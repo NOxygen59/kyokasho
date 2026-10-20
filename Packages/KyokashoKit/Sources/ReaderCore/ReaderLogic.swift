@@ -84,6 +84,19 @@ public enum PresentationLayout {
         }
     }
 
+    /// Ordre des pages pour afficher une double page de droite à gauche **sans** l'option RTL de
+    /// PDFKit (qui intervertit les tailles des deux pages quand elles diffèrent) : dans chaque paire,
+    /// la page lue en second passe à gauche. `order[k]` = position de lecture affichée en k-ième.
+    public static func rightToLeftSpreadOrder(count: Int, firstPageAlone: Bool) -> [Int] {
+        var order = Array(0..<max(0, count))
+        var i = firstPageAlone ? 1 : 0
+        while i + 1 < count {
+            order.swapAt(i, i + 1)
+            i += 2
+        }
+        return order
+    }
+
     /// Une page est « large » (probable scan de double page) si sa largeur dépasse sa hauteur de 15 %.
     public static func isWide(_ size: CGSize) -> Bool {
         size.height > 0 && size.width / size.height > 1.15

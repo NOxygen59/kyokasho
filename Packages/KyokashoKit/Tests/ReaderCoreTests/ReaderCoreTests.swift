@@ -87,6 +87,13 @@ final class PresentationTests: XCTestCase {
         XCTAssertEqual(PresentationLayout.presentedIndex(ofSource: 99, in: ltr), 3)
     }
 
+    func testRightToLeftSpreadOrder() {
+        XCTAssertEqual(PresentationLayout.rightToLeftSpreadOrder(count: 6, firstPageAlone: true), [0, 2, 1, 4, 3, 5])
+        XCTAssertEqual(PresentationLayout.rightToLeftSpreadOrder(count: 5, firstPageAlone: false), [1, 0, 3, 2, 4])
+        XCTAssertEqual(PresentationLayout.rightToLeftSpreadOrder(count: 1, firstPageAlone: true), [0])
+        XCTAssertEqual(PresentationLayout.rightToLeftSpreadOrder(count: 0, firstPageAlone: true), [])
+    }
+
     func testHalves() {
         let box = CGRect(x: 10, y: 20, width: 800, height: 600)
         XCTAssertEqual(PresentationLayout.box(for: .left, in: box), CGRect(x: 10, y: 20, width: 400, height: 600))

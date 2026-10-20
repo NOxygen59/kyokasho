@@ -43,6 +43,10 @@ final class ReaderController: NSObject, ObservableObject {
     /// Boîte et rotation d'origine de chaque page source (avant nos transformations).
     private var originalBoxes: [Int: CGRect] = [:]
     private var originalRotations: [Int: Int] = [:]
+    /// Pages sources coupées en deux (réglage global ou manuel) : jamais rognées en entier.
+    private var splitSources: Set<Int> = []
+    /// Vrai pendant une reconstruction : le changement de page qui en résulte n'est pas un geste.
+    private var rebuilding = false
     private var observers: [NSObjectProtocol] = []
     private var savePositionWork: DispatchWorkItem?
     private var cropTask: Task<Void, Never>?
@@ -120,15 +124,30 @@ final class ReaderController: NSObject, ObservableObject {
                 page.setBounds(ContentBounds.apply(crop, to: box), for: .cropBox)
             }
         }
+        splitSources = splitPages
         presented = PresentationLayout.pages(pageCount: originalBoxes.count, splitPages: splitPages, rightToLeft: rtl)
+        if rtl && settings.layout == .double {
+            // Double page de droite à gauche : on range les pages dans l'ordre visuel nous-mêmes
+            // (l'option RTL de PDFKit intervertit les tailles des pages d'une même double page).
+            // (`exchangePage` de PDFKit lève une exception avec des pages copiées : on retire puis réinsère.)
+            let order = PresentationLayout.rightToLeftSpreadOrder(count: pdf.pageCount, firstPageAlone: settings.firstPageAlone)
+            for i in order.indices where order[i] == i + 1 {
+                guard let second = pdf.page(at: i + 1) else { continue }
+                pdf.removePage(at: i + 1)
+                pdf.insert(second, at: i)
+            }
+            presented = order.map { presented[$0] }
+        }
         addHighlightAnnotations(to: pdf)
 
+        rebuilding = true
         self.pdf = pdf
         pdf.delegate = self
         pdfView.pageOverlayViewProvider = ink
         pdfView.document = pdf
         applyDisplaySettings()
         go(toSource: source, animated: false)
+        rebuilding = false
     }
 
     private func markOpened() {
@@ -158,7 +177,7 @@ final class ReaderController: NSObject, ObservableObject {
         }
         pdfView.displayDirection = paginated ? .horizontal : .vertical
         pdfView.displaysAsBook = double && s.firstPageAlone
-        pdfView.displaysRTL = rtl
+        pdfView.displaysRTL = rtl && !double
         pdfView.displaysPageBreaks = true
         pdfView.pageBreakMargins = paginated ? .zero : UIEdgeInsets(top: 6, left: 0, bottom: 6, right: 0)
         pdfView.pageShadowsEnabled = s.background != .black
@@ -181,8 +200,10 @@ final class ReaderController: NSObject, ObservableObject {
     func update(settings newSettings: ReaderSettings) {
         let old = settings
         settings = newSettings
+        let rtlDouble = { (s: ReaderSettings) in s.direction == .rightToLeft && s.layout == .double }
         let needsRebuild = old.direction != newSettings.direction || old.splitWidePages != newSettings.splitWidePages
-            || old.autoCrop != newSettings.autoCrop
+            || old.autoCrop != newSettings.autoCrop || rtlDouble(old) != rtlDouble(newSettings)
+            || (rtlDouble(newSettings) && old.firstPageAlone != newSettings.firstPageAlone)
         if needsRebuild {
             rebuild(keepingSource: currentSourcePage)
             startAutoCropIfNeeded()
@@ -224,7 +245,7 @@ final class ReaderController: NSObject, ObservableObject {
         guard index != NSNotFound, index != currentIndex || presented.isEmpty == false else { return }
         let changed = index != currentIndex
         currentIndex = index
-        if changed, settings.hideBarsOnScroll, barsVisible { barsVisible = false }
+        if changed, !rebuilding, settings.hideBarsOnScroll, barsVisible { barsVisible = false }
         scheduleSavePosition()
         preloadThumbnails(around: currentSourcePage)
     }
@@ -519,13 +540,18 @@ final class ReaderController: NSObject, ObservableObject {
             t.autoCrop = crop
             transforms[index] = t
             toSave.append(t)
-            guard !(t.split), let box = originalBoxes[index] else { continue }
+            guard !splitSources.contains(index), let box = originalBoxes[index] else { continue }
             for page in pages(forSource: index, in: pdf) {
                 page.setBounds(ContentBounds.apply(crop, to: box), for: .cropBox)
             }
         }
         model.persist { try $0.save(toSave) }
         pdfView.layoutDocumentView()
+        // Les tailles de page ont changé : recalcul de l'échelle « page entière » (sauf si zoomé).
+        if pdfView.autoScales {
+            pdfView.autoScales = false
+            pdfView.autoScales = true
+        }
     }
 
     // MARK: Recherche
