@@ -11,9 +11,11 @@ let package = Package(
     products: [
         .library(name: "ReaderCore", targets: ["ReaderCore"]),
         .library(name: "OCRKit", targets: ["OCRKit"]),
+        .library(name: "DictionaryKit", targets: ["DictionaryKit"]),
     ],
     dependencies: [
         .package(url: "https://github.com/groue/GRDB.swift.git", from: "7.11.1"),
+        .package(url: "https://github.com/weichsel/ZIPFoundation.git", from: "0.9.20"),
     ],
     targets: [
         // Code original (MIT) : modèles, base, import, réglages, logique pure.
@@ -23,7 +25,17 @@ let package = Package(
         ),
         // Code original (MIT) : moteurs OCR, boîtes de caractères, cache, banc d'essai.
         .target(name: "OCRKit", dependencies: ["ReaderCore"]),
+        // Code porté de Yomitan (GPL-3.0-or-later) : déconjugaison, fonctions japonaises.
+        .target(name: "YomitanKit", resources: [.copy("Resources/japanese-transforms.json")]),
+        // Code original (MIT) : base de dictionnaires, import Yomitan, recherche, rendu HTML.
+        .target(name: "DictionaryKit", dependencies: [
+            "YomitanKit",
+            .product(name: "GRDB", package: "GRDB.swift"),
+            .product(name: "ZIPFoundation", package: "ZIPFoundation"),
+        ]),
         .testTarget(name: "ReaderCoreTests", dependencies: ["ReaderCore"]),
+        .testTarget(name: "YomitanKitTests", dependencies: ["YomitanKit"]),
+        .testTarget(name: "DictionaryKitTests", dependencies: ["DictionaryKit"]),
         .testTarget(name: "OCRKitTests", dependencies: ["OCRKit"]),
     ]
 )
