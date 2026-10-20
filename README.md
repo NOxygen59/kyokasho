@@ -23,6 +23,7 @@ Textes des licences : [LICENSES/](LICENSES/) ; attributions : [THIRD_PARTY_NOTIC
 
 | Version | Release | Contenu |
 |---|---|---|
+| **0.1.1** | [v0.1.1](https://github.com/NOxygen59/kyokasho/releases/tag/v0.1.1) | Glissement animé en double page |
 | **0.1.0** (V1) | [v0.1.0](https://github.com/NOxygen59/kyokasho/releases/tag/v0.1.0) | Lecteur, annotations, commentaires, page vers IA, Google Drive |
 
 Les `.tipa` sont joints aux [Releases](https://github.com/NOxygen59/kyokasho/releases).

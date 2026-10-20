@@ -241,12 +241,42 @@ final class ReaderController: NSObject, ObservableObject {
         go(toPresented: PresentationLayout.presentedIndex(ofSource: source, in: presented), animated: animated)
     }
 
-    func next() {
-        if pdfView.canGoToNextPage { pdfView.goToNextPage(nil) }
-    }
+    func next() { turn(forward: true) }
 
-    func previous() {
-        if pdfView.canGoToPreviousPage { pdfView.goToPreviousPage(nil) }
+    func previous() { turn(forward: false) }
+
+    private var isAnimatingTurn = false
+
+    /// Tourne la page. En mode paginé sans contrôleur de pages de PDFKit (double page, ou
+    /// transition maison), glissement animé : la page actuelle (photo) part d'un côté, la
+    /// nouvelle arrive de l'autre, dans le sens de lecture.
+    private func turn(forward: Bool) {
+        guard forward ? pdfView.canGoToNextPage : pdfView.canGoToPreviousPage else { return }
+        let animate = settings.scrollMode == .paginated && settings.transition == .slide
+            && !pdfView.isUsingPageViewController && pdfView.isAtFit && !isAnimatingTurn
+            && !UIAccessibility.isReduceMotionEnabled
+        guard animate, let host = pdfView.superview,
+              let snapshot = pdfView.snapshotView(afterScreenUpdates: false) else {
+            forward ? pdfView.goToNextPage(nil) : pdfView.goToPreviousPage(nil)
+            return
+        }
+        isAnimatingTurn = true
+        snapshot.frame = pdfView.frame
+        host.insertSubview(snapshot, aboveSubview: pdfView)
+        forward ? pdfView.goToNextPage(nil) : pdfView.goToPreviousPage(nil)
+        pdfView.layoutIfNeeded()
+        // Lecture gauche → droite : avancer fait partir le contenu vers la gauche ; l'inverse en droite → gauche.
+        let movesLeft = forward != (settings.direction == .rightToLeft)
+        let width = pdfView.bounds.width
+        pdfView.transform = CGAffineTransform(translationX: movesLeft ? width : -width, y: 0)
+        UIView.animate(withDuration: 0.26, delay: 0, options: [.curveEaseOut, .allowUserInteraction]) {
+            snapshot.transform = CGAffineTransform(translationX: movesLeft ? -width : width, y: 0)
+            self.pdfView.transform = .identity
+        } completion: { _ in
+            snapshot.removeFromSuperview()
+            self.pdfView.transform = .identity
+            self.isAnimatingTurn = false
+        }
     }
 
     private func pageChanged() {
