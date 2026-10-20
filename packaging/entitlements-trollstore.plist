@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Identité de l'app (pseudo-signature ldid, installation TrollStore). -->
+	<key>application-identifier</key>
+	<string>fr.noxygen59.kyokasho</string>
+	<!-- Trousseau : jeton de connexion Google Drive. -->
+	<key>keychain-access-groups</key>
+	<array>
+		<string>fr.noxygen59.kyokasho</string>
+	</array>
+</dict>
+</plist>

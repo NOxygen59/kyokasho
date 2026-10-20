@@ -1,0 +1,48 @@
+#!/bin/zsh
+# SPDX-License-Identifier: MIT
+# Construit dist/Kyokasho-<version>.tipa, installable avec TrollStore (iPad, iOS 16).
+#
+#   ./build_ipa.sh
+#
+# Étapes : génération du projet Xcode (XcodeGen) → archive Release sans signature → dossier
+# Payload → pseudo-signature ldid avec les entitlements → zip en .tipa.
+# Prérequis : Xcode, XcodeGen et ldid (brew install xcodegen ldid).
+set -euo pipefail
+ROOT="$(cd -- "$(dirname -- "$0")" && pwd)"
+cd "$ROOT"
+
+VERSION="$(grep -m1 'MARKETING_VERSION' project.yml | sed -E 's/.*"([^"]+)".*/\1/')"
+BUILD="$ROOT/build/ipa"
+ARCHIVE="$BUILD/Kyokasho.xcarchive"
+OUT="$ROOT/dist/Kyokasho-$VERSION.tipa"
+
+print "==> 1/5 Projet Xcode (XcodeGen)"
+xcodegen generate --quiet
+
+print "==> 2/5 Archive Release (sans signature)"
+rm -rf "$ARCHIVE"
+xcodebuild archive \
+  -project Kyokasho.xcodeproj -scheme Kyokasho -configuration Release \
+  -destination 'generic/platform=iOS' -archivePath "$ARCHIVE" \
+  -derivedDataPath "$BUILD/DerivedData" \
+  CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+  | grep -E '^(\*\*|.*error:)' || true
+APP="$ARCHIVE/Products/Applications/Kyokasho.app"
+[[ -d "$APP" ]] || { print -u2 "Archive introuvable : la compilation a échoué."; exit 1; }
+
+print "==> 3/5 Dossier Payload"
+rm -rf "$BUILD/Payload"
+mkdir -p "$BUILD/Payload"
+cp -R "$APP" "$BUILD/Payload/"
+
+print "==> 4/5 Pseudo-signature (ldid)"
+# Frameworks embarqués d'abord (s'il y en a), puis l'app avec ses entitlements.
+for fw in "$BUILD/Payload/Kyokasho.app/Frameworks/"*(N); do ldid -S "$fw"; done
+ldid -S"$ROOT/packaging/entitlements-trollstore.plist" "$BUILD/Payload/Kyokasho.app/Kyokasho"
+
+print "==> 5/5 Paquet .tipa"
+mkdir -p "$ROOT/dist"
+rm -f "$OUT"
+(cd "$BUILD" && zip -qry "$OUT" Payload)
+print "OK : $OUT ($(du -h "$OUT" | cut -f1))"
+print "Installation : ouvrir ce fichier avec TrollStore sur l'iPad."
