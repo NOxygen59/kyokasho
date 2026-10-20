@@ -23,6 +23,7 @@ Textes des licences : [LICENSES/](LICENSES/) ; attributions : [THIRD_PARTY_NOTIC
 
 | Version | Release | Contenu |
 |---|---|---|
+| **0.3.0** | [v0.3.0](https://github.com/NOxygen59/kyokasho/releases/tag/v0.3.0) | Interface « Atelier » paysage, panneau d'étude, DeepL, Drive simplifié |
 | **0.2.0** (V2) | [v0.2.0](https://github.com/NOxygen59/kyokasho/releases/tag/v0.2.0) | OCR : texte du PDF / Apple Vision, lecteur de texte, comparaison, banc d'essai |
 | **0.1.1** | [v0.1.1](https://github.com/NOxygen59/kyokasho/releases/tag/v0.1.1) | Glissement animé en double page |
 | **0.1.0** (V1) | [v0.1.0](https://github.com/NOxygen59/kyokasho/releases/tag/v0.1.0) | Lecteur, annotations, commentaires, page vers IA, Google Drive |
@@ -92,12 +93,8 @@ Pour l'accès **direct** dans Kyōkasho, il faut un identifiant client OAuth (gr
    « Paramètres avancés → Accéder à Kyokasho ».
 4. **Identifiants → Créer des identifiants → ID client OAuth** → type **iOS**, ID de bundle
    `fr.noxygen59.kyokasho` → **Créer**. Copier l'**ID client** (`xxxx.apps.googleusercontent.com`).
-5. Créer le fichier `App/Config/Local.xcconfig` (ignoré par Git) :
-   ```
-   GOOGLE_CLIENT_ID = xxxx.apps.googleusercontent.com
-   GOOGLE_REVERSED_CLIENT_ID = com.googleusercontent.apps.xxxx
-   ```
-6. Relancer `./build_ipa.sh` et réinstaller.
+5. Dans l'app : *Google Drive* → assistant → coller l'identifiant. Pas besoin de recompiler.
+   (Option développeur : `App/Config/Local.xcconfig` avec `GOOGLE_CLIENT_ID = …`.)
 
 Accès en **lecture seule** ; le jeton est stocké dans le Trousseau de l'iPad ; seules les requêtes
 que tu déclenches partent vers Google.

@@ -51,9 +51,24 @@ final class GoogleDrive: NSObject, ObservableObject {
     @Published private(set) var isSignedIn = false
     @Published private(set) var accountEmail: String?
 
-    let clientId: String = (Bundle.main.object(forInfoDictionaryKey: "GoogleClientID") as? String ?? "")
-        .trimmingCharacters(in: .whitespaces)
-    var isConfigured: Bool { clientId.hasSuffix(".apps.googleusercontent.com") }
+    /// Identifiant client OAuth : collé dans l'app (assistant), sinon celui de la compilation.
+    @Published private(set) var clientId: String = UserDefaults.standard.string(forKey: "googleClientID")
+        ?? (Bundle.main.object(forInfoDictionaryKey: "GoogleClientID") as? String ?? "").trimmingCharacters(in: .whitespaces)
+    var isConfigured: Bool { Self.isValidClientId(clientId) }
+
+    static func isValidClientId(_ id: String) -> Bool {
+        let trimmed = id.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.hasSuffix(".apps.googleusercontent.com") && trimmed.count > 40 && !trimmed.contains(" ")
+    }
+
+    /// Enregistre l'identifiant collé dans l'assistant (pas besoin de recompiler : la session de
+    /// connexion intercepte elle-même l'adresse de retour, sans schéma déclaré dans Info.plist).
+    func setClientId(_ id: String) {
+        let trimmed = id.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed != clientId { signOut() }
+        clientId = trimmed
+        UserDefaults.standard.set(trimmed, forKey: "googleClientID")
+    }
 
     private var redirectScheme: String {
         clientId.components(separatedBy: ".").reversed().joined(separator: ".")

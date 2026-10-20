@@ -4,67 +4,74 @@
 import ReaderCore
 import SwiftUI
 
+/// Bibliothèque « Atelier » : barre latérale (sources, outils) + planche de documents sur fond
+/// quadrillé. Pensée pour le paysage ; en portrait la barre latérale se replie en haut.
 struct LibraryView: View {
+    enum Filter: String, CaseIterable { case all, inProgress, drive }
+
     @EnvironmentObject private var model: AppModel
+    @State private var filter: Filter = .all
     @State private var showPicker = false
     @State private var showSettings = false
     @State private var showDrive = false
+    @State private var showBench = false
     @State private var renaming: LibraryDocument?
     @State private var newTitle = ""
     @State private var deleting: LibraryDocument?
     @State private var search = ""
 
-    private let columns = [GridItem(.adaptive(minimum: 170, maximum: 230), spacing: 24)]
-
     private var filtered: [LibraryDocument] {
+        var docs = model.documents
+        switch filter {
+        case .all: break
+        case .inProgress: docs = docs.filter { $0.lastPageIndex > 0 && $0.lastPageIndex < $0.pageCount - 1 }
+        case .drive: docs = docs.filter { $0.driveFileId != nil }
+        }
         let query = search.trimmingCharacters(in: .whitespaces)
-        guard !query.isEmpty else { return model.documents }
-        return model.documents.filter { $0.title.localizedCaseInsensitiveContains(query) }
+        if !query.isEmpty { docs = docs.filter { $0.title.localizedCaseInsensitiveContains(query) } }
+        return docs
     }
 
     var body: some View {
-        Group {
-            if model.documents.isEmpty {
-                emptyState
-            } else {
-                ScrollView {
-                    LazyVGrid(columns: columns, spacing: 28) {
-                        ForEach(filtered) { document in
-                            Button { model.openDocumentId = document.id } label: {
-                                DocumentCard(document: document)
-                            }
-                            .buttonStyle(.plain)
-                            .contextMenu { menu(for: document) }
-                        }
+        GeometryReader { geo in
+            let landscape = geo.size.width > geo.size.height
+            ZStack {
+                GridBackground()
+                if landscape {
+                    HStack(alignment: .top, spacing: Atelier.gap) {
+                        sidebar.frame(width: 248)
+                        main
                     }
-                    .padding(24)
+                    .padding(Atelier.gap)
+                } else {
+                    VStack(spacing: Atelier.gap) {
+                        compactBar
+                        main
+                    }
+                    .padding(Atelier.gap)
                 }
-                .searchable(text: $search, prompt: "Rechercher un document")
             }
         }
-        .navigationTitle("Bibliothèque")
-        .toolbar {
-            ToolbarItemGroup(placement: .primaryAction) {
-                Button { showDrive = true } label: { Label("Google Drive", systemImage: "externaldrive.badge.icloud") }
-                Button { showPicker = true } label: { Label("Importer", systemImage: "plus") }
-            }
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button { showSettings = true } label: { Label("Réglages", systemImage: "gearshape") }
-            }
-        }
+        .toolbar(.hidden, for: .navigationBar)
         .overlay(alignment: .bottom) {
             if let progress = model.importProgress {
-                ImportBanner(progress: progress).padding(.bottom, 24)
+                ImportBanner(progress: progress).padding(.bottom, 28)
             }
         }
         .sheet(isPresented: $showPicker) {
             DocumentPicker { urls in model.importFiles(urls) }.ignoresSafeArea()
         }
         .sheet(isPresented: $showSettings) {
-            SettingsView().environmentObject(model)
+            SettingsView().environmentObject(model).preferredColorScheme(.dark)
         }
         .sheet(isPresented: $showDrive) {
-            DriveBrowserView().environmentObject(model)
+            DriveBrowserView().environmentObject(model).preferredColorScheme(.dark)
+        }
+        .sheet(isPresented: $showBench) {
+            NavigationStack {
+                BenchView().toolbar { ToolbarItem(placement: .confirmationAction) { Button("OK") { showBench = false } } }
+            }
+            .environmentObject(model).preferredColorScheme(.dark)
         }
         .alert("Renommer", isPresented: Binding(get: { renaming != nil }, set: { if !$0 { renaming = nil } })) {
             TextField("Titre", text: $newTitle)
@@ -75,6 +82,161 @@ struct LibraryView: View {
                             isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }),
                             titleVisibility: .visible) {
             Button("Supprimer", role: .destructive) { if let deleting { model.delete(deleting) } }
+        }
+    }
+
+    // MARK: Barre latérale
+
+    private var sidebar: some View {
+        VStack(alignment: .leading, spacing: 22) {
+            HStack(spacing: 10) {
+                Text("教").font(.custom("HiraMinProN-W6", size: 26))
+                    .frame(width: 42, height: 42)
+                    .foregroundStyle(.black.opacity(0.85))
+                    .background(Atelier.Tint.japanese, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("Kyōkasho").font(Atelier.display(19)).foregroundStyle(Atelier.textPrimary)
+                    Text("教科書 · atelier de lecture").font(.system(size: 11)).foregroundStyle(Atelier.textTertiary)
+                }
+            }
+            VStack(alignment: .leading, spacing: 4) {
+                AtelierLabel("Bibliothèque").padding(.bottom, 4)
+                sideRow(.all, icon: "square.grid.2x2", title: "Tous les documents", count: model.documents.count)
+                sideRow(.inProgress, icon: "book", title: "En cours",
+                        count: model.documents.filter { $0.lastPageIndex > 0 && $0.lastPageIndex < $0.pageCount - 1 }.count)
+                sideRow(.drive, icon: "externaldrive.badge.icloud", title: "Depuis Drive",
+                        count: model.documents.filter { $0.driveFileId != nil }.count)
+            }
+            VStack(alignment: .leading, spacing: 4) {
+                AtelierLabel("Importer").padding(.bottom, 4)
+                actionRow(icon: "folder", title: "Fichiers", tint: Atelier.Tint.cloud) { showPicker = true }
+                actionRow(icon: "externaldrive.badge.icloud", title: "Google Drive", tint: Atelier.Tint.cloud) { showDrive = true }
+            }
+            VStack(alignment: .leading, spacing: 4) {
+                AtelierLabel("Outils").padding(.bottom, 4)
+                actionRow(icon: "gauge.with.dots.needle.33percent", title: "Banc d'essai OCR", tint: Atelier.Tint.japanese) { showBench = true }
+                actionRow(icon: "gearshape", title: "Réglages", tint: Atelier.textSecondary) { showSettings = true }
+            }
+            Spacer()
+            statsCard
+        }
+        .padding(18)
+        .frame(maxHeight: .infinity, alignment: .top)
+        .atelierPanel()
+    }
+
+    private func sideRow(_ value: Filter, icon: String, title: String, count: Int) -> some View {
+        let on = filter == value
+        return Button {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { filter = value }
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: icon).frame(width: 22)
+                Text(title)
+                Spacer()
+                Text("\(count)").font(Atelier.mono).foregroundStyle(on ? Color.black.opacity(0.6) : Atelier.textTertiary)
+            }
+            .font(.system(size: 15, weight: .medium))
+            .padding(.horizontal, 10).padding(.vertical, 9)
+            .foregroundStyle(on ? Color.black.opacity(0.85) : Atelier.textPrimary)
+            .background(on ? Atelier.Tint.read : Color.clear, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func actionRow(icon: String, title: String, tint: Color, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                Image(systemName: icon).frame(width: 22).foregroundStyle(tint)
+                Text(title).foregroundStyle(Atelier.textPrimary)
+                Spacer()
+            }
+            .font(.system(size: 15, weight: .medium))
+            .padding(.horizontal, 10).padding(.vertical, 9)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(PressScale())
+    }
+
+    private var statsCard: some View {
+        let pages = model.documents.reduce(0) { $0 + $1.pageCount }
+        let read = model.documents.reduce(0) { $0 + min($1.lastPageIndex + 1, $1.pageCount) }
+        return VStack(alignment: .leading, spacing: 8) {
+            AtelierLabel("Progression")
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                Text("\(read)").font(Atelier.display(30)).foregroundStyle(Atelier.textPrimary)
+                Text("/ \(pages) pages").font(.system(size: 13)).foregroundStyle(Atelier.textSecondary)
+            }
+            ProgressView(value: Double(read), total: Double(max(pages, 1))).tint(Atelier.Tint.read)
+        }
+        .padding(14)
+        .background(Atelier.surfaceHigh, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+
+    /// Portrait : barre compacte en haut.
+    private var compactBar: some View {
+        HStack(spacing: 12) {
+            Text("Kyōkasho").font(Atelier.display(22)).foregroundStyle(Atelier.textPrimary)
+            Spacer()
+            Picker("", selection: $filter) {
+                Text("Tous").tag(Filter.all)
+                Text("En cours").tag(Filter.inProgress)
+                Text("Drive").tag(Filter.drive)
+            }
+            .pickerStyle(.segmented).frame(width: 260)
+            CapsuleButton(icon: "plus", label: "Importer") { showPicker = true }
+            CapsuleButton(icon: "externaldrive.badge.icloud", label: "Google Drive") { showDrive = true }
+            CapsuleButton(icon: "gearshape", label: "Réglages") { showSettings = true }
+        }
+        .padding(10)
+        .atelierPanel()
+    }
+
+    // MARK: Planche
+
+    private var main: some View {
+        VStack(alignment: .leading, spacing: Atelier.gap) {
+            HStack(alignment: .bottom) {
+                VStack(alignment: .leading, spacing: 2) {
+                    AtelierLabel(filterTitle, tint: Atelier.Tint.read)
+                    Text("\(filtered.count) document\(filtered.count > 1 ? "s" : "")")
+                        .font(Atelier.display(32)).foregroundStyle(Atelier.textPrimary)
+                }
+                Spacer()
+                HStack(spacing: 8) {
+                    Image(systemName: "magnifyingglass").foregroundStyle(Atelier.textTertiary)
+                    TextField("Rechercher", text: $search).foregroundStyle(Atelier.textPrimary)
+                }
+                .padding(.horizontal, 14).padding(.vertical, 10)
+                .frame(width: 280)
+                .atelierPanel(radius: 22)
+                Button { showPicker = true } label: { Label("Importer", systemImage: "plus") }
+                    .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.cloud))
+            }
+            if filtered.isEmpty {
+                emptyState
+            } else {
+                ScrollView {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 180, maximum: 220), spacing: 22)], spacing: 26) {
+                        ForEach(filtered) { document in
+                            Button { model.openDocumentId = document.id } label: { DocumentCard(document: document) }
+                                .buttonStyle(PressScale())
+                                .contextMenu { menu(for: document) }
+                        }
+                    }
+                    .padding(.vertical, 6)
+                }
+            }
+        }
+        .padding(.horizontal, 6)
+    }
+
+    private var filterTitle: String {
+        switch filter {
+        case .all: return "Tous les documents"
+        case .inProgress: return "En cours"
+        case .drive: return "Depuis Google Drive"
         }
     }
 
@@ -90,61 +252,81 @@ struct LibraryView: View {
 
     private var emptyState: some View {
         VStack(spacing: 16) {
-            Image(systemName: "books.vertical").font(.system(size: 56)).foregroundStyle(.secondary)
-            Text("Aucun document").font(.title2.bold())
-            Text("Importe un PDF depuis Fichiers ou Google Drive.").foregroundStyle(.secondary)
-            HStack {
-                Button { showPicker = true } label: { Label("Importer depuis Fichiers", systemImage: "folder") }
-                    .buttonStyle(.borderedProminent)
+            Text("教").font(.custom("HiraMinProN-W6", size: 64)).foregroundStyle(Atelier.Tint.japanese.opacity(0.8))
+            Text(filter == .all ? "Ta bibliothèque est vide" : "Rien ici pour l'instant")
+                .font(Atelier.display(24)).foregroundStyle(Atelier.textPrimary)
+            Text("Importe un cours ou un manuel en PDF, depuis Fichiers ou Google Drive.")
+                .foregroundStyle(Atelier.textSecondary)
+            HStack(spacing: 12) {
+                Button { showPicker = true } label: { Label("Fichiers", systemImage: "folder") }
+                    .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.cloud))
                 Button { showDrive = true } label: { Label("Google Drive", systemImage: "externaldrive.badge.icloud") }
-                    .buttonStyle(.bordered)
+                    .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.read))
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 
+/// Carte de document : couverture, titre, progression façon cartouche de plan.
 struct DocumentCard: View {
     @EnvironmentObject private var model: AppModel
     let document: LibraryDocument
     @State private var image: UIImage?
 
+    private var progress: Double {
+        Double(min(document.lastPageIndex + 1, document.pageCount)) / Double(max(document.pageCount, 1))
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 10).fill(Color(white: 0.16))
-                if let image {
-                    Image(uiImage: image).resizable().scaledToFit()
-                        .clipShape(RoundedRectangle(cornerRadius: 6))
-                        .padding(6)
-                } else {
-                    ProgressView()
+        VStack(alignment: .leading, spacing: 10) {
+            ZStack(alignment: .topTrailing) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Atelier.surfaceHigh)
+                    if let image {
+                        Image(uiImage: image).resizable().scaledToFill()
+                    } else {
+                        ProgressView().tint(Atelier.textTertiary)
+                    }
+                }
+                .aspectRatio(0.72, contentMode: .fit)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Atelier.hairline))
+                .shadow(color: .black.opacity(0.5), radius: 12, y: 8)
+                if document.driveFileId != nil {
+                    Image(systemName: "externaldrive.badge.icloud")
+                        .font(.system(size: 12, weight: .bold))
+                        .padding(7)
+                        .foregroundStyle(.black.opacity(0.8))
+                        .background(Atelier.Tint.cloud, in: Circle())
+                        .padding(8)
                 }
             }
-            .aspectRatio(0.72, contentMode: .fit)
-            .shadow(color: .black.opacity(0.35), radius: 6, y: 3)
-
-            Text(document.title).font(.subheadline.weight(.semibold)).lineLimit(2)
-            HStack {
-                Text("Page \(document.lastPageIndex + 1) / \(document.pageCount)")
-                Spacer()
-                if document.driveFileId != nil { Image(systemName: "externaldrive.badge.icloud") }
+            Text(document.title).font(.system(size: 15, weight: .semibold)).lineLimit(2)
+                .foregroundStyle(Atelier.textPrimary)
+            HStack(spacing: 8) {
+                GeometryReader { g in
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(Atelier.surfaceHigh)
+                        Capsule().fill(Atelier.Tint.read).frame(width: max(4, g.size.width * progress))
+                    }
+                }
+                .frame(height: 4)
+                Text(String(format: "%d/%d", document.lastPageIndex + 1, document.pageCount))
+                    .font(.system(size: 11, weight: .semibold, design: .monospaced)).foregroundStyle(Atelier.textTertiary)
             }
-            .font(.caption).foregroundStyle(.secondary)
-            ProgressView(value: Double(document.lastPageIndex + 1), total: Double(max(document.pageCount, 1)))
-                .tint(.accentColor)
         }
         .onAppear(perform: load)
         .onChange(of: document.id) { _ in load() }
     }
 
     private func load() {
-        if let cached = model.thumbnails.cached(documentId: document.id, page: 0, width: 360) {
+        if let cached = model.thumbnails.cached(documentId: document.id, page: 0, width: 400) {
             image = cached
             return
         }
         model.thumbnails.thumbnail(documentId: document.id, fileURL: model.storage.url(for: document.id),
-                                   page: 0, width: 360) { image = $0 }
+                                   page: 0, width: 400) { image = $0 }
     }
 }
 
@@ -153,13 +335,14 @@ struct ImportBanner: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            ProgressView()
+            ProgressView().tint(Atelier.Tint.cloud)
             VStack(alignment: .leading) {
                 Text("Import \(progress.done + 1) / \(progress.total)").font(.subheadline.bold())
-                Text(progress.currentName).font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                Text(progress.currentName).font(.caption).foregroundStyle(Atelier.textSecondary).lineLimit(1)
             }
         }
+        .foregroundStyle(Atelier.textPrimary)
         .padding(.horizontal, 18).padding(.vertical, 12)
-        .background(.regularMaterial, in: Capsule())
+        .atelierPanel(radius: 24)
     }
 }

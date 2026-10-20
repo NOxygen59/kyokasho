@@ -57,6 +57,31 @@ public actor OCRService {
         return result
     }
 
+    /// Pages (source) dont le texte OCR contient `query`, avec un extrait autour.
+    /// Un seul résultat par page et par moteur préféré (premier moteur de `engines` qui a la page).
+    public func search(_ query: String, documentId: String, engines: [String]) -> [(page: Int, context: String)] {
+        let needle = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !needle.isEmpty, let records = try? database.ocrResults(documentId: documentId) else { return [] }
+        var bestByPage: [Int: OCRPage] = [:]
+        for record in records {
+            guard let rank = engines.firstIndex(of: record.engine),
+                  let page = try? decoder.decode(OCRPage.self, from: record.json),
+                  page.version >= OCRPage.currentVersion else { continue }
+            if let current = bestByPage[record.pageIndex], let currentRank = engines.firstIndex(of: current.engine),
+               currentRank <= rank { continue }
+            bestByPage[record.pageIndex] = page
+        }
+        var results: [(Int, String)] = []
+        for (pageIndex, page) in bestByPage.sorted(by: { $0.key < $1.key }) {
+            let text = page.lines.map(\.text).joined()
+            guard let range = text.range(of: needle, options: [.caseInsensitive, .widthInsensitive, .diacriticInsensitive]) else { continue }
+            let start = text.index(range.lowerBound, offsetBy: -15, limitedBy: text.startIndex) ?? text.startIndex
+            let end = text.index(range.upperBound, offsetBy: 25, limitedBy: text.endIndex) ?? text.endIndex
+            results.append((pageIndex, String(text[start..<end])))
+        }
+        return results
+    }
+
     /// Annule les OCR en cours d'un document (page quittée, lecteur fermé).
     public func cancelAll(documentId: String) {
         for (key, task) in running where key.hasPrefix(documentId + "#") { task.cancel() }

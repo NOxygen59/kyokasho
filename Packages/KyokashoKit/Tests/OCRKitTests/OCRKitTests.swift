@@ -185,6 +185,22 @@ final class ServiceTests: XCTestCase {
         XCTAssertEqual(try db.ocrCacheStats().pages, 0)
     }
 
+    func testSearchInOCRText() async throws {
+        let db = try AppDatabase.inMemory()
+        try db.save(LibraryDocument(id: "d", title: "D", originalFileName: "d.pdf", pageCount: 3, fileSize: 1))
+        let line = OCRLine(text: "全般照明と局部照明", box: NormBox(x: 0, y: 0, w: 1, h: 0.1), charBoxes: [],
+                           measuredCharBoxes: false, vertical: false, confidence: 1)
+        let page = OCRPage(engine: OCREngineID.vision, lines: [line], durationMs: 1)
+        try db.save(OCRResultRecord(documentId: "d", pageIndex: 2, engine: OCREngineID.vision,
+                                    json: try JSONEncoder().encode(page), durationMs: 1))
+        let service = OCRService(database: db)
+        let hits = await service.search("局部", documentId: "d", engines: [OCREngineID.vision])
+        XCTAssertEqual(hits.map(\.page), [2])
+        XCTAssertTrue(hits[0].context.contains("局部照明"))
+        let none = await service.search("家具", documentId: "d", engines: [OCREngineID.vision])
+        XCTAssertTrue(none.isEmpty)
+    }
+
     func testBenchStorage() throws {
         let db = try AppDatabase.inMemory()
         let sample = BenchSample(title: "Slide 1", imageFile: "a.png", referenceText: "照明")

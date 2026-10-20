@@ -169,18 +169,94 @@ private struct DriveSignIn: View {
     }
 }
 
-private struct DriveSetupHelp: View {
+/// Assistant de configuration de Google Drive : 4 étapes dans le navigateur, puis on colle
+/// l'identifiant ici. Une seule fois, aucune recompilation.
+struct DriveSetupHelp: View {
+    @ObservedObject private var drive = GoogleDrive.shared
+    @Environment(\.openURL) private var openURL
+    @State private var pasted = ""
+    @State private var done: Set<Int> = []
+
+    private let steps: [(String, String, String)] = [
+        ("Crée un projet", "Nom : Kyokasho. Un seul projet suffit, c'est gratuit.",
+         "https://console.cloud.google.com/projectcreate"),
+        ("Active l'API Google Drive", "Bouton « Activer ».",
+         "https://console.cloud.google.com/apis/library/drive.googleapis.com"),
+        ("Écran de connexion", "Nom de l'app : Kyokasho, ton e-mail. Audience : Externe, puis « Publier l'application » (sinon Google te déconnecte tous les 7 jours).",
+         "https://console.cloud.google.com/auth/branding"),
+        ("Crée l'identifiant", "Type : iOS. ID de bundle : fr.noxygen59.kyokasho. Copie l'« ID client ».",
+         "https://console.cloud.google.com/auth/clients/create"),
+    ]
+
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Google Drive n'est pas encore configuré").font(.title2.bold())
-                Text("Il faut un identifiant client OAuth (gratuit) créé avec ton compte Google, puis recompiler l'app. Les étapes sont dans le README, section « Google Drive ».")
-                Text("En attendant, tu peux importer depuis Drive avec le bouton « + » : choisis Google Drive dans le sélecteur Fichiers (l'app Google Drive doit être installée).")
-                    .foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 18) {
+                VStack(alignment: .leading, spacing: 6) {
+                    AtelierLabel("Google Drive · une seule fois", tint: Atelier.Tint.cloud)
+                    Text("Relie ton Drive en 5 minutes").font(Atelier.display(26)).foregroundStyle(Atelier.textPrimary)
+                    Text("Google demande que chaque app ait son identifiant. Ouvre chaque étape, fais-la, coche, puis colle l'identifiant en bas.")
+                        .foregroundStyle(Atelier.textSecondary)
+                }
+                ForEach(steps.indices, id: \.self) { i in
+                    let step = steps[i]
+                    HStack(alignment: .top, spacing: 14) {
+                        Button {
+                            if done.contains(i) { done.remove(i) } else { done.insert(i) }
+                        } label: {
+                            ZStack {
+                                Circle().fill(done.contains(i) ? Atelier.Tint.cloud : Atelier.surfaceHigh).frame(width: 34, height: 34)
+                                if done.contains(i) {
+                                    Image(systemName: "checkmark").font(.system(size: 14, weight: .bold)).foregroundStyle(.black.opacity(0.85))
+                                } else {
+                                    Text("\(i + 1)").font(Atelier.mono).foregroundStyle(Atelier.textPrimary)
+                                }
+                            }
+                        }
+                        .buttonStyle(PressScale())
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(step.0).font(.system(size: 16, weight: .semibold)).foregroundStyle(Atelier.textPrimary)
+                            Text(step.1).font(.system(size: 14)).foregroundStyle(Atelier.textSecondary)
+                        }
+                        Spacer()
+                        Button {
+                            if let url = URL(string: step.2) { openURL(url) }
+                            done.insert(i)
+                        } label: { Label("Ouvrir", systemImage: "arrow.up.forward.square") }
+                            .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.cloud))
+                    }
+                    .padding(14)
+                    .background(Atelier.surfaceHigh.opacity(0.5), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                }
+                VStack(alignment: .leading, spacing: 10) {
+                    AtelierLabel("5 · Colle l'identifiant", tint: Atelier.Tint.cloud)
+                    HStack {
+                        TextField("xxxx.apps.googleusercontent.com", text: $pasted)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .font(Atelier.mono)
+                            .padding(12)
+                            .background(Atelier.surfaceHigh, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+                        Button {
+                            pasted = UIPasteboard.general.string ?? pasted
+                        } label: { Label("Coller", systemImage: "doc.on.clipboard") }
+                            .buttonStyle(AtelierButtonStyle(tint: Atelier.textSecondary))
+                    }
+                    if !pasted.isEmpty && !GoogleDrive.isValidClientId(pasted) {
+                        Text("Ça ne ressemble pas à un ID client (il finit par .apps.googleusercontent.com).")
+                            .font(.footnote).foregroundStyle(.orange)
+                    }
+                    Button { drive.setClientId(pasted) } label: { Label("Enregistrer et continuer", systemImage: "checkmark") }
+                        .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.cloud))
+                        .disabled(!GoogleDrive.isValidClientId(pasted))
+                }
+                Text("Pas envie ? Le bouton « Fichiers » marche aussi avec Google Drive si l'app Google Drive est installée sur l'iPad.")
+                    .font(.footnote).foregroundStyle(Atelier.textTertiary)
             }
-            .padding(32)
+            .padding(28)
         }
+        .background(Atelier.canvas)
         .navigationTitle("Google Drive")
+        .onAppear { pasted = drive.isConfigured ? drive.clientId : "" }
     }
 }
 
@@ -194,10 +270,11 @@ struct DriveAccountView: View {
         Form {
             Section("Compte") {
                 if !drive.isConfigured {
-                    Text("Non configuré (voir README).").foregroundStyle(.secondary)
+                    NavigationLink("Configurer Google Drive") { DriveSetupHelp() }
                 } else if drive.isSignedIn {
                     LabeledContent("Connecté", value: drive.accountEmail ?? "compte Google")
                     Button("Se déconnecter", role: .destructive) { drive.signOut() }
+                    NavigationLink("Changer d'identifiant Google") { DriveSetupHelp() }
                 } else {
                     DriveSignIn()
                 }

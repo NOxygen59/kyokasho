@@ -12,13 +12,7 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Apparence") {
-                    Picker("Thème", selection: $model.appSettings.theme) {
-                        Text("Sombre").tag(AppTheme.dark)
-                        Text("Clair").tag(AppTheme.light)
-                        Text("Système").tag(AppTheme.system)
-                    }
-                }
+                TranslationSettingsSection()
                 ReaderSettingsSections(settings: $model.readerDefaults)
                 Section {
                     Toggle("Dessiner aussi au doigt", isOn: $model.drawWithFinger)
@@ -297,6 +291,44 @@ struct AboutView: View {
         VStack(alignment: .leading, spacing: 2) {
             Link(name, destination: URL(string: url)!).font(.body.bold())
             Text("\(author) — licence \(license)").font(.caption).foregroundStyle(.secondary)
+        }
+    }
+}
+
+/// Clé DeepL (Trousseau) et quota du mois.
+struct TranslationSettingsSection: View {
+    @ObservedObject private var deepl = DeepLService.shared
+    @State private var key = ""
+    @State private var usage: String?
+
+    var body: some View {
+        Section {
+            if deepl.hasKey {
+                LabeledContent("Clé DeepL", value: deepl.maskedKey ?? "")
+                if let usage { LabeledContent("Ce mois-ci", value: usage) }
+                Button("Retirer la clé", role: .destructive) { deepl.setKey(nil); usage = nil }
+            } else {
+                SecureField("Clé API DeepL", text: $key)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                Button("Enregistrer") { deepl.setKey(key); key = ""; refresh() }
+                    .disabled(key.trimmingCharacters(in: .whitespaces).isEmpty)
+                Link("Créer une clé gratuite (DeepL API Free)", destination: URL(string: "https://www.deepl.com/pro-api")!)
+            }
+        } header: {
+            Text("Traduction")
+        } footer: {
+            Text("Optionnel. Le texte de la page part chez DeepL seulement quand tu touches « Traduire » (panneau d'étude). La clé reste dans le Trousseau de l'iPad. Offre gratuite : 500 000 caractères par mois.")
+        }
+        .onAppear(perform: refresh)
+    }
+
+    private func refresh() {
+        guard deepl.hasKey else { return }
+        Task {
+            if let u = try? await deepl.usage() {
+                usage = "\(u.used.formatted()) / \(u.limit.formatted()) caractères"
+            }
         }
     }
 }

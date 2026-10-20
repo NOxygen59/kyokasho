@@ -339,6 +339,13 @@ extension AppDatabase {
         }
     }
 
+    /// Tous les résultats OCR d'un document (recherche dans les pages scannées).
+    public func ocrResults(documentId: String) throws -> [OCRResultRecord] {
+        try writer.read { db in
+            try OCRResultRecord.filter(Column("documentId") == documentId).order(Column("pageIndex")).fetchAll(db)
+        }
+    }
+
     /// Moteurs déjà passés sur une page (pour « Comparer » et l'affichage du moteur).
     public func ocrEngines(documentId: String, pageIndex: Int) throws -> [String] {
         try writer.read { db in

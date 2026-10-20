@@ -40,11 +40,17 @@ final class ReaderController: NSObject, ObservableObject {
 
     struct SearchResult: Identifiable {
         let id = UUID()
-        let selection: PDFSelection
+        /// `nil` : trouvé dans le texte OCR (page scannée), pas dans le texte du PDF.
+        let selection: PDFSelection?
         let presentedIndex: Int
         let sourcePage: Int
         let context: String
+        var fromOCR: Bool { selection == nil }
     }
+
+    /// Lecture OCR de tout le document (pages scannées → texte cherchable).
+    @Published private(set) var documentOCRProgress: (done: Int, total: Int)?
+    private var documentOCRTask: Task<Void, Never>?
 
     private var transforms: [Int: PageTransform] = [:]
     private var highlights: [Highlight] = []
@@ -346,7 +352,7 @@ final class ReaderController: NSObject, ObservableObject {
     // MARK: OCR
 
     /// Page stable depuis un instant : OCR en cache affiché, OCR auto si demandé.
-    private func schedulePageSettled() {
+    func schedulePageSettled() {
         settleWork?.cancel()
         let work = DispatchWorkItem { [weak self] in self?.pageSettled() }
         settleWork = work
@@ -448,6 +454,7 @@ final class ReaderController: NSObject, ObservableObject {
         savePositionWork?.perform()
         cropTask?.cancel()
         ocrTask?.cancel()
+        documentOCRTask?.cancel()
         settleWork?.cancel()
         ink.flush()
         pdf?.cancelFindString()
@@ -761,12 +768,62 @@ final class ReaderController: NSObject, ObservableObject {
         }
         isSearching = true
         pdf.beginFindString(trimmed, withOptions: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive])
+        // Pages scannées : recherche aussi dans le texte OCR en cache.
+        let documentId = document.id
+        let engines = [OCREngineID.vision]
+        let service = model.ocr
+        Task { [weak self] in
+            let hits = await service.search(trimmed, documentId: documentId, engines: engines)
+            guard let self else { return }
+            let pdfPages = Set(self.searchResults.filter { !$0.fromOCR }.map(\.sourcePage))
+            for hit in hits where !pdfPages.contains(hit.page) {
+                let index = PresentationLayout.presentedIndex(ofSource: hit.page, in: self.presented)
+                let result = SearchResult(selection: nil, presentedIndex: index, sourcePage: hit.page,
+                                          context: "📷 " + hit.context.replacingOccurrences(of: "\n", with: " "))
+                let position = self.searchResults.firstIndex { $0.sourcePage > hit.page } ?? self.searchResults.endIndex
+                self.searchResults.insert(result, at: position)
+            }
+        }
+    }
+
+    /// Lit (OCR) toutes les pages qui n'ont pas encore de texte, en tâche de fond.
+    func ocrWholeDocument() {
+        guard documentOCRTask == nil else { return }
+        let url = fileURL
+        let documentId = document.id
+        let count = document.pageCount
+        let choice = settings.ocrEngine
+        let service = model.ocr
+        documentOCRProgress = (0, count)
+        documentOCRTask = Task { [weak self] in
+            for page in 0..<count {
+                if Task.isCancelled { break }
+                let engine = await Task.detached(priority: .utility) {
+                    OCRService.resolve(choice, url: url, pageIndex: page)
+                }.value
+                _ = try? await service.page(documentId: documentId, url: url, pageIndex: page, engine: engine)
+                await MainActor.run { self?.documentOCRProgress = (page + 1, count) }
+            }
+            await MainActor.run {
+                self?.documentOCRProgress = nil
+                self?.documentOCRTask = nil
+                self?.schedulePageSettled()
+            }
+        }
+    }
+
+    func cancelWholeDocumentOCR() {
+        documentOCRTask?.cancel()
     }
 
     func show(_ result: SearchResult) {
-        pdfView.go(to: result.selection)
-        result.selection.color = UIColor.systemOrange.withAlphaComponent(0.6)
-        pdfView.highlightedSelections = [result.selection]
+        guard let selection = result.selection else {
+            go(toSource: result.sourcePage)
+            return
+        }
+        pdfView.go(to: selection)
+        selection.color = UIColor.systemOrange.withAlphaComponent(0.6)
+        pdfView.highlightedSelections = [selection]
     }
 
     // MARK: Image de la page (pour l'IA)
