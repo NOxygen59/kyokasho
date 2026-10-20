@@ -1,0 +1,22 @@
+# Jamais de PDF ni de données tierces dans le dépôt
+*.pdf
+*.PDF
+
+# Xcode / SwiftPM
+/Kyokasho.xcodeproj/
+.build/
+.swiftpm/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+
+# Builds
+/build/
+/dist/
+/Payload/
+
+# Secrets locaux (identifiant Google, etc.)
+/App/Config/Local.xcconfig
+/App/Config/Secrets.plist
+
+.DS_Store
