@@ -29,6 +29,8 @@ public struct ReaderSettings: Codable, Equatable, Sendable {
     public var invertTapZones: Bool = false
     public var doubleTapZoom: Bool = true
     public var hideBarsOnScroll: Bool = true
+    /// Moteur OCR (remplaçable par document).
+    public var ocrEngine: OCREngineChoice = .auto
 
     public init() {}
 
@@ -51,6 +53,7 @@ public struct ReaderSettings: Codable, Equatable, Sendable {
         invertTapZones = try c.decodeIfPresent(Bool.self, forKey: .invertTapZones) ?? d.invertTapZones
         doubleTapZoom = try c.decodeIfPresent(Bool.self, forKey: .doubleTapZoom) ?? d.doubleTapZoom
         hideBarsOnScroll = try c.decodeIfPresent(Bool.self, forKey: .hideBarsOnScroll) ?? d.hideBarsOnScroll
+        ocrEngine = try c.decodeIfPresent(OCREngineChoice.self, forKey: .ocrEngine) ?? d.ocrEngine
     }
 
     public func applying(_ override: ReaderSettingsOverride) -> ReaderSettings {
@@ -68,6 +71,7 @@ public struct ReaderSettings: Codable, Equatable, Sendable {
         if let v = override.invertTapZones { s.invertTapZones = v }
         if let v = override.doubleTapZoom { s.doubleTapZoom = v }
         if let v = override.hideBarsOnScroll { s.hideBarsOnScroll = v }
+        if let v = override.ocrEngine { s.ocrEngine = v }
         return s
     }
 }
@@ -87,6 +91,7 @@ public struct ReaderSettingsOverride: Codable, Equatable, Sendable {
     public var invertTapZones: Bool?
     public var doubleTapZoom: Bool?
     public var hideBarsOnScroll: Bool?
+    public var ocrEngine: OCREngineChoice?
 
     public init() {}
 
@@ -98,17 +103,51 @@ public enum AppTheme: String, Codable, CaseIterable, Sendable {
     case dark, light, system
 }
 
+/// Choix du moteur OCR. `auto` : texte intégré au PDF s'il existe, sinon Apple Vision.
+public enum OCREngineChoice: String, Codable, CaseIterable, Sendable {
+    case auto, pdfText, vision
+}
+
+/// Style du lecteur de texte (texte OCR d'une page), inspiré du « lecteur de texte » d'Aidoku.
+public struct TextReaderSettings: Codable, Equatable, Sendable {
+    public enum Style: String, Codable, CaseIterable, Sendable { case scroll, pages }
+    public enum Font: String, Codable, CaseIterable, Sendable { case gothic, mincho, system }
+
+    public var style: Style = .scroll
+    public var font: Font = .gothic
+    public var fontSize: Double = 22
+    public var lineSpacing: Double = 0.6   // en fraction de la taille du texte
+    public var horizontalMargin: Double = 48
+
+    public init() {}
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        let d = TextReaderSettings()
+        style = try c.decodeIfPresent(Style.self, forKey: .style) ?? d.style
+        font = try c.decodeIfPresent(Font.self, forKey: .font) ?? d.font
+        fontSize = min(48, max(12, try c.decodeIfPresent(Double.self, forKey: .fontSize) ?? d.fontSize))
+        lineSpacing = min(2, max(0, try c.decodeIfPresent(Double.self, forKey: .lineSpacing) ?? d.lineSpacing))
+        horizontalMargin = min(200, max(0, try c.decodeIfPresent(Double.self, forKey: .horizontalMargin) ?? d.horizontalMargin))
+    }
+}
+
 /// Réglages généraux de l'app (hors lecteur).
 public struct AppSettings: Codable, Equatable, Sendable {
     public var theme: AppTheme = .dark
-    /// Moteur OCR (préparé pour la V2).
-    public var ocrEngine: String = "auto"
+    /// OCR automatique de la page lue (en tâche de fond, résultat en cache).
+    public var ocrAutoCurrentPage: Bool = false
+    /// Affiche les zones reconnues par l'OCR sur la page (lignes et caractères).
+    public var showOCRBoxes: Bool = false
+    public var textReader = TextReaderSettings()
 
     public init() {}
 
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         theme = try c.decodeIfPresent(AppTheme.self, forKey: .theme) ?? .dark
-        ocrEngine = try c.decodeIfPresent(String.self, forKey: .ocrEngine) ?? "auto"
+        ocrAutoCurrentPage = try c.decodeIfPresent(Bool.self, forKey: .ocrAutoCurrentPage) ?? false
+        showOCRBoxes = try c.decodeIfPresent(Bool.self, forKey: .showOCRBoxes) ?? false
+        textReader = try c.decodeIfPresent(TextReaderSettings.self, forKey: .textReader) ?? TextReaderSettings()
     }
 }

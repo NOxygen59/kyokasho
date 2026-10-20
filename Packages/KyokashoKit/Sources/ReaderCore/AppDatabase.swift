@@ -102,6 +102,35 @@ public final class AppDatabase: @unchecked Sendable {
             }
             for prompt in AIPrompt.defaults { try prompt.insert(db) }
         }
+        m.registerMigration("v2-ocr") { db in
+            // Cache OCR : une ligne par (document, page source, moteur). Changer de moteur n'efface rien.
+            try db.create(table: "ocrResult") { t in
+                t.column("documentId", .text).notNull().references("document", onDelete: .cascade, onUpdate: .cascade)
+                t.column("pageIndex", .integer).notNull()
+                t.column("engine", .text).notNull()
+                t.column("json", .blob).notNull()
+                t.column("durationMs", .integer).notNull()
+                t.column("createdAt", .datetime).notNull()
+                t.primaryKey(["documentId", "pageIndex", "engine"])
+            }
+            try db.create(table: "benchSample") { t in
+                t.primaryKey("id", .text)
+                t.column("title", .text).notNull()
+                t.column("imageFile", .text).notNull()
+                t.column("referenceText", .text).notNull()
+                t.column("createdAt", .datetime).notNull()
+            }
+            try db.create(table: "benchRun") { t in
+                t.primaryKey("id", .text)
+                t.column("sampleId", .text).notNull().references("benchSample", onDelete: .cascade)
+                t.column("engine", .text).notNull()
+                t.column("cer", .double).notNull()
+                t.column("durationMs", .integer).notNull()
+                t.column("text", .text).notNull()
+                t.column("createdAt", .datetime).notNull()
+            }
+            try db.create(index: "benchRun_sample", on: "benchRun", columns: ["sampleId", "engine"])
+        }
         return m
     }
 }
@@ -298,5 +327,80 @@ extension AppDatabase {
 
     public func deletePrompt(id: String) throws {
         try writer.write { db in _ = try AIPrompt.deleteOne(db, key: id) }
+    }
+}
+
+// MARK: - OCR
+
+extension AppDatabase {
+    public func ocrResult(documentId: String, pageIndex: Int, engine: String) throws -> OCRResultRecord? {
+        try writer.read { db in
+            try OCRResultRecord.fetchOne(db, key: ["documentId": documentId, "pageIndex": pageIndex, "engine": engine])
+        }
+    }
+
+    /// Moteurs déjà passés sur une page (pour « Comparer » et l'affichage du moteur).
+    public func ocrEngines(documentId: String, pageIndex: Int) throws -> [String] {
+        try writer.read { db in
+            try String.fetchAll(db, sql: "SELECT engine FROM ocrResult WHERE documentId = ? AND pageIndex = ? ORDER BY createdAt",
+                                arguments: [documentId, pageIndex])
+        }
+    }
+
+    public func save(_ record: OCRResultRecord) throws {
+        try writer.write { db in try record.save(db) }
+    }
+
+    /// Taille du cache OCR (octets) et nombre de pages.
+    public func ocrCacheStats() throws -> (bytes: Int, pages: Int) {
+        try writer.read { db in
+            let row = try Row.fetchOne(db, sql: "SELECT COALESCE(SUM(LENGTH(json)), 0) AS b, COUNT(*) AS n FROM ocrResult")
+            return (row?["b"] ?? 0, row?["n"] ?? 0)
+        }
+    }
+
+    public func clearOCRCache(documentId: String? = nil) throws {
+        try writer.write { db in
+            if let documentId {
+                try db.execute(sql: "DELETE FROM ocrResult WHERE documentId = ?", arguments: [documentId])
+            } else {
+                try db.execute(sql: "DELETE FROM ocrResult")
+            }
+        }
+    }
+
+    // MARK: Banc d'essai
+
+    public func benchSamples() throws -> [BenchSample] {
+        try writer.read { db in try BenchSample.order(Column("createdAt")).fetchAll(db) }
+    }
+
+    public func save(_ sample: BenchSample) throws {
+        try writer.write { db in try sample.save(db) }
+    }
+
+    public func deleteBenchSample(id: String) throws {
+        try writer.write { db in _ = try BenchSample.deleteOne(db, key: id) }
+    }
+
+    public func benchRuns(sampleId: String) throws -> [BenchRun] {
+        try writer.read { db in
+            try BenchRun.filter(Column("sampleId") == sampleId).order(Column("createdAt").desc).fetchAll(db)
+        }
+    }
+
+    /// Dernier essai de chaque (échantillon, moteur).
+    public func latestBenchRuns() throws -> [BenchRun] {
+        try writer.read { db in
+            try BenchRun.fetchAll(db, sql: """
+                SELECT r.* FROM benchRun r
+                JOIN (SELECT sampleId, engine, MAX(createdAt) AS c FROM benchRun GROUP BY sampleId, engine) last
+                ON r.sampleId = last.sampleId AND r.engine = last.engine AND r.createdAt = last.c
+                """)
+        }
+    }
+
+    public func save(_ run: BenchRun) throws {
+        try writer.write { db in try run.save(db) }
     }
 }

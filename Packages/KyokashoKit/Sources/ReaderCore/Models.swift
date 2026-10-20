@@ -256,3 +256,74 @@ extension JSONEncoder {
         return encoder
     }
 }
+
+/// Résultat OCR d'une page en cache (contenu = `OCRPage` encodé en JSON par OCRKit).
+public struct OCRResultRecord: Codable, Hashable, Sendable {
+    public var documentId: String
+    public var pageIndex: Int
+    public var engine: String
+    public var json: Data
+    public var durationMs: Int
+    public var createdAt: Date
+
+    public init(documentId: String, pageIndex: Int, engine: String, json: Data, durationMs: Int, createdAt: Date = Date()) {
+        self.documentId = documentId
+        self.pageIndex = pageIndex
+        self.engine = engine
+        self.json = json
+        self.durationMs = durationMs
+        self.createdAt = createdAt
+    }
+}
+
+extension OCRResultRecord: FetchableRecord, PersistableRecord {
+    public static let databaseTableName = "ocrResult"
+}
+
+/// Échantillon du banc d'essai OCR : une image (fichier) et son texte de référence.
+public struct BenchSample: Codable, Identifiable, Hashable, Sendable {
+    public var id: String
+    public var title: String
+    /// Nom du fichier image dans le dossier du banc d'essai.
+    public var imageFile: String
+    public var referenceText: String
+    public var createdAt: Date
+
+    public init(id: String = UUID().uuidString, title: String, imageFile: String, referenceText: String, createdAt: Date = Date()) {
+        self.id = id
+        self.title = title
+        self.imageFile = imageFile
+        self.referenceText = referenceText
+        self.createdAt = createdAt
+    }
+}
+
+extension BenchSample: FetchableRecord, PersistableRecord {
+    public static let databaseTableName = "benchSample"
+}
+
+/// Un passage d'un moteur sur un échantillon : taux d'erreur de caractères et durée.
+public struct BenchRun: Codable, Identifiable, Hashable, Sendable {
+    public var id: String
+    public var sampleId: String
+    public var engine: String
+    public var cer: Double
+    public var durationMs: Int
+    public var text: String
+    public var createdAt: Date
+
+    public init(id: String = UUID().uuidString, sampleId: String, engine: String, cer: Double, durationMs: Int,
+                text: String, createdAt: Date = Date()) {
+        self.id = id
+        self.sampleId = sampleId
+        self.engine = engine
+        self.cer = cer
+        self.durationMs = durationMs
+        self.text = text
+        self.createdAt = createdAt
+    }
+}
+
+extension BenchRun: FetchableRecord, PersistableRecord {
+    public static let databaseTableName = "benchRun"
+}
