@@ -6,7 +6,7 @@ import GRDB
 
 /// Un PDF importé. `id` = empreinte SHA-256 du fichier (hexadécimal) : un même fichier importé
 /// deux fois n'est stocké qu'une fois. Le fichier lui-même vit dans `DocumentStorage`, jamais modifié.
-public struct Document: Codable, Identifiable, Hashable, Sendable {
+public struct LibraryDocument: Codable, Identifiable, Hashable, Sendable {
     public var id: String
     public var title: String
     public var originalFileName: String
@@ -56,7 +56,7 @@ public struct Document: Codable, Identifiable, Hashable, Sendable {
     }
 }
 
-extension Document: FetchableRecord, PersistableRecord {
+extension LibraryDocument: FetchableRecord, PersistableRecord {
     public static let databaseTableName = "document"
 }
 

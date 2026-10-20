@@ -45,7 +45,7 @@ final class SettingsTests: XCTestCase {
     }
 
     func testDocumentOverrideRoundTrip() {
-        var doc = Document(id: "a", title: "t", originalFileName: "t.pdf", pageCount: 1, fileSize: 1)
+        var doc = LibraryDocument(id: "a", title: "t", originalFileName: "t.pdf", pageCount: 1, fileSize: 1)
         XCTAssertNil(doc.settingsJSON)
         var o = ReaderSettingsOverride()
         o.background = .white
@@ -182,8 +182,8 @@ final class DatabaseTests: XCTestCase {
     }
 
     func testReadingPositionAndOrdering() throws {
-        try db.save(Document(id: "a", title: "A", originalFileName: "a.pdf", pageCount: 10, fileSize: 1, importedAt: Date(timeIntervalSince1970: 1)))
-        try db.save(Document(id: "b", title: "B", originalFileName: "b.pdf", pageCount: 10, fileSize: 1, importedAt: Date(timeIntervalSince1970: 2)))
+        try db.save(LibraryDocument(id: "a", title: "A", originalFileName: "a.pdf", pageCount: 10, fileSize: 1, importedAt: Date(timeIntervalSince1970: 1)))
+        try db.save(LibraryDocument(id: "b", title: "B", originalFileName: "b.pdf", pageCount: 10, fileSize: 1, importedAt: Date(timeIntervalSince1970: 2)))
         XCTAssertEqual(try db.allDocuments().map(\.id), ["b", "a"])
         try db.updateReadingPosition(documentId: "a", pageIndex: 7, at: Date(timeIntervalSince1970: 3))
         XCTAssertEqual(try db.allDocuments().map(\.id), ["a", "b"], "le dernier ouvert en premier")
@@ -191,7 +191,7 @@ final class DatabaseTests: XCTestCase {
     }
 
     func testCascadeDeleteAndRekey() throws {
-        try db.save(Document(id: "old", title: "Cours", originalFileName: "c.pdf", pageCount: 5, fileSize: 1))
+        try db.save(LibraryDocument(id: "old", title: "Cours", originalFileName: "c.pdf", pageCount: 5, fileSize: 1))
         try db.save(PageComment(documentId: "old", pageIndex: 1, body: "note"))
         try db.save(Highlight(documentId: "old", pageIndex: 1, rects: [PageRect(x: 1, y: 2, width: 3, height: 4)], color: .green, text: "x"))
         try db.save(InkDrawing(documentId: "old", pageIndex: 2, data: Data([1, 2, 3])), isEmpty: false)
@@ -216,7 +216,7 @@ final class DatabaseTests: XCTestCase {
     }
 
     func testEmptyInkDeletesRow() throws {
-        try db.save(Document(id: "d", title: "D", originalFileName: "d.pdf", pageCount: 1, fileSize: 1))
+        try db.save(LibraryDocument(id: "d", title: "D", originalFileName: "d.pdf", pageCount: 1, fileSize: 1))
         try db.save(InkDrawing(documentId: "d", pageIndex: 0, data: Data([9])), isEmpty: false)
         XCTAssertEqual(try db.pagesWithInk(documentId: "d"), [0])
         try db.save(InkDrawing(documentId: "d", pageIndex: 0, data: Data()), isEmpty: true)
@@ -224,7 +224,7 @@ final class DatabaseTests: XCTestCase {
     }
 
     func testAutoCropStoredAsJSON() throws {
-        try db.save(Document(id: "d", title: "D", originalFileName: "d.pdf", pageCount: 1, fileSize: 1))
+        try db.save(LibraryDocument(id: "d", title: "D", originalFileName: "d.pdf", pageCount: 1, fileSize: 1))
         let crop = NormalizedRect(x: 0.1, y: 0.2, width: 0.7, height: 0.6)
         try db.save([PageTransform(documentId: "d", pageIndex: 0, autoCrop: crop)])
         XCTAssertEqual(try db.pageTransforms(documentId: "d")[0]?.autoCrop, crop)

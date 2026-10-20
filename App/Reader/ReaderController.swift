@@ -1,0 +1,653 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 NOxygen59
+
+import Combine
+import PDFKit
+import PencilKit
+import ReaderCore
+import UIKit
+
+/// Pilote le `PDFView` d'un document : construction des pages affichées (rognage, découpe,
+/// rotation — en mémoire, le fichier n'est jamais réécrit), réglages, navigation, gestes,
+/// surlignages, signets, recherche, sauvegarde de la position.
+@MainActor
+final class ReaderController: NSObject, ObservableObject {
+    let model: AppModel
+    @Published private(set) var document: LibraryDocument
+    let pdfView = ReaderPDFView()
+    let ink: InkStore
+
+    @Published private(set) var settings: ReaderSettings
+    @Published private(set) var pdf: PDFDocument?
+    @Published private(set) var presented: [PresentedPage] = []
+    @Published private(set) var currentIndex = 0
+    @Published var barsVisible = true
+    @Published private(set) var isDrawing = false
+    @Published private(set) var hasSelection = false
+    @Published private(set) var bookmarks: [Bookmark] = []
+    @Published var tappedHighlight: Highlight?
+    @Published var loadError: String?
+    @Published private(set) var searchResults: [SearchResult] = []
+    @Published private(set) var isSearching = false
+
+    struct SearchResult: Identifiable {
+        let id = UUID()
+        let selection: PDFSelection
+        let presentedIndex: Int
+        let sourcePage: Int
+        let context: String
+    }
+
+    private var transforms: [Int: PageTransform] = [:]
+    private var highlights: [Highlight] = []
+    /// Boîte et rotation d'origine de chaque page source (avant nos transformations).
+    private var originalBoxes: [Int: CGRect] = [:]
+    private var originalRotations: [Int: Int] = [:]
+    private var observers: [NSObjectProtocol] = []
+    private var savePositionWork: DispatchWorkItem?
+    private var cropTask: Task<Void, Never>?
+    private var singleTap: UITapGestureRecognizer!
+    private var doubleTap: UITapGestureRecognizer!
+    private var swipeLeft: UISwipeGestureRecognizer!
+    private var swipeRight: UISwipeGestureRecognizer!
+
+    init(document: LibraryDocument, model: AppModel) {
+        self.document = document
+        self.model = model
+        self.settings = model.settings(for: document)
+        self.ink = InkStore(documentId: document.id, model: model)
+        super.init()
+        ink.controller = self
+        configureGestures()
+        observe()
+    }
+
+    var fileURL: URL { model.storage.url(for: document.id) }
+
+    var currentSourcePage: Int {
+        presented.indices.contains(currentIndex) ? presented[currentIndex].source : document.lastPageIndex
+    }
+
+    var isCurrentPageBookmarked: Bool { bookmarks.contains { $0.pageIndex == currentSourcePage } }
+
+    // MARK: Chargement
+
+    func load() {
+        do {
+            transforms = try model.database.pageTransforms(documentId: document.id)
+            highlights = try model.database.highlights(documentId: document.id)
+            bookmarks = try model.database.bookmarks(documentId: document.id)
+            try ink.loadIndex()
+        } catch {
+            loadError = error.localizedDescription
+        }
+        rebuild(keepingSource: document.lastPageIndex)
+        markOpened()
+        startAutoCropIfNeeded()
+    }
+
+    /// (Re)construit le document affiché à partir du fichier et des transformations.
+    private func rebuild(keepingSource source: Int) {
+        guard let pdf = PDFDocument(url: fileURL) else {
+            loadError = "Impossible d'ouvrir ce PDF."
+            return
+        }
+        originalBoxes.removeAll(keepingCapacity: true)
+        originalRotations.removeAll(keepingCapacity: true)
+        let rtl = settings.direction == .rightToLeft
+        var splitPages = Set<Int>()
+
+        // De la fin vers le début : les insertions ne décalent pas les pages restant à traiter.
+        for index in stride(from: pdf.pageCount - 1, through: 0, by: -1) {
+            guard let page = pdf.page(at: index) else { continue }
+            let box = page.bounds(for: .cropBox)
+            originalBoxes[index] = box
+            originalRotations[index] = page.rotation
+            let transform = transforms[index]
+            if let extra = transform?.rotation, extra % 360 != 0 {
+                page.rotation = ((page.rotation + extra) % 360 + 360) % 360
+            }
+            let visibleSize = page.rotation % 180 == 0 ? box.size : CGSize(width: box.height, height: box.width)
+            let split = transform?.split ?? false || (settings.splitWidePages && PresentationLayout.isWide(visibleSize))
+            if split, let copy = page.copy() as? PDFPage {
+                splitPages.insert(index)
+                let first: PresentedPage.Part = rtl ? .right : .left
+                let second: PresentedPage.Part = rtl ? .left : .right
+                page.setBounds(PresentationLayout.box(for: first, in: box), for: .cropBox)
+                copy.setBounds(PresentationLayout.box(for: second, in: box), for: .cropBox)
+                pdf.insert(copy, at: index + 1)
+            } else if settings.autoCrop, let crop = transform?.autoCrop {
+                page.setBounds(ContentBounds.apply(crop, to: box), for: .cropBox)
+            }
+        }
+        presented = PresentationLayout.pages(pageCount: originalBoxes.count, splitPages: splitPages, rightToLeft: rtl)
+        addHighlightAnnotations(to: pdf)
+
+        self.pdf = pdf
+        pdf.delegate = self
+        pdfView.pageOverlayViewProvider = ink
+        pdfView.document = pdf
+        applyDisplaySettings()
+        go(toSource: source, animated: false)
+    }
+
+    private func markOpened() {
+        let id = document.id
+        let page = document.lastPageIndex
+        model.persist { try $0.updateReadingPosition(documentId: id, pageIndex: page) }
+    }
+
+    // MARK: Réglages
+
+    func applyDisplaySettings() {
+        let s = settings
+        let paginated = s.scrollMode == .paginated
+        let double = s.layout == .double
+        let rtl = s.direction == .rightToLeft
+
+        // Le contrôleur de pages de PDFKit (glissement entre pages) ne gère que la page simple.
+        let pageController = paginated && !double && s.transition == .slide
+        if pdfView.isUsingPageViewController != pageController {
+            pdfView.usePageViewController(pageController, withViewOptions: [UIPageViewController.OptionsKey.interPageSpacing: 24])
+        }
+        switch (double, paginated) {
+        case (false, true): pdfView.displayMode = .singlePage
+        case (false, false): pdfView.displayMode = .singlePageContinuous
+        case (true, true): pdfView.displayMode = .twoUp
+        case (true, false): pdfView.displayMode = .twoUpContinuous
+        }
+        pdfView.displayDirection = paginated ? .horizontal : .vertical
+        pdfView.displaysAsBook = double && s.firstPageAlone
+        pdfView.displaysRTL = rtl
+        pdfView.displaysPageBreaks = true
+        pdfView.pageBreakMargins = paginated ? .zero : UIEdgeInsets(top: 6, left: 0, bottom: 6, right: 0)
+        pdfView.pageShadowsEnabled = s.background != .black
+        pdfView.backgroundColor = s.background.uiColor
+        pdfView.autoScales = true
+        pdfView.minScaleFactor = pdfView.scaleFactorForSizeToFit
+        pdfView.maxScaleFactor = max(6, pdfView.scaleFactorForSizeToFit * 6)
+        // Sans contrôleur de pages, PDFKit ne tourne pas les pages au glisser : on le fait nous-mêmes.
+        let manualSwipe = paginated && !pageController && !isDrawing
+        swipeLeft.isEnabled = manualSwipe
+        swipeRight.isEnabled = manualSwipe
+        doubleTap.isEnabled = s.doubleTapZoom && !isDrawing
+        singleTap.isEnabled = !isDrawing
+        if s.doubleTapZoom {
+            singleTap.require(toFail: doubleTap)
+        }
+    }
+
+    /// Applique de nouveaux réglages (globaux ou du document). Reconstruit si la structure change.
+    func update(settings newSettings: ReaderSettings) {
+        let old = settings
+        settings = newSettings
+        let needsRebuild = old.direction != newSettings.direction || old.splitWidePages != newSettings.splitWidePages
+            || old.autoCrop != newSettings.autoCrop
+        if needsRebuild {
+            rebuild(keepingSource: currentSourcePage)
+            startAutoCropIfNeeded()
+        } else {
+            applyDisplaySettings()
+        }
+    }
+
+    func setDocumentOverride(_ override: ReaderSettingsOverride) {
+        document.settingsOverride = override
+        let doc = document
+        model.persist { try $0.save(doc) }
+        update(settings: model.readerDefaults.applying(override))
+    }
+
+    // MARK: Navigation
+
+    func go(toPresented index: Int, animated: Bool = true) {
+        guard let pdf, let page = pdf.page(at: max(0, min(index, pdf.pageCount - 1))) else { return }
+        pdfView.go(to: page)
+        currentIndex = pdf.index(for: page)
+    }
+
+    func go(toSource source: Int, animated: Bool = true) {
+        go(toPresented: PresentationLayout.presentedIndex(ofSource: source, in: presented), animated: animated)
+    }
+
+    func next() {
+        if pdfView.canGoToNextPage { pdfView.goToNextPage(nil) }
+    }
+
+    func previous() {
+        if pdfView.canGoToPreviousPage { pdfView.goToPreviousPage(nil) }
+    }
+
+    private func pageChanged() {
+        guard let pdf, let page = pdfView.currentPage else { return }
+        let index = pdf.index(for: page)
+        guard index != NSNotFound, index != currentIndex || presented.isEmpty == false else { return }
+        let changed = index != currentIndex
+        currentIndex = index
+        if changed, settings.hideBarsOnScroll, barsVisible { barsVisible = false }
+        scheduleSavePosition()
+        preloadThumbnails(around: currentSourcePage)
+    }
+
+    private func scheduleSavePosition() {
+        savePositionWork?.cancel()
+        let id = document.id
+        let page = currentSourcePage
+        document.lastPageIndex = page
+        let work = DispatchWorkItem { [model] in
+            model.persist { try $0.updateReadingPosition(documentId: id, pageIndex: page) }
+        }
+        savePositionWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6, execute: work)
+    }
+
+    /// Prépare les miniatures des pages voisines (aperçu instantané dans la barre de pages).
+    private func preloadThumbnails(around source: Int) {
+        let n = settings.preloadCount
+        guard n > 0 else { return }
+        let lower = max(0, source - n), upper = min(document.pageCount - 1, source + n)
+        guard lower <= upper else { return }
+        for page in lower...upper {
+            model.thumbnails.thumbnail(documentId: document.id, fileURL: fileURL, page: page, width: 240) { _ in }
+        }
+    }
+
+    func close() {
+        savePositionWork?.perform()
+        cropTask?.cancel()
+        ink.flush()
+        pdf?.cancelFindString()
+        observers.forEach(NotificationCenter.default.removeObserver)
+        observers.removeAll()
+    }
+
+    // MARK: Gestes
+
+    private func configureGestures() {
+        doubleTap = UITapGestureRecognizer(target: self, action: #selector(handleDoubleTap(_:)))
+        doubleTap.numberOfTapsRequired = 2
+        doubleTap.delegate = self
+        singleTap = UITapGestureRecognizer(target: self, action: #selector(handleTap(_:)))
+        singleTap.delegate = self
+        singleTap.require(toFail: doubleTap)
+        pdfView.addGestureRecognizer(doubleTap)
+        pdfView.addGestureRecognizer(singleTap)
+        swipeLeft = UISwipeGestureRecognizer(target: self, action: #selector(handleSwipe(_:)))
+        swipeLeft.direction = .left
+        swipeRight = UISwipeGestureRecognizer(target: self, action: #selector(handleSwipe(_:)))
+        swipeRight.direction = .right
+        for swipe in [swipeLeft!, swipeRight!] {
+            swipe.delegate = self
+            pdfView.addGestureRecognizer(swipe)
+        }
+    }
+
+    @objc private func handleSwipe(_ gesture: UISwipeGestureRecognizer) {
+        // Zoomé : le glisser sert à se déplacer dans la page, pas à tourner.
+        guard pdfView.scaleFactor <= pdfView.scaleFactorForSizeToFit * 1.05 else { return }
+        // Glisser vers la gauche = page suivante en lecture gauche → droite, l'inverse en droite → gauche.
+        let towardLeft = gesture.direction == .left
+        let forward = settings.direction == .rightToLeft ? !towardLeft : towardLeft
+        forward ? next() : previous()
+    }
+
+    @objc private func handleTap(_ gesture: UITapGestureRecognizer) {
+        let point = gesture.location(in: pdfView)
+        if hasSelection {
+            pdfView.clearSelection()
+            return
+        }
+        // Tap sur un surlignage : proposer de le supprimer.
+        if let page = pdfView.page(for: point, nearest: false) {
+            let pagePoint = pdfView.convert(point, to: page)
+            if let annotation = page.annotation(at: pagePoint), let name = annotation.userName, name.hasPrefix("hl:") {
+                let id = String(name.dropFirst(3))
+                tappedHighlight = highlights.first { $0.id == id }
+                return
+            }
+        }
+        switch TapZones.action(atFraction: point.x / max(pdfView.bounds.width, 1), settings: settings) {
+        case .next: next()
+        case .previous: previous()
+        case .toggleBars: barsVisible.toggle()
+        }
+    }
+
+    @objc private func handleDoubleTap(_ gesture: UITapGestureRecognizer) {
+        let point = gesture.location(in: pdfView)
+        let fit = pdfView.scaleFactorForSizeToFit
+        if pdfView.scaleFactor > fit * 1.05 {
+            pdfView.autoScales = true
+            return
+        }
+        guard let page = pdfView.page(for: point, nearest: true) else { return }
+        let pagePoint = pdfView.convert(point, to: page)
+        pdfView.autoScales = false
+        let target = fit * 2.5
+        pdfView.scaleFactor = target
+        let visible = CGSize(width: pdfView.bounds.width / target, height: pdfView.bounds.height / target)
+        pdfView.go(to: CGRect(x: pagePoint.x - visible.width / 2, y: pagePoint.y - visible.height / 2,
+                              width: visible.width, height: visible.height), on: page)
+    }
+
+    // MARK: Dessin
+
+    func setDrawing(_ on: Bool) {
+        isDrawing = on
+        pdfView.isInMarkupMode = on
+        if on {
+            pdfView.clearSelection()
+            barsVisible = true
+        }
+        ink.setEditing(on)
+        // PDFKit ne redemande les surcouches qu'au changement de fournisseur : on le réassigne pour
+        // que chaque page visible reçoive (ou perde) sa vue de dessin.
+        pdfView.pageOverlayViewProvider = nil
+        pdfView.pageOverlayViewProvider = ink
+        applyDisplaySettings()
+        DispatchQueue.main.async { [ink] in ink.showToolPicker(on) }
+    }
+
+    // MARK: Surlignages
+
+    private func addHighlightAnnotations(to pdf: PDFDocument) {
+        for highlight in highlights { annotate(highlight, in: pdf) }
+    }
+
+    private func pages(forSource source: Int, in pdf: PDFDocument) -> [PDFPage] {
+        presented.enumerated().compactMap { index, p in p.source == source ? pdf.page(at: index) : nil }
+    }
+
+    private func annotate(_ highlight: Highlight, in pdf: PDFDocument) {
+        for page in pages(forSource: highlight.pageIndex, in: pdf) {
+            for rect in highlight.rects {
+                let annotation = PDFAnnotation(bounds: CGRect(x: rect.x, y: rect.y, width: rect.width, height: rect.height),
+                                               forType: .highlight, withProperties: nil)
+                annotation.color = highlight.color.uiColor.withAlphaComponent(0.45)
+                annotation.userName = "hl:" + highlight.id
+                page.addAnnotation(annotation)
+            }
+        }
+    }
+
+    func highlightSelection(color: HighlightColor) {
+        guard let pdf, let selection = pdfView.currentSelection else { return }
+        var bySource: [Int: (rects: [PageRect], text: [String])] = [:]
+        for line in selection.selectionsByLine() {
+            for page in line.pages {
+                let index = pdf.index(for: page)
+                guard presented.indices.contains(index) else { continue }
+                let source = presented[index].source
+                let r = line.bounds(for: page)
+                guard r.width > 0, r.height > 0 else { continue }
+                bySource[source, default: ([], [])].rects.append(PageRect(x: r.minX, y: r.minY, width: r.width, height: r.height))
+                if let text = line.string { bySource[source, default: ([], [])].text.append(text) }
+            }
+        }
+        for (source, value) in bySource {
+            let highlight = Highlight(documentId: document.id, pageIndex: source, rects: value.rects, color: color,
+                                      text: value.text.joined(separator: "\n"))
+            highlights.append(highlight)
+            annotate(highlight, in: pdf)
+            model.persist { try $0.save(highlight) }
+        }
+        pdfView.clearSelection()
+    }
+
+    func deleteHighlight(_ highlight: Highlight) {
+        highlights.removeAll { $0.id == highlight.id }
+        if let pdf {
+            for page in pages(forSource: highlight.pageIndex, in: pdf) {
+                for annotation in page.annotations where annotation.userName == "hl:" + highlight.id {
+                    page.removeAnnotation(annotation)
+                }
+            }
+        }
+        model.persist { try $0.deleteHighlight(id: highlight.id) }
+    }
+
+    var allHighlights: [Highlight] { highlights }
+
+    // MARK: Signets
+
+    func toggleBookmark() {
+        let page = currentSourcePage
+        if let existing = bookmarks.first(where: { $0.pageIndex == page }) {
+            bookmarks.removeAll { $0.id == existing.id }
+            model.persist { try $0.deleteBookmark(id: existing.id) }
+        } else {
+            let bookmark = Bookmark(documentId: document.id, pageIndex: page, title: "Page \(page + 1)")
+            bookmarks.append(bookmark)
+            bookmarks.sort { $0.pageIndex < $1.pageIndex }
+            model.persist { try $0.save(bookmark) }
+        }
+    }
+
+    func rename(_ bookmark: Bookmark, to title: String) {
+        guard let i = bookmarks.firstIndex(where: { $0.id == bookmark.id }) else { return }
+        bookmarks[i].title = title
+        let updated = bookmarks[i]
+        model.persist { try $0.save(updated) }
+    }
+
+    func delete(_ bookmark: Bookmark) {
+        bookmarks.removeAll { $0.id == bookmark.id }
+        model.persist { try $0.deleteBookmark(id: bookmark.id) }
+    }
+
+    // MARK: Rotation et découpe de la page courante
+
+    func rotateCurrentPage() {
+        let source = currentSourcePage
+        var t = transforms[source] ?? PageTransform(documentId: document.id, pageIndex: source)
+        t.rotation = (t.rotation + 90) % 360
+        transforms[source] = t
+        model.persist { try $0.save(t) }
+        rebuild(keepingSource: source)
+    }
+
+    func toggleSplitCurrentPage() {
+        let source = currentSourcePage
+        var t = transforms[source] ?? PageTransform(documentId: document.id, pageIndex: source)
+        t.split.toggle()
+        transforms[source] = t
+        model.persist { try $0.save(t) }
+        rebuild(keepingSource: source)
+    }
+
+    var isCurrentPageSplit: Bool { presented.indices.contains(currentIndex) && presented[currentIndex].part != .whole }
+
+    // MARK: Rognage automatique (calculé en tâche de fond, mis en cache en base)
+
+    private func startAutoCropIfNeeded() {
+        cropTask?.cancel()
+        guard settings.autoCrop else { return }
+        let missing = (0..<document.pageCount).filter { transforms[$0]?.autoCrop == nil }
+        guard !missing.isEmpty else { return }
+        // Ordre : page courante puis vers l'extérieur, pour que ce qu'on lit soit rogné d'abord.
+        let start = currentSourcePage
+        let ordered = missing.sorted { abs($0 - start) < abs($1 - start) }
+        let url = fileURL
+        let documentId = document.id
+        cropTask = Task.detached(priority: .utility) { [weak self] in
+            guard let cg = CGPDFDocument(url as CFURL) else { return }
+            var batch: [Int: NormalizedRect] = [:]
+            for (n, index) in ordered.enumerated() {
+                if Task.isCancelled { return }
+                if let crop = autoreleasepool(invoking: { Self.detectCrop(cg, pageIndex: index) }) {
+                    batch[index] = crop
+                }
+                if batch.count >= 12 || n == ordered.count - 1 {
+                    let ready = batch
+                    batch.removeAll()
+                    await self?.applyCrops(ready, documentId: documentId)
+                }
+            }
+        }
+    }
+
+    nonisolated private static func detectCrop(_ document: CGPDFDocument, pageIndex: Int) -> NormalizedRect? {
+        guard let page = document.page(at: pageIndex + 1) else { return nil }
+        let box = page.getBoxRect(.cropBox)
+        let width = 160
+        let height = max(1, Int((Double(width) * box.height / max(box.width, 1)).rounded()))
+        var pixels = [UInt8](repeating: 255, count: width * height)
+        let ok: Bool = pixels.withUnsafeMutableBytes { buffer in
+            guard let ctx = CGContext(data: buffer.baseAddress, width: width, height: height, bitsPerComponent: 8,
+                                      bytesPerRow: width, space: CGColorSpaceCreateDeviceGray(),
+                                      bitmapInfo: CGImageAlphaInfo.none.rawValue) else { return false }
+            ctx.setFillColor(gray: 1, alpha: 1)
+            ctx.fill(CGRect(x: 0, y: 0, width: width, height: height))
+            ctx.interpolationQuality = .low
+            ctx.scaleBy(x: CGFloat(width) / box.width, y: CGFloat(height) / box.height)
+            ctx.translateBy(x: -box.minX, y: -box.minY)
+            ctx.drawPDFPage(page)
+            return true
+        }
+        guard ok else { return nil }
+        // Le contexte a l'origine en bas : les lignes du tampon vont du haut vers le bas, comme attendu.
+        return pixels.withUnsafeBufferPointer {
+            ContentBounds.detect(pixels: $0, width: width, height: height, bytesPerRow: width)
+        } ?? NormalizedRect.full
+    }
+
+    private func applyCrops(_ crops: [Int: NormalizedRect], documentId: String) {
+        guard documentId == document.id, settings.autoCrop, let pdf else { return }
+        var toSave: [PageTransform] = []
+        for (index, crop) in crops {
+            var t = transforms[index] ?? PageTransform(documentId: documentId, pageIndex: index)
+            t.autoCrop = crop
+            transforms[index] = t
+            toSave.append(t)
+            guard !(t.split), let box = originalBoxes[index] else { continue }
+            for page in pages(forSource: index, in: pdf) {
+                page.setBounds(ContentBounds.apply(crop, to: box), for: .cropBox)
+            }
+        }
+        model.persist { try $0.save(toSave) }
+        pdfView.layoutDocumentView()
+    }
+
+    // MARK: Recherche
+
+    func search(_ query: String) {
+        guard let pdf else { return }
+        pdf.cancelFindString()
+        searchResults = []
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            isSearching = false
+            pdfView.highlightedSelections = nil
+            return
+        }
+        isSearching = true
+        pdf.beginFindString(trimmed, withOptions: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive])
+    }
+
+    func show(_ result: SearchResult) {
+        pdfView.go(to: result.selection)
+        result.selection.color = UIColor.systemOrange.withAlphaComponent(0.6)
+        pdfView.highlightedSelections = [result.selection]
+    }
+
+    // MARK: Image de la page (pour l'IA)
+
+    /// Rendu net de la page affichée (≈ 2 048 px de large), pour le presse-papiers.
+    func renderCurrentPage(maxWidth: CGFloat = 2048) -> UIImage? {
+        guard let pdf, let page = pdf.page(at: currentIndex) else { return nil }
+        let box = page.bounds(for: .cropBox)
+        let rotated = page.rotation % 180 != 0
+        let size = rotated ? CGSize(width: box.height, height: box.width) : box.size
+        let scale = maxWidth / max(size.width, 1)
+        return page.thumbnail(of: CGSize(width: size.width * scale, height: size.height * scale), for: .cropBox)
+    }
+
+    // MARK: Notifications
+
+    private func observe() {
+        let center = NotificationCenter.default
+        observers.append(center.addObserver(forName: .PDFViewPageChanged, object: pdfView, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.pageChanged() }
+        })
+        observers.append(center.addObserver(forName: .PDFViewSelectionChanged, object: pdfView, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                let text = self.pdfView.currentSelection?.string ?? ""
+                self.hasSelection = !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            }
+        })
+        observers.append(center.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.savePositionWork?.perform()
+                self?.ink.flush()
+            }
+        })
+    }
+}
+
+// MARK: - Délégués
+
+extension ReaderController: UIGestureRecognizerDelegate {
+    nonisolated func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
+                                       shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool {
+        true
+    }
+}
+
+extension ReaderController: PDFDocumentDelegate {
+    nonisolated func didMatchString(_ instance: PDFSelection) {
+        MainActor.assumeIsolated {
+            guard let pdf, let page = instance.pages.first else { return }
+            let index = pdf.index(for: page)
+            let context = instance.copy() as? PDFSelection
+            context?.extend(atStart: 20)
+            context?.extend(atEnd: 30)
+            let text = (context?.string ?? instance.string ?? "")
+                .replacingOccurrences(of: "\n", with: " ")
+                .trimmingCharacters(in: .whitespaces)
+            let source = presented.indices.contains(index) ? presented[index].source : index
+            searchResults.append(SearchResult(selection: instance, presentedIndex: index, sourcePage: source, context: text))
+        }
+    }
+
+    nonisolated func documentDidEndDocumentFind(_ notification: Notification) {
+        MainActor.assumeIsolated { isSearching = false }
+    }
+}
+
+// MARK: - Vue PDF
+
+/// `PDFView` qui garde l'échelle « page entière » à jour quand la taille change (rotation, Split View).
+final class ReaderPDFView: PDFView {
+    override func layoutSubviews() {
+        let wasFit = autoScales
+        super.layoutSubviews()
+        if wasFit {
+            minScaleFactor = scaleFactorForSizeToFit
+        }
+    }
+}
+
+extension ReaderSettings.Background {
+    var uiColor: UIColor {
+        switch self {
+        case .black: return .black
+        case .darkGray: return UIColor(white: 0.11, alpha: 1)
+        case .gray: return UIColor(white: 0.32, alpha: 1)
+        case .white: return .white
+        case .sepia: return UIColor(red: 0.96, green: 0.92, blue: 0.83, alpha: 1)
+        }
+    }
+}
+
+extension HighlightColor {
+    var uiColor: UIColor {
+        switch self {
+        case .yellow: return UIColor(red: 1.0, green: 0.85, blue: 0.2, alpha: 1)
+        case .green: return UIColor(red: 0.45, green: 0.85, blue: 0.4, alpha: 1)
+        case .blue: return UIColor(red: 0.35, green: 0.65, blue: 1.0, alpha: 1)
+        case .pink: return UIColor(red: 1.0, green: 0.45, blue: 0.7, alpha: 1)
+        case .orange: return UIColor(red: 1.0, green: 0.6, blue: 0.25, alpha: 1)
+        }
+    }
+}

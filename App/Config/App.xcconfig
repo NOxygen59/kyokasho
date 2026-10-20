@@ -1,0 +1,5 @@
+// SPDX-License-Identifier: MIT
+// Réglages communs. L'identifiant Google (optionnel) est dans Local.xcconfig, jamais versionné.
+GOOGLE_CLIENT_ID =
+GOOGLE_REVERSED_CLIENT_ID = fr.noxygen59.kyokasho.noauth
+#include? "Local.xcconfig"

@@ -109,22 +109,22 @@ public final class AppDatabase: @unchecked Sendable {
 // MARK: - Documents
 
 extension AppDatabase {
-    public func allDocuments() throws -> [Document] {
+    public func allDocuments() throws -> [LibraryDocument] {
         try writer.read { db in
-            try Document.order(sql: "COALESCE(lastOpenedAt, importedAt) DESC").fetchAll(db)
+            try LibraryDocument.order(sql: "COALESCE(lastOpenedAt, importedAt) DESC").fetchAll(db)
         }
     }
 
-    public func document(id: String) throws -> Document? {
-        try writer.read { db in try Document.fetchOne(db, key: id) }
+    public func document(id: String) throws -> LibraryDocument? {
+        try writer.read { db in try LibraryDocument.fetchOne(db, key: id) }
     }
 
-    public func save(_ document: Document) throws {
+    public func save(_ document: LibraryDocument) throws {
         try writer.write { db in try document.save(db) }
     }
 
     public func deleteDocument(id: String) throws {
-        try writer.write { db in _ = try Document.deleteOne(db, key: id) }
+        try writer.write { db in _ = try LibraryDocument.deleteOne(db, key: id) }
     }
 
     /// Enregistre la position de lecture (appelé souvent : requête minimale).
@@ -137,15 +137,15 @@ extension AppDatabase {
 
     /// Une nouvelle version d'un document (ex. cours mis à jour sur Drive) remplace l'ancienne :
     /// toutes les annotations suivent grâce aux clés étrangères `ON UPDATE CASCADE`.
-    public func rekeyDocument(from oldId: String, to newDocument: Document) throws {
+    public func rekeyDocument(from oldId: String, to newDocument: LibraryDocument) throws {
         try writer.write { db in
-            if oldId != newDocument.id, try Document.exists(db, key: newDocument.id) {
+            if oldId != newDocument.id, try LibraryDocument.exists(db, key: newDocument.id) {
                 // La nouvelle version existe déjà : on y rattache les annotations de l'ancienne.
                 for table in ["pageTransform", "highlight", "inkDrawing", "bookmark", "pageComment"] {
                     try db.execute(sql: "UPDATE OR IGNORE \(table) SET documentId = ? WHERE documentId = ?",
                                    arguments: [newDocument.id, oldId])
                 }
-                _ = try Document.deleteOne(db, key: oldId)
+                _ = try LibraryDocument.deleteOne(db, key: oldId)
                 try newDocument.update(db)
             } else {
                 try db.execute(sql: "UPDATE document SET id = ? WHERE id = ?", arguments: [newDocument.id, oldId])
@@ -155,9 +155,9 @@ extension AppDatabase {
     }
 
     /// Publie la bibliothèque à chaque changement (pour l'interface).
-    public func documentsPublisher() -> AnyPublisher<[Document], Error> {
+    public func documentsPublisher() -> AnyPublisher<[LibraryDocument], Error> {
         ValueObservation
-            .tracking { db in try Document.order(sql: "COALESCE(lastOpenedAt, importedAt) DESC").fetchAll(db) }
+            .tracking { db in try LibraryDocument.order(sql: "COALESCE(lastOpenedAt, importedAt) DESC").fetchAll(db) }
             .publisher(in: writer, scheduling: .immediate)
             .eraseToAnyPublisher()
     }

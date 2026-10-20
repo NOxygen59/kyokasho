@@ -35,7 +35,7 @@ public enum ImportError: LocalizedError, Equatable {
 }
 
 public struct ImportResult: Equatable, Sendable {
-    public var document: Document
+    public var document: LibraryDocument
     /// `false` si le même fichier était déjà dans la bibliothèque.
     public var isNew: Bool
 }
@@ -114,7 +114,7 @@ public struct DocumentImporter: Sendable {
             try FileManager.default.moveItem(at: temp, to: destination)
         }
         let size = (try? FileManager.default.attributesOfItem(atPath: destination.path)[.size] as? NSNumber)?.int64Value ?? 0
-        let document = Document(id: hash, title: title, originalFileName: fileName, pageCount: pageCount,
+        let document = LibraryDocument(id: hash, title: title, originalFileName: fileName, pageCount: pageCount,
                                 fileSize: size, driveFileId: driveFileId, driveRevision: driveRevision)
         try database.save(document)
         return ImportResult(document: document, isNew: true)
@@ -123,7 +123,7 @@ public struct DocumentImporter: Sendable {
     /// Remplace un document par une nouvelle version (même cours mis à jour) en gardant
     /// annotations, signets, commentaires et position de lecture.
     @discardableResult
-    public func replace(documentId oldId: String, withFileAt source: URL, driveRevision: String? = nil) throws -> Document {
+    public func replace(documentId oldId: String, withFileAt source: URL, driveRevision: String? = nil) throws -> LibraryDocument {
         guard var old = try database.document(id: oldId) else { throw ImportError.unreadable("document inconnu") }
         let hash = try Self.sha256(of: source)
         if hash == oldId {
