@@ -27,7 +27,7 @@ struct ReaderScreen: View {
             HStack(spacing: 0) {
                 ZStack {
                     PDFViewHost(view: reader.pdfView)
-                        .ignoresSafeArea()
+                        .ignoresSafeArea(edges: .vertical)
                     if reader.barsVisible || reader.isDrawing {
                         VStack(spacing: 0) {
                             topBar
@@ -40,6 +40,7 @@ struct ReaderScreen: View {
                         Text(error).padding().background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
                     }
                 }
+                .clipped()
                 .animation(.easeInOut(duration: 0.18), value: reader.barsVisible)
                 if showWeb {
                     Divider()
@@ -60,7 +61,7 @@ struct ReaderScreen: View {
         .sheet(item: $sheet) { sheet in
             Group {
                 switch sheet {
-                case .search: SearchSheet(reader: reader)
+                case .search: SearchSheet(reader: reader, close: { self.sheet = nil })
                 case .bookmarks: BookmarksSheet(reader: reader)
                 case .comments: CommentsSheet(reader: reader)
                 case .ai: AIPageSheet(reader: reader, openWeb: { self.sheet = nil; showWeb = true })
@@ -129,7 +130,8 @@ struct ReaderScreen: View {
     private var bottomBar: some View {
         let count = max(reader.presented.count, 1)
         let shown = scrubbing.map { Int($0) } ?? reader.currentIndex
-        let source = reader.presented.indices.contains(shown) ? reader.presented[shown].source : shown
+        let source = scrubbing == nil ? reader.currentSourcePage
+            : (reader.presented.indices.contains(shown) ? reader.presented[shown].source : shown)
         return VStack(spacing: 8) {
             if scrubbing != nil {
                 ScrubPreview(documentId: reader.document.id, fileURL: reader.fileURL, page: source)

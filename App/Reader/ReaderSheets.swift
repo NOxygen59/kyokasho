@@ -11,7 +11,8 @@ import WebKit
 
 struct SearchSheet: View {
     @ObservedObject var reader: ReaderController
-    @Environment(\.dismiss) private var dismiss
+    /// Fermeture explicite : `close()` avec une recherche active peut fermer aussi le lecteur.
+    var close: () -> Void
     @State private var query = ""
 
     var body: some View {
@@ -25,7 +26,7 @@ struct SearchSheet: View {
                 ForEach(reader.searchResults) { result in
                     Button {
                         reader.show(result)
-                        dismiss()
+                        close()
                     } label: {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Page \(result.sourcePage + 1)").font(.caption.bold()).foregroundStyle(.secondary)
@@ -40,7 +41,7 @@ struct SearchSheet: View {
             .onChange(of: query) { if $0.isEmpty { reader.search("") } }
             .navigationTitle(reader.searchResults.isEmpty ? "Rechercher" : "\(reader.searchResults.count) résultat(s)")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("OK") { dismiss() } } }
+            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("OK") { close() } } }
         }
     }
 }
@@ -196,6 +197,12 @@ struct CommentsSheet: View {
     var body: some View {
         NavigationStack {
             List {
+                Picker("Afficher", selection: $showAll) {
+                    Text("Cette page").tag(false)
+                    Text("Tout le document").tag(true)
+                }
+                .pickerStyle(.segmented)
+                .listRowBackground(Color.clear)
                 if !showAll {
                     Section("Nouveau commentaire — page \(page + 1)") {
                         TextEditor(text: $draft).frame(minHeight: 90)
@@ -228,13 +235,6 @@ struct CommentsSheet: View {
             .navigationTitle("Commentaires")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Picker("", selection: $showAll) {
-                        Text("Cette page").tag(false)
-                        Text("Tout le document").tag(true)
-                    }
-                    .pickerStyle(.segmented)
-                }
                 ToolbarItemGroup(placement: .confirmationAction) {
                     ShareLink(item: MarkdownFile(text: markdown, name: reader.document.title),
                               preview: SharePreview("\(reader.document.title).md")) {

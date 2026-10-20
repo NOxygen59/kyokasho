@@ -29,6 +29,9 @@ final class InkStore: NSObject, PDFPageOverlayViewProvider {
         self.documentId = documentId
         self.model = model
         super.init()
+        // Les pages sont claires même en thème sombre : couleurs d'encre non inversées, stylo noir.
+        toolPicker.colorUserInterfaceStyle = .light
+        toolPicker.selectedTool = PKInkingTool(.pen, color: .black, width: 3)
     }
 
     func loadIndex() throws {
@@ -81,11 +84,15 @@ final class InkStore: NSObject, PDFPageOverlayViewProvider {
 
     /// Affiche ou masque la palette d'outils (après que PDFKit a recréé les surcouches).
     func showToolPicker(_ on: Bool) {
-        if on, let first = liveViews.allObjects.first {
-            toolPicker.setVisible(true, forFirstResponder: first.canvas)
-            first.canvas.becomeFirstResponder()
+        let canvases = liveViews.allObjects.compactMap(\.existingCanvas)
+        if on, let first = canvases.first {
+            toolPicker.setVisible(true, forFirstResponder: first)
+            first.becomeFirstResponder()
         } else {
-            for view in liveViews.allObjects { toolPicker.setVisible(false, forFirstResponder: view.canvas) }
+            for canvas in canvases {
+                toolPicker.setVisible(false, forFirstResponder: canvas)
+                canvas.resignFirstResponder()
+            }
         }
     }
 
@@ -97,10 +104,10 @@ final class InkStore: NSObject, PDFPageOverlayViewProvider {
             let index = pdf.index(for: page)
             guard controller.presented.indices.contains(index) else { return nil }
             let source = controller.presented[index].source
-            // Pas de surcouche inutile : seulement si la page a déjà un dessin, ou si on dessine.
-            guard editing || pagesWithInk.contains(source) else { return nil }
+            // Surcouche légère pour chaque page affichée (PDFKit ne la redemande pas quand on passe en
+            // mode dessin) ; la vue PencilKit n'est créée qu'en mode dessin ou si la page a un dessin.
             let overlay = InkPageView(store: self, sourcePage: source, box: page.bounds(for: .cropBox), rotation: page.rotation)
-            overlay.show(drawing(forSource: source))
+            if pagesWithInk.contains(source) { overlay.show(drawing(forSource: source)) }
             overlay.setEditing(editing, toolPicker: toolPicker, finger: model.drawWithFinger)
             liveViews.add(overlay)
             return overlay
@@ -110,7 +117,7 @@ final class InkStore: NSObject, PDFPageOverlayViewProvider {
     nonisolated func pdfView(_ pdfView: PDFView, willEndDisplayingOverlayView overlayView: UIView, for page: PDFPage) {
         MainActor.assumeIsolated {
             guard let overlay = overlayView as? InkPageView else { return }
-            toolPicker.removeObserver(overlay.canvas)
+            if let canvas = overlay.existingCanvas { toolPicker.removeObserver(canvas) }
             liveViews.remove(overlay)
             if !dirty.isEmpty { flush() }
         }
@@ -119,7 +126,8 @@ final class InkStore: NSObject, PDFPageOverlayViewProvider {
 
 /// Surcouche d'une page : vue PencilKit transparente, dans le repère de la page affichée.
 final class InkPageView: UIView, PKCanvasViewDelegate {
-    let canvas = PKCanvasView()
+    private var canvas: PKCanvasView?
+    var existingCanvas: PKCanvasView? { canvas }
     let sourcePage: Int
     private let box: CGRect
     private let rotation: Int
@@ -137,12 +145,25 @@ final class InkPageView: UIView, PKCanvasViewDelegate {
         backgroundColor = .clear
         isOpaque = false
         clipsToBounds = true
+        isUserInteractionEnabled = false
+    }
+
+    /// Crée la vue PencilKit à la première utilisation (mémoire : rien pour les pages sans dessin).
+    @discardableResult
+    private func ensureCanvas() -> PKCanvasView {
+        if let canvas { return canvas }
+        let canvas = PKCanvasView(frame: bounds)
         canvas.backgroundColor = .clear
         canvas.isOpaque = false
         canvas.isScrollEnabled = false
         canvas.contentInsetAdjustmentBehavior = .never
+        canvas.isUserInteractionEnabled = false
+        // Encre affichée telle quelle (sinon le noir devient blanc en thème sombre).
+        canvas.overrideUserInterfaceStyle = .light
         canvas.delegate = self
         addSubview(canvas)
+        self.canvas = canvas
+        return canvas
     }
 
     required init?(coder: NSCoder) { fatalError("non utilisé") }
@@ -157,7 +178,7 @@ final class InkPageView: UIView, PKCanvasViewDelegate {
 
     override func layoutSubviews() {
         super.layoutSubviews()
-        canvas.frame = bounds
+        canvas?.frame = bounds
         if bounds.size != lastSize, bounds.width > 0 {
             lastSize = bounds.size
             apply()
@@ -166,11 +187,13 @@ final class InkPageView: UIView, PKCanvasViewDelegate {
 
     func show(_ drawing: PKDrawing) {
         canonical = drawing
+        if canvas == nil && drawing.strokes.isEmpty { return }
+        ensureCanvas()
         apply()
     }
 
     private func apply() {
-        guard bounds.width > 0 else { return }
+        guard bounds.width > 0, let canvas else { return }
         applying = true
         canvas.drawing = canonical.transformed(using: pageTransform)
         applying = false
@@ -178,6 +201,9 @@ final class InkPageView: UIView, PKCanvasViewDelegate {
 
     @MainActor
     func setEditing(_ on: Bool, toolPicker: PKToolPicker, finger: Bool) {
+        isUserInteractionEnabled = on
+        guard on || canvas != nil else { return }
+        let canvas = ensureCanvas()
         canvas.isUserInteractionEnabled = on
         canvas.drawingPolicy = finger ? .anyInput : .pencilOnly
         if on {
@@ -190,7 +216,7 @@ final class InkPageView: UIView, PKCanvasViewDelegate {
 
     // Laisse passer les touches vers PDFKit hors mode dessin.
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        canvas.isUserInteractionEnabled ? super.hitTest(point, with: event) : nil
+        canvas?.isUserInteractionEnabled == true ? super.hitTest(point, with: event) : nil
     }
 
     func canvasViewDrawingDidChange(_ canvasView: PKCanvasView) {

@@ -59,6 +59,7 @@ final class ReaderController: NSObject, ObservableObject {
         self.document = document
         self.model = model
         self.settings = model.settings(for: document)
+        self.currentSourcePage = document.lastPageIndex
         self.ink = InkStore(documentId: document.id, model: model)
         super.init()
         ink.controller = self
@@ -68,9 +69,9 @@ final class ReaderController: NSObject, ObservableObject {
 
     var fileURL: URL { model.storage.url(for: document.id) }
 
-    var currentSourcePage: Int {
-        presented.indices.contains(currentIndex) ? presented[currentIndex].source : document.lastPageIndex
-    }
+    /// Page source en cours de lecture. En double page, la première page *lue* de la double page
+    /// (celle de droite en lecture droite → gauche), pas la première dans l'ordre interne.
+    @Published private(set) var currentSourcePage = 0
 
     var isCurrentPageBookmarked: Bool { bookmarks.contains { $0.pageIndex == currentSourcePage } }
 
@@ -182,9 +183,7 @@ final class ReaderController: NSObject, ObservableObject {
         pdfView.pageBreakMargins = paginated ? .zero : UIEdgeInsets(top: 6, left: 0, bottom: 6, right: 0)
         pdfView.pageShadowsEnabled = s.background != .black
         pdfView.backgroundColor = s.background.uiColor
-        pdfView.autoScales = true
-        pdfView.minScaleFactor = pdfView.scaleFactorForSizeToFit
-        pdfView.maxScaleFactor = max(6, pdfView.scaleFactorForSizeToFit * 6)
+        DispatchQueue.main.async { [pdfView] in pdfView.fitToPage() }
         // Sans contrôleur de pages, PDFKit ne tourne pas les pages au glisser : on le fait nous-mêmes.
         let manualSwipe = paginated && !pageController && !isDrawing
         swipeLeft.isEnabled = manualSwipe
@@ -225,6 +224,9 @@ final class ReaderController: NSObject, ObservableObject {
         guard let pdf, let page = pdf.page(at: max(0, min(index, pdf.pageCount - 1))) else { return }
         pdfView.go(to: page)
         currentIndex = pdf.index(for: page)
+        updateCurrentSourcePage()
+        // Les pages visibles ne sont connues qu'après la mise en page : on recalcule juste après.
+        DispatchQueue.main.async { [weak self] in self?.updateCurrentSourcePage() }
     }
 
     func go(toSource source: Int, animated: Bool = true) {
@@ -245,9 +247,23 @@ final class ReaderController: NSObject, ObservableObject {
         guard index != NSNotFound, index != currentIndex || presented.isEmpty == false else { return }
         let changed = index != currentIndex
         currentIndex = index
+        updateCurrentSourcePage()
         if changed, !rebuilding, settings.hideBarsOnScroll, barsVisible { barsVisible = false }
         scheduleSavePosition()
         preloadThumbnails(around: currentSourcePage)
+    }
+
+    private func updateCurrentSourcePage() {
+        guard let pdf, presented.indices.contains(currentIndex) else { return }
+        var source = presented[currentIndex].source
+        if settings.layout == .double {
+            let visible = pdfView.visiblePages.map { pdf.index(for: $0) }.filter { presented.indices.contains($0) }
+            if let first = visible.map({ presented[$0].source }).min() { source = min(source, first) }
+        }
+        if source != currentSourcePage {
+            currentSourcePage = source
+            scheduleSavePosition()
+        }
     }
 
     private func scheduleSavePosition() {
@@ -337,13 +353,12 @@ final class ReaderController: NSObject, ObservableObject {
     @objc private func handleDoubleTap(_ gesture: UITapGestureRecognizer) {
         let point = gesture.location(in: pdfView)
         let fit = pdfView.scaleFactorForSizeToFit
-        if pdfView.scaleFactor > fit * 1.05 {
-            pdfView.autoScales = true
+        if !pdfView.isAtFit {
+            pdfView.fitToPage()
             return
         }
         guard let page = pdfView.page(for: point, nearest: true) else { return }
         let pagePoint = pdfView.convert(point, to: page)
-        pdfView.autoScales = false
         let target = fit * 2.5
         pdfView.scaleFactor = target
         let visible = CGSize(width: pdfView.bounds.width / target, height: pdfView.bounds.height / target)
@@ -361,10 +376,6 @@ final class ReaderController: NSObject, ObservableObject {
             barsVisible = true
         }
         ink.setEditing(on)
-        // PDFKit ne redemande les surcouches qu'au changement de fournisseur : on le réassigne pour
-        // que chaque page visible reçoive (ou perde) sa vue de dessin.
-        pdfView.pageOverlayViewProvider = nil
-        pdfView.pageOverlayViewProvider = ink
         applyDisplaySettings()
         DispatchQueue.main.async { [ink] in ink.showToolPicker(on) }
     }
@@ -548,10 +559,7 @@ final class ReaderController: NSObject, ObservableObject {
         model.persist { try $0.save(toSave) }
         pdfView.layoutDocumentView()
         // Les tailles de page ont changé : recalcul de l'échelle « page entière » (sauf si zoomé).
-        if pdfView.autoScales {
-            pdfView.autoScales = false
-            pdfView.autoScales = true
-        }
+        if pdfView.isAtFit { pdfView.fitToPage() }
     }
 
     // MARK: Recherche
@@ -580,7 +588,9 @@ final class ReaderController: NSObject, ObservableObject {
 
     /// Rendu net de la page affichée (≈ 2 048 px de large), pour le presse-papiers.
     func renderCurrentPage(maxWidth: CGFloat = 2048) -> UIImage? {
-        guard let pdf, let page = pdf.page(at: currentIndex) else { return nil }
+        // La page lue (en double page : la première lue, pas la première dans l'ordre interne).
+        let index = presented.firstIndex { $0.source == currentSourcePage } ?? currentIndex
+        guard let pdf, let page = pdf.page(at: index) else { return nil }
         let box = page.bounds(for: .cropBox)
         let rotated = page.rotation % 180 != 0
         let size = rotated ? CGSize(width: box.height, height: box.width) : box.size
@@ -632,7 +642,10 @@ extension ReaderController: PDFDocumentDelegate {
                 .replacingOccurrences(of: "\n", with: " ")
                 .trimmingCharacters(in: .whitespaces)
             let source = presented.indices.contains(index) ? presented[index].source : index
-            searchResults.append(SearchResult(selection: instance, presentedIndex: index, sourcePage: source, context: text))
+            let result = SearchResult(selection: instance, presentedIndex: index, sourcePage: source, context: text)
+            // Résultats triés par page de lecture (l'ordre interne peut différer en droite → gauche).
+            let position = searchResults.firstIndex { $0.sourcePage > source } ?? searchResults.endIndex
+            searchResults.insert(result, at: position)
         }
     }
 
@@ -645,11 +658,39 @@ extension ReaderController: PDFDocumentDelegate {
 
 /// `PDFView` qui garde l'échelle « page entière » à jour quand la taille change (rotation, Split View).
 final class ReaderPDFView: PDFView {
+    private var lastSize: CGSize = .zero
+    private var lastFit: CGFloat = 0
+
+    /// Vrai si la page est affichée « entière » (pas de zoom de l'utilisateur).
+    var isAtFit: Bool {
+        lastFit == 0 || abs(scaleFactor - lastFit) / lastFit < 0.02
+    }
+
+    /// Ajuste la page à la vue. (On n'utilise pas `autoScales` : PDFKit le désactive dès qu'on
+    /// règle le zoom minimum, et ne réajuste alors plus rien quand la taille change.)
+    func fitToPage() {
+        layoutDocumentView()
+        let fit = scaleFactorForSizeToFit
+        guard fit > 0 else { return }
+        minScaleFactor = fit
+        maxScaleFactor = max(6, fit * 6)
+        scaleFactor = fit
+        lastFit = fit
+    }
+
     override func layoutSubviews() {
-        let wasFit = autoScales
         super.layoutSubviews()
-        if wasFit {
-            minScaleFactor = scaleFactorForSizeToFit
+        guard bounds.size != lastSize, bounds.width > 0 else { return }
+        lastSize = bounds.size
+        let wasFit = isAtFit
+        // Après la mise en page de PDFKit : panneau latéral, Split View, rotation.
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            if wasFit {
+                self.fitToPage()
+            } else {
+                self.minScaleFactor = self.scaleFactorForSizeToFit
+            }
         }
     }
 }
