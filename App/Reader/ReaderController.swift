@@ -53,6 +53,9 @@ final class ReaderController: NSObject, ObservableObject {
     private var singleTap: UITapGestureRecognizer!
     private var doubleTap: UITapGestureRecognizer!
     private var swipeLeft: UISwipeGestureRecognizer!
+    /// Appui long en cours ou terminé (sélection de texte de PDFKit) : le tap qui suit est ignoré.
+    private var pressWasLong = false
+    private var longPressWatcher: UILongPressGestureRecognizer!
     private var swipeRight: UISwipeGestureRecognizer!
 
     init(document: LibraryDocument, model: AppModel) {
@@ -144,7 +147,12 @@ final class ReaderController: NSObject, ObservableObject {
         rebuilding = true
         self.pdf = pdf
         pdf.delegate = self
-        pdfView.pageOverlayViewProvider = ink
+        #if DEBUG
+        let overlays = !UserDefaults.standard.bool(forKey: "debugNoOverlays")
+        #else
+        let overlays = true
+        #endif
+        pdfView.pageOverlayViewProvider = overlays ? ink : nil
         pdfView.document = pdf
         applyDisplaySettings()
         go(toSource: source, animated: false)
@@ -307,15 +315,37 @@ final class ReaderController: NSObject, ObservableObject {
         singleTap = UITapGestureRecognizer(target: self, action: #selector(handleTap(_:)))
         singleTap.delegate = self
         singleTap.require(toFail: doubleTap)
-        pdfView.addGestureRecognizer(doubleTap)
-        pdfView.addGestureRecognizer(singleTap)
+        #if DEBUG
+        let attach = !UserDefaults.standard.bool(forKey: "debugNoGestures")
+        #else
+        let attach = true
+        #endif
+        // Nos gestes ne doivent jamais bloquer ceux de PDFKit (sélection de texte à l'appui long,
+        // poignées, menu) : ils observent les touches sans les annuler ni les retarder.
+        for gesture in [doubleTap!, singleTap!] {
+            gesture.cancelsTouchesInView = false
+            gesture.delaysTouchesEnded = false
+        }
+        // Observe seulement (n'empêche rien) : marque les appuis longs pour que le tap les ignore.
+        longPressWatcher = UILongPressGestureRecognizer(target: self, action: #selector(handleLongPress(_:)))
+        longPressWatcher.minimumPressDuration = 0.35
+        longPressWatcher.cancelsTouchesInView = false
+        longPressWatcher.delaysTouchesEnded = false
+        longPressWatcher.delegate = self
+        if attach {
+            pdfView.addGestureRecognizer(doubleTap)
+            pdfView.addGestureRecognizer(singleTap)
+            pdfView.addGestureRecognizer(longPressWatcher)
+        }
         swipeLeft = UISwipeGestureRecognizer(target: self, action: #selector(handleSwipe(_:)))
         swipeLeft.direction = .left
         swipeRight = UISwipeGestureRecognizer(target: self, action: #selector(handleSwipe(_:)))
         swipeRight.direction = .right
         for swipe in [swipeLeft!, swipeRight!] {
             swipe.delegate = self
-            pdfView.addGestureRecognizer(swipe)
+            swipe.cancelsTouchesInView = false
+            swipe.delaysTouchesEnded = false
+            if attach { pdfView.addGestureRecognizer(swipe) }
         }
     }
 
@@ -328,7 +358,13 @@ final class ReaderController: NSObject, ObservableObject {
         forward ? next() : previous()
     }
 
+    @objc private func handleLongPress(_ gesture: UILongPressGestureRecognizer) {
+        if gesture.state == .began { pressWasLong = true }
+    }
+
     @objc private func handleTap(_ gesture: UITapGestureRecognizer) {
+        // Un appui long sert à sélectionner du texte (PDFKit) : ce n'est pas un tap.
+        guard !pressWasLong else { return }
         let point = gesture.location(in: pdfView)
         if hasSelection {
             pdfView.clearSelection()
@@ -627,6 +663,14 @@ extension ReaderController: UIGestureRecognizerDelegate {
     nonisolated func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer,
                                        shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool {
         true
+    }
+
+    nonisolated func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
+        MainActor.assumeIsolated {
+            // Nouveau contact : on oublie l'appui long précédent.
+            if gestureRecognizer === longPressWatcher { pressWasLong = false }
+        }
+        return true
     }
 }
 
