@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 NOxygen59
 
+import OCRKit
 import PDFKit
 import ReaderCore
 import SwiftUI
@@ -14,7 +15,7 @@ struct ReaderScreen: View {
     @State private var scrubbing: Double?
 
     enum Sheet: String, Identifiable {
-        case search, bookmarks, comments, ai, settings
+        case search, bookmarks, comments, ai, settings, text
         var id: String { rawValue }
     }
 
@@ -66,6 +67,7 @@ struct ReaderScreen: View {
                 case .comments: CommentsSheet(reader: reader)
                 case .ai: AIPageSheet(reader: reader, openWeb: { self.sheet = nil; showWeb = true })
                 case .settings: DocumentSettingsSheet(reader: reader)
+                case .text: TextPageSheet(reader: reader, close: { self.sheet = nil })
                 }
             }
             .environmentObject(model)
@@ -103,6 +105,7 @@ struct ReaderScreen: View {
                     .foregroundStyle(reader.isDrawing ? Color.accentColor : Color.primary)
             }
             .accessibilityLabel(reader.isDrawing ? "Terminer le dessin" : "Dessiner")
+            barButton("text.viewfinder", "Texte de la page (OCR)") { sheet = .text }
             barButton("sparkles", "Page vers IA") { sheet = .ai }
             barButton(showWeb ? "sidebar.trailing" : "globe", "claude.ai") { showWeb.toggle() }
             Menu {
@@ -139,6 +142,7 @@ struct ReaderScreen: View {
             HStack(spacing: 14) {
                 Text("\(source + 1) / \(reader.document.pageCount)")
                     .font(.footnote.monospacedDigit()).frame(minWidth: 84, alignment: .leading)
+                OCRBadge(reader: reader) { sheet = .text }
                 if count > 1 {
                     Slider(value: Binding(get: { scrubbing ?? Double(reader.currentIndex) },
                                           set: { scrubbing = $0 }),
@@ -219,5 +223,34 @@ extension HighlightColor {
         case .pink: return "rose"
         case .orange: return "orange"
         }
+    }
+}
+
+/// Moteur OCR de la page lue (barre d'info) ; touche pour ouvrir le texte.
+struct OCRBadge: View {
+    @ObservedObject var reader: ReaderController
+    var open: () -> Void
+
+    var body: some View {
+        Button(action: open) {
+            HStack(spacing: 4) {
+                switch reader.ocrState {
+                case .running:
+                    ProgressView().controlSize(.mini)
+                    Text("OCR…")
+                case .failed:
+                    Image(systemName: "exclamationmark.triangle")
+                    Text("OCR")
+                case .idle:
+                    Image(systemName: "text.viewfinder")
+                    Text(reader.ocrPage.map { OCREngineID.displayName($0.engine) } ?? "OCR")
+                }
+            }
+            .font(.caption)
+            .padding(.horizontal, 8).padding(.vertical, 4)
+            .background(.thinMaterial, in: Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Texte de la page")
     }
 }

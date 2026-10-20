@@ -3,6 +3,7 @@
 
 import Combine
 import Foundation
+import OCRKit
 import ReaderCore
 import SwiftUI
 
@@ -13,6 +14,9 @@ final class AppModel: ObservableObject {
     let storage: DocumentStorage
     let importer: DocumentImporter
     let thumbnails: ThumbnailCache
+    let ocr: OCRService
+    /// Images du banc d'essai OCR.
+    let benchDirectory: URL
 
     @Published private(set) var documents: [LibraryDocument] = []
     @Published var appSettings: AppSettings {
@@ -63,6 +67,9 @@ final class AppModel: ObservableObject {
         storage = DocumentStorage(root: support.appendingPathComponent("Documents", isDirectory: true))
         importer = DocumentImporter(storage: storage, database: database)
         thumbnails = ThumbnailCache(directory: caches.appendingPathComponent("Thumbnails", isDirectory: true))
+        ocr = OCRService(database: database)
+        benchDirectory = support.appendingPathComponent("Bench", isDirectory: true)
+        try? FileManager.default.createDirectory(at: benchDirectory, withIntermediateDirectories: true)
         appSettings = (try? database.appSettings()) ?? AppSettings()
         readerDefaults = (try? database.readerDefaults()) ?? .default
 

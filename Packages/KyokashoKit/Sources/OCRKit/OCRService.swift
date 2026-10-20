@@ -34,7 +34,9 @@ public actor OCRService {
     /// Résultat en cache, sans rien calculer.
     public func cached(documentId: String, pageIndex: Int, engine: String) -> OCRPage? {
         guard let record = try? database.ocrResult(documentId: documentId, pageIndex: pageIndex, engine: engine) else { return nil }
-        return try? decoder.decode(OCRPage.self, from: record.json)
+        guard let page = try? decoder.decode(OCRPage.self, from: record.json),
+              page.version >= OCRPage.currentVersion else { return nil }
+        return page
     }
 
     /// Résultat de la page (cache, sinon calcul + mise en cache).

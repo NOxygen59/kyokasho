@@ -2,6 +2,7 @@
 // Copyright (c) 2026 NOxygen59
 
 import Combine
+import OCRKit
 import PDFKit
 import PencilKit
 import ReaderCore
@@ -29,6 +30,13 @@ final class ReaderController: NSObject, ObservableObject {
     @Published var loadError: String?
     @Published private(set) var searchResults: [SearchResult] = []
     @Published private(set) var isSearching = false
+    /// OCR de la page lue (première page lue en double page).
+    @Published private(set) var ocrPage: OCRPage?
+    @Published private(set) var ocrState: OCRState = .idle
+
+    enum OCRState: Equatable {
+        case idle, running, failed(String)
+    }
 
     struct SearchResult: Identifiable {
         let id = UUID()
@@ -50,6 +58,8 @@ final class ReaderController: NSObject, ObservableObject {
     private var observers: [NSObjectProtocol] = []
     private var savePositionWork: DispatchWorkItem?
     private var cropTask: Task<Void, Never>?
+    private var ocrTask: Task<Void, Never>?
+    private var settleWork: DispatchWorkItem?
     private var singleTap: UITapGestureRecognizer!
     private var doubleTap: UITapGestureRecognizer!
     private var swipeLeft: UISwipeGestureRecognizer!
@@ -92,6 +102,7 @@ final class ReaderController: NSObject, ObservableObject {
         rebuild(keepingSource: document.lastPageIndex)
         markOpened()
         startAutoCropIfNeeded()
+        schedulePageSettled()
     }
 
     /// (Re)construit le document affiché à partir du fichier et des transformations.
@@ -165,6 +176,9 @@ final class ReaderController: NSObject, ObservableObject {
         model.persist { try $0.updateReadingPosition(documentId: id, pageIndex: page) }
     }
 
+    /// `cropBox` d'origine d'une page source (repère des résultats OCR).
+    func originalBox(ofSource source: Int) -> CGRect? { originalBoxes[source] }
+
     // MARK: Réglages
 
     func applyDisplaySettings() {
@@ -217,6 +231,7 @@ final class ReaderController: NSObject, ObservableObject {
         } else {
             applyDisplaySettings()
         }
+        if old.ocrEngine != newSettings.ocrEngine { schedulePageSettled() }
     }
 
     func setDocumentOverride(_ override: ReaderSettingsOverride) {
@@ -289,6 +304,7 @@ final class ReaderController: NSObject, ObservableObject {
         if changed, !rebuilding, settings.hideBarsOnScroll, barsVisible { barsVisible = false }
         scheduleSavePosition()
         preloadThumbnails(around: currentSourcePage)
+        schedulePageSettled()
     }
 
     private func updateCurrentSourcePage() {
@@ -327,9 +343,112 @@ final class ReaderController: NSObject, ObservableObject {
         }
     }
 
+    // MARK: OCR
+
+    /// Page stable depuis un instant : OCR en cache affiché, OCR auto si demandé.
+    private func schedulePageSettled() {
+        settleWork?.cancel()
+        let work = DispatchWorkItem { [weak self] in self?.pageSettled() }
+        settleWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35, execute: work)
+    }
+
+    private func pageSettled() {
+        ink.showOCRBoxes = model.appSettings.showOCRBoxes
+        ocrPage = nil
+        ocrState = .idle
+        let source = currentSourcePage
+        let visible = visibleSources()
+        Task { [weak self] in
+            guard let self else { return }
+            // Zones en cache pour toutes les pages visibles (double page).
+            for page in visible {
+                if let cached = await self.cachedOCR(source: page) { self.ink.setOCR(cached, source: page) }
+            }
+            if let cached = await self.cachedOCR(source: source) {
+                if self.currentSourcePage == source { self.ocrPage = cached }
+            } else if self.model.appSettings.ocrAutoCurrentPage {
+                self.runOCR()
+            }
+        }
+    }
+
+    private func visibleSources() -> [Int] {
+        guard let pdf else { return [currentSourcePage] }
+        let sources = pdfView.visiblePages.map { pdf.index(for: $0) }.filter { presented.indices.contains($0) }.map { presented[$0].source }
+        return Array(Set(sources)).sorted()
+    }
+
+    /// Moteurs à essayer, dans l'ordre, pour lire le cache d'une page.
+    private func preferredEngines() -> [String] {
+        switch settings.ocrEngine {
+        case .pdfText: return [OCREngineID.pdfText]
+        case .vision: return [OCREngineID.vision]
+        case .auto: return [OCREngineID.pdfText, OCREngineID.vision]
+        }
+    }
+
+    private func cachedOCR(source: Int) async -> OCRPage? {
+        for engine in preferredEngines() {
+            if let page = await model.ocr.cached(documentId: document.id, pageIndex: source, engine: engine) { return page }
+        }
+        return nil
+    }
+
+    /// Lance l'OCR de la page lue (en tâche de fond ; le cache évite de refaire).
+    /// - Parameters:
+    ///   - engine: moteur imposé (sinon : réglage du document, « auto » résolu selon la page).
+    ///   - force: ignore le cache (bouton « Relancer »).
+    func runOCR(engine: String? = nil, force: Bool = false) {
+        ocrTask?.cancel()
+        let source = currentSourcePage
+        let url = fileURL
+        let documentId = document.id
+        let choice = settings.ocrEngine
+        let service = model.ocr
+        ocrState = .running
+        ocrTask = Task { [weak self] in
+            let engineID: String
+            if let engine {
+                engineID = engine
+            } else {
+                engineID = await Task.detached(priority: .userInitiated) {
+                    OCRService.resolve(choice, url: url, pageIndex: source)
+                }.value
+            }
+            do {
+                let page = try await service.page(documentId: documentId, url: url, pageIndex: source, engine: engineID, force: force)
+                guard let self, !Task.isCancelled else { return }
+                self.ink.setOCR(page, source: source)
+                if self.currentSourcePage == source {
+                    self.ocrPage = page
+                    self.ocrState = .idle
+                }
+            } catch is CancellationError {
+                return
+            } catch {
+                guard let self, self.currentSourcePage == source else { return }
+                self.ocrState = .failed(error.localizedDescription)
+            }
+        }
+    }
+
+    /// OCR d'une page avec un moteur précis (comparaison), sans changer la page affichée.
+    func ocr(engine: String) async throws -> OCRPage {
+        try await model.ocr.page(documentId: document.id, url: fileURL, pageIndex: currentSourcePage, engine: engine)
+    }
+
+    func setShowOCRBoxes(_ on: Bool) {
+        model.appSettings.showOCRBoxes = on
+        ink.showOCRBoxes = on
+        if on { pageSettled() }
+    }
+
     func close() {
         savePositionWork?.perform()
         cropTask?.cancel()
+        ocrTask?.cancel()
+        settleWork?.cancel()
         ink.flush()
         pdf?.cancelFindString()
         observers.forEach(NotificationCenter.default.removeObserver)

@@ -8,7 +8,7 @@
 # Kyōkasho
 
 Lecteur **personnel** de cours et de manuels PDF pour iPad : lecture façon Aidoku, annotations,
-commentaires, page vers IA, Google Drive. Prévu ensuite : OCR japonais (V2), dictionnaire au
+commentaires, page vers IA, Google Drive. OCR japonais (V2, voir [docs/OCR.md](docs/OCR.md)). Prévu ensuite : dictionnaire au
 toucher façon Yomitan (V3), cartes de révision FSRS (V4), moteurs OCR supplémentaires (V5).
 Plan complet : [PLAN.md](PLAN.md).
 
@@ -23,6 +23,7 @@ Textes des licences : [LICENSES/](LICENSES/) ; attributions : [THIRD_PARTY_NOTIC
 
 | Version | Release | Contenu |
 |---|---|---|
+| **0.2.0** (V2) | [v0.2.0](https://github.com/NOxygen59/kyokasho/releases/tag/v0.2.0) | OCR : texte du PDF / Apple Vision, lecteur de texte, comparaison, banc d'essai |
 | **0.1.1** | [v0.1.1](https://github.com/NOxygen59/kyokasho/releases/tag/v0.1.1) | Glissement animé en double page |
 | **0.1.0** (V1) | [v0.1.0](https://github.com/NOxygen59/kyokasho/releases/tag/v0.1.0) | Lecteur, annotations, commentaires, page vers IA, Google Drive |
 

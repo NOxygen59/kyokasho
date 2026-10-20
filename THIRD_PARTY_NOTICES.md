@@ -8,7 +8,7 @@
 
 ## Code porté
 
-Aucun pour l'instant (V1 = code original uniquement). Chaque portage futur sera listé ici avec
+Aucun pour l'instant (V1–V2 = code original uniquement). Chaque portage futur sera listé ici avec
 l'URL du dépôt, le commit source et la licence, et gardera l'en-tête de copyright d'origine.
 
 ## Inspirations (comportement seulement, aucun code repris en V1)

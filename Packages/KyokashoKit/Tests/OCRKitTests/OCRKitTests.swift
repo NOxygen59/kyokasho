@@ -135,6 +135,18 @@ final class EngineTests: XCTestCase {
         for line in page.lines { XCTAssertEqual(line.charBoxes.count, line.text.count) }
     }
 
+    /// Les boîtes de Vision (image rendue) doivent tomber au même endroit que le texte du PDF.
+    func testVisionBoxesMatchPDFText() async throws {
+        let url = try makeTextPDF(lines: ["照明計画を考える。", "空間の印象"], size: 34)
+        let pdf = try await PDFTextEngine().recognize(.pdfPage(url: url, index: 0))
+        let vision = try await VisionOCREngine().recognize(.pdfPage(url: url, index: 0))
+        let a = try XCTUnwrap(pdf.lines.first?.box)
+        let b = try XCTUnwrap(vision.lines.first?.box)
+        XCTAssertEqual(a.x, b.x, accuracy: 0.03)
+        XCTAssertEqual(a.midY, b.midY, accuracy: 0.03)
+        XCTAssertEqual(a.w, b.w, accuracy: 0.08)
+    }
+
     func testRendererSize() throws {
         let url = try makeTextPDF(lines: ["A"])
         let image = try PageRenderer.render(url: url, pageIndex: 0, longSide: 1000)
@@ -164,6 +176,11 @@ final class ServiceTests: XCTestCase {
         // Un autre moteur ne remplace pas le premier.
         _ = try await service.page(documentId: "d", url: url, pageIndex: 0, engine: OCREngineID.vision)
         XCTAssertEqual(Set(try db.ocrEngines(documentId: "d", pageIndex: 0)), [OCREngineID.pdfText, OCREngineID.vision])
+        // Ancien format (sans version) : ignoré, donc refait.
+        try db.save(OCRResultRecord(documentId: "d", pageIndex: 0, engine: "old",
+                                    json: Data(#"{"engine":"old","lines":[],"durationMs":1}"#.utf8), durationMs: 1))
+        let stale = await service.cached(documentId: "d", pageIndex: 0, engine: "old")
+        XCTAssertNil(stale)
         try db.clearOCRCache(documentId: "d")
         XCTAssertEqual(try db.ocrCacheStats().pages, 0)
     }

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 NOxygen59
 
+import OCRKit
 import PDFKit
 import PencilKit
 import ReaderCore
@@ -22,6 +23,18 @@ final class InkStore: NSObject, PDFPageOverlayViewProvider {
     private var dirty: Set<Int> = []
     private var saveWork: DispatchWorkItem?
     private var editing = false
+    /// Zones OCR à dessiner (si le réglage est actif), par page source.
+    private(set) var ocrPages: [Int: OCRPage] = [:]
+    var showOCRBoxes = false {
+        didSet { for view in liveViews.allObjects { view.showOCR(showOCRBoxes ? ocrPages[view.sourcePage] : nil) } }
+    }
+
+    func setOCR(_ page: OCRPage?, source: Int) {
+        ocrPages[source] = page
+        guard showOCRBoxes else { return }
+        for view in liveViews.allObjects where view.sourcePage == source { view.showOCR(page) }
+    }
+
     /// Surcouches visibles (pour mettre à jour les deux moitiés d'une page découpée).
     private let liveViews = NSHashTable<InkPageView>.weakObjects()
 
@@ -106,8 +119,10 @@ final class InkStore: NSObject, PDFPageOverlayViewProvider {
             let source = controller.presented[index].source
             // Surcouche légère pour chaque page affichée (PDFKit ne la redemande pas quand on passe en
             // mode dessin) ; la vue PencilKit n'est créée qu'en mode dessin ou si la page a un dessin.
-            let overlay = InkPageView(store: self, sourcePage: source, box: page.bounds(for: .cropBox), rotation: page.rotation)
+            let overlay = InkPageView(store: self, sourcePage: source, box: page.bounds(for: .cropBox), rotation: page.rotation,
+                                      sourceBox: controller.originalBox(ofSource: source) ?? page.bounds(for: .cropBox))
             if pagesWithInk.contains(source) { overlay.show(drawing(forSource: source)) }
+            if showOCRBoxes { overlay.showOCR(ocrPages[source]) }
             overlay.setEditing(editing, toolPicker: toolPicker, finger: model.drawWithFinger)
             liveViews.add(overlay)
             return overlay
@@ -131,21 +146,59 @@ final class InkPageView: UIView, PKCanvasViewDelegate {
     let sourcePage: Int
     private let box: CGRect
     private let rotation: Int
+    /// `cropBox` d'origine de la page source : repère des résultats OCR.
+    private let sourceBox: CGRect
     private weak var store: InkStore?
+    private let ocrLineLayer = CAShapeLayer()
+    private let ocrCharLayer = CAShapeLayer()
+    private var ocrPage: OCRPage?
     private var applying = false
     private var lastSize: CGSize = .zero
     private var canonical = PKDrawing()
 
-    init(store: InkStore, sourcePage: Int, box: CGRect, rotation: Int) {
+    init(store: InkStore, sourcePage: Int, box: CGRect, rotation: Int, sourceBox: CGRect) {
         self.store = store
         self.sourcePage = sourcePage
         self.box = box
         self.rotation = rotation
+        self.sourceBox = sourceBox
         super.init(frame: .zero)
         backgroundColor = .clear
         isOpaque = false
         clipsToBounds = true
         isUserInteractionEnabled = false
+        for (layer, color, width) in [(ocrCharLayer, UIColor.systemBlue.withAlphaComponent(0.45), 0.5),
+                                      (ocrLineLayer, UIColor.systemOrange.withAlphaComponent(0.9), 1.0)] {
+            layer.fillColor = nil
+            layer.strokeColor = color.cgColor
+            layer.lineWidth = width
+            self.layer.addSublayer(layer)
+        }
+    }
+
+    /// Zones OCR (lignes en orange, caractères en bleu) ; `nil` pour les masquer.
+    func showOCR(_ page: OCRPage?) {
+        ocrPage = page
+        drawOCR()
+    }
+
+    private func drawOCR() {
+        guard let page = ocrPage, bounds.width > 0, sourceBox.width > 0 else {
+            ocrLineLayer.path = nil
+            ocrCharLayer.path = nil
+            return
+        }
+        let transform = pageTransform
+        func path(_ boxes: [NormBox]) -> CGPath {
+            let p = CGMutablePath()
+            for b in boxes {
+                p.addRect(CGRect(x: sourceBox.minX + b.x * sourceBox.width, y: sourceBox.maxY - (b.y + b.h) * sourceBox.height,
+                                 width: b.w * sourceBox.width, height: b.h * sourceBox.height), transform: transform)
+            }
+            return p
+        }
+        ocrLineLayer.path = path(page.lines.map(\.box))
+        ocrCharLayer.path = path(page.lines.flatMap(\.charBoxes))
     }
 
     /// Crée la vue PencilKit à la première utilisation (mémoire : rien pour les pages sans dessin).
@@ -182,6 +235,7 @@ final class InkPageView: UIView, PKCanvasViewDelegate {
         if bounds.size != lastSize, bounds.width > 0 {
             lastSize = bounds.size
             apply()
+            drawOCR()
         }
     }
 

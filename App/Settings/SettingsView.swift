@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 NOxygen59
 
+import OCRKit
 import ReaderCore
 import SwiftUI
 
@@ -27,11 +28,11 @@ struct SettingsView: View {
                     Text("Désactivé : seul l'Apple Pencil dessine, le doigt fait défiler. Le PDF original n'est jamais modifié.")
                 }
                 Section {
-                    NavigationLink("Moteur et options") { OCRSettingsPlaceholder() }
+                    NavigationLink("Moteur, texte et banc d'essai") { OCRSettingsView() }
                 } header: {
                     Text("OCR")
                 } footer: {
-                    Text("Arrive en V2 : Apple Vision (japonais), cache par page, comparaison des moteurs.")
+                    Text("Moteur par défaut : \(model.readerDefaults.ocrEngine.label).")
                 }
                 Section("Google Drive") {
                     NavigationLink("Compte Google Drive") { DriveAccountView() }
@@ -134,6 +135,10 @@ struct DocumentSettingsSheet: View {
                     OptionalBool("Double tap zoom", value: $override.doubleTapZoom, defaultValue: d.doubleTapZoom)
                     OptionalBool("Masquer les barres", value: $override.hideBarsOnScroll, defaultValue: d.hideBarsOnScroll)
                 }
+                Section("OCR") {
+                    OptionalPicker("Moteur", value: $override.ocrEngine, defaultValue: d.ocrEngine,
+                                   options: OCREngineChoice.allCases.map { ($0, $0.label) })
+                }
                 Section {
                     Button("Tout remettre par défaut", role: .destructive) { override = ReaderSettingsOverride() }
                         .disabled(override.isEmpty)
@@ -188,16 +193,79 @@ struct OptionalBool: View {
     }
 }
 
-struct OCRSettingsPlaceholder: View {
+extension OCREngineChoice {
+    var label: String {
+        switch self {
+        case .auto: return "Auto"
+        case .pdfText: return "Texte du PDF"
+        case .vision: return "Apple Vision"
+        }
+    }
+}
+
+struct OCRSettingsView: View {
+    @EnvironmentObject private var model: AppModel
+    @State private var cache: (bytes: Int, pages: Int) = (0, 0)
+
     var body: some View {
         Form {
             Section {
-                Text("Rien à régler pour l'instant.").foregroundStyle(.secondary)
+                Picker("Moteur par défaut", selection: $model.readerDefaults.ocrEngine) {
+                    ForEach(OCREngineChoice.allCases, id: \.self) { Text($0.label).tag($0) }
+                }
+                Toggle("OCR automatique de la page lue", isOn: $model.appSettings.ocrAutoCurrentPage)
+                Toggle("Afficher les zones reconnues", isOn: $model.appSettings.showOCRBoxes)
+            } header: {
+                Text("Moteur")
             } footer: {
-                Text("Prévu en V2 : choix du moteur (Auto / Apple Vision), remplaçable par document, comparaison et banc d'essai.")
+                Text("Auto : texte intégré au PDF quand il existe (exact et instantané), sinon Apple Vision (japonais). Remplaçable par document. Vision ne lit pas encore le japonais vertical : NDLOCR-Lite arrive en V5.")
+            }
+            Section("Lecteur de texte") {
+                Picker("Style", selection: $model.appSettings.textReader.style) {
+                    Text("Défilement").tag(TextReaderSettings.Style.scroll)
+                    Text("Pages").tag(TextReaderSettings.Style.pages)
+                }
+                Picker("Police", selection: $model.appSettings.textReader.font) {
+                    Text("Gothique").tag(TextReaderSettings.Font.gothic)
+                    Text("Mincho").tag(TextReaderSettings.Font.mincho)
+                    Text("Système").tag(TextReaderSettings.Font.system)
+                }
+                Stepper("Taille : \(Int(model.appSettings.textReader.fontSize))", value: $model.appSettings.textReader.fontSize, in: 12...48, step: 1)
+                VStack(alignment: .leading) {
+                    Text("Interligne")
+                    Slider(value: $model.appSettings.textReader.lineSpacing, in: 0...2)
+                }
+                VStack(alignment: .leading) {
+                    Text("Marges horizontales : \(Int(model.appSettings.textReader.horizontalMargin)) pt")
+                    Slider(value: $model.appSettings.textReader.horizontalMargin, in: 0...200, step: 4)
+                }
+                OCRTextView(text: "照明計画を考える。\n空間の印象は光で大きく変わります。", settings: model.appSettings.textReader)
+                    .frame(height: 140)
+            }
+            Section {
+                LabeledContent("Pages en cache", value: "\(cache.pages)")
+                LabeledContent("Taille", value: ByteCountFormatter.string(fromByteCount: Int64(cache.bytes), countStyle: .file))
+                Button("Vider le cache OCR", role: .destructive) {
+                    try? model.database.clearOCRCache()
+                    refresh()
+                }
+            } header: {
+                Text("Cache")
+            } footer: {
+                Text("Chaque page n'est lue qu'une fois par moteur ; changer de moteur n'efface pas les autres résultats.")
+            }
+            Section {
+                NavigationLink("Banc d'essai") { BenchView() }
+            } footer: {
+                Text("Images + texte de référence : taux d'erreur de caractères et temps de chaque moteur.")
             }
         }
         .navigationTitle("OCR")
+        .onAppear(perform: refresh)
+    }
+
+    private func refresh() {
+        cache = (try? model.database.ocrCacheStats()) ?? (0, 0)
     }
 }
 

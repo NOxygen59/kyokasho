@@ -41,10 +41,17 @@ public enum PageRenderer {
         ctx.setFillColor(gray: 1, alpha: 1)
         ctx.fill(CGRect(x: 0, y: 0, width: width, height: height))
         ctx.interpolationQuality = .high
-        // Transformation de CoreGraphics qui tient compte de la rotation intrinsèque de la page.
-        let transform = page.getDrawingTransform(.cropBox, rect: CGRect(x: 0, y: 0, width: width, height: height),
-                                                 rotate: 0, preserveAspectRatio: true)
-        ctx.concatenate(transform)
+        // Pas de `getDrawingTransform` : il n'agrandit jamais (la page resterait petite au centre).
+        // Mise à l'échelle, rotation intrinsèque de la page, puis origine de la cropBox.
+        ctx.scaleBy(x: CGFloat(width) / size.width, y: CGFloat(height) / size.height)
+        switch rotation {
+        case 90: ctx.translateBy(x: 0, y: box.width); ctx.rotate(by: -.pi / 2)
+        case 180: ctx.translateBy(x: box.width, y: box.height); ctx.rotate(by: .pi)
+        case 270: ctx.translateBy(x: box.height, y: 0); ctx.rotate(by: .pi / 2)
+        default: break
+        }
+        ctx.translateBy(x: -box.minX, y: -box.minY)
+        ctx.clip(to: box)
         ctx.drawPDFPage(page)
         guard let image = ctx.makeImage() else { throw OCRError.renderFailed }
         return image

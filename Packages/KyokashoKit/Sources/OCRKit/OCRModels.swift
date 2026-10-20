@@ -60,14 +60,27 @@ public struct OCRLine: Codable, Hashable, Sendable {
 
 /// Résultat OCR d'une page.
 public struct OCRPage: Codable, Hashable, Sendable {
+    /// Version du format/rendu : un résultat plus ancien en cache est refait automatiquement.
+    public static let currentVersion = 2
+
     public var engine: String
     public var lines: [OCRLine]
     public var durationMs: Int
+    public var version: Int
 
-    public init(engine: String, lines: [OCRLine], durationMs: Int) {
+    public init(engine: String, lines: [OCRLine], durationMs: Int, version: Int = OCRPage.currentVersion) {
         self.engine = engine
         self.lines = lines
         self.durationMs = durationMs
+        self.version = version
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        engine = try c.decode(String.self, forKey: .engine)
+        lines = try c.decode([OCRLine].self, forKey: .lines)
+        durationMs = try c.decode(Int.self, forKey: .durationMs)
+        version = try c.decodeIfPresent(Int.self, forKey: .version) ?? 1
     }
 
     /// Texte de la page, une ligne par ligne reconnue.
