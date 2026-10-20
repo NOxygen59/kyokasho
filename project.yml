@@ -49,8 +49,8 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: fr.noxygen59.kyokasho
         PRODUCT_NAME: Kyokasho
-        MARKETING_VERSION: "0.3.0"
-        CURRENT_PROJECT_VERSION: "4"
+        MARKETING_VERSION: "0.4.0"
+        CURRENT_PROJECT_VERSION: "5"
         INFOPLIST_FILE: App/Info.plist
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         CODE_SIGN_STYLE: Manual

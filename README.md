@@ -23,6 +23,7 @@ Textes des licences : [LICENSES/](LICENSES/) ; attributions : [THIRD_PARTY_NOTIC
 
 | Version | Release | Contenu |
 |---|---|---|
+| **0.4.0** (V3) | [v0.4.0](https://github.com/NOxygen59/kyokasho/releases/tag/v0.4.0) | Dictionnaire au toucher façon Yomitan, onglet Mots, recherche, import de dictionnaires |
 | **0.3.0** | [v0.3.0](https://github.com/NOxygen59/kyokasho/releases/tag/v0.3.0) | Interface « Atelier » paysage, panneau d'étude, DeepL, Drive simplifié |
 | **0.2.0** (V2) | [v0.2.0](https://github.com/NOxygen59/kyokasho/releases/tag/v0.2.0) | OCR : texte du PDF / Apple Vision, lecteur de texte, comparaison, banc d'essai |
 | **0.1.1** | [v0.1.1](https://github.com/NOxygen59/kyokasho/releases/tag/v0.1.1) | Glissement animé en double page |
