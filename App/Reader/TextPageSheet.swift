@@ -45,7 +45,7 @@ struct TextPageSheet: View {
                     }
                 }
                 .sheet(isPresented: $showCompare) {
-                    CompareEnginesView(reader: reader).environmentObject(model)
+                    CompareEnginesView(reader: reader).environmentObject(model).environmentObject(model.dictionary)
                 }
                 .onAppear { if reader.ocrPage == nil && reader.ocrState != .running { reader.runOCR() } }
         }

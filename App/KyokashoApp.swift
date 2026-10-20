@@ -11,7 +11,7 @@ struct KyokashoApp: App {
     var body: some Scene {
         WindowGroup {
             RootView()
-                .environmentObject(model)
+                .environmentObject(model).environmentObject(model.dictionary)
                 .preferredColorScheme(.dark)
                 .tint(Atelier.Tint.read)
                 .onOpenURL { url in
@@ -47,7 +47,7 @@ struct RootView: View {
             set: { model.openDocumentId = $0?.id }
         )) { document in
             ReaderScreen(document: document, model: model)
-                .environmentObject(model)
+                .environmentObject(model).environmentObject(model.dictionary)
                 .preferredColorScheme(.dark)
                 .tint(Atelier.Tint.read)
         }

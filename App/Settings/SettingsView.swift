@@ -28,6 +28,13 @@ struct SettingsView: View {
                 } footer: {
                     Text("Moteur par défaut : \(model.readerDefaults.ocrEngine.label).")
                 }
+                Section {
+                    NavigationLink("Dictionnaires") { DictionaryManagerView() }
+                } header: {
+                    Text("Dictionnaire")
+                } footer: {
+                    Text("Dictionnaires Yomitan (.zip) : JMdict, Jitendex, kanji, fréquences, accents…")
+                }
                 Section("Google Drive") {
                     NavigationLink("Compte Google Drive") { DriveAccountView() }
                 }
@@ -278,6 +285,8 @@ struct AboutView: View {
             }
             Section("Bibliothèques utilisées") {
                 credit("GRDB.swift", "Gwendal Roué", "MIT", "https://github.com/groue/GRDB.swift")
+                credit("ZIPFoundation", "Thomas Zoechling", "MIT", "https://github.com/weichsel/ZIPFoundation")
+                credit("Yomitan (déconjugaison, texte japonais)", "yomidevs", "GPL-3.0", "https://github.com/yomidevs/yomitan")
             }
             Section("Inspirations (comportement)") {
                 credit("Aidoku", "Aidoku", "GPL-3.0", "https://github.com/Aidoku/Aidoku")

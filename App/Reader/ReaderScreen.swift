@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 NOxygen59
 
+import DictionaryKit
 import OCRKit
 import PDFKit
 import ReaderCore
@@ -13,6 +14,7 @@ struct ReaderScreen: View {
     @EnvironmentObject private var model: AppModel
     @Environment(\.dismiss) private var dismiss
     @StateObject private var reader: ReaderController
+    @StateObject private var lookup: LookupSession
     @State private var sheet: Sheet?
     @State private var side: Side? = nil
     @State private var studyTab: StudyPanel.Tab = .text
@@ -26,6 +28,7 @@ struct ReaderScreen: View {
 
     init(document: LibraryDocument, model: AppModel) {
         _reader = StateObject(wrappedValue: ReaderController(document: document, model: model))
+        _lookup = StateObject(wrappedValue: LookupSession(dictionary: model.dictionary))
     }
 
     private var chromeVisible: Bool { reader.barsVisible || reader.isDrawing }
@@ -37,8 +40,22 @@ struct ReaderScreen: View {
                 ZStack {
                     PDFViewHost(view: reader.pdfView)
                         .clipShape(RoundedRectangle(cornerRadius: side == nil ? 0 : Atelier.radius, style: .continuous))
+                    LookupHighlightLayer(rects: reader.lookupHighlight)
                     if chromeVisible {
                         chrome.transition(.opacity)
+                    }
+                    if let request = reader.lookupRequest {
+                        GeometryReader { area in
+                            let w = min(440, area.size.width - 40)
+                            let h = min(560, area.size.height - 40)
+                            let right = request.anchor.x + 24 + w < area.size.width
+                            let x = right ? request.anchor.x + 24 : max(20, request.anchor.x - 24 - w)
+                            let y = min(max(20, request.anchor.y - 80), area.size.height - h - 20)
+                            LookupPopup(session: lookup, close: { reader.endLookup(); lookup.clear() })
+                                .frame(width: w, height: h)
+                                .offset(x: x, y: y)
+                                .transition(.scale(scale: 0.96, anchor: right ? .topLeading : .topTrailing).combined(with: .opacity))
+                        }
                     }
                     if let error = reader.loadError {
                         Text(error).padding().atelierPanel()
@@ -69,6 +86,11 @@ struct ReaderScreen: View {
             if scene?.interfaceOrientation.isLandscape == true { side = .study }
         }
         .onDisappear { reader.close() }
+        .onChange(of: reader.lookupRequest) { request in
+            if let request { lookup.start(request.text) } else { lookup.clear() }
+        }
+        .onChange(of: lookup.matchedLength) { reader.setLookupMatchLength($0) }
+        .animation(.spring(response: 0.3, dampingFraction: 0.86), value: reader.lookupRequest)
         .onChange(of: model.readerDefaults) { defaults in
             reader.update(settings: defaults.applying(reader.document.settingsOverride))
         }
@@ -80,7 +102,7 @@ struct ReaderScreen: View {
                 case .settings: DocumentSettingsSheet(reader: reader)
                 }
             }
-            .environmentObject(model)
+            .environmentObject(model).environmentObject(model.dictionary)
             .preferredColorScheme(.dark)
         }
         .confirmationDialog("Surlignage", isPresented: Binding(get: { reader.tappedHighlight != nil },
@@ -186,6 +208,20 @@ struct ReaderScreen: View {
                 reader.setDrawing(!reader.isDrawing)
             }
             Rectangle().fill(Atelier.hairline).frame(width: 26, height: 1).padding(.vertical, 2)
+            Button {
+                reader.lookupMode.toggle()
+                if reader.isDrawing { reader.setDrawing(false) }
+                if !reader.lookupMode { reader.endLookup() }
+            } label: {
+                Text("辞").font(.custom("HiraMinProN-W6", size: 21))
+                    .frame(width: 46, height: 46)
+                    .foregroundStyle(reader.lookupMode ? Color.black.opacity(0.85) : Atelier.textPrimary)
+                    .background(reader.lookupMode ? Atelier.Tint.japanese : Color.clear,
+                                in: RoundedRectangle(cornerRadius: Atelier.smallRadius, style: .continuous))
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(PressScale())
+            .accessibilityLabel("Dictionnaire au toucher")
             ToolButton(icon: "character.ja", label: "Texte de la page", tint: Atelier.Tint.japanese,
                        active: side == .study && studyTab == .text) { openStudy(.text) }
             ToolButton(icon: "character.book.closed.ja", label: "Mots de la page", tint: Atelier.Tint.japanese,
@@ -345,5 +381,23 @@ extension HighlightColor {
         case .pink: return "rose"
         case .orange: return "orange"
         }
+    }
+}
+
+/// Surlignage du mot touché (dans le repère de la vue PDF).
+struct LookupHighlightLayer: View {
+    let rects: [CGRect]
+
+    var body: some View {
+        Canvas { context, _ in
+            for r in rects where r.width > 0 {
+                context.fill(Path(roundedRect: r.insetBy(dx: -1.5, dy: -1.5), cornerRadius: 3),
+                             with: .color(Atelier.Tint.japanese.opacity(0.32)))
+                context.stroke(Path(CGRect(x: r.minX, y: r.maxY + 1, width: r.width, height: 0)).strokedPath(.init(lineWidth: 2)),
+                               with: .color(Atelier.Tint.japanese))
+            }
+        }
+        .allowsHitTesting(false)
+        .animation(.easeOut(duration: 0.12), value: rects)
     }
 }

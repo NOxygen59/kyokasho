@@ -163,6 +163,22 @@ final class DictionaryKitTests: XCTestCase {
         XCTAssertThrowsError(try DictionaryImporter(database: db).importDictionary(at: try FakeDictionary.make(), replaceExisting: false))
     }
 
+    func testProfilesAndAudio() throws {
+        var profiles = DictionaryProfiles()
+        var p = profiles.active
+        p.lookup.scanLength = 30
+        profiles.active = p
+        let data = try JSONEncoder().encode(profiles)
+        let back = try JSONDecoder().decode(DictionaryProfiles.self, from: data)
+        XCTAssertEqual(back.active.lookup.scanLength, 30)
+        let decoded = try JSONDecoder().decode(LookupOptions.self, from: Data(#"{"scanLength":500}"#.utf8))
+        XCTAssertEqual(decoded.scanLength, 40, "borné")
+        let urls = AudioSource.defaults[1].resolve(term: "食べる", reading: "たべる")
+        XCTAssertTrue(urls[0].hasPrefix("https://assets.languagepod101.com/"))
+        XCTAssertFalse(urls[0].contains("食"), "encodé")
+        XCTAssertEqual(AudioSource.defaults[0].resolve(term: "猫", reading: "ねこ").first, "猫_ねこ.mp3")
+    }
+
     func testDelete() throws {
         let id = try XCTUnwrap(db.dictionaries().first?.id)
         try db.deleteDictionary(id: id)

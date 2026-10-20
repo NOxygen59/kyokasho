@@ -37,6 +37,8 @@ targets:
         product: ReaderCore
       - package: KyokashoKit
         product: OCRKit
+      - package: KyokashoKit
+        product: DictionaryKit
       - sdk: PDFKit.framework
       - sdk: PencilKit.framework
       - sdk: WebKit.framework

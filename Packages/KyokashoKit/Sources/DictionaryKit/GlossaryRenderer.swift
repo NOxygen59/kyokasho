@@ -7,7 +7,7 @@ import YomitanKit
 /// Rendu HTML des résultats (popup et page de recherche). Tout le texte venant des dictionnaires
 /// est échappé ; le contenu structuré n'autorise qu'une liste fermée de balises et de styles.
 public struct GlossaryRenderer: Sendable {
-    public struct Options: Sendable, Equatable {
+    public struct Options: Codable, Sendable, Equatable {
         public var fontSize: Double = 17
         public var showFrequencies = true
         public var showPitch = true

@@ -34,6 +34,23 @@ final class ReaderController: NSObject, ObservableObject {
     @Published private(set) var ocrPage: OCRPage?
     @Published private(set) var ocrState: OCRState = .idle
 
+    // MARK: Dictionnaire au toucher
+    /// Outil « dictionnaire » actif : un tap sur un caractère cherche le mot.
+    @Published var lookupMode = false
+    /// Demande de recherche (texte à partir du caractère touché, point d'ancrage dans la vue).
+    @Published var lookupRequest: LookupRequest?
+    /// Rectangles (repère de la vue PDF) du texte touché puis du mot reconnu.
+    @Published var lookupHighlight: [CGRect] = []
+
+    struct LookupRequest: Equatable {
+        let id = UUID()
+        let text: String
+        let anchor: CGPoint
+    }
+
+    /// Caractères du texte touché, pour surligner exactement le mot reconnu (n premiers).
+    private var lookupCharacterRects: [CGRect] = []
+
     enum OCRState: Equatable {
         case idle, running, failed(String)
     }
@@ -182,6 +199,95 @@ final class ReaderController: NSObject, ObservableObject {
         model.persist { try $0.updateReadingPosition(documentId: id, pageIndex: page) }
     }
 
+    /// Cherche le texte sous `point` (vue PDF) : texte intégré du PDF, sinon OCR (fait si besoin).
+    func lookup(at point: CGPoint) async {
+        guard let pdf, let page = pdfView.page(for: point, nearest: false) else { return }
+        let index = pdf.index(for: page)
+        guard presented.indices.contains(index) else { return }
+        let source = presented[index].source
+        let pagePoint = pdfView.convert(point, to: page)
+        let maxLength = model.dictionary.profile.lookup.scanLength
+
+        // 1. Texte intégré du PDF.
+        if let string = page.string, !string.isEmpty {
+            let i = page.characterIndex(at: pagePoint)
+            if i >= 0, i < (string as NSString).length {
+                let ns = string as NSString
+                var text = ""
+                var rects: [CGRect] = []
+                var j = i
+                while j < ns.length, text.count < maxLength {
+                    let range = ns.rangeOfComposedCharacterSequence(at: j)
+                    let piece = ns.substring(with: range)
+                    if piece == "\n" || piece == "\r" { break }
+                    text += piece
+                    rects.append(pdfView.convert(page.characterBounds(at: range.location), from: page))
+                    j = NSMaxRange(range)
+                }
+                if !text.trimmingCharacters(in: .whitespaces).isEmpty {
+                    present(text: text, rects: rects, anchor: point)
+                    return
+                }
+            }
+        }
+
+        // 2. OCR de la page (cache, sinon Apple Vision).
+        guard let box = originalBoxes[source] else { return }
+        var ocr = await cachedOCR(source: source)
+        if ocr == nil {
+            ocrState = .running
+            ocr = try? await model.ocr.page(documentId: document.id, url: fileURL, pageIndex: source, engine: OCREngineID.vision)
+            ocrState = .idle
+            if let ocr, source == currentSourcePage { ocrPage = ocr; ink.setOCR(ocr, source: source) }
+        }
+        guard let ocr else { return }
+        let normalized = CGPoint(x: (pagePoint.x - box.minX) / box.width, y: (box.maxY - pagePoint.y) / box.height)
+        guard let hit = ocr.character(at: normalized) else {
+            lookupHighlight = []
+            return
+        }
+        var text = ""
+        var rects: [CGRect] = []
+        var line = hit.line
+        var start = hit.index
+        // Le texte continue sur les lignes suivantes (phrase coupée par la mise en page).
+        while line < ocr.lines.count, text.count < maxLength {
+            let l = ocr.lines[line]
+            let chars = Array(l.text)
+            for k in start..<chars.count where text.count < maxLength {
+                text.append(chars[k])
+                if l.charBoxes.indices.contains(k) {
+                    let b = l.charBoxes[k]
+                    let pageRect = CGRect(x: box.minX + b.x * box.width, y: box.maxY - (b.y + b.h) * box.height,
+                                          width: b.w * box.width, height: b.h * box.height)
+                    rects.append(pdfView.convert(pageRect, from: page))
+                } else {
+                    rects.append(.zero)
+                }
+            }
+            line += 1
+            start = 0
+        }
+        present(text: text, rects: rects, anchor: point)
+    }
+
+    private func present(text: String, rects: [CGRect], anchor: CGPoint) {
+        lookupCharacterRects = rects
+        lookupHighlight = Array(rects.prefix(1))
+        lookupRequest = LookupRequest(text: text, anchor: anchor)
+    }
+
+    /// Le dictionnaire a reconnu `length` caractères : on surligne exactement le mot.
+    func setLookupMatchLength(_ length: Int) {
+        lookupHighlight = Array(lookupCharacterRects.prefix(max(1, length))).filter { !$0.isEmpty }
+    }
+
+    func endLookup() {
+        lookupRequest = nil
+        lookupHighlight = []
+        lookupCharacterRects = []
+    }
+
     /// `cropBox` d'origine d'une page source (repère des résultats OCR).
     func originalBox(ofSource source: Int) -> CGRect? { originalBoxes[source] }
 
@@ -307,6 +413,7 @@ final class ReaderController: NSObject, ObservableObject {
         let changed = index != currentIndex
         currentIndex = index
         updateCurrentSourcePage()
+        if changed, lookupRequest != nil { endLookup() }
         if changed, !rebuilding, settings.hideBarsOnScroll, barsVisible { barsVisible = false }
         scheduleSavePosition()
         preloadThumbnails(around: currentSourcePage)
@@ -524,6 +631,10 @@ final class ReaderController: NSObject, ObservableObject {
         let point = gesture.location(in: pdfView)
         if hasSelection {
             pdfView.clearSelection()
+            return
+        }
+        if lookupMode {
+            Task { await lookup(at: point) }
             return
         }
         // Tap sur un surlignage : proposer de le supprimer.

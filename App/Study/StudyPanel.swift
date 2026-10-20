@@ -3,6 +3,7 @@
 
 import OCRKit
 import ReaderCore
+import DictionaryKit
 import SwiftUI
 
 /// Panneau d'étude, à droite du lecteur : tout ce qui sert à **comprendre** la page.
@@ -98,7 +99,7 @@ struct StudyTextTab: View {
             translation = nil
             translateError = nil
         }
-        .sheet(isPresented: $showCompare) { CompareEnginesView(reader: reader).environmentObject(model) }
+        .sheet(isPresented: $showCompare) { CompareEnginesView(reader: reader).environmentObject(model).environmentObject(model.dictionary) }
     }
 
     private var engineRow: some View {
@@ -193,14 +194,32 @@ struct StudyTextTab: View {
 // MARK: - Vocabulaire (V3)
 
 struct StudyVocabTab: View {
+    @EnvironmentObject private var dictionary: DictionaryModel
     @ObservedObject var reader: ReaderController
+    @StateObject private var popup = PopupHolder()
+    @State private var words: [Word] = []
+    @State private var loading = false
 
-    /// Kanji de la page (aperçu en attendant le dictionnaire de la V3).
+    struct Word: Identifiable, Equatable {
+        let id: String
+        let expression: String
+        let reading: String
+        let gloss: String
+        var count: Int
+    }
+
+    /// Une seule session de popup par onglet (créée au premier usage).
+    @MainActor final class PopupHolder: ObservableObject {
+        var session: LookupSession?
+        @Published var shown = false
+    }
+
+    /// Kanji de la page.
     private var kanji: [Character] {
         guard let text = reader.ocrPage?.text else { return [] }
         var seen = Set<Character>()
         return text.filter { c in
-            guard let v = c.unicodeScalars.first?.value, (0x4E00...0x9FFF).contains(v) else { return false }
+            guard let v = c.unicodeScalars.first?.value, (0x4E00...0x9FFF).contains(v) || (0x3400...0x4DBF).contains(v) else { return false }
             return seen.insert(c).inserted
         }.map { $0 }
     }
@@ -208,30 +227,110 @@ struct StudyVocabTab: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
-                if kanji.isEmpty {
-                    Text("Lis la page (onglet Texte) pour voir ses kanji.").foregroundStyle(Atelier.textSecondary)
+                if reader.ocrPage?.text.isEmpty ?? true {
+                    Text("Lis la page (onglet Texte) pour voir son vocabulaire.").foregroundStyle(Atelier.textSecondary)
+                } else if !dictionary.hasTermDictionaries {
+                    VStack(alignment: .leading, spacing: 6) {
+                        AtelierLabel("Aucun dictionnaire", tint: Atelier.textTertiary)
+                        Text("Importe un dictionnaire Yomitan dans Réglages → Dictionnaires pour voir les mots de la page.")
+                            .font(.footnote).foregroundStyle(Atelier.textSecondary)
+                    }
+                    .padding(12)
+                    .background(Atelier.surfaceHigh.opacity(0.6), in: RoundedRectangle(cornerRadius: Atelier.smallRadius, style: .continuous))
                 } else {
-                    AtelierLabel("Kanji de la page · \(kanji.count)", tint: Atelier.Tint.japanese)
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 6), spacing: 8) {
-                        ForEach(kanji, id: \.self) { k in
-                            Text(String(k))
-                                .font(.custom("HiraMinProN-W6", size: 26))
-                                .frame(maxWidth: .infinity, minHeight: 48)
-                                .foregroundStyle(Atelier.textPrimary)
-                                .background(Atelier.surfaceHigh, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
-                                .textSelection(.enabled)
+                    HStack {
+                        AtelierLabel("Mots de la page · \(words.count)", tint: Atelier.Tint.japanese)
+                        if loading { ProgressView().controlSize(.small).tint(Atelier.Tint.japanese) }
+                    }
+                    LazyVStack(alignment: .leading, spacing: 6) {
+                        ForEach(words) { word in
+                            Button { open(word.expression) } label: { row(word) }.buttonStyle(.plain)
                         }
                     }
                 }
-                VStack(alignment: .leading, spacing: 6) {
-                    AtelierLabel("Bientôt (V3)", tint: Atelier.textTertiary)
-                    Text("Touche un mot sur la page : lecture, sens, accent, fréquence, kanji, et création de carte de révision — façon Yomitan.")
-                        .font(.footnote).foregroundStyle(Atelier.textSecondary)
+                if !kanji.isEmpty {
+                    AtelierLabel("Kanji de la page · \(kanji.count)", tint: Atelier.Tint.japanese)
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 6), spacing: 8) {
+                        ForEach(kanji, id: \.self) { k in
+                            Button { openKanji(String(k)) } label: {
+                                Text(String(k))
+                                    .font(.custom("HiraMinProN-W6", size: 26))
+                                    .frame(maxWidth: .infinity, minHeight: 48)
+                                    .foregroundStyle(Atelier.textPrimary)
+                                    .background(Atelier.surfaceHigh, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+                            }
+                            .buttonStyle(PressScale())
+                        }
+                    }
                 }
-                .padding(12)
-                .background(Atelier.surfaceHigh.opacity(0.6), in: RoundedRectangle(cornerRadius: Atelier.smallRadius, style: .continuous))
             }
         }
+        .task(id: reader.ocrPage?.text) { await reload() }
+        .sheet(isPresented: $popup.shown) {
+            if let session = popup.session {
+                LookupPopup(session: session, close: { popup.shown = false })
+                    .environmentObject(dictionary)
+                    .presentationDetents([.medium, .large])
+                    .preferredColorScheme(.dark)
+            }
+        }
+    }
+
+    private func row(_ word: Word) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 10) {
+            VStack(alignment: .leading, spacing: 1) {
+                if word.reading != word.expression && !word.reading.isEmpty {
+                    Text(word.reading).font(.custom("HiraginoSans-W3", size: 11)).foregroundStyle(Atelier.textTertiary)
+                }
+                Text(word.expression).font(.custom("HiraginoSans-W6", size: 18)).foregroundStyle(Atelier.textPrimary)
+            }
+            .frame(minWidth: 70, alignment: .leading)
+            Text(word.gloss).font(.footnote).foregroundStyle(Atelier.textSecondary).lineLimit(2)
+            Spacer(minLength: 0)
+            if word.count > 1 { Text("×\(word.count)").font(Atelier.mono).foregroundStyle(Atelier.textTertiary) }
+        }
+        .padding(.horizontal, 10).padding(.vertical, 7)
+        .background(Atelier.surfaceHigh.opacity(0.7), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
+        .contentShape(Rectangle())
+    }
+
+    private func session() -> LookupSession {
+        if let s = popup.session { return s }
+        let s = LookupSession(dictionary: dictionary)
+        popup.session = s
+        return s
+    }
+
+    private func open(_ text: String) {
+        session().start(text)
+        popup.shown = true
+    }
+
+    private func openKanji(_ c: String) {
+        let s = session()
+        s.clear()
+        s.pushKanji(c)
+        popup.shown = true
+    }
+
+    private func reload() async {
+        guard let text = reader.ocrPage?.text, !text.isEmpty, dictionary.hasTermDictionaries else { words = []; return }
+        loading = true
+        defer { loading = false }
+        let segments = await dictionary.segment(text)
+        guard !Task.isCancelled else { return }
+        var order: [String] = []
+        var map: [String: Word] = [:]
+        for seg in segments {
+            guard let term = seg.term, term.expression.contains(where: { !$0.isWhitespace && !$0.isPunctuation }) else { continue }
+            // Les particules seules (une kana) n'apprennent rien : on les saute.
+            if term.expression.count == 1, term.expression.unicodeScalars.allSatisfy({ (0x3040...0x30FF).contains($0.value) }) { continue }
+            if map[term.id] != nil { map[term.id]!.count += 1; continue }
+            order.append(term.id)
+            map[term.id] = Word(id: term.id, expression: term.expression, reading: term.reading,
+                                gloss: GlossaryText.plain(term.definitions.first?.glossaryJSON ?? ""), count: 1)
+        }
+        words = order.compactMap { map[$0] }
     }
 }
 

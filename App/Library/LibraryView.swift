@@ -15,6 +15,7 @@ struct LibraryView: View {
     @State private var showSettings = false
     @State private var showDrive = false
     @State private var showBench = false
+    @State private var showDictionary = false
     @State private var renaming: LibraryDocument?
     @State private var newTitle = ""
     @State private var deleting: LibraryDocument?
@@ -62,16 +63,27 @@ struct LibraryView: View {
             DocumentPicker { urls in model.importFiles(urls) }.ignoresSafeArea()
         }
         .sheet(isPresented: $showSettings) {
-            SettingsView().environmentObject(model).preferredColorScheme(.dark)
+            SettingsView().environmentObject(model).environmentObject(model.dictionary).preferredColorScheme(.dark)
         }
         .sheet(isPresented: $showDrive) {
-            DriveBrowserView().environmentObject(model).preferredColorScheme(.dark)
+            DriveBrowserView().environmentObject(model).environmentObject(model.dictionary).preferredColorScheme(.dark)
+        }
+        .fullScreenCover(isPresented: $showDictionary) {
+            NavigationStack {
+                DictionarySearchView(dictionary: model.dictionary)
+                    .padding(Atelier.gap)
+                    .background(GridBackground())
+                    .navigationTitle("Dictionnaire")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar { ToolbarItem(placement: .confirmationAction) { Button("OK") { showDictionary = false } } }
+            }
+            .environmentObject(model).environmentObject(model.dictionary).preferredColorScheme(.dark)
         }
         .sheet(isPresented: $showBench) {
             NavigationStack {
                 BenchView().toolbar { ToolbarItem(placement: .confirmationAction) { Button("OK") { showBench = false } } }
             }
-            .environmentObject(model).preferredColorScheme(.dark)
+            .environmentObject(model).environmentObject(model.dictionary).preferredColorScheme(.dark)
         }
         .alert("Renommer", isPresented: Binding(get: { renaming != nil }, set: { if !$0 { renaming = nil } })) {
             TextField("Titre", text: $newTitle)
@@ -114,6 +126,7 @@ struct LibraryView: View {
             }
             VStack(alignment: .leading, spacing: 4) {
                 AtelierLabel("Outils").padding(.bottom, 4)
+                actionRow(icon: "character.book.closed.ja", title: "Dictionnaire", tint: Atelier.Tint.japanese) { showDictionary = true }
                 actionRow(icon: "gauge.with.dots.needle.33percent", title: "Banc d'essai OCR", tint: Atelier.Tint.japanese) { showBench = true }
                 actionRow(icon: "gearshape", title: "Réglages", tint: Atelier.textSecondary) { showSettings = true }
             }

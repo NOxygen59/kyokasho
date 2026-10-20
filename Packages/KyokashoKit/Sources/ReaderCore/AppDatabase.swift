@@ -215,6 +215,15 @@ extension AppDatabase {
         }
     }
 
+    /// Valeur enregistrée sous `key` (réglages d'autres modules, ex. profils de dictionnaire).
+    public func storedValue<T: Decodable>(_ type: T.Type, forKey key: String) throws -> T? {
+        try value(type, forKey: key)
+    }
+
+    public func setStoredValue<T: Encodable>(_ value: T, forKey key: String) throws {
+        try setValue(value, forKey: key)
+    }
+
     public func readerDefaults() throws -> ReaderSettings {
         try value(ReaderSettings.self, forKey: Self.readerDefaultsKey) ?? .default
     }

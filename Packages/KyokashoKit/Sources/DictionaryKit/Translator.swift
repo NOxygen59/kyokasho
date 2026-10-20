@@ -68,7 +68,7 @@ public struct KanjiResult: Sendable, Equatable {
 }
 
 /// Options de recherche (une partie d'un profil).
-public struct LookupOptions: Sendable, Equatable {
+public struct LookupOptions: Codable, Sendable, Equatable {
     /// Nombre de caractères examinés à partir du point touché.
     public var scanLength = 16
     public var maxResults = 24
@@ -78,6 +78,15 @@ public struct LookupOptions: Sendable, Equatable {
     public var excludedDictionaryIds: Set<Int64> = []
 
     public init() {}
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        let d = LookupOptions()
+        scanLength = min(40, max(1, try c.decodeIfPresent(Int.self, forKey: .scanLength) ?? d.scanLength))
+        maxResults = min(100, max(1, try c.decodeIfPresent(Int.self, forKey: .maxResults) ?? d.maxResults))
+        partsOfSpeechFilter = try c.decodeIfPresent(Bool.self, forKey: .partsOfSpeechFilter) ?? d.partsOfSpeechFilter
+        excludedDictionaryIds = try c.decodeIfPresent(Set<Int64>.self, forKey: .excludedDictionaryIds) ?? []
+    }
 }
 
 /// Recherche de mots à la Yomitan : pour chaque longueur (de la plus longue à la plus courte),
