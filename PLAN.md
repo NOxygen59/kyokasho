@@ -302,3 +302,21 @@ aucun gel de l'interface. Chaque version se termine par une mesure, pas par une 
 
 > Note d'organisation : les « modules » sont des cibles d'un même package Swift local
 > (`Packages/KyokashoKit`) ; les écrans SwiftUI vivent dans la cible de l'app (`App/`).
+
+## 10. Découpage en sessions (1 par jour, jusqu'au mardi 27 octobre 2026)
+
+Règle : une session = une étape, peu de code relu, pas de simulateur sauf feu vert.
+Au début de chaque session, lire seulement cette section et `git log -3`.
+
+| Jour | Étape | Fini quand |
+|---|---|---|
+| mer. 21 | V4-a : ReviewKit compile (cible + swift-fsrs dans Package.swift), tests templates / FSRS / file de révision | `swift test` vert |
+| jeu. 22 | V4-b : export CSV + `.apkg` (format genanki) + lien AnkiMobile, tests | tests vert |
+| ven. 23 | V4-c : app, créer une carte depuis le popup et l'onglet Mots (champs, phrase, image de la zone, audio, anti-doublon) | app compile |
+| sam. 24 | V4-d : app, écran de révision, liste des cartes, réglages + éditeur de modèle, export → release **0.5.0** | release publiée |
+| dim. 25 | V5-a : ONNX Runtime, téléchargement des modèles NDLOCR-Lite à la demande, prétraitement | tests vert |
+| lun. 26 | V5-b : inférence + post-traitement, mode « Auto » (vertical → NDLOCR), banc d'essai | app compile |
+| mar. 27 | Release **0.6.0** + tests simulateur / iPad (si tu dis oui) + corrections | release publiée |
+
+État au 20 octobre : V3 publiée (0.4.0). ReviewKit commencé (`Sources/ReviewKit` : templates,
+modèles, base, FSRS) mais **pas encore dans Package.swift, jamais compilé**.
