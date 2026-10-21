@@ -747,20 +747,36 @@ final class ReaderController: NSObject, ObservableObject {
     /// Tourne la page. En mode paginé sans contrôleur de pages de PDFKit (double page, ou
     /// transition maison), glissement animé : la page actuelle (photo) part d'un côté, la
     /// nouvelle arrive de l'autre, dans le sens de lecture.
+    /// Page à afficher : juste après la dernière page visible, ou juste avant la première.
+    /// (`goToNextPage` de PDFKit n'avance que d'une page : en double page, elle restait souvent
+    /// dans la même double page et rien ne bougeait.)
+    private func turnTarget(forward: Bool) -> PDFPage? {
+        guard let pdf else { return nil }
+        let visible = pdfView.visiblePages.map { pdf.index(for: $0) }.filter { $0 != NSNotFound }
+        let lo = visible.min() ?? currentIndex, hi = visible.max() ?? currentIndex
+        let i = forward ? hi + 1 : lo - 1
+        return i >= 0 && i < pdf.pageCount ? pdf.page(at: i) : nil
+    }
+
     private func turn(forward: Bool) {
-        guard forward ? pdfView.canGoToNextPage : pdfView.canGoToPreviousPage else { return }
+        // Défilement continu : une page coupée en bas compte comme visible ; PDFKit tourne bien tout seul.
+        guard settings.scrollMode == .paginated else {
+            forward ? pdfView.goToNextPage(nil) : pdfView.goToPreviousPage(nil)
+            return
+        }
+        guard let target = turnTarget(forward: forward) else { return }
         let animate = settings.scrollMode == .paginated && settings.transition == .slide
             && !pdfView.isUsingPageViewController && pdfView.isAtFit && !isAnimatingTurn
             && !UIAccessibility.isReduceMotionEnabled
         guard animate, let host = pdfView.superview,
               let snapshot = pdfView.snapshotView(afterScreenUpdates: false) else {
-            forward ? pdfView.goToNextPage(nil) : pdfView.goToPreviousPage(nil)
+            pdfView.go(to: target)
             return
         }
         isAnimatingTurn = true
         snapshot.frame = pdfView.frame
         host.insertSubview(snapshot, aboveSubview: pdfView)
-        forward ? pdfView.goToNextPage(nil) : pdfView.goToPreviousPage(nil)
+        pdfView.go(to: target)
         pdfView.layoutIfNeeded()
         // Lecture gauche → droite : avancer fait partir le contenu vers la gauche ; l'inverse en droite → gauche.
         let movesLeft = forward != (settings.direction == .rightToLeft)

@@ -83,6 +83,10 @@ struct StudyTextTab: View {
     @State private var translation: String?
     /// Texte mis en forme (titres, paragraphes, tableaux) ou tel que lu, ligne par ligne.
     @AppStorage("study.formattedText") private var formatted = true
+    /// Furigana (dictionnaire Yomitan) sur le texte extrait ; un appui ouvre le dictionnaire.
+    @AppStorage("study.furigana") private var furigana = false
+    @State private var lookup: LookupSession?
+    @State private var showLookup = false
     @State private var translating = false
     @State private var translateError: String?
     @State private var showCompare = false
@@ -100,7 +104,14 @@ struct StudyTextTab: View {
                     Button("Lire avec Apple Vision") { reader.runOCR(engine: OCREngineID.vision) }
                         .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.japanese))
                 case (let page?, _):
-                    if formatted {
+                    if furigana {
+                        FuriganaTextView(page: page, formatted: formatted) { text in
+                            let session = lookup ?? LookupSession(dictionary: model.dictionary)
+                            lookup = session
+                            session.start(text)
+                            showLookup = true
+                        }
+                    } else if formatted {
                         FormattedOCRText(page: page)
                     } else {
                         Text(page.text)
@@ -122,6 +133,20 @@ struct StudyTextTab: View {
         .onChange(of: reader.focusSource) { _ in
             translation = nil
             translateError = nil
+        }
+        .sheet(isPresented: $showLookup, onDismiss: { lookup?.clear() }) {
+            // Fenêtre compacte du dictionnaire (mot touché dans le texte à furigana).
+            if let lookup {
+                LookupPopup(session: lookup, added: model.review.keys, onAddCard: { term in
+                    model.review.add(term, sentence: reader.ocrPage?.lines.first { $0.text.contains(term.matchedText) }?.text,
+                                     source: "\(reader.document.title) · p. \(reader.document.pageLabel(reader.focusSource))",
+                                     image: nil, documentId: reader.document.id, page: reader.focusSource,
+                                     dictionary: model.dictionary)
+                }, close: { showLookup = false })
+                .environmentObject(model.dictionary)
+                .presentationDetents([.medium, .large])
+                .preferredColorScheme(.dark)
+            }
         }
         .sheet(isPresented: $showCompare) { CompareEnginesView(reader: reader).environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review) }
     }
@@ -153,6 +178,9 @@ struct StudyTextTab: View {
             }
             .pickerStyle(.segmented)
             .frame(maxWidth: 190)
+            Toggle(isOn: $furigana) { Text("ふりがな").font(.system(size: 13, weight: .semibold)) }
+                .toggleStyle(.button)
+                .accessibilityLabel("Furigana sur le texte extrait")
             Spacer()
             Button {
                 guard let page = reader.ocrPage else { return }

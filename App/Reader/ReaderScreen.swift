@@ -76,8 +76,9 @@ struct ReaderScreen: View {
                             .keyboardShortcut(.escape, modifiers: [])
                             .opacity(0).allowsHitTesting(false)
                     }
-                    // Clavier / souris branchés : flèches pour tourner les pages (← → aussi au clavier).
-                    if keyboard.connected {
+                    // Flèches pour tourner les pages : avec les barres affichées, ou toujours si un clavier
+                    // est branché (← → aussi au clavier).
+                    if keyboard.connected || chromeVisible {
                         HStack {
                             pageArrow(left: true)
                             Spacer()
@@ -243,40 +244,50 @@ struct ReaderScreen: View {
             CapsuleButton(icon: reader.isCurrentPageBookmarked ? "bookmark.fill" : "bookmark", label: "Signet",
                           active: reader.isCurrentPageBookmarked) { reader.toggleBookmark() }
             Menu {
-                Button { reader.rotateCurrentPage() } label: { Label("Pivoter la page", systemImage: "rotate.right") }
-                Button { reader.toggleSplitCurrentPage() } label: {
-                    Label(reader.isCurrentPageSplit ? "Ne plus couper la page" : "Couper la page en deux",
-                          systemImage: "rectangle.split.2x1")
-                }
-                Picker(selection: Binding(get: { pageTone }, set: { pageTone = $0; reader.setPageTone($0) })) {
-                    ForEach(PageTone.allCases) { Label($0.title, systemImage: $0.icon).tag($0) }
+                // Rangé par thème : affichage (pour tous les livres), cette page, ce document.
+                Menu {
+                    Picker(selection: Binding(get: { pageTone }, set: { pageTone = $0; reader.setPageTone($0) })) {
+                        ForEach(PageTone.allCases) { Label($0.title, systemImage: $0.icon).tag($0) }
+                    } label: {
+                        Label("Fond de page", systemImage: "circle.lefthalf.filled")
+                    }
+                    .pickerStyle(.menu)
+                    Toggle(isOn: Binding(get: { furigana }, set: { furigana = $0; reader.setFurigana($0) })) {
+                        Label("Furigana sur les kanji", systemImage: "character.ja")
+                    }
+                    if ScanSharpening.isInstalled {
+                        Toggle(isOn: Binding(get: { sharpenScans }, set: { sharpenScans = $0; reader.setSharpening($0) })) {
+                            Label("Netteté des scans (DE-GAN)", systemImage: "wand.and.stars")
+                        }
+                    }
+                    Button { reader.setShowOCRBoxes(!showOCRBoxes) } label: {
+                        Label(showOCRBoxes ? "Masquer les zones OCR" : "Montrer les zones OCR",
+                              systemImage: "rectangle.dashed")
+                    }
                 } label: {
-                    Label("Fond de page", systemImage: "circle.lefthalf.filled")
+                    Label("Affichage", systemImage: "eye")
                 }
-                .pickerStyle(.menu)
-                Toggle(isOn: Binding(get: { furigana }, set: { furigana = $0; reader.setFurigana($0) })) {
-                    Label("Furigana sur les kanji", systemImage: "character.ja")
-                }
-                if ScanSharpening.isInstalled {
-                    Toggle(isOn: Binding(get: { sharpenScans }, set: { sharpenScans = $0; reader.setSharpening($0) })) {
-                        Label("Netteté des scans (DE-GAN)", systemImage: "wand.and.stars")
+                Menu {
+                    Button { reader.rotateCurrentPage() } label: { Label("Pivoter la page", systemImage: "rotate.right") }
+                    Button { reader.toggleSplitCurrentPage() } label: {
+                        Label(reader.isCurrentPageSplit ? "Ne plus couper la page" : "Couper la page en deux",
+                              systemImage: "rectangle.split.2x1")
                     }
-                }
-                Button { reader.setShowOCRBoxes(!showOCRBoxes) } label: {
-                    Label(showOCRBoxes ? "Masquer les zones OCR" : "Montrer les zones OCR",
-                          systemImage: "rectangle.dashed")
+                    Button { reader.setFirstPage(reader.currentSourcePage) } label: {
+                        Label("Cette page est la page 1", systemImage: "1.circle")
+                    }
+                    if reader.document.firstPageIndex != 0 {
+                        Button { reader.setFirstPage(0) } label: {
+                            Label("Numéros du PDF (page 1 = début)", systemImage: "arrow.uturn.backward")
+                        }
+                    }
+                } label: {
+                    Label("Cette page", systemImage: "doc")
                 }
                 Divider()
-                Button { reader.setFirstPage(reader.currentSourcePage) } label: {
-                    Label("Cette page est la page 1", systemImage: "1.circle")
+                Button { sheet = .settings } label: {
+                    Label("Pagination et réglages de ce document", systemImage: "slider.horizontal.3")
                 }
-                if reader.document.firstPageIndex != 0 {
-                    Button { reader.setFirstPage(0) } label: {
-                        Label("Numéros du PDF (page 1 = début)", systemImage: "arrow.uturn.backward")
-                    }
-                }
-                Divider()
-                Button { sheet = .settings } label: { Label("Réglages du document", systemImage: "slider.horizontal.3") }
             } label: {
                 Image(systemName: "ellipsis").font(.system(size: 17, weight: .semibold))
                     .frame(width: 40, height: 40).foregroundStyle(Atelier.textPrimary)

@@ -60,7 +60,7 @@ public enum Furigana {
     /// Découpe la lecture d'un mot entre ses groupes de kanji (les kana du mot servent de repères).
     /// Renvoie des plages de graphèmes du mot. Si l'alignement échoue : une lecture pour tout le mot
     /// s'il n'a que des kanji, sinon rien (mieux vaut pas de furigana qu'un furigana à cheval sur les kana).
-    static func align(_ surface: String, _ reading: String) -> [(Range<Int>, String)] {
+    public static func align(_ surface: String, _ reading: String) -> [(Range<Int>, String)] {
         let chars = Array(surface)
         var groups: [(range: Range<Int>, kanji: Bool)] = []
         for (i, c) in chars.enumerated() {

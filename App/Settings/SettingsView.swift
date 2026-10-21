@@ -38,6 +38,11 @@ struct SettingsView: View {
                         row("character.bubble", "Traduction (DeepL)", tint: Atelier.Tint.ai)
                     }
                 }
+                Section("Modèles") {
+                    NavigationLink { ModelsView() } label: {
+                        row("shippingbox", "Modèles téléchargés", tint: Atelier.Tint.ai)
+                    }
+                }
                 Section("Cartes") {
                     NavigationLink { ReviewSettingsView() } label: {
                         row("rectangle.stack", "Révisions et export Anki", tint: Atelier.Tint.japanese)
@@ -178,7 +183,7 @@ struct DocumentSettingsSheet: View {
                 } header: {
                     Text("Lecture")
                 } footer: {
-                    Text("« Par défaut » suit les réglages généraux.")
+                    Text("Ces choix valent pour ce document seulement (les autres gardent les leurs). « Par défaut » suit les réglages généraux.")
                 }
                 Section("Pages") {
                     OptionalPicker("Fond", value: $override.background, defaultValue: d.background, options: [
@@ -203,7 +208,11 @@ struct DocumentSettingsSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("OK") { dismiss() } } }
             .onAppear { override = reader.document.settingsOverride }
-            .onChange(of: override) { reader.setDocumentOverride($0) }
+            // Enregistré pour ce document seulement, et seulement s'il a vraiment changé
+            // (pas à l'ouverture de la feuille).
+            .onChange(of: override) { new in
+                if new != reader.document.settingsOverride { reader.setDocumentOverride(new) }
+            }
         }
     }
 }
@@ -278,7 +287,9 @@ struct OCRSettingsView: View {
             } footer: {
                 Text("Auto : texte intégré au PDF quand il existe (exact et instantané). Sinon NDLOCR-Lite s'il est installé (livres japonais, vertical), puis PP-OCRv5, puis Apple Vision. Remplaçable par document. Un moteur choisi mais pas téléchargé renvoie une erreur.")
             }
-            OCRModelsSection()
+            Section {
+                NavigationLink { ModelsView() } label: { Label("Modèles téléchargés (OCR, netteté)", systemImage: "shippingbox") }
+            }
             Section("Lecteur de texte") {
                 Picker("Style", selection: $model.appSettings.textReader.style) {
                     Text("Défilement").tag(TextReaderSettings.Style.scroll)
@@ -428,5 +439,13 @@ struct TranslationSettingsSection: View {
                 usage = "\(u.used.formatted()) / \(u.limit.formatted()) caractères"
             }
         }
+    }
+}
+
+/// Tous les modèles à télécharger (OCR, netteté des scans), avec leurs liens.
+struct ModelsView: View {
+    var body: some View {
+        Form { OCRModelsSection() }
+            .navigationTitle("Modèles")
     }
 }

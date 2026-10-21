@@ -102,6 +102,13 @@ struct OCRModelsSection: View {
             }
             Text(spec.summary).font(.footnote).foregroundStyle(.secondary)
             Text("Licence : \(spec.license)").font(.caption2).foregroundStyle(.tertiary)
+            // Liens sous chaque modèle : projet d'origine et fichier téléchargé.
+            if let home = spec.homepage {
+                Link(destination: home) { Label(Self.short(home), systemImage: "link").font(.caption2) }
+            }
+            if let file = spec.mainDownload {
+                Link(destination: file) { Label(Self.short(file), systemImage: "arrow.down.circle").font(.caption2).lineLimit(1) }
+            }
             if let p = downloads.progress[spec.id] {
                 HStack {
                     ProgressView(value: p)
@@ -125,6 +132,8 @@ struct OCRModelsSection: View {
     }
 
     private func size(_ bytes: Int64) -> String { ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file) }
+
+    private static func short(_ url: URL) -> String { (url.host ?? "") + url.path }
 }
 
 /// Moteurs à proposer dans les menus « Moteur » : ceux qui marchent tout de suite + modèles installés.

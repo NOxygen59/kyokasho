@@ -21,6 +21,20 @@ public struct ModelSpec: Identifiable, Sendable, Equatable {
     public let files: [File]
 
     public var totalSize: Int64 { files.reduce(0) { $0 + $1.size } }
+
+    /// Page du projet d'origine (affichée sous le modèle).
+    public var homepage: URL? {
+        switch id {
+        case "ppocr5": return URL(string: "https://github.com/PaddlePaddle/PaddleOCR")
+        case "ndlocr": return URL(string: "https://github.com/ndl-lab/ndlocr-lite")
+        case "glmocr": return URL(string: "https://huggingface.co/zai-org/GLM-OCR")
+        case "degan": return URL(string: "https://github.com/dali92002/DE-GAN")
+        default: return nil
+        }
+    }
+
+    /// Fichier principal téléchargé (le plus gros), pour afficher son adresse.
+    public var mainDownload: URL? { files.max { $0.size < $1.size }?.url }
 }
 
 public extension ModelSpec {
