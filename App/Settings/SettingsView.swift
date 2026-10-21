@@ -2,6 +2,7 @@
 // Copyright (c) 2026 NOxygen59
 
 import OCRKit
+import ONNXOCRKit
 import ReaderCore
 import SwiftUI
 
@@ -272,6 +273,7 @@ extension OCREngineChoice {
 
 struct OCRSettingsView: View {
     @EnvironmentObject private var model: AppModel
+    @AppStorage("study.layoutEngine") private var layoutEngineRaw = LayoutDetector.Engine.geometry.rawValue
     @State private var cache: (bytes: Int, pages: Int) = (0, 0)
 
     var body: some View {
@@ -289,6 +291,13 @@ struct OCRSettingsView: View {
             }
             Section {
                 NavigationLink { ModelsView() } label: { Label("Modèles téléchargés (OCR, netteté)", systemImage: "shippingbox") }
+            }
+            Section {
+                LayoutEnginePicker(selection: $layoutEngineRaw)
+            } header: {
+                Text("Mise en page du texte extrait")
+            } footer: {
+                Text("PP-DocLayout et DocLayout-YOLO repèrent titres, colonnes et tableaux ; « Géométrie » marche sans modèle. Même choix que dans le panneau d'étude.")
             }
             Section("Lecteur de texte") {
                 Picker("Style", selection: $model.appSettings.textReader.style) {
@@ -411,11 +420,13 @@ struct TranslationSettingsSection: View {
     @ObservedObject private var deepl = DeepLService.shared
     @State private var key = ""
     @State private var usage: String?
+    @AppStorage(DefinitionTranslations.autoKey) private var autoDefinitions = false
 
     var body: some View {
         Section {
             if deepl.hasKey {
                 LabeledContent("Clé DeepL", value: deepl.maskedKey ?? "")
+                Toggle("Traduire tout seul les définitions anglaises", isOn: $autoDefinitions)
                 if let usage { LabeledContent("Ce mois-ci", value: usage) }
                 Button("Retirer la clé", role: .destructive) { deepl.setKey(nil); usage = nil }
             } else {
@@ -429,7 +440,7 @@ struct TranslationSettingsSection: View {
         } header: {
             Text("Traduction")
         } footer: {
-            Text("Optionnel. Le texte de la page part chez DeepL seulement quand tu touches « Traduire » (panneau d'étude). La clé reste dans le Trousseau de l'iPad. Offre gratuite : 500 000 caractères par mois.")
+            Text("Optionnel. Le texte de la page part chez DeepL seulement quand tu touches « Traduire » (panneau d'étude ou dictionnaire), ou si tu actives la traduction automatique des définitions anglaises (la définition anglaise part alors à chaque mot recherché pas encore traduit). La clé reste dans le Trousseau de l'iPad. Offre gratuite : 500 000 caractères par mois.")
         }
         .onAppear(perform: refresh)
     }

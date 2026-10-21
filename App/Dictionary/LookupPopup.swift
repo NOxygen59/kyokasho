@@ -159,6 +159,12 @@ struct LookupPopup: View {
                               mediaRoot: dictionaryModel.database?.mediaRoot) { message in
                     handle(message)
                 }
+                // Définition anglaise seulement : traduction française (DeepL) sous la fenêtre.
+                if let term = session.currentTerms.first,
+                   DefinitionTranslations.isEnglish(DefinitionTranslations.source(term)) {
+                    Divider().overlay(Atelier.hairline)
+                    DefinitionTranslationBar(term: term)
+                }
             }
         }
         .overlay(alignment: .bottom) {

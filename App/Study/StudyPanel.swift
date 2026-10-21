@@ -95,10 +95,13 @@ struct StudyTextTab: View {
     @State private var translating = false
     @State private var translateError: String?
     @State private var showCompare = false
+    @State private var query = ""
+    @State private var matches: [PageTextSearch.Match] = []
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
+                if reader.ocrPage != nil { PageSearchField(query: $query) }
                 engineRow
                 switch (reader.ocrPage, reader.ocrState) {
                 case (_, .running):
@@ -108,6 +111,8 @@ struct StudyTextTab: View {
                     Text(message).foregroundStyle(Atelier.textSecondary)
                     Button("Lire avec Apple Vision") { reader.runOCR(engine: OCREngineID.vision) }
                         .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.japanese))
+                case (_, _) where !query.isEmpty && reader.ocrPage != nil:
+                    PageSearchResults(matches: matches)
                 case (let page?, _):
                     if let layoutError, formatted {
                         Text(layoutError).font(.caption).foregroundStyle(Atelier.textTertiary)
@@ -138,6 +143,14 @@ struct StudyTextTab: View {
                 documentOCRRow
             }
         }
+        .task(id: "\(query)|\(reader.focusSource)|\(reader.ocrPage?.hashValue ?? 0)") {
+            guard let page = reader.ocrPage, !query.isEmpty else { matches = []; return }
+            try? await Task.sleep(nanoseconds: 150_000_000)
+            guard !Task.isCancelled else { return }
+            let q = query
+            let found = await Task.detached { PageTextSearch.search(q, in: page) }.value
+            if !Task.isCancelled { matches = found }
+        }
         .onChange(of: reader.focusSource) { _ in
             translation = nil
             translateError = nil
@@ -164,7 +177,12 @@ struct StudyTextTab: View {
     private func loadRegions() async {
         layoutError = nil
         let engine = LayoutDetector.Engine(rawValue: layoutEngineRaw) ?? .geometry
-        guard formatted, reader.ocrPage != nil, engine != .geometry, engine.isAvailable() else { regions = []; return }
+        guard formatted, reader.ocrPage != nil, engine != .geometry else { regions = []; return }
+        guard engine.isAvailable() else {
+            regions = []
+            layoutError = "\(engine.title) n'est pas téléchargé (Réglages → Modèles) : mise en page par géométrie."
+            return
+        }
         let key = "\(reader.document.id)-\(reader.focusSource)-\(engine.rawValue)"
         if let cached = LayoutRegionsCache.shared.get(key) { regions = cached; return }
         // Zones de l'ancienne page / de l'autre moteur : retirées tout de suite (géométrie en attendant).
@@ -188,18 +206,18 @@ struct StudyTextTab: View {
     private var engineRow: some View {
         HStack(spacing: 8) {
             Menu {
-                Button("Texte du PDF") { reader.runOCR(engine: OCREngineID.pdfText) }
-                Button("Apple Vision") { reader.runOCR(engine: OCREngineID.vision) }
-                ForEach(OCREngineMenu.extra, id: \.self) { id in
-                    Button(OCREngineID.displayName(id)) { reader.runOCR(engine: id) }
+                ForEach([OCREngineID.pdfText, OCREngineID.vision] + OCREngineMenu.extra, id: \.self) { id in
+                    Button { reader.runOCR(engine: id) } label: {
+                        Label(OCREngineID.displayName(id), systemImage: OCREngineMenu.icon(id))
+                    }
                 }
                 Divider()
                 Button("Relancer") { reader.runOCR(engine: reader.ocrPage?.engine, force: true) }
                 Button("Comparer les moteurs") { showCompare = true }
             } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "cpu")
-                    Text(reader.ocrPage.map { OCREngineID.displayName($0.engine) } ?? "Moteur")
+                // Icône seule (le nom s'écrivait en colonne dans le panneau étroit) ; le nom est dans le menu.
+                HStack(spacing: 4) {
+                    Image(systemName: OCREngineMenu.icon(reader.ocrPage?.engine))
                     Image(systemName: "chevron.down").font(.system(size: 10, weight: .bold))
                 }
                 .font(.system(size: 13, weight: .semibold))
@@ -214,15 +232,18 @@ struct StudyTextTab: View {
             .frame(maxWidth: 190)
             if formatted {
                 Menu {
-                    Picker("Mise en page", selection: $layoutEngineRaw) {
-                        ForEach(LayoutDetector.Engine.allCases.filter { $0.isAvailable() }, id: \.rawValue) { engine in
-                            Text(engine.title).tag(engine.rawValue)
-                        }
-                    }
+                    LayoutEnginePicker(selection: $layoutEngineRaw)
                 } label: {
-                    Image(systemName: "rectangle.3.group").font(.system(size: 14, weight: .semibold))
+                    HStack(spacing: 4) {
+                        Image(systemName: "rectangle.3.group")
+                        Text(LayoutEngineMenu.engine(layoutEngineRaw).shortTitle)
+                            .strikethrough(!LayoutEngineMenu.engine(layoutEngineRaw).isAvailable())
+                    }
+                    .font(.system(size: 13, weight: .semibold))
+                    .padding(.horizontal, 8).padding(.vertical, 6)
+                    .background(Atelier.surfaceHigh, in: Capsule())
                 }
-                .accessibilityLabel("Moteur de mise en page")
+                .accessibilityLabel("Moteur de mise en page : \(LayoutEngineMenu.engine(layoutEngineRaw).title)")
             }
             Toggle(isOn: $furigana) { Text("ふりがな").font(.system(size: 13, weight: .semibold)) }
                 .toggleStyle(.button)
@@ -298,6 +319,36 @@ struct StudyTextTab: View {
         defer { translating = false }
         do { translation = try await DeepLService.shared.translate(text) }
         catch { translateError = error.localizedDescription }
+    }
+}
+
+/// Moteur de mise en page : nom court pour le panneau, liste complète (modèles absents grisés).
+enum LayoutEngineMenu {
+    static func engine(_ raw: String) -> LayoutDetector.Engine { LayoutDetector.Engine(rawValue: raw) ?? .geometry }
+}
+
+extension LayoutDetector.Engine {
+    var shortTitle: String {
+        switch self {
+        case .geometry: return "Géo"
+        case .ppDocLayout: return "PP"
+        case .docLayoutYOLO: return "YOLO"
+        }
+    }
+}
+
+/// Choix du moteur de mise en page (panneau et Réglages) ; un modèle pas encore téléchargé est grisé.
+struct LayoutEnginePicker: View {
+    @Binding var selection: String
+
+    var body: some View {
+        Picker("Mise en page", selection: $selection) {
+            ForEach(LayoutDetector.Engine.allCases, id: \.rawValue) { engine in
+                Text(engine.isAvailable() ? engine.title : "\(engine.title) — à télécharger (Modèles)")
+                    .tag(engine.rawValue)
+                    .disabled(!engine.isAvailable())
+            }
+        }
     }
 }
 

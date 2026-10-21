@@ -148,28 +148,33 @@ PencilKit, Drive, DeepL, thèmes, barre flottante.
 > **Priorité absolue : les retours de l'utilisateur.** Puis de haut en bas.
 
 ### Grosse mise à jour v0.8.3 (demandée le 22/10, capture de la 0.8.2) — avant les étapes 1-7
-Une sous-étape (A, B…) par session. Release 0.8.3 seulement quand l'utilisateur la demande.
+Rythme choisi le 22/10 au soir : **2 sections de la liste de l'utilisateur par session** (1-2 = B-F fait ; 4-5 = G-H + I ; 6-7 = J + K). Release 0.8.3 seulement quand l'utilisateur la demande.
 
 - [x] **A — Furigana de la page** : taille de la 0.8.0 rétablie (45 % du caractère, plancher 32 % même si la
   ligne voisine est proche), une lecture longue déborde du mot, et les bandes d'une même ligne sont écartées pour
   ne **jamais** se chevaucher (`FuriganaLayer.layout` + `spread`, ✅ Mac sur des nombres ; rendu iPad non vérifié).
-- [ ] **B — Panneau d'étude, en-tête** : sélecteur OCR en **icônes** (Apple → `apple.logo`, NDLOCR / PP-OCR /
+- [x] **B — Panneau d'étude, en-tête** : sélecteur OCR en **icônes** (Apple → `apple.logo`, NDLOCR / PP-OCR /
   GLM → symboles génériques + nom dans le menu seulement) : fini « Apple Vision » écrit en colonne. Choix
   explicite PP-DocLayout / DocLayout-YOLO dans ce panneau **et** dans Réglages (existe déjà : `study.layoutEngine`,
   le rendre visible avec son nom). Notes de la page : icône dans le menu « … » plutôt qu'un onglet.
-- [ ] **C — Barre d'outils flottante** (`FloatingToolbar`) : réordonner en groupes logiques (lire : main, sélection,
+- [x] **C — Barre d'outils flottante** (`FloatingToolbar`) : réordonner en groupes logiques (lire : main, sélection,
   dictionnaire | annoter : stylo, notes | japonais : あ furigana, texte | IA / web | disposition). Montrer un
   croquis texte à l'utilisateur **avant** de coder.
-- [ ] **D — Recherche dans le texte de la page** (haut du panneau Texte) : romaji, kana ou kanji ; romaji → kana
+- [x] **D — Recherche dans le texte de la page** (haut du panneau Texte) : romaji, kana ou kanji ; romaji → kana
   (`CFStringTransform` latin → hiragana), kana ↔ katakana, comparaison aussi sur les lectures (`TextFurigana`) ;
   surligner et défiler jusqu'aux résultats.
-- [ ] **E — Mot entier au toucher dans le panneau** : dans `FuriganaTextView`, `data-q` doit partir du **début du
+- [x] **E — Mot entier au toucher dans le panneau** : dans `FuriganaTextView`, `data-q` doit partir du **début du
   mot** (segment `DictionaryModel.segment` / `Translator.segment` le plus long qui contient le caractère touché),
   pas du kanji touché. Même règle pour le texte « Brut ».
-- [ ] **F — Définitions anglaises → français par DeepL** : si le dictionnaire actif n'a que de l'anglais, bouton
+- [x] **F — Définitions anglaises → français par DeepL** : si le dictionnaire actif n'a que de l'anglais, bouton
   (ou automatique si l'option est cochée) qui traduit **le mot et sa définition** et l'affiche dessous. Cache local
   (GRDB, clé = mot + dictionnaire) ; 👍 / 👎 / ✏️ : la version corrigée remplace la traduction et est gardée.
   Rien n'est envoyé sans clé DeepL ni sans action de l'utilisateur (règle § 2).
+  **Fait (22/10)** : B icônes (`OCREngineMenu.icon`), `LayoutEnginePicker` (panneau + Réglages → OCR), Notes dans
+  « … » ; C barre = mode | dictionnaire | panneau (Texte, Mots) | IA-web ; D `PageTextSearch` (✅ Mac : romaji →
+  kana, katakana → hiragana) ; E `FuriganaTextView.wordStarts` (mode ふりがな seulement : le texte simple n'a pas de
+  toucher dictionnaire) ; F `DefinitionTranslations` (JSON `Application Support/definition-translations.json`,
+  premier mot du popup seulement, option auto dans Réglages → Traduction). Rien vérifié sur l'iPad.
 - [ ] **G — Notes flottantes** : fenêtre dans l'app, redimensionnable (coin, doigt / Pencil / souris), contenu à
   échelle fixe avec défilement ; texte au clavier **et** dessin PencilKit dans la même note (calque `PKCanvasView`
   au-dessus d'un `UITextView`, ou blocs). Données : migration GRDB (dessin en `Data`).
@@ -182,7 +187,11 @@ Une sous-étape (A, B…) par session. Release 0.8.3 seulement quand l'utilisate
   (vérifier sa licence avant d'y copier quoi que ce soit ; sinon aucun code repris).
 - [ ] **J — Mise à jour automatique par TrollStore** : ⚠️ **à décider avec l'utilisateur avant de coder**.
   (1) Le `.tipa` est dans le dépôt **privé** : le télécharger depuis l'app demande un jeton GitHub (interdit § 2),
-  ou de le publier ailleurs (refusé le 21/10). (2) TrollStore 2 s'ouvre par `apple-magnifier://install?url=<URL>`
+  ou de le publier ailleurs (refusé le 21/10). **22/10 : l'utilisateur veut une connexion GitHub dans l'app**
+  (l'app n'a aujourd'hui aucun accès au dépôt privé : elle lit seulement `latest.json` public). Prévu : jeton
+  « fine-grained » lecture seule sur `NOxygen59/kyokasho` (Contents: read), **collé par l'utilisateur** dans
+  Réglages (Trousseau, comme DeepL) ou connexion GitHub « device flow » ; API releases → asset
+  (`Accept: application/octet-stream` → URL signée temporaire). (2) TrollStore 2 s'ouvre par `apple-magnifier://install?url=<URL>`
   et télécharge **lui-même** depuis une URL ; il n'existe pas de `trollstore://install?path=` pour un fichier
   local. Prévu ensuite : une vérification au lancement (déjà `AppUpdate`), téléchargement en fond, ouverture de
   TrollStore, fichier temporaire supprimé au retour (`build` changé).

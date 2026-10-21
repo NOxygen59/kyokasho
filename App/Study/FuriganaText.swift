@@ -93,7 +93,7 @@ struct FuriganaTextView: View {
             guard !Task.isCancelled else { return }
             let segments = await dictionary.segment(unit.text)
             let rubies = TextFurigana.rubies(unit.text, segments: segments)
-            let inner = Self.markup(unit.text, rubies: rubies)
+            let inner = Self.markup(unit.text, rubies: rubies, wordStarts: Self.wordStarts(unit.text, segments: segments))
             if unit.tag == "td" {
                 if openRow != unit.row { body += (openRow == nil ? "<table>" : "</tr>") + "<tr>"; openRow = unit.row }
                 body += "<td>\(inner)</td>"
@@ -108,12 +108,26 @@ struct FuriganaTextView: View {
         html = Self.page(body)
     }
 
-    /// Chaque caractère dans un `<span data-q>` (texte à chercher à partir de lui, calculé ici : pas de calcul
-    /// d'index en JavaScript, qui compte autrement les caractères composés) ; kanji avec lecture dans `<ruby>`.
-    static func markup(_ text: String, rubies: [(range: Range<Int>, reading: String)]) -> String {
+    /// Pour chaque caractère, début du mot du dictionnaire qui le contient (segments de `Translator.segment`) :
+    /// toucher 井 dans 天井 cherche 天井, pas 井. Sans mot trouvé : le caractère lui-même.
+    static func wordStarts(_ text: String, segments: [Translator.Segment]) -> [Int]? {
+        guard !segments.isEmpty, segments.map(\.text).joined() == text else { return nil }
+        var starts: [Int] = []
+        for segment in segments {
+            let first = starts.count
+            for k in 0..<segment.text.count { starts.append(segment.term == nil ? first + k : first) }
+        }
+        return starts
+    }
+
+    /// Chaque caractère dans un `<span data-q>` (texte à chercher à partir du début de son mot, calculé ici :
+    /// pas de calcul d'index en JavaScript, qui compte autrement les caractères composés) ; kanji avec lecture
+    /// dans `<ruby>`.
+    static func markup(_ text: String, rubies: [(range: Range<Int>, reading: String)], wordStarts: [Int]? = nil) -> String {
         let chars = Array(text)
         func span(_ i: Int) -> String {
-            "<span data-q=\"\(escape(String(chars[i..<min(chars.count, i + 24)])))\">\(escape(String(chars[i])))</span>"
+            let from = wordStarts.flatMap { $0.count == chars.count ? $0[i] : nil } ?? i
+            return "<span data-q=\"\(escape(String(chars[from..<min(chars.count, from + 24)])))\">\(escape(String(chars[i])))</span>"
         }
         var starts: [Int: (Range<Int>, String)] = [:]
         for r in rubies where r.range.upperBound <= chars.count && !r.range.isEmpty { starts[r.range.lowerBound] = (r.range, r.reading) }

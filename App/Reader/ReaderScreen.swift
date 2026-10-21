@@ -287,6 +287,7 @@ struct ReaderScreen: View {
                 } label: {
                     Label("Cette page", systemImage: "doc")
                 }
+                Button { openStudy(.notes) } label: { Label("Notes de la page", systemImage: "text.bubble") }
                 Divider()
                 Button { sheet = .settings } label: {
                     Label("Pagination et réglages de ce document", systemImage: "slider.horizontal.3")
@@ -352,12 +353,11 @@ struct ReaderScreen: View {
                     if reader.pencilLookup, reader.isDrawing { reader.setDrawing(false) }
                 }
             }
+            railDivider(vertical)
             ToolButton(icon: "character.ja", label: "Texte de la page", tint: Atelier.Tint.japanese,
                        active: side == .study && studyTab == .text) { openStudy(.text) }
             ToolButton(icon: "character.book.closed.ja", label: "Mots de la page", tint: Atelier.Tint.japanese,
                        active: side == .study && studyTab == .vocab) { openStudy(.vocab) }
-            ToolButton(icon: "text.bubble", label: "Notes", tint: Atelier.Tint.annotate,
-                       active: side == .study && studyTab == .notes) { openStudy(.notes) }
             railDivider(vertical)
             ToolButton(icon: "sparkles", label: "Page vers IA", tint: Atelier.Tint.ai) { sheet = .ai }
             ToolButton(icon: "globe", label: "Navigateur à côté", tint: Atelier.Tint.ai, active: side == .web) {

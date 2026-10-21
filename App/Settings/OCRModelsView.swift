@@ -145,6 +145,18 @@ struct OCRModelsSection: View {
 
 /// Moteurs à proposer dans les menus « Moteur » : ceux qui marchent tout de suite + modèles installés.
 enum OCREngineMenu {
+    /// Icône du moteur (sélecteur du panneau d'étude).
+    static func icon(_ id: String?) -> String {
+        switch id {
+        case OCREngineID.pdfText: return "doc.plaintext"
+        case OCREngineID.vision: return "apple.logo"
+        case OCREngineID.ndlocr: return "building.columns"
+        case OCREngineID.ppocr5: return "text.viewfinder"
+        case OCREngineID.glmocr: return "sparkles"
+        default: return "cpu"
+        }
+    }
+
     static var extra: [String] {
         [OCREngineID.ndlocr, OCREngineID.ppocr5, OCREngineID.glmocr].filter { OCRService.engine($0)?.isAvailable == true }
     }
