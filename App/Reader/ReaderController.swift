@@ -65,6 +65,7 @@ final class ReaderController: NSObject, ObservableObject {
     private var pageStringCache: (index: Int, string: NSString)?
     private var pageTextTask: Task<Void, Never>?
     private var sharpenTask: Task<Void, Never>?
+    private var furiganaTask: Task<Void, Never>?
     private var hover: UIHoverGestureRecognizer!
     private var pencilTap: UITapGestureRecognizer!
     /// Le Pencil cherche le mot touché dans le dictionnaire (au lieu de dessiner ou d'afficher les barres).
@@ -225,8 +226,8 @@ final class ReaderController: NSObject, ObservableObject {
             rotations[index] = page.rotation
             ordered.append(page)
             // Version nettoyée (DE-GAN) possible : posée sur le cadre d'origine.
-            let sharpenKey = ScanSharpening.key(documentId: documentId, page: index)
-            (page as? TonedPage)?.sharpenKey = sharpenKey
+            let pageKey = ScanSharpening.key(documentId: documentId, page: index)
+            (page as? TonedPage)?.pageKey = pageKey
             (page as? TonedPage)?.originalBox = box
             let transform = transforms[index]
             if let extra = transform?.rotation, extra % 360 != 0 {
@@ -241,7 +242,7 @@ final class ReaderController: NSObject, ObservableObject {
                 page.setBounds(PresentationLayout.box(for: first, in: box), for: .cropBox)
                 copy.setBounds(PresentationLayout.box(for: second, in: box), for: .cropBox)
                 // `copy()` ne recopie pas les propriétés Swift.
-                (copy as? TonedPage)?.sharpenKey = sharpenKey
+                (copy as? TonedPage)?.pageKey = pageKey
                 (copy as? TonedPage)?.originalBox = box
                 ordered.append(copy)
             } else if settings.autoCrop, let crop = transform?.autoCrop {
@@ -386,7 +387,7 @@ final class ReaderController: NSObject, ObservableObject {
             let engine = await scanEngine(source: source)
             ocr = try? await model.ocr.page(documentId: document.id, url: fileURL, pageIndex: source, engine: engine)
             ocrState = .idle
-            if let ocr, source == currentSourcePage { ocrPage = ocr; ink.setOCR(ocr, source: source) }
+            if let ocr, source == currentSourcePage { ocrPage = ocr; showOCR(ocr, source: source) }
         }
         guard let ocr else { return }
         let normalized = CGPoint(x: (pagePoint.x - box.minX) / box.width, y: (box.maxY - pagePoint.y) / box.height)
@@ -578,6 +579,53 @@ final class ReaderController: NSObject, ObservableObject {
         }
     }
 
+    // MARK: Furigana
+
+    /// Zones OCR affichées (+ furigana du scan si l'option est active et la page sans texte intégré).
+    private func showOCR(_ ocr: OCRPage, source: Int) {
+        ink.setOCR(ocr, source: source)
+        guard FuriganaLayer.enabled else { return }
+        let key = ScanSharpening.key(documentId: document.id, page: source), url = fileURL
+        Task.detached(priority: .utility) { [weak self] in
+            let box: CGRect? = (try? PDFPool.withDocument(url) { doc -> CGRect? in
+                guard let page = doc.page(at: source), page.string?.isEmpty != false else { return nil }
+                return page.bounds(for: .cropBox)
+            }) ?? nil
+            guard let box else { return }
+            FuriganaLayer.set(FuriganaLayer.marks(from: ocr, box: box), for: key)
+            await self?.pdfView.redrawVisiblePages()
+        }
+    }
+
+    /// Pages visibles avec texte intégré : furigana calculés depuis le texte du PDF.
+    func scheduleFurigana(_ pages: [Int]) {
+        furiganaTask?.cancel()
+        guard FuriganaLayer.enabled else { return }
+        let url = fileURL, id = document.id
+        furiganaTask = Task.detached(priority: .utility) { [weak self] in
+            var changed = false
+            for source in pages {
+                guard !Task.isCancelled else { return }
+                let key = ScanSharpening.key(documentId: id, page: source)
+                guard !FuriganaLayer.has(key) else { continue }
+                let marks: [FuriganaLayer.Mark]? = (try? PDFPool.withDocument(url) { doc -> [FuriganaLayer.Mark]? in
+                    guard let page = doc.page(at: source), page.string?.isEmpty == false else { return nil }
+                    return FuriganaLayer.marks(from: page)
+                }) ?? nil
+                if let marks { FuriganaLayer.set(marks, for: key); changed = true }
+            }
+            guard changed, !Task.isCancelled else { return }
+            await self?.pdfView.redrawVisiblePages()
+        }
+    }
+
+    func setFurigana(_ on: Bool) {
+        UserDefaults.standard.set(on, forKey: FuriganaLayer.storageKey)
+        // Recalcul complet de la page posée (texte du PDF et OCR en cache).
+        if on { schedulePageSettled() } else { furiganaTask?.cancel() }
+        pdfView.redrawVisiblePages()
+    }
+
     func setSharpening(_ on: Bool) {
         UserDefaults.standard.set(on, forKey: ScanSharpening.storageKey)
         if on { scheduleSharpening(visibleSources()) } else { sharpenTask?.cancel() }
@@ -756,11 +804,12 @@ final class ReaderController: NSObject, ObservableObject {
         }
         let visible = visibleSources()
         scheduleSharpening(visible)
+        scheduleFurigana(visible)
         Task { [weak self] in
             guard let self else { return }
             // Zones en cache pour toutes les pages visibles (double page).
             for page in visible {
-                if let cached = await self.cachedOCR(source: page) { self.ink.setOCR(cached, source: page) }
+                if let cached = await self.cachedOCR(source: page) { self.showOCR(cached, source: page) }
             }
             if let cached = await self.cachedOCR(source: source) {
                 if self.currentSourcePage == source { self.ocrPage = cached }
@@ -819,7 +868,7 @@ final class ReaderController: NSObject, ObservableObject {
             do {
                 let page = try await service.page(documentId: documentId, url: url, pageIndex: source, engine: engineID, force: force)
                 guard let self, !Task.isCancelled else { return }
-                self.ink.setOCR(page, source: source)
+                self.showOCR(page, source: source)
                 if self.currentSourcePage == source {
                     self.ocrPage = page
                     self.ocrState = .idle
@@ -848,6 +897,7 @@ final class ReaderController: NSObject, ObservableObject {
         savePositionWork?.perform()
         cropTask?.cancel()
         sharpenTask?.cancel()
+        furiganaTask?.cancel()
         ocrTask?.cancel()
         documentOCRTask?.cancel()
         settleWork?.cancel()

@@ -120,6 +120,13 @@ Code : `PageEnhancer` (ONNXOCRKit, tuiles qui se recouvrent), `ScanSharpening` (
 `layoutDocumentView()` ou réinstaller le document), vitesse, mémoire (≈ 45 Mo de tampons + 124 Mo de modèle).
 Limite : pages avec texte intégré (dont scans avec couche OCR) ignorées. TextBSR (ESRGAN ×4) écarté : trop lourd.
 
+### [x] G — Furigana sur la page (option, fait le 21/10, non testé sur l'iPad)
+Menu de la page → « Furigana sur les kanji ». Lectures : `Furigana` (ReaderCore, `CFStringTokenizer` + romaji →
+hiragana, aligné sur les groupes de kanji ; table `corrections` pour les erreurs connues, ex. 日本 → にほん).
+Positions : texte du PDF (`page.selection(for:)`, **pas** `characterBounds` qui décale après chaque fin de ligne)
+ou boîtes OCR des scans. Dessin : `FuriganaLayer.draw` dans `TonedPage.draw`. Vérifié sur Mac en horizontal ;
+le vertical (à droite de la colonne) n'est vérifié nulle part. Idée : lectures du dictionnaire installé (plus justes).
+
 ## 6. Carte du code (où est quoi)
 
 - **`project.yml`** (XcodeGen) : versions, paquets `KyokashoKit` + `GLMOCRKit`, produits utilisés par l'app.

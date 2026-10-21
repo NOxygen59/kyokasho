@@ -27,6 +27,7 @@ struct ReaderScreen: View {
     @AppStorage("pencil.lookupOption") private var pencilOption = false
     @AppStorage(PageTone.storageKey) private var pageTone = PageTone.normal
     @AppStorage(ScanSharpening.storageKey) private var sharpenScans = false
+    @AppStorage(FuriganaLayer.storageKey) private var furigana = false
     @State private var pageField = ""
     @ObservedObject private var keyboard = HardwareKeyboard.shared
 
@@ -251,6 +252,9 @@ struct ReaderScreen: View {
                     Label("Fond de page", systemImage: "circle.lefthalf.filled")
                 }
                 .pickerStyle(.menu)
+                Toggle(isOn: Binding(get: { furigana }, set: { furigana = $0; reader.setFurigana($0) })) {
+                    Label("Furigana sur les kanji", systemImage: "character.ja")
+                }
                 if ScanSharpening.isInstalled {
                     Toggle(isOn: Binding(get: { sharpenScans }, set: { sharpenScans = $0; reader.setSharpening($0) })) {
                         Label("Netteté des scans (DE-GAN)", systemImage: "wand.and.stars")

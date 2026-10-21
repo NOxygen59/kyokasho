@@ -321,3 +321,23 @@ final class ImporterTests: XCTestCase {
         measure { _ = try? DocumentImporter.sha256(of: url) }
     }
 }
+
+final class FuriganaTests: XCTestCase {
+    private func pairs(_ text: String) -> [String] {
+        let chars = Array(text)
+        return Furigana.rubies(for: text).map { String(chars[$0.range]) + "=" + $0.reading }
+    }
+
+    func testReadingsAlignedOnKanji() {
+        XCTAssertEqual(pairs("日本語の教科書を読む。"), ["日本=にほん", "語=ご", "教科=きょうか", "書=しょ", "読=よ"])
+        XCTAssertEqual(pairs("食べ物を買いました"), ["食=た", "物=もの", "買=か"])
+        XCTAssertEqual(pairs("ひらがなだけ"), [])
+    }
+
+    func testUTF16RangesMatchText() {
+        let text = "新しい漢字"
+        let ns = text as NSString
+        XCTAssertEqual(Furigana.rubies(for: text).map { ns.substring(with: $0.utf16) }, ["新", "漢字"])
+    }
+}
+

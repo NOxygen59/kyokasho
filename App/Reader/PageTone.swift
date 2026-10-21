@@ -68,13 +68,13 @@ enum PageTone: String, CaseIterable, Identifiable {
 /// Page qui affiche sa version nettoyée par DE-GAN si elle est prête (`ScanSharpening`), puis applique
 /// `PageTone.current` par-dessus.
 final class TonedPage: PDFPage {
-    /// Clé de la version nettoyée (document + page d'origine) ; `nil` : jamais remplacée.
-    var sharpenKey: String?
+    /// Clé de la page d'origine (document + page) : version nettoyée, furigana.
+    var pageKey: String?
     /// Cadre d'origine de la page (avant rognage / coupe), là où l'image nettoyée se pose.
     var originalBox: CGRect = .zero
 
     override func draw(with box: PDFDisplayBox, to context: CGContext) {
-        if let key = sharpenKey, let image = ScanSharpening.image(for: key) {
+        if let key = pageKey, let image = ScanSharpening.image(for: key) {
             // Même repère que `super.draw` (origine du cadre + rotation, vérifié sur Mac) ;
             // la découpe garde seulement la partie visible (moitié de page coupée, rognage).
             let visible = bounds(for: box)
@@ -88,6 +88,13 @@ final class TonedPage: PDFPage {
             context.restoreGState()
         } else {
             super.draw(with: box, to: context)
+        }
+        if let key = pageKey, let marks = FuriganaLayer.marks(for: key), !marks.isEmpty {
+            context.saveGState()
+            context.concatenate(transform(for: box))
+            context.clip(to: bounds(for: box))
+            FuriganaLayer.draw(marks, in: context)
+            context.restoreGState()
         }
         let tone = PageTone.current
         guard tone != .normal else { return }
