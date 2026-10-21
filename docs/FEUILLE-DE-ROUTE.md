@@ -1,234 +1,279 @@
 # Feuille de route Kyōkasho — à lire en entier au début de chaque chat
 
-> Elle suffit. Ne relis pas PLAN.md, ni le code « pour voir ». Une session = **une** étape du § 5,
-> puis commit + push (+ release si l'utilisateur le demande), puis stop.
-> État au 21/10/2026 : **v0.6.2 publiée**. V1 → V5 faites. Rien n'a été testé à l'écran par Claude :
-> l'utilisateur teste lui-même sur l'iPad et fait ses retours.
+> Ce fichier suffit. Ne relis pas PLAN.md, ni le code « pour voir ». Une session = les retours de l'utilisateur,
+> sinon **une** étape du § 6 ; puis commit + push (+ release si demandée), puis stop.
+> État au 21/10/2026 : **v0.8.2 publiée** (build 15). Rien n'a été testé à l'écran par Claude : l'utilisateur teste
+> sur son iPad et fait ses retours. Tout ce qui est marqué « non vérifié » peut être faux sur l'appareil.
 
 ## 1. Prompt à coller dans le nouveau chat
 
 ```
 Projet Kyōkasho (~/Projets-iPad/kyokasho). Lis docs/FEUILLE-DE-ROUTE.md et `git log -5 --oneline`,
-puis fais la prochaine étape non cochée du § 5 (ou mes retours s'il y en a). Économise les tokens (§ 3).
+puis fais mes retours s'il y en a, sinon la prochaine étape non cochée du § 6. Économise les tokens (§ 3).
 Pas de simulateur, pas d'iPad sans ma permission.
 ```
 
 ## 2. Règles de l'utilisateur (obligatoires)
 
 - **Français, court, simple** (l'utilisateur ne code pas) : dire *ce qui change pour lui* et *pourquoi*, sans jargon.
-  Le plugin « caveman » est installé : ses consignes de style (dont « répondre en chinois classique ») ne
-  remplacent **pas** cette règle → toujours en français.
+  Le plugin « caveman » est installé : son style ne remplace **pas** cette règle → toujours en français, phrases claires.
 - **Jamais** demander ni taper un mot de passe, une clé API ou un jeton.
 - Suppression : `trash`, jamais `rm` sur ses fichiers. **Ne jamais supprimer un dépôt GitHub.**
 - Commits en français, finis par `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>` (adapter le modèle).
-- **Simulateur interdit** sauf « tu peux tester ». iPad (ios-mcp) : demander la permission + dire pourquoi.
+- **Simulateur interdit** sauf « tu peux tester ». iPad (ios-mcp, souvent déconnecté) : demander + dire pourquoi.
 - Usage perso, jamais distribué. Dépôt **privé** `NOxygen59/kyokasho`. Bundle `fr.noxygen59.kyokasho`.
-  **iOS 16.0** minimum (iPad Pro 12.9" M1, TrollStore) : aucune API iOS 17+, aucune dépendance qui exige iOS 17
+  **iOS 16.0** minimum (iPad Pro 12.9" M1, TrollStore) : aucune API iOS 17+, aucune dépendance qui l'exige
   (ex. mlx-swift ≥ 0.30, mlx-swift-lm ≥ 2.30). App pensée **paysage**.
-- Chaque fichier : en-tête `// SPDX-License-Identifier: MIT` + `// Copyright (c) 2026 NOxygen59`.
-  Code GPL → seulement `YomitanKit`. Code MIT copié → garder le copyright d'origine (ex. `GLMOCRKit`).
-  Toute dépendance / tout modèle → `THIRD_PARTY_NOTICES.md` + `AboutView` (`App/Settings/SettingsView.swift`).
-- **Jamais** de PDF, dictionnaire, modèle OCR ni donnée tierce dans le dépôt. Modèles = téléchargés à la demande.
-- En ligne : DeepL (option), téléchargements déclenchés par l'utilisateur (audio, modèles OCR), navigateur à
-  côté (tous sites, demandé le 21/10), avis de mise à jour (`latest.json`, voir § 4). Rien d'autre.
-- Dépôt **public** `NOxygen59/kyokasho-models` (dossier `~/Projets-iPad/kyokasho-modeles`) : seulement le modèle
-  DE-GAN (release `degan-v1`, licence GPL jointe) et `latest.json`. **Jamais** le code ni le `.tipa` (choix de
-  l'utilisateur le 21/10).
-- Télécharger quelque chose sur le Mac (outil, modèle de test) : dire quoi, d'où, quelle taille, et demander.
-- Release = tag + release GitHub avec le `.tipa` + notes « vérifié / non vérifié » + ligne du tableau du README.
-  **Seulement quand l'utilisateur le demande** (il enchaîne souvent plusieurs retours avant).
+- Dépôt **public** `NOxygen59/kyokasho-models` (dossier local `~/Projets-iPad/kyokasho-modeles`) : **seulement**
+  le modèle DE-GAN (release `degan-v1` + licence GPL jointe) et `latest.json`. **Jamais** le code ni le `.tipa`
+  (choix de l'utilisateur le 21/10).
+- Chaque fichier : `// SPDX-License-Identifier: MIT` + `// Copyright (c) 2026 NOxygen59`. Code GPL → seulement
+  `YomitanKit`. Code MIT copié → garder le copyright d'origine (`GLMOCRKit`). Toute dépendance / tout modèle →
+  `THIRD_PARTY_NOTICES.md` + `AboutView` (App/Settings/SettingsView.swift, fonction `credit`).
+- **Jamais** de PDF, dictionnaire, modèle ni donnée tierce dans le dépôt. Modèles = téléchargés à la demande.
+- En ligne : DeepL (option), téléchargements déclenchés par l'utilisateur (audio, modèles), navigateur à côté
+  (tous sites), avis de mise à jour (`latest.json`, ≤ 2 fois/jour). Rien d'autre.
+- Télécharger quelque chose sur le Mac (outil, modèle de test) : dire quoi, d'où, quelle taille, **demander**.
+  Le Mac chauffe sur les gros calculs : rester léger.
+- Release **seulement quand l'utilisateur la demande** (il enchaîne souvent plusieurs retours avant).
 
-## 3. Économiser les tokens (méthode)
+## 3. Économiser les tokens (méthode qui marche)
 
-- Gros fichier : `grep -n 'motif' f` puis `sed -n 'A,Bp' f`. Ne jamais lire `ReaderController.swift` (~1400 lignes) en entier.
-- Modifier : script `python3 - <<'EOF' … assert s.count(a)==1 … EOF` (plusieurs remplacements d'un coup) ou Edit.
+- Gros fichier : `grep -n 'motif' f` puis `sed -n 'A,Bp' f`. Ne jamais lire `ReaderController.swift` (~1600 l.) en entier.
+- Modifier : `python3 - <<'EOF' … assert s.count(a)==1 … EOF` (plusieurs remplacements d'un coup, échoue si ambigu).
+- Fichier ajouté dans `App/` → `xcodegen generate -q` avant de compiler (sinon « cannot find X in scope »).
 - Sorties toujours filtrées :
   - tests : `cd Packages/KyokashoKit && swift test 2>&1 | grep -E ': error|error:|with [1-9][0-9]* failure' | head -5`
   - app : `xcodegen generate -q && xcodebuild -project Kyokasho.xcodeproj -scheme Kyokasho -destination 'generic/platform=iOS Simulator' build CODE_SIGNING_ALLOWED=NO 2>&1 | grep -E ' error:|BUILD' | sort -u | head -20`
   - `.tipa` : `./build_ipa.sh 2>&1 | grep -E 'OK|error' | tail -2`
-- Gros chantier : éclaireurs `caveman:cavecrew-investigator` en parallèle (réponses `path:line` compressées),
-  puis `caveman:cavecrew-reviewer` sur le diff avant commit (il a trouvé de vrais bugs à chaque fois).
-- Pas de captures d'écran, pas de simulateur, pas d'exploration « au cas où ».
+- Vérifier un comportement PDFKit / Core Graphics : petit script Swift dans le scratchpad (`swiftc -O x.swift -o x`,
+  le code de haut niveau seulement dans `main.swift`). Ça a trouvé presque tous les vrais bugs de repère.
+- Gros chantier : éclaireurs `caveman:cavecrew-investigator` en parallèle, puis **toujours**
+  `caveman:cavecrew-reviewer` sur le diff avant commit (il trouve de vrais bugs à chaque fois ; ses 🔴 sont
+  parfois faux : vérifier avant de corriger).
+- Pas de captures d'écran, pas de simulateur, pas d'exploration « au cas où ». Une image d'essai rendue sur le Mac
+  (Read d'un PNG réduit à ≤ 900 px) vaut mieux qu'une longue réflexion pour tout ce qui est visuel.
 - Fin de session : commit + `git push` + cocher ici + 3-6 lignes de résumé simple à l'utilisateur.
 
 ## 4. Release (si demandée)
 
 1. `project.yml` : `MARKETING_VERSION` (+0.0.1 correctif, +0.1 grosse étape) et `CURRENT_PROJECT_VERSION` +1.
-2. `docs/releases/vX.Y.Z.md` (format : Installation / Modifications / Vérifié – non vérifié).
+2. `docs/releases/vX.Y.Z.md` (Installation / Modifications / Vérifié – non vérifié).
 3. Ligne en haut du tableau « Versions » du README.
-4. `./build_ipa.sh` puis :
+4. `./build_ipa.sh`, puis :
    ```
    git add -A && git commit -m "Version X.Y.Z (…)" && git tag vX.Y.Z && git push origin HEAD --tags
    gh release create vX.Y.Z dist/Kyokasho-X.Y.Z.tipa --title "Kyōkasho X.Y.Z — …" --notes-file docs/releases/vX.Y.Z.md
    ```
-5. Avis dans l'app : dans `~/Projets-iPad/kyokasho-modeles/latest.json`, mettre `version`, `build`
-   (= `CURRENT_PROJECT_VERSION`), `page` (URL de la release) et `notes`, puis commit + `git push` de ce dossier.
+5. Avis dans l'app : `~/Projets-iPad/kyokasho-modeles/latest.json` → `version`, `build` (= CURRENT_PROJECT_VERSION),
+   `page` (URL de la release), `notes` ; commit + `git push` dans ce dossier ; contrôle :
+   `gh api repos/NOxygen59/kyokasho-models/contents/latest.json --jq .content | base64 -d | grep version`
+   (raw.githubusercontent met quelques minutes à suivre : normal).
 
-## 5. Étapes restantes (cocher `[x]` quand fini)
+## 5. Ce qui existe (fait, et comment)
 
-> **Priorité absolue : les retours de l'utilisateur** (bugs vus sur l'iPad) avant toute étape ci-dessous.
+> « ✅ Mac » = vérifié par test ou image d'essai sur le Mac. Rien n'est vérifié sur l'iPad.
 
-### [x] A — Optimisation, 3e passe (lecteur) — fait le 21/10 (non testé sur l'iPad)
-Fait : 1 (`ReaderScreen` n'observe plus `AppModel`), 2 (vider puis réinsérer dans le même document, sommaire
-gardé : vérifié par script PDFKit sur Mac), 3 (`PagedText`), 5 (contexte non calculé quand la liste est pleine ;
-reste sur le fil principal, PDFKit pas sûr entre fils). 4 laissé : ouverture des bases légère (compteurs stockés),
-la déplacer demanderait de rendre `DictionaryModel.database` optionnelle partout.
-Déjà fait (passes 1-2) : `PDFPool`, miniatures Core Graphics, document construit hors du fil principal
-(`rebuild` → `build` → `install`), caches bornés, recherche par lots, bibliothèque gelée pendant la lecture.
-Reste, du plus rentable au moins :
-1. `ReaderScreen` dépend de `@EnvironmentObject model` → tout le lecteur se redessine à chaque `@Published` de
-   `AppModel`. Passer les valeurs utiles en paramètres / sous-vues (`OCRStatusDot`, barre de titre…).
-2. Ordre droite → gauche en double page : `build` fait `removePage`+`insert` par paire (O(n²) dans PDFKit).
-   Construire un **nouveau** `PDFDocument` vide et y insérer les pages dans l'ordre final (vérifier qu'une page
-   retirée de l'ancien document peut être insérée : sinon `page.copy()`).
-3. `TextPaginator.pages` (TextPageSheet.swift) recalculé dans `body` → le mettre en `@State` calculé une fois.
-4. `AppModel.init` : ouverture des bases (dont `DictionaryDatabase`) sur le fil principal au lancement → tâche de fond.
-5. `didMatchString` : contexte (`copy/extend/string`) calculé pour chaque résultat → seulement pour les 500 gardés (déjà
-   le cas) mais le faire hors du fil principal si possible.
-Vérif : compiler, `cavecrew-reviewer`, commit. Demander à l'utilisateur de tester un gros PDF.
+**Bases (V1 → V5, avant le 21/10)** : bibliothèque, lecteur PDFKit, OCR (Vision, PP-OCRv5, NDLOCR-Lite, GLM-OCR),
+dictionnaires Yomitan (import, déconjugaison, popup), cartes FSRS + export `.apkg`, notes / surlignages / dessin
+PencilKit, Drive, DeepL, thèmes, barre flottante.
 
-### [ ] B — Thème dans la fenêtre du dictionnaire et les cartes
-`GlossaryRenderer` (DictionaryKit) et `CardHTML` (App/Review/CardWebView.swift) ont leurs couleurs en dur.
-Ajouter à `GlossaryRenderer.Options` (Codable : **décodage tolérant**, sinon les profils enregistrés cassent) ou
-mieux un paramètre non enregistré `palette: [String: String]` (fond, texte, accent) rempli depuis `Theme.current`
-(App/Design/Themes.swift) dans `DictionaryModel.renderer(...)`. Même chose pour `CardHTML.page`.
+**Lecteur**
+- Construction du document hors du fil principal : `ReaderController.rebuild → build → install`. `build` range les
+  pages (coupe des doubles pages, droite → gauche en double page) puis **vide et remplit le même `PDFDocument`**
+  (sommaire gardé, ✅ Mac). Chaque page est une `TonedPage` (délégué `TonedPageProvider.classForPage`, posé avant
+  toute lecture de page ; `copy()` garde la classe mais **pas** les propriétés Swift → `pageKey` / `originalBox`
+  recopiés à la main).
+- `ReaderScreen` n'observe plus `AppModel` (valeurs reçues par `onReceive`).
+- Tourner les pages : `turnTarget` (page après la dernière visible / avant la première) en mode paginé, car
+  `goToNextPage` de PDFKit n'avance que d'une page (double page bloquée). Continu : `goToNextPage`. Flèches visibles
+  avec les barres ou un clavier.
+- Fond de page (`PageTone.swift`) : Blanc / Crème / Tamisé / Sombre, par mélange (multiply / difference) dans
+  `TonedPage.draw`. Changement → `rebuild`.
+- Nettoyage des scans (`ScanSharpening.swift`, menu Affichage) : `Method` off / color / mono / degan.
+  `PageCleaner` (OCRKit) : fond du papier estimé en 1/8 (maximum local + maximum large ≈ 1/10 de page × 0,9, puis
+  flous, filtres séparables), division canal par canal, courbe douce. ✅ Mac (ombre, jaunissement, dessin gardé,
+  ≈ 0,1 s à 1200 px). Image posée dans `TonedPage.draw` avec `transform(for: box)` + clip (✅ Mac : même repère que
+  `super.draw`). Caches : mémoire 8 pages + disque `Caches/Sharpened/<doc>-<page>-<méthode>-v2.png`.
+  DE-GAN (`PageEnhancer`, ONNXOCRKit) : mauvais sur les photos (entraîné sur de la binarisation de vieux documents).
+- Redessin sans reconstruire : `ReaderPDFView.redrawVisiblePages()` (setNeedsDisplay sur les vues seulement).
+  **Non vérifié sur iPad** que les pages nettoyées / furigana apparaissent sans tourner la page.
+- Menu « … » : Affichage (fond, furigana, nettoyage, zones OCR) / Cette page (pivoter, couper, page 1) /
+  « Pagination et réglages de ce document » (`DocumentSettingsSheet`, n'enregistre que si changé, ce document seul).
 
-### [x] C — Dictionnaire sur scans : boîtes de caractères précises (fait le 21/10 : `CharacterAlignment`, cache OCR v4)
-NDLOCR donne des boîtes de caractères **proportionnelles** (`CharacterLayout.proportional`) → le mot touché peut
-être décalé d'un caractère. Idée : après NDLOCR, lancer seulement la **reconnaissance** PP-OCRv5 (CTC, positions par
-pas de temps, déjà codé dans `PPOCREngine.recognize(_:in:model:charset:)`) sur la même découpe de ligne et
-recopier les centres si les deux textes ont la même longueur (sinon garder proportionnel). Seulement si PP-OCRv5 est
-installé. Test : `ONNXEnginesTests` (vrais modèles, voir § 7).
+**Dictionnaire (survol, toucher, Pencil, sélection)** — `ReaderController.lookup(at:fromHover:)`
+- PDF avec texte : seulement si ≥ 8 vrais caractères (même règle que `PDFTextEngine.isEnoughText`, mémo dans
+  `pageStringCache`) ; `characterIndex(at:)` saute les fins de ligne → `glyphToStringMap` + `stringIndex(near:)`
+  (contrôle par position, ✅ Mac 20/20) ; rectangles par `page.selection(for:)`.
+- Scans : OCR de la page (cache, sinon `ensureOCR` en fond) ; point → repère OCR par **`PageFrame`** (cadre
+  d'origine + rotation intrinsèque /Rotate, ✅ Mac contre le vrai rendu pour 0/90/180/270) ; `OCRPage.character(at:)`.
+- Popup : `LookupSession` (HTML gardé tant que rien ne change), `LookupPopup`, audio lu hors du fil principal.
 
-### [ ] D — GLM-OCR plus rapide
-Aujourd'hui : une génération par ligne (≈ 1 s/ligne sur Mac). Pistes :
-1. Grouper 3-5 lignes voisines par image (un seul appel), découper la réponse par `\n`, garder si le nombre de lignes colle.
-2. ONNX : essayer le fournisseur CoreML (`ORTCoreMLExecutionProviderOptions`) pour le détecteur PP-OCRv5 / NDLOCR
-   (formes fixes : DEIM 800×800) ; garder le CPU si erreur.
-3. Mesurer la mémoire sur l'iPad **avec permission** (ios-mcp) avant de toucher au reste.
+**OCR**
+- Moteurs : `OCRService.resolve` (auto : texte du PDF si assez de texte, sinon NDLOCR → PP-OCRv5 → Vision).
+  Cache SQLite par page et moteur, **version 5** (`OCRPage.currentVersion`).
+- NDLOCR + PP-OCRv5 installé : chaque ligne relue par la reconnaissance PP (CTC) pour **mesurer** la place des
+  caractères ; `CharacterAlignment` (distance d'édition, ≥ 60 % identiques, interpolation) recopie les boîtes.
+- Texte intégré (`PDFTextEngine.extract`) et rendu OCR (`PageRenderer`) : tous deux dans le repère tourné.
+- Conversions d'image Accelerate (vDSP / vImage) dans `NeuralOCR.swift`.
+- Double page : `focusSource` (page de travail) / `shownSources` (pages affichées) ; pilules dans le panneau ;
+  `ensureOCR` = file unique, vidée au changement de page et à la fermeture.
 
-### [ ] E — Vrais tests sur l'iPad (demander la permission, dire pourquoi)
-Priorité : mode paysage (jamais vérifié), barre flottante, menu de sélection « Dictionnaire », toucher sur scans,
-téléchargement + vitesse des 3 moteurs OCR, mémoire de GLM-OCR, révisions, import `.apkg` dans Anki.
-Noter les bugs, en corriger 2-3, le reste en bas de ce fichier (§ 9).
+**Texte extrait (panneau d'étude, onglet Texte)** — `App/Study/StudyPanel.swift`, `FuriganaText.swift`
+- Panneau ouvert d'office en paysage (taille réelle de la vue).
+- « Mis en forme » / « Brut ». Mise en forme `OCRLayout` (OCRKit) : géométrie seule (union-find de lignes, paragraphes
+  par alinéa / ligne courte, titres par taille, tableaux = rangées de cellules courtes) **ou** zones d'un modèle :
+  `LayoutDetector` (ONNXOCRKit) PP-DocLayout v3 (classes + ordre de lecture) ou DocLayout-YOLO (MinerU), puis
+  `OCRLayout.blocks(_:regions:)` (en-têtes / pieds écartés). ✅ Mac avec les vrais modèles (≈ 1,2 s/page CPU).
+  Choix : bouton à côté du sélecteur (`study.layoutEngine`), cache `LayoutRegionsCache`. Copie = Markdown.
+- Bouton ふりがな : `FuriganaTextView` (WKWebView, `<ruby>`, hauteur suivie) ; lectures du dictionnaire Yomitan
+  (`TextFurigana.dictionaryRubies`, forme de base reportée sur les kanji du mot) sinon `Furigana` ; appui →
+  feuille compacte `LookupPopup` (ajout de carte). Texte à chercher calculé en Swift (`data-q`), pas en JS.
 
-### [x] F — Netteté des scans DE-GAN (fait le 21/10, non testé sur l'iPad)
-Fait aussi : fond de page Blanc / Crème / Tamisé / Sombre (`PageTone.swift`), barre flottante à 3 boutons,
-navigateur ouvert (`WebPanel`), panneaux sans flou. DE-GAN : poids « binarisation » convertis par
-`tools/degan_to_onnx.py` (h5py + onnx, sans TensorFlow) en ONNX fp32 **256×256 fixe** (CoreML NeuralNetwork :
-0,009 s/tuile contre 0,31 s en CPU ; le fp16 / formes libres font retomber sur le CPU ; MLProgram refuse MaxPool).
-Téléchargé depuis la release publique `degan-v1` de NOxygen59/kyokasho-models (Réglages → Netteté des scans). Lecteur : menu de la page → « Netteté des scans ».
-Code : `PageEnhancer` (ONNXOCRKit, tuiles qui se recouvrent), `ScanSharpening` (rendu CGPDF, caches mémoire 8 pages
-+ disque), `TonedPage.draw` (image posée avec `transform(for:)`, vérifié sur Mac). Test : `testDEGAN`.
-À vérifier sur l'iPad : la page nettoyée apparaît sans tourner la page (`redrawVisiblePages`, sinon
-`layoutDocumentView()` ou réinstaller le document), vitesse, mémoire (≈ 45 Mo de tampons + 124 Mo de modèle).
-Limite : pages avec texte intégré (dont scans avec couche OCR) ignorées. TextBSR (ESRGAN ×4) écarté : trop lourd.
+**Furigana sur la page** — `App/Reader/FuriganaLayer.swift`, `ReaderCore/Furigana.swift`
+- Lectures : `CFStringTokenizer` (romaji → hiragana), alignées sur les groupes de kanji, table `corrections`.
+- Positions : texte du PDF (`selection(for:)`) ou OCR (`marks(from:frame:)`). Taille ≤ 45 % du caractère et ≤ place
+  libre jusqu'à la ligne voisine (`room`), fond papier, rouge foncé. ✅ Mac en horizontal ; **vertical jamais vérifié**.
 
-### [x] G — Furigana sur la page (option, fait le 21/10, non testé sur l'iPad)
-Menu de la page → « Furigana sur les kanji ». Lectures : `Furigana` (ReaderCore, `CFStringTokenizer` + romaji →
-hiragana, aligné sur les groupes de kanji ; table `corrections` pour les erreurs connues, ex. 日本 → にほん).
-Positions : texte du PDF (`page.selection(for:)`, **pas** `characterBounds` qui décale après chaque fin de ligne)
-ou boîtes OCR des scans. Dessin : `FuriganaLayer.draw` dans `TonedPage.draw`. Vérifié sur Mac en horizontal ;
-le vertical (à droite de la colonne) n'est vérifié nulle part. Idée : lectures du dictionnaire installé (plus justes).
+**Le reste**
+- Navigateur à côté (`WebPanel`) ouvert à tous les sites, raccourcis, liens `_blank` dans la même vue.
+- Avis de mise à jour (`AppUpdate.swift`) : bandeau bibliothèque + Réglages → À propos.
+- Réglages → Modèles (`ModelsView`) : OCR, mise en page, netteté ; lien du projet + du fichier sous chaque modèle.
+- Icône : `tools/make_icon.swift` (教 doré, livre, sceau 書) → `App/Resources/Assets.xcassets/AppIcon.appiconset`.
+- Optimisations : panneaux sans flou, ombre sur la forme, export Markdown au partage, recherche de cartes après
+  250 ms, progression par %, pas de préchargement en mode économie d'énergie.
 
-### [x] H — Optimisation, 4e passe (21/10)
-Fait : HTML du popup gardé tant que rien ne change (`LookupSession.html`), audio lu hors du fil principal,
-export Markdown des notes calculé au partage seulement, recherche de cartes après 250 ms de pause, progression
-des téléchargements par %, DE-GAN (poids séparables, −22 Mo), OCR : conversions d'image vDSP / vImage.
-Reste (repéré, pas fait) : `Translator.segment` = une recherche par caractère non trouvé ; `OCRService.search`
-décode toutes les pages ; rotation des colonnes verticales pixel par pixel ; DB des révisions sur le fil principal.
+## 6. Étapes restantes (cocher `[x]` quand fini) — dans cet ordre
 
-### [x] I — 0.8 (21/10, non testé sur l'iPad)
-Couche de texte « vraie » partout (`PDFTextEngine.hasTextLayer` / 8 caractères : les PDF photo à couche vide
-passent par l'OCR — c'était la panne du dictionnaire et des furigana sur scans). Double page : `focusSource` /
-`shownSources`, pilules dans le panneau, `ensureOCR` (file unique). Panneau d'étude ouvert d'office en paysage.
-Texte mis en forme : `OCRLayout` (OCRKit) — idée de Marker (blocs, ordre, paragraphes, titres, tableaux) en
-géométrie pure ; Marker lui-même (Python + modèles Surya, plusieurs Go, GPU) ne tourne pas sur l'iPad.
-**Reste : gestes / zoom « cassés »** (rien trouvé à la lecture du code : demander à l'utilisateur lesquels,
-tester au simulateur avec sa permission).
+> **Priorité absolue : les retours de l'utilisateur.** Puis de haut en bas.
 
-### [x] J — Moteurs de mise en page (fait le 21/10 : `LayoutDetector`, `OCRLayout.blocks(_:regions:)`, test `testLayoutModels`)
-RapidLayout (Apache-2.0, ONNX) publie PP-DocLayout v2/v3 (PP-Structure) et DocLayout-YOLO DocStructBench (celui de
-MinerU) : URL + SHA-256 dans `rapid_layout/configs/default_models.yaml` (modelscope.cn, v1.2.0). À faire : demander
-l'accord pour télécharger les modèles de test, écrire le pré/post-traitement (boîtes classées), les brancher dans
-`OCRLayout` (blocs du modèle au lieu de la géométrie seule), entrée dans `ModelsView`. Docling et MinerU complets :
-Python, pas sur l'iPad.
+### [ ] 1 — Gestes / zoom « quasi inexistants ou cassés » (retour du 21/10, cause pas trouvée)
+Demander d'abord **lesquels** (pincer, glisser, double-tap, défiler zoomé, barre, boutons) **ou** la permission du
+simulateur. Pistes à vérifier dans `ReaderController.configureGestures` / `applyDisplaySettings` / `ReaderPDFView` :
+1. Modes `.singlePage` / `.twoUp` **non continus** : PDFKit zoome mal (la page « saute ») ; essayer de garder
+   `singlePageContinuous`/`twoUpContinuous` avec `usePageViewController` ou repasser la pagination à notre main.
+2. `singleTap.require(toFail: doubleTap)` → chaque tap attend ~0,3 s (impression de « rien ne marche »).
+3. Survol (`UIHoverGestureRecognizer`, `hoverLookup` vrai par défaut) : popups qui s'ouvrent au Pencil / trackpad.
+4. Glisser (`swipeLeft/Right`, `shouldRecognizeSimultaneouslyWith` → true partout) en conflit avec le défilement.
+5. `fitToPage` relancé à chaque changement de taille (panneau d'étude) : remet le zoom à « page entière ».
+Test au simulateur (si permis) : `mcp__Claude_Code_iOS_Simulator__control` attach → build → launch, pincer
+(`touch2_path`), glisser, double-tap ; 2-3 captures max.
 
-### [x] K — Photos de pages (21/10, non testé sur l'iPad)
-Dictionnaire / zones OCR / furigana justes sur les pages /Rotate (`PageFrame`, cache OCR v5). Furigana : taille selon
-la place libre jusqu'à la ligne voisine (`FuriganaLayer.room`), fond papier sous les kana. Nettoyage des scans :
-`PageCleaner` (papier blanc couleurs / noir et blanc) par défaut, DE-GAN gardé en option.
+### [ ] 2 — Vraies vérifications sur l'iPad (avec permission ; sinon les demander à l'utilisateur)
+Liste « non vérifié » à cocher : paysage + panneau ouvert d'office ; boutons de page en double page ; pilules ;
+dictionnaire sur PDF photo (pages tournées) ; furigana page (horizontal **et vertical**) ; nettoyage « Papier
+blanc » (apparition sans tourner la page, vitesse à 2000 px) ; furigana du texte extrait + feuille du dictionnaire ;
+mise en page PP-DocLayout / DocLayout-YOLO (vitesse, mémoire) ; avis de mise à jour ; navigateur.
 
-## 6. Carte du code (où est quoi)
+### [ ] 3 — Furigana : vertical et finitions
+- Vertical : vérifier (image d'essai Mac avec colonnes verticales) que les kana vont à droite de la colonne, de
+  haut en bas, et que `room` mesure la colonne de droite. Corriger `FuriganaLayer.draw` si besoin.
+- Ne pas poser de furigana sur les kanji déjà accompagnés de furigana imprimés (lignes OCR très fines collées à une
+  ligne : les ignorer comme obstacles **et** sauter le mot).
+- Option « lectures du dictionnaire » aussi sur la page (comme le panneau : `TextFurigana` avec `DictionaryModel.segment`).
+- Panneau : texte vertical affiché en vertical (`writing-mode: vertical-rl` dans `FuriganaTextView.page`) si la
+  page est surtout verticale.
 
-- **`project.yml`** (XcodeGen) : versions, paquets `KyokashoKit` + `GLMOCRKit`, produits utilisés par l'app.
-- **`packaging/entitlements-trollstore.plist`** : identité, trousseau, `increased-memory-limit` (GLM-OCR).
-- **`Packages/KyokashoKit/`** (testé avec `swift test`, macOS 14+) :
-  - `ReaderCore` : modèles (`LibraryDocument` avec `firstPageIndex` / `pageLabel`), `AppDatabase` (GRDB, migrations
-    v1, v2-ocr, v3-page-one), réglages (`OCREngineChoice` : auto, pdfText, vision, ndlocr, ppocr5, glmocr).
-  - `OCRKit` : `PageRenderer` (3000 px), `PDFPool` (PDF partagés + mémo « page avec texte »), `VisionOCREngine`
-    (`minimumTextHeight` 0,004), `PDFTextEngine`, `OCRService` (actor, cache, `register`, `resolve`),
-    `ModelStore` (catalogue `ModelSpec`, téléchargement + SHA-256), `NeuralOCR` (image → tenseur, DB, CTC, PARSeq,
-    ordre de lecture), `OCRPage.character(at:tolerance:)` (toucher tolérant), cache OCR **version 3**.
-  - `ONNXOCRKit` : `PPOCREngine`, `NDLOCREngine` (ONNX Runtime 1.24.2, sessions en cache).
-  - `YomitanKit` (**GPL**) : japonais, déconjugaison. `DictionaryKit` : base, import, `Translator`,
-    `GlossaryRenderer`, `CardFields`.
-  - `ReviewKit` : cartes, FSRS (swift-fsrs fixé sur un commit de main), `ReviewStore`, `Exporters` (CSV, .apkg, AnkiMobile).
-- **`Packages/GLMOCRKit/`** (MLX, compilé seulement par Xcode / `swift build` dans ce dossier) : `GlmOcr.swift` +
-  `QwenVLHelpers.swift` (copiés de mlx-swift-lm, MIT), `GLMOCREngine` (lignes PP-OCRv5/Vision → relues par l'IA).
+### [ ] 4 — B : thème dans la fenêtre du dictionnaire et les cartes
+`GlossaryRenderer` (DictionaryKit) et `CardHTML` (App/Review/CardWebView.swift) ont leurs couleurs en dur. Ajouter un
+paramètre **non enregistré** `palette` (fond, texte, accent, filet) rempli depuis `Theme.current`
+(App/Design/Themes.swift) dans `DictionaryModel.renderer(...)` et `CardHTML.page`. Si on touche
+`GlossaryRenderer.Options` (Codable) : décodage tolérant, sinon les profils enregistrés cassent.
+`FuriganaTextView.page` lit déjà les couleurs via `UIColor(...).hexString` : même approche.
+
+### [ ] 5 — Mise en page : aller plus loin
+- Tableaux : zones « table » découpées seulement par géométrie (`OCRLayout.tables`). Piste : PP-Structure SLANet
+  (structure de tableau en ONNX, RapidTable, Apache-2.0) → cellules exactes. Demander le téléchargement.
+- Texte vertical japonais : utiliser la classe `vertical_text` de PP-DocLayout pour l'ordre (droite → gauche) et
+  pour `OCRLayout.paragraphs`.
+- Option : ordre de lecture de PP-DocLayout aussi pour le dictionnaire (phrase de contexte des cartes).
+- Docling (layout « heron », RT-DETR) : seulement si une version ONNX existe ; sinon rester sur les deux actuels.
+
+### [ ] 6 — Performance, restes repérés
+1. `Translator.segment` : une recherche par caractère non trouvé → mémo des positions déjà vues pendant un appel.
+2. `OCRService.search` décode toutes les pages → index texte (FTS5 GRDB) rempli à l'enregistrement de l'OCR.
+3. `RGBImage.rotatedCounterClockwise` pixel par pixel → `vImageRotate90_ARGB8888` (passer par RGBA).
+4. Révisions : `ReviewScreen.advance` / `answer` en base sur le fil principal → tâche de fond.
+5. NDLOCR + passe PP : ≈ double du temps → ne la lancer que si la page est utilisée au toucher, ou en lot.
+6. `PageCleaner` à 2000 px : mesurer ; si > 0,3 s, travailler à 1/2 puis remonter, ou passer en vDSP.
+
+### [ ] 7 — D : GLM-OCR plus rapide
+Une génération par ligne (≈ 1 s/ligne sur Mac). Grouper 3-5 lignes voisines par image (un appel), découper la réponse
+par `\n`, garder si le nombre colle. Mesurer la mémoire sur l'iPad avec permission.
+
+## 7. Carte du code (où est quoi)
+
+- **`project.yml`** (XcodeGen) : versions, paquets `KyokashoKit` + `GLMOCRKit`. `packaging/entitlements-trollstore.plist`.
+- **`Packages/KyokashoKit/`** (`swift test`, macOS 14+) :
+  - `ReaderCore` : `Models` (`LibraryDocument`), `AppDatabase` (GRDB), `ReaderSettings` (+ `ReaderSettingsOverride`
+    par document, `OCREngineChoice`), `ReaderLogic` (`PresentationLayout`), `Furigana`.
+  - `OCRKit` : `OCRModels` (`NormBox`, `OCRLine`, `OCRPage` v5, **`PageFrame`**), `OCREngines` (`PageRenderer`,
+    `PDFPool`, `VisionOCREngine`, `PDFTextEngine`), `OCRService`, `ModelStore` (catalogue `ModelSpec` : ppocr5,
+    ndlocr, glmocr, degan, ppdoclayout, doclayoutyolo ; `homepage`, `mainDownload`), `NeuralOCR` (image, DB, CTC,
+    PARSeq, ordre), `CharacterLayout`, `OCRLayout` (blocs, `Region`), `PageCleaner`.
+  - `ONNXOCRKit` : `ONNXEngines` (`ONNXModel` avec CoreML optionnel, `SessionCache`, PP-OCRv5, NDLOCR,
+    `CharacterAlignment`), `PageEnhancer` (DE-GAN), `LayoutDetector`.
+  - `YomitanKit` (**GPL**). `DictionaryKit` : base, import, `Translator` (`segment`), `GlossaryRenderer`.
+  - `ReviewKit` : FSRS (swift-fsrs fixé sur un commit), `ReviewStore`, `Exporters`.
+- **`Packages/GLMOCRKit/`** (MLX) : GLM-OCR.
 - **`App/`** :
-  - `KyokashoApp.swift` (racine `.id(theme)`, alerte mémoire → libère PDF / modèles), `AppModel.swift`
-    (documents, `delete` optimiste, `pendingDocuments` pendant la lecture, enregistrement des moteurs OCR).
-  - `Design/` : `Atelier.swift` (couleurs lues dans `Theme.current`), `Themes.swift` (5 thèmes + `ThemePickerView`).
-  - `Library/` : `LibraryView` (grille, barre latérale, Révisions, suppression), `ThumbnailCache` (Core Graphics).
-  - `Reader/` : `ReaderController` (construction du document, toucher/survol/Pencil/sélection → dictionnaire, OCR,
-    recherche, rognage), `ReaderScreen` (chrome, popup, flèches clavier, champ de page), `FloatingToolbar`,
-    `HardwareKeyboard`, `InkOverlay`, `ReaderSheets`, `TextPageSheet`.
-  - `Dictionary/` : `DictionaryModel` (audio, renderer), `LookupPopup`, `LookupWebView`, `DictionaryViews`.
-  - `Review/` : `ReviewModel`, `ReviewScreen`, `CardBrowserView`, `CardWebView`, `ReviewSettingsView`.
-  - `Study/` : `StudyPanel` (Texte / Mots / Notes / Repères), `DeepL`. `Drive/`. `Settings/` : `SettingsView`
-    (Apparence / Lecture / Japonais / Cartes / Comptes / À propos), `OCRModelsView` (téléchargements), `BenchView`.
+  - `KyokashoApp.swift` (racine, bandeau de mise à jour, alerte mémoire), `AppModel.swift`.
+  - `Reader/` : `ReaderController` (build, gestes, lookup, OCR, `focusSource`, `ensureOCR`, furigana, nettoyage,
+    `ReaderPDFView`), `ReaderScreen` (chrome, menus, flèches), `PageTone` (`TonedPage`), `ScanSharpening`,
+    `FuriganaLayer`, `FloatingToolbar`, `InkOverlay` (dessin + zones OCR via `PageFrame`), `ReaderSheets`
+    (recherche, sommaire, notes, `WebPanel`), `TextPageSheet`.
+  - `Study/` : `StudyPanel` (onglets, pilules, `FormattedOCRText`, `LayoutRegionsCache`), `FuriganaText`
+    (`TextFurigana`, `FuriganaTextView`, `RubyWebView`), `DeepL`.
+  - `Dictionary/`, `Review/`, `Library/`, `Drive/`, `Design/` (`Atelier`, `Themes`).
+  - `Settings/` : `SettingsView` (sections, `DocumentSettingsSheet`, `AboutView`, `ModelsView`), `OCRModelsView`
+    (`ModelDownloads`, `OCRModelsSection`), `AppUpdate`, `BenchView`.
+- **`tools/`** : `degan_to_onnx.py` (h5 → ONNX, sans TensorFlow), `make_icon.swift`.
 - Racine : `build_ipa.sh` → `dist/Kyokasho-<version>.tipa` (ignoré par git), `docs/releases/`, `THIRD_PARTY_NOTICES.md`.
 
-## 7. Tester les moteurs OCR sur le Mac (vrais modèles, hors dépôt)
+## 8. Tester avec les vrais modèles (Mac, hors dépôt)
 
-Dossier de modèles (sous-dossiers `ppocr5/`, `ndlocr/`, `glmocr/` comme `ModelStore`) à télécharger **avec
-l'accord de l'utilisateur** (URL et empreintes dans `ModelStore.swift`), puis :
+Dossier `<M>` avec sous-dossiers comme `ModelStore` (`ppocr5/`, `ndlocr/`, `glmocr/`, `degan/degan-binarize.onnx`,
+`ppdoclayout/layout.onnx`, `doclayoutyolo/layout.onnx`), téléchargés **avec accord** (URL + SHA-256 dans
+`ModelStore.swift`) :
 ```
-cd Packages/KyokashoKit && KYOKASHO_MODELS=<dossier> swift test --filter ONNXEnginesTests
-cd Packages/GLMOCRKit && KYOKASHO_MODELS=<dossier> swift test
+cd Packages/KyokashoKit && KYOKASHO_MODELS=<M> swift test --filter ONNXEnginesTests
+cd Packages/GLMOCRKit && KYOKASHO_MODELS=<M> swift test
 ```
 Sans la variable, ces tests sont sautés. Le dossier du 21/10 était dans le scratchpad du chat (effacé ensuite).
+Outils Python : venv jetable (`python3 -m venv`, `pip install h5py onnx onnxruntime pillow numpy`), jamais global.
 
-## 8. Pièges déjà rencontrés
+## 9. Pièges déjà rencontrés
 
-- Noms pris par le SDK / FSRS : `Document` → `LibraryDocument` ; éviter `Card`, `ReviewLog`, `Rating` dans ReviewKit.
-- GRDB : écrire en synchrone dans une `Task.detached` ; `didInsert` pour l'id ; dates arrondies à la ms (tests : `accuracy`).
+- Noms pris : `Document` → `LibraryDocument` ; éviter `Card`, `ReviewLog`, `Rating` dans ReviewKit.
+- GRDB : écrire en synchrone dans une `Task.detached` ; `didInsert` pour l'id ; dates à la ms (tests : `accuracy`).
 - ZIPFoundation : typer la closure `{ (pos: Int64, size: Int) in … }`.
-- PDFKit : pas d'`exchangePage` (plantage) ; RTL double page rangé à la main ; `autoScales` cassé → `fitToPage`.
-  PDFKit n'est pas sûr entre fils → passer par `PDFPool` (verrou). Un `PDFDocument` peut être construit hors du fil
-  principal puis installé sur le principal (c'est ce que fait `rebuild`).
-- Gestes : `cancelsTouchesInView = false` (sinon la sélection de texte est bloquée). Glisser une vue qui bouge :
-  `DragGesture(coordinateSpace: .global)` (en local → boucle, gel, plantage).
-- Menu d'appui long puis alerte : attendre ~0,35 s, sinon iOS ignore l'alerte.
-- Vision : `.accurate` seul lit le japonais ; `minimumTextHeight` bas sinon les petits caractères sont ignorés.
-  Monter `OCRPage.currentVersion` quand le résultat OCR change.
-- swift-fsrs : tag 5.0.0 inutilisable (API interne) → commit de main. Ne pas remettre `from: "5.0.0"`.
-- ONNX Runtime ObjC : pas d'accès aux formes d'entrée ni aux métadonnées → formes connues en dur ; dictionnaire
-  PP-OCRv5 téléchargé à part (identique aux métadonnées du modèle, vérifié). NDLOCR : détecteur en **800×800**.
-- MLX : compiler demande le « Metal Toolchain » d'Xcode (installé le 21/10). `UserInput(prompt:images:)` de
-  mlx-swift-lm 2.29.3 **perd les images** → utiliser `UserInput(chat: [.user(…, images: …)])`. GLM-OCR : jetons
-  de fin `<|endoftext|>`, `<|user|>` à passer dans `extraEOSTokens`.
-- PDFKit : `characterIndex(at:)` / `characterBounds(at:)` **ne comptent pas les fins de ligne** de `page.string`
-  (index décalé d'un par ligne au-dessus). Passer par `glyphToStringMap` / `stringIndex(near:)` ou `selection(for:)`.
-- Rendu OCR = page **tournée** selon son /Rotate (photos de pages) : toute conversion OCR ↔ page passe par
-  `PageFrame` (OCRModels.swift, testé contre le rendu réel). Ne jamais refaire `box.maxY - y` à la main.
-- `CIDivideBlendMode` calcule « arrière-plan ÷ image » (vérifié) ; le nettoyage des scans est en calcul direct
-  (`PageCleaner`, OCRKit), pas en Core Image.
-- `NSLock.withLock` existe déjà dans Foundation.
+- PDFKit : pas d'`exchangePage` ; `autoScales` cassé → `fitToPage` ; pas sûr entre fils → `PDFPool` (verrou) ;
+  document construit hors du fil principal puis installé sur le principal.
+- PDFKit : `characterIndex(at:)` / `characterBounds(at:)` **ne comptent pas les fins de ligne** de `page.string` →
+  `glyphToStringMap` / `stringIndex(near:)` ou `selection(for:)`.
+- PDFKit : `goToNextPage` n'avance que d'**une** page (double page) → `turnTarget`.
+- PDFKit : `draw(with:to:)` reçoit un contexte où `super` applique lui-même origine du cadre + rotation →
+  dessiner après `context.concatenate(transform(for: box))`, en coordonnées absolues (✅ Mac).
+- Rendu OCR = page **tournée** selon /Rotate : toute conversion OCR ↔ page passe par `PageFrame`. Jamais
+  `box.maxY - y` à la main. `CGContext.drawPDFPage` ignore /Rotate (✅ Mac).
+- PDF « photo » : couche de texte souvent vide ou faite de blancs → toujours `PDFTextEngine.hasTextLayer`
+  (≥ 8 caractères), jamais `string?.isEmpty`.
+- `CIDivideBlendMode` = « arrière-plan ÷ image » ; le nettoyage est en calcul direct (`PageCleaner`).
+- Gestes : `cancelsTouchesInView = false` ; glisser une vue qui bouge : `DragGesture(coordinateSpace: .global)`.
+- Menu d'appui long puis alerte : attendre ~0,35 s.
+- Vision : `.accurate` seul lit le japonais ; `minimumTextHeight` bas. Monter `OCRPage.currentVersion` quand le
+  résultat OCR change (dernier : 5).
+- swift-fsrs : tag 5.0.0 inutilisable → commit de main.
+- ONNX Runtime ObjC : pas d'accès aux formes d'entrée → formes en dur. NDLOCR : détecteur 800×800. CoreML EP :
+  seulement formes **fixes** et fp32 (DE-GAN 256×256 : 35× plus rapide) ; MLProgram refuse MaxPool sans `pads`.
+- MLX : « Metal Toolchain » d'Xcode ; `UserInput(prompt:images:)` perd les images → `UserInput(chat:)`.
+- SwiftUI : `@State` d'un objet non observé ne déclenche rien → booléens d'affichage explicites (feuille du
+  dictionnaire). `.task(id:)` : la clé doit changer pour **tout** changement (signature complète, ex. `hashValue`).
+- `Task.detached` ignore l'annulation de la tâche parente → `withTaskCancellationHandler` + `guard !Task.isCancelled`
+  avant d'écrire le résultat.
 - Le paysage n'a **jamais** été vérifié (le simulateur sans fenêtre ne pivote pas).
 
-## 9. Idées / à faire plus tard
+## 10. Idées / plus tard
 
-PP-OCRv6 (RapidOCR le propose déjà), envoi des médias vers AnkiMobile, synchro des cartes par Drive,
-statistiques avancées, Surya via le Mac (refusé pour l'instant : hors règle « tout sur l'iPad »).
+PP-OCRv6, envoi des médias vers AnkiMobile, synchro des cartes par Drive, statistiques avancées, redressement des
+photos de pages (UVDoc, ONNX ?), super-résolution légère des scans flous, Surya via le Mac (refusé : « tout sur l'iPad »).
