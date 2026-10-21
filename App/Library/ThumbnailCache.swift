@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 NOxygen59
 
-import PDFKit
+import CoreGraphics
+import OCRKit
 import UIKit
 
 /// Miniatures de pages : cache mémoire limité (vidé automatiquement en cas de manque de mémoire)
@@ -13,12 +14,12 @@ final class ThumbnailCache: @unchecked Sendable {
     private let lock = NSLock()
     private var waiting: [String: [(UIImage?) -> Void]] = [:]
     /// Dernier PDF ouvert pour le rendu (n'est touché que depuis `queue`) : évite de rouvrir le
-    /// fichier pour chaque miniature d'un même document.
-    private var openDocument: (url: URL, document: PDFDocument)?
+    /// fichier pour chaque miniature d'un même document. Core Graphics, bien plus léger que PDFKit.
+    private var openDocument: (url: URL, document: CGPDFDocument)?
 
     init(directory: URL) {
         self.directory = directory
-        memory.totalCostLimit = 48 << 20 // ~48 Mo de miniatures décodées au maximum
+        memory.totalCostLimit = 32 << 20 // ~32 Mo de miniatures décodées au maximum
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
     }
 
@@ -62,20 +63,16 @@ final class ThumbnailCache: @unchecked Sendable {
         if let data = try? Data(contentsOf: diskURL), let image = UIImage(data: data) {
             return image.preparingForDisplay() ?? image
         }
-        let document: PDFDocument
+        let document: CGPDFDocument
         if let open = openDocument, open.url == fileURL {
             document = open.document
         } else {
-            guard let opened = PDFDocument(url: fileURL) else { return nil }
+            guard let opened = CGPDFDocument(fileURL as CFURL) else { return nil }
             openDocument = (fileURL, opened)
             document = opened
         }
-        guard let pdfPage = document.page(at: page) else { return nil }
-        let bounds = pdfPage.bounds(for: .cropBox)
-        let rotated = pdfPage.rotation % 180 != 0
-        let aspect = rotated ? bounds.width / max(bounds.height, 1) : bounds.height / max(bounds.width, 1)
-        let size = CGSize(width: CGFloat(width), height: (CGFloat(width) * aspect).rounded())
-        let image = pdfPage.thumbnail(of: size, for: .cropBox)
+        guard let cg = try? PageRenderer.thumbnail(document: document, pageIndex: page, width: width) else { return nil }
+        let image = UIImage(cgImage: cg)
         if let data = image.jpegData(compressionQuality: 0.8) {
             try? data.write(to: diskURL, options: .atomic)
         }

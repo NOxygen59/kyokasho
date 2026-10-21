@@ -112,10 +112,12 @@ struct LibraryView: View {
         } message: {
             Text("Numéro de la page du fichier PDF où ton manuel imprime « 1 ». Plus simple : ouvre le livre sur cette page, puis menu ••• → « Cette page est la page 1 ».")
         }
-        .confirmationDialog("Supprimer ce document et toutes ses notes ?",
-                            isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }),
-                            titleVisibility: .visible) {
+        .alert("Supprimer « \(deleting?.title ?? "") » ?",
+               isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } })) {
+            Button("Annuler", role: .cancel) {}
             Button("Supprimer", role: .destructive) { if let deleting { model.delete(deleting) } }
+        } message: {
+            Text("Le PDF, ses notes, surlignages, dessins et le texte lu par l'OCR seront effacés de l'iPad.")
         }
     }
 
@@ -294,7 +296,10 @@ struct LibraryView: View {
             pageOneText = String(document.firstPageIndex + 1)
             settingPageOne = document
         } label: { Label("Définir la page 1…", systemImage: "1.circle") }
-        Button(role: .destructive) { deleting = document } label: { Label("Supprimer", systemImage: "trash") }
+        Button(role: .destructive) {
+            // Le menu d'appui long doit finir de se fermer, sinon iOS ignore la fenêtre de confirmation.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { deleting = document }
+        } label: { Label("Supprimer", systemImage: "trash") }
     }
 
     private var emptyState: some View {

@@ -2,6 +2,7 @@
 // Copyright (c) 2026 NOxygen59
 
 import GLMOCRKit
+import OCRKit
 import ONNXOCRKit
 import SwiftUI
 import UIKit
@@ -37,6 +38,7 @@ struct KyokashoApp: App {
                 .onReceive(NotificationCenter.default.publisher(for: UIApplication.didReceiveMemoryWarningNotification)) { _ in
                     model.thumbnails.trim()
                     ONNXEngines.unload()
+                    PDFPool.release()
                     Task { await GLMOCREngine.unload() }
                 }
         }

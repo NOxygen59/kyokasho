@@ -21,6 +21,8 @@ final class InkStore: NSObject, PDFPageOverlayViewProvider {
     private var pagesWithInk: Set<Int> = []
     private var drawings: [Int: PKDrawing] = [:]
     private var dirty: Set<Int> = []
+    /// Pages dessinées pendant cette lecture : jamais oubliées (l'enregistrement est asynchrone).
+    private var touched: Set<Int> = []
     private var saveWork: DispatchWorkItem?
     private var editing = false
     /// Zones OCR à dessiner (si le réglage est actif), par page source.
@@ -47,6 +49,13 @@ final class InkStore: NSObject, PDFPageOverlayViewProvider {
         toolPicker.selectedTool = PKInkingTool(.pen, color: .black, width: 3)
     }
 
+    /// Oublie dessins et zones OCR des pages éloignées (un long livre ne remplit plus la mémoire).
+    /// Les dessins pas encore enregistrés sont gardés.
+    func trim(around source: Int, keep: Int = 8) {
+        drawings = drawings.filter { abs($0.key - source) <= keep || dirty.contains($0.key) || touched.contains($0.key) }
+        ocrPages = ocrPages.filter { abs($0.key - source) <= keep }
+    }
+
     func loadIndex() throws {
         pagesWithInk = try model.database.pagesWithInk(documentId: documentId)
     }
@@ -66,6 +75,7 @@ final class InkStore: NSObject, PDFPageOverlayViewProvider {
         drawings[source] = drawing
         pagesWithInk.insert(source)
         dirty.insert(source)
+        touched.insert(source)
         for other in liveViews.allObjects where other !== view && other.sourcePage == source {
             other.show(drawing)
         }

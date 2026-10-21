@@ -86,7 +86,11 @@ final class AppModel: ObservableObject {
         database.documentsPublisher()
             .replaceError(with: [])
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] in self?.documents = $0 }
+            .sink { [weak self] list in
+                guard let self else { return }
+                // Une suppression en cours ne doit pas faire réapparaître le livre un instant.
+                self.documents = list.filter { !self.deletingIds.contains($0.id) }
+            }
             .store(in: &cancellables)
     }
 
@@ -139,12 +143,29 @@ final class AppModel: ObservableObject {
         }
     }
 
+    /// Documents en cours de suppression (cachés de la liste jusqu'à la fin de l'effacement).
+    private var deletingIds: Set<String> = []
+
     func delete(_ document: LibraryDocument) {
         let importer = importer
         let thumbnails = thumbnails
+        // Retiré de la liste tout de suite ; remis (avec le message d'erreur) si l'effacement échoue.
+        deletingIds.insert(document.id)
+        documents.removeAll { $0.id == document.id }
+        let url = storage.url(for: document.id)
         ioQueue.async {
-            try? importer.delete(documentId: document.id)
-            thumbnails.removeAll(for: document.id)
+            PDFPool.release(url)
+            do {
+                try importer.delete(documentId: document.id)
+                thumbnails.removeAll(for: document.id)
+                Task { @MainActor in self.deletingIds.remove(document.id) }
+            } catch {
+                Task { @MainActor in
+                    self.deletingIds.remove(document.id)
+                    self.lastError = "Suppression impossible : \(error.localizedDescription)"
+                    self.documents = (try? self.database.allDocuments()) ?? self.documents
+                }
+            }
         }
     }
 

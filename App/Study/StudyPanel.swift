@@ -219,9 +219,10 @@ struct StudyVocabTab: View {
         @Published var shown = false
     }
 
-    /// Kanji de la page.
-    private var kanji: [Character] {
-        guard let text = reader.ocrPage?.text else { return [] }
+    /// Kanji de la page, calculés une fois par résultat OCR (dans `reload`), pas à chaque affichage.
+    @State private var kanji: [Character] = []
+
+    private static func kanji(in text: String) -> [Character] {
         var seen = Set<Character>()
         return text.filter { c in
             guard let v = c.unicodeScalars.first?.value, (0x4E00...0x9FFF).contains(v) || (0x3400...0x4DBF).contains(v) else { return false }
@@ -232,7 +233,7 @@ struct StudyVocabTab: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
-                if reader.ocrPage?.text.isEmpty ?? true {
+                if reader.ocrPage?.lines.isEmpty ?? true {
                     Text("Lis la page (onglet Texte) pour voir son vocabulaire.").foregroundStyle(Atelier.textSecondary)
                 } else if !dictionary.hasTermDictionaries {
                     VStack(alignment: .leading, spacing: 6) {
@@ -270,7 +271,8 @@ struct StudyVocabTab: View {
                 }
             }
         }
-        .task(id: reader.ocrPage?.text) { await reload() }
+        // Clé légère (pas tout le texte recollé à chaque affichage).
+        .task(id: reader.ocrPage.map { "\($0.engine)#\($0.lines.count)#\($0.lines.first?.text ?? "")#\($0.lines.last?.text ?? "")" }) { await reload() }
         .sheet(isPresented: $popup.shown) {
             if let session = popup.session {
                 LookupPopup(session: session, added: review.keys, onAddCard: { add($0) }, close: { popup.shown = false })
@@ -340,7 +342,9 @@ struct StudyVocabTab: View {
     }
 
     private func reload() async {
-        guard let text = reader.ocrPage?.text, !text.isEmpty, dictionary.hasTermDictionaries else { words = []; return }
+        let text = reader.ocrPage?.text ?? ""
+        kanji = Self.kanji(in: text)
+        guard !text.isEmpty, dictionary.hasTermDictionaries else { words = []; return }
         loading = true
         defer { loading = false }
         let segments = await dictionary.segment(text)

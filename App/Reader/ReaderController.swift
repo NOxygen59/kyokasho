@@ -57,9 +57,13 @@ final class ReaderController: NSObject, ObservableObject {
         didSet { UserDefaults.standard.set(hoverLookup, forKey: "reader.hoverLookup") }
     }
     /// La page a du texte (intégré ou OCR) : l'option de survol a un sens.
-    var pageHasText: Bool {
-        ocrPage != nil || pdf?.page(at: currentIndex)?.string?.isEmpty == false
-    }
+    var pageHasText: Bool { ocrPage != nil || pageHasPDFText }
+    /// Texte intégré à la page lue : calculé une fois par page, hors du fil principal (et plus à
+    /// chaque rafraîchissement de l'écran, ce qui relisait tout le texte de la page).
+    @Published private(set) var pageHasPDFText = false
+    /// Texte de la page touchée / survolée, gardé pour les recherches suivantes sur la même page.
+    private var pageStringCache: (index: Int, string: NSString)?
+    private var pageTextTask: Task<Void, Never>?
     private var hover: UIHoverGestureRecognizer!
     private var pencilTap: UITapGestureRecognizer!
     /// Le Pencil cherche le mot touché dans le dictionnaire (au lieu de dessiner ou d'afficher les barres).
@@ -167,6 +171,7 @@ final class ReaderController: NSObject, ObservableObject {
 
     /// (Re)construit le document affiché à partir du fichier et des transformations.
     private func rebuild(keepingSource source: Int) {
+        pageStringCache = nil
         guard let pdf = PDFDocument(url: fileURL) else {
             loadError = "Impossible d'ouvrir ce PDF."
             return
@@ -247,11 +252,17 @@ final class ReaderController: NSObject, ObservableObject {
         let pagePoint = pdfView.convert(point, to: page)
         let maxLength = model.dictionary.profile.lookup.scanLength
 
-        // 1. Texte intégré du PDF.
-        if let string = page.string, !string.isEmpty {
+        // 1. Texte intégré du PDF (lu une fois par page, gardé pour le survol).
+        let ns: NSString
+        if let cached = pageStringCache, cached.index == index {
+            ns = cached.string
+        } else {
+            ns = (page.string ?? "") as NSString
+            pageStringCache = (index, ns)
+        }
+        if ns.length > 0 {
             let i = page.characterIndex(at: pagePoint)
-            if i >= 0, i < (string as NSString).length {
-                let ns = string as NSString
+            if i >= 0, i < ns.length {
                 var text = ""
                 var rects: [CGRect] = []
                 var j = i
@@ -529,7 +540,6 @@ final class ReaderController: NSObject, ObservableObject {
         if changed, lookupRequest != nil { endLookup() }
         if changed, !rebuilding, settings.hideBarsOnScroll, barsVisible { barsVisible = false }
         scheduleSavePosition()
-        preloadThumbnails(around: currentSourcePage)
         schedulePageSettled()
     }
 
@@ -565,7 +575,8 @@ final class ReaderController: NSObject, ObservableObject {
         let lower = max(0, source - n), upper = min(document.pageCount - 1, source + n)
         guard lower <= upper else { return }
         for page in lower...upper {
-            model.thumbnails.thumbnail(documentId: document.id, fileURL: fileURL, page: page, width: 240) { _ in }
+            // Même largeur que la bande des pages (`FilmstripCell`), sinon la préparation ne sert à rien.
+            model.thumbnails.thumbnail(documentId: document.id, fileURL: fileURL, page: page, width: 120) { _ in }
         }
     }
 
@@ -584,6 +595,21 @@ final class ReaderController: NSObject, ObservableObject {
         ocrPage = nil
         ocrState = .idle
         let source = currentSourcePage
+        // Miniatures voisines et test « la page a du texte » seulement une fois la page posée
+        // (pas à chaque page qui défile).
+        preloadThumbnails(around: source)
+        ink.trim(around: source)
+        pageHasPDFText = false
+        pageTextTask?.cancel()
+        let url = fileURL
+        pageTextTask = Task.detached(priority: .utility) { [weak self] in
+            // Même règle que le toucher : un peu de texte suffit (folio, légende).
+            let has = (try? PDFPool.withDocument(url) { $0.page(at: source)?.string?.isEmpty == false }) ?? false
+            await MainActor.run {
+                guard !Task.isCancelled, self?.currentSourcePage == source else { return }
+                self?.pageHasPDFText = has
+            }
+        }
         let visible = visibleSources()
         Task { [weak self] in
             guard let self else { return }
@@ -683,6 +709,13 @@ final class ReaderController: NSObject, ObservableObject {
         pdf?.cancelFindString()
         observers.forEach(NotificationCenter.default.removeObserver)
         observers.removeAll()
+        // Libère tout de suite le PDF (et ses pages copiées) au lieu d'attendre la fin de la vue.
+        pageTextTask?.cancel()
+        pdfView.document = nil
+        pdf = nil
+        pageStringCache = nil
+        let url = fileURL
+        DispatchQueue.global(qos: .utility).async { PDFPool.release(url) }
     }
 
     // MARK: Gestes
@@ -965,7 +998,9 @@ final class ReaderController: NSObject, ObservableObject {
                 if let crop = autoreleasepool(invoking: { Self.detectCrop(cg, pageIndex: index) }) {
                     batch[index] = crop
                 }
-                if batch.count >= 12 || n == ordered.count - 1 {
+                // Petits lots autour de la page lue (vite visibles), puis gros lots : chaque lot
+                // relance la mise en page de tout le document.
+                if batch.count >= (n < 8 ? 4 : 80) || n == ordered.count - 1 {
                     let ready = batch
                     batch.removeAll()
                     await self?.applyCrops(ready, documentId: documentId)
@@ -1002,13 +1037,18 @@ final class ReaderController: NSObject, ObservableObject {
     private func applyCrops(_ crops: [Int: NormalizedRect], documentId: String) {
         guard documentId == document.id, settings.autoCrop, let pdf else { return }
         var toSave: [PageTransform] = []
+        // Pages affichées de chaque page source, calculées une fois (au lieu d'un parcours par page).
+        var pagesBySource: [Int: [PDFPage]] = [:]
+        for (i, p) in presented.enumerated() where crops[p.source] != nil {
+            if let page = pdf.page(at: i) { pagesBySource[p.source, default: []].append(page) }
+        }
         for (index, crop) in crops {
             var t = transforms[index] ?? PageTransform(documentId: documentId, pageIndex: index)
             t.autoCrop = crop
             transforms[index] = t
             toSave.append(t)
             guard !splitSources.contains(index), let box = originalBoxes[index] else { continue }
-            for page in pages(forSource: index, in: pdf) {
+            for page in pagesBySource[index] ?? [] {
                 page.setBounds(ContentBounds.apply(crop, to: box), for: .cropBox)
             }
         }

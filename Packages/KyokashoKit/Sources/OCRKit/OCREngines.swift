@@ -30,21 +30,37 @@ public enum PageRenderer {
     /// Rend la `cropBox` d'origine de la page en niveaux de gris (OCR : la couleur n'aide pas et
     /// coûte 4× plus de mémoire), côté le plus long ≈ `longSide` pixels.
     public static func render(url: URL, pageIndex: Int, longSide: Int = 2400) throws -> CGImage {
-        guard let pdf = CGPDFDocument(url as CFURL), let page = pdf.page(at: pageIndex + 1) else {
-            throw OCRError.pageUnavailable
-        }
+        try render(url: url, pageIndex: pageIndex, gray: true) { size in Double(longSide) / max(size.width, size.height, 1) }
+    }
+
+    /// Miniature en couleur, `width` pixels de large (bibliothèque, bande des pages).
+    public static func thumbnail(document: CGPDFDocument, pageIndex: Int, width: Int) throws -> CGImage {
+        try render(document, pageIndex: pageIndex, gray: false) { size in Double(width) / max(size.width, 1) }
+    }
+
+    private static func render(url: URL, pageIndex: Int, gray: Bool, scale: (CGSize) -> Double) throws -> CGImage {
+        // Document partagé (`PDFPool`) : un gros PDF n'est pas relu en entier à chaque page.
+        // Rendu sous le verrou : Core Graphics ne promet rien si deux fils dessinent le même document.
+        try PDFPool.withCGDocument(url) { try render($0, pageIndex: pageIndex, gray: gray, scale: scale) }
+    }
+
+    private static func render(_ pdf: CGPDFDocument, pageIndex: Int, gray: Bool, scale: (CGSize) -> Double) throws -> CGImage {
+        guard let page = pdf.page(at: pageIndex + 1) else { throw OCRError.pageUnavailable }
         let box = page.getBoxRect(.cropBox)
         let rotation = ((page.rotationAngle % 360) + 360) % 360
         let rotated = rotation == 90 || rotation == 270
         let size = rotated ? CGSize(width: box.height, height: box.width) : box.size
-        let scale = Double(longSide) / max(size.width, size.height, 1)
-        let width = max(1, Int((size.width * scale).rounded()))
-        let height = max(1, Int((size.height * scale).rounded()))
-        guard let ctx = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
-                                  space: CGColorSpaceCreateDeviceGray(), bitmapInfo: CGImageAlphaInfo.none.rawValue) else {
+        let factor = scale(size)
+        let width = max(1, Int((size.width * factor).rounded()))
+        let height = max(1, Int((size.height * factor).rounded()))
+        guard let ctx = gray
+            ? CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
+                        space: CGColorSpaceCreateDeviceGray(), bitmapInfo: CGImageAlphaInfo.none.rawValue)
+            : CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
+                        space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue) else {
             throw OCRError.renderFailed
         }
-        ctx.setFillColor(gray: 1, alpha: 1)
+        ctx.setFillColor(CGColor(gray: 1, alpha: 1))
         ctx.fill(CGRect(x: 0, y: 0, width: width, height: height))
         ctx.interpolationQuality = .high
         // Pas de `getDrawingTransform` : il n'agrandit jamais (la page resterait petite au centre).
@@ -130,17 +146,29 @@ public struct PDFTextEngine: OCREngine {
 
     public init() {}
 
-    /// La page a-t-elle assez de texte intégré pour se passer d'OCR ?
+    /// La page a-t-elle assez de texte intégré pour se passer d'OCR ? (Réponse gardée en mémoire.)
     public static func hasTextLayer(url: URL, pageIndex: Int) -> Bool {
-        guard let page = PDFDocument(url: url)?.page(at: pageIndex), let s = page.string else { return false }
-        return s.unicodeScalars.lazy.filter { !CharacterSet.whitespacesAndNewlines.contains($0) }.count >= 8
+        PDFPool.hasTextLayer(url: url, pageIndex: pageIndex) { document in
+            guard let s = document.page(at: pageIndex)?.string else { return false }
+            return Self.isEnoughText(s)
+        }
+    }
+
+    static func isEnoughText(_ s: String) -> Bool {
+        s.unicodeScalars.lazy.filter { !CharacterSet.whitespacesAndNewlines.contains($0) }.count >= 8
     }
 
     public func recognize(_ input: OCRInput) async throws -> OCRPage {
         let start = Date()
         guard case .pdfPage(let url, let index) = input else { throw OCRError.noTextLayer }
-        guard let document = PDFDocument(url: url), let page = document.page(at: index) else { throw OCRError.pageUnavailable }
-        guard let string = page.string, Self.hasTextLayer(url: url, pageIndex: index) else { throw OCRError.noTextLayer }
+        return try PDFPool.withDocument(url) { document in
+            guard let page = document.page(at: index) else { throw OCRError.pageUnavailable }
+            return try Self.extract(page, start: start, engine: id)
+        }
+    }
+
+    private static func extract(_ page: PDFPage, start: Date, engine id: String) throws -> OCRPage {
+        guard let string = page.string, isEnoughText(string) else { throw OCRError.noTextLayer }
         let box = page.bounds(for: .cropBox)
         let ns = string as NSString
         var lines: [OCRLine] = []
@@ -181,5 +209,53 @@ public struct PDFTextEngine: OCREngine {
         }
         flush()
         return OCRPage(engine: id, lines: lines, durationMs: Int(Date().timeIntervalSince(start) * 1000))
+    }
+}
+
+// MARK: - Documents PDF partagés
+
+/// Un seul document ouvert gardé par type (PDFKit pour le texte, Core Graphics pour le rendu) :
+/// l'OCR de tout un livre ne relit plus le fichier entier à chaque page. PDFKit n'aime pas être
+/// utilisé par plusieurs fils à la fois : tout accès passe par le verrou.
+public enum PDFPool {
+    private static let lock = NSRecursiveLock()
+    private nonisolated(unsafe) static var kit: (url: URL, document: PDFDocument)?
+    private nonisolated(unsafe) static var cg: (url: URL, document: CGPDFDocument)?
+    private nonisolated(unsafe) static var textLayer: [String: Bool] = [:]
+
+    public static func withDocument<T>(_ url: URL, _ body: (PDFDocument) throws -> T) throws -> T {
+        lock.lock(); defer { lock.unlock() }
+        if kit?.url != url {
+            guard let document = PDFDocument(url: url) else { throw OCRError.pageUnavailable }
+            kit = (url, document)
+        }
+        return try body(kit!.document)
+    }
+
+    public static func withCGDocument<T>(_ url: URL, _ body: (CGPDFDocument) throws -> T) throws -> T {
+        lock.lock(); defer { lock.unlock() }
+        if cg?.url != url { cg = CGPDFDocument(url as CFURL).map { (url, $0) } }
+        guard let document = cg?.document else { throw OCRError.pageUnavailable }
+        return try body(document)
+    }
+
+    static func hasTextLayer(url: URL, pageIndex: Int, check: (PDFDocument) -> Bool) -> Bool {
+        let key = "\(url.path)#\(pageIndex)"
+        lock.lock(); defer { lock.unlock() }
+        if let known = textLayer[key] { return known }
+        // Fichier illisible pour l'instant : réponse « non » sans la retenir.
+        guard let value = try? withDocument(url, check) else { return false }
+        if textLayer.count > 20_000 { textLayer.removeAll() }
+        textLayer[key] = value
+        return value
+    }
+
+    /// Libère les documents (lecteur fermé, document supprimé, manque de mémoire).
+    /// Peut attendre la fin d'un OCR en cours : à appeler hors du fil principal.
+    public static func release(_ url: URL? = nil) {
+        lock.lock(); defer { lock.unlock() }
+        if url == nil || kit?.url == url { kit = nil }
+        if url == nil || cg?.url == url { cg = nil }
+        if let url { textLayer = textLayer.filter { !$0.key.hasPrefix(url.path + "#") } }
     }
 }

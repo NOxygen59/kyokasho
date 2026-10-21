@@ -224,6 +224,17 @@ Nouveau fichier `Sources/ReviewKit/Exporters.swift`.
    Priorité : **mode paysage** (jamais vérifié), popup 辞, onglet Mots, révisions, import d'un vrai dictionnaire (Jitendex), OCR NDLOCR sur un manuel vertical.
 3. Noter les bugs et en corriger 2 ou 3 au plus. Le reste va dans une liste « à faire » en bas de ce fichier.
 
+### Optimisation (21/10, 1re passe) — fait
+- Suppression : alerte ouverte après la fermeture du menu d'appui long, livre retiré tout de suite, erreur affichée.
+- `PDFPool` (OCRKit) : un PDF ouvert partagé (PDFKit / Core Graphics) + mémo « page avec texte » ; libéré à la
+  fermeture du lecteur, à la suppression, en manque de mémoire. Miniatures en Core Graphics (plus de PDFKit).
+- Lecteur : texte de page lu une fois par page (survol), test « page avec texte » hors fil principal,
+  miniatures préparées à la bonne taille (120) une fois la page posée, PDF libéré à la fermeture, caches
+  d'encre / OCR bornés à ±8 pages, rognage auto en gros lots.
+- **Reste (2e passe)** : `ReaderController.rebuild` relit tout le PDF sur le fil principal (ouverture, réglages,
+  pivoter / couper une page) ; réorganisation droite → gauche en O(n²) ; `documents` republié à chaque page
+  tournée (rafraîchit la bibliothèque derrière le lecteur) ; recherche (`didMatchString`) en O(n²).
+
 ## 5. Carte du code (où est quoi)
 
 - **`project.yml`** (XcodeGen) : version `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION` ; produits du paquet utilisés par l'app.
