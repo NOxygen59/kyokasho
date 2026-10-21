@@ -305,7 +305,7 @@ aucun gel de l'interface. Chaque version se termine par une mesure, pas par une 
 
 ## 10. Découpage en sessions (1 par jour, jusqu'au mardi 27 octobre 2026)
 
-Règle : une session = une étape, peu de code relu, pas de simulateur sauf feu vert.
+Règle : une session = une étape. **Détails complets : `docs/FEUILLE-DE-ROUTE.md`** (à lire en premier).
 Au début de chaque session, lire seulement cette section et `git log -3`.
 
 | Jour | Étape | Fini quand |
