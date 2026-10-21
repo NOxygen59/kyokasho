@@ -23,6 +23,7 @@ Textes des licences : [LICENSES/](LICENSES/) ; attributions : [THIRD_PARTY_NOTIC
 
 | Version | Release | Contenu |
 |---|---|---|
+| **0.7.1** | [v0.7.1](https://github.com/NOxygen59/kyokasho/releases/tag/v0.7.1) | DE-GAN téléchargé directement, avis de mise à jour dans l'app |
 | **0.7.0** | [v0.7.0](https://github.com/NOxygen59/kyokasho/releases/tag/v0.7.0) | Furigana, netteté des scans (DE-GAN), fond doux / sombre, barre à 3 boutons, navigateur ouvert, optimisations |
 | **0.6.2** | [v0.6.2](https://github.com/NOxygen59/kyokasho/releases/tag/v0.6.2) | Dictionnaire sur pages scannées : petits caractères mieux lus, toucher tolérant, bon moteur OCR |
 | **0.6.1** | [v0.6.1](https://github.com/NOxygen59/kyokasho/releases/tag/v0.6.1) | Correctif : glisser la barre d'outils ne gèle plus l'app |
