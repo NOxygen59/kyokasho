@@ -16,7 +16,7 @@ struct TextPageSheet: View {
     var body: some View {
         NavigationStack {
             content
-                .navigationTitle("Texte — page \(reader.currentSourcePage + 1)")
+                .navigationTitle("Texte — page \(reader.document.pageLabel(reader.currentSourcePage))")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .navigationBarLeading) {
@@ -95,7 +95,7 @@ struct TextPageSheet: View {
         let file = UUID().uuidString + ".png"
         do {
             try png.write(to: model.benchDirectory.appendingPathComponent(file))
-            let sample = BenchSample(title: "\(reader.document.title) — p. \(reader.currentSourcePage + 1)",
+            let sample = BenchSample(title: "\(reader.document.title) — p. \(reader.document.pageLabel(reader.currentSourcePage))",
                                      imageFile: file, referenceText: reader.ocrPage?.text ?? "")
             model.persist { try $0.save(sample) }
             addedToBench = true
@@ -212,7 +212,7 @@ struct CompareEnginesView: View {
                     if engine != engines.last { Divider() }
                 }
             }
-            .navigationTitle("Comparer — page \(reader.currentSourcePage + 1)")
+            .navigationTitle("Comparer — page \(reader.document.pageLabel(reader.currentSourcePage))")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("OK") { dismiss() } } }
             .task {

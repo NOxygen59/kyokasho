@@ -17,6 +17,8 @@ struct LibraryView: View {
     @State private var showBench = false
     @State private var showDictionary = false
     @State private var renaming: LibraryDocument?
+    @State private var settingPageOne: LibraryDocument?
+    @State private var pageOneText = ""
     @State private var newTitle = ""
     @State private var deleting: LibraryDocument?
     @State private var search = ""
@@ -89,6 +91,16 @@ struct LibraryView: View {
             TextField("Titre", text: $newTitle)
             Button("Annuler", role: .cancel) {}
             Button("Renommer") { if let renaming { model.rename(renaming, to: newTitle) } }
+        }
+        .alert("Où est la page 1 ?", isPresented: Binding(get: { settingPageOne != nil },
+                                                           set: { if !$0 { settingPageOne = nil } })) {
+            TextField("Page du PDF", text: $pageOneText).keyboardType(.numberPad)
+            Button("Annuler", role: .cancel) {}
+            Button("OK") {
+                if let settingPageOne, let n = Int(pageOneText) { model.setFirstPage(settingPageOne, pdfPage: n) }
+            }
+        } message: {
+            Text("Numéro de la page du fichier PDF où ton manuel imprime « 1 ». Plus simple : ouvre le livre sur cette page, puis menu ••• → « Cette page est la page 1 ».")
         }
         .confirmationDialog("Supprimer ce document et toutes ses notes ?",
                             isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }),
@@ -260,6 +272,10 @@ struct LibraryView: View {
             newTitle = document.title
             renaming = document
         } label: { Label("Renommer", systemImage: "pencil") }
+        Button {
+            pageOneText = String(document.firstPageIndex + 1)
+            settingPageOne = document
+        } label: { Label("Définir la page 1…", systemImage: "1.circle") }
         Button(role: .destructive) { deleting = document } label: { Label("Supprimer", systemImage: "trash") }
     }
 
@@ -294,15 +310,19 @@ struct DocumentCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             ZStack(alignment: .topTrailing) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Atelier.surfaceHigh)
+                // Le cadre fixe la taille ; la page entière est posée dedans, centrée, jamais coupée.
+                // (Avant : `scaledToFill` dans le ZStack faisait déborder l'image hors de la case.)
+                RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Atelier.surfaceHigh)
+                .aspectRatio(0.72, contentMode: .fit)
+                .frame(maxWidth: .infinity)
+                .overlay {
                     if let image {
-                        Image(uiImage: image).resizable().scaledToFill()
+                        Image(uiImage: image).resizable().scaledToFit()
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
                     } else {
                         ProgressView().tint(Atelier.textTertiary)
                     }
                 }
-                .aspectRatio(0.72, contentMode: .fit)
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Atelier.hairline))
                 .shadow(color: .black.opacity(0.5), radius: 12, y: 8)
@@ -325,7 +345,7 @@ struct DocumentCard: View {
                     }
                 }
                 .frame(height: 4)
-                Text(String(format: "%d/%d", document.lastPageIndex + 1, document.pageCount))
+                Text("\(document.pageLabel(document.lastPageIndex))/\(document.pageLabel(document.pageCount - 1))")
                     .font(.system(size: 11, weight: .semibold, design: .monospaced)).foregroundStyle(Atelier.textTertiary)
             }
         }

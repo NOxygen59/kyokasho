@@ -46,16 +46,16 @@ struct ReaderScreen: View {
                     }
                     if let request = reader.lookupRequest {
                         GeometryReader { area in
-                            let w = min(440, area.size.width - 40)
-                            let h = min(560, area.size.height - 40)
-                            let right = request.anchor.x + 24 + w < area.size.width
-                            let x = right ? request.anchor.x + 24 : max(20, request.anchor.x - 24 - w)
-                            let y = min(max(20, request.anchor.y - 80), area.size.height - h - 20)
+                            let frame = PopupPlacement.frame(for: request, in: area.size)
                             LookupPopup(session: lookup, close: { reader.endLookup(); lookup.clear() })
-                                .frame(width: w, height: h)
-                                .offset(x: x, y: y)
-                                .transition(.scale(scale: 0.96, anchor: right ? .topLeading : .topTrailing).combined(with: .opacity))
+                                .frame(width: frame.width, height: frame.height)
+                                .offset(x: frame.minX, y: frame.minY)
+                                .transition(.scale(scale: 0.96, anchor: .top).combined(with: .opacity))
                         }
+                        // Échap (Magic Keyboard) ferme le popup.
+                        Button("") { reader.endLookup() }
+                            .keyboardShortcut(.escape, modifiers: [])
+                            .opacity(0).allowsHitTesting(false)
                     }
                     if let error = reader.loadError {
                         Text(error).padding().atelierPanel()
@@ -152,7 +152,7 @@ struct ReaderScreen: View {
                 Text(reader.document.title).font(.system(size: 15, weight: .semibold)).lineLimit(1)
                     .foregroundStyle(Atelier.textPrimary)
                 HStack(spacing: 6) {
-                    Text(String(format: "%02d / %02d", reader.currentSourcePage + 1, reader.document.pageCount))
+                    Text("\(reader.document.pageLabel(reader.currentSourcePage)) / \(reader.document.pageLabel(reader.document.pageCount - 1))")
                         .font(Atelier.mono)
                     OCRStatusDot(reader: reader)
                 }
@@ -179,6 +179,15 @@ struct ReaderScreen: View {
                 Button { reader.setShowOCRBoxes(!model.appSettings.showOCRBoxes) } label: {
                     Label(model.appSettings.showOCRBoxes ? "Masquer les zones OCR" : "Montrer les zones OCR",
                           systemImage: "rectangle.dashed")
+                }
+                Divider()
+                Button { reader.setFirstPage(reader.currentSourcePage) } label: {
+                    Label("Cette page est la page 1", systemImage: "1.circle")
+                }
+                if reader.document.firstPageIndex != 0 {
+                    Button { reader.setFirstPage(0) } label: {
+                        Label("Numéros du PDF (page 1 = début)", systemImage: "arrow.uturn.backward")
+                    }
                 }
                 Divider()
                 Button { sheet = .settings } label: { Label("Réglages du document", systemImage: "slider.horizontal.3") }
@@ -222,6 +231,14 @@ struct ReaderScreen: View {
             }
             .buttonStyle(PressScale())
             .accessibilityLabel("Dictionnaire au toucher")
+            // Survol au curseur : visible dès que la page a du texte (intégré ou analysé par l'OCR).
+            if reader.pageHasText {
+                ToolButton(icon: "cursorarrow.rays", label: "Dictionnaire au survol (curseur)",
+                           tint: Atelier.Tint.japanese, active: reader.hoverLookup) {
+                    reader.hoverLookup.toggle()
+                    if !reader.hoverLookup { reader.endLookup() }
+                }
+            }
             ToolButton(icon: "character.ja", label: "Texte de la page", tint: Atelier.Tint.japanese,
                        active: side == .study && studyTab == .text) { openStudy(.text) }
             ToolButton(icon: "character.book.closed.ja", label: "Mots de la page", tint: Atelier.Tint.japanese,
@@ -274,6 +291,7 @@ struct PageFilmstrip: View {
                 LazyHStack(spacing: 8) {
                     ForEach(0..<reader.document.pageCount, id: \.self) { page in
                         FilmstripCell(documentId: reader.document.id, fileURL: reader.fileURL, page: page,
+                                      label: reader.document.pageLabel(page),
                                       current: page == reader.currentSourcePage)
                             .id(page)
                             .onTapGesture { reader.go(toSource: page) }
@@ -298,6 +316,7 @@ struct FilmstripCell: View {
     let documentId: String
     let fileURL: URL
     let page: Int
+    let label: String
     let current: Bool
     @State private var image: UIImage?
 
@@ -309,7 +328,7 @@ struct FilmstripCell: View {
             }
             .frame(width: 46, height: 62)
             .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(current ? Atelier.Tint.read : .clear, lineWidth: 2))
-            Text("\(page + 1)").font(.system(size: 10, weight: .semibold, design: .monospaced))
+            Text(label).font(.system(size: 10, weight: .semibold, design: .monospaced))
                 .foregroundStyle(current ? Atelier.Tint.read : Atelier.textTertiary)
         }
         .onAppear(perform: load)
@@ -399,5 +418,30 @@ struct LookupHighlightLayer: View {
         }
         .allowsHitTesting(false)
         .animation(.easeOut(duration: 0.12), value: rects)
+    }
+}
+
+/// Où poser le popup du dictionnaire sans cacher le mot ni la suite du texte, comme Yomitan :
+/// texte horizontal → sous la ligne (au-dessus s'il n'y a pas la place) ;
+/// texte vertical → à droite de la colonne (déjà lue), sinon à gauche.
+enum PopupPlacement {
+    static func frame(for request: ReaderController.LookupRequest, in size: CGSize) -> CGRect {
+        let margin: CGFloat = 16, gap: CGFloat = 10
+        let word = request.wordRect.isEmpty ? CGRect(origin: request.anchor, size: CGSize(width: 1, height: 1)) : request.wordRect
+        let w = min(440, size.width - 2 * margin)
+        if request.vertical {
+            let h = min(560, size.height - 2 * margin)
+            let rightX = word.maxX + gap
+            let x = rightX + w <= size.width - margin ? rightX : max(margin, word.minX - gap - w)
+            let y = min(max(margin, word.minY - 40), size.height - h - margin)
+            return CGRect(x: x, y: y, width: w, height: h)
+        }
+        let below = size.height - margin - (word.maxY + gap)
+        let above = word.minY - gap - margin
+        let useBelow = below >= min(320, above) || below >= 420
+        let h = max(200, min(520, useBelow ? below : above))
+        let x = min(max(margin, word.minX - 30), size.width - w - margin)
+        let y = useBelow ? word.maxY + gap : max(margin, word.minY - gap - h)
+        return CGRect(x: x, y: y, width: w, height: h)
     }
 }

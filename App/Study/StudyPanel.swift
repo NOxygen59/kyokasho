@@ -20,7 +20,7 @@ struct StudyPanel: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                AtelierLabel("Étude · page \(reader.currentSourcePage + 1)", tint: Atelier.textSecondary)
+                AtelierLabel("Étude · page \(reader.document.pageLabel(reader.currentSourcePage))", tint: Atelier.textSecondary)
                 Spacer()
                 Button(action: close) {
                     Image(systemName: "sidebar.trailing").font(.system(size: 15, weight: .semibold))
@@ -395,7 +395,7 @@ struct StudyNotesTab: View {
         HStack(alignment: .top, spacing: 10) {
             RoundedRectangle(cornerRadius: 2).fill(Atelier.Tint.annotate).frame(width: 3)
             VStack(alignment: .leading, spacing: 3) {
-                if showPage { Text("p. \(comment.pageIndex + 1)").font(Atelier.mono).foregroundStyle(Atelier.textTertiary) }
+                if showPage { Text("p. \(reader.document.pageLabel(comment.pageIndex))").font(Atelier.mono).foregroundStyle(Atelier.textTertiary) }
                 Text(comment.body).foregroundStyle(Atelier.textPrimary).frame(maxWidth: .infinity, alignment: .leading)
             }
         }
@@ -461,7 +461,7 @@ struct StudyMarksTab: View {
                 Image(systemName: icon).foregroundStyle(tint)
                 Text(title).lineLimit(2).foregroundStyle(Atelier.textPrimary)
                 Spacer()
-                Text("\(page + 1)").font(Atelier.mono).foregroundStyle(Atelier.textTertiary)
+                Text(reader.document.pageLabel(page)).font(Atelier.mono).foregroundStyle(Atelier.textTertiary)
             }
         }
         .buttonStyle(.plain)

@@ -73,7 +73,7 @@ ReviewEntry, MemoryState, Grade, AnkiGUID), `ReviewScheduler.swift` (ReviewSetti
    - **ReviewSettings** : décodage borné ; `dayStart` à 4 h.
 4. Ajouter swift-fsrs dans THIRD_PARTY_NOTICES.md. Commit. **Fini quand** `swift test` est vert.
 
-### [ ] Session 2 — V4-b : export CSV, `.apkg`, AnkiMobile
+### [x] Session 2 — V4-b : export CSV, `.apkg`, AnkiMobile
 Nouveau fichier `Sources/ReviewKit/Exporters.swift`.
 
 - **CSV** (lisible par Anki) :
@@ -107,6 +107,15 @@ Nouveau fichier `Sources/ReviewKit/Exporters.swift`.
   - texte seulement (AnkiMobile ne prend pas les médias par URL).
 - **Tests** : CSV (guillemets, en-têtes) ; `.apkg` (dézipper, ouvrir le sqlite, compter notes/cartes, lire le JSON `models`, vérifier `media`) ; encodage du lien AnkiMobile.
 - THIRD_PARTY_NOTICES : genanki = « format seulement, aucun code copié ». Commit.
+
+> Fait aussi en session 2 (demandes de l'utilisateur, **jamais testé sur l'iPad**) :
+> - vignettes de l'accueil : page entière, centrée, plus coupée (`DocumentCard`) ;
+> - « page 1 » par document : `LibraryDocument.firstPageIndex` (migration `v3-page-one`), `pageLabel(_:)`
+>   (chiffres romains avant la page 1) utilisé partout où un numéro de page s'affiche ; réglage dans le menu •••
+>   du lecteur (« Cette page est la page 1 ») et l'appui long de la bibliothèque ;
+> - dictionnaire au **survol du curseur** (Magic Keyboard) : `UIHoverGestureRecognizer` dans `ReaderController`,
+>   bouton `cursorarrow.rays` sous 辞 (visible si la page a du texte), jamais d'OCR lancé par le survol,
+>   popup placé façon Yomitan (`PopupPlacement` : sous la ligne / à droite de la colonne verticale), Échap ferme.
 
 ### [ ] Session 3 — V4-c : créer une carte depuis le popup et l'onglet Mots
 1. **DictionaryKit** : `GlossaryText.items(json) -> [String]` (un sens par élément). Nouveau `CardFields.swift` avec `CardFields.make(term:sentence:source:) -> [String: String]` :

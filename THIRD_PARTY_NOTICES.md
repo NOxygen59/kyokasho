@@ -37,3 +37,9 @@ Copyright (C) 2024-2026 Yomitan Authors, (C) 2020-2022 Yomichan Authors. https:/
 | Composant | Auteur | Licence | Source |
 |---|---|---|---|
 | swift-fsrs (main, commit 4fbaf20) | Ben Smiley | MIT | https://github.com/open-spaced-repetition/swift-fsrs |
+
+## Format seulement (V4)
+
+| Composant | Auteur | Licence | Usage |
+|---|---|---|---|
+| genanki (commit 73f1debf) | Kerrick Staley | MIT | Description du format `.apkg` d'Anki. **Format seulement, aucun code copié** : l'export est réécrit en Swift. |

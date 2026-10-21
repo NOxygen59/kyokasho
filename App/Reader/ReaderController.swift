@@ -46,7 +46,22 @@ final class ReaderController: NSObject, ObservableObject {
         let id = UUID()
         let text: String
         let anchor: CGPoint
+        /// Premier caractère trouvé (repère de la vue PDF) : le popup se place à côté, sans le cacher.
+        var wordRect: CGRect = .zero
+        /// Texte vertical (colonnes) : popup à côté de la colonne ; horizontal : popup sous la ligne.
+        var vertical = false
     }
+
+    /// Survol au curseur (trackpad / souris) : le popup du dictionnaire suit le pointeur.
+    @Published var hoverLookup = UserDefaults.standard.object(forKey: "reader.hoverLookup") as? Bool ?? true {
+        didSet { UserDefaults.standard.set(hoverLookup, forKey: "reader.hoverLookup") }
+    }
+    /// La page a du texte (intégré ou OCR) : l'option de survol a un sens.
+    var pageHasText: Bool {
+        ocrPage != nil || pdf?.page(at: currentIndex)?.string?.isEmpty == false
+    }
+    private var hover: UIHoverGestureRecognizer!
+    private var hoverTask: Task<Void, Never>?
 
     /// Caractères du texte touché, pour surligner exactement le mot reconnu (n premiers).
     private var lookupCharacterRects: [CGRect] = []
@@ -200,7 +215,9 @@ final class ReaderController: NSObject, ObservableObject {
     }
 
     /// Cherche le texte sous `point` (vue PDF) : texte intégré du PDF, sinon OCR (fait si besoin).
-    func lookup(at point: CGPoint) async {
+    /// `fromHover` : survol au curseur → jamais d'OCR lancé (trop lent), et rien ne se ferme
+    /// quand le pointeur passe sur un blanc (pour pouvoir aller jusqu'au popup).
+    func lookup(at point: CGPoint, fromHover: Bool = false) async {
         guard let pdf, let page = pdfView.page(for: point, nearest: false) else { return }
         let index = pdf.index(for: page)
         guard presented.indices.contains(index) else { return }
@@ -233,8 +250,9 @@ final class ReaderController: NSObject, ObservableObject {
 
         // 2. OCR de la page (cache, sinon Apple Vision).
         guard let box = originalBoxes[source] else { return }
-        var ocr = await cachedOCR(source: source)
-        if ocr == nil {
+        var ocr = source == currentSourcePage ? ocrPage : nil
+        if ocr == nil { ocr = await cachedOCR(source: source) }
+        if ocr == nil, !fromHover {
             ocrState = .running
             ocr = try? await model.ocr.page(documentId: document.id, url: fileURL, pageIndex: source, engine: OCREngineID.vision)
             ocrState = .idle
@@ -243,7 +261,7 @@ final class ReaderController: NSObject, ObservableObject {
         guard let ocr else { return }
         let normalized = CGPoint(x: (pagePoint.x - box.minX) / box.width, y: (box.maxY - pagePoint.y) / box.height)
         guard let hit = ocr.character(at: normalized) else {
-            lookupHighlight = []
+            if !fromHover { lookupHighlight = [] }
             return
         }
         var text = ""
@@ -272,9 +290,16 @@ final class ReaderController: NSObject, ObservableObject {
     }
 
     private func present(text: String, rects: [CGRect], anchor: CGPoint) {
+        // Même mot que celui déjà affiché (le curseur bouge un peu) : on garde le popup.
+        if let current = lookupRequest, current.text == text, lookupCharacterRects.first == rects.first { return }
         lookupCharacterRects = rects
         lookupHighlight = Array(rects.prefix(1))
-        lookupRequest = LookupRequest(text: text, anchor: anchor)
+        let first = rects.first { !$0.isEmpty } ?? CGRect(origin: anchor, size: .zero)
+        var vertical = false
+        if rects.count > 1, !rects[0].isEmpty, !rects[1].isEmpty {
+            vertical = abs(rects[1].midX - rects[0].midX) < rects[0].width * 0.5 && rects[1].midY > rects[0].midY
+        }
+        lookupRequest = LookupRequest(text: text, anchor: anchor, wordRect: first, vertical: vertical)
     }
 
     /// Le dictionnaire a reconnu `length` caractères : on surligne exactement le mot.
@@ -351,6 +376,13 @@ final class ReaderController: NSObject, ObservableObject {
         let doc = document
         model.persist { try $0.save(doc) }
         update(settings: model.readerDefaults.applying(override))
+    }
+
+    /// La page source `index` devient la page « 1 » (numéros affichés comme dans le manuel imprimé).
+    func setFirstPage(_ index: Int) {
+        document.firstPageIndex = max(0, min(index, document.pageCount - 1))
+        let doc = document
+        model.persist { try $0.save(doc) }
     }
 
     // MARK: Navigation
@@ -595,7 +627,10 @@ final class ReaderController: NSObject, ObservableObject {
         longPressWatcher.cancelsTouchesInView = false
         longPressWatcher.delaysTouchesEnded = false
         longPressWatcher.delegate = self
+        hover = UIHoverGestureRecognizer(target: self, action: #selector(handleHover(_:)))
+        hover.delegate = self
         if attach {
+            pdfView.addGestureRecognizer(hover)
             pdfView.addGestureRecognizer(doubleTap)
             pdfView.addGestureRecognizer(singleTap)
             pdfView.addGestureRecognizer(longPressWatcher)
@@ -621,6 +656,26 @@ final class ReaderController: NSObject, ObservableObject {
         forward ? next() : previous()
     }
 
+    @objc private func handleHover(_ gesture: UIHoverGestureRecognizer) {
+        guard hoverLookup, !isDrawing, gesture.state == .began || gesture.state == .changed else {
+            hoverTask?.cancel()
+            return
+        }
+        let point = gesture.location(in: pdfView)
+        // Toujours sur le mot affiché : rien à refaire.
+        if lookupHighlight.contains(where: { $0.insetBy(dx: -2, dy: -2).contains(point) }) {
+            hoverTask?.cancel()
+            return
+        }
+        hoverTask?.cancel()
+        // Petit délai : on cherche quand le curseur se pose, pas à chaque pixel.
+        hoverTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 120_000_000)
+            guard !Task.isCancelled, let self else { return }
+            await self.lookup(at: point, fromHover: true)
+        }
+    }
+
     @objc private func handleLongPress(_ gesture: UILongPressGestureRecognizer) {
         if gesture.state == .began { pressWasLong = true }
     }
@@ -635,6 +690,11 @@ final class ReaderController: NSObject, ObservableObject {
         }
         if lookupMode {
             Task { await lookup(at: point) }
+            return
+        }
+        // Popup ouvert par le survol : un clic ailleurs le ferme (sans tourner la page).
+        if lookupRequest != nil {
+            endLookup()
             return
         }
         // Tap sur un surlignage : proposer de le supprimer.
@@ -751,7 +811,7 @@ final class ReaderController: NSObject, ObservableObject {
             bookmarks.removeAll { $0.id == existing.id }
             model.persist { try $0.deleteBookmark(id: existing.id) }
         } else {
-            let bookmark = Bookmark(documentId: document.id, pageIndex: page, title: "Page \(page + 1)")
+            let bookmark = Bookmark(documentId: document.id, pageIndex: page, title: "Page \(document.pageLabel(page))")
             bookmarks.append(bookmark)
             bookmarks.sort { $0.pageIndex < $1.pageIndex }
             model.persist { try $0.save(bookmark) }

@@ -131,6 +131,11 @@ public final class AppDatabase: @unchecked Sendable {
             }
             try db.create(index: "benchRun_sample", on: "benchRun", columns: ["sampleId", "engine"])
         }
+        m.registerMigration("v3-page-one") { db in
+            try db.alter(table: "document") { t in
+                t.add(column: "firstPageIndex", .integer).notNull().defaults(to: 0)
+            }
+        }
         return m
     }
 }

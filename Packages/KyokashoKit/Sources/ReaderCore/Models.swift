@@ -21,10 +21,13 @@ public struct LibraryDocument: Codable, Identifiable, Hashable, Sendable {
     /// Origine Google Drive (pour la resynchronisation), si importé depuis Drive.
     public var driveFileId: String?
     public var driveRevision: String?
+    /// Index (base 0) de la page source qui porte le numéro 1 imprimé (manuels avec pages de garde).
+    public var firstPageIndex: Int
 
     public init(id: String, title: String, originalFileName: String, pageCount: Int, fileSize: Int64,
                 importedAt: Date = Date(), lastOpenedAt: Date? = nil, lastPageIndex: Int = 0,
-                settingsJSON: String? = nil, driveFileId: String? = nil, driveRevision: String? = nil) {
+                settingsJSON: String? = nil, driveFileId: String? = nil, driveRevision: String? = nil,
+                firstPageIndex: Int = 0) {
         self.id = id
         self.title = title
         self.originalFileName = originalFileName
@@ -36,6 +39,29 @@ public struct LibraryDocument: Codable, Identifiable, Hashable, Sendable {
         self.settingsJSON = settingsJSON
         self.driveFileId = driveFileId
         self.driveRevision = driveRevision
+        self.firstPageIndex = firstPageIndex
+    }
+
+    /// Numéro affiché pour une page source : la page `firstPageIndex` porte « 1 » ;
+    /// les pages d'avant (couverture, sommaire…) sont en chiffres romains, comme dans les livres.
+    public func pageLabel(_ index: Int) -> String {
+        let n = index - firstPageIndex + 1
+        return n >= 1 ? String(n) : Self.roman(index + 1)
+    }
+
+    /// Page source pour un numéro imprimé (borné au document).
+    public func sourceIndex(forPrintedPage n: Int) -> Int {
+        max(0, min(pageCount - 1, n - 1 + firstPageIndex))
+    }
+
+    static func roman(_ value: Int) -> String {
+        var n = max(1, value)
+        var out = ""
+        for (v, s) in [(1000, "m"), (900, "cm"), (500, "d"), (400, "cd"), (100, "c"), (90, "xc"),
+                       (50, "l"), (40, "xl"), (10, "x"), (9, "ix"), (5, "v"), (4, "iv"), (1, "i")] {
+            while n >= v { out += s; n -= v }
+        }
+        return out
     }
 
     public var settingsOverride: ReaderSettingsOverride {

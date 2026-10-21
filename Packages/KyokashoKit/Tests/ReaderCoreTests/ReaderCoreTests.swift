@@ -175,6 +175,20 @@ final class DatabaseTests: XCTestCase {
         db = try AppDatabase.inMemory()
     }
 
+    func testFirstPageIndex() throws {
+        var doc = LibraryDocument(id: "d", title: "Manuel", originalFileName: "m.pdf", pageCount: 100, fileSize: 1)
+        XCTAssertEqual(doc.pageLabel(0), "1")
+        doc.firstPageIndex = 4
+        XCTAssertEqual(doc.pageLabel(0), "i")
+        XCTAssertEqual(doc.pageLabel(3), "iv")
+        XCTAssertEqual(doc.pageLabel(4), "1")
+        XCTAssertEqual(doc.pageLabel(13), "10")
+        XCTAssertEqual(doc.sourceIndex(forPrintedPage: 10), 13)
+        XCTAssertEqual(doc.sourceIndex(forPrintedPage: 500), 99)
+        try db.save(doc)
+        XCTAssertEqual(try db.document(id: "d")?.firstPageIndex, 4)
+    }
+
     func testDefaultPromptsAndSettings() throws {
         XCTAssertEqual(try db.aiPrompts().count, AIPrompt.defaults.count)
         XCTAssertEqual(try db.readerDefaults(), .default)

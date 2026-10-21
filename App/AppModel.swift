@@ -147,6 +147,13 @@ final class AppModel: ObservableObject {
         persist { try $0.save(doc) }
     }
 
+    /// `pdfPage` : numéro de page du PDF (1 = première page du fichier) qui porte le n° 1 imprimé.
+    func setFirstPage(_ document: LibraryDocument, pdfPage: Int) {
+        var doc = document
+        doc.firstPageIndex = max(0, min(pdfPage - 1, doc.pageCount - 1))
+        persist { try $0.save(doc) }
+    }
+
     func settings(for document: LibraryDocument) -> ReaderSettings {
         readerDefaults.applying(document.settingsOverride)
     }

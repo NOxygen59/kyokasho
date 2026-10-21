@@ -29,7 +29,7 @@ struct SearchSheet: View {
                         close()
                     } label: {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("Page \(result.sourcePage + 1)").font(.caption.bold()).foregroundStyle(.secondary)
+                            Text("Page \(reader.document.pageLabel(result.sourcePage))").font(.caption.bold()).foregroundStyle(.secondary)
                             Text(result.context).lineLimit(2)
                         }
                     }
@@ -96,7 +96,7 @@ struct BookmarksSheet: View {
                         Image(systemName: "bookmark.fill").foregroundStyle(Color.accentColor)
                         Text(bookmark.title)
                         Spacer()
-                        Text("p. \(bookmark.pageIndex + 1)").foregroundStyle(.secondary)
+                        Text("p. \(reader.document.pageLabel(bookmark.pageIndex))").foregroundStyle(.secondary)
                     }
                 }
                 .buttonStyle(.plain)
@@ -121,7 +121,7 @@ struct BookmarksSheet: View {
                     HStack(alignment: .top) {
                         RoundedRectangle(cornerRadius: 2).fill(Color(h.color.uiColor)).frame(width: 4)
                         VStack(alignment: .leading) {
-                            Text("Page \(h.pageIndex + 1)").font(.caption.bold()).foregroundStyle(.secondary)
+                            Text("Page \(reader.document.pageLabel(h.pageIndex))").font(.caption.bold()).foregroundStyle(.secondary)
                             Text(h.text.isEmpty ? "(sans texte)" : h.text).lineLimit(3)
                         }
                     }
@@ -204,7 +204,7 @@ struct CommentsSheet: View {
                 .pickerStyle(.segmented)
                 .listRowBackground(Color.clear)
                 if !showAll {
-                    Section("Nouveau commentaire — page \(page + 1)") {
+                    Section("Nouveau commentaire — page \(reader.document.pageLabel(page))") {
                         TextEditor(text: $draft).frame(minHeight: 90)
                         Button {
                             add()
@@ -217,7 +217,7 @@ struct CommentsSheet: View {
                     ForEach(shown) { comment in
                         VStack(alignment: .leading, spacing: 4) {
                             if showAll {
-                                Button("Page \(comment.pageIndex + 1)") {
+                                Button("Page \(reader.document.pageLabel(comment.pageIndex))") {
                                     reader.go(toSource: comment.pageIndex)
                                     dismiss()
                                 }
@@ -314,7 +314,7 @@ struct AIPageSheet: View {
                         .frame(width: 160, height: 210)
                         .background(Color(white: 0.15), in: RoundedRectangle(cornerRadius: 8))
                         VStack(alignment: .leading, spacing: 10) {
-                            Text("Page \(reader.currentSourcePage + 1)").font(.headline)
+                            Text("Page \(reader.document.pageLabel(reader.currentSourcePage))").font(.headline)
                             Button { copyImage() } label: { Label("Copier la page en image", systemImage: "photo.on.rectangle") }
                                 .buttonStyle(.borderedProminent)
                             Text("Colle-la ensuite dans claude.ai (ou une autre IA), puis colle un prompt ci-dessous.")
