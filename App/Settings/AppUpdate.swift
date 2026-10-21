@@ -4,7 +4,8 @@
 import SwiftUI
 
 /// « Mise à jour disponible » : lit `latest.json` du dépôt public NOxygen59/kyokasho-models (numéro de
-/// version seulement ; l'app elle-même reste dans le dépôt privé). Au plus deux fois par jour, au lancement.
+/// version seulement ; l'app elle-même reste dans le dépôt privé). Une fois à chaque lancement ; si GitHub est
+/// connecté, le `.tipa` est ensuite téléchargé en fond (`UpdateInstaller`).
 @MainActor
 final class AppUpdate: ObservableObject {
     static let shared = AppUpdate()
@@ -28,9 +29,9 @@ final class AppUpdate: ObservableObject {
 
     static var currentBuild: Int { Int(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "") ?? 0 }
 
-    func checkIfDue() {
-        let last = UserDefaults.standard.double(forKey: lastCheckKey)
-        guard Date().timeIntervalSince1970 - last > 12 * 3600 else { return }
+    /// Au lancement (une seule fois par lancement).
+    func checkAtLaunch() {
+        UpdateInstaller.shared.cleanUp()
         Task { await check(manual: false) }
     }
 
@@ -51,6 +52,7 @@ final class AppUpdate: ObservableObject {
         if latest.build > Self.currentBuild, manual || latest.build != dismissed {
             available = latest
             state = .idle
+            UpdateInstaller.shared.prepare(latest)
         } else {
             available = nil
             state = .upToDate
@@ -66,7 +68,9 @@ final class AppUpdate: ObservableObject {
 /// Bandeau en haut de la bibliothèque quand une version plus récente existe.
 struct UpdateBanner: View {
     @ObservedObject private var update = AppUpdate.shared
+    @ObservedObject private var installer = UpdateInstaller.shared
     @Environment(\.openURL) private var openURL
+    @State private var installFailed = false
 
     var body: some View {
         if let latest = update.available {
@@ -81,8 +85,20 @@ struct UpdateBanner: View {
                 }
                 Spacer()
                 Button("Plus tard") { update.dismiss() }.foregroundStyle(Atelier.textSecondary)
-                Button("Télécharger") { openURL(latest.page) }
-                    .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.read))
+                switch installer.state {
+                case .downloading:
+                    HStack(spacing: 6) { ProgressView(); Text("Téléchargement…") }.foregroundStyle(Atelier.textSecondary)
+                case .ready(let file):
+                    // Repli si le lien TrollStore n'est pas activé : « Ouvrir avec… » → TrollStore.
+                    ShareLink(item: file) { Image(systemName: "square.and.arrow.up") }
+                        .foregroundStyle(installFailed ? Atelier.Tint.read : Atelier.textSecondary)
+                        .accessibilityLabel("Ouvrir le fichier dans TrollStore")
+                    Button("Installer") { Task { installFailed = !(await installer.installWithTrollStore()) } }
+                        .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.read))
+                default:
+                    Button("Télécharger") { openURL(latest.page) }
+                        .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.read))
+                }
             }
             .padding(.horizontal, 16).padding(.vertical, 12)
             .atelierPanel(radius: 16)

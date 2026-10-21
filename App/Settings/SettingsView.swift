@@ -389,6 +389,7 @@ struct AboutView: View {
                 Text("Lecteur personnel de cours et de manuels. Usage strictement personnel, non distribué.")
                     .foregroundStyle(.secondary)
             }
+            GitHubUpdateSection()
             Section("Bibliothèques utilisées") {
                 credit("GRDB.swift", "Gwendal Roué", "MIT", "https://github.com/groue/GRDB.swift")
                 credit("ZIPFoundation", "Thomas Zoechling", "MIT", "https://github.com/weichsel/ZIPFoundation")

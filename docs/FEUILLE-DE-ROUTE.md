@@ -32,7 +32,7 @@ Pas de simulateur, pas d'iPad sans ma permission.
   `THIRD_PARTY_NOTICES.md` + `AboutView` (App/Settings/SettingsView.swift, fonction `credit`).
 - **Jamais** de PDF, dictionnaire, modèle ni donnée tierce dans le dépôt. Modèles = téléchargés à la demande.
 - En ligne : DeepL (option), téléchargements déclenchés par l'utilisateur (audio, modèles), navigateur à côté
-  (tous sites), avis de mise à jour (`latest.json`, ≤ 2 fois/jour). Rien d'autre.
+  (tous sites), avis de mise à jour (`latest.json`, 1 fois par lancement) + API GitHub du dépôt privé si l'utilisateur a connecté GitHub (releases seulement). Rien d'autre.
 - Télécharger quelque chose sur le Mac (outil, modèle de test) : dire quoi, d'où, quelle taille, **demander**.
   Le Mac chauffe sur les gros calculs : rester léger.
 - Release **seulement quand l'utilisateur la demande** (il enchaîne souvent plusieurs retours avant).
@@ -199,7 +199,7 @@ Rythme choisi le 22/10 au soir : **2 sections de la liste de l'utilisateur par s
   fermeture) ; « Nouvelle note flottante » dans « … » et le panneau. H ancre = `PageComment.anchor*` (migration
   `v4-note-canvas-anchor`), pastille `NoteAnchorAnnotation` (« note:<id> »), toucher → ouvre la note, lien ＊ →
   `goToAnchor` (surlignage jaune 1,5 s). I `ResourceMonitor` (Réglages → Outils, puis « … ») compact / courbe.
-- [ ] **J — Mise à jour automatique par TrollStore** : ⚠️ **à décider avec l'utilisateur avant de coder**.
+- [x] **J — Mise à jour automatique par TrollStore** : ⚠️ **à décider avec l'utilisateur avant de coder**.
   (1) Le `.tipa` est dans le dépôt **privé** : le télécharger depuis l'app demande un jeton GitHub (interdit § 2),
   ou de le publier ailleurs (refusé le 21/10). **22/10 : l'utilisateur veut une connexion GitHub dans l'app**
   (l'app n'a aujourd'hui aucun accès au dépôt privé : elle lit seulement `latest.json` public). Prévu : jeton
@@ -209,6 +209,13 @@ Rythme choisi le 22/10 au soir : **2 sections de la liste de l'utilisateur par s
   et télécharge **lui-même** depuis une URL ; il n'existe pas de `trollstore://install?path=` pour un fichier
   local. Prévu ensuite : une vérification au lancement (déjà `AppUpdate`), téléchargement en fond, ouverture de
   TrollStore, fichier temporaire supprimé au retour (`build` changé).
+  **Fait (22/10, non vérifié)** : `GitHubUpdate.swift`. `GitHubAccount` = device flow d'une **GitHub App de
+  l'utilisateur** (Client ID collé dans Réglages → À propos, aide pas à pas dans l'app ; Contents read-only, installée
+  sur `kyokasho` seulement, jetons sans expiration), jeton au Trousseau. `UpdateInstaller` : au lancement
+  `cleanUp` (efface `Caches/Update` si la version a été installée) puis `latest.json` → release `vX.Y.Z` → asset
+  `.tipa` (302 → lien signé, `NoRedirect`) téléchargé en fond ; bandeau « Installer » →
+  `apple-magnifier://install?url=<lien signé frais encodé>` (TrollStore : « URL Scheme Enabled »), repli
+  `ShareLink` du fichier. Toujours publier la release **avec** son `.tipa` et le tag `vX.Y.Z` = `latest.json`.
 - [ ] **K — Grammaire** : conception écrite dans `docs/GRAMMAIRE.md` (22/10). Coder seulement après accord.
 
 ### [ ] 1 — Gestes / zoom « quasi inexistants ou cassés » (retour du 21/10, cause pas trouvée)

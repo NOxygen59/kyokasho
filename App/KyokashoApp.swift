@@ -55,7 +55,7 @@ struct RootView: View {
             LibraryView()
                 .safeAreaInset(edge: .top, spacing: 0) { UpdateBanner() }
         }
-        .task { AppUpdate.shared.checkIfDue() }
+        .task { AppUpdate.shared.checkAtLaunch() }
         .fullScreenCover(item: Binding(
             get: { model.openDocumentId.flatMap { id in model.documents.first { $0.id == id } } },
             set: { model.openDocumentId = $0?.id }
