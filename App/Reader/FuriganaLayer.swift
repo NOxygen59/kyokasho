@@ -124,39 +124,104 @@ enum FuriganaLayer {
 
     // MARK: Dessin
 
-    /// Dans le repère de la page (y vers le haut), déjà transformé par l'appelant.
-    /// Taille : 45 % du caractère au plus, réduite à la place libre (jamais sur la ligne voisine) ;
-    /// fond couleur papier sous les kana, pour rester lisible sur un dessin ou une trame.
-    static func draw(_ marks: [Mark], in context: CGContext) {
-        context.saveGState()
-        context.textMatrix = .identity
-        for mark in marks {
+    /// Taille et bande (fond + kana) de chaque lecture, dans le repère absolu de la page.
+    struct Placed {
+        var reading: [Character]
+        var vertical: Bool
+        var size: CGFloat
+        var strip: CGRect
+    }
+
+    /// Taille : 45 % du caractère (comme en 0.8.0), réduite par la place libre mais jamais sous 32 %.
+    /// Une lecture longue déborde du mot ; les bandes d'une même ligne sont ensuite écartées (`spread`)
+    /// pour ne jamais se chevaucher.
+    static func layout(_ marks: [Mark]) -> [Placed] {
+        var placed: [Placed] = marks.compactMap { mark in
             let kana = Array(mark.reading)
-            guard !kana.isEmpty else { continue }
+            guard !kana.isEmpty else { return nil }
             let count = CGFloat(kana.count)
             let base = mark.vertical ? mark.rect.width : mark.rect.height
             let span = mark.vertical ? mark.rect.height : mark.rect.width
-            var size = min(base * 0.45, mark.maxSize)
-            // Lecture plus longue que le mot : on serre (jusqu'à déborder un peu de chaque côté).
-            if size * count > span * 1.5 { size = span * 1.5 / count }
-            // Plancher de lisibilité, jamais au-delà de la place libre (sauf interligne quasi nul).
-            size = max(size, min(base * 0.2, max(mark.maxSize, base * 0.14)))
+            var size = min(base * 0.45, max(mark.maxSize, base * 0.32))
+            // Très longue lecture sur un mot court : on serre un peu, jusqu'à 3 fois la largeur du mot.
+            if size * count > span * 3 { size = max(base * 0.28, span * 3 / count) }
             let total = size * count
+            let strip = mark.vertical
+                ? CGRect(x: mark.rect.maxX + size * 0.05, y: mark.rect.midY - total / 2, width: size, height: total)
+                : CGRect(x: mark.rect.midX - total / 2, y: mark.rect.maxY + size * 0.08, width: total, height: size)
+            return Placed(reading: kana, vertical: mark.vertical, size: size, strip: strip)
+        }
+        // Lignes : même sens, bandes qui se recouvrent sur l'axe transversal.
+        func cross(_ p: Placed) -> (CGFloat, CGFloat) { p.vertical ? (p.strip.minX, p.strip.maxX) : (p.strip.minY, p.strip.maxY) }
+        var lines: [[Int]] = []
+        for i in placed.indices.sorted(by: { cross(placed[$0]).0 < cross(placed[$1]).0 }) {
+            let (lo, hi) = cross(placed[i])
+            if let j = lines.indices.last(where: { k in
+                let first = placed[lines[k][0]]
+                let (flo, fhi) = cross(first)
+                return first.vertical == placed[i].vertical && min(hi, fhi) - max(lo, flo) > (hi - lo) * 0.5
+            }) {
+                lines[j].append(i)
+            } else {
+                lines.append([i])
+            }
+        }
+        for line in lines where line.count > 1 {
+            // Position le long de la lecture : x en horizontal, -y en vertical (de haut en bas).
+            let vertical = placed[line[0]].vertical
+            let order = line.sorted {
+                vertical ? placed[$0].strip.maxY > placed[$1].strip.maxY : placed[$0].strip.minX < placed[$1].strip.minX
+            }
+            let gap = (order.map { placed[$0].size }.min() ?? 0) * 0.3
+            let starts = spread(order.map { i in
+                let s = placed[i].strip
+                return vertical ? (start: -s.maxY, length: s.height) : (start: s.minX, length: s.width)
+            }, gap: gap)
+            for (i, start) in zip(order, starts) {
+                if vertical { placed[i].strip.origin.y = -start - placed[i].strip.height } else { placed[i].strip.origin.x = start }
+            }
+        }
+        return placed
+    }
+
+    /// Écarte des intervalles triés (début voulu, longueur) pour qu'ils restent séparés de `gap`, en bougeant
+    /// le moins possible : les intervalles qui se touchent forment un bloc posé sur la moyenne de leurs positions.
+    static func spread(_ items: [(start: CGFloat, length: CGFloat)], gap: CGFloat) -> [CGFloat] {
+        typealias Block = (offsets: [CGFloat], sum: CGFloat, length: CGFloat)
+        func start(_ b: Block) -> CGFloat { b.sum / CGFloat(b.offsets.count) }
+        var blocks: [Block] = []
+        for item in items {
+            var block: Block = ([0], item.start, item.length)
+            while let last = blocks.last, start(last) + last.length + gap > start(block) {
+                blocks.removeLast()
+                let shift = last.length + gap
+                block = (last.offsets + block.offsets.map { $0 + shift },
+                         last.sum + block.sum - shift * CGFloat(block.offsets.count), shift + block.length)
+            }
+            blocks.append(block)
+        }
+        return blocks.flatMap { b in b.offsets.map { start(b) + $0 } }
+    }
+
+    /// Dans le repère de la page (y vers le haut), déjà transformé par l'appelant.
+    /// Fond couleur papier sous les kana, pour rester lisible sur un dessin ou une trame.
+    static func draw(_ marks: [Mark], in context: CGContext) {
+        context.saveGState()
+        context.textMatrix = .identity
+        for mark in layout(marks) {
+            let size = mark.size, strip = mark.strip
             let font = CTFontCreateWithName("HiraginoSans-W5" as CFString, size, nil)
             let attributes: [NSAttributedString.Key: Any] = [
                 NSAttributedString.Key(kCTFontAttributeName as String): font,
                 NSAttributedString.Key(kCTForegroundColorFromContextAttributeName as String): true,
             ]
             let pad = size * 0.12
-            let strip = mark.vertical
-                ? CGRect(x: mark.rect.maxX + size * 0.05, y: mark.rect.midY - total / 2, width: size, height: total)
-                : CGRect(x: mark.rect.midX - total / 2, y: mark.rect.maxY + size * 0.08, width: total, height: size)
             context.setFillColor(gray: 1, alpha: 0.78)
             context.addPath(CGPath(roundedRect: strip.insetBy(dx: -pad, dy: -pad * 0.6), cornerWidth: pad * 1.5,
                                    cornerHeight: pad * 1.5, transform: nil))
             context.fillPath()
             context.setFillColor(red: 0.62, green: 0.12, blue: 0.10, alpha: 1)
-            for (i, c) in kana.enumerated() {
+            for (i, c) in mark.reading.enumerated() {
                 let line = CTLineCreateWithAttributedString(NSAttributedString(string: String(c), attributes: attributes))
                 let width = CGFloat(CTLineGetTypographicBounds(line, nil, nil, nil))
                 if mark.vertical {

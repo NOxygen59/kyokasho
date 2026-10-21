@@ -2,7 +2,7 @@
 
 > Ce fichier suffit. Ne relis pas PLAN.md, ni le code « pour voir ». Une session = les retours de l'utilisateur,
 > sinon **une** étape du § 6 ; puis commit + push (+ release si demandée), puis stop.
-> État au 21/10/2026 : **v0.8.2 publiée** (build 15). Rien n'a été testé à l'écran par Claude : l'utilisateur teste
+> État au 22/10/2026 : **v0.8.2 publiée** (build 15), v0.8.3 en cours (§ 6, sous-étapes A-K). Rien n'a été testé à l'écran par Claude : l'utilisateur teste
 > sur son iPad et fait ses retours. Tout ce qui est marqué « non vérifié » peut être faux sur l'appareil.
 
 ## 1. Prompt à coller dans le nouveau chat
@@ -146,6 +146,47 @@ PencilKit, Drive, DeepL, thèmes, barre flottante.
 ## 6. Étapes restantes (cocher `[x]` quand fini) — dans cet ordre
 
 > **Priorité absolue : les retours de l'utilisateur.** Puis de haut en bas.
+
+### Grosse mise à jour v0.8.3 (demandée le 22/10, capture de la 0.8.2) — avant les étapes 1-7
+Une sous-étape (A, B…) par session. Release 0.8.3 seulement quand l'utilisateur la demande.
+
+- [x] **A — Furigana de la page** : taille de la 0.8.0 rétablie (45 % du caractère, plancher 32 % même si la
+  ligne voisine est proche), une lecture longue déborde du mot, et les bandes d'une même ligne sont écartées pour
+  ne **jamais** se chevaucher (`FuriganaLayer.layout` + `spread`, ✅ Mac sur des nombres ; rendu iPad non vérifié).
+- [ ] **B — Panneau d'étude, en-tête** : sélecteur OCR en **icônes** (Apple → `apple.logo`, NDLOCR / PP-OCR /
+  GLM → symboles génériques + nom dans le menu seulement) : fini « Apple Vision » écrit en colonne. Choix
+  explicite PP-DocLayout / DocLayout-YOLO dans ce panneau **et** dans Réglages (existe déjà : `study.layoutEngine`,
+  le rendre visible avec son nom). Notes de la page : icône dans le menu « … » plutôt qu'un onglet.
+- [ ] **C — Barre d'outils flottante** (`FloatingToolbar`) : réordonner en groupes logiques (lire : main, sélection,
+  dictionnaire | annoter : stylo, notes | japonais : あ furigana, texte | IA / web | disposition). Montrer un
+  croquis texte à l'utilisateur **avant** de coder.
+- [ ] **D — Recherche dans le texte de la page** (haut du panneau Texte) : romaji, kana ou kanji ; romaji → kana
+  (`CFStringTransform` latin → hiragana), kana ↔ katakana, comparaison aussi sur les lectures (`TextFurigana`) ;
+  surligner et défiler jusqu'aux résultats.
+- [ ] **E — Mot entier au toucher dans le panneau** : dans `FuriganaTextView`, `data-q` doit partir du **début du
+  mot** (segment `DictionaryModel.segment` / `Translator.segment` le plus long qui contient le caractère touché),
+  pas du kanji touché. Même règle pour le texte « Brut ».
+- [ ] **F — Définitions anglaises → français par DeepL** : si le dictionnaire actif n'a que de l'anglais, bouton
+  (ou automatique si l'option est cochée) qui traduit **le mot et sa définition** et l'affiche dessous. Cache local
+  (GRDB, clé = mot + dictionnaire) ; 👍 / 👎 / ✏️ : la version corrigée remplace la traduction et est gardée.
+  Rien n'est envoyé sans clé DeepL ni sans action de l'utilisateur (règle § 2).
+- [ ] **G — Notes flottantes** : fenêtre dans l'app, redimensionnable (coin, doigt / Pencil / souris), contenu à
+  échelle fixe avec défilement ; texte au clavier **et** dessin PencilKit dans la même note (calque `PKCanvasView`
+  au-dessus d'un `UITextView`, ou blocs). Données : migration GRDB (dessin en `Data`).
+- [ ] **H — Ancres sur la page** : astérisque posé sur un mot / une zone (repère page + `NormBox`), lié à une
+  note ; lien dans la note → aller à la page, surligner le mot 1,5 s. Migration GRDB (table `anchors`).
+- [ ] **I — Moniteur de ressources** : interrupteur dans Réglages ; si actif, entrée dans le menu « … ». Panneau
+  flottant avec ✕ : mode compact (CPU %, RAM Mo, FPS) et mode graphique (Swift Charts, iOS 16 OK) avec choix de la
+  courbe. Mesures : `task_threads` + `thread_basic_info` (CPU), `task_vm_info.phys_footprint` (RAM),
+  `CADisplayLink` (FPS) — API publiques, pas besoin de privilèges. `Mathelord/infobar` : **inspiration seulement**
+  (vérifier sa licence avant d'y copier quoi que ce soit ; sinon aucun code repris).
+- [ ] **J — Mise à jour automatique par TrollStore** : ⚠️ **à décider avec l'utilisateur avant de coder**.
+  (1) Le `.tipa` est dans le dépôt **privé** : le télécharger depuis l'app demande un jeton GitHub (interdit § 2),
+  ou de le publier ailleurs (refusé le 21/10). (2) TrollStore 2 s'ouvre par `apple-magnifier://install?url=<URL>`
+  et télécharge **lui-même** depuis une URL ; il n'existe pas de `trollstore://install?path=` pour un fichier
+  local. Prévu ensuite : une vérification au lancement (déjà `AppUpdate`), téléchargement en fond, ouverture de
+  TrollStore, fichier temporaire supprimé au retour (`build` changé).
+- [ ] **K — Grammaire** : conception écrite dans `docs/GRAMMAIRE.md` (22/10). Coder seulement après accord.
 
 ### [ ] 1 — Gestes / zoom « quasi inexistants ou cassés » (retour du 21/10, cause pas trouvée)
 Demander d'abord **lesquels** (pincer, glisser, double-tap, défiler zoomé, barre, boutons) **ou** la permission du
