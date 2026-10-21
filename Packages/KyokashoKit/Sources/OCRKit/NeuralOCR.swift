@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 NOxygen59
 
+import Accelerate
 import CoreGraphics
 import Foundation
 
@@ -34,11 +35,10 @@ public struct RGBImage: Sendable, Equatable {
     }
 
     public var cgImage: CGImage? {
+        guard width > 0, height > 0 else { return nil }
         var rgba = [UInt8](repeating: 255, count: width * height * 4)
-        for i in 0..<(width * height) {
-            rgba[i * 4] = pixels[i * 3]
-            rgba[i * 4 + 1] = pixels[i * 3 + 1]
-            rgba[i * 4 + 2] = pixels[i * 3 + 2]
+        pixels.withUnsafeBytes { src in
+            rgba.withUnsafeMutableBytes { Self.convert(src.baseAddress!, rgba: false, to: $0.baseAddress!, width: width, height: height) }
         }
         guard let provider = CGDataProvider(data: Data(rgba) as CFData) else { return nil }
         return CGImage(width: width, height: height, bitsPerComponent: 8, bitsPerPixel: 32, bytesPerRow: width * 4,
@@ -96,11 +96,17 @@ public struct RGBImage: Sendable, Equatable {
     public func chw(mean: [Float], std: [Float], scale: Float = 1 / 255, bgr: Bool = false) -> [Float] {
         let plane = width * height
         var out = [Float](repeating: 0, count: plane * 3)
-        for c in 0..<3 {
-            let src = bgr ? 2 - c : c
-            let m = mean[c], inv = 1 / std[c]
-            for i in 0..<plane {
-                out[c * plane + i] = (Float(pixels[i * 3 + src]) * scale - m) * inv
+        guard plane > 0 else { return out }
+        // Accelerate : octets entrelacés (pas de 3) → plan Float, puis × (scale / std) + (−mean / std).
+        pixels.withUnsafeBufferPointer { src in
+            out.withUnsafeMutableBufferPointer { dst in
+                for c in 0..<3 {
+                    let channel = bgr ? 2 - c : c
+                    let plane0 = dst.baseAddress! + c * plane
+                    vDSP_vfltu8(src.baseAddress! + channel, 3, plane0, 1, vDSP_Length(plane))
+                    var a = scale / std[c], b = -mean[c] / std[c]
+                    vDSP_vsmsa(plane0, 1, &a, &b, plane0, 1, vDSP_Length(plane))
+                }
             }
         }
         return out
@@ -113,14 +119,25 @@ public struct RGBImage: Sendable, Equatable {
               let data = ctx.data else { return nil }
         ctx.interpolationQuality = .high
         ctx.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
-        let rgba = data.bindMemory(to: UInt8.self, capacity: width * height * 4)
         var pixels = [UInt8](repeating: 0, count: width * height * 3)
-        for i in 0..<(width * height) {
-            pixels[i * 3] = rgba[i * 4]
-            pixels[i * 3 + 1] = rgba[i * 4 + 1]
-            pixels[i * 3 + 2] = rgba[i * 4 + 2]
+        // `ctx` gardé vivant pendant la lecture de sa mémoire.
+        withExtendedLifetime(ctx) {
+            pixels.withUnsafeMutableBytes { convert(data, rgba: true, to: $0.baseAddress!, width: width, height: height) }
         }
         return RGBImage(width: width, height: height, pixels: pixels)
+    }
+
+    /// RGBA (4 octets) ↔ RGB (3 octets) avec vImage, au lieu d'une boucle pixel par pixel.
+    private static func convert(_ src: UnsafeRawPointer, rgba: Bool, to dst: UnsafeMutableRawPointer, width: Int, height: Int) {
+        var input = vImage_Buffer(data: UnsafeMutableRawPointer(mutating: src), height: vImagePixelCount(height),
+                                  width: vImagePixelCount(width), rowBytes: width * (rgba ? 4 : 3))
+        var output = vImage_Buffer(data: dst, height: vImagePixelCount(height), width: vImagePixelCount(width),
+                                   rowBytes: width * (rgba ? 3 : 4))
+        if rgba {
+            vImageConvert_RGBA8888toRGB888(&input, &output, vImage_Flags(kvImageNoFlags))
+        } else {
+            vImageConvert_RGB888toRGBA8888(&input, nil, 255, &output, false, vImage_Flags(kvImageNoFlags))
+        }
     }
 }
 

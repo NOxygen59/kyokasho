@@ -26,11 +26,19 @@ public enum PageEnhancer {
         }
         // Poids en rampe sur les bords de chaque tuile : les recouvrements se fondent.
         let ramp: [Float] = (0..<t).map { Float(min($0 + 1, t - $0, overlap)) / Float(overlap) }
+        let ys = starts(height), xs = starts(width)
+        // Grille régulière de tuiles : le poids total d'un pixel = poids en y × poids en x
+        // (deux petits tableaux au lieu d'un tableau de la taille de la page).
+        func axisWeight(_ origins: [Int], _ n: Int) -> [Float] {
+            var w = [Float](repeating: 0, count: n)
+            for o in origins { for i in 0..<min(t, n - o) { w[o + i] += ramp[i] } }
+            return w
+        }
+        let weightY = axisWeight(ys, height), weightX = axisWeight(xs, width)
         var sum = [Float](repeating: 0, count: width * height)
-        var weight = [Float](repeating: 0, count: width * height)
         var input = [Float](repeating: 1, count: t * t)
-        for y0 in starts(height) {
-            for x0 in starts(width) {
+        for y0 in ys {
+            for x0 in xs {
                 try Task.checkCancellation()
                 let h = min(t, height - y0), w = min(t, width - x0)
                 for i in input.indices { input[i] = 1 }
@@ -45,7 +53,6 @@ public enum PageEnhancer {
                     for x in 0..<w {
                         let k = ramp[y] * ramp[x]
                         sum[row + x] += out[y * t + x] * k
-                        weight[row + x] += k
                     }
                 }
             }
@@ -53,9 +60,14 @@ public enum PageEnhancer {
         // Le modèle sort ≈ 1 pour le fond : on étire [0,5 ; 0,95] vers [noir ; blanc] (seuil 0,95 du script
         // d'origine, mais en douceur pour garder des bords lisses).
         var result = [UInt8](repeating: 255, count: width * height)
-        for i in result.indices where weight[i] > 0 {
-            let v = (sum[i] / weight[i] - 0.5) / 0.45
-            result[i] = UInt8(max(0, min(1, v)) * 255)
+        for y in 0..<height {
+            let row = y * width
+            for x in 0..<width {
+                let w = weightY[y] * weightX[x]
+                guard w > 0 else { continue }
+                let v = (sum[row + x] / w - 0.5) / 0.45
+                result[row + x] = UInt8(max(0, min(1, v)) * 255)
+            }
         }
         return result
     }

@@ -49,7 +49,11 @@ struct CardBrowserView: View {
                 }
             }
             .onAppear(perform: reload)
-            .onChange(of: query) { _ in reload() }
+            // Recherche tapée : on attend une courte pause avant d'interroger la base.
+            .task(id: query) {
+                try? await Task.sleep(nanoseconds: 250_000_000)
+                if !Task.isCancelled { reload() }
+            }
             .onChange(of: deckId) { _ in reload() }
         }
     }

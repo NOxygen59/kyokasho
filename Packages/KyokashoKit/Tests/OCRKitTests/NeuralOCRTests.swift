@@ -120,3 +120,26 @@ final class CharacterHitTests: XCTestCase {
         XCTAssertNil(page.character(at: CGPoint(x: 0.8, y: 0.8), tolerance: 0.01))
     }
 }
+
+final class RGBImageAccelerateTests: XCTestCase {
+    func testConversionsMatchPixelLoops() throws {
+        let w = 7, h = 5
+        let pixels = (0..<(w * h * 3)).map { UInt8(($0 * 37) % 256) }
+        let image = RGBImage(width: w, height: h, pixels: pixels)
+        // Aller-retour Core Graphics : mêmes octets.
+        let back = try XCTUnwrap(RGBImage(XCTUnwrap(image.cgImage)))
+        XCTAssertEqual(back.pixels, pixels)
+        // Tenseur : même calcul qu'une boucle simple (RGB puis BGR).
+        let mean: [Float] = [0.485, 0.456, 0.406], std: [Float] = [0.229, 0.224, 0.225]
+        for bgr in [false, true] {
+            let fast = image.chw(mean: mean, std: std, bgr: bgr)
+            for c in 0..<3 {
+                let src = bgr ? 2 - c : c
+                for i in 0..<(w * h) {
+                    let slow = (Float(pixels[i * 3 + src]) / 255 - mean[c]) / std[c]
+                    XCTAssertEqual(fast[c * w * h + i], slow, accuracy: 1e-5)
+                }
+            }
+        }
+    }
+}

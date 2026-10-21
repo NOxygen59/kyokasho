@@ -395,9 +395,10 @@ struct StudyNotesTab: View {
                     .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.annotate))
                     .disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 Spacer()
-                ShareLink(item: MarkdownFile(text: MarkdownExporter.export(title: reader.document.title, comments: comments,
-                                                                           highlights: reader.allHighlights, bookmarks: reader.bookmarks),
-                                             name: reader.document.title),
+                ShareLink(item: MarkdownFile(name: reader.document.title) { [reader, comments] in
+                              MarkdownExporter.export(title: reader.document.title, comments: comments,
+                                                      highlights: reader.allHighlights, bookmarks: reader.bookmarks)
+                          },
                           preview: SharePreview("\(reader.document.title).md")) {
                     Label("Markdown", systemImage: "square.and.arrow.up").font(.system(size: 13, weight: .semibold))
                 }

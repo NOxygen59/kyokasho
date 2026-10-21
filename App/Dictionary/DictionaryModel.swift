@@ -170,13 +170,15 @@ final class DictionaryModel: ObservableObject {
                 var ext = (candidate as NSString).pathExtension.lowercased()
                 switch source.kind {
                 case .localFolder:
-                    data = try? Data(contentsOf: audioFolder.appendingPathComponent(candidate))
+                    // Lecture du disque hors du fil principal (le popup reste fluide).
+                    let file = audioFolder.appendingPathComponent(candidate)
+                    data = await Task.detached(priority: .userInitiated) { try? Data(contentsOf: file) }.value
                 case .url:
                     guard let url = URL(string: candidate) else { continue }
                     ext = url.pathExtension.lowercased()
                     data = await Self.download(url)
                 }
-                if let data, AVAudioPlayerCheck.isPlayable(data) {
+                if let data, await Task.detached(priority: .userInitiated, operation: { AVAudioPlayerCheck.isPlayable(data) }).value {
                     return (data, ["mp3", "m4a", "ogg", "opus", "wav", "aac"].contains(ext) ? ext : "mp3")
                 }
             }

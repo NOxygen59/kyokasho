@@ -23,7 +23,19 @@ final class LookupSession: ObservableObject {
     }
 
     let dictionary: DictionaryModel
-    @Published private(set) var stack: [Page] = []
+    @Published private(set) var stack: [Page] = [] {
+        didSet { stackRevision &+= 1 }
+    }
+    /// Change à chaque modification de la pile : sert de clé au HTML déjà construit.
+    private var stackRevision = 0
+    private struct HTMLKey: Equatable {
+        var revision: Int
+        var canAddCards: Bool
+        var added: Set<String>
+        var options: GlossaryRenderer.Options
+        var dictionaries: [DictionaryInfo]
+    }
+    private var htmlCache: (key: HTMLKey, html: String)?
     /// Toutes les recherches de la session (onglet Historique de la recherche manuelle).
     @Published private(set) var history: [String] = []
     /// Mot reconnu sur la page (pour surligner le texte touché).
@@ -81,13 +93,21 @@ final class LookupSession: ObservableObject {
         matchedLength = 0
     }
 
+    /// HTML de la page affichée. Gardé tant que rien ne change : le popup se redessine souvent
+    /// (toast, sélection…) et reconstruire tout le HTML à chaque fois coûtait pour rien.
     func html(canAddCards: Bool, added: Set<String> = []) -> String {
+        let key = HTMLKey(revision: stackRevision, canAddCards: canAddCards, added: added,
+                          options: dictionary.profile.display, dictionaries: dictionary.dictionaries)
+        if let htmlCache, htmlCache.key == key { return htmlCache.html }
         let renderer = dictionary.renderer(canAddCards: canAddCards, added: added)
+        let html: String
         switch current {
-        case .terms(let q, let r)?: return renderer.page(terms: r, dictionaries: dictionary.dictionaries, query: q)
-        case .kanji(let k)?: return renderer.page(kanji: k)
-        default: return renderer.page(terms: [], dictionaries: [], query: nil).replacingOccurrences(of: "Aucun résultat.", with: "…")
+        case .terms(let q, let r)?: html = renderer.page(terms: r, dictionaries: dictionary.dictionaries, query: q)
+        case .kanji(let k)?: html = renderer.page(kanji: k)
+        default: html = renderer.page(terms: [], dictionaries: [], query: nil).replacingOccurrences(of: "Aucun résultat.", with: "…")
         }
+        htmlCache = (key, html)
+        return html
     }
 
     var currentTerms: [TermResult] {

@@ -127,6 +127,13 @@ Positions : texte du PDF (`page.selection(for:)`, **pas** `characterBounds` qui 
 ou boîtes OCR des scans. Dessin : `FuriganaLayer.draw` dans `TonedPage.draw`. Vérifié sur Mac en horizontal ;
 le vertical (à droite de la colonne) n'est vérifié nulle part. Idée : lectures du dictionnaire installé (plus justes).
 
+### [x] H — Optimisation, 4e passe (21/10)
+Fait : HTML du popup gardé tant que rien ne change (`LookupSession.html`), audio lu hors du fil principal,
+export Markdown des notes calculé au partage seulement, recherche de cartes après 250 ms de pause, progression
+des téléchargements par %, DE-GAN (poids séparables, −22 Mo), OCR : conversions d'image vDSP / vImage.
+Reste (repéré, pas fait) : `Translator.segment` = une recherche par caractère non trouvé ; `OCRService.search`
+décode toutes les pages ; rotation des colonnes verticales pixel par pixel ; DB des révisions sur le fil principal.
+
 ## 6. Carte du code (où est quoi)
 
 - **`project.yml`** (XcodeGen) : versions, paquets `KyokashoKit` + `GLMOCRKit`, produits utilisés par l'app.

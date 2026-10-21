@@ -28,11 +28,18 @@ final class ModelDownloads: ObservableObject {
         errors[spec.id] = nil
         progress[spec.id] = 0
         let store = store
+        let percent = PercentGate()
         tasks[spec.id] = Task {
             do {
                 try await store.download(spec) { done, total in
                     let fraction = total > 0 ? Double(done) / Double(total) : 0
-                    Task { @MainActor in ModelDownloads.shared.progress[spec.id] = fraction }
+                    // Écran mis à jour à chaque % gagné, pas à chaque paquet reçu.
+                    guard percent.advance(to: Int(fraction * 100)) else { return }
+                    Task { @MainActor in
+                        // Valeur arrivée après la fin : ignorée (pas de barre fantôme).
+                        guard ModelDownloads.shared.tasks[spec.id] != nil else { return }
+                        ModelDownloads.shared.progress[spec.id] = fraction
+                    }
                 }
             } catch is CancellationError {
             } catch let error as URLError where error.code == .cancelled {
@@ -157,5 +164,19 @@ struct OCRModelsSection: View {
 enum OCREngineMenu {
     static var extra: [String] {
         [OCREngineID.ndlocr, OCREngineID.ppocr5, OCREngineID.glmocr].filter { OCRService.engine($0)?.isAvailable == true }
+    }
+}
+
+/// Laisse passer une valeur seulement quand le pourcentage change (appelé depuis le fil du téléchargement).
+private final class PercentGate: @unchecked Sendable {
+    private let lock = NSLock()
+    private var last = -1
+
+    func advance(to value: Int) -> Bool {
+        lock.withLock {
+            guard value != last else { return false }
+            last = value
+            return true
+        }
     }
 }
