@@ -45,6 +45,8 @@ targets:
         product: ReviewKit
       - package: KyokashoKit
         product: ONNXOCRKit
+      - package: KyokashoKit
+        product: MorphologyKit
       - package: GLMOCRKit
         product: GLMOCRKit
       - sdk: PDFKit.framework

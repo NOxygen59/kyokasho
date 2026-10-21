@@ -18,6 +18,16 @@ public enum Furigana {
     /// Lectures fausses connues de l'analyseur (mot entier → lecture).
     static let corrections: [String: String] = ["日本": "にほん", "日本語": "にほんご", "日本人": "にほんじん"]
 
+    /// Analyseur morphologique installé (MeCab + UniDic) : mots (zone UTF-16) et lecture en hiragana selon le
+    /// contexte. `nil` : analyseur du système (`CFStringTokenizer`), moins juste.
+    /// Lu depuis les fils de dessin de PDFKit, écrit sur le fil principal : protégé par un verrou.
+    public static var analyzer: (@Sendable (String) -> [(range: NSRange, reading: String)])? {
+        get { analyzerLock.withLock { storedAnalyzer } }
+        set { analyzerLock.withLock { storedAnalyzer = newValue } }
+    }
+    private static let analyzerLock = NSLock()
+    nonisolated(unsafe) private static var storedAnalyzer: (@Sendable (String) -> [(range: NSRange, reading: String)])?
+
     public static func rubies(for text: String) -> [Ruby] {
         let ns = text as NSString
         guard ns.length > 0, text.contains(where: isKanji) else { return [] }
@@ -31,22 +41,31 @@ public enum Furigana {
         }
         graphemeAt[ns.length] = g
 
-        let tokenizer = CFStringTokenizerCreate(nil, text as CFString, CFRange(location: 0, length: ns.length),
-                                                kCFStringTokenizerUnitWord, Locale(identifier: "ja") as CFLocale)
-        var result: [Ruby] = []
-        while CFStringTokenizerAdvanceToNextToken(tokenizer) != [] {
-            let r = CFStringTokenizerGetCurrentTokenRange(tokenizer)
-            let surface = ns.substring(with: NSRange(location: r.location, length: r.length))
-            guard surface.contains(where: isKanji) else { continue }
-            let reading: String
-            if let fixed = corrections[surface] {
-                reading = fixed
-            } else {
-                guard let latin = CFStringTokenizerCopyCurrentTokenAttribute(tokenizer, kCFStringTokenizerAttributeLatinTranscription) as? String,
-                      let kana = latin.applyingTransform(.latinToHiragana, reverse: false),
-                      kana.allSatisfy(isKana) else { continue }
-                reading = kana
+        // Mots + lectures : MeCab s'il est installé, sinon l'analyseur du système.
+        var words: [(range: NSRange, reading: String)] = []
+        if let analyzer {
+            words = analyzer(text)
+        } else {
+            let tokenizer = CFStringTokenizerCreate(nil, text as CFString, CFRange(location: 0, length: ns.length),
+                                                    kCFStringTokenizerUnitWord, Locale(identifier: "ja") as CFLocale)
+            while CFStringTokenizerAdvanceToNextToken(tokenizer) != [] {
+                let r = CFStringTokenizerGetCurrentTokenRange(tokenizer)
+                let surface = ns.substring(with: NSRange(location: r.location, length: r.length))
+                guard surface.contains(where: isKanji) else { continue }
+                if let fixed = corrections[surface] {
+                    words.append((NSRange(location: r.location, length: r.length), fixed))
+                } else if let latin = CFStringTokenizerCopyCurrentTokenAttribute(tokenizer, kCFStringTokenizerAttributeLatinTranscription) as? String,
+                          let kana = latin.applyingTransform(.latinToHiragana, reverse: false), kana.allSatisfy(isKana) {
+                    words.append((NSRange(location: r.location, length: r.length), kana))
+                }
             }
+        }
+        var result: [Ruby] = []
+        for (nr, reading) in words where nr.location >= 0 && NSMaxRange(nr) <= ns.length {
+            let r = CFRange(location: nr.location, length: nr.length)
+            let surface = ns.substring(with: nr)
+            let reading = corrections[surface] ?? reading
+            guard surface.contains(where: isKanji), !reading.isEmpty, reading.allSatisfy(isKana) else { continue }
             for (sub, kana) in align(surface, reading) {
                 let start = r.location + utf16Offset(surface, sub.lowerBound)
                 let end = r.location + utf16Offset(surface, sub.upperBound)

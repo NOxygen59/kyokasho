@@ -55,7 +55,7 @@ struct RootView: View {
             LibraryView()
                 .safeAreaInset(edge: .top, spacing: 0) { UpdateBanner() }
         }
-        .task { AppUpdate.shared.checkAtLaunch() }
+        .task { AppUpdate.shared.checkAtLaunch(); MorphologyService.shared.loadIfInstalled() }
         .fullScreenCover(item: Binding(
             get: { model.openDocumentId.flatMap { id in model.documents.first { $0.id == id } } },
             set: { model.openDocumentId = $0?.id }

@@ -11,6 +11,8 @@ import WebKit
 /// posée sur les kanji du mot), sinon l'analyseur japonais du système.
 enum TextFurigana {
     static func rubies(_ text: String, segments: [Translator.Segment]) -> [(range: Range<Int>, reading: String)] {
+        // MeCab installé : lectures selon le contexte (plus justes que la forme de base du dictionnaire).
+        if Furigana.analyzer != nil { return Furigana.rubies(for: text).map { ($0.range, $0.reading) } }
         // Les segments doivent recouvrir le texte tel quel ; sinon, analyseur du système pour tout.
         guard !segments.isEmpty, segments.map(\.text).joined() == text else {
             return Furigana.rubies(for: text).map { ($0.range, $0.reading) }
@@ -63,6 +65,7 @@ struct FuriganaTextView: View {
     @EnvironmentObject private var dictionary: DictionaryModel
     @State private var html = ""
     @AppStorage(FuriganaLayer.Tint.storageKey) private var tint = FuriganaLayer.Tint.red
+    @ObservedObject private var morphology = MorphologyService.shared
     @State private var height: CGFloat = 200
 
     /// Unités de texte : titres, paragraphes, cellules (mis en forme) ou lignes (brut).
@@ -84,7 +87,7 @@ struct FuriganaTextView: View {
     var body: some View {
         RubyWebView(html: html, height: $height, onLookup: onLookup)
             .frame(height: height)
-            .task(id: "\(page.hashValue)|\(formatted)|\(regions.hashValue)|\(tint.rawValue)") { await build() }
+            .task(id: "\(page.hashValue)|\(formatted)|\(regions.hashValue)|\(tint.rawValue)|\(morphology.state == .ready)") { await build() }
     }
 
     private func build() async {

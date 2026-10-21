@@ -14,6 +14,7 @@ let package = Package(
         .library(name: "DictionaryKit", targets: ["DictionaryKit"]),
         .library(name: "ReviewKit", targets: ["ReviewKit"]),
         .library(name: "ONNXOCRKit", targets: ["ONNXOCRKit"]),
+        .library(name: "MorphologyKit", targets: ["MorphologyKit"]),
     ],
     dependencies: [
         .package(url: "https://github.com/groue/GRDB.swift.git", from: "7.11.1"),
@@ -49,11 +50,21 @@ let package = Package(
             .product(name: "GRDB", package: "GRDB.swift"),
             .product(name: "ZIPFoundation", package: "ZIPFoundation"),
         ]),
+        // MeCab 0.996 (Taku Kudo, licence BSD choisie parmi GPL / LGPL / BSD) : analyseur morphologique.
+        .target(
+            name: "MeCabC",
+            exclude: ["LICENSE-BSD"],
+            cxxSettings: [.define("HAVE_CONFIG_H"), .unsafeFlags(["-w"])]
+        ),
+        // Code original (MIT) : découpage en mots et lectures (MeCab + dictionnaire UniDic téléchargé à part).
+        .target(name: "MorphologyKit", dependencies: ["MeCabC"]),
         .testTarget(name: "ReaderCoreTests", dependencies: ["ReaderCore"]),
         .testTarget(name: "YomitanKitTests", dependencies: ["YomitanKit"]),
         .testTarget(name: "DictionaryKitTests", dependencies: ["DictionaryKit"]),
         .testTarget(name: "OCRKitTests", dependencies: ["OCRKit"]),
         .testTarget(name: "ReviewKitTests", dependencies: ["ReviewKit"]),
         .testTarget(name: "ONNXOCRKitTests", dependencies: ["ONNXOCRKit"]),
-    ]
+        .testTarget(name: "MorphologyKitTests", dependencies: ["MorphologyKit"]),
+    ],
+    cxxLanguageStandard: .cxx14
 )

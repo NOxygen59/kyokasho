@@ -59,3 +59,12 @@ Copyright (C) 2024-2026 Yomitan Authors, (C) 2020-2022 Yomichan Authors. https:/
 | `Packages/GLMOCRKit/Sources/GLMOCRKit/GlmOcr.swift`, `QwenVLHelpers.swift` | ml-explore (mlx-swift-lm 2.31.3 / 2.29.3), d'après mlx-vlm (Prince Canuma) | MIT | **Code copié et adapté** (iOS 16) ; Copyright (c) 2024 ml-explore, licence MIT conservée |
 | swift-transformers 1.1.9 | Hugging Face | Apache-2.0 | Tokenizer de GLM-OCR (dépendance de mlx-swift-lm) |
 | Modèle GLM-OCR 4 bits (mlx-community/GLM-OCR-4bit) | Zhipu AI ; conversion mlx-community | MIT | **Téléchargé à la demande**, jamais dans le dépôt |
+
+## Analyseur japonais (0.8.4)
+
+- **MeCab 0.996** — Taku Kudo, Nippon Telegraph and Telephone Corporation. Licence triple GPL / LGPL / **BSD** :
+  BSD choisie. Code source copié sans changement dans `Packages/KyokashoKit/Sources/MeCabC` (sauf `config.h`,
+  écrit pour iOS) ; texte de la licence dans `Sources/MeCabC/LICENSE-BSD`. https://github.com/taku910/mecab
+- **UniDic 2.1.2** (via **unidic-lite 1.0.8**, Paul McCann, MIT) — UniDic Consortium, licence triple GPL / LGPL /
+  **BSD** : BSD choisie. **Pas dans le dépôt ni dans l'app** : téléchargé à la demande depuis PyPI
+  (`unidic-lite-1.0.8.tar.gz`, SHA-256 vérifié). https://github.com/polm/unidic-lite

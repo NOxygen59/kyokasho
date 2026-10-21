@@ -222,7 +222,13 @@ Rythme choisi le 22/10 au soir : **2 sections de la liste de l'utilisateur par s
 - [x] **Dictionnaire sur la page = mot entier** : la recherche partait du caractère touché (井 seul dans 天井).
   `ReaderController.wordStart(in:at:)` remonte au début du mot (`DictionaryModel.segment`, mémo par ligne), pour
   l'OCR et pour le texte du PDF (fenêtre de ±16 caractères). Non vérifié sur iPad.
-- [ ] **L — Analyseur MeCab + UniDic-lite** (≈ 50 Mo, téléchargé à la demande, **demander**) : lectures des furigana
+- [x] **L — Analyseur MeCab + UniDic-lite** (22/10, non vérifié iPad) : `MeCabC` (MeCab 0.996 copié, BSD, C++14,
+  `config.h` maison) + `MorphologyKit` (`MeCab.tokens` : surface, zone UTF-16, lecture f[17] en hiragana, lemme ;
+  `UniDic.extract` : gzip + tar en flux, archive PyPI 47 Mo → 260 Mo dans `Application Support/unidic`).
+  Tests Mac : `KYOKASHO_UNIDIC=<dicdir>` / `KYOKASHO_UNIDIC_ARCHIVE=<tar.gz> swift test --filter MorphologyKitTests`.
+  App : `MorphologyService` (Réglages → Modèles → « Japonais : analyseur »), `Furigana.analyzer` branché au
+  lancement → furigana page + panneau par MeCab. Reste possible : `wordStart` par MeCab, grammaire.
+  Détail de l'ancien texte de l'étape : (≈ 50 Mo, téléchargé à la demande, **demander**) : lectures des furigana
   selon le contexte (bien meilleur que `CFStringTokenizer` : 上手/うわて, 今日, 一日, noms composés) et découpage en
   mots pour le dictionnaire et la grammaire (`docs/GRAMMAIRE.md` § 2, même socle). Furigana page + panneau.
 - [ ] **M — OCR « relu » sans IA lourde** : (1) lignes douteuses = confiance basse (`OCRLine.confidence`) ou mots

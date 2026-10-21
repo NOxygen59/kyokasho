@@ -396,6 +396,11 @@ struct AboutView: View {
                 credit("Yomitan (déconjugaison, texte japonais)", "yomidevs", "GPL-3.0", "https://github.com/yomidevs/yomitan")
                 credit("swift-fsrs (calcul des révisions)", "Ben Smiley", "MIT", "https://github.com/open-spaced-repetition/swift-fsrs")
             }
+            Section("Analyseur japonais") {
+                credit("MeCab", "Taku Kudo · NTT", "BSD", "https://github.com/taku910/mecab")
+                credit("UniDic (dictionnaire téléchargé)", "UniDic Consortium", "BSD", "https://clrd.ninjal.ac.jp/unidic/")
+                credit("unidic-lite", "Paul McCann", "MIT", "https://github.com/polm/unidic-lite")
+            }
             Section("OCR") {
                 credit("ONNX Runtime", "Microsoft", "MIT", "https://github.com/microsoft/onnxruntime-swift-package-manager")
                 credit("PP-OCRv5 (modèles téléchargés)", "PaddlePaddle · RapidAI", "Apache-2.0", "https://github.com/PaddlePaddle/PaddleOCR")
@@ -469,7 +474,10 @@ struct TranslationSettingsSection: View {
 /// Tous les modèles à télécharger (OCR, netteté des scans), avec leurs liens.
 struct ModelsView: View {
     var body: some View {
-        Form { OCRModelsSection() }
+        Form {
+            MorphologySection()
+            OCRModelsSection()
+        }
             .navigationTitle("Modèles")
     }
 }
