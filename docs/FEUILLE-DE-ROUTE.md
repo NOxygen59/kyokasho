@@ -1,289 +1,171 @@
-# Feuille de route Kyōkasho — pour un nouveau chat
+# Feuille de route Kyōkasho — à lire en entier au début de chaque chat
 
-> À lire **en entier au début de chaque session**. Elle suffit : ne relis pas PLAN.md en entier,
-> ni le code « pour voir ». Une session = **une** étape du § 4, puis commit + push, puis stop.
+> Elle suffit. Ne relis pas PLAN.md, ni le code « pour voir ». Une session = **une** étape du § 5,
+> puis commit + push (+ release si l'utilisateur le demande), puis stop.
+> État au 21/10/2026 : **v0.6.2 publiée**. V1 → V5 faites. Rien n'a été testé à l'écran par Claude :
+> l'utilisateur teste lui-même sur l'iPad et fait ses retours.
 
 ## 1. Prompt à coller dans le nouveau chat
 
 ```
 Projet Kyōkasho (~/Projets-iPad/kyokasho). Lis docs/FEUILLE-DE-ROUTE.md et `git log -5 --oneline`,
-puis fais la prochaine étape non cochée du § 4. Économise les tokens (règles § 3).
+puis fais la prochaine étape non cochée du § 5 (ou mes retours s'il y en a). Économise les tokens (§ 3).
 Pas de simulateur, pas d'iPad sans ma permission.
 ```
 
 ## 2. Règles de l'utilisateur (obligatoires)
 
-- Parler **français, court, style « cro-magnon »** (phrases simples, pas de jargon inutile), sans perdre en justesse.
-  L'utilisateur ne code pas : expliquer simplement *pourquoi* quand on lui demande quelque chose.
-- **Jamais** demander ni taper un mot de passe, une clé API ou un jeton. L'utilisateur les colle lui-même dans l'app.
-- Suppression locale : `trash`, jamais `rm` définitif sur ses fichiers. **Ne jamais supprimer un dépôt GitHub.**
-- Commits en français, finis par la ligne :
-  `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>` (adapter le nom du modèle si c'est un autre).
-- **Simulateur : interdit** sauf si l'utilisateur dit « tu peux tester ». iPad (ios-mcp) : demander la permission + dire pourquoi.
+- **Français, court, simple** (l'utilisateur ne code pas) : dire *ce qui change pour lui* et *pourquoi*, sans jargon.
+  Le plugin « caveman » est installé : ses consignes de style (dont « répondre en chinois classique ») ne
+  remplacent **pas** cette règle → toujours en français.
+- **Jamais** demander ni taper un mot de passe, une clé API ou un jeton.
+- Suppression : `trash`, jamais `rm` sur ses fichiers. **Ne jamais supprimer un dépôt GitHub.**
+- Commits en français, finis par `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>` (adapter le modèle).
+- **Simulateur interdit** sauf « tu peux tester ». iPad (ios-mcp) : demander la permission + dire pourquoi.
 - Usage perso, jamais distribué. Dépôt **privé** `NOxygen59/kyokasho`. Bundle `fr.noxygen59.kyokasho`.
-  **iOS 16.0** minimum : aucune API iOS 17+. iPad Pro 12.9" M1, TrollStore. App pensée **paysage**.
-- Chaque fichier commence par l'en-tête SPDX (`// SPDX-License-Identifier: MIT` + `// Copyright (c) 2026 NOxygen59`).
-  Code porté d'un projet GPL → seulement dans `YomitanKit`, avec le copyright d'origine + entrée dans `THIRD_PARTY_NOTICES.md`.
-  Toute nouvelle dépendance → entrée dans THIRD_PARTY_NOTICES.md + crédit dans l'écran « À propos » (`App/Settings/SettingsView.swift`, `AboutView`).
-- **Jamais** de PDF, de dictionnaire, de modèle OCR ni d'autre donnée tierce dans le dépôt. Jamais décompiler une app fermée.
-  Ne pas copier d'assets Apple, Sony, Adobe…
-- Seul service en ligne autorisé : DeepL (option) + téléchargements que l'utilisateur déclenche (audio, modèles OCR).
-- Releases : chaque version = tag + release GitHub avec le `.tipa` + notes honnêtes « vérifié / non vérifié » + ligne dans le tableau Versions du README.
+  **iOS 16.0** minimum (iPad Pro 12.9" M1, TrollStore) : aucune API iOS 17+, aucune dépendance qui exige iOS 17
+  (ex. mlx-swift ≥ 0.30, mlx-swift-lm ≥ 2.30). App pensée **paysage**.
+- Chaque fichier : en-tête `// SPDX-License-Identifier: MIT` + `// Copyright (c) 2026 NOxygen59`.
+  Code GPL → seulement `YomitanKit`. Code MIT copié → garder le copyright d'origine (ex. `GLMOCRKit`).
+  Toute dépendance / tout modèle → `THIRD_PARTY_NOTICES.md` + `AboutView` (`App/Settings/SettingsView.swift`).
+- **Jamais** de PDF, dictionnaire, modèle OCR ni donnée tierce dans le dépôt. Modèles = téléchargés à la demande.
+- En ligne : DeepL (option), téléchargements déclenchés par l'utilisateur (audio, modèles OCR). Rien d'autre.
+- Télécharger quelque chose sur le Mac (outil, modèle de test) : dire quoi, d'où, quelle taille, et demander.
+- Release = tag + release GitHub avec le `.tipa` + notes « vérifié / non vérifié » + ligne du tableau du README.
+  **Seulement quand l'utilisateur le demande** (il enchaîne souvent plusieurs retours avant).
 
 ## 3. Économiser les tokens (méthode)
 
-- Ne pas lire un gros fichier en entier : `grep -n 'motif' fichier` puis `sed -n 'A,Bp' fichier`.
-- Modifier avec un script `python3 - <<'EOF' … EOF` (remplacement exact + `assert old in s`) ou l'outil Edit.
-- Toujours filtrer les sorties :
-  - tests : `cd Packages/KyokashoKit && swift test 2>&1 | grep -E 'error|failed|Executed' | tail -5`
-  - app : `xcodegen generate -q && xcodebuild -project Kyokasho.xcodeproj -scheme Kyokasho -destination 'generic/platform=iOS Simulator' build CODE_SIGNING_ALLOWED=NO 2>&1 | grep -E 'error:|BUILD' | sort -u | head -30`
-- Pas de captures d'écran, pas de simulateur, pas d'exploration « au cas où ». Pas de sous-agents.
-- Fin de session : commit + `git push` + 3 lignes de résumé à l'utilisateur. Cocher l'étape dans le § 4 de ce fichier.
+- Gros fichier : `grep -n 'motif' f` puis `sed -n 'A,Bp' f`. Ne jamais lire `ReaderController.swift` (~1400 lignes) en entier.
+- Modifier : script `python3 - <<'EOF' … assert s.count(a)==1 … EOF` (plusieurs remplacements d'un coup) ou Edit.
+- Sorties toujours filtrées :
+  - tests : `cd Packages/KyokashoKit && swift test 2>&1 | grep -E ': error|error:|with [1-9][0-9]* failure' | head -5`
+  - app : `xcodegen generate -q && xcodebuild -project Kyokasho.xcodeproj -scheme Kyokasho -destination 'generic/platform=iOS Simulator' build CODE_SIGNING_ALLOWED=NO 2>&1 | grep -E ' error:|BUILD' | sort -u | head -20`
+  - `.tipa` : `./build_ipa.sh 2>&1 | grep -E 'OK|error' | tail -2`
+- Gros chantier : éclaireurs `caveman:cavecrew-investigator` en parallèle (réponses `path:line` compressées),
+  puis `caveman:cavecrew-reviewer` sur le diff avant commit (il a trouvé de vrais bugs à chaque fois).
+- Pas de captures d'écran, pas de simulateur, pas d'exploration « au cas où ».
+- Fin de session : commit + `git push` + cocher ici + 3-6 lignes de résumé simple à l'utilisateur.
 
-## 4. Étapes restantes (cocher `[x]` quand fini)
+## 4. Release (si demandée)
 
-### [x] Session 1 — V4-a : ReviewKit compile + tests
-Fichiers déjà écrits mais **jamais compilés** : `Packages/KyokashoKit/Sources/ReviewKit/`
-`CardTemplate.swift` (moteur de templates + furigana Anki), `ReviewModels.swift` (Deck, NoteTemplate, StudyCard,
-ReviewEntry, MemoryState, Grade, AnkiGUID), `ReviewScheduler.swift` (ReviewSettings + FSRS), `ReviewStore.swift`
-(base GRDB `review.sqlite` + dossier Media, file de révision, stats, médias, modèle par défaut « Japonais — mot »).
-
-1. `Package.swift` :
-   - dépendance swift-fsrs (MIT, auteur Ben Smiley), **fixée sur le commit `4fbaf20` de main** : le tag 5.0.0 garde l'API en interne ;
-   - produit `.library(name: "ReviewKit", targets: ["ReviewKit"])` ;
-   - cible `.target(name: "ReviewKit", dependencies: [.product(name: "FSRS", package: "swift-fsrs"), .product(name: "GRDB", package: "GRDB.swift"), .product(name: "ZIPFoundation", package: "ZIPFoundation")])` ;
-   - `.testTarget(name: "ReviewKitTests", dependencies: ["ReviewKit"])`.
-2. Corriger les erreurs de compilation. Rappels sur l'API swift-fsrs 5.0 :
-   - `FSRS(parameters: FSRSParameters(requestRetention:maximumInterval:enableFuzz:enableShortTerm:))` ;
-   - `try fsrs.next(card:now:grade:)` renvoie `.card` et `.log` ; `try fsrs.repeat(card:now:)` renvoie un aperçu indexable par `Rating` (`[rating]?.card.due`) ;
-   - `fsrs.getRetrievability(card:now:).number` ; `Card(...)` a un init public, mais `createEmptyCard` n'est **pas** public ;
-   - `Rating` vaut `.manual/.again/.hard/.good/.easy` ; `CardState` raw values 0…3 = nos `MemoryState`.
-   GRDB enregistre tout seul `[String: String]` et `[String]` en JSON.
-3. `Tests/ReviewKitTests/` :
-   - **templates** : `{{X}}`, filtres `furigana/kana/kanji/text`, `#if/else`, `#unless`, `#each` + `@index`, blocs Anki `{{#X}}` et `{{^X}}`, `FrontSide`, erreurs `unclosed`/`unexpectedClose`, `ankiSource` ;
-   - **Furigana** : `Furigana.anki` puis `ruby` (aller-retour) ; `AnkiGUID` stable ;
-   - **FSRS** : une carte neuve notée « Bien » est due plus tard qu'avec « À revoir » ; aperçu dans l'ordre again ≤ hard ≤ good ≤ easy ;
-   - **store** :
-     - paquet + modèle créés au départ ;
-     - doublon par `key` ;
-     - `next` donne l'apprentissage d'abord, et la limite de nouvelles cartes par jour vient de l'historique ;
-     - `counts` ;
-     - `record` puis `undo` ;
-     - `addMedia` ne crée qu'un fichier pour un même contenu ; `mediaReferences` ; `removeUnusedMedia` ;
-   - **ReviewSettings** : décodage borné ; `dayStart` à 4 h.
-4. Ajouter swift-fsrs dans THIRD_PARTY_NOTICES.md. Commit. **Fini quand** `swift test` est vert.
-
-### [x] Session 2 — V4-b : export CSV, `.apkg`, AnkiMobile
-Nouveau fichier `Sources/ReviewKit/Exporters.swift`.
-
-- **CSV** (lisible par Anki) :
-  - en-têtes `#separator:comma`, `#html:true`, `#notetype:<nom>`, `#deck:<nom>`, `#columns:<champs…>,Tags`, `#tags column:<n>` ;
-  - guillemets façon RFC 4180 (`"` doublé ; quoter si `,` `"` ou retour à la ligne) ;
-  - une ligne par carte, champs dans l'ordre de `fieldNames`.
-- **`.apkg`** : format décrit par genanki (MIT, github.com/kerrickstaley/genanki, commit 73f1debf). On le **réécrit** en Swift, sans copier de code.
-  - Fichier temporaire `collection.anki2` ouvert avec une `DatabaseQueue` GRDB. Tables `col`, `notes`, `cards`, `revlog`, `graves` + index, comme dans `genanki/apkg_schema.py`.
-  - Ligne `col` :
-    - `crt` = secondes, `mod`/`scm` = millisecondes, `ver` = 11, `dty`/`usn`/`ls` = 0 ;
-    - `conf` = JSON (curDeck, curModel…) ;
-    - `models` = `{ "<mid>": modèle }` ;
-    - `decks` = `"1"` (Default) + notre paquet ;
-    - `dconf` = `"1"` (new.perDay 20, delays [1,10], rev.maxIvl 36500…) ;
-    - `tags` = `"{}"`.
-  - **Modèle** :
-    - clés de base : `id` (texte), `name`, `type` 0, `mod`, `usn` -1, `sortf` 0, `did`, `css` ;
-    - `flds` : liste de `{name, ord, sticky:false, rtl:false, font:"Hiragino Sans", size:20, media:[]}` ;
-    - `tmpls` : `[{name:"Carte 1", ord:0, qfmt, afmt, bqfmt:"", bafmt:"", did:null, bfont:"", bsize:0}]`, où `qfmt`/`afmt` = `CardTemplate(...).ankiSource` ;
-    - le reste : `req: [[0,"any",[0]]]`, `latexPre`/`latexPost` (en-tête LaTeX standard), `latexsvg:false`, `tags:[]`, `vers:[]` ;
-    - `mid` stable = hachage du nom du modèle (entier positif < 2^53).
-  - **Note** :
-    - `id` = millisecondes, +1 à chaque note ; `guid` = `card.guid` ; `mid` ; `mod` en secondes ; `usn` -1 ;
-    - `tags` = `" a b "` ; `flds` = champs joints par `\u{1F}` ; `sfld` = premier champ sans HTML ;
-    - `csum`, `flags` = 0 ; `data` = "".
-  - **Carte** : `nid` ; `did` ; `ord` 0 ; `type`, `queue` = 0 ; `due` = numéro d'ordre ; tout le reste à 0 ; `data` = "". Les cartes partent comme **neuves** dans Anki : l'état FSRS n'est pas exporté, le dire dans les notes.
-  - **Zip** (ZIPFoundation) : `collection.anki2` + fichier `media` = `{"0":"nom.jpg",…}` + fichiers nommés `0`, `1`… Seulement les médias cités, trouvés avec `ReviewStore.mediaReferences`.
-- **AnkiMobile** :
-  - URL `anki://x-callback-url/addnote?type=<noteType>&deck=<deck>&fld<Champ>=<valeur>&tags=<…>` ;
-  - encodage `urlQueryAllowed` sans `&+=?#` ;
-  - texte seulement (AnkiMobile ne prend pas les médias par URL).
-- **Tests** : CSV (guillemets, en-têtes) ; `.apkg` (dézipper, ouvrir le sqlite, compter notes/cartes, lire le JSON `models`, vérifier `media`) ; encodage du lien AnkiMobile.
-- THIRD_PARTY_NOTICES : genanki = « format seulement, aucun code copié ». Commit.
-
-> Fait aussi en session 2 (demandes de l'utilisateur, **jamais testé sur l'iPad**) :
-> - vignettes de l'accueil : page entière, centrée, plus coupée (`DocumentCard`) ;
-> - « page 1 » par document : `LibraryDocument.firstPageIndex` (migration `v3-page-one`), `pageLabel(_:)`
->   (chiffres romains avant la page 1) utilisé partout où un numéro de page s'affiche ; réglage dans le menu •••
->   du lecteur (« Cette page est la page 1 ») et l'appui long de la bibliothèque ;
-> - dictionnaire au **survol du curseur** (Magic Keyboard) : `UIHoverGestureRecognizer` dans `ReaderController`,
->   bouton `cursorarrow.rays` sous 辞 (visible si la page a du texte), jamais d'OCR lancé par le survol,
->   popup placé façon Yomitan (`PopupPlacement` : sous la ligne / à droite de la colonne verticale), Échap ferme.
-
-### [x] Session 3 — V4-c : créer une carte depuis le popup et l'onglet Mots
-1. **DictionaryKit** : `GlossaryText.items(json) -> [String]` (un sens par élément). Nouveau `CardFields.swift` avec `CardFields.make(term:sentence:source:) -> [String: String]` :
-   - `Mot` = expression, `Lecture` = lecture ;
-   - `Furigana` = segments de `JapaneseText.distributeFurigana` au format Anki : `texte[lecture]`, une espace avant chaque segment qui a une lecture ;
-   - `Sens` = `<ol><li>…</li></ol>` (premières définitions, texte simple, HTML échappé) ;
-   - `Accent` = `[n]` (accents uniques) ; `Fréquence` = 1re valeur + nom du dictionnaire ;
-   - `Phrase` = phrase avec le mot entouré de `<b>` ; `Source` = « Titre · p. N ».
-   - DictionaryKit ne dépend **pas** de ReviewKit. Ajouter des tests.
-2. **App** : nouveau `App/Review/ReviewModel.swift` (`@MainActor ObservableObject`).
-   - Store dans `Application Support/Kyokasho/Review`. Réglages enregistrés avec `appDatabase.setStoredValue(_, forKey: "review.settings")`.
-   - Publie `counts`, `decks`, `templates`.
-   - `addCard(term:sentence:imageData:audio:documentId:page:) -> AddResult (.added / .duplicate)`.
-   - Ajouter `let review: ReviewModel` dans `AppModel`, à côté de `dictionary`. L'injecter partout où il y a `.environmentObject(model.dictionary)` : `grep -rn 'model.dictionary)' App`.
-   - project.yml : ajouter le produit `ReviewKit` à côté de `DictionaryKit`.
-3. **Contexte de la page**. Dans `ReaderController.present(text:rects:anchor:)`, garder `lookupContext` : la phrase (texte de la ligne OCR, ou pour un PDF texte `page.selectionForLine(at:)?.string`) et le rectangle de la ligne dans la page.
-   - **Image** : dessiner la zone avec `PDFPage.draw` dans un `UIGraphicsImageRenderer` (ligne agrandie de 40 % en hauteur, 1200 px de large au plus), JPEG qualité 0,7, puis `store.addMedia` et `<img src="nom">`.
-   - **Audio** : sortir de `DictionaryModel.playAudio` une fonction `audioData(term:reading:) async -> (Data, ext)?`. Champ `Audio` = `[sound:nom.mp3]`. Image et audio selon `ReviewSettings.includeImage/includeAudio`.
-4. **Branchement de l'interface** :
-   - dans `ReaderScreen`, `LookupPopup(session:onAddCard:close:)` reçoit `onAddCard` → `review.addCard(...)` ; le renderer affiche déjà ＋ puis ✓ ;
-   - si doublon : petit message « Déjà dans tes cartes » ;
-   - onglet Mots (`App/Study/StudyPanel.swift`, `StudyVocabTab`) : bouton ＋ par ligne, et ✓ si `store.existingKeys` contient le mot ;
-   - option : envoi AnkiMobile si `settings.sendToAnkiMobile`.
-5. L'app compile. Commit.
-
-> Notes session 3 : `StudyCard.sourceDocumentId` est devenu `String?` (les documents ont un id texte).
-> Ajout via `ReviewModel.add(...)` (doublon vu tout de suite, audio cherché ensuite) ; ✓ déjà affiché dans le popup
-> pour les mots qui ont une carte (`GlossaryRenderer.addedTermIds`). Onglet Mots : pas d'image (pas de position).
-
-### [x] Session 4 — V4-d : écrans de révision → release 0.5.0
-1. **`App/Review/CardWebView.swift`** : copie de `LookupWebView`, avec un gestionnaire de schéma `kyocard` qui sert `store.mediaRoot`.
-   - HTML = `<style>css</style><div class="card">recto ou verso</div>`.
-   - `src="x"` → `kyocard:///x`. `[sound:x]` → bouton ▶︎ qui envoie un message, et l'app lit le fichier avec `AVAudioPlayer`.
-2. **`ReviewScreen`** : ouvert en plein écran depuis la barre latérale de la bibliothèque, ligne « Révisions » avec le nombre de cartes dues (`App/Library/LibraryView.swift`, `actionRow`).
-   - Paysage : carte au centre, colonne de droite avec 4 boutons (couleurs Atelier) et l'intervalle sous chacun (`ReviewScheduler.preview` + `intervalLabel`).
-   - « Montrer la réponse » (toucher la carte). Bouton annuler (`store.undo`). Durée mesurée.
-   - Fin de séance : bilan. Cas `.later(date)` : « Reviens à HH:mm ».
-3. **`CardBrowserView`** : recherche, filtre par paquet, édition des champs (un `TextEditor` par champ), suspendre, supprimer (avec confirmation), en-tête de stats (`store.stats`).
-4. **Réglages → Révisions** (`SettingsView`) :
-   - nouvelles cartes / jour, révisions max, rétention (curseur 0,80–0,97), heure de début de journée ;
-   - paquet par défaut + nouveau paquet ;
-   - éditeur de modèle : recto / verso / CSS + aperçu en direct + `validationError` ;
-   - image / audio ; AnkiMobile (oui/non, noms du paquet et du type) ;
-   - export CSV / `.apkg` : fichier temporaire + `ShareLink`, ou `.fileExporter` ;
-   - « Nettoyer les médias » (`removeUnusedMedia`).
-5. Crédits « À propos » : swift-fsrs, genanki (format). Compiler.
-6. **Release 0.5.0** (méthode du § 6). Notes : vérifié = tests unitaires ; non vérifié = tout l'écran, l'import réel dans Anki, AnkiMobile.
-
-### [x] Hors plan — demandes du 21/10 (après 0.5.0, **pas testé à l'écran**)
-- Menu de sélection iOS → « Dictionnaire » (`ReaderPDFView.buildMenu`, `ReaderController.lookupSelection`).
-- Bande des pages rétractable ; champ « page » à côté de la recherche (numéro imprimé ou romain).
-- Tap = barres seulement (plus de zones de tap) ; clavier branché (`HardwareKeyboard`) → flèches + ← →.
-- Barre d'outils flottante : poignée pour la déplacer, verticale / horizontale / rétractée (`@AppStorage toolbar.*`).
-- Option « Pencil → dictionnaire » (Réglages → Apple Pencil) : bouton dans la barre, `pencilTap`.
-- Thèmes : `App/Design/Themes.swift` (Atelier + Forêt, Braise, Sable, Lagon), `ThemeManager`, racine `.id(theme)`.
-  Les couleurs `Atelier.*` sont lues dans `Theme.current`. Le CSS des définitions (WebView) ne suit pas encore le thème.
-- Réglages rangés : Apparence / Lecture / Japonais / Cartes / Comptes / À propos.
-- **Prochaine session demandée par l'utilisateur : revue complète du code pour optimiser.**
-
-### [x] Sessions 5-6 faites en avance (21/10) : PP-OCRv5, NDLOCR-Lite, GLM-OCR
-- `OCRKit/ModelStore.swift` : catalogue (`ModelSpec.ppocr5/.ndlocr/.glmocr`, URL fixées sur un commit + SHA-256),
-  téléchargement avec reprise. `OCRKit/NeuralOCR.swift` : image → tenseur, DB, CTC, PARSeq, ordre de lecture vertical.
-- `ONNXOCRKit` (ONNX Runtime 1.24.2) : `PPOCREngine`, `NDLOCREngine`. Testés sur le Mac avec les vrais modèles :
-  `KYOKASHO_MODELS=<dossier> swift test --filter ONNXEnginesTests` (dossier avec `ppocr5/`, `ndlocr/`).
-  NDLOCR : détecteur en 800×800 (pas 1024 malgré le nom du fichier), sorties `labels/boxes/scores/char_count`.
-- `Packages/GLMOCRKit` (paquet à part, MLX) : GLM-OCR porté de mlx-swift-lm 2.31.3 vers 2.29.3 (**dernière version iOS 16**,
-  ne pas monter : 2.30+ exige iOS 17). Lignes trouvées par PP-OCRv5 (ou Vision), relues une par une par l'IA.
-  Compiler MLX demande le « Metal Toolchain » d'Xcode (installé le 21/10).
-- Auto = texte du PDF → NDLOCR → PP-OCRv5 → Vision (GLM seulement si choisi). Réglages → OCR : télécharger / supprimer.
-- Entitlement `increased-memory-limit` ajouté (TrollStore). **Rien testé sur l'iPad** (vitesse, mémoire de GLM-OCR).
-
-### [ ] Session 5 — V5-a (remplacée par le bloc ci-dessus ; garder pour mémoire) : moteur NDLOCR-Lite, partie 1
-1. **Vérifier d'abord** (lecture seule, peu de tokens) le dépôt `ndl-lab/ndlocr-lite` sur GitHub :
-   - licence du code et des modèles ;
-   - fichiers ONNX (détection de la mise en page + reconnaissance des lignes), tailles d'entrée, normalisation ;
-   - fichier de caractères ; type de décodage (CTC ou attention) ;
-   - URL de téléchargement des modèles.
-   Écrire le résumé dans `docs/OCR.md`. Si la licence bloque, **demander** à l'utilisateur.
-2. **ONNX Runtime** : paquet SwiftPM `https://github.com/microsoft/onnxruntime-swift-package-manager`, produit `onnxruntime`.
-   - Vérifier qu'il marche sur iOS 16 et ce qu'il ajoute à la taille de l'app.
-   - L'ajouter à `OCRKit`, ou mieux à une cible à part `NDLOCRKit` pour ne pas alourdir les tests.
-3. **`ModelStore`** :
-   - téléchargement **à la demande** (taille affichée avant, progression, reprise si coupé) ;
-   - rangement dans `Application Support/Kyokasho/Models/<nom>` ; bouton supprimer ;
-   - jamais dans l'IPA ;
-   - empreinte SHA-256 vérifiée si le dépôt en donne une.
-4. **Prétraitement en Swift** : redimensionner, garder les proportions, remplir les bords, normaliser, passer en tableau CHW Float32. Tests sur une image générée.
-5. Commit.
-
-### [ ] Session 6 — V5-b : moteur NDLOCR-Lite, partie 2
-1. **`NDLOCREngine`** suit le même protocole que `VisionOCREngine` (`Packages/KyokashoKit/Sources/OCRKit/OCREngines.swift`) :
-   - détection → boîtes des lignes (souvent verticales) → découpe → reconnaissance → décodage → `OCRLine` ;
-   - `NormBox` + boîtes par caractère réparties en proportion, comme le repli déjà en place pour Vision.
-   - Ordre de lecture du japonais vertical : colonnes de droite à gauche, de haut en bas.
-2. **Choix du moteur** :
-   - `OCREngineChoice` (`ReaderCore/ReaderSettings.swift`) gagne `.ndlocr` ; monter `OCRPage.version` pour vider l'ancien cache ;
-   - **Auto** : si Vision voit surtout des lignes verticales (hauteur > largeur) et que les modèles sont installés → NDLOCR, sinon Vision ;
-   - réglage dans `OCRSettingsView`.
-3. **Banc d'essai** (`App/Settings/BenchView.swift`) : ajouter le moteur, comparer le taux d'erreur et le temps.
-4. Option PP-OCRv5 mobile (Apache-2.0) : **seulement s'il reste du temps**, sinon la noter dans les idées.
-5. L'app compile. Commit.
-
-### [ ] Session 7 — release 0.6.0 + vrais tests
-1. Release 0.6.0 (§ 6).
-2. **Demander** à l'utilisateur la permission de tester (simulateur et/ou iPad), en expliquant pourquoi.
-   Priorité : **mode paysage** (jamais vérifié), popup 辞, onglet Mots, révisions, import d'un vrai dictionnaire (Jitendex), OCR NDLOCR sur un manuel vertical.
-3. Noter les bugs et en corriger 2 ou 3 au plus. Le reste va dans une liste « à faire » en bas de ce fichier.
-
-### Optimisation (21/10, 1re passe) — fait
-- Suppression : alerte ouverte après la fermeture du menu d'appui long, livre retiré tout de suite, erreur affichée.
-- `PDFPool` (OCRKit) : un PDF ouvert partagé (PDFKit / Core Graphics) + mémo « page avec texte » ; libéré à la
-  fermeture du lecteur, à la suppression, en manque de mémoire. Miniatures en Core Graphics (plus de PDFKit).
-- Lecteur : texte de page lu une fois par page (survol), test « page avec texte » hors fil principal,
-  miniatures préparées à la bonne taille (120) une fois la page posée, PDF libéré à la fermeture, caches
-  d'encre / OCR bornés à ±8 pages, rognage auto en gros lots.
-- 2e passe (faite) : `rebuild` en tâche de fond (`build` → `install`, n° de génération, tâche annulée à la
-  fermeture) + indicateur « Préparation des pages… » ; pivoter = sur place si possible ; rognages réappliqués à
-  l'installation ; bibliothèque non republiée pendant la lecture si seule la position change (`pendingDocuments`) ;
-  recherche par lots de 0,25 s, 500 résultats max, résultats OCR d'une ancienne recherche ignorés.
-- Encore lent : l'ordre droite → gauche reste O(n²) dans PDFKit (mais hors fil principal maintenant).
-
-## 5. Carte du code (où est quoi)
-
-- **`project.yml`** (XcodeGen) : version `MARKETING_VERSION` / `CURRENT_PROJECT_VERSION` ; produits du paquet utilisés par l'app.
-- **`Packages/KyokashoKit/`** :
-  - `ReaderCore` : modèles, `AppDatabase` (GRDB, migrations, `storedValue` / `setStoredValue`), réglages ;
-  - `OCRKit` : `PageRenderer`, `VisionOCREngine`, `PDFTextEngine`, acteur `OCRService` (cache), taux d'erreur ;
-  - `YomitanKit` (**GPL**) : `JapaneseText` (kana, furigana, mores, accent), `LanguageTransformer` (déconjugaison, `japanese-transforms.json`) ;
-  - `DictionaryKit` : `DictionaryDatabase`, `DictionaryImporter`, `Translator` (`findTerms`, `findKanji`, `segment`), `GlossaryRenderer` (HTML + pont JS), `GlossaryText`, `DictionaryProfile` ;
-  - `ReviewKit` : cartes, voir § 4.
-- **`App/`** :
-  - `KyokashoApp.swift` (racine, injections) ; `AppModel.swift` (`dictionary`, `ocr`…) ;
-  - `Design/Atelier.swift` : couleurs, `AtelierPanel`, `ToolButton`, `CapsuleButton`, `PillTabs`, `PressScale`, `GridBackground` ;
-  - `Library/LibraryView.swift` (barre latérale) ;
-  - `Reader/` : `ReaderScreen` (barre d'outils, bouton 辞, popup, surlignage), `ReaderController` (recherche au toucher, OCR), `InkOverlay`, `ReaderSheets`, `TextPageSheet` ;
-  - `Study/StudyPanel.swift` (onglets Texte / Mots / Notes / Repères), `Study/DeepL.swift` ;
-  - `Dictionary/` : `DictionaryModel`, `LookupWebView`, `LookupPopup` (`LookupSession`), `DictionaryViews` ;
-  - `Drive/`, `Settings/` : `SettingsView`, `AboutView`, `OCRSettingsView`, `BenchView`.
-- **Racine du dépôt** : `build_ipa.sh` → `dist/Kyokasho-<version>.tipa` (le dossier `dist` est ignoré par git). `docs/releases/vX.Y.Z.md`. `THIRD_PARTY_NOTICES.md`. `PLAN.md` (plan d'origine validé).
-
-## 6. Faire une release
-
-1. Monter la version dans `project.yml` : `MARKETING_VERSION` et `CURRENT_PROJECT_VERSION` +1.
-2. Écrire `docs/releases/vX.Y.Z.md` (même format que `v0.4.0.md` : Installation, Modifications, Vérifié / non vérifié).
-3. Ajouter une ligne en haut du tableau « Versions » du README.
-4. `./build_ipa.sh 2>&1 | grep -E '==>|OK|error'`
-5. Commit, tag et publication :
+1. `project.yml` : `MARKETING_VERSION` (+0.0.1 correctif, +0.1 grosse étape) et `CURRENT_PROJECT_VERSION` +1.
+2. `docs/releases/vX.Y.Z.md` (format : Installation / Modifications / Vérifié – non vérifié).
+3. Ligne en haut du tableau « Versions » du README.
+4. `./build_ipa.sh` puis :
    ```
-   git add -A && git commit -m "Version X.Y.Z …" && git tag vX.Y.Z && git push origin HEAD --tags
+   git add -A && git commit -m "Version X.Y.Z (…)" && git tag vX.Y.Z && git push origin HEAD --tags
    gh release create vX.Y.Z dist/Kyokasho-X.Y.Z.tipa --title "Kyōkasho X.Y.Z — …" --notes-file docs/releases/vX.Y.Z.md
    ```
 
-## 7. Pièges déjà rencontrés
+## 5. Étapes restantes (cocher `[x]` quand fini)
 
-- Types qui portent le même nom que ceux du SDK : `Document` → `LibraryDocument`. Dans ReviewKit, éviter `Card`, `ReviewLog` et `Rating`, déjà pris par FSRS.
-- GRDB : dans une fonction `async`, les surcharges async de `write` gênent → garder l'import et l'écriture en synchrone dans une `Task.detached`. Pour récupérer l'id, utiliser `inserted(db)` / `didInsert`.
-- ZIPFoundation : `addEntry` est ambigu → typer la closure `{ (pos: Int64, size: Int) in … }`.
-- PDFKit :
-  - pas de `exchangePage` (plantage) → retirer puis insérer la page ;
-  - avec `displaysRTL`, les doubles pages sont rangées à la main ;
-  - `autoScales` est cassé par `minScaleFactor` → on ajuste nous-mêmes à la page.
-- Les gestes perso bloquaient la sélection de texte → `cancelsTouchesInView = false`.
-- Vision : seul le mode `.accurate` lit le japonais. Le cache OCR porte un numéro de version : le monter quand le format change.
-- swift-fsrs : le tag 5.0.0 a `FSRS`, `next`, `repeat` en `internal` → on suit un commit de main. Ne pas remettre `from: "5.0.0"`.
-- Dates GRDB arrondies à la milliseconde : dans les tests, comparer avec `accuracy`.
-- `NSLock.withLock` existe déjà dans Foundation : ne pas le redéfinir.
-- Le simulateur sans fenêtre ne pivote pas : le paysage n'a **jamais** été vérifié.
+> **Priorité absolue : les retours de l'utilisateur** (bugs vus sur l'iPad) avant toute étape ci-dessous.
 
-## 8. Idées pour plus tard (pas maintenant)
+### [ ] A — Optimisation, 3e passe (lecteur)
+Déjà fait (passes 1-2) : `PDFPool`, miniatures Core Graphics, document construit hors du fil principal
+(`rebuild` → `build` → `install`), caches bornés, recherche par lots, bibliothèque gelée pendant la lecture.
+Reste, du plus rentable au moins :
+1. `ReaderScreen` dépend de `@EnvironmentObject model` → tout le lecteur se redessine à chaque `@Published` de
+   `AppModel`. Passer les valeurs utiles en paramètres / sous-vues (`OCRStatusDot`, barre de titre…).
+2. Ordre droite → gauche en double page : `build` fait `removePage`+`insert` par paire (O(n²) dans PDFKit).
+   Construire un **nouveau** `PDFDocument` vide et y insérer les pages dans l'ordre final (vérifier qu'une page
+   retirée de l'ancien document peut être insérée : sinon `page.copy()`).
+3. `TextPaginator.pages` (TextPageSheet.swift) recalculé dans `body` → le mettre en `@State` calculé une fois.
+4. `AppModel.init` : ouverture des bases (dont `DictionaryDatabase`) sur le fil principal au lancement → tâche de fond.
+5. `didMatchString` : contexte (`copy/extend/string`) calculé pour chaque résultat → seulement pour les 500 gardés (déjà
+   le cas) mais le faire hors du fil principal si possible.
+Vérif : compiler, `cavecrew-reviewer`, commit. Demander à l'utilisateur de tester un gros PDF.
 
-PP-OCRv5, envoi des médias vers AnkiMobile, synchro des cartes par Drive, statistiques avancées.
+### [ ] B — Thème dans la fenêtre du dictionnaire et les cartes
+`GlossaryRenderer` (DictionaryKit) et `CardHTML` (App/Review/CardWebView.swift) ont leurs couleurs en dur.
+Ajouter à `GlossaryRenderer.Options` (Codable : **décodage tolérant**, sinon les profils enregistrés cassent) ou
+mieux un paramètre non enregistré `palette: [String: String]` (fond, texte, accent) rempli depuis `Theme.current`
+(App/Design/Themes.swift) dans `DictionaryModel.renderer(...)`. Même chose pour `CardHTML.page`.
+
+### [ ] C — Dictionnaire sur scans : boîtes de caractères précises
+NDLOCR donne des boîtes de caractères **proportionnelles** (`CharacterLayout.proportional`) → le mot touché peut
+être décalé d'un caractère. Idée : après NDLOCR, lancer seulement la **reconnaissance** PP-OCRv5 (CTC, positions par
+pas de temps, déjà codé dans `PPOCREngine.recognize(_:in:model:charset:)`) sur la même découpe de ligne et
+recopier les centres si les deux textes ont la même longueur (sinon garder proportionnel). Seulement si PP-OCRv5 est
+installé. Test : `ONNXEnginesTests` (vrais modèles, voir § 7).
+
+### [ ] D — GLM-OCR plus rapide
+Aujourd'hui : une génération par ligne (≈ 1 s/ligne sur Mac). Pistes :
+1. Grouper 3-5 lignes voisines par image (un seul appel), découper la réponse par `\n`, garder si le nombre de lignes colle.
+2. ONNX : essayer le fournisseur CoreML (`ORTCoreMLExecutionProviderOptions`) pour le détecteur PP-OCRv5 / NDLOCR
+   (formes fixes : DEIM 800×800) ; garder le CPU si erreur.
+3. Mesurer la mémoire sur l'iPad **avec permission** (ios-mcp) avant de toucher au reste.
+
+### [ ] E — Vrais tests sur l'iPad (demander la permission, dire pourquoi)
+Priorité : mode paysage (jamais vérifié), barre flottante, menu de sélection « Dictionnaire », toucher sur scans,
+téléchargement + vitesse des 3 moteurs OCR, mémoire de GLM-OCR, révisions, import `.apkg` dans Anki.
+Noter les bugs, en corriger 2-3, le reste en bas de ce fichier (§ 9).
+
+## 6. Carte du code (où est quoi)
+
+- **`project.yml`** (XcodeGen) : versions, paquets `KyokashoKit` + `GLMOCRKit`, produits utilisés par l'app.
+- **`packaging/entitlements-trollstore.plist`** : identité, trousseau, `increased-memory-limit` (GLM-OCR).
+- **`Packages/KyokashoKit/`** (testé avec `swift test`, macOS 14+) :
+  - `ReaderCore` : modèles (`LibraryDocument` avec `firstPageIndex` / `pageLabel`), `AppDatabase` (GRDB, migrations
+    v1, v2-ocr, v3-page-one), réglages (`OCREngineChoice` : auto, pdfText, vision, ndlocr, ppocr5, glmocr).
+  - `OCRKit` : `PageRenderer` (3000 px), `PDFPool` (PDF partagés + mémo « page avec texte »), `VisionOCREngine`
+    (`minimumTextHeight` 0,004), `PDFTextEngine`, `OCRService` (actor, cache, `register`, `resolve`),
+    `ModelStore` (catalogue `ModelSpec`, téléchargement + SHA-256), `NeuralOCR` (image → tenseur, DB, CTC, PARSeq,
+    ordre de lecture), `OCRPage.character(at:tolerance:)` (toucher tolérant), cache OCR **version 3**.
+  - `ONNXOCRKit` : `PPOCREngine`, `NDLOCREngine` (ONNX Runtime 1.24.2, sessions en cache).
+  - `YomitanKit` (**GPL**) : japonais, déconjugaison. `DictionaryKit` : base, import, `Translator`,
+    `GlossaryRenderer`, `CardFields`.
+  - `ReviewKit` : cartes, FSRS (swift-fsrs fixé sur un commit de main), `ReviewStore`, `Exporters` (CSV, .apkg, AnkiMobile).
+- **`Packages/GLMOCRKit/`** (MLX, compilé seulement par Xcode / `swift build` dans ce dossier) : `GlmOcr.swift` +
+  `QwenVLHelpers.swift` (copiés de mlx-swift-lm, MIT), `GLMOCREngine` (lignes PP-OCRv5/Vision → relues par l'IA).
+- **`App/`** :
+  - `KyokashoApp.swift` (racine `.id(theme)`, alerte mémoire → libère PDF / modèles), `AppModel.swift`
+    (documents, `delete` optimiste, `pendingDocuments` pendant la lecture, enregistrement des moteurs OCR).
+  - `Design/` : `Atelier.swift` (couleurs lues dans `Theme.current`), `Themes.swift` (5 thèmes + `ThemePickerView`).
+  - `Library/` : `LibraryView` (grille, barre latérale, Révisions, suppression), `ThumbnailCache` (Core Graphics).
+  - `Reader/` : `ReaderController` (construction du document, toucher/survol/Pencil/sélection → dictionnaire, OCR,
+    recherche, rognage), `ReaderScreen` (chrome, popup, flèches clavier, champ de page), `FloatingToolbar`,
+    `HardwareKeyboard`, `InkOverlay`, `ReaderSheets`, `TextPageSheet`.
+  - `Dictionary/` : `DictionaryModel` (audio, renderer), `LookupPopup`, `LookupWebView`, `DictionaryViews`.
+  - `Review/` : `ReviewModel`, `ReviewScreen`, `CardBrowserView`, `CardWebView`, `ReviewSettingsView`.
+  - `Study/` : `StudyPanel` (Texte / Mots / Notes / Repères), `DeepL`. `Drive/`. `Settings/` : `SettingsView`
+    (Apparence / Lecture / Japonais / Cartes / Comptes / À propos), `OCRModelsView` (téléchargements), `BenchView`.
+- Racine : `build_ipa.sh` → `dist/Kyokasho-<version>.tipa` (ignoré par git), `docs/releases/`, `THIRD_PARTY_NOTICES.md`.
+
+## 7. Tester les moteurs OCR sur le Mac (vrais modèles, hors dépôt)
+
+Dossier de modèles (sous-dossiers `ppocr5/`, `ndlocr/`, `glmocr/` comme `ModelStore`) à télécharger **avec
+l'accord de l'utilisateur** (URL et empreintes dans `ModelStore.swift`), puis :
+```
+cd Packages/KyokashoKit && KYOKASHO_MODELS=<dossier> swift test --filter ONNXEnginesTests
+cd Packages/GLMOCRKit && KYOKASHO_MODELS=<dossier> swift test
+```
+Sans la variable, ces tests sont sautés. Le dossier du 21/10 était dans le scratchpad du chat (effacé ensuite).
+
+## 8. Pièges déjà rencontrés
+
+- Noms pris par le SDK / FSRS : `Document` → `LibraryDocument` ; éviter `Card`, `ReviewLog`, `Rating` dans ReviewKit.
+- GRDB : écrire en synchrone dans une `Task.detached` ; `didInsert` pour l'id ; dates arrondies à la ms (tests : `accuracy`).
+- ZIPFoundation : typer la closure `{ (pos: Int64, size: Int) in … }`.
+- PDFKit : pas d'`exchangePage` (plantage) ; RTL double page rangé à la main ; `autoScales` cassé → `fitToPage`.
+  PDFKit n'est pas sûr entre fils → passer par `PDFPool` (verrou). Un `PDFDocument` peut être construit hors du fil
+  principal puis installé sur le principal (c'est ce que fait `rebuild`).
+- Gestes : `cancelsTouchesInView = false` (sinon la sélection de texte est bloquée). Glisser une vue qui bouge :
+  `DragGesture(coordinateSpace: .global)` (en local → boucle, gel, plantage).
+- Menu d'appui long puis alerte : attendre ~0,35 s, sinon iOS ignore l'alerte.
+- Vision : `.accurate` seul lit le japonais ; `minimumTextHeight` bas sinon les petits caractères sont ignorés.
+  Monter `OCRPage.currentVersion` quand le résultat OCR change.
+- swift-fsrs : tag 5.0.0 inutilisable (API interne) → commit de main. Ne pas remettre `from: "5.0.0"`.
+- ONNX Runtime ObjC : pas d'accès aux formes d'entrée ni aux métadonnées → formes connues en dur ; dictionnaire
+  PP-OCRv5 téléchargé à part (identique aux métadonnées du modèle, vérifié). NDLOCR : détecteur en **800×800**.
+- MLX : compiler demande le « Metal Toolchain » d'Xcode (installé le 21/10). `UserInput(prompt:images:)` de
+  mlx-swift-lm 2.29.3 **perd les images** → utiliser `UserInput(chat: [.user(…, images: …)])`. GLM-OCR : jetons
+  de fin `<|endoftext|>`, `<|user|>` à passer dans `extraEOSTokens`.
+- `NSLock.withLock` existe déjà dans Foundation.
+- Le paysage n'a **jamais** été vérifié (le simulateur sans fenêtre ne pivote pas).
+
+## 9. Idées / à faire plus tard
+
+PP-OCRv6 (RapidOCR le propose déjà), envoi des médias vers AnkiMobile, synchro des cartes par Drive,
+statistiques avancées, Surya via le Mac (refusé pour l'instant : hors règle « tout sur l'iPad »).
