@@ -355,19 +355,28 @@ final class ReaderController: NSObject, ObservableObject {
             }
         }
 
-        // 2. OCR de la page (cache, sinon Apple Vision).
+        // 2. OCR de la page (cache, sinon le moteur choisi : NDLOCR / PP-OCRv5 s'ils sont installés).
         guard let box = originalBoxes[source] else { return }
         var ocr = source == currentSourcePage ? ocrPage : nil
         if ocr == nil { ocr = await cachedOCR(source: source) }
-        if ocr == nil, !fromHover {
+        if ocr == nil, fromHover {
+            // Survol d'une page jamais lue : on lance l'OCR en fond, le survol marchera dès qu'il a fini.
+            if ocrState != .running, source == currentSourcePage { runOCR() }
+            return
+        }
+        if ocr == nil {
             ocrState = .running
-            ocr = try? await model.ocr.page(documentId: document.id, url: fileURL, pageIndex: source, engine: OCREngineID.vision)
+            let engine = await scanEngine(source: source)
+            ocr = try? await model.ocr.page(documentId: document.id, url: fileURL, pageIndex: source, engine: engine)
             ocrState = .idle
             if let ocr, source == currentSourcePage { ocrPage = ocr; ink.setOCR(ocr, source: source) }
         }
         guard let ocr else { return }
         let normalized = CGPoint(x: (pagePoint.x - box.minX) / box.width, y: (box.maxY - pagePoint.y) / box.height)
-        guard let hit = ocr.character(at: normalized) else {
+        // Marge de toucher : ~14 pt au doigt, ~4 pt au curseur, convertis en fraction de la page affichée.
+        let margin: CGFloat = fromHover ? 4 : 14
+        let tolerance = Double(margin / max(box.width * pdfView.scaleFactor, 1))
+        guard let hit = ocr.character(at: normalized, tolerance: tolerance) else {
             if !fromHover { lookupHighlight = [] }
             return
         }
@@ -436,6 +445,19 @@ final class ReaderController: NSObject, ObservableObject {
         let text = String(raw.prefix(model.dictionary.profile.lookup.scanLength))
         pdfView.clearSelection()
         present(text: text, rects: [viewRect], anchor: CGPoint(x: viewRect.maxX, y: viewRect.minY), context: context)
+    }
+
+    /// Moteur pour lire une page scannée : le réglage du document (Auto = NDLOCR → PP-OCRv5 → Vision),
+    /// jamais « texte du PDF » ici (on n'arrive là que si le texte intégré n'a rien donné).
+    private func scanEngine(source: Int) async -> String {
+        let choice = settings.ocrEngine
+        let url = fileURL
+        let resolved = await Task.detached(priority: .userInitiated) {
+            OCRService.resolve(choice == .pdfText ? .auto : choice, url: url, pageIndex: source)
+        }.value
+        guard resolved == OCREngineID.pdfText else { return resolved }
+        for id in [OCREngineID.ndlocr, OCREngineID.ppocr5] where OCRService.engine(id)?.isAvailable == true { return id }
+        return OCREngineID.vision
     }
 
     /// « Titre · p. N » (numéro imprimé) de la page du mot cherché.

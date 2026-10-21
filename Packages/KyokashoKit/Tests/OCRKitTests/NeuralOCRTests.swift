@@ -95,3 +95,28 @@ final class NeuralOCRTests: XCTestCase {
         XCTAssertEqual(Set(ModelSpec.all.map(\.id)).count, 3)
     }
 }
+
+final class CharacterHitTests: XCTestCase {
+    func line(_ text: String, _ box: NormBox, vertical: Bool = false) -> OCRLine {
+        OCRLine(text: text, box: box, charBoxes: CharacterLayout.proportional(text, in: box, vertical: vertical),
+                measuredCharBoxes: false, vertical: vertical, confidence: 1)
+    }
+
+    func testTolerantHit() {
+        // Grande ligne + petite ligne (furigana) juste au-dessus.
+        let page = OCRPage(engine: "t", lines: [
+            line("漢字", NormBox(x: 0.1, y: 0.10, w: 0.2, h: 0.05)),
+            line("かんじ", NormBox(x: 0.1, y: 0.092, w: 0.2, h: 0.006)),
+        ], durationMs: 0)
+        // Dans la grande ligne, deuxième caractère.
+        XCTAssertEqual(page.character(at: CGPoint(x: 0.25, y: 0.12))?.index, 1)
+        // Juste au-dessus de la petite ligne : sans marge, la grande ligne (marge de 60 % de son
+        // épaisseur) ; avec la marge du doigt, la petite ligne, plus proche.
+        XCTAssertEqual(page.character(at: CGPoint(x: 0.12, y: 0.085))?.line, 0)
+        XCTAssertEqual(page.character(at: CGPoint(x: 0.12, y: 0.085), tolerance: 0.01)?.line, 1)
+        // Point dans la petite ligne (qui chevauche le haut de la grande) : la plus fine gagne.
+        XCTAssertEqual(page.character(at: CGPoint(x: 0.28, y: 0.095), tolerance: 0.01)?.line, 1)
+        // Loin de tout : rien.
+        XCTAssertNil(page.character(at: CGPoint(x: 0.8, y: 0.8), tolerance: 0.01))
+    }
+}

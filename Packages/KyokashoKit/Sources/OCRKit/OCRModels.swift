@@ -61,7 +61,7 @@ public struct OCRLine: Codable, Hashable, Sendable {
 /// Résultat OCR d'une page.
 public struct OCRPage: Codable, Hashable, Sendable {
     /// Version du format/rendu : un résultat plus ancien en cache est refait automatiquement.
-    public static let currentVersion = 2
+    public static let currentVersion = 3
 
     public var engine: String
     public var lines: [OCRLine]
@@ -87,16 +87,29 @@ public struct OCRPage: Codable, Hashable, Sendable {
     public var text: String { lines.map(\.text).joined(separator: "\n") }
 
     /// Caractère sous un point (coordonnées normalisées) : (ligne, index du caractère).
-    public func character(at point: CGPoint) -> (line: Int, index: Int)? {
-        for (l, line) in lines.enumerated() where line.box.rect.insetBy(dx: -0.002, dy: -0.002).contains(point) {
-            if let i = line.charBoxes.firstIndex(where: { $0.rect.insetBy(dx: -0.001, dy: -0.002).contains(point) }) {
-                return (l, i)
-            }
-            // Entre deux caractères : le plus proche le long de la ligne.
-            let distances = line.charBoxes.map { line.vertical ? abs($0.midY - point.y) : abs($0.midX - point.x) }
-            if let best = distances.indices.min(by: { distances[$0] < distances[$1] }) { return (l, best) }
+    /// Caractère sous le point (repère normalisé de la page). `tolerance` : marge autorisée autour des
+    /// lignes (un doigt est moins précis qu'un curseur ; les petits caractères sont vite manqués).
+    /// La ligne la plus proche gagne ; à distance égale, la plus fine (petits caractères, furigana).
+    public func character(at point: CGPoint, tolerance: Double = 0.002) -> (line: Int, index: Int)? {
+        var best: (line: Int, distance: Double, thickness: Double)?
+        for (l, line) in lines.enumerated() where !line.charBoxes.isEmpty {
+            let r = line.box.rect
+            let dx = max(r.minX - point.x, 0, point.x - r.maxX)
+            let dy = max(r.minY - point.y, 0, point.y - r.maxY)
+            let distance = (dx * dx + dy * dy).squareRoot()
+            let thickness = line.vertical ? r.width : r.height
+            // Marge : au moins `tolerance`, et jusqu'à 60 % de l'épaisseur de la ligne.
+            guard distance <= max(tolerance, thickness * 0.6) else { continue }
+            if let b = best, distance > b.distance + 1e-6 || (abs(distance - b.distance) <= 1e-6 && thickness >= b.thickness) { continue }
+            best = (l, distance, thickness)
         }
-        return nil
+        guard let l = best?.line else { return nil }
+        let line = lines[l]
+        if let i = line.charBoxes.firstIndex(where: { $0.rect.contains(point) }) { return (l, i) }
+        // Entre deux caractères (ou à côté de la ligne) : le plus proche le long de la ligne.
+        let distances = line.charBoxes.map { line.vertical ? abs($0.midY - point.y) : abs($0.midX - point.x) }
+        guard let i = distances.indices.min(by: { distances[$0] < distances[$1] }) else { return nil }
+        return (l, i)
     }
 }
 

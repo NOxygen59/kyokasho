@@ -29,7 +29,7 @@ public extension OCREngine {
 public enum PageRenderer {
     /// Rend la `cropBox` d'origine de la page en niveaux de gris (OCR : la couleur n'aide pas et
     /// coûte 4× plus de mémoire), côté le plus long ≈ `longSide` pixels.
-    public static func render(url: URL, pageIndex: Int, longSide: Int = 2400) throws -> CGImage {
+    public static func render(url: URL, pageIndex: Int, longSide: Int = 3000) throws -> CGImage {
         try render(url: url, pageIndex: pageIndex, gray: true) { size in Double(longSide) / max(size.width, size.height, 1) }
     }
 
@@ -106,6 +106,9 @@ public struct VisionOCREngine: OCREngine {
         request.recognitionLevel = .accurate
         request.recognitionLanguages = languages
         request.usesLanguageCorrection = true
+        // Par défaut Vision ignore le texte de moins de 1/32 de la hauteur de l'image : les petits
+        // caractères et les furigana d'un manuel passaient à la trappe.
+        request.minimumTextHeight = 0.004
         try VNImageRequestHandler(cgImage: image, options: [:]).perform([request])
         let aspect = Double(image.width) / Double(max(image.height, 1))
         var lines: [OCRLine] = []

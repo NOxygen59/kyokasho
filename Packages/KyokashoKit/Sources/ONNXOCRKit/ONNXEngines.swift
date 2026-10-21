@@ -122,7 +122,9 @@ public struct PPOCREngine: OCREngine {
     public func recognize(_ input: OCRInput) async throws -> OCRPage {
         guard isAvailable else { throw OCRError.modelMissing(ModelSpec.ppocr5.title) }
         let start = Date()
-        let image = try ONNXEngines.pageImage(input, longSide: 2000)
+        // Page en haute définition (les petits caractères restent lisibles dans les découpes de lignes) ;
+        // la détection, elle, travaille sur une version réduite.
+        let image = try ONNXEngines.pageImage(input, longSide: 3000)
         let boxes = try detect(image)
         try Task.checkCancellation()
         let rec = try SessionCache.shared.model(store.url(.ppocr5, "rec.onnx"))
@@ -138,8 +140,9 @@ public struct PPOCREngine: OCREngine {
     /// Lignes de texte (repère de `image`), comme PaddleOCR : côté court ≥ 736, multiples de 32.
     func detect(_ image: RGBImage) throws -> [DBPostprocess.Box] {
         let det = try SessionCache.shared.model(store.url(.ppocr5, "det.onnx"))
-        let shortSide = min(image.width, image.height)
-        let ratio = shortSide < 736 ? 736 / Double(shortSide) : 1
+        let shortSide = min(image.width, image.height), longSide = max(image.width, image.height)
+        // Côté court ≥ 736 (comme PaddleOCR), côté long ≤ 2400 (temps de calcul).
+        let ratio = shortSide < 736 ? 736 / Double(shortSide) : min(1, 2400 / Double(longSide))
         let w = max(32, Int((Double(image.width) * ratio / 32).rounded()) * 32)
         let h = max(32, Int((Double(image.height) * ratio / 32).rounded()) * 32)
         let tensor = image.resized(width: w, height: h).chw(mean: [0.5, 0.5, 0.5], std: [0.5, 0.5, 0.5])
@@ -205,7 +208,7 @@ public struct NDLOCREngine: OCREngine {
     public func recognize(_ input: OCRInput) async throws -> OCRPage {
         guard isAvailable else { throw OCRError.modelMissing(ModelSpec.ndlocr.title) }
         let start = Date()
-        let image = try ONNXEngines.pageImage(input, longSide: 2000)
+        let image = try ONNXEngines.pageImage(input, longSide: 3000)
         let detections = try detect(image)
         let charset = try SessionCache.shared.charset(store.url(.ndlocr, "NDLmoji.yaml")) { SequenceDecoder.ndlCharset(yaml: $0) }
         var lines: [OCRLine] = []

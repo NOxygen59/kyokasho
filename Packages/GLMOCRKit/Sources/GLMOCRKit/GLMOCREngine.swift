@@ -29,7 +29,7 @@ public struct GLMOCREngine: OCREngine {
         let start = Date()
         let image: CGImage
         switch input {
-        case .pdfPage(let url, let index): image = try PageRenderer.render(url: url, pageIndex: index, longSide: 2000)
+        case .pdfPage(let url, let index): image = try PageRenderer.render(url: url, pageIndex: index, longSide: 3000)
         case .image(let cg): image = cg
         }
         // 1. Où sont les lignes (et un premier texte, gardé si l'IA ne répond rien).
