@@ -295,7 +295,8 @@ public final class ReviewStore: @unchecked Sendable {
             let total = reviewsDone + newDone
             if let review, let new { return .card(total % 5 == 4 ? new : review) }
             if let c = review ?? new { return .card(c) }
-            if let later = try b.filter(learningStates.contains(Column("state"))).filter(Column("due") < tomorrow)
+            // Sans `excluding` : la carte qu'on vient de voir peut être celle qui revient plus tard.
+            if let later = try base(deckId).filter(learningStates.contains(Column("state"))).filter(Column("due") < tomorrow)
                 .order(Column("due")).fetchOne(db) {
                 return .later(later.due)
             }

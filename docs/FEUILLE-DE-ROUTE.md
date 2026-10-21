@@ -42,14 +42,14 @@ Pas de simulateur, pas d'iPad sans ma permission.
 
 ## 4. Étapes restantes (cocher `[x]` quand fini)
 
-### [ ] Session 1 — V4-a : ReviewKit compile + tests
+### [x] Session 1 — V4-a : ReviewKit compile + tests
 Fichiers déjà écrits mais **jamais compilés** : `Packages/KyokashoKit/Sources/ReviewKit/`
 `CardTemplate.swift` (moteur de templates + furigana Anki), `ReviewModels.swift` (Deck, NoteTemplate, StudyCard,
 ReviewEntry, MemoryState, Grade, AnkiGUID), `ReviewScheduler.swift` (ReviewSettings + FSRS), `ReviewStore.swift`
 (base GRDB `review.sqlite` + dossier Media, file de révision, stats, médias, modèle par défaut « Japonais — mot »).
 
 1. `Package.swift` :
-   - dépendance `.package(url: "https://github.com/open-spaced-repetition/swift-fsrs", from: "5.0.0")` (MIT, auteur Ben Smiley) ;
+   - dépendance swift-fsrs (MIT, auteur Ben Smiley), **fixée sur le commit `4fbaf20` de main** : le tag 5.0.0 garde l'API en interne ;
    - produit `.library(name: "ReviewKit", targets: ["ReviewKit"])` ;
    - cible `.target(name: "ReviewKit", dependencies: [.product(name: "FSRS", package: "swift-fsrs"), .product(name: "GRDB", package: "GRDB.swift"), .product(name: "ZIPFoundation", package: "ZIPFoundation")])` ;
    - `.testTarget(name: "ReviewKitTests", dependencies: ["ReviewKit"])`.
@@ -230,6 +230,8 @@ Nouveau fichier `Sources/ReviewKit/Exporters.swift`.
   - `autoScales` est cassé par `minScaleFactor` → on ajuste nous-mêmes à la page.
 - Les gestes perso bloquaient la sélection de texte → `cancelsTouchesInView = false`.
 - Vision : seul le mode `.accurate` lit le japonais. Le cache OCR porte un numéro de version : le monter quand le format change.
+- swift-fsrs : le tag 5.0.0 a `FSRS`, `next`, `repeat` en `internal` → on suit un commit de main. Ne pas remettre `from: "5.0.0"`.
+- Dates GRDB arrondies à la milliseconde : dans les tests, comparer avec `accuracy`.
 - `NSLock.withLock` existe déjà dans Foundation : ne pas le redéfinir.
 - Le simulateur sans fenêtre ne pivote pas : le paysage n'a **jamais** été vérifié.
 
