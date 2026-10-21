@@ -45,7 +45,18 @@ final class AppModel: ObservableObject {
     @Published var importProgress: ImportProgress?
     @Published var lastError: String?
     /// Document à ouvrir (bibliothèque → lecteur).
-    @Published var openDocumentId: String?
+    @Published var openDocumentId: String? {
+        didSet {
+            // Lecteur fermé : la bibliothèque reçoit enfin les positions de lecture mises de côté.
+            if openDocumentId == nil, let pending = pendingDocuments {
+                pendingDocuments = nil
+                documents = pending
+            }
+        }
+    }
+    /// Liste reçue pendant la lecture quand seule la position de lecture a changé : pas publiée
+    /// tout de suite (sinon la bibliothèque, derrière le lecteur, se redessine à chaque page tournée).
+    private var pendingDocuments: [LibraryDocument]?
 
     private var cancellables = Set<AnyCancellable>()
     /// File d'écriture : les enregistrements ne bloquent jamais l'interface.
@@ -89,7 +100,13 @@ final class AppModel: ObservableObject {
             .sink { [weak self] list in
                 guard let self else { return }
                 // Une suppression en cours ne doit pas faire réapparaître le livre un instant.
-                self.documents = list.filter { !self.deletingIds.contains($0.id) }
+                let list = list.filter { !self.deletingIds.contains($0.id) }
+                if self.openDocumentId != nil, Self.onlyReadingPositionChanged(self.documents, list) {
+                    self.pendingDocuments = list
+                } else {
+                    self.pendingDocuments = nil
+                    self.documents = list
+                }
             }
             .store(in: &cancellables)
     }
@@ -143,6 +160,20 @@ final class AppModel: ObservableObject {
         }
     }
 
+    static func onlyReadingPositionChanged(_ old: [LibraryDocument], _ new: [LibraryDocument]) -> Bool {
+        guard old.count == new.count else { return false }
+        // Par identifiant : l'ordre (dernier ouvert en premier) peut bouger.
+        let previous = Dictionary(old.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+        for b in new {
+            guard let a = previous[b.id] else { return false }
+            var x = a, y = b
+            x.lastPageIndex = 0; y.lastPageIndex = 0
+            x.lastOpenedAt = nil; y.lastOpenedAt = nil
+            if x != y { return false }
+        }
+        return true
+    }
+
     /// Documents en cours de suppression (cachés de la liste jusqu'à la fin de l'effacement).
     private var deletingIds: Set<String> = []
 
@@ -152,6 +183,7 @@ final class AppModel: ObservableObject {
         // Retiré de la liste tout de suite ; remis (avec le message d'erreur) si l'effacement échoue.
         deletingIds.insert(document.id)
         documents.removeAll { $0.id == document.id }
+        pendingDocuments?.removeAll { $0.id == document.id }
         let url = storage.url(for: document.id)
         ioQueue.async {
             PDFPool.release(url)

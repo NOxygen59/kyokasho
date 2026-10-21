@@ -82,6 +82,17 @@ struct ReaderScreen: View {
                         }
                         .padding(.horizontal, 8)
                     }
+                    // Construction du document en tâche de fond (gros PDF, réglages, page coupée).
+                    if reader.isBuilding {
+                        HStack(spacing: 10) {
+                            ProgressView().tint(Atelier.Tint.read)
+                            Text("Préparation des pages…").font(.system(size: 14, weight: .medium))
+                                .foregroundStyle(Atelier.textSecondary)
+                        }
+                        .padding(.horizontal, 18).padding(.vertical, 12)
+                        .atelierPanel(radius: 22)
+                        .allowsHitTesting(false)
+                    }
                     if let error = reader.loadError {
                         Text(error).padding().atelierPanel()
                     }

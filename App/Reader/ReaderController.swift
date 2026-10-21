@@ -165,28 +165,59 @@ final class ReaderController: NSObject, ObservableObject {
         }
         rebuild(keepingSource: document.lastPageIndex)
         markOpened()
-        startAutoCropIfNeeded()
-        schedulePageSettled()
     }
 
+    /// Résultat de la construction (fait hors du fil principal) : document affiché + repères.
+    private struct Built: @unchecked Sendable {
+        let pdf: PDFDocument
+        let boxes: [Int: CGRect]
+        let rotations: [Int: Int]
+        let splits: Set<Int>
+        let presented: [PresentedPage]
+    }
+
+    /// Numéro de la dernière construction demandée : un résultat plus ancien est ignoré.
+    private var rebuildGeneration = 0
+    /// Vrai pendant la construction du document (ouverture, réglages, page coupée).
+    @Published private(set) var isBuilding = false
+    private var buildTask: Task<Void, Never>?
+    /// Lecteur fermé : plus rien ne doit réinstaller de document.
+    private var closed = false
+
     /// (Re)construit le document affiché à partir du fichier et des transformations.
+    /// Le gros du travail (lecture de toutes les pages, copies des pages coupées, ordre droite → gauche)
+    /// se fait en tâche de fond ; seule l'installation dans la vue PDF reste sur le fil principal.
     private func rebuild(keepingSource source: Int) {
         pageStringCache = nil
-        guard let pdf = PDFDocument(url: fileURL) else {
-            loadError = "Impossible d'ouvrir ce PDF."
-            return
+        rebuildGeneration += 1
+        let generation = rebuildGeneration
+        let url = fileURL, transforms = transforms, settings = settings
+        isBuilding = true
+        // Une seule construction à la fois : la précédente (plus à jour) est abandonnée.
+        buildTask?.cancel()
+        buildTask = Task.detached(priority: .userInitiated) { [weak self] in
+            let built = autoreleasepool { Self.build(url: url, transforms: transforms, settings: settings) }
+            guard !Task.isCancelled else { return }
+            await self?.install(built, source: source, generation: generation)
         }
-        originalBoxes.removeAll(keepingCapacity: true)
-        originalRotations.removeAll(keepingCapacity: true)
+    }
+
+    nonisolated private static func build(url: URL, transforms: [Int: PageTransform], settings: ReaderSettings) -> Built? {
+        guard let pdf = PDFDocument(url: url) else { return nil }
+        var boxes: [Int: CGRect] = [:]
+        var rotations: [Int: Int] = [:]
         let rtl = settings.direction == .rightToLeft
         var splitPages = Set<Int>()
+        let count = pdf.pageCount
+        boxes.reserveCapacity(count)
+        rotations.reserveCapacity(count)
 
         // De la fin vers le début : les insertions ne décalent pas les pages restant à traiter.
-        for index in stride(from: pdf.pageCount - 1, through: 0, by: -1) {
+        for index in stride(from: count - 1, through: 0, by: -1) {
             guard let page = pdf.page(at: index) else { continue }
             let box = page.bounds(for: .cropBox)
-            originalBoxes[index] = box
-            originalRotations[index] = page.rotation
+            boxes[index] = box
+            rotations[index] = page.rotation
             let transform = transforms[index]
             if let extra = transform?.rotation, extra % 360 != 0 {
                 page.rotation = ((page.rotation + extra) % 360 + 360) % 360
@@ -204,11 +235,11 @@ final class ReaderController: NSObject, ObservableObject {
                 page.setBounds(ContentBounds.apply(crop, to: box), for: .cropBox)
             }
         }
-        splitSources = splitPages
-        presented = PresentationLayout.pages(pageCount: originalBoxes.count, splitPages: splitPages, rightToLeft: rtl)
+        var presented = PresentationLayout.pages(pageCount: boxes.count, splitPages: splitPages, rightToLeft: rtl)
         if rtl && settings.layout == .double {
             // Double page de droite à gauche : on range les pages dans l'ordre visuel nous-mêmes
             // (l'option RTL de PDFKit intervertit les tailles des pages d'une même double page).
+            // Un seul passage : chaque paire inversée est déplacée une fois (et non page par page).
             // (`exchangePage` de PDFKit lève une exception avec des pages copiées : on retire puis réinsère.)
             let order = PresentationLayout.rightToLeftSpreadOrder(count: pdf.pageCount, firstPageAlone: settings.firstPageAlone)
             for i in order.indices where order[i] == i + 1 {
@@ -218,7 +249,43 @@ final class ReaderController: NSObject, ObservableObject {
             }
             presented = order.map { presented[$0] }
         }
+        return Built(pdf: pdf, boxes: boxes, rotations: rotations, splits: splitPages, presented: presented)
+    }
+
+    private func install(_ built: Built?, source: Int, generation: Int) {
+        guard generation == rebuildGeneration, !closed else { return }
+        isBuilding = false
+        // Page tournée pendant la construction : on reste où l'utilisateur est allé.
+        let target = pdf == nil ? source : currentSourcePage
+        guard let built else {
+            loadError = "Impossible d'ouvrir ce PDF."
+            return
+        }
+        originalBoxes = built.boxes
+        originalRotations = built.rotations
+        splitSources = built.splits
+        presented = built.presented
+        let pdf = built.pdf
+        // Rognages calculés pendant la construction (l'instantané des transformations était plus ancien).
+        if settings.autoCrop {
+            var pagesBySource: [Int: [PDFPage]] = [:]
+            for (i, p) in built.presented.enumerated() where transforms[p.source]?.autoCrop != nil && !built.splits.contains(p.source) {
+                if let page = pdf.page(at: i) { pagesBySource[p.source, default: []].append(page) }
+            }
+            for (source, pages) in pagesBySource {
+                guard let crop = transforms[source]?.autoCrop, let box = built.boxes[source] else { continue }
+                for page in pages { page.setBounds(ContentBounds.apply(crop, to: box), for: .cropBox) }
+            }
+        }
         addHighlightAnnotations(to: pdf)
+        // L'ancien document ne doit plus envoyer de résultats de recherche (ses index ne valent plus rien).
+        self.pdf?.cancelFindString()
+        self.pdf?.delegate = nil
+        if !searchResults.isEmpty || !pendingResults.isEmpty {
+            searchResults = []
+            pendingResults = []
+            isSearching = false
+        }
 
         rebuilding = true
         self.pdf = pdf
@@ -231,8 +298,11 @@ final class ReaderController: NSObject, ObservableObject {
         pdfView.pageOverlayViewProvider = overlays ? ink : nil
         pdfView.document = pdf
         applyDisplaySettings()
-        go(toSource: source, animated: false)
+        go(toSource: target, animated: false)
         rebuilding = false
+        // Le rognage a besoin des repères de pages : lancé une fois le document installé.
+        startAutoCropIfNeeded()
+        schedulePageSettled()
     }
 
     private func markOpened() {
@@ -456,7 +526,6 @@ final class ReaderController: NSObject, ObservableObject {
             || (rtlDouble(newSettings) && old.firstPageAlone != newSettings.firstPageAlone)
         if needsRebuild {
             rebuild(keepingSource: currentSourcePage)
-            startAutoCropIfNeeded()
         } else {
             applyDisplaySettings()
         }
@@ -711,6 +780,8 @@ final class ReaderController: NSObject, ObservableObject {
         observers.removeAll()
         // Libère tout de suite le PDF (et ses pages copiées) au lieu d'attendre la fin de la vue.
         pageTextTask?.cancel()
+        buildTask?.cancel()
+        closed = true
         pdfView.document = nil
         pdf = nil
         pageStringCache = nil
@@ -964,6 +1035,13 @@ final class ReaderController: NSObject, ObservableObject {
         t.rotation = (t.rotation + 90) % 360
         transforms[source] = t
         model.persist { try $0.save(t) }
+        // Page entière, sans découpe automatique en jeu : on tourne sur place (pas de reconstruction).
+        if !isBuilding, let pdf, !settings.splitWidePages, !splitSources.contains(source), let base = originalRotations[source] {
+            for page in pages(forSource: source, in: pdf) { page.rotation = ((base + t.rotation) % 360 + 360) % 360 }
+            pdfView.layoutDocumentView()
+            if pdfView.isAtFit { pdfView.fitToPage() }
+            return
+        }
         rebuild(keepingSource: source)
     }
 
@@ -1060,10 +1138,50 @@ final class ReaderController: NSObject, ObservableObject {
 
     // MARK: Recherche
 
+    /// Résultats reçus mais pas encore affichés : la liste est mise à jour par lots (4 fois par seconde)
+    /// au lieu d'être triée et redessinée à chaque résultat (lent sur un mot fréquent).
+    private var pendingResults: [SearchResult] = []
+    /// Numéro de la recherche en cours : les résultats OCR d'une ancienne recherche sont ignorés.
+    private var searchToken = 0
+    private var flushScheduled = false
+    static let maxSearchResults = 500
+
+    private func enqueue(_ result: SearchResult) {
+        guard searchResults.count + pendingResults.count < Self.maxSearchResults else { return }
+        pendingResults.append(result)
+        if searchResults.count + pendingResults.count >= Self.maxSearchResults {
+            pdf?.cancelFindString()
+            isSearching = false
+            flushResults()
+            return
+        }
+        guard !flushScheduled else { return }
+        flushScheduled = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in self?.flushResults() }
+    }
+
+    private func flushResults() {
+        flushScheduled = false
+        guard !pendingResults.isEmpty else { return }
+        // Une page trouvée dans le texte du PDF n'a pas besoin du résultat OCR en plus.
+        let pdfPages = Set((searchResults + pendingResults).filter { !$0.fromOCR }.map(\.sourcePage))
+        searchResults.removeAll { $0.fromOCR && pdfPages.contains($0.sourcePage) }
+        pendingResults.removeAll { $0.fromOCR && pdfPages.contains($0.sourcePage) }
+        // Tri par page de lecture (l'ordre interne peut différer en droite → gauche), stable.
+        let all = (searchResults + pendingResults).enumerated()
+            .sorted { $0.element.sourcePage != $1.element.sourcePage ? $0.element.sourcePage < $1.element.sourcePage : $0.offset < $1.offset }
+            .map(\.element)
+        pendingResults = []
+        searchResults = all
+    }
+
     func search(_ query: String) {
         guard let pdf else { return }
         pdf.cancelFindString()
         searchResults = []
+        pendingResults = []
+        searchToken += 1
+        let token = searchToken
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
             isSearching = false
@@ -1078,15 +1196,14 @@ final class ReaderController: NSObject, ObservableObject {
         let service = model.ocr
         Task { [weak self] in
             let hits = await service.search(trimmed, documentId: documentId, engines: engines)
-            guard let self else { return }
-            let pdfPages = Set(self.searchResults.filter { !$0.fromOCR }.map(\.sourcePage))
+            guard let self, token == self.searchToken else { return }
+            let pdfPages = Set((self.searchResults + self.pendingResults).filter { !$0.fromOCR }.map(\.sourcePage))
             for hit in hits where !pdfPages.contains(hit.page) {
                 let index = PresentationLayout.presentedIndex(ofSource: hit.page, in: self.presented)
-                let result = SearchResult(selection: nil, presentedIndex: index, sourcePage: hit.page,
-                                          context: "📷 " + hit.context.replacingOccurrences(of: "\n", with: " "))
-                let position = self.searchResults.firstIndex { $0.sourcePage > hit.page } ?? self.searchResults.endIndex
-                self.searchResults.insert(result, at: position)
+                self.enqueue(SearchResult(selection: nil, presentedIndex: index, sourcePage: hit.page,
+                                          context: "📷 " + hit.context.replacingOccurrences(of: "\n", with: " ")))
             }
+            self.flushResults()
         }
     }
 
@@ -1196,15 +1313,15 @@ extension ReaderController: PDFDocumentDelegate {
                 .replacingOccurrences(of: "\n", with: " ")
                 .trimmingCharacters(in: .whitespaces)
             let source = presented.indices.contains(index) ? presented[index].source : index
-            let result = SearchResult(selection: instance, presentedIndex: index, sourcePage: source, context: text)
-            // Résultats triés par page de lecture (l'ordre interne peut différer en droite → gauche).
-            let position = searchResults.firstIndex { $0.sourcePage > source } ?? searchResults.endIndex
-            searchResults.insert(result, at: position)
+            enqueue(SearchResult(selection: instance, presentedIndex: index, sourcePage: source, context: text))
         }
     }
 
     nonisolated func documentDidEndDocumentFind(_ notification: Notification) {
-        MainActor.assumeIsolated { isSearching = false }
+        MainActor.assumeIsolated {
+            isSearching = false
+            flushResults()
+        }
     }
 }
 

@@ -231,9 +231,11 @@ Nouveau fichier `Sources/ReviewKit/Exporters.swift`.
 - Lecteur : texte de page lu une fois par page (survol), test « page avec texte » hors fil principal,
   miniatures préparées à la bonne taille (120) une fois la page posée, PDF libéré à la fermeture, caches
   d'encre / OCR bornés à ±8 pages, rognage auto en gros lots.
-- **Reste (2e passe)** : `ReaderController.rebuild` relit tout le PDF sur le fil principal (ouverture, réglages,
-  pivoter / couper une page) ; réorganisation droite → gauche en O(n²) ; `documents` republié à chaque page
-  tournée (rafraîchit la bibliothèque derrière le lecteur) ; recherche (`didMatchString`) en O(n²).
+- 2e passe (faite) : `rebuild` en tâche de fond (`build` → `install`, n° de génération, tâche annulée à la
+  fermeture) + indicateur « Préparation des pages… » ; pivoter = sur place si possible ; rognages réappliqués à
+  l'installation ; bibliothèque non republiée pendant la lecture si seule la position change (`pendingDocuments`) ;
+  recherche par lots de 0,25 s, 500 résultats max, résultats OCR d'une ancienne recherche ignorés.
+- Encore lent : l'ordre droite → gauche reste O(n²) dans PDFKit (mais hors fil principal maintenant).
 
 ## 5. Carte du code (où est quoi)
 
