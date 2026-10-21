@@ -23,6 +23,7 @@ Textes des licences : [LICENSES/](LICENSES/) ; attributions : [THIRD_PARTY_NOTIC
 
 | Version | Release | Contenu |
 |---|---|---|
+| **0.8.3** | [v0.8.3](https://github.com/NOxygen59/kyokasho/releases/tag/v0.8.3) | Furigana plus lisibles (couleur au choix), recherche dans la page, traduction française des définitions, notes flottantes ancrées, moniteur, mise à jour par TrollStore |
 | **0.8.2** | [v0.8.2](https://github.com/NOxygen59/kyokasho/releases/tag/v0.8.2) | PDF photo : dictionnaire juste (pages tournées), furigana sans débordement, nettoyage des scans sans modèle ; mise en page PP-DocLayout / DocLayout-YOLO |
 | **0.8.1** | [v0.8.1](https://github.com/NOxygen59/kyokasho/releases/tag/v0.8.1) | Boutons de page réparés (double page), réglages par document, furigana cliquables dans le texte extrait, modèles à part, nouvelle icône |
 | **0.8.0** | [v0.8.0](https://github.com/NOxygen59/kyokasho/releases/tag/v0.8.0) | Scans fiables (dictionnaire, furigana), double page (pilules), texte mis en forme (titres, tableaux), panneau ouvert d'office |
