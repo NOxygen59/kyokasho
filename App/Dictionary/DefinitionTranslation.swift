@@ -71,102 +71,53 @@ final class DefinitionTranslations: ObservableObject {
     }
 }
 
-/// Bloc « Français » sous les définitions anglaises du premier mot trouvé.
-struct DefinitionTranslationBar: View {
-    let term: TermResult
-    @ObservedObject private var store = DefinitionTranslations.shared
-    @ObservedObject private var deepl = DeepLService.shared
-    @AppStorage(DefinitionTranslations.autoKey) private var auto = false
-    @State private var busy = false
-    @State private var error: String?
-    @State private var editing = false
-    @State private var draft = ""
-
-    private var key: String { DefinitionTranslations.key(term) }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 6) {
-                Text("FR").font(.system(size: 11, weight: .bold)).foregroundStyle(Atelier.Tint.ai)
-                Text(term.expression).font(.custom("HiraginoSans-W6", size: 13)).foregroundStyle(Atelier.textSecondary)
-                Spacer()
-                if let entry = store.entries[key] {
-                    feedback(entry)
-                }
-            }
-            if editing {
-                TextField("Ta traduction", text: $draft, axis: .vertical)
-                    .lineLimit(1...4)
-                    .font(.system(size: 14))
-                    .padding(6)
-                    .background(Atelier.surfaceHigh, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-                HStack {
-                    Button("Annuler") { editing = false }
-                    Spacer()
-                    Button("Garder") {
-                        let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
-                        if !text.isEmpty { store.set(key, .init(text: text, status: .edited)) }
-                        editing = false
-                    }
-                    .fontWeight(.semibold)
-                }
-                .font(.system(size: 13))
-                .foregroundStyle(Atelier.Tint.ai)
-            } else if let entry = store.entries[key] {
-                Text(entry.text).font(.system(size: 14)).foregroundStyle(Atelier.textPrimary).textSelection(.enabled)
-                    .fixedSize(horizontal: false, vertical: true)
-            } else if deepl.hasKey {
-                Button {
-                    Task { await translate() }
-                } label: {
-                    HStack(spacing: 6) {
-                        if busy { ProgressView().controlSize(.small) }
-                        Text("Traduire la définition en français")
-                    }
-                    .font(.system(size: 13, weight: .semibold))
-                }
-                .foregroundStyle(Atelier.Tint.ai)
-                .disabled(busy)
-            } else {
-                Text("Traduction française : ajoute ta clé DeepL dans Réglages → Traduction.")
-                    .font(.caption).foregroundStyle(Atelier.textTertiary)
-            }
-            if let error { Text(error).font(.caption).foregroundStyle(Atelier.textTertiary) }
+/// Bloc « Français » posé dans la fiche du premier mot (sous son en-tête), dans la fenêtre du dictionnaire.
+/// Les boutons renvoient `{type:'fr', action}` (translate / like / dislike / edit) à `LookupPopup`.
+enum DefinitionTranslationHTML {
+    static func block(entry: DefinitionTranslations.Entry?, hasKey: Bool, busy: Bool, error: String?) -> String {
+        func esc(_ s: String) -> String {
+            s.replacingOccurrences(of: "&", with: "&amp;").replacingOccurrences(of: "<", with: "&lt;")
+                .replacingOccurrences(of: ">", with: "&gt;").replacingOccurrences(of: "\"", with: "&quot;")
         }
-        .padding(.horizontal, 14).padding(.vertical, 8)
-        .background(Atelier.surfaceHigh.opacity(0.5))
-        .task(id: key) {
-            editing = false
-            error = nil
-            if auto, deepl.hasKey, store.entries[key] == nil { await translate() }
+        var h = "<div class=\"fr-tr\"><span class=\"fr-tag\">FR</span>"
+        if let entry {
+            let liked = entry.status == .liked || entry.status == .edited
+            h += "<span class=\"fr-text\">\(esc(entry.text))</span><span class=\"fr-act\">"
+            h += "<button data-fr=\"like\" class=\"\(liked ? "on" : "")\" title=\"Bonne traduction\">👍</button>"
+            h += "<button data-fr=\"dislike\" class=\"\(entry.status == .disliked ? "on" : "")\" title=\"Mauvaise : corriger\">👎</button>"
+            h += "<button data-fr=\"edit\" title=\"Modifier\">✏️</button></span>"
+        } else if busy {
+            h += "<span class=\"fr-text dim\">Traduction…</span>"
+        } else if hasKey {
+            h += "<button data-fr=\"translate\" class=\"fr-go\">Traduire en français</button>"
+        } else {
+            h += "<span class=\"fr-text dim\">Ajoute ta clé DeepL (Réglages → Traduction) pour la traduction française.</span>"
         }
+        if let error { h += "<div class=\"fr-text dim\">\(esc(error))</div>" }
+        return h + "</div>"
     }
 
-    private func feedback(_ entry: DefinitionTranslations.Entry) -> some View {
-        HStack(spacing: 12) {
-            Button { store.set(key, .init(text: entry.text, status: entry.status == .liked ? .machine : .liked)) } label: {
-                Image(systemName: entry.status == .liked || entry.status == .edited ? "hand.thumbsup.fill" : "hand.thumbsup")
-            }
-            .accessibilityLabel("Bonne traduction")
-            Button {
-                store.set(key, .init(text: entry.text, status: .disliked))
-                draft = entry.text
-                editing = true
-            } label: {
-                Image(systemName: entry.status == .disliked ? "hand.thumbsdown.fill" : "hand.thumbsdown")
-            }
-            .accessibilityLabel("Mauvaise traduction : la corriger")
-            Button { draft = entry.text; editing = true } label: { Image(systemName: "pencil") }
-                .accessibilityLabel("Modifier la traduction")
-        }
-        .font(.system(size: 13))
-        .foregroundStyle(Atelier.textSecondary)
-        .buttonStyle(.plain)
-    }
+    static let style = """
+    <style>
+    .fr-tr{margin:8px 0 4px;padding:8px 10px;border-radius:10px;background:rgba(160,120,255,.12);display:flex;flex-wrap:wrap;gap:6px;align-items:baseline;font-size:15px}
+    .fr-tag{font:700 11px -apple-system,sans-serif;color:#b79bff}
+    .fr-text{flex:1 1 200px} .fr-text.dim{opacity:.6;font-size:13px}
+    .fr-act button,.fr-go{border:none;border-radius:8px;background:rgba(255,255,255,.08);padding:3px 7px;font-size:14px;color:inherit}
+    .fr-act button.on{background:rgba(160,120,255,.45)} .fr-go{color:#b79bff;font-weight:600}
+    </style>
+    <script>
+    document.addEventListener('click',function(e){var b=e.target.closest('[data-fr]');if(!b)return;
+      e.stopPropagation();window.webkit.messageHandlers.kyokasho.postMessage({type:'fr',action:b.dataset.fr})},true);
+    </script>
+    """
 
-    private func translate() async {
-        busy = true
-        defer { busy = false }
-        do { try await store.translate(term) } catch { self.error = error.localizedDescription }
+    /// Insère le bloc après le premier en-tête de mot (`</header>` du premier `<article class="term">`).
+    static func inject(_ block: String, into html: String) -> String {
+        guard let article = html.range(of: "<article class=\"term\""),
+              let header = html.range(of: "</header>", range: article.upperBound..<html.endIndex) else { return html }
+        var out = html
+        out.insert(contentsOf: block, at: header.upperBound)
+        if let body = out.range(of: "</body>") { out.insert(contentsOf: style, at: body.lowerBound) } else { out += style }
+        return out
     }
 }

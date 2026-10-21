@@ -126,6 +126,28 @@ struct LookupPopup: View {
     var onAddCard: ((TermResult) -> String?)? = nil
     var close: () -> Void
     @State private var toast: String?
+    @ObservedObject private var translations = DefinitionTranslations.shared
+    @ObservedObject private var deepl = DeepLService.shared
+    @AppStorage(DefinitionTranslations.autoKey) private var autoTranslate = false
+    @State private var translating = false
+    @State private var translateError: String?
+    @State private var editingFrench = false
+    @State private var frenchDraft = ""
+
+    /// Premier mot trouvé, s'il n'a que des définitions anglaises (traduction française possible).
+    private var englishTerm: TermResult? {
+        guard let term = session.currentTerms.first,
+              DefinitionTranslations.isEnglish(DefinitionTranslations.source(term)) else { return nil }
+        return term
+    }
+
+    private var pageHTML: String {
+        let html = session.html(canAddCards: onAddCard != nil, added: added)
+        guard let term = englishTerm else { return html }
+        let block = DefinitionTranslationHTML.block(entry: translations.entries[DefinitionTranslations.key(term)],
+                                                    hasKey: deepl.hasKey, busy: translating, error: translateError)
+        return DefinitionTranslationHTML.inject(block, into: html)
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -155,15 +177,9 @@ struct LookupPopup: View {
                 }
                 .padding(24).frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                LookupWebView(html: session.html(canAddCards: onAddCard != nil, added: added),
+                LookupWebView(html: pageHTML,
                               mediaRoot: dictionaryModel.database?.mediaRoot) { message in
                     handle(message)
-                }
-                // Définition anglaise seulement : traduction française (DeepL) sous la fenêtre.
-                if let term = session.currentTerms.first,
-                   DefinitionTranslations.isEnglish(DefinitionTranslations.source(term)) {
-                    Divider().overlay(Atelier.hairline)
-                    DefinitionTranslationBar(term: term)
                 }
             }
         }
@@ -177,6 +193,23 @@ struct LookupPopup: View {
             }
         }
         .animation(.easeOut(duration: 0.2), value: toast)
+        // Traduction automatique (option) du premier mot anglais pas encore traduit.
+        .task(id: englishTerm.map(DefinitionTranslations.key)) {
+            translateError = nil
+            guard autoTranslate, deepl.hasKey, let term = englishTerm,
+                  translations.entries[DefinitionTranslations.key(term)] == nil else { return }
+            await translateFrench(term)
+        }
+        .alert("Traduction française", isPresented: $editingFrench) {
+            TextField("Ta traduction", text: $frenchDraft)
+            Button("Annuler", role: .cancel) {}
+            Button("Garder") {
+                let text = frenchDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+                if let term = englishTerm, !text.isEmpty {
+                    translations.set(DefinitionTranslations.key(term), .init(text: text, status: .edited))
+                }
+            }
+        }
         .background(Atelier.surface)
         .clipShape(RoundedRectangle(cornerRadius: Atelier.radius, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: Atelier.radius, style: .continuous).strokeBorder(Atelier.Tint.japanese.opacity(0.35), lineWidth: 1))
@@ -188,6 +221,22 @@ struct LookupPopup: View {
         case .lookup(let text): session.push(text)
         case .kanji(let c): session.pushKanji(c)
         case .audio(let term, let reading): Task { await dictionaryModel.playAudio(term: term, reading: reading) }
+        case .french(let action):
+            guard let term = englishTerm else { return }
+            let key = DefinitionTranslations.key(term)
+            let entry = translations.entries[key]
+            switch action {
+            case "translate": Task { await translateFrench(term) }
+            case "like":
+                if let entry { translations.set(key, .init(text: entry.text, status: entry.status == .liked ? .machine : .liked)) }
+            case "dislike":
+                if let entry { translations.set(key, .init(text: entry.text, status: .disliked)) }
+                frenchDraft = entry?.text ?? ""
+                editingFrench = true
+            default:
+                frenchDraft = entry?.text ?? ""
+                editingFrench = true
+            }
         case .card(let index):
             let terms = session.currentTerms
             guard terms.indices.contains(index), let message = onAddCard?(terms[index]) else { return }
@@ -197,5 +246,12 @@ struct LookupPopup: View {
                 if toast == message { toast = nil }
             }
         }
+    }
+
+    private func translateFrench(_ term: TermResult) async {
+        translating = true
+        translateError = nil
+        defer { translating = false }
+        do { try await translations.translate(term) } catch { translateError = error.localizedDescription }
     }
 }

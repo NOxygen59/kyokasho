@@ -62,6 +62,7 @@ struct FuriganaTextView: View {
     var onLookup: (String) -> Void
     @EnvironmentObject private var dictionary: DictionaryModel
     @State private var html = ""
+    @AppStorage(FuriganaLayer.Tint.storageKey) private var tint = FuriganaLayer.Tint.red
     @State private var height: CGFloat = 200
 
     /// Unités de texte : titres, paragraphes, cellules (mis en forme) ou lignes (brut).
@@ -83,7 +84,7 @@ struct FuriganaTextView: View {
     var body: some View {
         RubyWebView(html: html, height: $height, onLookup: onLookup)
             .frame(height: height)
-            .task(id: "\(page.hashValue)|\(formatted)|\(regions.hashValue)") { await build() }
+            .task(id: "\(page.hashValue)|\(formatted)|\(regions.hashValue)|\(tint.rawValue)") { await build() }
     }
 
     private func build() async {
@@ -160,7 +161,7 @@ struct FuriganaTextView: View {
         html,body{margin:0;background:transparent;color:\(text);font:17px/2.1 "Hiragino Mincho ProN",serif;-webkit-user-select:none}
         p,h2,h3,td{margin:0 0 .6em} h2{font-size:1.35em} h3{font-size:1.15em}
         table{border-collapse:collapse;margin:.4em 0 .8em} td{border:1px solid \(line);padding:2px 8px}
-        rt{font-size:.5em;color:\(accent)} span[data-q]{cursor:pointer} span.hit{background:\(accent)55;border-radius:3px}
+        rt{font-size:.5em;color:\(FuriganaLayer.Tint.current.panelHex)} span[data-q]{cursor:pointer} span.hit{background:\(accent)55;border-radius:3px}
         </style></head><body>\(body)
         <script>
         function size(){window.webkit.messageHandlers.kyokasho.postMessage({type:'height',value:document.body.scrollHeight})}

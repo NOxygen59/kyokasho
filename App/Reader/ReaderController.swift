@@ -682,6 +682,11 @@ final class ReaderController: NSObject, ObservableObject {
         }
     }
 
+    func setFuriganaTint(_ tint: FuriganaLayer.Tint) {
+        UserDefaults.standard.set(tint.rawValue, forKey: FuriganaLayer.Tint.storageKey)
+        pdfView.redrawVisiblePages()
+    }
+
     func setFurigana(_ on: Bool) {
         UserDefaults.standard.set(on, forKey: FuriganaLayer.storageKey)
         // Recalcul complet de la page posée (texte du PDF et OCR en cache).

@@ -29,6 +29,8 @@ struct ReaderScreen: View {
     @AppStorage(PageTone.storageKey) private var pageTone = PageTone.normal
     @State private var scanCleaning = ScanSharpening.method
     @AppStorage(FuriganaLayer.storageKey) private var furigana = false
+    @AppStorage(FuriganaLayer.Tint.storageKey) private var furiganaTint = FuriganaLayer.Tint.red
+    @ObservedObject private var deepl = DeepLService.shared
     @State private var pageField = ""
     @ObservedObject private var keyboard = HardwareKeyboard.shared
 
@@ -127,6 +129,7 @@ struct ReaderScreen: View {
             reader.load()
         }
         .onDisappear { reader.close() }
+        .task { await deepl.refreshUsage() }
         .onChange(of: reader.lookupRequest) { request in
             if let request { lookup.start(request.text) } else { lookup.clear() }
         }
@@ -255,6 +258,12 @@ struct ReaderScreen: View {
                     Toggle(isOn: Binding(get: { furigana }, set: { furigana = $0; reader.setFurigana($0) })) {
                         Label("Furigana sur les kanji", systemImage: "character.ja")
                     }
+                    Picker(selection: Binding(get: { furiganaTint }, set: { furiganaTint = $0; reader.setFuriganaTint($0) })) {
+                        ForEach(FuriganaLayer.Tint.allCases) { Text($0.title).tag($0) }
+                    } label: {
+                        Label("Couleur des furigana", systemImage: "paintpalette")
+                    }
+                    .pickerStyle(.menu)
                     Picker(selection: Binding(get: { scanCleaning }, set: { scanCleaning = $0; reader.setScanCleaning($0) })) {
                         ForEach(ScanSharpening.Method.allCases.filter { $0 != .degan || ScanSharpening.isInstalled }) {
                             Text($0.title).tag($0)
@@ -288,6 +297,13 @@ struct ReaderScreen: View {
                     Label("Cette page", systemImage: "doc")
                 }
                 Button { openStudy(.notes) } label: { Label("Notes de la page", systemImage: "text.bubble") }
+                if deepl.hasKey {
+                    // Information seulement (mise à jour à l'ouverture du livre et après chaque traduction).
+                    Button { Task { await deepl.refreshUsage() } } label: {
+                        Label(deepl.usageText.map { "DeepL : \($0)" } ?? "DeepL : quota inconnu (toucher pour actualiser)",
+                              systemImage: "character.bubble")
+                    }
+                }
                 Divider()
                 Button { sheet = .settings } label: {
                     Label("Pagination et réglages de ce document", systemImage: "slider.horizontal.3")

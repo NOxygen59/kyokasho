@@ -14,6 +14,46 @@ enum FuriganaLayer {
     static let storageKey = "reader.furigana"
     static var enabled: Bool { UserDefaults.standard.bool(forKey: storageKey) }
 
+    /// Couleur des furigana (menu « … » → Affichage) : foncée sur la page, claire dans le panneau sombre.
+    enum Tint: String, CaseIterable, Identifiable {
+        case red, blue, green, purple, orange, black
+        static let storageKey = "reader.furiganaColor"
+        static var current: Tint { UserDefaults.standard.string(forKey: storageKey).flatMap(Tint.init) ?? .red }
+        var id: String { rawValue }
+        var title: String {
+            switch self {
+            case .red: return "Rouge"
+            case .blue: return "Bleu"
+            case .green: return "Vert"
+            case .purple: return "Violet"
+            case .orange: return "Orange"
+            case .black: return "Noir"
+            }
+        }
+        /// Sur la page (papier clair).
+        var page: (r: CGFloat, g: CGFloat, b: CGFloat) {
+            switch self {
+            case .red: return (0.62, 0.12, 0.10)
+            case .blue: return (0.10, 0.25, 0.65)
+            case .green: return (0.08, 0.45, 0.20)
+            case .purple: return (0.45, 0.15, 0.60)
+            case .orange: return (0.80, 0.38, 0.02)
+            case .black: return (0.10, 0.10, 0.10)
+            }
+        }
+        /// Dans le panneau d'étude (fond sombre).
+        var panelHex: String {
+            switch self {
+            case .red: return "#ff7a6b"
+            case .blue: return "#7fb2ff"
+            case .green: return "#6fd28a"
+            case .purple: return "#c79bff"
+            case .orange: return "#ffb05c"
+            case .black: return "#d9d9d9"
+            }
+        }
+    }
+
     /// Une lecture, dans le repère absolu de la page (celui de `cropBox`).
     struct Mark: Sendable {
         var rect: CGRect
@@ -208,6 +248,7 @@ enum FuriganaLayer {
     static func draw(_ marks: [Mark], in context: CGContext) {
         context.saveGState()
         context.textMatrix = .identity
+        let color = Tint.current.page
         for mark in layout(marks) {
             let size = mark.size, strip = mark.strip
             let font = CTFontCreateWithName("HiraginoSans-W5" as CFString, size, nil)
@@ -220,7 +261,7 @@ enum FuriganaLayer {
             context.addPath(CGPath(roundedRect: strip.insetBy(dx: -pad, dy: -pad * 0.6), cornerWidth: pad * 1.5,
                                    cornerHeight: pad * 1.5, transform: nil))
             context.fillPath()
-            context.setFillColor(red: 0.62, green: 0.12, blue: 0.10, alpha: 1)
+            context.setFillColor(red: color.r, green: color.g, blue: color.b, alpha: 1)
             for (i, c) in mark.reading.enumerated() {
                 let line = CTLineCreateWithAttributedString(NSAttributedString(string: String(c), attributes: attributes))
                 let width = CGFloat(CTLineGetTypographicBounds(line, nil, nil, nil))

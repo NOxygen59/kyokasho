@@ -10,6 +10,8 @@ final class DeepLService: ObservableObject {
     static let shared = DeepLService()
 
     @Published private(set) var hasKey: Bool
+    /// Dernier quota connu (menu « … » du lecteur), à titre d'information.
+    @Published private(set) var lastUsage: (used: Int, limit: Int)?
     private let keychain = KeychainItem(service: "fr.noxygen59.kyokasho.deepl", account: "api_key")
     /// Traductions déjà faites (texte source → traduction), pour ne jamais payer deux fois.
     private var cache: [String: String] = [:]
@@ -65,7 +67,24 @@ final class DeepLService: ObservableObject {
             throw DeepLError.badResponse
         }
         cache[target + "|" + source] = result
+        Task { await refreshUsage() }
         return result
+    }
+
+    @MainActor
+    func refreshUsage() async {
+        guard hasKey else { lastUsage = nil; return }
+        if let u = try? await usage() { lastUsage = u }
+    }
+
+    /// « 12 345 / 500 000 caractères ce mois-ci ».
+    var usageText: String? {
+        guard let u = lastUsage else { return nil }
+        let f = NumberFormatter()
+        f.numberStyle = .decimal
+        f.locale = Locale(identifier: "fr_FR")
+        func n(_ v: Int) -> String { f.string(from: NSNumber(value: v)) ?? "\(v)" }
+        return "\(n(u.used)) / \(n(u.limit)) caractères ce mois-ci"
     }
 
     /// Quota du mois (caractères utilisés / limite).

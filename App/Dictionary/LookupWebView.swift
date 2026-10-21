@@ -12,6 +12,8 @@ enum LookupMessage {
     case kanji(String)
     case audio(term: String, reading: String)
     case card(index: Int)
+    /// Bloc de traduction française : translate / like / dislike / edit.
+    case french(String)
 }
 
 /// Vue web des définitions. Pas de JavaScript venant des dictionnaires (seulement notre script),
@@ -67,6 +69,7 @@ struct LookupWebView: UIViewRepresentable {
             case "kanji": if let c = body["character"] as? String { onMessage(.kanji(c)) }
             case "audio": onMessage(.audio(term: body["term"] as? String ?? "", reading: body["reading"] as? String ?? ""))
             case "card": if let i = body["index"] as? Int { onMessage(.card(index: i)) }
+            case "fr": if let a = body["action"] as? String { onMessage(.french(a)) }
             default: break
             }
         }
