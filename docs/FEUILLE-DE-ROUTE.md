@@ -242,6 +242,17 @@ Rythme choisi le 22/10 au soir : **2 sections de la liste de l'utilisateur par s
   力/カ, 夕/タ, 二/ニ, 工/エ…) gardée seulement si elle forme un mot du dictionnaire ; (3) **seules** les lignes encore
   douteuses sont relues par GLM-OCR (déjà dans l'app), en fond, pas toute la page ; (4) dans le panneau, caractères
   douteux soulignés, toucher → corriger à la main (correction gardée dans le cache OCR).
+- [ ] **O — PROCHAINE SESSION (choix du 22/10) : MLX récent rétroporté sur iOS 16** (« chemin 2 ») pour avoir
+  tous les modèles récents (Qwen3.5, Qwen3-VL, OvisOCR2…). Constat du 22/10 : `mlx-swift` 0.32.3 ne déclare pas
+  iOS 17 ; `mlx-swift-lm` 3.32.3 déclare `.iOS(.v17)` et tools 6.2, mais l'iOS 17+ vient surtout de
+  `MLXFoundationModels` (inutile ici). Plan : forks `NOxygen59/mlx-swift-lm` (+ `mlx-swift` si besoin) branche
+  `ios16` : plateforme `.iOS(.v16)`, retirer `MLXFoundationModels`, « polyfills » pour chaque API iOS 17+ trouvée
+  à la compilation (`@available` + repli : Observation → ObservableObject, etc.) ; vérifier dans le C++ de MLX
+  que les API Metal récentes (MTLResidencySet…) sont sous `__builtin_available`. Puis `GLMOCRKit` sur ces forks
+  (GLM-OCR existe en amont : `MLXVLM/Models/GlmOcr.swift` → retirer notre copie si identique), ajouter
+  **OvisOCR2** (`tokimoa/ovisocr2-mlx-8bit`, Apache-2.0, ≈ 1 Go, qwen3_5, japonais) au catalogue `ModelStore`, et
+  un bouton « Vérifier la double page » (différences à accepter / refuser). **L'utilisateur ne veut ni
+  téléchargement de modèle ni test sur le Mac** : compiler seulement ; prévenir que l'essai réel se fera sur iPad.
 - [ ] **N — Furigana « vérifiés »** : lecture gardée seulement si MeCab et le dictionnaire Yomitan sont d'accord ;
   sinon, celle du dictionnaire si le mot y est, et petit point pour signaler le doute. Correction à la main gardée.
 - Écarté : petit modèle de langue local pour tout relire (1-3 Go de mémoire, lent, chauffe, gain incertain sur des
