@@ -145,7 +145,7 @@ Nouveau fichier `Sources/ReviewKit/Exporters.swift`.
 > Ajout via `ReviewModel.add(...)` (doublon vu tout de suite, audio cherché ensuite) ; ✓ déjà affiché dans le popup
 > pour les mots qui ont une carte (`GlossaryRenderer.addedTermIds`). Onglet Mots : pas d'image (pas de position).
 
-### [ ] Session 4 — V4-d : écrans de révision → release 0.5.0
+### [x] Session 4 — V4-d : écrans de révision → release 0.5.0
 1. **`App/Review/CardWebView.swift`** : copie de `LookupWebView`, avec un gestionnaire de schéma `kyocard` qui sert `store.mediaRoot`.
    - HTML = `<style>css</style><div class="card">recto ou verso</div>`.
    - `src="x"` → `kyocard:///x`. `[sound:x]` → bouton ▶︎ qui envoie un message, et l'app lit le fichier avec `AVAudioPlayer`.

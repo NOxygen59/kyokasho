@@ -54,6 +54,9 @@ final class ReviewModel: ObservableObject {
         keys.formUnion(found)
     }
 
+    /// Carte supprimée : le mot redevient ajoutable (＋).
+    func forgetKey(_ key: String) { keys.remove(key) }
+
     var defaultDeckId: Int64? { settings.defaultDeckId.flatMap { id in decks.first { $0.id == id }?.id } ?? decks.first?.id }
     var defaultTemplate: NoteTemplate? {
         settings.defaultTemplateId.flatMap { id in templates.first { $0.id == id } } ?? templates.first

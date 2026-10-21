@@ -17,6 +17,8 @@ struct LibraryView: View {
     @State private var showBench = false
     @State private var showDictionary = false
     @State private var renaming: LibraryDocument?
+    @EnvironmentObject private var review: ReviewModel
+    @State private var showReview = false
     @State private var settingPageOne: LibraryDocument?
     @State private var pageOneText = ""
     @State private var newTitle = ""
@@ -95,6 +97,10 @@ struct LibraryView: View {
             Button("Annuler", role: .cancel) {}
             Button("Renommer") { if let renaming { model.rename(renaming, to: newTitle) } }
         }
+        .fullScreenCover(isPresented: $showReview, onDismiss: { review.refresh() }) {
+            ReviewScreen().environmentObject(model).environmentObject(review).preferredColorScheme(.dark)
+        }
+        .onAppear { review.refresh() }
         .alert("Où est la page 1 ?", isPresented: Binding(get: { settingPageOne != nil },
                                                            set: { if !$0 { settingPageOne = nil } })) {
             TextField("Page du PDF", text: $pageOneText).keyboardType(.numberPad)
@@ -141,6 +147,8 @@ struct LibraryView: View {
             }
             VStack(alignment: .leading, spacing: 4) {
                 AtelierLabel("Outils").padding(.bottom, 4)
+                actionRow(icon: "rectangle.stack.badge.play", title: "Révisions", tint: Atelier.Tint.japanese,
+                          count: review.counts.total) { showReview = true }
                 actionRow(icon: "character.book.closed.ja", title: "Dictionnaire", tint: Atelier.Tint.japanese) { showDictionary = true }
                 actionRow(icon: "gauge.with.dots.needle.33percent", title: "Banc d'essai OCR", tint: Atelier.Tint.japanese) { showBench = true }
                 actionRow(icon: "gearshape", title: "Réglages", tint: Atelier.textSecondary) { showSettings = true }
@@ -173,12 +181,18 @@ struct LibraryView: View {
         .buttonStyle(.plain)
     }
 
-    private func actionRow(icon: String, title: String, tint: Color, action: @escaping () -> Void) -> some View {
+    private func actionRow(icon: String, title: String, tint: Color, count: Int? = nil,
+                           action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 10) {
                 Image(systemName: icon).frame(width: 22).foregroundStyle(tint)
                 Text(title).foregroundStyle(Atelier.textPrimary)
                 Spacer()
+                if let count, count > 0 {
+                    Text("\(count)").font(Atelier.mono).foregroundStyle(Color.black.opacity(0.8))
+                        .padding(.horizontal, 7).padding(.vertical, 2)
+                        .background(tint, in: Capsule())
+                }
             }
             .font(.system(size: 15, weight: .medium))
             .padding(.horizontal, 10).padding(.vertical, 9)

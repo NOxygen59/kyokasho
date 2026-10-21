@@ -35,6 +35,13 @@ struct SettingsView: View {
                 } footer: {
                     Text("Dictionnaires Yomitan (.zip) : JMdict, Jitendex, kanji, fréquences, accents…")
                 }
+                Section {
+                    NavigationLink("Révisions et export Anki") { ReviewSettingsView() }
+                } header: {
+                    Text("Cartes")
+                } footer: {
+                    Text("Rythme des révisions (FSRS), modèle de carte, AnkiMobile, export .apkg / CSV.")
+                }
                 Section("Google Drive") {
                     NavigationLink("Compte Google Drive") { DriveAccountView() }
                 }
@@ -287,6 +294,10 @@ struct AboutView: View {
                 credit("GRDB.swift", "Gwendal Roué", "MIT", "https://github.com/groue/GRDB.swift")
                 credit("ZIPFoundation", "Thomas Zoechling", "MIT", "https://github.com/weichsel/ZIPFoundation")
                 credit("Yomitan (déconjugaison, texte japonais)", "yomidevs", "GPL-3.0", "https://github.com/yomidevs/yomitan")
+                credit("swift-fsrs (calcul des révisions)", "Ben Smiley", "MIT", "https://github.com/open-spaced-repetition/swift-fsrs")
+            }
+            Section("Format de fichier") {
+                credit("genanki (format .apkg d'Anki, aucun code copié)", "Kerrick Staley", "MIT", "https://github.com/kerrickstaley/genanki")
             }
             Section("Inspirations (comportement)") {
                 credit("Aidoku", "Aidoku", "GPL-3.0", "https://github.com/Aidoku/Aidoku")
