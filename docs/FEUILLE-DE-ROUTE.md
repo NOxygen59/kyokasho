@@ -218,6 +218,23 @@ Rythme choisi le 22/10 au soir : **2 sections de la liste de l'utilisateur par s
   `ShareLink` du fichier. Toujours publier la release **avec** son `.tipa` et le tag `vX.Y.Z` = `latest.json`.
 - [ ] **K — Grammaire** : conception écrite dans `docs/GRAMMAIRE.md` (22/10). Coder seulement après accord.
 
+### Fiabilité du texte (demandée le 22/10 au soir) — passe avant les étapes 1-7
+- [x] **Dictionnaire sur la page = mot entier** : la recherche partait du caractère touché (井 seul dans 天井).
+  `ReaderController.wordStart(in:at:)` remonte au début du mot (`DictionaryModel.segment`, mémo par ligne), pour
+  l'OCR et pour le texte du PDF (fenêtre de ±16 caractères). Non vérifié sur iPad.
+- [ ] **L — Analyseur MeCab + UniDic-lite** (≈ 50 Mo, téléchargé à la demande, **demander**) : lectures des furigana
+  selon le contexte (bien meilleur que `CFStringTokenizer` : 上手/うわて, 今日, 一日, noms composés) et découpage en
+  mots pour le dictionnaire et la grammaire (`docs/GRAMMAIRE.md` § 2, même socle). Furigana page + panneau.
+- [ ] **M — OCR « relu » sans IA lourde** : (1) lignes douteuses = confiance basse (`OCRLine.confidence`) ou mots
+  absents du dictionnaire ; (2) correction par paires de caractères qui se ressemblent (未/末, 土/士, 口/ロ, 一/ー,
+  力/カ, 夕/タ, 二/ニ, 工/エ…) gardée seulement si elle forme un mot du dictionnaire ; (3) **seules** les lignes encore
+  douteuses sont relues par GLM-OCR (déjà dans l'app), en fond, pas toute la page ; (4) dans le panneau, caractères
+  douteux soulignés, toucher → corriger à la main (correction gardée dans le cache OCR).
+- [ ] **N — Furigana « vérifiés »** : lecture gardée seulement si MeCab et le dictionnaire Yomitan sont d'accord ;
+  sinon, celle du dictionnaire si le mot y est, et petit point pour signaler le doute. Correction à la main gardée.
+- Écarté : petit modèle de langue local pour tout relire (1-3 Go de mémoire, lent, chauffe, gain incertain sur des
+  textes techniques) ; GLM-OCR ciblé sur les lignes douteuses donne l'essentiel du gain pour bien moins cher.
+
 ### [ ] 1 — Gestes / zoom « quasi inexistants ou cassés » (retour du 21/10, cause pas trouvée)
 Demander d'abord **lesquels** (pincer, glisser, double-tap, défiler zoomé, barre, boutons) **ou** la permission du
 simulateur. Pistes à vérifier dans `ReaderController.configureGestures` / `applyDisplaySettings` / `ReaderPDFView` :

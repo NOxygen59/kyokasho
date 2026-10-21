@@ -76,6 +76,8 @@ final class ReaderController: NSObject, ObservableObject {
     private var pageStringCache: (index: Int, string: NSString, map: [Int], hasText: Bool)?
     /// `realOCR` des pages hors panneau (évite une lecture du cache SQLite à chaque survol) ; vidé à chaque OCR.
     private var realOCRMemo: [Int: OCRPage?] = [:]
+    /// Début de mot par caractère, par ligne de texte (découpage du dictionnaire), pour le survol.
+    private var wordStartMemo: [String: [Int]] = [:]
     private var pageTextTask: Task<Void, Never>?
     private var sharpenTask: Task<Void, Never>?
     private var furiganaTask: Task<Void, Never>?
@@ -390,7 +392,28 @@ final class ReaderController: NSObject, ObservableObject {
             do {
                 var text = ""
                 var rects: [CGRect] = []
-                var j = i
+                // Remonter au début du mot (toucher 井 dans 天井 cherche 天井) : fenêtre de la ligne autour
+                // du caractère, découpée par le dictionnaire.
+                var back: [Int] = []
+                var k = i
+                while back.count < 16, k > 0 {
+                    let r = ns.rangeOfComposedCharacterSequence(at: k - 1)
+                    let piece = ns.substring(with: r)
+                    if piece == "\n" || piece == "\r" { break }
+                    back.insert(r.location, at: 0)
+                    k = r.location
+                }
+                var window = back.map { ns.substring(with: ns.rangeOfComposedCharacterSequence(at: $0)) }.joined()
+                var f = i
+                while f < ns.length, window.count < back.count + 16 {
+                    let r = ns.rangeOfComposedCharacterSequence(at: f)
+                    let piece = ns.substring(with: r)
+                    if piece == "\n" || piece == "\r" { break }
+                    window += piece
+                    f = NSMaxRange(r)
+                }
+                let wordStart = await wordStart(in: window, at: back.count)
+                var j = wordStart < back.count ? back[wordStart] : i
                 while j < ns.length, text.count < maxLength {
                     let range = ns.rangeOfComposedCharacterSequence(at: j)
                     let piece = ns.substring(with: range)
@@ -451,7 +474,8 @@ final class ReaderController: NSObject, ObservableObject {
         var text = ""
         var rects: [CGRect] = []
         var line = hit.line
-        var start = hit.index
+        // Début du mot qui contient le caractère touché (pas seulement ce caractère).
+        var start = await wordStart(in: hitLine.text, at: hit.index)
         // Le texte continue sur les lignes suivantes (phrase coupée par la mise en page).
         while line < ocr.lines.count, text.count < maxLength {
             let l = ocr.lines[line]
@@ -955,6 +979,21 @@ final class ReaderController: NSObject, ObservableObject {
         }
         realOCRMemo[source] = .some(found)
         return found
+    }
+
+    /// Début du mot du dictionnaire qui contient le caractère `offset` de `text` (plus long mot à chaque
+    /// position, comme le panneau d'étude). Sans dictionnaire : le caractère lui-même.
+    private func wordStart(in text: String, at offset: Int) async -> Int {
+        let starts: [Int]
+        if let memo = wordStartMemo[text] {
+            starts = memo
+        } else {
+            let segments = await model.dictionary.segment(text)
+            starts = FuriganaTextView.wordStarts(text, segments: segments) ?? Array(0..<text.count)
+            if wordStartMemo.count > 300 { wordStartMemo.removeAll() }
+            wordStartMemo[text] = starts
+        }
+        return starts.indices.contains(offset) ? min(starts[offset], offset) : offset
     }
 
     private func cachedOCR(source: Int) async -> OCRPage? {
