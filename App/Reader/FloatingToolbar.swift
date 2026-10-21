@@ -13,6 +13,7 @@ struct FloatingToolbar<Items: View>: View {
     @ViewBuilder let items: (_ vertical: Bool) -> Items
 
     @AppStorage("toolbar.style") private var styleRaw = Style.vertical.rawValue
+    private var style: Style { Style(rawValue: styleRaw) ?? .vertical }
     @AppStorage("toolbar.lastOpen") private var lastOpen = Style.vertical.rawValue
     @AppStorage("toolbar.x") private var fractionX = 0.0
     @AppStorage("toolbar.y") private var fractionY = 0.1
@@ -21,7 +22,6 @@ struct FloatingToolbar<Items: View>: View {
     @State private var size: CGSize = .zero
 
     var body: some View {
-        let style = Style(rawValue: styleRaw) ?? .vertical
         let maxX = max(0, area.width - size.width)
         let maxY = max(0, area.height - size.height)
         let x = min(max(0, fractionX * maxX + drag.width), maxX)
@@ -49,13 +49,13 @@ struct FloatingToolbar<Items: View>: View {
                 VStack(spacing: 6) {
                     grip(vertical: true).gesture(gesture)
                     items(true)
-                    styleMenu
+                    styleButtons(vertical: true)
                 }
             case .horizontal:
                 HStack(spacing: 6) {
                     grip(vertical: false).gesture(gesture)
                     items(false)
-                    styleMenu
+                    styleButtons(vertical: false)
                 }
             }
         }
@@ -81,16 +81,29 @@ struct FloatingToolbar<Items: View>: View {
             .accessibilityLabel("Déplacer la barre d'outils")
     }
 
-    private var styleMenu: some View {
-        Menu {
-            Button { setStyle(.vertical) } label: { Label("Verticale", systemImage: "rectangle.portrait") }
-            Button { setStyle(.horizontal) } label: { Label("Horizontale", systemImage: "rectangle") }
-            Button { setStyle(.collapsed) } label: { Label("Rétracter", systemImage: "arrow.down.right.and.arrow.up.left") }
-        } label: {
-            Image(systemName: "ellipsis").font(.system(size: 15, weight: .semibold))
-                .frame(width: 46, height: 30).foregroundStyle(Atelier.textSecondary)
+    /// Forme de la barre : trois petits boutons directs (plus de menu à dérouler).
+    private func styleButtons(vertical: Bool) -> some View {
+        let buttons = Group {
+            styleButton(.vertical, icon: "rectangle.portrait", label: "Barre verticale", vertical: vertical)
+            styleButton(.horizontal, icon: "rectangle", label: "Barre horizontale", vertical: vertical)
+            styleButton(.collapsed, icon: "arrow.down.right.and.arrow.up.left", label: "Rétracter la barre", vertical: vertical)
         }
-        .accessibilityLabel("Forme de la barre d'outils")
+        return Group {
+            if vertical { VStack(spacing: 2) { buttons } } else { HStack(spacing: 2) { buttons } }
+        }
+    }
+
+    private func styleButton(_ target: Style, icon: String, label: String, vertical: Bool) -> some View {
+        let current = style == target
+        return Button { setStyle(target) } label: {
+            Image(systemName: icon).font(.system(size: 12, weight: .semibold))
+                .frame(width: vertical ? 46 : 26, height: vertical ? 26 : 46)
+                .foregroundStyle(current ? Atelier.Tint.read : Atelier.textTertiary)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(PressScale())
+        .disabled(current)
+        .accessibilityLabel(label)
     }
 
     private func setStyle(_ style: Style) {

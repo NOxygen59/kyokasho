@@ -319,7 +319,7 @@ struct AIPageSheet: View {
                                 .buttonStyle(.borderedProminent)
                             Text("Colle-la ensuite dans claude.ai (ou une autre IA), puis colle un prompt ci-dessous.")
                                 .font(.footnote).foregroundStyle(.secondary)
-                            Button { openWeb() } label: { Label("Ouvrir claude.ai à côté", systemImage: "sidebar.trailing") }
+                            Button { openWeb() } label: { Label("Ouvrir le navigateur à côté", systemImage: "sidebar.trailing") }
                         }
                     }
                 }
@@ -419,38 +419,132 @@ struct PromptEditor: View {
     }
 }
 
-// MARK: - claude.ai à côté
+// MARK: - Navigateur à côté
 
+/// Petit navigateur ouvert à tous les sites (claude.ai, dictionnaires en ligne, recherche…).
 struct WebPanel: View {
     var onClose: () -> Void
     @Environment(\.openURL) private var openURL
-    static let url = URL(string: "https://claude.ai/new")!
+    @StateObject private var state = WebState(view: WebView.shared)
+    @State private var address = ""
+    @FocusState private var editing: Bool
+
+    /// Raccourcis : un appui ouvre le site.
+    static let shortcuts: [(name: String, url: String)] = [
+        ("Claude", "https://claude.ai/new"),
+        ("ChatGPT", "https://chatgpt.com"),
+        ("Jisho", "https://jisho.org"),
+        ("Weblio", "https://www.weblio.jp"),
+        ("DeepL", "https://www.deepl.com/translator"),
+    ]
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                Text("claude.ai").font(.headline)
-                Spacer()
-                Button { openURL(Self.url) } label: { Label("Ouvrir dans Safari", systemImage: "safari") }
-                Button(action: onClose) { Image(systemName: "xmark.circle.fill") }.accessibilityLabel("Fermer")
+            VStack(spacing: 8) {
+                HStack(spacing: 10) {
+                    Button { state.view.goBack() } label: { Image(systemName: "chevron.left") }
+                        .disabled(!state.canGoBack).accessibilityLabel("Page précédente")
+                    Button { state.view.goForward() } label: { Image(systemName: "chevron.right") }
+                        .disabled(!state.canGoForward).accessibilityLabel("Page suivante")
+                    TextField("Adresse ou recherche", text: $address)
+                        .textFieldStyle(.roundedBorder)
+                        .keyboardType(.webSearch).autocorrectionDisabled().textInputAutocapitalization(.never)
+                        .focused($editing)
+                        .onSubmit { go(address) }
+                    Button { if state.loading { state.view.stopLoading() } else { state.view.reload() } } label: {
+                        Image(systemName: state.loading ? "xmark" : "arrow.clockwise")
+                    }
+                    .accessibilityLabel(state.loading ? "Arrêter" : "Recharger")
+                    Button { if let url = state.url { openURL(url) } } label: { Image(systemName: "safari") }
+                        .accessibilityLabel("Ouvrir dans Safari")
+                    Button(action: onClose) { Image(systemName: "xmark.circle.fill") }.accessibilityLabel("Fermer")
+                }
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 6) {
+                        ForEach(Self.shortcuts, id: \.url) { site in
+                            Button(site.name) { go(site.url) }
+                                .font(.system(size: 13, weight: .medium))
+                                .padding(.horizontal, 10).padding(.vertical, 5)
+                                .background(Capsule().fill(Atelier.surfaceHigh))
+                        }
+                    }
+                }
             }
             .padding(12)
             .background(.ultraThinMaterial)
-            WebView(url: Self.url)
+            if state.loading {
+                ProgressView(value: state.progress).progressViewStyle(.linear).tint(Atelier.Tint.ai)
+            }
+            WebView(url: WebView.startURL)
         }
+        .onAppear { address = state.url?.absoluteString ?? "" }
+        .onChange(of: state.url) { url in if !editing { address = url?.absoluteString ?? "" } }
+    }
+
+    private func go(_ text: String) {
+        editing = false
+        guard let url = WebView.url(for: text) else { return }
+        state.view.load(URLRequest(url: url))
+    }
+}
+
+/// État de la vue web (adresse, retour possible, chargement) suivi pour la barre du navigateur.
+@MainActor
+final class WebState: ObservableObject {
+    let view: WKWebView
+    @Published var url: URL?
+    @Published var canGoBack = false
+    @Published var canGoForward = false
+    @Published var loading = false
+    @Published var progress = 0.0
+    private var observations: [NSKeyValueObservation] = []
+
+    init(view: WKWebView) {
+        self.view = view
+        func watch<V>(_ path: KeyPath<WKWebView, V>, _ apply: @escaping (WebState, V) -> Void) {
+            observations.append(view.observe(path, options: [.initial, .new]) { [weak self] web, _ in
+                let value = web[keyPath: path]
+                Task { @MainActor in if let self { apply(self, value) } }
+            })
+        }
+        watch(\.url) { state, url in
+            state.url = url
+            if let url { UserDefaults.standard.set(url.absoluteString, forKey: "web.lastURL") }
+        }
+        watch(\.canGoBack) { $0.canGoBack = $1 }
+        watch(\.canGoForward) { $0.canGoForward = $1 }
+        watch(\.isLoading) { $0.loading = $1 }
+        watch(\.estimatedProgress) { $0.progress = $1 }
     }
 }
 
 struct WebView: UIViewRepresentable {
     let url: URL
 
-    /// Une seule vue web pour toute l'app : la session claude.ai et la page restent ouvertes
+    /// Première page : la dernière visitée, sinon claude.ai.
+    @MainActor static var startURL: URL {
+        UserDefaults.standard.string(forKey: "web.lastURL").flatMap(URL.init(string:)) ?? URL(string: "https://claude.ai/new")!
+    }
+
+    /// Texte tapé → adresse (avec https:// si besoin) ou recherche DuckDuckGo.
+    static func url(for text: String) -> URL? {
+        let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return nil }
+        if text.contains("://"), let url = URL(string: text) { return url }
+        if !text.contains(" "), text.contains("."), let url = URL(string: "https://" + text) { return url }
+        var parts = URLComponents(string: "https://duckduckgo.com/")!
+        parts.queryItems = [URLQueryItem(name: "q", value: text)]
+        return parts.url
+    }
+
+    /// Une seule vue web pour toute l'app : les sessions (claude.ai…) et la page restent ouvertes
     /// quand on ferme et rouvre le panneau.
     @MainActor static let shared: WKWebView = {
         let config = WKWebViewConfiguration()
         config.websiteDataStore = .default()
         let view = WKWebView(frame: .zero, configuration: config)
         view.allowsBackForwardNavigationGestures = true
+        view.uiDelegate = SameViewOpener.shared
         // Agent Safari complet : certains sites refusent les vues web intégrées.
         view.customUserAgent = "Mozilla/5.0 (iPad; CPU OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1"
         return view
@@ -463,4 +557,15 @@ struct WebView: UIViewRepresentable {
     }
 
     func updateUIView(_ uiView: WKWebView, context: Context) {}
+}
+
+/// Liens « nouvelle fenêtre » (`target="_blank"`, `window.open`) : ouverts dans la même vue.
+final class SameViewOpener: NSObject, WKUIDelegate {
+    @MainActor static let shared = SameViewOpener()
+
+    func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration,
+                 for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
+        if navigationAction.targetFrame == nil { webView.load(navigationAction.request) }
+        return nil
+    }
 }

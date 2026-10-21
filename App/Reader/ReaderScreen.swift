@@ -25,6 +25,7 @@ struct ReaderScreen: View {
     @State private var studyTab: StudyPanel.Tab = .text
     @AppStorage("reader.filmstripShown") private var filmstripShown = true
     @AppStorage("pencil.lookupOption") private var pencilOption = false
+    @AppStorage(PageTone.storageKey) private var pageTone = PageTone.normal
     @State private var pageField = ""
     @ObservedObject private var keyboard = HardwareKeyboard.shared
 
@@ -243,6 +244,12 @@ struct ReaderScreen: View {
                     Label(reader.isCurrentPageSplit ? "Ne plus couper la page" : "Couper la page en deux",
                           systemImage: "rectangle.split.2x1")
                 }
+                Picker(selection: Binding(get: { pageTone }, set: { pageTone = $0; reader.setPageTone($0) })) {
+                    ForEach(PageTone.allCases) { Label($0.title, systemImage: $0.icon).tag($0) }
+                } label: {
+                    Label("Fond de page", systemImage: "circle.lefthalf.filled")
+                }
+                .pickerStyle(.menu)
                 Button { reader.setShowOCRBoxes(!showOCRBoxes) } label: {
                     Label(showOCRBoxes ? "Masquer les zones OCR" : "Montrer les zones OCR",
                           systemImage: "rectangle.dashed")
@@ -327,7 +334,7 @@ struct ReaderScreen: View {
                        active: side == .study && studyTab == .notes) { openStudy(.notes) }
             railDivider(vertical)
             ToolButton(icon: "sparkles", label: "Page vers IA", tint: Atelier.Tint.ai) { sheet = .ai }
-            ToolButton(icon: "globe", label: "claude.ai à côté", tint: Atelier.Tint.ai, active: side == .web) {
+            ToolButton(icon: "globe", label: "Navigateur à côté", tint: Atelier.Tint.ai, active: side == .web) {
                 side = side == .web ? nil : .web
             }
     }

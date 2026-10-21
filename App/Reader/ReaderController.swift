@@ -204,6 +204,7 @@ final class ReaderController: NSObject, ObservableObject {
 
     nonisolated private static func build(url: URL, transforms: [Int: PageTransform], settings: ReaderSettings) -> Built? {
         guard let pdf = PDFDocument(url: url) else { return nil }
+        pdf.delegate = TonedPageProvider.shared
         var boxes: [Int: CGRect] = [:]
         var rotations: [Int: Int] = [:]
         let rtl = settings.direction == .rightToLeft
@@ -546,6 +547,13 @@ final class ReaderController: NSObject, ObservableObject {
     }
 
     /// Applique de nouveaux réglages (globaux ou du document). Reconstruit si la structure change.
+    /// Fond des pages changé : on redessine (le document est reconstruit en tâche de fond).
+    func setPageTone(_ tone: PageTone) {
+        guard tone != PageTone.current else { return }
+        PageTone.current = tone
+        rebuild(keepingSource: currentSourcePage)
+    }
+
     func update(settings newSettings: ReaderSettings) {
         let old = settings
         settings = newSettings
@@ -669,7 +677,8 @@ final class ReaderController: NSObject, ObservableObject {
     /// Prépare les miniatures des pages voisines (aperçu instantané dans la barre de pages).
     private func preloadThumbnails(around source: Int) {
         let n = settings.preloadCount
-        guard n > 0 else { return }
+        // Mode économie d'énergie : rien d'avance (les miniatures se font quand on ouvre la bande).
+        guard n > 0, !ProcessInfo.processInfo.isLowPowerModeEnabled else { return }
         let lower = max(0, source - n), upper = min(document.pageCount - 1, source + n)
         guard lower <= upper else { return }
         for page in lower...upper {
@@ -1331,6 +1340,9 @@ extension ReaderController: UIGestureRecognizerDelegate {
 }
 
 extension ReaderController: PDFDocumentDelegate {
+    /// Même classe que pendant la construction (fond doux / inversé), pour toute page créée ensuite.
+    nonisolated func classForPage() -> AnyClass { TonedPage.self }
+
     nonisolated func didMatchString(_ instance: PDFSelection) {
         MainActor.assumeIsolated {
             guard let pdf, let page = instance.pages.first else { return }

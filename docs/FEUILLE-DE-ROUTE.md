@@ -29,7 +29,8 @@ Pas de simulateur, pas d'iPad sans ma permission.
   Code GPL → seulement `YomitanKit`. Code MIT copié → garder le copyright d'origine (ex. `GLMOCRKit`).
   Toute dépendance / tout modèle → `THIRD_PARTY_NOTICES.md` + `AboutView` (`App/Settings/SettingsView.swift`).
 - **Jamais** de PDF, dictionnaire, modèle OCR ni donnée tierce dans le dépôt. Modèles = téléchargés à la demande.
-- En ligne : DeepL (option), téléchargements déclenchés par l'utilisateur (audio, modèles OCR). Rien d'autre.
+- En ligne : DeepL (option), téléchargements déclenchés par l'utilisateur (audio, modèles OCR), navigateur à
+  côté (tous sites, demandé le 21/10). Rien d'autre.
 - Télécharger quelque chose sur le Mac (outil, modèle de test) : dire quoi, d'où, quelle taille, et demander.
 - Release = tag + release GitHub avec le `.tipa` + notes « vérifié / non vérifié » + ligne du tableau du README.
   **Seulement quand l'utilisateur le demande** (il enchaîne souvent plusieurs retours avant).
@@ -105,6 +106,14 @@ Aujourd'hui : une génération par ligne (≈ 1 s/ligne sur Mac). Pistes :
 Priorité : mode paysage (jamais vérifié), barre flottante, menu de sélection « Dictionnaire », toucher sur scans,
 téléchargement + vitesse des 3 moteurs OCR, mémoire de GLM-OCR, révisions, import `.apkg` dans Anki.
 Noter les bugs, en corriger 2-3, le reste en bas de ce fichier (§ 9).
+
+### [ ] F — Netteté des caractères sur scans (demandé le 21/10, attend l'accord de l'utilisateur)
+Fait : fond de page Blanc / Crème / Tamisé / Sombre (`App/Reader/PageTone.swift`, `TonedPage` via
+`classForPage`), barre flottante à 3 boutons, navigateur ouvert (`WebPanel`), gains batterie (panneaux sans flou).
+Reste : DE-GAN (GPL-3, U-Net Keras 256×256, poids sur Google Drive) ou TextBSR (ESRGAN, CC BY-NC-SA, PyTorch).
+Le code Python ne tourne pas sur iPad → convertir les poids en ONNX sur le Mac (outils Python à installer :
+demander), modèle téléchargé à la demande via `ModelStore`, appliqué à l'image de la page (pas au PDF).
+DE-GAN d'abord (plus léger ; ESRGAN ×4 sur une page entière = lent et gourmand en batterie).
 
 ## 6. Carte du code (où est quoi)
 

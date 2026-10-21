@@ -51,15 +51,17 @@ struct AtelierPanel: ViewModifier {
     func body(content: Content) -> some View {
         content
             .padding(padding)
+            // Batterie / fluidité : pas de flou (invisible sous un fond presque opaque, mais recalculé
+            // à chaque image quand la page défile derrière) et ombre portée par la forme seule
+            // (sinon tout le contenu, textes et icônes, est redessiné à part pour la calculer).
             .background {
                 RoundedRectangle(cornerRadius: radius, style: .continuous)
-                    .fill(Atelier.surface.opacity(0.92))
-                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: radius, style: .continuous))
+                    .fill(Atelier.surface.opacity(0.97))
+                    .shadow(color: .black.opacity(0.45), radius: 18, y: 8)
             }
             .overlay {
                 RoundedRectangle(cornerRadius: radius, style: .continuous).strokeBorder(Atelier.hairline, lineWidth: 1)
             }
-            .shadow(color: .black.opacity(0.45), radius: 18, y: 8)
     }
 }
 
