@@ -179,8 +179,10 @@ Rythme choisi le 22/10 au soir : **2 sections de la liste de l'utilisateur par s
   (`FuriganaLayer.Tint`, menu « … » → Affichage, aussi dans le panneau) ; traduction FR **dans la fiche du premier
   mot** (`DefinitionTranslationHTML.inject` après son `</header>`, boutons → message `fr`, correction par alerte) ;
   quota DeepL dans « … » (`DeepLService.usageText`, actualisé à l'ouverture du livre et après chaque traduction).
-- [ ] **Retour à préciser** : « le dictionnaire ne marche pas partout sur les PDF photo » → demander quelles pages /
-  zones (bords, texte vertical, petits caractères, page tournée, double page ?) ou une capture.
+- [x] **Dictionnaire sur PDF photo « moins précis »** : cause = couche texte cachée du PDF (OCR de l'appli de scan)
+  utilisée avant notre OCR. Désormais `lookup` prend d'abord `realOCR` (OCR du panneau, sinon cache d'un moteur
+  ≠ pdfText, mémo `realOCRMemo` vidé dans `showOCR`). Non vérifié sur iPad ; si des zones restent muettes,
+  demander lesquelles.
 - [ ] **G — Notes flottantes** : fenêtre dans l'app, redimensionnable (coin, doigt / Pencil / souris), contenu à
   échelle fixe avec défilement ; texte au clavier **et** dessin PencilKit dans la même note (calque `PKCanvasView`
   au-dessus d'un `UITextView`, ou blocs). Données : migration GRDB (dessin en `Data`).

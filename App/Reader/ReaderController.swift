@@ -68,6 +68,8 @@ final class ReaderController: NSObject, ObservableObject {
     /// Texte de la page touchée / survolée, gardé pour les recherches suivantes sur la même page.
     /// Texte de la page sous le curseur + correspondance « index de `characterIndex(at:)` → index du texte ».
     private var pageStringCache: (index: Int, string: NSString, map: [Int], hasText: Bool)?
+    /// `realOCR` des pages hors panneau (évite une lecture du cache SQLite à chaque survol) ; vidé à chaque OCR.
+    private var realOCRMemo: [Int: OCRPage?] = [:]
     private var pageTextTask: Task<Void, Never>?
     private var sharpenTask: Task<Void, Never>?
     private var furiganaTask: Task<Void, Never>?
@@ -365,9 +367,12 @@ final class ReaderController: NSObject, ObservableObject {
                 .prefix(8).count >= 8
             pageStringCache = (index, ns, map, pageHasText)
         }
+        // OCR déjà fait par un vrai moteur (panneau, furigana) : il passe avant la couche texte du PDF, qui sur
+        // un PDF « photo » est souvent l'OCR médiocre de l'appli de scan.
+        let realOCR = pageHasText ? await realOCR(source: source) : nil
         // Texte intégré seulement s'il y en a vraiment (un PDF « photo » a souvent une couche vide ou faite
         // de blancs : il passe par l'OCR).
-        if pageHasText {
+        if pageHasText, realOCR == nil {
             let glyph = page.characterIndex(at: pagePoint)
             // Point hors du texte (marge, image) : rien à chercher, et surtout pas l'OCR d'une page numérique.
             guard glyph >= 0, glyph < map.count, let i = Self.stringIndex(near: map[glyph], glyph: glyph, on: page, string: ns) else {
@@ -403,7 +408,7 @@ final class ReaderController: NSObject, ObservableObject {
 
         // 2. OCR de la page (cache, sinon le moteur choisi : NDLOCR / PP-OCRv5 s'ils sont installés).
         guard let box = originalBoxes[source], let frame = pageFrame(ofSource: source) else { return }
-        var ocr = source == focusSource ? ocrPage : nil
+        var ocr = realOCR ?? (source == focusSource ? ocrPage : nil)
         if ocr == nil { ocr = await cachedOCR(source: source) }
         if ocr == nil, fromHover {
             // Survol d'une page jamais lue : on lance l'OCR en fond, le survol marchera dès qu'il a fini.
@@ -646,6 +651,7 @@ final class ReaderController: NSObject, ObservableObject {
 
     /// Zones OCR affichées (+ furigana du scan si l'option est active et la page sans texte intégré).
     private func showOCR(_ ocr: OCRPage, source: Int) {
+        realOCRMemo[source] = nil
         ink.setOCR(ocr, source: source)
         guard FuriganaLayer.enabled else { return }
         let key = ScanSharpening.key(documentId: document.id, page: source), url = fileURL
@@ -929,6 +935,18 @@ final class ReaderController: NSObject, ObservableObject {
         case .glmocr: return [OCREngineID.glmocr]
         case .auto: return [OCREngineID.pdfText, OCREngineID.glmocr, OCREngineID.ndlocr, OCREngineID.ppocr5, OCREngineID.vision]
         }
+    }
+
+    /// OCR de la page par un moteur autre que « texte du PDF » (celui du panneau, sinon le cache).
+    private func realOCR(source: Int) async -> OCRPage? {
+        if source == focusSource, let page = ocrPage { return page.engine == OCREngineID.pdfText ? nil : page }
+        if let memo = realOCRMemo[source] { return memo }
+        var found: OCRPage?
+        for engine in preferredEngines() where engine != OCREngineID.pdfText {
+            if let page = await model.ocr.cached(documentId: document.id, pageIndex: source, engine: engine) { found = page; break }
+        }
+        realOCRMemo[source] = .some(found)
+        return found
     }
 
     private func cachedOCR(source: Int) async -> OCRPage? {
