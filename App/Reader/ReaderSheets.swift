@@ -313,10 +313,28 @@ struct AIPageSheet: View {
     @State private var prompts: [AIPrompt] = []
     @State private var copied: String?
     @State private var editingPrompt: AIPrompt?
+    /// Double page : pages envoyées (une des deux, ou les deux côte à côte).
+    @State private var chosen: [Int] = []
+
+    private var pageTitle: String {
+        let labels = chosen.map { reader.document.pageLabel($0) }
+        return labels.count > 1 ? "Pages \(labels.joined(separator: " et "))" : "Page \(labels.first ?? reader.document.pageLabel(reader.currentSourcePage))"
+    }
 
     var body: some View {
         NavigationStack {
             List {
+                if reader.shownSources.count > 1 {
+                    Section("Double page : quelle page ?") {
+                        Picker("Pages", selection: $chosen) {
+                            ForEach(reader.shownSources, id: \.self) { source in
+                                Text("p. \(reader.document.pageLabel(source))").tag([source])
+                            }
+                            Text("Les deux").tag(reader.shownSources)
+                        }
+                        .pickerStyle(.segmented)
+                    }
+                }
                 Section {
                     HStack(alignment: .top, spacing: 16) {
                         Group {
@@ -325,7 +343,7 @@ struct AIPageSheet: View {
                         .frame(width: 160, height: 210)
                         .background(Color(white: 0.15), in: RoundedRectangle(cornerRadius: 8))
                         VStack(alignment: .leading, spacing: 10) {
-                            Text("Page \(reader.document.pageLabel(reader.currentSourcePage))").font(.headline)
+                            Text(pageTitle).font(.headline)
                             Button { copyImage() } label: { Label("Copier la page en image", systemImage: "photo.on.rectangle") }
                                 .buttonStyle(.borderedProminent)
                             Text("Colle-la ensuite dans claude.ai (ou une autre IA), puis colle un prompt ci-dessous.")
@@ -372,7 +390,11 @@ struct AIPageSheet: View {
             }
             .onAppear {
                 prompts = (try? model.database.aiPrompts()) ?? []
-                DispatchQueue.main.async { image = reader.renderCurrentPage(maxWidth: 2048) }
+                if chosen.isEmpty { chosen = reader.shownSources.count > 1 ? reader.shownSources : [reader.currentSourcePage] }
+            }
+            .onChange(of: chosen) { sources in
+                image = nil
+                DispatchQueue.main.async { image = reader.renderSources(sources, maxWidth: sources.count > 1 ? 3072 : 2048) }
             }
         }
     }

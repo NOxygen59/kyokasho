@@ -183,16 +183,22 @@ Rythme choisi le 22/10 au soir : **2 sections de la liste de l'utilisateur par s
   utilisée avant notre OCR. Désormais `lookup` prend d'abord `realOCR` (OCR du panneau, sinon cache d'un moteur
   ≠ pdfText, mémo `realOCRMemo` vidé dans `showOCR`). Non vérifié sur iPad ; si des zones restent muettes,
   demander lesquelles.
-- [ ] **G — Notes flottantes** : fenêtre dans l'app, redimensionnable (coin, doigt / Pencil / souris), contenu à
+- [x] **G — Notes flottantes** : fenêtre dans l'app, redimensionnable (coin, doigt / Pencil / souris), contenu à
   échelle fixe avec défilement ; texte au clavier **et** dessin PencilKit dans la même note (calque `PKCanvasView`
   au-dessus d'un `UITextView`, ou blocs). Données : migration GRDB (dessin en `Data`).
-- [ ] **H — Ancres sur la page** : astérisque posé sur un mot / une zone (repère page + `NormBox`), lié à une
+- [x] **H — Ancres sur la page** : astérisque posé sur un mot / une zone (repère page + `NormBox`), lié à une
   note ; lien dans la note → aller à la page, surligner le mot 1,5 s. Migration GRDB (table `anchors`).
-- [ ] **I — Moniteur de ressources** : interrupteur dans Réglages ; si actif, entrée dans le menu « … ». Panneau
+- [x] **I — Moniteur de ressources** : interrupteur dans Réglages ; si actif, entrée dans le menu « … ». Panneau
   flottant avec ✕ : mode compact (CPU %, RAM Mo, FPS) et mode graphique (Swift Charts, iOS 16 OK) avec choix de la
   courbe. Mesures : `task_threads` + `thread_basic_info` (CPU), `task_vm_info.phys_footprint` (RAM),
   `CADisplayLink` (FPS) — API publiques, pas besoin de privilèges. `Mathelord/infobar` : **inspiration seulement**
   (vérifier sa licence avant d'y copier quoi que ce soit ; sinon aucun code repris).
+  **Fait (22/10, non vérifié iPad)** : « Page vers IA » en double page → p. X / p. Y / les deux
+  (`renderSources`, côte à côte). G `NoteWindow` (PKCanvasView 820×1400 + UITextView dessous ; Pencil dessine,
+  doigt écrit/défile, bouton main = dessin au doigt/souris ; sauvegarde 0,6 s après chaque changement et à la
+  fermeture) ; « Nouvelle note flottante » dans « … » et le panneau. H ancre = `PageComment.anchor*` (migration
+  `v4-note-canvas-anchor`), pastille `NoteAnchorAnnotation` (« note:<id> »), toucher → ouvre la note, lien ＊ →
+  `goToAnchor` (surlignage jaune 1,5 s). I `ResourceMonitor` (Réglages → Outils, puis « … ») compact / courbe.
 - [ ] **J — Mise à jour automatique par TrollStore** : ⚠️ **à décider avec l'utilisateur avant de coder**.
   (1) Le `.tipa` est dans le dépôt **privé** : le télécharger depuis l'app demande un jeton GitHub (interdit § 2),
   ou de le publier ailleurs (refusé le 21/10). **22/10 : l'utilisateur veut une connexion GitHub dans l'app**

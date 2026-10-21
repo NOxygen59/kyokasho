@@ -136,6 +136,16 @@ public final class AppDatabase: @unchecked Sendable {
                 t.add(column: "firstPageIndex", .integer).notNull().defaults(to: 0)
             }
         }
+        m.registerMigration("v4-note-canvas-anchor") { db in
+            try db.alter(table: "pageComment") { t in
+                t.add(column: "drawing", .blob)
+                t.add(column: "anchorX", .double)
+                t.add(column: "anchorY", .double)
+                t.add(column: "anchorWidth", .double)
+                t.add(column: "anchorHeight", .double)
+                t.add(column: "anchorText", .text)
+            }
+        }
         return m
     }
 }

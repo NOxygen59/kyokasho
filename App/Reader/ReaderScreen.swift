@@ -31,6 +31,8 @@ struct ReaderScreen: View {
     @AppStorage(FuriganaLayer.storageKey) private var furigana = false
     @AppStorage(FuriganaLayer.Tint.storageKey) private var furiganaTint = FuriganaLayer.Tint.red
     @ObservedObject private var deepl = DeepLService.shared
+    @AppStorage(ResourceMonitor.enabledKey) private var monitorEnabled = false
+    @AppStorage(ResourceMonitor.shownKey) private var monitorShown = false
     @State private var pageField = ""
     @ObservedObject private var keyboard = HardwareKeyboard.shared
 
@@ -177,7 +179,25 @@ struct ReaderScreen: View {
             .padding(.horizontal, Atelier.gap)
             .padding(.top, 8)
             GeometryReader { area in
-                FloatingToolbar(area: area.size) { vertical in toolItems(vertical: vertical) }
+                ZStack(alignment: .topLeading) {
+                    FloatingToolbar(area: area.size) { vertical in toolItems(vertical: vertical) }
+                    if monitorEnabled && monitorShown {
+                        ResourceMonitorPanel(area: area.size)
+                    }
+                    if let note = reader.openNote {
+                        NoteWindow(reader: reader, note: note, area: area.size)
+                    }
+                    if reader.placingAnchorFor != nil {
+                        HStack(spacing: 10) {
+                            Text("Touche le mot de la page où ancrer la note").font(.system(size: 14, weight: .semibold))
+                            Button("Annuler") { reader.placingAnchorFor = nil }.fontWeight(.bold)
+                        }
+                        .foregroundStyle(Color.black.opacity(0.85))
+                        .padding(.horizontal, 14).padding(.vertical, 8)
+                        .background(Atelier.Tint.annotate, in: Capsule())
+                        .frame(maxWidth: .infinity, alignment: .top)
+                    }
+                }
             }
                 .padding(Atelier.gap)
             if !reader.isDrawing {
@@ -297,6 +317,10 @@ struct ReaderScreen: View {
                     Label("Cette page", systemImage: "doc")
                 }
                 Button { openStudy(.notes) } label: { Label("Notes de la page", systemImage: "text.bubble") }
+                Button { reader.newNote() } label: { Label("Nouvelle note flottante", systemImage: "note.text.badge.plus") }
+                if monitorEnabled {
+                    Toggle(isOn: $monitorShown) { Label("Moniteur de ressources", systemImage: "gauge.with.dots.needle.33percent") }
+                }
                 if deepl.hasKey {
                     // Information seulement (mise à jour à l'ouverture du livre et après chaque traduction).
                     Button { Task { await deepl.refreshUsage() } } label: {

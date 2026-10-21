@@ -566,9 +566,7 @@ struct StudyVocabTab: View {
 // MARK: - Notes de la page
 
 struct StudyNotesTab: View {
-    @EnvironmentObject private var model: AppModel
     @ObservedObject var reader: ReaderController
-    @State private var comments: [PageComment] = []
     @State private var draft = ""
     @FocusState private var focused: Bool
 
@@ -592,9 +590,12 @@ struct StudyNotesTab: View {
                 Button("Ajouter") { add() }
                     .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.annotate))
                     .disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                Button { reader.newNote() } label: { Label("Flottante", systemImage: "note.text.badge.plus") }
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Atelier.Tint.annotate)
                 Spacer()
-                ShareLink(item: MarkdownFile(name: reader.document.title) { [reader, comments] in
-                              MarkdownExporter.export(title: reader.document.title, comments: comments,
+                ShareLink(item: MarkdownFile(name: reader.document.title) { [reader] in
+                              MarkdownExporter.export(title: reader.document.title, comments: reader.notes,
                                                       highlights: reader.allHighlights, bookmarks: reader.bookmarks)
                           },
                           preview: SharePreview("\(reader.document.title).md")) {
@@ -604,57 +605,57 @@ struct StudyNotesTab: View {
             }
             ScrollView {
                 VStack(alignment: .leading, spacing: 10) {
-                    let here = comments.filter { $0.pageIndex == page }
-                    let others = comments.filter { $0.pageIndex != page }
+                    let here = reader.notes.filter { $0.pageIndex == page }
+                    let others = reader.notes.filter { $0.pageIndex != page }
                     if here.isEmpty { Text("Aucune note sur cette page.").font(.footnote).foregroundStyle(Atelier.textTertiary) }
                     ForEach(here) { note($0) }
                     if !others.isEmpty {
                         AtelierLabel("Autres pages").padding(.top, 6)
-                        ForEach(others) { comment in
-                            Button { reader.go(toSource: comment.pageIndex) } label: { note(comment, showPage: true) }
-                                .buttonStyle(.plain)
-                        }
+                        ForEach(others) { note($0, showPage: true) }
                     }
                 }
             }
         }
-        .onAppear(perform: load)
     }
 
+    /// Toucher : ouvrir la note dans la fenêtre flottante ; ＊ : aller au mot ancré.
     private func note(_ comment: PageComment, showPage: Bool = false) -> some View {
         HStack(alignment: .top, spacing: 10) {
             RoundedRectangle(cornerRadius: 2).fill(Atelier.Tint.annotate).frame(width: 3)
             VStack(alignment: .leading, spacing: 3) {
-                if showPage { Text("p. \(reader.document.pageLabel(comment.pageIndex))").font(Atelier.mono).foregroundStyle(Atelier.textTertiary) }
-                Text(comment.body).foregroundStyle(Atelier.textPrimary).frame(maxWidth: .infinity, alignment: .leading)
+                HStack(spacing: 6) {
+                    if showPage { Text("p. \(reader.document.pageLabel(comment.pageIndex))").font(Atelier.mono).foregroundStyle(Atelier.textTertiary) }
+                    if comment.drawing != nil { Image(systemName: "scribble").font(.caption).foregroundStyle(Atelier.textTertiary) }
+                    if comment.anchorRect != nil {
+                        Button { reader.goToAnchor(comment) } label: {
+                            Text("＊ \(comment.anchorText ?? "ancre")").font(.caption.weight(.semibold)).foregroundStyle(Atelier.Tint.annotate)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                Text(comment.body.isEmpty ? "(note sans texte)" : comment.body)
+                    .foregroundStyle(comment.body.isEmpty ? Atelier.textTertiary : Atelier.textPrimary)
+                    .lineLimit(4)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
+        .contentShape(Rectangle())
+        .onTapGesture { reader.openNote = comment }
         .contextMenu {
-            Button(role: .destructive) { delete(comment) } label: { Label("Supprimer", systemImage: "trash") }
+            Button { reader.openNote = comment } label: { Label("Ouvrir", systemImage: "macwindow") }
+            if showPage { Button { reader.go(toSource: comment.pageIndex) } label: { Label("Aller à la page", systemImage: "arrow.right") } }
+            Button(role: .destructive) { reader.deleteNote(comment) } label: { Label("Supprimer", systemImage: "trash") }
         }
-    }
-
-    private func load() {
-        comments = (try? model.database.comments(documentId: reader.document.id)) ?? []
     }
 
     private func add() {
         let body = draft.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !body.isEmpty else { return }
-        let comment = PageComment(documentId: reader.document.id, pageIndex: page, body: body)
-        comments.append(comment)
-        model.persist { try $0.save(comment) }
+        reader.saveNote(PageComment(documentId: reader.document.id, pageIndex: page, body: body))
         draft = ""
         focused = false
     }
-
-    private func delete(_ comment: PageComment) {
-        comments.removeAll { $0.id == comment.id }
-        model.persist { try $0.deleteComment(id: comment.id) }
-    }
 }
-
-// MARK: - Repères : signets, sommaire, surlignages
 
 struct StudyMarksTab: View {
     @ObservedObject var reader: ReaderController

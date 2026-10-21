@@ -8,6 +8,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @EnvironmentObject private var model: AppModel
+    @AppStorage(ResourceMonitor.enabledKey) private var monitorEnabled = false
     @EnvironmentObject private var themes: ThemeManager
     @Environment(\.dismiss) private var dismiss
 
@@ -48,6 +49,15 @@ struct SettingsView: View {
                     NavigationLink { ReviewSettingsView() } label: {
                         row("rectangle.stack", "Révisions et export Anki", tint: Atelier.Tint.japanese)
                     }
+                }
+                Section {
+                    Toggle(isOn: $monitorEnabled) {
+                        row("gauge.with.dots.needle.33percent", "Moniteur de ressources", tint: Atelier.Tint.read)
+                    }
+                } header: {
+                    Text("Outils")
+                } footer: {
+                    Text("CPU, mémoire et images par seconde de l'app, dans un panneau flottant ouvert depuis le menu « … » du lecteur.")
                 }
                 Section("Comptes") {
                     NavigationLink { DriveAccountView() } label: {

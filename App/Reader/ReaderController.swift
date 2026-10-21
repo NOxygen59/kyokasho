@@ -27,6 +27,12 @@ final class ReaderController: NSObject, ObservableObject {
     @Published private(set) var hasSelection = false
     @Published private(set) var bookmarks: [Bookmark] = []
     @Published var tappedHighlight: Highlight?
+    /// Note ouverte dans la fenêtre flottante.
+    @Published var openNote: PageComment?
+    /// Note qui attend son ancre : le prochain toucher sur la page la pose.
+    @Published var placingAnchorFor: PageComment?
+    /// Notes du document (ancres affichées sur les pages).
+    @Published private(set) var notes: [PageComment] = []
     @Published var loadError: String?
     @Published private(set) var searchResults: [SearchResult] = []
     @Published private(set) var isSearching = false
@@ -172,6 +178,7 @@ final class ReaderController: NSObject, ObservableObject {
             transforms = try model.database.pageTransforms(documentId: document.id)
             highlights = try model.database.highlights(documentId: document.id)
             bookmarks = try model.database.bookmarks(documentId: document.id)
+            notes = try model.database.comments(documentId: document.id)
             try ink.loadIndex()
         } catch {
             loadError = error.localizedDescription
@@ -307,6 +314,7 @@ final class ReaderController: NSObject, ObservableObject {
             }
         }
         addHighlightAnnotations(to: pdf)
+        for note in notes { annotateAnchor(note, in: pdf) }
         // L'ancien document ne doit plus envoyer de résultats de recherche (ses index ne valent plus rien).
         self.pdf?.cancelFindString()
         self.pdf?.delegate = nil
@@ -1178,6 +1186,12 @@ final class ReaderController: NSObject, ObservableObject {
             pdfView.clearSelection()
             return
         }
+        // Note en attente d'ancre : ce toucher la pose (sur le mot touché s'il y en a un).
+        if let note = placingAnchorFor {
+            placingAnchorFor = nil
+            placeAnchor(for: note, at: point)
+            return
+        }
         if lookupMode {
             Task { await lookup(at: point) }
             return
@@ -1190,6 +1204,11 @@ final class ReaderController: NSObject, ObservableObject {
         // Tap sur un surlignage : proposer de le supprimer.
         if let page = pdfView.page(for: point, nearest: false) {
             let pagePoint = pdfView.convert(point, to: page)
+            if let annotation = page.annotation(at: pagePoint), let name = annotation.userName, name.hasPrefix("note:") {
+                let id = String(name.dropFirst(5))
+                if let note = notes.first(where: { $0.id == id }) { openNote = note }
+                return
+            }
             if let annotation = page.annotation(at: pagePoint), let name = annotation.userName, name.hasPrefix("hl:") {
                 let id = String(name.dropFirst(3))
                 tappedHighlight = highlights.first { $0.id == id }
@@ -1228,6 +1247,104 @@ final class ReaderController: NSObject, ObservableObject {
         ink.setEditing(on)
         applyDisplaySettings()
         DispatchQueue.main.async { [ink] in ink.showToolPicker(on) }
+    }
+
+    // MARK: Notes (fenêtre flottante, ancres)
+
+    /// Nouvelle note sur la page de travail, ouverte tout de suite dans la fenêtre flottante.
+    func newNote() {
+        let note = PageComment(documentId: document.id, pageIndex: focusSource, body: "")
+        notes.append(note)
+        model.persist { try $0.save(note) }
+        openNote = note
+    }
+
+    /// Enregistre une note modifiée (texte, dessin ou ancre) et met son ancre à jour sur la page.
+    func saveNote(_ note: PageComment) {
+        var note = note
+        note.updatedAt = Date()
+        let old = notes.first { $0.id == note.id }
+        if let i = notes.firstIndex(where: { $0.id == note.id }) { notes[i] = note } else { notes.append(note) }
+        if openNote?.id == note.id { openNote = note }
+        model.persist { try $0.save(note) }
+        // Pastille refaite seulement si l'ancre a bougé (pas à chaque mot tapé).
+        if let pdf, old?.anchorRect != note.anchorRect || old?.pageIndex != note.pageIndex {
+            if let old { removeAnchor(old, in: pdf) }
+            annotateAnchor(note, in: pdf)
+        }
+    }
+
+    func deleteNote(_ note: PageComment) {
+        notes.removeAll { $0.id == note.id }
+        if openNote?.id == note.id { openNote = nil }
+        if placingAnchorFor?.id == note.id { placingAnchorFor = nil }
+        if let pdf { removeAnchor(note, in: pdf) }
+        model.persist { try $0.deleteComment(id: note.id) }
+    }
+
+    /// Notes rechargées (ajoutées depuis le panneau d'étude).
+    func reloadNotes() {
+        notes = (try? model.database.comments(documentId: document.id)) ?? notes
+        guard let pdf else { return }
+        for note in notes { removeAnchor(note, in: pdf); annotateAnchor(note, in: pdf) }
+    }
+
+    private func placeAnchor(for note: PageComment, at point: CGPoint) {
+        guard let pdf, let page = pdfView.page(for: point, nearest: false) else { return }
+        let index = pdf.index(for: page)
+        guard presented.indices.contains(index) else { return }
+        let pagePoint = pdfView.convert(point, to: page)
+        guard var note = notes.first(where: { $0.id == note.id }) else { return }
+        // Mot sous le doigt (texte du PDF), sinon un petit carré autour du point.
+        let word = page.selectionForWord(at: pagePoint)
+        let text = word?.string?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let rect: CGRect
+        if let bounds = word?.bounds(for: page), !text.isEmpty, bounds.width < 400, bounds.height < 200 {
+            rect = bounds
+        } else {
+            rect = CGRect(x: pagePoint.x - 10, y: pagePoint.y - 10, width: 20, height: 20)
+        }
+        note.pageIndex = presented[index].source
+        note.anchorRect = PageRect(x: rect.minX, y: rect.minY, width: rect.width, height: rect.height)
+        note.anchorText = text.isEmpty ? nil : String(text.prefix(30))
+        saveNote(note)
+    }
+
+    /// Va à l'ancre de la note et fait clignoter le mot ancré 1,5 s.
+    func goToAnchor(_ note: PageComment) {
+        guard let rect = note.anchorRect else { go(toSource: note.pageIndex); return }
+        go(toSource: note.pageIndex)
+        guard let pdf else { return }
+        let bounds = CGRect(x: rect.x, y: rect.y, width: rect.width, height: rect.height).insetBy(dx: -3, dy: -3)
+        var added: [(PDFPage, PDFAnnotation)] = []
+        for page in pages(forSource: note.pageIndex, in: pdf) where page.bounds(for: .cropBox).intersects(bounds) {
+            let flash = PDFAnnotation(bounds: bounds, forType: .highlight, withProperties: nil)
+            flash.color = UIColor.systemYellow.withAlphaComponent(0.6)
+            flash.userName = "flash"
+            page.addAnnotation(flash)
+            added.append((page, flash))
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            for (page, flash) in added { page.removeAnnotation(flash) }
+        }
+    }
+
+    private func annotateAnchor(_ note: PageComment, in pdf: PDFDocument) {
+        guard let rect = note.anchorRect else { return }
+        let size: CGFloat = max(14, min(26, rect.height * 0.8))
+        // Pastille « ＊ » au coin haut-droit du mot.
+        let badge = CGRect(x: rect.x + rect.width - size * 0.3, y: rect.y + rect.height - size * 0.5, width: size, height: size)
+        for page in pages(forSource: note.pageIndex, in: pdf) where page.bounds(for: .cropBox).intersects(badge) {
+            let annotation = NoteAnchorAnnotation(bounds: badge, forType: .stamp, withProperties: nil)
+            annotation.userName = "note:" + note.id
+            page.addAnnotation(annotation)
+        }
+    }
+
+    private func removeAnchor(_ note: PageComment, in pdf: PDFDocument) {
+        for page in pages(forSource: note.pageIndex, in: pdf) {
+            for annotation in page.annotations where annotation.userName == "note:" + note.id { page.removeAnnotation(annotation) }
+        }
     }
 
     // MARK: Surlignages
@@ -1551,6 +1668,31 @@ final class ReaderController: NSObject, ObservableObject {
         return page.thumbnail(of: CGSize(width: size.width * scale, height: size.height * scale), for: .cropBox)
     }
 
+    /// Pages données (sources) en une image : côte à côte dans l'ordre affiché (double page « les deux »).
+    func renderSources(_ sources: [Int], maxWidth: CGFloat = 2048) -> UIImage? {
+        guard let pdf else { return nil }
+        let pages: [PDFPage] = presented.indices.filter { sources.contains(presented[$0].source) }.compactMap { pdf.page(at: $0) }
+        guard !pages.isEmpty else { return nil }
+        let sizes = pages.map { page -> CGSize in
+            let box = page.bounds(for: .cropBox)
+            return page.rotation % 180 != 0 ? CGSize(width: box.height, height: box.width) : box.size
+        }
+        let height = sizes.map(\.height).max() ?? 1
+        let totalWidth = sizes.reduce(0) { $0 + $1.width * height / max($1.height, 1) }
+        let scale = maxWidth / max(totalWidth, 1)
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        return UIGraphicsImageRenderer(size: CGSize(width: totalWidth * scale, height: height * scale), format: format).image { _ in
+            var x: CGFloat = 0
+            for (page, size) in zip(pages, sizes) {
+                let w = size.width * height / max(size.height, 1) * scale
+                let h = height * scale
+                page.thumbnail(of: CGSize(width: w, height: h), for: .cropBox).draw(in: CGRect(x: x, y: 0, width: w, height: h))
+                x += w
+            }
+        }
+    }
+
     // MARK: Notifications
 
     private func observe() {
@@ -1704,5 +1846,25 @@ extension HighlightColor {
         case .pink: return UIColor(red: 1.0, green: 0.45, blue: 0.7, alpha: 1)
         case .orange: return UIColor(red: 1.0, green: 0.6, blue: 0.25, alpha: 1)
         }
+    }
+}
+
+/// Ancre d'une note sur la page : pastille couleur annotation avec un astérisque.
+final class NoteAnchorAnnotation: PDFAnnotation {
+    override func draw(with box: PDFDisplayBox, in context: CGContext) {
+        UIGraphicsPushContext(context)
+        defer { UIGraphicsPopContext() }
+        let rect = bounds.insetBy(dx: 1, dy: 1)
+        context.setFillColor(UIColor(red: 0.95, green: 0.68, blue: 0.20, alpha: 0.95).cgColor)
+        context.fillEllipse(in: rect)
+        context.saveGState()
+        // Repère de la page (y vers le haut) : retourner pour écrire le texte à l'endroit.
+        context.translateBy(x: 0, y: rect.midY * 2)
+        context.scaleBy(x: 1, y: -1)
+        let font = UIFont.systemFont(ofSize: rect.height * 0.8, weight: .heavy)
+        let text = NSAttributedString(string: "*", attributes: [.font: font, .foregroundColor: UIColor.black])
+        let size = text.size()
+        text.draw(at: CGPoint(x: rect.midX - size.width / 2, y: rect.midY - size.height * 0.38))
+        context.restoreGState()
     }
 }

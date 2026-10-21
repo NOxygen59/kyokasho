@@ -224,15 +224,35 @@ public struct PageComment: Codable, Identifiable, Hashable, Sendable {
     public var body: String
     public var createdAt: Date
     public var updatedAt: Date
+    /// Dessin de la note (`PKDrawing.dataRepresentation()`), si on y a écrit au Pencil.
+    public var drawing: Data?
+    /// Ancre sur la page (repère absolu de la page source, comme les surlignages) et mot ancré.
+    public var anchorX: Double?
+    public var anchorY: Double?
+    public var anchorWidth: Double?
+    public var anchorHeight: Double?
+    public var anchorText: String?
 
     public init(id: String = UUID().uuidString, documentId: String, pageIndex: Int, body: String,
-                createdAt: Date = Date(), updatedAt: Date = Date()) {
+                createdAt: Date = Date(), updatedAt: Date = Date(), drawing: Data? = nil) {
         self.id = id
         self.documentId = documentId
         self.pageIndex = pageIndex
         self.body = body
         self.createdAt = createdAt
         self.updatedAt = updatedAt
+        self.drawing = drawing
+    }
+
+    public var anchorRect: PageRect? {
+        get {
+            guard let anchorX, let anchorY, let anchorWidth, let anchorHeight else { return nil }
+            return PageRect(x: anchorX, y: anchorY, width: anchorWidth, height: anchorHeight)
+        }
+        set {
+            anchorX = newValue?.x; anchorY = newValue?.y
+            anchorWidth = newValue?.width; anchorHeight = newValue?.height
+        }
     }
 }
 
