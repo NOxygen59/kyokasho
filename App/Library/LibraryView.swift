@@ -15,6 +15,7 @@ struct LibraryView: View {
     @State private var showSettings = false
     @State private var showDrive = false
     @State private var showBench = false
+    @State private var showMerge = false
     @State private var showDictionary = false
     @State private var renaming: LibraryDocument?
     @EnvironmentObject private var review: ReviewModel
@@ -66,6 +67,9 @@ struct LibraryView: View {
         }
         .sheet(isPresented: $showPicker) {
             DocumentPicker { urls in model.importFiles(urls) }.ignoresSafeArea()
+        }
+        .sheet(isPresented: $showMerge) {
+            PDFMergeView().environmentObject(model).preferredColorScheme(.dark)
         }
         .sheet(isPresented: $showSettings) {
             SettingsView().environmentObject(themes).environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review).preferredColorScheme(.dark)
@@ -153,6 +157,7 @@ struct LibraryView: View {
                 actionRow(icon: "rectangle.stack.badge.play", title: "Révisions", tint: Atelier.Tint.japanese,
                           count: review.counts.total) { showReview = true }
                 actionRow(icon: "character.book.closed.ja", title: "Dictionnaire", tint: Atelier.Tint.japanese) { showDictionary = true }
+                actionRow(icon: "doc.on.doc", title: "Fusionner des PDF", tint: Atelier.Tint.cloud) { showMerge = true }
                 actionRow(icon: "gauge.with.dots.needle.33percent", title: "Banc d'essai OCR", tint: Atelier.Tint.japanese) { showBench = true }
                 actionRow(icon: "gearshape", title: "Réglages", tint: Atelier.textSecondary) { showSettings = true }
             }
