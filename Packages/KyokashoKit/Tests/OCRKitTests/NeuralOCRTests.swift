@@ -176,3 +176,28 @@ final class OCRLayoutTests: XCTestCase {
         XCTAssertEqual(OCRLayout.blocks(page), [.paragraph("左の列の一行目左の列の二行目"), .paragraph("右の列の一行目右の列の二行目")])
     }
 }
+
+final class OCRLayoutRegionTests: XCTestCase {
+    private func line(_ text: String, x: Double, y: Double, w: Double, h: Double = 0.02) -> OCRLine {
+        let box = NormBox(x: x, y: y, w: w, h: h)
+        return OCRLine(text: text, box: box, charBoxes: CharacterLayout.proportional(text, in: box, vertical: false),
+                       measuredCharBoxes: false, vertical: false, confidence: 1)
+    }
+
+    func testRegionsDecideKindsAndOrder() {
+        let page = OCRPage(engine: "test", lines: [
+            line("12", x: 0.9, y: 0.95, w: 0.03),                   // folio (pied de page)
+            line("右の段落です。", x: 0.55, y: 0.2, w: 0.4),
+            line("見出し", x: 0.1, y: 0.05, w: 0.3),
+            line("左の段落です。", x: 0.05, y: 0.2, w: 0.4),
+        ], durationMs: 0)
+        let regions = [
+            OCRLayout.Region(box: NormBox(x: 0.04, y: 0.04, w: 0.5, h: 0.05), kind: .title(level: 1), order: 1),
+            OCRLayout.Region(box: NormBox(x: 0.04, y: 0.18, w: 0.45, h: 0.1), kind: .text, order: 2),
+            OCRLayout.Region(box: NormBox(x: 0.54, y: 0.18, w: 0.45, h: 0.1), kind: .text, order: 3),
+            OCRLayout.Region(box: NormBox(x: 0.85, y: 0.93, w: 0.1, h: 0.05), kind: .ignored, order: 4),
+        ]
+        XCTAssertEqual(OCRLayout.blocks(page, regions: regions),
+                       [.heading(level: 1, text: "見出し"), .paragraph("左の段落です。"), .paragraph("右の段落です。")])
+    }
+}

@@ -29,6 +29,8 @@ public struct ModelSpec: Identifiable, Sendable, Equatable {
         case "ndlocr": return URL(string: "https://github.com/ndl-lab/ndlocr-lite")
         case "glmocr": return URL(string: "https://huggingface.co/zai-org/GLM-OCR")
         case "degan": return URL(string: "https://github.com/dali92002/DE-GAN")
+        case "ppdoclayout": return URL(string: "https://github.com/PaddlePaddle/PaddleOCR")
+        case "doclayoutyolo": return URL(string: "https://github.com/opendatalab/DocLayout-YOLO")
         default: return nil
         }
     }
@@ -85,6 +87,25 @@ public extension ModelSpec {
                     size: 1_247_191_941, sha256: "089e0339fcbc0fbf2225c3bd1cd94c6b4d49fdb3b1adfbb35ea22eb60b2afc95")])
 
     static let all: [ModelSpec] = [.ndlocr, .ppocr5, .glmocr]
+
+    /// PP-DocLayout v3 (PaddleOCR / PP-Structure, Apache-2.0), version ONNX de RapidLayout :
+    /// zones de la page (titre, texte, tableau, légende…) **et ordre de lecture**.
+    static let ppdoclayout = ModelSpec(
+        id: "ppdoclayout", title: "PP-DocLayout v3 (mise en page)",
+        summary: "Repère titres, paragraphes, colonnes, tableaux et légendes, avec l'ordre de lecture. Pour le texte mis en forme.",
+        license: "Apache-2.0 (PaddlePaddle) — conversion ONNX : RapidAI/RapidLayout",
+        files: [File(name: "layout.onnx", url: URL(string: "https://www.modelscope.cn/models/RapidAI/RapidLayout/resolve/v1.2.0/onnx/pp_doc_layout/pp_doc_layoutv3.onnx")!,
+                     size: 130_502_330, sha256: "250dbad1dfb9e4983fab75e1bf5085cd56ec3f41d5c7d0f8623ec74856e7aa67")])
+
+    /// DocLayout-YOLO DocStructBench (OpenDataLab, modèle de mise en page de MinerU), version ONNX de RapidLayout.
+    static let doclayoutyolo = ModelSpec(
+        id: "doclayoutyolo", title: "DocLayout-YOLO (mise en page de MinerU)",
+        summary: "Repère titres, texte, tableaux, figures et légendes ; écarte en-têtes et pieds de page. Pour le texte mis en forme.",
+        license: "AGPL-3.0 (OpenDataLab) — conversion ONNX : RapidAI/RapidLayout",
+        files: [File(name: "layout.onnx", url: URL(string: "https://www.modelscope.cn/models/RapidAI/RapidLayout/resolve/v1.2.0/onnx/doclayout/doclayout_yolo_docstructbench_imgsz1024.onnx")!,
+                     size: 75_324_621, sha256: "3b452baef10ecabd615491bc82cc4d49475fbc2cd7a8e535044f2c6bb28fb9fe")])
+
+    static let layoutModels: [ModelSpec] = [.ppdoclayout, .doclayoutyolo]
 
     /// DE-GAN (Souibgui & Kessentini, GPL-3.0) : poids « binarisation » du dépôt d'origine convertis en ONNX
     /// (tuiles 256×256) par `tools/degan_to_onnx.py`, publiés (avec la licence) sur le dépôt public

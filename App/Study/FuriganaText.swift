@@ -58,6 +58,7 @@ enum TextFurigana {
 struct FuriganaTextView: View {
     let page: OCRPage
     let formatted: Bool
+    var regions: [OCRLayout.Region] = []
     var onLookup: (String) -> Void
     @EnvironmentObject private var dictionary: DictionaryModel
     @State private var html = ""
@@ -67,7 +68,8 @@ struct FuriganaTextView: View {
     private var units: [(tag: String, text: String, row: Int?)] {
         guard formatted else { return page.lines.map { ("p", $0.text, nil) } }
         var out: [(String, String, Int?)] = []
-        for (b, block) in OCRLayout.blocks(page).enumerated() {
+        let blocks = regions.isEmpty ? OCRLayout.blocks(page) : OCRLayout.blocks(page, regions: regions)
+        for (b, block) in blocks.enumerated() {
             switch block {
             case .heading(let level, let text): out.append(("h\(level + 1)", text, nil))
             case .paragraph(let text): out.append(("p", text, nil))
@@ -81,7 +83,7 @@ struct FuriganaTextView: View {
     var body: some View {
         RubyWebView(html: html, height: $height, onLookup: onLookup)
             .frame(height: height)
-            .task(id: "\(page.hashValue)|\(formatted)") { await build() }
+            .task(id: "\(page.hashValue)|\(formatted)|\(regions.hashValue)") { await build() }
     }
 
     private func build() async {

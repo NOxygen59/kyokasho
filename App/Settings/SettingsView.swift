@@ -380,6 +380,8 @@ struct AboutView: View {
                 credit("ONNX Runtime", "Microsoft", "MIT", "https://github.com/microsoft/onnxruntime-swift-package-manager")
                 credit("PP-OCRv5 (modèles téléchargés)", "PaddlePaddle · RapidAI", "Apache-2.0", "https://github.com/PaddlePaddle/PaddleOCR")
                 credit("NDLOCR-Lite (modèles téléchargés)", "国立国会図書館 (National Diet Library)", "CC-BY-4.0", "https://github.com/ndl-lab/ndlocr-lite")
+                credit("PP-DocLayout v3 (mise en page, modèle téléchargé)", "PaddlePaddle · conversion RapidAI", "Apache-2.0", "https://github.com/RapidAI/RapidLayout")
+                credit("DocLayout-YOLO (mise en page de MinerU, modèle téléchargé)", "OpenDataLab · conversion RapidAI", "AGPL-3.0", "https://github.com/opendatalab/DocLayout-YOLO")
                 credit("DE-GAN (netteté des scans, modèle téléchargé)", "M. A. Souibgui, Y. Kessentini", "GPL-3.0", "https://github.com/dali92002/DE-GAN")
                 credit("GLM-OCR (modèle téléchargé)", "Zhipu AI · conversion mlx-community", "MIT", "https://huggingface.co/zai-org/GLM-OCR")
                 credit("MLX Swift, mlx-swift-lm (GLM-OCR porté)", "ml-explore (Apple)", "MIT", "https://github.com/ml-explore/mlx-swift-lm")

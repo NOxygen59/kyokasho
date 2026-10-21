@@ -20,7 +20,7 @@ final class ModelDownloads: ObservableObject {
     private init() { refresh() }
 
     func refresh() {
-        installed = Set((ModelSpec.all + [.degan]).filter { store.isInstalled($0) }.map(\.id))
+        installed = Set((ModelSpec.all + [.degan] + ModelSpec.layoutModels).filter { store.isInstalled($0) }.map(\.id))
     }
 
     func start(_ spec: ModelSpec) {
@@ -74,6 +74,13 @@ struct OCRModelsSection: View {
             Text("Modèles à télécharger")
         } footer: {
             Text("Les modèles restent sur l'iPad (Application Support), hors de l'app. Le téléchargement reprend s'il est coupé ; chaque fichier est vérifié (empreinte SHA-256). GLM-OCR utilise PP-OCRv5 (ou Apple Vision) pour trouver les lignes, puis relit chacune avec l'IA.")
+        }
+        Section {
+            ForEach(ModelSpec.layoutModels) { spec in row(spec) }
+        } header: {
+            Text("Mise en page (texte mis en forme)")
+        } footer: {
+            Text("Sans modèle, la mise en forme se fait par la géométrie des lignes. Avec un modèle : titres, colonnes, tableaux, légendes repérés sur l'image de la page ; en-têtes et pieds de page écartés. Choix dans le panneau Texte (mode « Mis en forme »).")
         }
         Section {
             row(.degan)

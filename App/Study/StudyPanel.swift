@@ -2,6 +2,7 @@
 // Copyright (c) 2026 NOxygen59
 
 import OCRKit
+import ONNXOCRKit
 import ReaderCore
 import DictionaryKit
 import SwiftUI
@@ -85,6 +86,10 @@ struct StudyTextTab: View {
     @AppStorage("study.formattedText") private var formatted = true
     /// Furigana (dictionnaire Yomitan) sur le texte extrait ; un appui ouvre le dictionnaire.
     @AppStorage("study.furigana") private var furigana = false
+    /// Moteur de mise en page du mode « Mis en forme » (géométrie seule, PP-DocLayout, DocLayout-YOLO).
+    @AppStorage("study.layoutEngine") private var layoutEngineRaw = LayoutDetector.Engine.geometry.rawValue
+    @State private var regions: [OCRLayout.Region] = []
+    @State private var layoutError: String?
     @State private var lookup: LookupSession?
     @State private var showLookup = false
     @State private var translating = false
@@ -104,15 +109,18 @@ struct StudyTextTab: View {
                     Button("Lire avec Apple Vision") { reader.runOCR(engine: OCREngineID.vision) }
                         .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.japanese))
                 case (let page?, _):
+                    if let layoutError, formatted {
+                        Text(layoutError).font(.caption).foregroundStyle(Atelier.textTertiary)
+                    }
                     if furigana {
-                        FuriganaTextView(page: page, formatted: formatted) { text in
+                        FuriganaTextView(page: page, formatted: formatted, regions: regions) { text in
                             let session = lookup ?? LookupSession(dictionary: model.dictionary)
                             lookup = session
                             session.start(text)
                             showLookup = true
                         }
                     } else if formatted {
-                        FormattedOCRText(page: page)
+                        FormattedOCRText(page: page, regions: regions)
                     } else {
                         Text(page.text)
                             .font(Atelier.jp)
@@ -134,6 +142,7 @@ struct StudyTextTab: View {
             translation = nil
             translateError = nil
         }
+        .task(id: "\(reader.focusSource)|\(layoutEngineRaw)|\(formatted)|\(reader.ocrPage != nil)") { await loadRegions() }
         .sheet(isPresented: $showLookup, onDismiss: { lookup?.clear() }) {
             // Fenêtre compacte du dictionnaire (mot touché dans le texte à furigana).
             if let lookup {
@@ -149,6 +158,31 @@ struct StudyTextTab: View {
             }
         }
         .sheet(isPresented: $showCompare) { CompareEnginesView(reader: reader).environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review) }
+    }
+
+    /// Zones de mise en page de la page de travail (modèle choisi, gardées en mémoire par page).
+    private func loadRegions() async {
+        layoutError = nil
+        let engine = LayoutDetector.Engine(rawValue: layoutEngineRaw) ?? .geometry
+        guard formatted, reader.ocrPage != nil, engine != .geometry, engine.isAvailable() else { regions = []; return }
+        let key = "\(reader.document.id)-\(reader.focusSource)-\(engine.rawValue)"
+        if let cached = LayoutRegionsCache.shared.get(key) { regions = cached; return }
+        // Zones de l'ancienne page / de l'autre moteur : retirées tout de suite (géométrie en attendant).
+        regions = []
+        let url = reader.fileURL, page = reader.focusSource
+        let work = Task.detached(priority: .userInitiated) {
+            Result { try LayoutDetector.regions(.pdfPage(url: url, index: page), engine: engine) }
+        }
+        let result = await withTaskCancellationHandler { await work.value } onCancel: { work.cancel() }
+        guard !Task.isCancelled else { return }
+        switch result {
+        case .success(let found):
+            LayoutRegionsCache.shared.set(found, for: key)
+            regions = found
+        case .failure(let error):
+            regions = []
+            layoutError = "Mise en page : \(error.localizedDescription) (géométrie utilisée)."
+        }
     }
 
     private var engineRow: some View {
@@ -178,6 +212,18 @@ struct StudyTextTab: View {
             }
             .pickerStyle(.segmented)
             .frame(maxWidth: 190)
+            if formatted {
+                Menu {
+                    Picker("Mise en page", selection: $layoutEngineRaw) {
+                        ForEach(LayoutDetector.Engine.allCases.filter { $0.isAvailable() }, id: \.rawValue) { engine in
+                            Text(engine.title).tag(engine.rawValue)
+                        }
+                    }
+                } label: {
+                    Image(systemName: "rectangle.3.group").font(.system(size: 14, weight: .semibold))
+                }
+                .accessibilityLabel("Moteur de mise en page")
+            }
             Toggle(isOn: $furigana) { Text("ふりがな").font(.system(size: 13, weight: .semibold)) }
                 .toggleStyle(.button)
                 .accessibilityLabel("Furigana sur le texte extrait")
@@ -260,6 +306,7 @@ struct StudyTextTab: View {
 /// Texte OCR mis en forme : titres, paragraphes, tableaux (`OCRLayout`), calculé une fois par page.
 struct FormattedOCRText: View {
     let page: OCRPage
+    var regions: [OCRLayout.Region] = []
     @State private var blocks: [OCRLayout.Block] = []
 
     var body: some View {
@@ -290,7 +337,9 @@ struct FormattedOCRText: View {
         }
         .textSelection(.enabled)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .task(id: page) { blocks = OCRLayout.blocks(page) }
+        .task(id: "\(page.hashValue)|\(regions.hashValue)") {
+            blocks = regions.isEmpty ? OCRLayout.blocks(page) : OCRLayout.blocks(page, regions: regions)
+        }
     }
 }
 
@@ -595,5 +644,22 @@ struct StudyMarksTab: View {
             }
         }
         .buttonStyle(.plain)
+    }
+}
+
+/// Zones de mise en page déjà calculées (mémoire, quelques pages).
+@MainActor
+final class LayoutRegionsCache {
+    static let shared = LayoutRegionsCache()
+    private var entries: [String: [OCRLayout.Region]] = [:]
+    private var order: [String] = []
+
+    func get(_ key: String) -> [OCRLayout.Region]? { entries[key] }
+
+    func set(_ regions: [OCRLayout.Region], for key: String) {
+        entries[key] = regions
+        order.removeAll { $0 == key }
+        order.append(key)
+        while order.count > 30 { entries[order.removeFirst()] = nil }
     }
 }

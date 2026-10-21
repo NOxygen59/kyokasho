@@ -69,6 +69,44 @@ final class ONNXEnginesTests: XCTestCase {
         XCTAssertGreaterThan(dark, 2_000)
     }
 
+    func testLayoutModels() throws {
+        // Page d'essai : titre, deux colonnes de texte, tableau.
+        let w = 1240, h = 1754
+        let ctx = try XCTUnwrap(CGContext(data: nil, width: w, height: h, bitsPerComponent: 8, bytesPerRow: 0,
+                                          space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue))
+        ctx.setFillColor(CGColor(red: 1, green: 1, blue: 1, alpha: 1)); ctx.fill(CGRect(x: 0, y: 0, width: w, height: h))
+        func text(_ s: String, _ x: Int, _ yTop: Int, _ size: CGFloat) {
+            let font = CTFontCreateWithName("HiraMinProN-W3" as CFString, size, nil)
+            let line = CTLineCreateWithAttributedString(NSAttributedString(string: s, attributes: [kCTFontAttributeName as NSAttributedString.Key: font]))
+            ctx.textPosition = CGPoint(x: CGFloat(x), y: CGFloat(h - yTop) - size); CTLineDraw(line, ctx)
+        }
+        text("第三章　日本の気候と暮らし", 120, 100, 56)
+        let para = "日本は南北に長い国で、地域によって気候が大きく異なります。北海道は冬が長く寒さが厳しい一方、沖縄は一年を通して暖かい気候です。"
+        for (col, x0) in [120, 660].enumerated() {
+            for k in 0..<18 {
+                let start = para.index(para.startIndex, offsetBy: (k * 7 + col * 3) % para.count)
+                text(String(para[start...].prefix(18)), x0, 260 + k * 44, 26)
+            }
+        }
+        for (r, row) in [["都市", "一月", "八月"], ["札幌", "-3.2", "22.3"], ["東京", "5.4", "26.9"]].enumerated() {
+            for (c, cell) in row.enumerated() {
+                let x = 160 + c * 260, y = 1170 + r * 60
+                ctx.stroke(CGRect(x: x - 20, y: h - y - 48, width: 260, height: 60))
+                text(cell, x, y, 26)
+            }
+        }
+        let page = try XCTUnwrap(ctx.makeImage())
+        for engine in [LayoutDetector.Engine.ppDocLayout, .docLayoutYOLO] where engine.isAvailable(store: store) {
+            let start = Date()
+            let regions = try LayoutDetector.regions(.image(page), engine: engine, store: store)
+            print("Layout", engine.rawValue, regions.count, "zones", Int(Date().timeIntervalSince(start) * 1000), "ms",
+                  regions.map { "\($0.kind)" })
+            XCTAssertTrue(regions.contains { $0.kind == .table })
+            XCTAssertTrue(regions.contains { if case .title = $0.kind { return true } else { return false } })
+            XCTAssertGreaterThanOrEqual(regions.filter { $0.kind == .text }.count, 2)
+        }
+    }
+
     func testPPOCR() async throws {
         let engine = PPOCREngine(store: store)
         try XCTSkipUnless(engine.isAvailable)

@@ -14,6 +14,66 @@ public enum OCRLayout {
         case table([[String]])
     }
 
+    /// Zone repérée par un modèle de mise en page (PP-DocLayout, DocLayout-YOLO), cadre normalisé de la page.
+    public struct Region: Sendable, Hashable {
+        public enum Kind: Sendable, Hashable { case title(level: Int), text, table, caption, figure, formula, ignored }
+        public var box: NormBox
+        public var kind: Kind
+        /// Ordre de lecture donné par le modèle (`nil` : ordre des lignes du moteur OCR).
+        public var order: Double?
+
+        public init(box: NormBox, kind: Kind, order: Double?) {
+            self.box = box
+            self.kind = kind
+            self.order = order
+        }
+    }
+
+    /// Avec des zones de mise en page : chaque ligne OCR va dans la zone qui la contient, la zone décide
+    /// (titre, paragraphes, tableau ; en-têtes / pieds de page écartés). Lignes hors zones : géométrie seule.
+    public static func blocks(_ page: OCRPage, regions: [Region]) -> [Block] {
+        let lines = page.lines.filter { !$0.text.trimmingCharacters(in: .whitespaces).isEmpty }
+        guard !lines.isEmpty, !regions.isEmpty else { return blocks(page) }
+        var members = [[Int]](repeating: [], count: regions.count)
+        var loose: [OCRLine] = []
+        for (i, line) in lines.enumerated() {
+            let area = max(line.box.w * line.box.h, 1e-9)
+            let best = regions.indices.map { r -> (Int, Double) in
+                let b = regions[r].box
+                let inter = overlap(line.box.x, line.box.x + line.box.w, b.x, b.x + b.w) * overlap(line.box.y, line.box.y + line.box.h, b.y, b.y + b.h)
+                return (r, inter / area)
+            }.max { $0.1 < $1.1 }
+            if let best, best.1 >= 0.5 { members[best.0].append(i) } else { loose.append(line) }
+        }
+        let sizes = lines.map(size).sorted()
+        let median = sizes[sizes.count / 2]
+        var items: [(order: Double, block: Block)] = []
+        for (r, region) in regions.enumerated() where !members[r].isEmpty {
+            let regionLines = members[r].map { lines[$0] }
+            let order = region.order ?? Double(members[r].min() ?? 0)
+            switch region.kind {
+            case .ignored: continue
+            case .title(let level): items.append((order, .heading(level: level, text: join(sorted(regionLines)))))
+            case .table:
+                if let table = tables(regionLines, median: median).first, table.members.count == regionLines.count {
+                    items.append((order, .table(table.rows)))
+                } else {
+                    // Tableau que la géométrie ne sait pas découper : une rangée par ligne.
+                    items.append((order, .table(sorted(regionLines).map { [$0.text] })))
+                }
+            case .text, .caption, .figure, .formula:
+                for paragraph in paragraphs(sorted(regionLines)) { items.append((order, .paragraph(paragraph))) }
+            }
+        }
+        if !loose.isEmpty {
+            let extra = blocks(OCRPage(engine: page.engine, lines: loose, durationMs: 0))
+            // Sans ordre du modèle pour elles : placées après les zones.
+            let last = (items.map(\.order).max() ?? 0) + 1
+            items += extra.map { (last, $0) }
+        }
+        return items.enumerated().sorted { ($0.element.order, $0.offset) < ($1.element.order, $1.offset) }.map(\.element.block)
+    }
+
     public static func blocks(_ page: OCRPage) -> [Block] {
         let lines = page.lines.filter { !$0.text.trimmingCharacters(in: .whitespaces).isEmpty }
         guard !lines.isEmpty else { return [] }

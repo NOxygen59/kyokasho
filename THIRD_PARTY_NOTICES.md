@@ -51,6 +51,7 @@ Copyright (C) 2024-2026 Yomitan Authors, (C) 2020-2022 Yomichan Authors. https:/
 | ONNX Runtime (onnxruntime-swift-package-manager 1.24.2) | Microsoft | MIT | Exécution des modèles OCR sur l'iPad |
 | Modèles PP-OCRv5 mobile (det + rec, ONNX) | PaddlePaddle ; conversion RapidAI/RapidOCR | Apache-2.0 | **Téléchargés à la demande**, jamais dans le dépôt |
 | Modèle DE-GAN « binarisation » (poids Keras convertis en ONNX par `tools/degan_to_onnx.py`) | M. A. Souibgui, Y. Kessentini | GPL-3.0 | **Téléchargé à la demande** depuis le dépôt public NOxygen59/kyokasho-models (avec sa licence), jamais dans ce dépôt ; netteté des scans |
+| Modèles de mise en page PP-DocLayout v3 (Apache-2.0, PaddlePaddle) et DocLayout-YOLO DocStructBench (AGPL-3.0, OpenDataLab), versions ONNX de RapidAI/RapidLayout (Apache-2.0) ; pré/post-traitement repris de RapidLayout | PaddlePaddle ; OpenDataLab ; RapidAI | Apache-2.0 / AGPL-3.0 | **Téléchargés à la demande**, jamais dans le dépôt ; texte mis en forme |
 | Dictionnaire `ppocrv5_dict.txt` | PaddlePaddle | Apache-2.0 | Téléchargé avec le modèle |
 | NDLOCR-Lite (modèles DEIM + PARSeq, `NDLmoji.yaml`) | National Diet Library (Japon) | CC-BY-4.0 | **Téléchargés à la demande** ; crédit dans « À propos » |
 | PaddleOCR, RapidOCR, NDLOCR-Lite (code Python) | idem | Apache-2.0 / CC-BY-4.0 | **Comportement seulement** : prétraitement et décodage réécrits en Swift, aucun code copié |

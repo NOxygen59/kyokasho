@@ -147,7 +147,7 @@ géométrie pure ; Marker lui-même (Python + modèles Surya, plusieurs Go, GPU)
 **Reste : gestes / zoom « cassés »** (rien trouvé à la lecture du code : demander à l'utilisateur lesquels,
 tester au simulateur avec sa permission).
 
-### [ ] J — Moteurs de mise en page (demandé le 21/10)
+### [x] J — Moteurs de mise en page (fait le 21/10 : `LayoutDetector`, `OCRLayout.blocks(_:regions:)`, test `testLayoutModels`)
 RapidLayout (Apache-2.0, ONNX) publie PP-DocLayout v2/v3 (PP-Structure) et DocLayout-YOLO DocStructBench (celui de
 MinerU) : URL + SHA-256 dans `rapid_layout/configs/default_models.yaml` (modelscope.cn, v1.2.0). À faire : demander
 l'accord pour télécharger les modèles de test, écrire le pré/post-traitement (boîtes classées), les brancher dans
