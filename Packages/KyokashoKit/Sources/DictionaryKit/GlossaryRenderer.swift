@@ -23,6 +23,8 @@ public struct GlossaryRenderer: Sendable {
     public static let mediaScheme = "kyomedia"
 
     public var options: Options
+    /// Termes (`TermResult.id`) qui ont déjà une carte : bouton ✓ au lieu de ＋.
+    public var addedTermIds: Set<String> = []
     let inflectionName: @Sendable (String) -> String
 
     public init(options: Options = Options(), inflectionName: @escaping @Sendable (String) -> String = { $0 }) {
@@ -67,7 +69,9 @@ public struct GlossaryRenderer: Sendable {
         h += "<header><div class=\"headword\" lang=\"ja\">\(headword(t))</div><div class=\"actions\">"
         h += "<button class=\"btn audio\" data-term=\"\(attr(t.expression))\" data-reading=\"\(attr(t.reading))\" title=\"Prononciation\">▶︎</button>"
         if options.canAddCards {
-            h += "<button class=\"btn card\" data-index=\"\(index)\" title=\"Créer une carte\">＋</button>"
+            h += addedTermIds.contains(t.id)
+                ? "<button class=\"btn done\" title=\"Déjà dans tes cartes\">✓</button>"
+                : "<button class=\"btn card\" data-index=\"\(index)\" title=\"Créer une carte\">＋</button>"
         }
         h += "</div></header>"
         if !t.inflectionRules.isEmpty {

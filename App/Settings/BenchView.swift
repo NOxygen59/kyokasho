@@ -78,7 +78,7 @@ struct BenchView: View {
             }
         }
         .sheet(item: $editing, onDismiss: reload) { sample in
-            BenchSampleEditor(sample: sample).environmentObject(model).environmentObject(model.dictionary)
+            BenchSampleEditor(sample: sample).environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review)
         }
     }
 

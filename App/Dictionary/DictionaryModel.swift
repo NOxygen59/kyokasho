@@ -142,11 +142,13 @@ final class DictionaryModel: ObservableObject {
         return await Task.detached(priority: .utility) { (try? translator.segment(text, options: options)) ?? [] }.value
     }
 
-    func renderer(canAddCards: Bool = false) -> GlossaryRenderer {
+    func renderer(canAddCards: Bool = false, added: Set<String> = []) -> GlossaryRenderer {
         var options = profile.display
         options.canAddCards = canAddCards
         let translator = translator
-        return GlossaryRenderer(options: options, inflectionName: { id in translator?.inflectionName(id) ?? id })
+        var renderer = GlossaryRenderer(options: options, inflectionName: { id in translator?.inflectionName(id) ?? id })
+        renderer.addedTermIds = added
+        return renderer
     }
 
     // MARK: Audio
@@ -156,20 +158,30 @@ final class DictionaryModel: ObservableObject {
     /// Essaie les sources dans l'ordre du profil ; en ligne seulement à ta demande (bouton ▶︎).
     @discardableResult
     func playAudio(term: String, reading: String) async -> AudioResult {
+        guard let (data, _) = await audioData(term: term, reading: reading), play(data) else { return .notFound }
+        return .played
+    }
+
+    /// Premier enregistrement trouvé (sources dans l'ordre du profil) et son extension (mp3 par défaut).
+    func audioData(term: String, reading: String) async -> (Data, String)? {
         for source in profile.audioSources where source.enabled {
             for candidate in source.resolve(term: term, reading: reading) {
                 let data: Data?
+                var ext = (candidate as NSString).pathExtension.lowercased()
                 switch source.kind {
                 case .localFolder:
                     data = try? Data(contentsOf: audioFolder.appendingPathComponent(candidate))
                 case .url:
                     guard let url = URL(string: candidate) else { continue }
+                    ext = url.pathExtension.lowercased()
                     data = await Self.download(url)
                 }
-                if let data, play(data) { return .played }
+                if let data, AVAudioPlayerCheck.isPlayable(data) {
+                    return (data, ["mp3", "m4a", "ogg", "opus", "wav", "aac"].contains(ext) ? ext : "mp3")
+                }
             }
         }
-        return .notFound
+        return nil
     }
 
     nonisolated static func download(_ url: URL) async -> Data? {
@@ -188,4 +200,9 @@ final class DictionaryModel: ObservableObject {
         self.player = player
         return player.play()
     }
+}
+
+/// Un fichier est gardé seulement si AVAudioPlayer sait le lire (évite les pages d'erreur HTML).
+enum AVAudioPlayerCheck {
+    static func isPlayable(_ data: Data) -> Bool { (try? AVAudioPlayer(data: data)) != nil }
 }

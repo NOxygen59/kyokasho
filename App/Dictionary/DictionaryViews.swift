@@ -13,9 +13,11 @@ struct DictionarySearchView: View {
     @StateObject private var session: LookupSession
     @State private var query = ""
     @FocusState private var focused: Bool
-    var onAddCard: ((TermResult) -> Void)?
+    var onAddCard: ((TermResult) -> String?)?
+    var added: Set<String> = []
 
-    init(dictionary: DictionaryModel, onAddCard: ((TermResult) -> Void)? = nil) {
+    init(dictionary: DictionaryModel, added: Set<String> = [], onAddCard: ((TermResult) -> String?)? = nil) {
+        self.added = added
         _session = StateObject(wrappedValue: LookupSession(dictionary: dictionary))
         self.onAddCard = onAddCard
     }
@@ -42,7 +44,7 @@ struct DictionarySearchView: View {
                 if session.current == nil {
                     historyList
                 } else {
-                    LookupPopup(session: session, onAddCard: onAddCard, close: { session.clear() })
+                    LookupPopup(session: session, added: added, onAddCard: onAddCard, close: { session.clear() })
                 }
             }
         }

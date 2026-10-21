@@ -12,6 +12,7 @@ import SwiftUI
 /// pellicule des pages en bas. Tout s'efface d'un tap au centre de la page.
 struct ReaderScreen: View {
     @EnvironmentObject private var model: AppModel
+    @EnvironmentObject private var review: ReviewModel
     @Environment(\.dismiss) private var dismiss
     @StateObject private var reader: ReaderController
     @StateObject private var lookup: LookupSession
@@ -47,7 +48,12 @@ struct ReaderScreen: View {
                     if let request = reader.lookupRequest {
                         GeometryReader { area in
                             let frame = PopupPlacement.frame(for: request, in: area.size)
-                            LookupPopup(session: lookup, close: { reader.endLookup(); lookup.clear() })
+                            LookupPopup(session: lookup, added: review.keys, onAddCard: { term in
+                                review.add(term, sentence: reader.lookupContext?.sentence, source: reader.lookupSourceLabel,
+                                           image: review.settings.includeImage ? reader.lookupLineJPEG() : nil,
+                                           documentId: reader.document.id, page: reader.lookupContext?.source,
+                                           dictionary: model.dictionary)
+                            }, close: { reader.endLookup(); lookup.clear() })
                                 .frame(width: frame.width, height: frame.height)
                                 .offset(x: frame.minX, y: frame.minY)
                                 .transition(.scale(scale: 0.96, anchor: .top).combined(with: .opacity))
@@ -102,7 +108,7 @@ struct ReaderScreen: View {
                 case .settings: DocumentSettingsSheet(reader: reader)
                 }
             }
-            .environmentObject(model).environmentObject(model.dictionary)
+            .environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review)
             .preferredColorScheme(.dark)
         }
         .confirmationDialog("Surlignage", isPresented: Binding(get: { reader.tappedHighlight != nil },

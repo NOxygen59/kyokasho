@@ -108,7 +108,7 @@ public struct StudyCard: Codable, Identifiable, Hashable, Sendable, FetchableRec
     public var key: String
     public var fields: [String: String]
     public var tags: [String]
-    public var sourceDocumentId: Int64?
+    public var sourceDocumentId: String?
     public var sourcePage: Int?
     public var createdAt: Date
     public var modifiedAt: Date
@@ -127,7 +127,7 @@ public struct StudyCard: Codable, Identifiable, Hashable, Sendable, FetchableRec
     public var lastReview: Date?
 
     public init(id: Int64? = nil, deckId: Int64, templateId: Int64, key: String, fields: [String: String],
-                tags: [String] = [], sourceDocumentId: Int64? = nil, sourcePage: Int? = nil, now: Date = Date()) {
+                tags: [String] = [], sourceDocumentId: String? = nil, sourcePage: Int? = nil, now: Date = Date()) {
         self.id = id
         self.deckId = deckId
         self.templateId = templateId

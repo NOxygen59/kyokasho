@@ -63,6 +63,17 @@ final class ReaderController: NSObject, ObservableObject {
     private var hover: UIHoverGestureRecognizer!
     private var hoverTask: Task<Void, Never>?
 
+    /// Contexte du mot cherché, pour fabriquer une carte : phrase, ligne dans la page.
+    struct LookupContext {
+        let source: Int
+        let presentedIndex: Int
+        let sentence: String
+        /// Rectangle de la ligne, repère de la page PDF (reconverti au moment de l'ajout).
+        let lineRect: CGRect
+        let vertical: Bool
+    }
+    private(set) var lookupContext: LookupContext?
+
     /// Caractères du texte touché, pour surligner exactement le mot reconnu (n premiers).
     private var lookupCharacterRects: [CGRect] = []
 
@@ -242,7 +253,11 @@ final class ReaderController: NSObject, ObservableObject {
                     j = NSMaxRange(range)
                 }
                 if !text.trimmingCharacters(in: .whitespaces).isEmpty {
-                    present(text: text, rects: rects, anchor: point)
+                    let line = page.selectionForLine(at: pagePoint)
+                    let context = LookupContext(source: source, presentedIndex: index,
+                                                sentence: line?.string?.trimmingCharacters(in: .whitespacesAndNewlines) ?? text,
+                                                lineRect: line?.bounds(for: page) ?? .zero, vertical: false)
+                    present(text: text, rects: rects, anchor: point, context: context)
                     return
                 }
             }
@@ -264,6 +279,12 @@ final class ReaderController: NSObject, ObservableObject {
             if !fromHover { lookupHighlight = [] }
             return
         }
+        let hitLine = ocr.lines[hit.line]
+        let lb = hitLine.box
+        let context = LookupContext(source: source, presentedIndex: index, sentence: hitLine.text,
+                                    lineRect: CGRect(x: box.minX + lb.x * box.width, y: box.maxY - (lb.y + lb.h) * box.height,
+                                                     width: lb.w * box.width, height: lb.h * box.height),
+                                    vertical: hitLine.vertical)
         var text = ""
         var rects: [CGRect] = []
         var line = hit.line
@@ -286,13 +307,14 @@ final class ReaderController: NSObject, ObservableObject {
             line += 1
             start = 0
         }
-        present(text: text, rects: rects, anchor: point)
+        present(text: text, rects: rects, anchor: point, context: context)
     }
 
-    private func present(text: String, rects: [CGRect], anchor: CGPoint) {
+    private func present(text: String, rects: [CGRect], anchor: CGPoint, context: LookupContext) {
         // Même mot que celui déjà affiché (le curseur bouge un peu) : on garde le popup.
         if let current = lookupRequest, current.text == text, lookupCharacterRects.first == rects.first { return }
         lookupCharacterRects = rects
+        lookupContext = context
         lookupHighlight = Array(rects.prefix(1))
         let first = rects.first { !$0.isEmpty } ?? CGRect(origin: anchor, size: .zero)
         var vertical = false
@@ -305,6 +327,37 @@ final class ReaderController: NSObject, ObservableObject {
     /// Le dictionnaire a reconnu `length` caractères : on surligne exactement le mot.
     func setLookupMatchLength(_ length: Int) {
         lookupHighlight = Array(lookupCharacterRects.prefix(max(1, length))).filter { !$0.isEmpty }
+    }
+
+    /// « Titre · p. N » (numéro imprimé) de la page du mot cherché.
+    var lookupSourceLabel: String? {
+        lookupContext.map { "\(document.title) · p. \(document.pageLabel($0.source))" }
+    }
+
+    /// Image de la ligne du mot (agrandie de 40 % en épaisseur, 1200 px de large au plus), en JPEG.
+    func lookupLineJPEG() -> Data? {
+        guard let context = lookupContext, !context.lineRect.isEmpty,
+              let page = pdf?.page(at: context.presentedIndex) else { return nil }
+        var r = context.lineRect
+        if context.vertical { r = r.insetBy(dx: -r.width * 0.2, dy: 0) } else { r = r.insetBy(dx: 0, dy: -r.height * 0.2) }
+        // Repère de dessin de la page (rotation et cropBox compris).
+        let crop = page.bounds(for: .cropBox)
+        r = r.intersection(crop).applying(page.transform(for: .cropBox))
+        guard r.width > 1, r.height > 1 else { return nil }
+        let scale = min(1200 / r.width, 6)
+        let size = CGSize(width: (r.width * scale).rounded(), height: (r.height * scale).rounded())
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        let image = UIGraphicsImageRenderer(size: size, format: format).image { ctx in
+            UIColor.white.setFill()
+            ctx.fill(CGRect(origin: .zero, size: size))
+            let cg = ctx.cgContext
+            cg.translateBy(x: 0, y: size.height)
+            cg.scaleBy(x: scale, y: -scale)
+            cg.translateBy(x: -r.minX, y: -r.minY)
+            page.draw(with: .cropBox, to: cg)
+        }
+        return image.jpegData(compressionQuality: 0.7)
     }
 
     func endLookup() {

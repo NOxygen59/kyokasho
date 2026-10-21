@@ -16,6 +16,7 @@ final class AppModel: ObservableObject {
     let thumbnails: ThumbnailCache
     let ocr: OCRService
     let dictionary: DictionaryModel
+    let review: ReviewModel
     /// Images du banc d'essai OCR.
     let benchDirectory: URL
 
@@ -70,6 +71,7 @@ final class AppModel: ObservableObject {
         thumbnails = ThumbnailCache(directory: caches.appendingPathComponent("Thumbnails", isDirectory: true))
         ocr = OCRService(database: database)
         dictionary = DictionaryModel(appDatabase: database)
+        review = ReviewModel(appDatabase: database)
         benchDirectory = support.appendingPathComponent("Bench", isDirectory: true)
         try? FileManager.default.createDirectory(at: benchDirectory, withIntermediateDirectories: true)
         appSettings = (try? database.appSettings()) ?? AppSettings()

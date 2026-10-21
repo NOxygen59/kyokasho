@@ -54,7 +54,7 @@ public final class ReviewStore: @unchecked Sendable {
                 t.column("key", .text).notNull()
                 t.column("fields", .text).notNull()
                 t.column("tags", .text).notNull()
-                t.column("sourceDocumentId", .integer)
+                t.column("sourceDocumentId", .text)
                 t.column("sourcePage", .integer)
                 t.column("createdAt", .datetime).notNull()
                 t.column("modifiedAt", .datetime).notNull()

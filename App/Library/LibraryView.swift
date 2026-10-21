@@ -65,27 +65,30 @@ struct LibraryView: View {
             DocumentPicker { urls in model.importFiles(urls) }.ignoresSafeArea()
         }
         .sheet(isPresented: $showSettings) {
-            SettingsView().environmentObject(model).environmentObject(model.dictionary).preferredColorScheme(.dark)
+            SettingsView().environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review).preferredColorScheme(.dark)
         }
         .sheet(isPresented: $showDrive) {
-            DriveBrowserView().environmentObject(model).environmentObject(model.dictionary).preferredColorScheme(.dark)
+            DriveBrowserView().environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review).preferredColorScheme(.dark)
         }
         .fullScreenCover(isPresented: $showDictionary) {
             NavigationStack {
-                DictionarySearchView(dictionary: model.dictionary)
+                DictionarySearchView(dictionary: model.dictionary, added: model.review.keys) { term in
+                    model.review.add(term, sentence: nil, source: nil, image: nil, documentId: nil, page: nil,
+                                     dictionary: model.dictionary)
+                }
                     .padding(Atelier.gap)
                     .background(GridBackground())
                     .navigationTitle("Dictionnaire")
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbar { ToolbarItem(placement: .confirmationAction) { Button("OK") { showDictionary = false } } }
             }
-            .environmentObject(model).environmentObject(model.dictionary).preferredColorScheme(.dark)
+            .environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review).preferredColorScheme(.dark)
         }
         .sheet(isPresented: $showBench) {
             NavigationStack {
                 BenchView().toolbar { ToolbarItem(placement: .confirmationAction) { Button("OK") { showBench = false } } }
             }
-            .environmentObject(model).environmentObject(model.dictionary).preferredColorScheme(.dark)
+            .environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review).preferredColorScheme(.dark)
         }
         .alert("Renommer", isPresented: Binding(get: { renaming != nil }, set: { if !$0 { renaming = nil } })) {
             TextField("Titre", text: $newTitle)

@@ -99,7 +99,7 @@ struct StudyTextTab: View {
             translation = nil
             translateError = nil
         }
-        .sheet(isPresented: $showCompare) { CompareEnginesView(reader: reader).environmentObject(model).environmentObject(model.dictionary) }
+        .sheet(isPresented: $showCompare) { CompareEnginesView(reader: reader).environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review) }
     }
 
     private var engineRow: some View {
@@ -195,6 +195,7 @@ struct StudyTextTab: View {
 
 struct StudyVocabTab: View {
     @EnvironmentObject private var dictionary: DictionaryModel
+    @EnvironmentObject private var review: ReviewModel
     @ObservedObject var reader: ReaderController
     @StateObject private var popup = PopupHolder()
     @State private var words: [Word] = []
@@ -206,6 +207,7 @@ struct StudyVocabTab: View {
         let reading: String
         let gloss: String
         var count: Int
+        let term: TermResult
     }
 
     /// Une seule session de popup par onglet (créée au premier usage).
@@ -268,7 +270,7 @@ struct StudyVocabTab: View {
         .task(id: reader.ocrPage?.text) { await reload() }
         .sheet(isPresented: $popup.shown) {
             if let session = popup.session {
-                LookupPopup(session: session, close: { popup.shown = false })
+                LookupPopup(session: session, added: review.keys, onAddCard: { add($0) }, close: { popup.shown = false })
                     .environmentObject(dictionary)
                     .presentationDetents([.medium, .large])
                     .preferredColorScheme(.dark)
@@ -288,10 +290,31 @@ struct StudyVocabTab: View {
             Text(word.gloss).font(.footnote).foregroundStyle(Atelier.textSecondary).lineLimit(2)
             Spacer(minLength: 0)
             if word.count > 1 { Text("×\(word.count)").font(Atelier.mono).foregroundStyle(Atelier.textTertiary) }
+            if review.keys.contains(word.id) {
+                Image(systemName: "checkmark").font(.system(size: 13, weight: .bold)).foregroundStyle(Atelier.Tint.read)
+                    .frame(width: 30, height: 30).accessibilityLabel("Déjà dans tes cartes")
+            } else {
+                Button { _ = add(word.term) } label: {
+                    Image(systemName: "plus").font(.system(size: 13, weight: .bold)).foregroundStyle(Atelier.Tint.japanese)
+                        .frame(width: 30, height: 30)
+                        .background(Atelier.surfaceHigh, in: Circle())
+                }
+                .buttonStyle(PressScale())
+                .accessibilityLabel("Créer une carte")
+            }
         }
         .padding(.horizontal, 10).padding(.vertical, 7)
         .background(Atelier.surfaceHigh.opacity(0.7), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
         .contentShape(Rectangle())
+    }
+
+    /// Carte depuis l'onglet Mots : phrase = ligne OCR qui contient le mot (pas d'image : pas de position précise).
+    private func add(_ term: TermResult) -> String? {
+        let sentence = reader.ocrPage?.lines.first { $0.text.contains(term.matchedText) }?.text
+        return review.add(term, sentence: sentence,
+                          source: "\(reader.document.title) · p. \(reader.document.pageLabel(reader.currentSourcePage))",
+                          image: nil, documentId: reader.document.id, page: reader.currentSourcePage,
+                          dictionary: dictionary)
     }
 
     private func session() -> LookupSession {
@@ -328,9 +351,10 @@ struct StudyVocabTab: View {
             if map[term.id] != nil { map[term.id]!.count += 1; continue }
             order.append(term.id)
             map[term.id] = Word(id: term.id, expression: term.expression, reading: term.reading,
-                                gloss: GlossaryText.plain(term.definitions.first?.glossaryJSON ?? ""), count: 1)
+                                gloss: GlossaryText.plain(term.definitions.first?.glossaryJSON ?? ""), count: 1, term: term)
         }
         words = order.compactMap { map[$0] }
+        review.loadKeys(order)
     }
 }
 

@@ -117,7 +117,7 @@ Nouveau fichier `Sources/ReviewKit/Exporters.swift`.
 >   bouton `cursorarrow.rays` sous 辞 (visible si la page a du texte), jamais d'OCR lancé par le survol,
 >   popup placé façon Yomitan (`PopupPlacement` : sous la ligne / à droite de la colonne verticale), Échap ferme.
 
-### [ ] Session 3 — V4-c : créer une carte depuis le popup et l'onglet Mots
+### [x] Session 3 — V4-c : créer une carte depuis le popup et l'onglet Mots
 1. **DictionaryKit** : `GlossaryText.items(json) -> [String]` (un sens par élément). Nouveau `CardFields.swift` avec `CardFields.make(term:sentence:source:) -> [String: String]` :
    - `Mot` = expression, `Lecture` = lecture ;
    - `Furigana` = segments de `JapaneseText.distributeFurigana` au format Anki : `texte[lecture]`, une espace avant chaque segment qui a une lecture ;
@@ -140,6 +140,10 @@ Nouveau fichier `Sources/ReviewKit/Exporters.swift`.
    - onglet Mots (`App/Study/StudyPanel.swift`, `StudyVocabTab`) : bouton ＋ par ligne, et ✓ si `store.existingKeys` contient le mot ;
    - option : envoi AnkiMobile si `settings.sendToAnkiMobile`.
 5. L'app compile. Commit.
+
+> Notes session 3 : `StudyCard.sourceDocumentId` est devenu `String?` (les documents ont un id texte).
+> Ajout via `ReviewModel.add(...)` (doublon vu tout de suite, audio cherché ensuite) ; ✓ déjà affiché dans le popup
+> pour les mots qui ont une carte (`GlossaryRenderer.addedTermIds`). Onglet Mots : pas d'image (pas de position).
 
 ### [ ] Session 4 — V4-d : écrans de révision → release 0.5.0
 1. **`App/Review/CardWebView.swift`** : copie de `LookupWebView`, avec un gestionnaire de schéma `kyocard` qui sert `store.mediaRoot`.

@@ -81,8 +81,8 @@ final class LookupSession: ObservableObject {
         matchedLength = 0
     }
 
-    func html(canAddCards: Bool) -> String {
-        let renderer = dictionary.renderer(canAddCards: canAddCards)
+    func html(canAddCards: Bool, added: Set<String> = []) -> String {
+        let renderer = dictionary.renderer(canAddCards: canAddCards, added: added)
         switch current {
         case .terms(let q, let r)?: return renderer.page(terms: r, dictionaries: dictionary.dictionaries, query: q)
         case .kanji(let k)?: return renderer.page(kanji: k)
@@ -100,8 +100,12 @@ final class LookupSession: ObservableObject {
 struct LookupPopup: View {
     @EnvironmentObject private var dictionaryModel: DictionaryModel
     @ObservedObject var session: LookupSession
-    var onAddCard: ((TermResult) -> Void)? = nil
+    /// Clés des cartes existantes (✓ dans les résultats).
+    var added: Set<String> = []
+    /// Ajoute une carte ; renvoie un petit message à afficher (doublon, erreur…), ou `nil`.
+    var onAddCard: ((TermResult) -> String?)? = nil
     var close: () -> Void
+    @State private var toast: String?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -131,12 +135,22 @@ struct LookupPopup: View {
                 }
                 .padding(24).frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                LookupWebView(html: session.html(canAddCards: onAddCard != nil),
+                LookupWebView(html: session.html(canAddCards: onAddCard != nil, added: added),
                               mediaRoot: dictionaryModel.database?.mediaRoot) { message in
                     handle(message)
                 }
             }
         }
+        .overlay(alignment: .bottom) {
+            if let toast {
+                Text(toast).font(.system(size: 14, weight: .semibold)).foregroundStyle(Atelier.textPrimary)
+                    .padding(.horizontal, 14).padding(.vertical, 8)
+                    .background(Atelier.surfaceHigh, in: Capsule())
+                    .padding(.bottom, 14)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .animation(.easeOut(duration: 0.2), value: toast)
         .background(Color(red: 0.105, green: 0.115, blue: 0.135))
         .clipShape(RoundedRectangle(cornerRadius: Atelier.radius, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: Atelier.radius, style: .continuous).strokeBorder(Atelier.Tint.japanese.opacity(0.35), lineWidth: 1))
@@ -150,7 +164,12 @@ struct LookupPopup: View {
         case .audio(let term, let reading): Task { await dictionaryModel.playAudio(term: term, reading: reading) }
         case .card(let index):
             let terms = session.currentTerms
-            if terms.indices.contains(index) { onAddCard?(terms[index]) }
+            guard terms.indices.contains(index), let message = onAddCard?(terms[index]) else { return }
+            toast = message
+            Task {
+                try? await Task.sleep(nanoseconds: 2_000_000_000)
+                if toast == message { toast = nil }
+            }
         }
     }
 }

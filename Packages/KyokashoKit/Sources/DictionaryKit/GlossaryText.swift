@@ -21,6 +21,19 @@ public enum GlossaryText {
         return joined.count > limit ? String(joined.prefix(limit - 1)) + "…" : joined
     }
 
+    /// `glossaryJSON` → un sens par élément (texte simple, sans images ni balises).
+    public static func items(_ glossaryJSON: String) -> [String] {
+        guard let data = glossaryJSON.data(using: .utf8),
+              let items = try? JSONSerialization.jsonObject(with: data) as? [Any] else { return [] }
+        return items.compactMap { item in
+            var out = ""
+            collect(item, into: &out)
+            let t = out.split(whereSeparator: \.isNewline).map { $0.trimmingCharacters(in: .whitespaces) }
+                .filter { !$0.isEmpty }.joined(separator: " ")
+            return t.isEmpty ? nil : t
+        }
+    }
+
     private static func collect(_ node: Any, into out: inout String) {
         switch node {
         case let s as String:
