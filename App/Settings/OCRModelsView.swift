@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 NOxygen59
 
+import GLMOCRKit
 import OCRKit
 import ONNXOCRKit
 import SwiftUI
@@ -48,6 +49,7 @@ final class ModelDownloads: ObservableObject {
 
     func delete(_ spec: ModelSpec) {
         ONNXEngines.unload()
+        Task { await GLMOCREngine.unload() }
         try? store.delete(spec)
         refresh()
     }

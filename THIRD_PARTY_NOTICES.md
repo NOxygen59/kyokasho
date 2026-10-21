@@ -53,3 +53,7 @@ Copyright (C) 2024-2026 Yomitan Authors, (C) 2020-2022 Yomichan Authors. https:/
 | Dictionnaire `ppocrv5_dict.txt` | PaddlePaddle | Apache-2.0 | Téléchargé avec le modèle |
 | NDLOCR-Lite (modèles DEIM + PARSeq, `NDLmoji.yaml`) | National Diet Library (Japon) | CC-BY-4.0 | **Téléchargés à la demande** ; crédit dans « À propos » |
 | PaddleOCR, RapidOCR, NDLOCR-Lite (code Python) | idem | Apache-2.0 / CC-BY-4.0 | **Comportement seulement** : prétraitement et décodage réécrits en Swift, aucun code copié |
+| MLX Swift 0.29.1, mlx-swift-lm 2.29.3 | ml-explore (Apple) | MIT | Exécution du modèle IA GLM-OCR |
+| `Packages/GLMOCRKit/Sources/GLMOCRKit/GlmOcr.swift`, `QwenVLHelpers.swift` | ml-explore (mlx-swift-lm 2.31.3 / 2.29.3), d'après mlx-vlm (Prince Canuma) | MIT | **Code copié et adapté** (iOS 16) ; Copyright (c) 2024 ml-explore, licence MIT conservée |
+| swift-transformers 1.1.9 | Hugging Face | Apache-2.0 | Tokenizer de GLM-OCR (dépendance de mlx-swift-lm) |
+| Modèle GLM-OCR 4 bits (mlx-community/GLM-OCR-4bit) | Zhipu AI ; conversion mlx-community | MIT | **Téléchargé à la demande**, jamais dans le dépôt |

@@ -23,6 +23,8 @@ settings:
 packages:
   KyokashoKit:
     path: Packages/KyokashoKit
+  GLMOCRKit:
+    path: Packages/GLMOCRKit
 targets:
   Kyokasho:
     type: application
@@ -43,6 +45,8 @@ targets:
         product: ReviewKit
       - package: KyokashoKit
         product: ONNXOCRKit
+      - package: GLMOCRKit
+        product: GLMOCRKit
       - sdk: PDFKit.framework
       - sdk: PencilKit.framework
       - sdk: WebKit.framework

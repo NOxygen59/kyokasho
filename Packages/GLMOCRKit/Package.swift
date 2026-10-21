@@ -21,5 +21,6 @@ let package = Package(
             .product(name: "MLXVLM", package: "mlx-swift-lm"),
             .product(name: "MLXLMCommon", package: "mlx-swift-lm"),
         ]),
+        .testTarget(name: "GLMOCRKitTests", dependencies: ["GLMOCRKit"]),
     ]
 )

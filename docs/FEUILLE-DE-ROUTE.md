@@ -175,7 +175,19 @@ Nouveau fichier `Sources/ReviewKit/Exporters.swift`.
 - Réglages rangés : Apparence / Lecture / Japonais / Cartes / Comptes / À propos.
 - **Prochaine session demandée par l'utilisateur : revue complète du code pour optimiser.**
 
-### [ ] Session 5 — V5-a : moteur NDLOCR-Lite, partie 1
+### [x] Sessions 5-6 faites en avance (21/10) : PP-OCRv5, NDLOCR-Lite, GLM-OCR
+- `OCRKit/ModelStore.swift` : catalogue (`ModelSpec.ppocr5/.ndlocr/.glmocr`, URL fixées sur un commit + SHA-256),
+  téléchargement avec reprise. `OCRKit/NeuralOCR.swift` : image → tenseur, DB, CTC, PARSeq, ordre de lecture vertical.
+- `ONNXOCRKit` (ONNX Runtime 1.24.2) : `PPOCREngine`, `NDLOCREngine`. Testés sur le Mac avec les vrais modèles :
+  `KYOKASHO_MODELS=<dossier> swift test --filter ONNXEnginesTests` (dossier avec `ppocr5/`, `ndlocr/`).
+  NDLOCR : détecteur en 800×800 (pas 1024 malgré le nom du fichier), sorties `labels/boxes/scores/char_count`.
+- `Packages/GLMOCRKit` (paquet à part, MLX) : GLM-OCR porté de mlx-swift-lm 2.31.3 vers 2.29.3 (**dernière version iOS 16**,
+  ne pas monter : 2.30+ exige iOS 17). Lignes trouvées par PP-OCRv5 (ou Vision), relues une par une par l'IA.
+  Compiler MLX demande le « Metal Toolchain » d'Xcode (installé le 21/10).
+- Auto = texte du PDF → NDLOCR → PP-OCRv5 → Vision (GLM seulement si choisi). Réglages → OCR : télécharger / supprimer.
+- Entitlement `increased-memory-limit` ajouté (TrollStore). **Rien testé sur l'iPad** (vitesse, mémoire de GLM-OCR).
+
+### [ ] Session 5 — V5-a (remplacée par le bloc ci-dessus ; garder pour mémoire) : moteur NDLOCR-Lite, partie 1
 1. **Vérifier d'abord** (lecture seule, peu de tokens) le dépôt `ndl-lab/ndlocr-lite` sur GitHub :
    - licence du code et des modèles ;
    - fichiers ONNX (détection de la mise en page + reconnaissance des lignes), tailles d'entrée, normalisation ;

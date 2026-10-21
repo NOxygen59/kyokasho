@@ -5,6 +5,9 @@
 	<!-- Identité de l'app (pseudo-signature ldid, installation TrollStore). -->
 	<key>application-identifier</key>
 	<string>fr.noxygen59.kyokasho</string>
+	<!-- Plus de mémoire pour le moteur OCR IA (GLM-OCR, ≈ 1,5 Go). -->
+	<key>com.apple.developer.kernel.increased-memory-limit</key>
+	<true/>
 	<!-- Trousseau : jeton de connexion Google Drive. -->
 	<key>keychain-access-groups</key>
 	<array>

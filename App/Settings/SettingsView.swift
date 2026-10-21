@@ -351,6 +351,9 @@ struct AboutView: View {
                 credit("ONNX Runtime", "Microsoft", "MIT", "https://github.com/microsoft/onnxruntime-swift-package-manager")
                 credit("PP-OCRv5 (modèles téléchargés)", "PaddlePaddle · RapidAI", "Apache-2.0", "https://github.com/PaddlePaddle/PaddleOCR")
                 credit("NDLOCR-Lite (modèles téléchargés)", "国立国会図書館 (National Diet Library)", "CC-BY-4.0", "https://github.com/ndl-lab/ndlocr-lite")
+                credit("GLM-OCR (modèle téléchargé)", "Zhipu AI · conversion mlx-community", "MIT", "https://huggingface.co/zai-org/GLM-OCR")
+                credit("MLX Swift, mlx-swift-lm (GLM-OCR porté)", "ml-explore (Apple)", "MIT", "https://github.com/ml-explore/mlx-swift-lm")
+                credit("swift-transformers (tokenizer)", "Hugging Face", "Apache-2.0", "https://github.com/huggingface/swift-transformers")
             }
             Section("Format de fichier") {
                 credit("genanki (format .apkg d'Anki, aucun code copié)", "Kerrick Staley", "MIT", "https://github.com/kerrickstaley/genanki")

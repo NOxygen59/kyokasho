@@ -16,6 +16,7 @@ import Foundation
 import Hub
 import MLX
 import MLXLMCommon
+import MLXVLM
 import MLXNN
 import Tokenizers
 
@@ -420,7 +421,7 @@ private enum Vision {
         sinVal = expandedDimensions(sinVal, axis: 1)
         sinVal = tiled(sinVal, repetitions: [1, 1, 2])
 
-        let output = (tensor * cosVal) + (QwenVL.rotateHalf(tensor) * sinVal)
+        let output = (tensor * cosVal) + (GLMQwenVL.rotateHalf(tensor) * sinVal)
         return output.asType(tensor.dtype)
     }
 
@@ -607,7 +608,7 @@ private enum Vision {
     fileprivate class VisionModel: Module {
 
         @ModuleInfo(key: "patch_embed") var patchEmbed: PatchEmbed
-        let rotaryPosEmb: QwenVL.VisionRotaryEmbedding
+        let rotaryPosEmb: GLMQwenVL.VisionRotaryEmbedding
         @ModuleInfo(key: "blocks") var blocks: [GlmOcrVisionBlock]
         @ModuleInfo var downsample: Conv2d
         @ModuleInfo var merger: PatchMerger
@@ -621,7 +622,7 @@ private enum Vision {
             self._patchEmbed.wrappedValue = PatchEmbed(config)
 
             let headDim = config.hiddenSize / config.numHeads
-            self.rotaryPosEmb = QwenVL.VisionRotaryEmbedding(
+            self.rotaryPosEmb = GLMQwenVL.VisionRotaryEmbedding(
                 dimensions: headDim / 2, theta: 10_000)
 
             self._blocks.wrappedValue = (0 ..< config.depth).map { _ in
@@ -785,7 +786,7 @@ public struct GlmOcrProcessor: UserInputProcessor {
         let images = images.map { MediaProcessing.apply($0, processing: processing) }
 
         let size = images[0].extent.size
-        let (resizedHeight, resizedWidth) = try QwenVL.targetSize(
+        let (resizedHeight, resizedWidth) = try GLMQwenVL.targetSize(
             height: Int(size.height), width: Int(size.width),
             factor: config.patchSize * config.mergeSize,
             minPixels: config.minPixels, maxPixels: config.maxPixels)
@@ -795,7 +796,7 @@ public struct GlmOcrProcessor: UserInputProcessor {
             preprocess(image: image, resizedSize: resizedSize).asMLXArray()
         }
 
-        return try QwenVL.patchify(
+        return try GLMQwenVL.patchify(
             images: processedImages, mergeSize: config.mergeSize, patchSize: config.patchSize,
             temporalPatchSize: config.temporalPatchSize)
     }
@@ -1007,7 +1008,7 @@ public class GlmOcr: Module, VLMModel, KVCacheDimensionProvider {
             hiddenStates = hiddenStates[.newAxis, 0..., 0...]
         }
 
-        let merged = QwenVL.mergeInputIdsWithImageFeatures(
+        let merged = GLMQwenVL.mergeInputIdsWithImageFeatures(
             inputIds: inputIds, inputEmbeds: inputEmbeds, imageFeatures: hiddenStates,
             imageTokenId: config.baseConfiguration.imageTokenId,
             videoTokenId: config.baseConfiguration.videoTokenId)

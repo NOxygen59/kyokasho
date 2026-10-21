@@ -3,6 +3,7 @@
 
 import Combine
 import Foundation
+import GLMOCRKit
 import OCRKit
 import ONNXOCRKit
 import ReaderCore
@@ -74,6 +75,7 @@ final class AppModel: ObservableObject {
         // Moteurs à modèle téléchargé : toujours enregistrés, disponibles une fois le modèle installé.
         OCRService.register(NDLOCREngine())
         OCRService.register(PPOCREngine())
+        OCRService.register(GLMOCREngine())
         dictionary = DictionaryModel(appDatabase: database)
         review = ReviewModel(appDatabase: database)
         benchDirectory = support.appendingPathComponent("Bench", isDirectory: true)
