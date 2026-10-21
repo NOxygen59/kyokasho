@@ -198,6 +198,8 @@ Sans la variable, ces tests sont sautés. Le dossier du 21/10 était dans le scr
 - MLX : compiler demande le « Metal Toolchain » d'Xcode (installé le 21/10). `UserInput(prompt:images:)` de
   mlx-swift-lm 2.29.3 **perd les images** → utiliser `UserInput(chat: [.user(…, images: …)])`. GLM-OCR : jetons
   de fin `<|endoftext|>`, `<|user|>` à passer dans `extraEOSTokens`.
+- PDFKit : `characterIndex(at:)` / `characterBounds(at:)` **ne comptent pas les fins de ligne** de `page.string`
+  (index décalé d'un par ligne au-dessus). Passer par `glyphToStringMap` / `stringIndex(near:)` ou `selection(for:)`.
 - `NSLock.withLock` existe déjà dans Foundation.
 - Le paysage n'a **jamais** été vérifié (le simulateur sans fenêtre ne pivote pas).
 

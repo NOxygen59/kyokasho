@@ -62,7 +62,8 @@ final class ReaderController: NSObject, ObservableObject {
     /// chaque rafraîchissement de l'écran, ce qui relisait tout le texte de la page).
     @Published private(set) var pageHasPDFText = false
     /// Texte de la page touchée / survolée, gardé pour les recherches suivantes sur la même page.
-    private var pageStringCache: (index: Int, string: NSString)?
+    /// Texte de la page sous le curseur + correspondance « index de `characterIndex(at:)` → index du texte ».
+    private var pageStringCache: (index: Int, string: NSString, map: [Int])?
     private var pageTextTask: Task<Void, Never>?
     private var sharpenTask: Task<Void, Never>?
     private var furiganaTask: Task<Void, Never>?
@@ -342,15 +343,23 @@ final class ReaderController: NSObject, ObservableObject {
 
         // 1. Texte intégré du PDF (lu une fois par page, gardé pour le survol).
         let ns: NSString
+        let map: [Int]
         if let cached = pageStringCache, cached.index == index {
             ns = cached.string
+            map = cached.map
         } else {
             ns = (page.string ?? "") as NSString
-            pageStringCache = (index, ns)
+            map = Self.glyphToStringMap(ns)
+            pageStringCache = (index, ns, map)
         }
         if ns.length > 0 {
-            let i = page.characterIndex(at: pagePoint)
-            if i >= 0, i < ns.length {
+            let glyph = page.characterIndex(at: pagePoint)
+            // Point hors du texte (marge, image) : rien à chercher, et surtout pas l'OCR d'une page numérique.
+            guard glyph >= 0, glyph < map.count, let i = Self.stringIndex(near: map[glyph], glyph: glyph, on: page, string: ns) else {
+                if !fromHover { lookupHighlight = [] }
+                return
+            }
+            do {
                 var text = ""
                 var rects: [CGRect] = []
                 var j = i
@@ -359,7 +368,9 @@ final class ReaderController: NSObject, ObservableObject {
                     let piece = ns.substring(with: range)
                     if piece == "\n" || piece == "\r" { break }
                     text += piece
-                    rects.append(pdfView.convert(page.characterBounds(at: range.location), from: page))
+                    // Rectangle du caractère dans le même repère que le texte (`selection(for:)`).
+                    let bounds = page.selection(for: range)?.bounds(for: page) ?? .zero
+                    rects.append(pdfView.convert(bounds, from: page))
                     j = NSMaxRange(range)
                 }
                 if !text.trimmingCharacters(in: .whitespaces).isEmpty {
@@ -370,6 +381,8 @@ final class ReaderController: NSObject, ObservableObject {
                     present(text: text, rects: rects, anchor: point, context: context)
                     return
                 }
+                if !fromHover { lookupHighlight = [] }
+                return
             }
         }
 
@@ -427,6 +440,35 @@ final class ReaderController: NSObject, ObservableObject {
             start = 0
         }
         present(text: text, rects: rects, anchor: point, context: context)
+    }
+
+    /// `characterIndex(at:)` / `characterBounds(at:)` ne comptent pas les fins de ligne de `page.string`
+    /// (vérifié sur Mac) : sans correction, le mot lu glissait d'un caractère par ligne au-dessus.
+    nonisolated static func glyphToStringMap(_ ns: NSString) -> [Int] {
+        var map: [Int] = []
+        map.reserveCapacity(ns.length)
+        for i in 0..<ns.length {
+            let unit = ns.character(at: i)
+            if unit != 0x0A, unit != 0x0D { map.append(i) }
+        }
+        return map
+    }
+
+    /// Index du texte pour le caractère `glyph`, contrôlé par sa position : si PDFKit compte autrement
+    /// (espaces ajoutées…), on cherche à côté le caractère qui est vraiment à cet endroit.
+    private static func stringIndex(near guess: Int, glyph: Int, on page: PDFPage, string ns: NSString) -> Int? {
+        let target = page.characterBounds(at: glyph)
+        guard target.width > 0 || target.height > 0 else { return guess }
+        let center = CGPoint(x: target.midX, y: target.midY)
+        for delta in [0, -1, 1, -2, 2, -3, 3, -4, 4] {
+            let i = guess + delta
+            guard i >= 0, i < ns.length else { continue }
+            let unit = ns.character(at: i)
+            if unit == 0x0A || unit == 0x0D { continue }
+            if let r = page.selection(for: NSRange(location: i, length: 1))?.bounds(for: page),
+               r.insetBy(dx: -1, dy: -1).contains(center) { return i }
+        }
+        return nil
     }
 
     private func present(text: String, rects: [CGRect], anchor: CGPoint, context: LookupContext) {
