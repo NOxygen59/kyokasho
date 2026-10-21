@@ -213,6 +213,13 @@ public struct NDLOCREngine: OCREngine {
         let image = try ONNXEngines.pageImage(input, longSide: 3000)
         let detections = try detect(image)
         let charset = try SessionCache.shared.charset(store.url(.ndlocr, "NDLmoji.yaml")) { SequenceDecoder.ndlCharset(yaml: $0) }
+        // Positions des caractères : NDLOCR (PARSeq) n'en donne pas. Si PP-OCRv5 est installé, sa reconnaissance
+        // (CTC : un pas de temps par caractère) relit la même découpe et fournit les vrais centres.
+        let pp = PPOCREngine(store: store)
+        let ppRec: (model: ONNXModel, charset: [String])? = pp.isAvailable
+            ? (try? (SessionCache.shared.model(store.url(.ppocr5, "rec.onnx")),
+                     SessionCache.shared.charset(store.url(.ppocr5, "dict.txt")) { SequenceDecoder.paddleCharset(dict: $0) }))
+            : nil
         var lines: [OCRLine] = []
         for d in detections {
             try Task.checkCancellation()
@@ -222,8 +229,16 @@ public struct NDLOCREngine: OCREngine {
             guard !text.isEmpty else { continue }
             let box = ONNXEngines.normalized(d.rect, in: image)
             let vertical = d.rect.height > d.rect.width
-            lines.append(OCRLine(text: text, box: box, charBoxes: CharacterLayout.proportional(text, in: box, vertical: vertical),
-                                 measuredCharBoxes: false, vertical: vertical, confidence: Double(d.score)))
+            var charBoxes = CharacterLayout.proportional(text, in: box, vertical: vertical)
+            var measured = false
+            if let ppRec, let ppLine = try? pp.recognize(d.rect, in: image, model: ppRec.model, charset: ppRec.charset),
+               ppLine.measuredCharBoxes, ppLine.vertical == vertical,
+               let aligned = CharacterAlignment.boxes(for: text, reference: ppLine.text, referenceBoxes: ppLine.charBoxes) {
+                charBoxes = aligned
+                measured = true
+            }
+            lines.append(OCRLine(text: text, box: box, charBoxes: charBoxes,
+                                 measuredCharBoxes: measured, vertical: vertical, confidence: Double(d.score)))
         }
         return OCRPage(engine: id, lines: NeuralLayout.readingOrder(lines), durationMs: Int(Date().timeIntervalSince(start) * 1000))
     }
@@ -275,5 +290,57 @@ public struct NDLOCREngine: OCREngine {
             if text.count >= t.limit, tier < tiers.count - 1 { tier += 1; continue }
             return text
         }
+    }
+}
+
+/// Recopie les boîtes mesurées d'un autre moteur sur un texte un peu différent : alignement caractère par
+/// caractère (distance d'édition). Les caractères sans équivalent prennent une place entre leurs voisins.
+/// `nil` si moins de 60 % des caractères concordent (les deux lectures divergent trop).
+enum CharacterAlignment {
+    static func boxes(for text: String, reference: String, referenceBoxes: [NormBox]) -> [NormBox]? {
+        let a = Array(text), b = Array(reference)
+        guard !a.isEmpty, b.count == referenceBoxes.count, !b.isEmpty else { return nil }
+        if a == b { return referenceBoxes }
+        let n = a.count, m = b.count
+        // Distance d'édition, puis remontée du chemin : a[i] ↔ b[j] (égal ou remplacé).
+        var cost = [[Int]](repeating: [Int](repeating: 0, count: m + 1), count: n + 1)
+        for i in 0...n { cost[i][0] = i }
+        for j in 0...m { cost[0][j] = j }
+        for i in 1...n {
+            for j in 1...m {
+                cost[i][j] = min(cost[i - 1][j] + 1, cost[i][j - 1] + 1, cost[i - 1][j - 1] + (a[i - 1] == b[j - 1] ? 0 : 1))
+            }
+        }
+        var match = [Int?](repeating: nil, count: n)
+        var equal = 0
+        var i = n, j = m
+        while i > 0, j > 0 {
+            if cost[i][j] == cost[i - 1][j - 1] + (a[i - 1] == b[j - 1] ? 0 : 1) {
+                match[i - 1] = j - 1
+                if a[i - 1] == b[j - 1] { equal += 1 }
+                i -= 1; j -= 1
+            } else if cost[i][j] == cost[i - 1][j] + 1 {
+                i -= 1
+            } else {
+                j -= 1
+            }
+        }
+        guard Double(equal) >= 0.6 * Double(n) else { return nil }
+        // Caractères sans équivalent : boîte interpolée entre le voisin d'avant et celui d'après.
+        var out: [NormBox] = []
+        out.reserveCapacity(n)
+        for k in 0..<n {
+            if let j = match[k] { out.append(referenceBoxes[j]); continue }
+            let before = (0..<k).reversed().first { match[$0] != nil }.map { referenceBoxes[match[$0]!] }
+            let after = ((k + 1)..<n).first { match[$0] != nil }.map { referenceBoxes[match[$0]!] }
+            switch (before, after) {
+            case let (p?, q?):
+                out.append(NormBox(x: (p.x + q.x) / 2, y: (p.y + q.y) / 2, w: (p.w + q.w) / 2, h: (p.h + q.h) / 2))
+            case let (p?, nil): out.append(p)
+            case let (nil, q?): out.append(q)
+            default: return nil
+            }
+        }
+        return out
     }
 }

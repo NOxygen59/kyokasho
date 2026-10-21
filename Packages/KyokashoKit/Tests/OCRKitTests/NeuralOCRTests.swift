@@ -143,3 +143,36 @@ final class RGBImageAccelerateTests: XCTestCase {
         }
     }
 }
+
+final class OCRLayoutTests: XCTestCase {
+    private func line(_ text: String, x: Double, y: Double, w: Double, h: Double = 0.02, vertical: Bool = false) -> OCRLine {
+        let box = NormBox(x: x, y: y, w: w, h: h)
+        return OCRLine(text: text, box: box, charBoxes: CharacterLayout.proportional(text, in: box, vertical: vertical),
+                       measuredCharBoxes: false, vertical: vertical, confidence: 1)
+    }
+
+    func testHeadingParagraphsAndTable() {
+        let page = OCRPage(engine: "test", lines: [
+            line("第一章", x: 0.1, y: 0.05, w: 0.2, h: 0.04),
+            line("　日本語の文章です。これは", x: 0.12, y: 0.12, w: 0.78),
+            line("続きの行です。", x: 0.1, y: 0.145, w: 0.3),
+            line("　新しい段落。", x: 0.12, y: 0.17, w: 0.4),
+            line("名前", x: 0.1, y: 0.3, w: 0.08), line("値段", x: 0.5, y: 0.3, w: 0.08),
+            line("りんご", x: 0.1, y: 0.33, w: 0.1), line("百円", x: 0.5, y: 0.33, w: 0.08),
+        ], durationMs: 0)
+        let blocks = OCRLayout.blocks(page)
+        XCTAssertEqual(blocks.first, .heading(level: 1, text: "第一章"))
+        XCTAssertTrue(blocks.contains(.paragraph("日本語の文章です。これは続きの行です。")))
+        XCTAssertTrue(blocks.contains(.paragraph("新しい段落。")))
+        XCTAssertTrue(blocks.contains(.table([["名前", "値段"], ["りんご", "百円"]])))
+        XCTAssertTrue(OCRLayout.markdown(blocks).contains("| 名前 | 値段 |"))
+    }
+
+    func testTwoColumnsStaySeparate() {
+        let page = OCRPage(engine: "test", lines: [
+            line("左の列の一行目", x: 0.05, y: 0.1, w: 0.4), line("左の列の二行目", x: 0.05, y: 0.125, w: 0.4),
+            line("右の列の一行目", x: 0.55, y: 0.1, w: 0.4), line("右の列の二行目", x: 0.55, y: 0.125, w: 0.4),
+        ], durationMs: 0)
+        XCTAssertEqual(OCRLayout.blocks(page), [.paragraph("左の列の一行目左の列の二行目"), .paragraph("右の列の一行目右の列の二行目")])
+    }
+}

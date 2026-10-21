@@ -93,7 +93,7 @@ Ajouter à `GlossaryRenderer.Options` (Codable : **décodage tolérant**, sinon 
 mieux un paramètre non enregistré `palette: [String: String]` (fond, texte, accent) rempli depuis `Theme.current`
 (App/Design/Themes.swift) dans `DictionaryModel.renderer(...)`. Même chose pour `CardHTML.page`.
 
-### [ ] C — Dictionnaire sur scans : boîtes de caractères précises
+### [x] C — Dictionnaire sur scans : boîtes de caractères précises (fait le 21/10 : `CharacterAlignment`, cache OCR v4)
 NDLOCR donne des boîtes de caractères **proportionnelles** (`CharacterLayout.proportional`) → le mot touché peut
 être décalé d'un caractère. Idée : après NDLOCR, lancer seulement la **reconnaissance** PP-OCRv5 (CTC, positions par
 pas de temps, déjà codé dans `PPOCREngine.recognize(_:in:model:charset:)`) sur la même découpe de ligne et
@@ -137,6 +137,15 @@ export Markdown des notes calculé au partage seulement, recherche de cartes apr
 des téléchargements par %, DE-GAN (poids séparables, −22 Mo), OCR : conversions d'image vDSP / vImage.
 Reste (repéré, pas fait) : `Translator.segment` = une recherche par caractère non trouvé ; `OCRService.search`
 décode toutes les pages ; rotation des colonnes verticales pixel par pixel ; DB des révisions sur le fil principal.
+
+### [x] I — 0.8 (21/10, non testé sur l'iPad)
+Couche de texte « vraie » partout (`PDFTextEngine.hasTextLayer` / 8 caractères : les PDF photo à couche vide
+passent par l'OCR — c'était la panne du dictionnaire et des furigana sur scans). Double page : `focusSource` /
+`shownSources`, pilules dans le panneau, `ensureOCR` (file unique). Panneau d'étude ouvert d'office en paysage.
+Texte mis en forme : `OCRLayout` (OCRKit) — idée de Marker (blocs, ordre, paragraphes, titres, tableaux) en
+géométrie pure ; Marker lui-même (Python + modèles Surya, plusieurs Go, GPU) ne tourne pas sur l'iPad.
+**Reste : gestes / zoom « cassés »** (rien trouvé à la lecture du code : demander à l'utilisateur lesquels,
+tester au simulateur avec sa permission).
 
 ## 6. Carte du code (où est quoi)
 

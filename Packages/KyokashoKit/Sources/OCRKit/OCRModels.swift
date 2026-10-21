@@ -61,7 +61,8 @@ public struct OCRLine: Codable, Hashable, Sendable {
 /// Résultat OCR d'une page.
 public struct OCRPage: Codable, Hashable, Sendable {
     /// Version du format/rendu : un résultat plus ancien en cache est refait automatiquement.
-    public static let currentVersion = 3
+    /// 4 : boîtes de caractères de NDLOCR mesurées par PP-OCRv5 (si installé).
+    public static let currentVersion = 4
 
     public var engine: String
     public var lines: [OCRLine]

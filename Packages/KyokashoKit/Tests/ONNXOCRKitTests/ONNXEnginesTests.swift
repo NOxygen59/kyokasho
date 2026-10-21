@@ -98,3 +98,24 @@ final class ONNXEnginesTests: XCTestCase {
         XCTAssertEqual(v.lines.first?.vertical, true)
     }
 }
+
+final class CharacterAlignmentTests: XCTestCase {
+    private func boxes(_ n: Int) -> [NormBox] { (0..<n).map { NormBox(x: Double($0) / 10, y: 0, w: 0.1, h: 0.1) } }
+
+    func testSameTextKeepsBoxes() {
+        XCTAssertEqual(CharacterAlignment.boxes(for: "日本語", reference: "日本語", referenceBoxes: boxes(3)), boxes(3))
+    }
+
+    func testOneMissingCharacterIsInterpolated() throws {
+        // PP-OCR a sauté « の » : 教科書 garde ses vraies places, « の » se met entre 語 et 教.
+        let out = try XCTUnwrap(CharacterAlignment.boxes(for: "日本語の教科書", reference: "日本語教科書", referenceBoxes: boxes(6)))
+        XCTAssertEqual(out.count, 7)
+        XCTAssertEqual(out[4].x, 0.3, accuracy: 1e-9)  // 教
+        XCTAssertEqual(out[3].x, 0.25, accuracy: 1e-9) // の
+    }
+
+    func testTooDifferentGivesNil() {
+        XCTAssertNil(CharacterAlignment.boxes(for: "日本語の教科書", reference: "abcdefg", referenceBoxes: boxes(7)))
+    }
+}
+

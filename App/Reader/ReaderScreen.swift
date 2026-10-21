@@ -22,6 +22,7 @@ struct ReaderScreen: View {
     @StateObject private var lookup: LookupSession
     @State private var sheet: Sheet?
     @State private var side: Side? = nil
+    @State private var autoOpenedSide = false
     @State private var studyTab: StudyPanel.Tab = .text
     @AppStorage("reader.filmstripShown") private var filmstripShown = true
     @AppStorage("pencil.lookupOption") private var pencilOption = false
@@ -106,6 +107,10 @@ struct ReaderScreen: View {
                 }
             }
             .padding(side == nil ? 0 : Atelier.gap)
+            .onAppear {
+                // Paysage (taille réelle de la vue, pas l'orientation de la scène) : panneau d'étude ouvert d'office.
+                if landscape, !autoOpenedSide { autoOpenedSide = true; side = .study }
+            }
             .overlay(alignment: .trailing) {
                 // Portrait : le panneau d'étude passe par-dessus la page.
                 if side == .study, !landscape {
@@ -119,9 +124,6 @@ struct ReaderScreen: View {
         .persistentSystemOverlays(chromeVisible ? .automatic : .hidden)
         .onAppear {
             reader.load()
-            // En paysage, le panneau d'étude est ouvert d'office : il y a la place.
-            let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene
-            if scene?.interfaceOrientation.isLandscape == true { side = .study }
         }
         .onDisappear { reader.close() }
         .onChange(of: reader.lookupRequest) { request in

@@ -20,7 +20,25 @@ struct StudyPanel: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                AtelierLabel("Étude · page \(reader.document.pageLabel(reader.currentSourcePage))", tint: Atelier.textSecondary)
+                if reader.shownSources.count > 1 {
+                    // Double page : une pilule par page affichée, le panneau travaille sur celle choisie.
+                    HStack(spacing: 6) {
+                        ForEach(reader.shownSources, id: \.self) { source in
+                            let on = source == reader.focusSource
+                            Button { reader.focus(source) } label: {
+                                Text("p. \(reader.document.pageLabel(source))")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .padding(.horizontal, 12).padding(.vertical, 5)
+                                    .foregroundStyle(on ? Color.black.opacity(0.85) : Atelier.textSecondary)
+                                    .background(Capsule().fill(on ? Atelier.Tint.japanese : Atelier.surfaceHigh))
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("Travailler sur la page \(reader.document.pageLabel(source))")
+                        }
+                    }
+                } else {
+                    AtelierLabel("Étude · page \(reader.document.pageLabel(reader.focusSource))", tint: Atelier.textSecondary)
+                }
                 Spacer()
                 Button(action: close) {
                     Image(systemName: "sidebar.trailing").font(.system(size: 15, weight: .semibold))
@@ -63,6 +81,8 @@ struct StudyTextTab: View {
     @ObservedObject var reader: ReaderController
     @ObservedObject private var deepl = DeepLService.shared
     @State private var translation: String?
+    /// Texte mis en forme (titres, paragraphes, tableaux) ou tel que lu, ligne par ligne.
+    @AppStorage("study.formattedText") private var formatted = true
     @State private var translating = false
     @State private var translateError: String?
     @State private var showCompare = false
@@ -80,12 +100,16 @@ struct StudyTextTab: View {
                     Button("Lire avec Apple Vision") { reader.runOCR(engine: OCREngineID.vision) }
                         .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.japanese))
                 case (let page?, _):
-                    Text(page.text)
-                        .font(Atelier.jp)
-                        .lineSpacing(7)
-                        .foregroundStyle(Atelier.textPrimary)
-                        .textSelection(.enabled)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                    if formatted {
+                        FormattedOCRText(page: page)
+                    } else {
+                        Text(page.text)
+                            .font(Atelier.jp)
+                            .lineSpacing(7)
+                            .foregroundStyle(Atelier.textPrimary)
+                            .textSelection(.enabled)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
                     translationBlock(for: page.text)
                 default:
                     Text("La page n'a pas encore été lue.").foregroundStyle(Atelier.textSecondary)
@@ -95,7 +119,7 @@ struct StudyTextTab: View {
                 documentOCRRow
             }
         }
-        .onChange(of: reader.currentSourcePage) { _ in
+        .onChange(of: reader.focusSource) { _ in
             translation = nil
             translateError = nil
         }
@@ -123,10 +147,19 @@ struct StudyTextTab: View {
                 .padding(.horizontal, 10).padding(.vertical, 6)
                 .background(Atelier.surfaceHigh, in: Capsule())
             }
+            Picker("Affichage", selection: $formatted) {
+                Text("Mis en forme").tag(true)
+                Text("Brut").tag(false)
+            }
+            .pickerStyle(.segmented)
+            .frame(maxWidth: 190)
             Spacer()
-            Button { UIPasteboard.general.string = reader.ocrPage?.text } label: { Image(systemName: "doc.on.doc") }
+            Button {
+                guard let page = reader.ocrPage else { return }
+                UIPasteboard.general.string = formatted ? OCRLayout.markdown(page) : page.text
+            } label: { Image(systemName: "doc.on.doc") }
                 .disabled(reader.ocrPage == nil)
-                .accessibilityLabel("Copier le texte")
+                .accessibilityLabel(formatted ? "Copier en Markdown" : "Copier le texte")
         }
         .foregroundStyle(Atelier.textPrimary)
     }
@@ -195,6 +228,43 @@ struct StudyTextTab: View {
 }
 
 // MARK: - Vocabulaire (V3)
+
+/// Texte OCR mis en forme : titres, paragraphes, tableaux (`OCRLayout`), calculé une fois par page.
+struct FormattedOCRText: View {
+    let page: OCRPage
+    @State private var blocks: [OCRLayout.Block] = []
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            ForEach(blocks.indices, id: \.self) { i in
+                switch blocks[i] {
+                case .heading(let level, let text):
+                    Text(text).font(.system(size: level == 1 ? 22 : 18, weight: .bold))
+                        .foregroundStyle(Atelier.textPrimary).padding(.top, i == 0 ? 0 : 6)
+                case .paragraph(let text):
+                    Text(text).font(Atelier.jp).lineSpacing(7).foregroundStyle(Atelier.textPrimary)
+                case .table(let rows):
+                    Grid(alignment: .leading, horizontalSpacing: 0, verticalSpacing: 0) {
+                        ForEach(rows.indices, id: \.self) { r in
+                            GridRow {
+                                ForEach(rows[r].indices, id: \.self) { c in
+                                    Text(rows[r][c]).font(r == 0 ? Atelier.jp.bold() : Atelier.jp)
+                                        .padding(.horizontal, 8).padding(.vertical, 5)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .overlay(Rectangle().strokeBorder(Atelier.hairline, lineWidth: 1))
+                                }
+                            }
+                        }
+                    }
+                    .foregroundStyle(Atelier.textPrimary)
+                }
+            }
+        }
+        .textSelection(.enabled)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .task(id: page) { blocks = OCRLayout.blocks(page) }
+    }
+}
 
 struct StudyVocabTab: View {
     @EnvironmentObject private var dictionary: DictionaryModel
@@ -317,8 +387,8 @@ struct StudyVocabTab: View {
     private func add(_ term: TermResult) -> String? {
         let sentence = reader.ocrPage?.lines.first { $0.text.contains(term.matchedText) }?.text
         return review.add(term, sentence: sentence,
-                          source: "\(reader.document.title) · p. \(reader.document.pageLabel(reader.currentSourcePage))",
-                          image: nil, documentId: reader.document.id, page: reader.currentSourcePage,
+                          source: "\(reader.document.title) · p. \(reader.document.pageLabel(reader.focusSource))",
+                          image: nil, documentId: reader.document.id, page: reader.focusSource,
                           dictionary: dictionary)
     }
 
@@ -374,7 +444,7 @@ struct StudyNotesTab: View {
     @State private var draft = ""
     @FocusState private var focused: Bool
 
-    private var page: Int { reader.currentSourcePage }
+    private var page: Int { reader.focusSource }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {

@@ -31,7 +31,11 @@ final class ReaderController: NSObject, ObservableObject {
     @Published private(set) var searchResults: [SearchResult] = []
     @Published private(set) var isSearching = false
     /// OCR de la page lue (première page lue en double page).
+    /// OCR de la page de travail (`focusSource`) : panneau Texte / Mots.
     @Published private(set) var ocrPage: OCRPage?
+    /// Pages affichées (deux en double page) et celle choisie dans le panneau (pilules).
+    @Published private(set) var shownSources: [Int] = []
+    @Published private(set) var focusSource = 0
     @Published private(set) var ocrState: OCRState = .idle
 
     // MARK: Dictionnaire au toucher
@@ -63,10 +67,14 @@ final class ReaderController: NSObject, ObservableObject {
     @Published private(set) var pageHasPDFText = false
     /// Texte de la page touchée / survolée, gardé pour les recherches suivantes sur la même page.
     /// Texte de la page sous le curseur + correspondance « index de `characterIndex(at:)` → index du texte ».
-    private var pageStringCache: (index: Int, string: NSString, map: [Int])?
+    private var pageStringCache: (index: Int, string: NSString, map: [Int], hasText: Bool)?
     private var pageTextTask: Task<Void, Never>?
     private var sharpenTask: Task<Void, Never>?
     private var furiganaTask: Task<Void, Never>?
+    /// File de `ensureOCR` : pages à lire, page en cours, tâche unique.
+    private var ensureQueue: [Int] = []
+    private var ensuringPage: Int?
+    private var ensureTask: Task<Void, Never>?
     private var hover: UIHoverGestureRecognizer!
     private var pencilTap: UITapGestureRecognizer!
     /// Le Pencil cherche le mot touché dans le dictionnaire (au lieu de dessiner ou d'afficher les barres).
@@ -344,15 +352,22 @@ final class ReaderController: NSObject, ObservableObject {
         // 1. Texte intégré du PDF (lu une fois par page, gardé pour le survol).
         let ns: NSString
         let map: [Int]
+        let pageHasText: Bool
         if let cached = pageStringCache, cached.index == index {
             ns = cached.string
             map = cached.map
+            pageHasText = cached.hasText
         } else {
             ns = (page.string ?? "") as NSString
             map = Self.glyphToStringMap(ns)
-            pageStringCache = (index, ns, map)
+            // Même règle que l'OCR « auto » : au moins 8 vrais caractères (pas seulement des blancs).
+            pageHasText = (ns as String).unicodeScalars.lazy.filter { !CharacterSet.whitespacesAndNewlines.contains($0) }
+                .prefix(8).count >= 8
+            pageStringCache = (index, ns, map, pageHasText)
         }
-        if ns.length > 0 {
+        // Texte intégré seulement s'il y en a vraiment (un PDF « photo » a souvent une couche vide ou faite
+        // de blancs : il passe par l'OCR).
+        if pageHasText {
             let glyph = page.characterIndex(at: pagePoint)
             // Point hors du texte (marge, image) : rien à chercher, et surtout pas l'OCR d'une page numérique.
             guard glyph >= 0, glyph < map.count, let i = Self.stringIndex(near: map[glyph], glyph: glyph, on: page, string: ns) else {
@@ -388,19 +403,20 @@ final class ReaderController: NSObject, ObservableObject {
 
         // 2. OCR de la page (cache, sinon le moteur choisi : NDLOCR / PP-OCRv5 s'ils sont installés).
         guard let box = originalBoxes[source] else { return }
-        var ocr = source == currentSourcePage ? ocrPage : nil
+        var ocr = source == focusSource ? ocrPage : nil
         if ocr == nil { ocr = await cachedOCR(source: source) }
         if ocr == nil, fromHover {
             // Survol d'une page jamais lue : on lance l'OCR en fond, le survol marchera dès qu'il a fini.
-            if ocrState != .running, source == currentSourcePage { runOCR() }
+            ensureOCR([source])
             return
         }
         if ocr == nil {
-            ocrState = .running
+            let focused = source == focusSource
+            if focused { ocrState = .running }
             let engine = await scanEngine(source: source)
             ocr = try? await model.ocr.page(documentId: document.id, url: fileURL, pageIndex: source, engine: engine)
-            ocrState = .idle
-            if let ocr, source == currentSourcePage { ocrPage = ocr; showOCR(ocr, source: source) }
+            if focused, focusSource == source { ocrState = .idle }
+            if let ocr { if source == focusSource { ocrPage = ocr }; showOCR(ocr, source: source) }
         }
         guard let ocr else { return }
         let normalized = CGPoint(x: (pagePoint.x - box.minX) / box.width, y: (box.maxY - pagePoint.y) / box.height)
@@ -611,8 +627,7 @@ final class ReaderController: NSObject, ObservableObject {
             for page in pages {
                 guard !Task.isCancelled else { return }
                 // Page avec du texte intégré (PDF numérique) : déjà nette, rien à faire.
-                let hasText = (try? PDFPool.withDocument(url) { $0.page(at: page)?.string?.isEmpty == false }) ?? false
-                guard !hasText else { continue }
+                guard !PDFTextEngine.hasTextLayer(url: url, pageIndex: page) else { continue }
                 let key = ScanSharpening.key(documentId: id, page: page)
                 if (try? ScanSharpening.prepare(key: key, fileURL: url, page: page)) == true { changed = true }
             }
@@ -629,10 +644,8 @@ final class ReaderController: NSObject, ObservableObject {
         guard FuriganaLayer.enabled else { return }
         let key = ScanSharpening.key(documentId: document.id, page: source), url = fileURL
         Task.detached(priority: .utility) { [weak self] in
-            let box: CGRect? = (try? PDFPool.withDocument(url) { doc -> CGRect? in
-                guard let page = doc.page(at: source), page.string?.isEmpty != false else { return nil }
-                return page.bounds(for: .cropBox)
-            }) ?? nil
+            guard !PDFTextEngine.hasTextLayer(url: url, pageIndex: source) else { return }
+            let box: CGRect? = (try? PDFPool.withDocument(url) { $0.page(at: source)?.bounds(for: .cropBox) }) ?? nil
             guard let box else { return }
             FuriganaLayer.set(FuriganaLayer.marks(from: ocr, box: box), for: key)
             await self?.pdfView.redrawVisiblePages()
@@ -650,9 +663,9 @@ final class ReaderController: NSObject, ObservableObject {
                 guard !Task.isCancelled else { return }
                 let key = ScanSharpening.key(documentId: id, page: source)
                 guard !FuriganaLayer.has(key) else { continue }
+                guard PDFTextEngine.hasTextLayer(url: url, pageIndex: source) else { continue }
                 let marks: [FuriganaLayer.Mark]? = (try? PDFPool.withDocument(url) { doc -> [FuriganaLayer.Mark]? in
-                    guard let page = doc.page(at: source), page.string?.isEmpty == false else { return nil }
-                    return FuriganaLayer.marks(from: page)
+                    doc.page(at: source).map(FuriganaLayer.marks(from:))
                 }) ?? nil
                 if let marks { FuriganaLayer.set(marks, for: key); changed = true }
             }
@@ -838,25 +851,34 @@ final class ReaderController: NSObject, ObservableObject {
         let url = fileURL
         pageTextTask = Task.detached(priority: .utility) { [weak self] in
             // Même règle que le toucher : un peu de texte suffit (folio, légende).
-            let has = (try? PDFPool.withDocument(url) { $0.page(at: source)?.string?.isEmpty == false }) ?? false
+            let has = PDFTextEngine.hasTextLayer(url: url, pageIndex: source)
             await MainActor.run {
                 guard !Task.isCancelled, self?.currentSourcePage == source else { return }
                 self?.pageHasPDFText = has
             }
         }
         let visible = visibleSources()
+        // Nouvelle page : la file d'OCR de l'ancienne ne sert plus.
+        if visible != shownSources { cancelEnsureOCR() }
+        shownSources = visible
+        focusSource = source
         scheduleSharpening(visible)
         scheduleFurigana(visible)
         Task { [weak self] in
             guard let self else { return }
             // Zones en cache pour toutes les pages visibles (double page).
+            var missing: [Int] = []
             for page in visible {
-                if let cached = await self.cachedOCR(source: page) { self.showOCR(cached, source: page) }
+                if let cached = await self.cachedOCR(source: page) {
+                    self.showOCR(cached, source: page)
+                    if page == self.focusSource { self.ocrPage = cached }
+                } else {
+                    missing.append(page)
+                }
             }
-            if let cached = await self.cachedOCR(source: source) {
-                if self.currentSourcePage == source { self.ocrPage = cached }
-            } else if self.model.appSettings.ocrAutoCurrentPage {
-                self.runOCR()
+            // OCR automatique (réglage) ou furigana actifs : les pages visibles sans OCR sont lues.
+            if !missing.isEmpty, self.model.appSettings.ocrAutoCurrentPage || FuriganaLayer.enabled {
+                self.ensureOCR(missing)
             }
         }
     }
@@ -892,7 +914,7 @@ final class ReaderController: NSObject, ObservableObject {
     ///   - force: ignore le cache (bouton « Relancer »).
     func runOCR(engine: String? = nil, force: Bool = false) {
         ocrTask?.cancel()
-        let source = currentSourcePage
+        let source = focusSource
         let url = fileURL
         let documentId = document.id
         let choice = settings.ocrEngine
@@ -911,14 +933,14 @@ final class ReaderController: NSObject, ObservableObject {
                 let page = try await service.page(documentId: documentId, url: url, pageIndex: source, engine: engineID, force: force)
                 guard let self, !Task.isCancelled else { return }
                 self.showOCR(page, source: source)
-                if self.currentSourcePage == source {
+                if self.focusSource == source {
                     self.ocrPage = page
                     self.ocrState = .idle
                 }
             } catch is CancellationError {
                 return
             } catch {
-                guard let self, self.currentSourcePage == source else { return }
+                guard let self, self.focusSource == source else { return }
                 self.ocrState = .failed(error.localizedDescription)
             }
         }
@@ -926,7 +948,57 @@ final class ReaderController: NSObject, ObservableObject {
 
     /// OCR d'une page avec un moteur précis (comparaison), sans changer la page affichée.
     func ocr(engine: String) async throws -> OCRPage {
-        try await model.ocr.page(documentId: document.id, url: fileURL, pageIndex: currentSourcePage, engine: engine)
+        try await model.ocr.page(documentId: document.id, url: fileURL, pageIndex: focusSource, engine: engine)
+    }
+
+    /// Pilule du panneau : travailler sur l'autre page affichée (double page).
+    func focus(_ source: Int) {
+        guard source != focusSource, shownSources.contains(source) else { return }
+        ocrTask?.cancel()
+        focusSource = source
+        ocrPage = nil
+        ocrState = .idle
+        Task { [weak self] in
+            guard let self else { return }
+            if let cached = await self.cachedOCR(source: source) {
+                if self.focusSource == source { self.ocrPage = cached }
+            } else if self.model.appSettings.ocrAutoCurrentPage || FuriganaLayer.enabled {
+                self.ensureOCR([source])
+            }
+        }
+    }
+
+    /// Lit en fond les pages données qui n'ont pas encore d'OCR (moteur du document), une à la fois :
+    /// une seule file, vidée quand la page change ou que le lecteur se ferme.
+    func ensureOCR(_ pages: [Int]) {
+        for page in pages where !ensureQueue.contains(page) && ensuringPage != page { ensureQueue.append(page) }
+        guard ensureTask == nil, !ensureQueue.isEmpty else { return }
+        let url = fileURL, documentId = document.id, choice = settings.ocrEngine, service = model.ocr
+        ensureTask = Task { [weak self] in
+            defer { self?.ensureTask = nil; self?.ensuringPage = nil }
+            while let self, !Task.isCancelled, !self.ensureQueue.isEmpty {
+                let source = self.ensureQueue.removeFirst()
+                self.ensuringPage = source
+                guard self.shownSources.contains(source) else { continue }
+                if source == self.focusSource { self.ocrState = .running }
+                let engine = await Task.detached(priority: .userInitiated) {
+                    OCRService.resolve(choice, url: url, pageIndex: source)
+                }.value
+                do {
+                    let page = try await service.page(documentId: documentId, url: url, pageIndex: source, engine: engine)
+                    self.showOCR(page, source: source)
+                    if source == self.focusSource { self.ocrPage = page; self.ocrState = .idle }
+                } catch {
+                    if source == self.focusSource { self.ocrState = .failed(error.localizedDescription) }
+                }
+            }
+        }
+    }
+
+    private func cancelEnsureOCR() {
+        ensureQueue = []
+        ensureTask?.cancel()
+        ensureTask = nil
     }
 
     func setShowOCRBoxes(_ on: Bool) {
@@ -940,6 +1012,7 @@ final class ReaderController: NSObject, ObservableObject {
         cropTask?.cancel()
         sharpenTask?.cancel()
         furiganaTask?.cancel()
+        cancelEnsureOCR()
         ocrTask?.cancel()
         documentOCRTask?.cancel()
         settleWork?.cancel()
@@ -1510,9 +1583,9 @@ final class ReaderPDFView: PDFView {
 
     /// Redessine les pages affichées sans reconstruire le document (page nettoyée prête, réglage changé).
     func redrawVisiblePages() {
+        // Les vues seulement (leur calque suit) : forcer les calques eux-mêmes peut vider des images de PDFKit.
         func walk(_ view: UIView) {
             view.setNeedsDisplay()
-            view.layer.setNeedsDisplay()
             view.subviews.forEach(walk)
         }
         walk(self)
