@@ -23,6 +23,7 @@ Textes des licences : [LICENSES/](LICENSES/) ; attributions : [THIRD_PARTY_NOTIC
 
 | Version | Release | Contenu |
 |---|---|---|
+| **0.6.0** (V5) | [v0.6.0](https://github.com/NOxygen59/kyokasho/releases/tag/v0.6.0) | OCR NDLOCR-Lite, PP-OCRv5, GLM-OCR (téléchargés), thèmes, barre flottante, dictionnaire dans la sélection, suppression réparée, optimisation mémoire |
 | **0.5.0** (V4) | [v0.5.0](https://github.com/NOxygen59/kyokasho/releases/tag/v0.5.0) | Cartes de révision FSRS, écran de révision, export Anki (.apkg, CSV, AnkiMobile), page 1, survol au curseur |
 | **0.4.0** (V3) | [v0.4.0](https://github.com/NOxygen59/kyokasho/releases/tag/v0.4.0) | Dictionnaire au toucher façon Yomitan, onglet Mots, recherche, import de dictionnaires |
 | **0.3.0** | [v0.3.0](https://github.com/NOxygen59/kyokasho/releases/tag/v0.3.0) | Interface « Atelier » paysage, panneau d'étude, DeepL, Drive simplifié |
