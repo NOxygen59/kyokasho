@@ -17,11 +17,13 @@ final class ONNXModel: @unchecked Sendable {
     private let session: ORTSession
     private let lock = NSLock()
 
-    init(path: URL, threads: Int = 3) throws {
+    /// `coreML` : GPU / Neural Engine (formes d'entrée fixes seulement) ; le CPU prend le relais sinon.
+    init(path: URL, threads: Int = 3, coreML: Bool = false) throws {
         guard let env = Self.env else { throw OCRError.renderFailed }
         let options = try ORTSessionOptions()
         try options.setIntraOpNumThreads(Int32(threads))
         try options.setGraphOptimizationLevel(.all)
+        if coreML { try? options.appendCoreMLExecutionProvider(with: ORTCoreMLExecutionProviderOptions()) }
         session = try ORTSession(env: env, modelPath: path.path, sessionOptions: options)
     }
 
@@ -63,15 +65,15 @@ extension ONNXModel.Tensor {
 }
 
 /// Sessions ouvertes une fois (chargement ≈ 1 s), gardées tant que l'app tourne.
-private final class SessionCache: @unchecked Sendable {
+final class SessionCache: @unchecked Sendable {
     static let shared = SessionCache()
     private let lock = NSLock()
     private var models: [URL: ONNXModel] = [:]
     private var texts: [URL: [String]] = [:]
 
-    func model(_ url: URL) throws -> ONNXModel {
+    func model(_ url: URL, coreML: Bool = false) throws -> ONNXModel {
         if let m = lock.withLock({ models[url] }) { return m }
-        let m = try ONNXModel(path: url)
+        let m = try ONNXModel(path: url, coreML: coreML)
         lock.withLock { models[url] = m }
         return m
     }

@@ -190,6 +190,7 @@ final class AppModel: ObservableObject {
             do {
                 try importer.delete(documentId: document.id)
                 thumbnails.removeAll(for: document.id)
+                ScanSharpening.removeCache(documentId: document.id)
                 Task { @MainActor in self.deletingIds.remove(document.id) }
             } catch {
                 Task { @MainActor in

@@ -64,6 +64,7 @@ final class ReaderController: NSObject, ObservableObject {
     /// Texte de la page touchée / survolée, gardé pour les recherches suivantes sur la même page.
     private var pageStringCache: (index: Int, string: NSString)?
     private var pageTextTask: Task<Void, Never>?
+    private var sharpenTask: Task<Void, Never>?
     private var hover: UIHoverGestureRecognizer!
     private var pencilTap: UITapGestureRecognizer!
     /// Le Pencil cherche le mot touché dans le dictionnaire (au lieu de dessiner ou d'afficher les barres).
@@ -191,18 +192,19 @@ final class ReaderController: NSObject, ObservableObject {
         pageStringCache = nil
         rebuildGeneration += 1
         let generation = rebuildGeneration
-        let url = fileURL, transforms = transforms, settings = settings
+        let url = fileURL, transforms = transforms, settings = settings, documentId = document.id
         isBuilding = true
         // Une seule construction à la fois : la précédente (plus à jour) est abandonnée.
         buildTask?.cancel()
         buildTask = Task.detached(priority: .userInitiated) { [weak self] in
-            let built = autoreleasepool { Self.build(url: url, transforms: transforms, settings: settings) }
+            let built = autoreleasepool { Self.build(url: url, documentId: documentId, transforms: transforms, settings: settings) }
             guard !Task.isCancelled else { return }
             await self?.install(built, source: source, generation: generation)
         }
     }
 
-    nonisolated private static func build(url: URL, transforms: [Int: PageTransform], settings: ReaderSettings) -> Built? {
+    nonisolated private static func build(url: URL, documentId: String, transforms: [Int: PageTransform],
+                                          settings: ReaderSettings) -> Built? {
         guard let pdf = PDFDocument(url: url) else { return nil }
         pdf.delegate = TonedPageProvider.shared
         var boxes: [Int: CGRect] = [:]
@@ -222,6 +224,10 @@ final class ReaderController: NSObject, ObservableObject {
             boxes[index] = box
             rotations[index] = page.rotation
             ordered.append(page)
+            // Version nettoyée (DE-GAN) possible : posée sur le cadre d'origine.
+            let sharpenKey = ScanSharpening.key(documentId: documentId, page: index)
+            (page as? TonedPage)?.sharpenKey = sharpenKey
+            (page as? TonedPage)?.originalBox = box
             let transform = transforms[index]
             if let extra = transform?.rotation, extra % 360 != 0 {
                 page.rotation = ((page.rotation + extra) % 360 + 360) % 360
@@ -234,6 +240,9 @@ final class ReaderController: NSObject, ObservableObject {
                 let second: PresentedPage.Part = rtl ? .left : .right
                 page.setBounds(PresentationLayout.box(for: first, in: box), for: .cropBox)
                 copy.setBounds(PresentationLayout.box(for: second, in: box), for: .cropBox)
+                // `copy()` ne recopie pas les propriétés Swift.
+                (copy as? TonedPage)?.sharpenKey = sharpenKey
+                (copy as? TonedPage)?.originalBox = box
                 ordered.append(copy)
             } else if settings.autoCrop, let crop = transform?.autoCrop {
                 page.setBounds(ContentBounds.apply(crop, to: box), for: .cropBox)
@@ -547,6 +556,34 @@ final class ReaderController: NSObject, ObservableObject {
     }
 
     /// Applique de nouveaux réglages (globaux ou du document). Reconstruit si la structure change.
+    // MARK: Netteté des scans (DE-GAN)
+
+    /// Pages visibles scannées : version nettoyée préparée en tâche de fond, puis redessinées.
+    func scheduleSharpening(_ pages: [Int]) {
+        sharpenTask?.cancel()
+        guard ScanSharpening.enabled, ScanSharpening.isInstalled else { return }
+        let url = fileURL, id = document.id
+        sharpenTask = Task.detached(priority: .utility) { [weak self] in
+            var changed = false
+            for page in pages {
+                guard !Task.isCancelled else { return }
+                // Page avec du texte intégré (PDF numérique) : déjà nette, rien à faire.
+                let hasText = (try? PDFPool.withDocument(url) { $0.page(at: page)?.string?.isEmpty == false }) ?? false
+                guard !hasText else { continue }
+                let key = ScanSharpening.key(documentId: id, page: page)
+                if (try? ScanSharpening.prepare(key: key, fileURL: url, page: page)) == true { changed = true }
+            }
+            guard changed, !Task.isCancelled else { return }
+            await self?.pdfView.redrawVisiblePages()
+        }
+    }
+
+    func setSharpening(_ on: Bool) {
+        UserDefaults.standard.set(on, forKey: ScanSharpening.storageKey)
+        if on { scheduleSharpening(visibleSources()) } else { sharpenTask?.cancel() }
+        pdfView.redrawVisiblePages()
+    }
+
     /// Fond des pages changé : on redessine (le document est reconstruit en tâche de fond).
     func setPageTone(_ tone: PageTone) {
         guard tone != PageTone.current else { return }
@@ -718,6 +755,7 @@ final class ReaderController: NSObject, ObservableObject {
             }
         }
         let visible = visibleSources()
+        scheduleSharpening(visible)
         Task { [weak self] in
             guard let self else { return }
             // Zones en cache pour toutes les pages visibles (double page).
@@ -809,6 +847,7 @@ final class ReaderController: NSObject, ObservableObject {
     func close() {
         savePositionWork?.perform()
         cropTask?.cancel()
+        sharpenTask?.cancel()
         ocrTask?.cancel()
         documentOCRTask?.cancel()
         settleWork?.cancel()
@@ -1376,6 +1415,16 @@ final class ReaderPDFView: PDFView {
     private var lastSize: CGSize = .zero
     /// Action « Dictionnaire » du menu de sélection d'iOS (Copier, Rechercher…).
     var onLookupSelection: (() -> Void)?
+
+    /// Redessine les pages affichées sans reconstruire le document (page nettoyée prête, réglage changé).
+    func redrawVisiblePages() {
+        func walk(_ view: UIView) {
+            view.setNeedsDisplay()
+            view.layer.setNeedsDisplay()
+            view.subviews.forEach(walk)
+        }
+        walk(self)
+    }
 
     override func buildMenu(with builder: UIMenuBuilder) {
         super.buildMenu(with: builder)

@@ -39,6 +39,7 @@ struct KyokashoApp: App {
                     model.thumbnails.trim()
                     ONNXEngines.unload()
                     PDFPool.release()
+                    ScanSharpening.clearMemory()
                     Task { await GLMOCREngine.unload() }
                 }
         }

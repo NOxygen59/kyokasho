@@ -43,6 +43,32 @@ final class ONNXEnginesTests: XCTestCase {
         return try XCTUnwrap(ctx.makeImage())
     }
 
+    func testDEGAN() throws {
+        try XCTSkipUnless(PageEnhancer.isInstalled(store: store))
+        // Page abîmée : fond gris taché, texte gris clair.
+        let image = try page(["日本語の教科書を読む。", "漢字とひらがな"], vertical: false)
+        let w = image.width, h = image.height
+        var gray = [UInt8](repeating: 0, count: w * h)
+        let ctx = try XCTUnwrap(CGContext(data: &gray, width: w, height: h, bitsPerComponent: 8, bytesPerRow: w,
+                                          space: CGColorSpaceCreateDeviceGray(), bitmapInfo: 0))
+        ctx.draw(image, in: CGRect(x: 0, y: 0, width: w, height: h))
+        var seed: UInt32 = 7
+        for i in gray.indices {
+            seed = seed &* 1_103_515_245 &+ 12_345
+            let noise = Int(seed >> 27)  // 0…31
+            gray[i] = UInt8(min(255, 90 + Int(gray[i]) * 110 / 255 + noise))
+        }
+        let start = Date()
+        let out = try PageEnhancer.enhance(gray: gray, width: w, height: h, store: store)
+        print("DE-GAN:", w, "×", h, Int(Date().timeIntervalSince(start) * 1000), "ms")
+        // Bas de page vide : redevenu blanc. Texte : resté sombre.
+        let background = out[(h - 60) * w ..< (h - 50) * w].map(Int.init).reduce(0, +) / (10 * w)
+        let dark = out.filter { $0 < 100 }.count
+        print("DE-GAN: fond", background, "pixels sombres", dark)
+        XCTAssertGreaterThan(background, 230)
+        XCTAssertGreaterThan(dark, 2_000)
+    }
+
     func testPPOCR() async throws {
         let engine = PPOCREngine(store: store)
         try XCTSkipUnless(engine.isAvailable)

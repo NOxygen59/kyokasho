@@ -26,6 +26,7 @@ struct ReaderScreen: View {
     @AppStorage("reader.filmstripShown") private var filmstripShown = true
     @AppStorage("pencil.lookupOption") private var pencilOption = false
     @AppStorage(PageTone.storageKey) private var pageTone = PageTone.normal
+    @AppStorage(ScanSharpening.storageKey) private var sharpenScans = false
     @State private var pageField = ""
     @ObservedObject private var keyboard = HardwareKeyboard.shared
 
@@ -250,6 +251,11 @@ struct ReaderScreen: View {
                     Label("Fond de page", systemImage: "circle.lefthalf.filled")
                 }
                 .pickerStyle(.menu)
+                if ScanSharpening.isInstalled {
+                    Toggle(isOn: Binding(get: { sharpenScans }, set: { sharpenScans = $0; reader.setSharpening($0) })) {
+                        Label("Netteté des scans (DE-GAN)", systemImage: "wand.and.stars")
+                    }
+                }
                 Button { reader.setShowOCRBoxes(!showOCRBoxes) } label: {
                     Label(showOCRBoxes ? "Masquer les zones OCR" : "Montrer les zones OCR",
                           systemImage: "rectangle.dashed")

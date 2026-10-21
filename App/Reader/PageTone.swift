@@ -65,10 +65,30 @@ enum PageTone: String, CaseIterable, Identifiable {
     }
 }
 
-/// Page qui applique `PageTone.current` après son dessin normal.
+/// Page qui affiche sa version nettoyée par DE-GAN si elle est prête (`ScanSharpening`), puis applique
+/// `PageTone.current` par-dessus.
 final class TonedPage: PDFPage {
+    /// Clé de la version nettoyée (document + page d'origine) ; `nil` : jamais remplacée.
+    var sharpenKey: String?
+    /// Cadre d'origine de la page (avant rognage / coupe), là où l'image nettoyée se pose.
+    var originalBox: CGRect = .zero
+
     override func draw(with box: PDFDisplayBox, to context: CGContext) {
-        super.draw(with: box, to: context)
+        if let key = sharpenKey, let image = ScanSharpening.image(for: key) {
+            // Même repère que `super.draw` (origine du cadre + rotation, vérifié sur Mac) ;
+            // la découpe garde seulement la partie visible (moitié de page coupée, rognage).
+            let visible = bounds(for: box)
+            context.saveGState()
+            context.concatenate(transform(for: box))
+            context.clip(to: visible)
+            context.setFillColor(gray: 1, alpha: 1)
+            context.fill(visible)
+            context.interpolationQuality = .high
+            context.draw(image, in: originalBox)
+            context.restoreGState()
+        } else {
+            super.draw(with: box, to: context)
+        }
         let tone = PageTone.current
         guard tone != .normal else { return }
         tone.apply(in: context, rect: context.boundingBoxOfClipPath)

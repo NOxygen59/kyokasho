@@ -107,13 +107,18 @@ Priorité : mode paysage (jamais vérifié), barre flottante, menu de sélection
 téléchargement + vitesse des 3 moteurs OCR, mémoire de GLM-OCR, révisions, import `.apkg` dans Anki.
 Noter les bugs, en corriger 2-3, le reste en bas de ce fichier (§ 9).
 
-### [ ] F — Netteté des caractères sur scans (demandé le 21/10, attend l'accord de l'utilisateur)
-Fait : fond de page Blanc / Crème / Tamisé / Sombre (`App/Reader/PageTone.swift`, `TonedPage` via
-`classForPage`), barre flottante à 3 boutons, navigateur ouvert (`WebPanel`), gains batterie (panneaux sans flou).
-Reste : DE-GAN (GPL-3, U-Net Keras 256×256, poids sur Google Drive) ou TextBSR (ESRGAN, CC BY-NC-SA, PyTorch).
-Le code Python ne tourne pas sur iPad → convertir les poids en ONNX sur le Mac (outils Python à installer :
-demander), modèle téléchargé à la demande via `ModelStore`, appliqué à l'image de la page (pas au PDF).
-DE-GAN d'abord (plus léger ; ESRGAN ×4 sur une page entière = lent et gourmand en batterie).
+### [x] F — Netteté des scans DE-GAN (fait le 21/10, non testé sur l'iPad)
+Fait aussi : fond de page Blanc / Crème / Tamisé / Sombre (`PageTone.swift`), barre flottante à 3 boutons,
+navigateur ouvert (`WebPanel`), panneaux sans flou. DE-GAN : poids « binarisation » convertis par
+`tools/degan_to_onnx.py` (h5py + onnx, sans TensorFlow) en ONNX fp32 **256×256 fixe** (CoreML NeuralNetwork :
+0,009 s/tuile contre 0,31 s en CPU ; le fp16 / formes libres font retomber sur le CPU ; MLProgram refuse MaxPool).
+Fichier : `~/Projets-iPad/kyokasho-modeles/degan-binarize.onnx` (124 Mo), à envoyer par AirDrop puis
+Réglages → Netteté des scans → Importer. Lecteur : menu de la page → « Netteté des scans ».
+Code : `PageEnhancer` (ONNXOCRKit, tuiles qui se recouvrent), `ScanSharpening` (rendu CGPDF, caches mémoire 8 pages
++ disque), `TonedPage.draw` (image posée avec `transform(for:)`, vérifié sur Mac). Test : `testDEGAN`.
+À vérifier sur l'iPad : la page nettoyée apparaît sans tourner la page (`redrawVisiblePages`, sinon
+`layoutDocumentView()` ou réinstaller le document), vitesse, mémoire (≈ 45 Mo de tampons + 124 Mo de modèle).
+Limite : pages avec texte intégré (dont scans avec couche OCR) ignorées. TextBSR (ESRGAN ×4) écarté : trop lourd.
 
 ## 6. Carte du code (où est quoi)
 
