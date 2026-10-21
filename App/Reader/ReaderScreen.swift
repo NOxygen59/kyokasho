@@ -27,7 +27,7 @@ struct ReaderScreen: View {
     @AppStorage("reader.filmstripShown") private var filmstripShown = true
     @AppStorage("pencil.lookupOption") private var pencilOption = false
     @AppStorage(PageTone.storageKey) private var pageTone = PageTone.normal
-    @AppStorage(ScanSharpening.storageKey) private var sharpenScans = false
+    @State private var scanCleaning = ScanSharpening.method
     @AppStorage(FuriganaLayer.storageKey) private var furigana = false
     @State private var pageField = ""
     @ObservedObject private var keyboard = HardwareKeyboard.shared
@@ -255,11 +255,14 @@ struct ReaderScreen: View {
                     Toggle(isOn: Binding(get: { furigana }, set: { furigana = $0; reader.setFurigana($0) })) {
                         Label("Furigana sur les kanji", systemImage: "character.ja")
                     }
-                    if ScanSharpening.isInstalled {
-                        Toggle(isOn: Binding(get: { sharpenScans }, set: { sharpenScans = $0; reader.setSharpening($0) })) {
-                            Label("Netteté des scans (DE-GAN)", systemImage: "wand.and.stars")
+                    Picker(selection: Binding(get: { scanCleaning }, set: { scanCleaning = $0; reader.setScanCleaning($0) })) {
+                        ForEach(ScanSharpening.Method.allCases.filter { $0 != .degan || ScanSharpening.isInstalled }) {
+                            Text($0.title).tag($0)
                         }
+                    } label: {
+                        Label("Nettoyage des scans", systemImage: "wand.and.stars")
                     }
+                    .pickerStyle(.menu)
                     Button { reader.setShowOCRBoxes(!showOCRBoxes) } label: {
                         Label(showOCRBoxes ? "Masquer les zones OCR" : "Montrer les zones OCR",
                               systemImage: "rectangle.dashed")

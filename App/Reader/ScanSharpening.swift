@@ -4,18 +4,37 @@
 import CoreGraphics
 import Foundation
 import ImageIO
+import OCRKit
 import ONNXOCRKit
 import UniformTypeIdentifiers
 
-/// « Netteté des scans » : pages scannées repassées par DE-GAN (fond blanc, caractères noirs nets).
-/// Seulement à la demande (réglage), page par page quand elle s'affiche ; résultat gardé en mémoire
-/// (quelques pages) et sur le disque (Caches), pour ne jamais recalculer une page déjà faite.
+/// « Nettoyage des scans » : pages scannées / photographiées repassées par `PageCleaner` (papier blanc sans
+/// ombre, encre renforcée ; couleurs ou noir et blanc) ou par DE-GAN (modèle). Seulement à la demande,
+/// page par page quand elle s'affiche ; résultat gardé en mémoire (quelques pages) et sur le disque (Caches).
 enum ScanSharpening {
-    static let storageKey = "reader.sharpenScans"
+    enum Method: String, CaseIterable, Identifiable {
+        case off, color, mono, degan
+        var id: String { rawValue }
+        var title: String {
+            switch self {
+            case .off: return "Aucun"
+            case .color: return "Papier blanc (couleurs gardées)"
+            case .mono: return "Noir et blanc net"
+            case .degan: return "DE-GAN (modèle)"
+            }
+        }
+    }
+
+    static let storageKey = "reader.scanCleaning"
     /// Grand côté de l'image traitée : assez pour des kanji nets, sans exploser le temps de calcul.
     static let longSide: CGFloat = 2000
 
-    static var enabled: Bool { UserDefaults.standard.bool(forKey: storageKey) }
+    static var method: Method {
+        if let raw = UserDefaults.standard.string(forKey: storageKey), let m = Method(rawValue: raw) { return m }
+        // Ancien réglage (DE-GAN seul) : activé → nettoyage « papier blanc », bien meilleur sur les photos.
+        return UserDefaults.standard.bool(forKey: "reader.sharpenScans") ? .color : .off
+    }
+    static var enabled: Bool { method != .off && (method != .degan || isInstalled) }
     static var isInstalled: Bool { PageEnhancer.isInstalled() }
 
     static func key(documentId: String, page: Int) -> String { "\(documentId)-\(page)" }
@@ -29,7 +48,8 @@ enum ScanSharpening {
 
     static func image(for key: String) -> CGImage? {
         guard enabled else { return nil }
-        return lock.withLock { images[key] }
+        let full = key + "-" + method.rawValue
+        return lock.withLock { images[full] }
     }
 
     private static func store(_ image: CGImage, for key: String) {
@@ -52,7 +72,7 @@ enum ScanSharpening {
         return dir
     }()
 
-    private static func file(_ key: String) -> URL { directory.appendingPathComponent(key + "-v1.png") }
+    private static func file(_ key: String) -> URL { directory.appendingPathComponent(key + "-v2.png") }
 
     /// Supprime les pages nettoyées d'un document (livre supprimé).
     static func removeCache(documentId: String) {
@@ -70,7 +90,11 @@ enum ScanSharpening {
     // MARK: Calcul
 
     /// Prépare la page (disque ou DE-GAN) hors du fil principal. `true` si une nouvelle image est prête.
-    static func prepare(key: String, fileURL: URL, page: Int) throws -> Bool {
+    static func prepare(key pageKey: String, fileURL: URL, page: Int) throws -> Bool {
+        let chosen = Self.method
+        guard chosen != .off else { return false }
+        // Une image par page et par méthode.
+        let key = pageKey + "-" + chosen.rawValue
         if lock.withLock({ images[key] != nil }) { return false }
         let path = file(key)
         if let source = CGImageSourceCreateWithURL(path as CFURL, nil),
@@ -78,10 +102,20 @@ enum ScanSharpening {
             store(image, for: key)
             return true
         }
-        guard let (gray, width, height) = render(fileURL: fileURL, page: page) else { return false }
-        try Task.checkCancellation()
-        let clean = try PageEnhancer.enhance(gray: gray, width: width, height: height)
-        guard let image = grayImage(clean, width: width, height: height) else { return false }
+        let image: CGImage
+        if chosen == .degan {
+            guard let (gray, width, height) = render(fileURL: fileURL, page: page, color: false) else { return false }
+            try Task.checkCancellation()
+            let clean = try PageEnhancer.enhance(gray: gray, width: width, height: height)
+            guard let made = makeImage(clean, width: width, height: height, color: false) else { return false }
+            image = made
+        } else {
+            guard let (rgb, width, height) = render(fileURL: fileURL, page: page, color: true) else { return false }
+            try Task.checkCancellation()
+            let clean = PageCleaner.clean(rgb, width: width, height: height, mode: chosen == .mono ? .mono : .color)
+            guard let made = makeImage(clean, width: width, height: height, color: true) else { return false }
+            image = made
+        }
         store(image, for: key)
         if let dest = CGImageDestinationCreateWithURL(path as CFURL, UTType.png.identifier as CFString, 1, nil) {
             CGImageDestinationAddImage(dest, image, nil)
@@ -92,16 +126,19 @@ enum ScanSharpening {
 
     /// Page d'origine (cadre de rognage du fichier, sans rotation) en niveaux de gris, par Core Graphics
     /// (indépendant du document affiché par PDFKit).
-    private static func render(fileURL: URL, page index: Int) -> ([UInt8], Int, Int)? {
+    private static func render(fileURL: URL, page index: Int, color: Bool) -> ([UInt8], Int, Int)? {
         guard let document = CGPDFDocument(fileURL as CFURL), let page = document.page(at: index + 1) else { return nil }
         let box = page.getBoxRect(.cropBox)
         guard box.width > 0, box.height > 0 else { return nil }
         let scale = longSide / max(box.width, box.height)
         let width = Int((box.width * scale).rounded()), height = Int((box.height * scale).rounded())
-        var pixels = [UInt8](repeating: 255, count: width * height)
+        let channels = color ? 4 : 1
+        var pixels = [UInt8](repeating: 255, count: width * height * channels)
         let drawn: Bool = pixels.withUnsafeMutableBytes { buffer in
             guard let ctx = CGContext(data: buffer.baseAddress, width: width, height: height, bitsPerComponent: 8,
-                                      bytesPerRow: width, space: CGColorSpaceCreateDeviceGray(), bitmapInfo: 0) else { return false }
+                                      bytesPerRow: width * channels,
+                                      space: color ? CGColorSpaceCreateDeviceRGB() : CGColorSpaceCreateDeviceGray(),
+                                      bitmapInfo: color ? CGImageAlphaInfo.noneSkipLast.rawValue : 0) else { return false }
             ctx.setFillColor(gray: 1, alpha: 1)
             ctx.fill(CGRect(x: 0, y: 0, width: width, height: height))
             ctx.interpolationQuality = .high
@@ -110,13 +147,33 @@ enum ScanSharpening {
             ctx.drawPDFPage(page)
             return true
         }
-        return drawn ? (pixels, width, height) : nil
+        guard drawn else { return nil }
+        guard color else { return (pixels, width, height) }
+        // RGBA → RGB (format de `PageCleaner`).
+        var rgb = [UInt8](repeating: 0, count: width * height * 3)
+        for i in 0..<(width * height) {
+            rgb[i * 3] = pixels[i * 4]; rgb[i * 3 + 1] = pixels[i * 4 + 1]; rgb[i * 3 + 2] = pixels[i * 4 + 2]
+        }
+        return (rgb, width, height)
     }
 
-    private static func grayImage(_ pixels: [UInt8], width: Int, height: Int) -> CGImage? {
-        guard let provider = CGDataProvider(data: Data(pixels) as CFData) else { return nil }
-        return CGImage(width: width, height: height, bitsPerComponent: 8, bitsPerPixel: 8, bytesPerRow: width,
-                       space: CGColorSpaceCreateDeviceGray(), bitmapInfo: CGBitmapInfo(rawValue: 0),
+    /// Octets gris (1 par pixel) ou RGB (3 par pixel) → image.
+    private static func makeImage(_ pixels: [UInt8], width: Int, height: Int, color: Bool) -> CGImage? {
+        let data: Data
+        if color {
+            var rgba = [UInt8](repeating: 255, count: width * height * 4)
+            for i in 0..<(width * height) {
+                rgba[i * 4] = pixels[i * 3]; rgba[i * 4 + 1] = pixels[i * 3 + 1]; rgba[i * 4 + 2] = pixels[i * 3 + 2]
+            }
+            data = Data(rgba)
+        } else {
+            data = Data(pixels)
+        }
+        guard let provider = CGDataProvider(data: data as CFData) else { return nil }
+        return CGImage(width: width, height: height, bitsPerComponent: 8, bitsPerPixel: color ? 32 : 8,
+                       bytesPerRow: width * (color ? 4 : 1),
+                       space: color ? CGColorSpaceCreateDeviceRGB() : CGColorSpaceCreateDeviceGray(),
+                       bitmapInfo: CGBitmapInfo(rawValue: color ? CGImageAlphaInfo.noneSkipLast.rawValue : 0),
                        provider: provider, decode: nil, shouldInterpolate: true, intent: .defaultIntent)
     }
 }

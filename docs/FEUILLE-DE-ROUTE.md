@@ -154,6 +154,11 @@ l'accord pour télécharger les modèles de test, écrire le pré/post-traitemen
 `OCRLayout` (blocs du modèle au lieu de la géométrie seule), entrée dans `ModelsView`. Docling et MinerU complets :
 Python, pas sur l'iPad.
 
+### [x] K — Photos de pages (21/10, non testé sur l'iPad)
+Dictionnaire / zones OCR / furigana justes sur les pages /Rotate (`PageFrame`, cache OCR v5). Furigana : taille selon
+la place libre jusqu'à la ligne voisine (`FuriganaLayer.room`), fond papier sous les kana. Nettoyage des scans :
+`PageCleaner` (papier blanc couleurs / noir et blanc) par défaut, DE-GAN gardé en option.
+
 ## 6. Carte du code (où est quoi)
 
 - **`project.yml`** (XcodeGen) : versions, paquets `KyokashoKit` + `GLMOCRKit`, produits utilisés par l'app.
@@ -216,6 +221,10 @@ Sans la variable, ces tests sont sautés. Le dossier du 21/10 était dans le scr
   de fin `<|endoftext|>`, `<|user|>` à passer dans `extraEOSTokens`.
 - PDFKit : `characterIndex(at:)` / `characterBounds(at:)` **ne comptent pas les fins de ligne** de `page.string`
   (index décalé d'un par ligne au-dessus). Passer par `glyphToStringMap` / `stringIndex(near:)` ou `selection(for:)`.
+- Rendu OCR = page **tournée** selon son /Rotate (photos de pages) : toute conversion OCR ↔ page passe par
+  `PageFrame` (OCRModels.swift, testé contre le rendu réel). Ne jamais refaire `box.maxY - y` à la main.
+- `CIDivideBlendMode` calcule « arrière-plan ÷ image » (vérifié) ; le nettoyage des scans est en calcul direct
+  (`PageCleaner`, OCRKit), pas en Core Image.
 - `NSLock.withLock` existe déjà dans Foundation.
 - Le paysage n'a **jamais** été vérifié (le simulateur sans fenêtre ne pivote pas).
 

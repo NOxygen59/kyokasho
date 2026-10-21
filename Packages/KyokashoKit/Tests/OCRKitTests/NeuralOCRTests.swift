@@ -201,3 +201,61 @@ final class OCRLayoutRegionTests: XCTestCase {
                        [.heading(level: 1, text: "見出し"), .paragraph("左の段落です。"), .paragraph("右の段落です。")])
     }
 }
+
+final class PageFrameTests: XCTestCase {
+    /// Le repère doit coller au rendu réel de l'OCR (`PageRenderer`), pour chaque rotation intrinsèque.
+    func testMatchesRendererForEveryRotation() throws {
+        let square = CGRect(x: 20, y: 140, width: 20, height: 20)   // près du haut-gauche de la page non tournée
+        for rotation in [0, 90, 180, 270] {
+            let data = NSMutableData()
+            var media = CGRect(x: 0, y: 0, width: 100, height: 200)
+            let ctx = try XCTUnwrap(CGContext(consumer: CGDataConsumer(data: data)!, mediaBox: &media, nil))
+            ctx.beginPDFPage([kCGPDFContextMediaBox as String: Data(bytes: &media, count: MemoryLayout<CGRect>.size),
+                              "Rotate": rotation] as CFDictionary)
+            ctx.setFillColor(CGColor(gray: 0, alpha: 1)); ctx.fill(square)
+            ctx.endPDFPage(); ctx.closePDF()
+            let url = FileManager.default.temporaryDirectory.appendingPathComponent("frame-\(rotation).pdf")
+            try (data as Data).write(to: url)
+            PDFPool.release(url)
+            let image = try PageRenderer.render(url: url, pageIndex: 0, longSide: 400)
+            let rgb = try XCTUnwrap(RGBImage(image))
+            // Centre des pixels noirs dans le rendu (normalisé, haut-gauche).
+            var sx = 0.0, sy = 0.0, n = 0.0
+            for y in 0..<rgb.height { for x in 0..<rgb.width where rgb.pixels[(y * rgb.width + x) * 3] < 128 { sx += Double(x); sy += Double(y); n += 1 } }
+            XCTAssertGreaterThan(n, 0)
+            let rendered = CGPoint(x: (sx / n + 0.5) / Double(rgb.width), y: (sy / n + 0.5) / Double(rgb.height))
+            let pageRotation = try XCTUnwrap(CGPDFDocument(url as CFURL)?.page(at: 1)?.rotationAngle)
+            XCTAssertEqual(Int(pageRotation), rotation, "le PDF d'essai doit porter la rotation")
+            let frame = PageFrame(box: media, rotation: Int(pageRotation))
+            let expected = frame.normalized(CGPoint(x: square.midX, y: square.midY))
+            XCTAssertEqual(rendered.x, expected.x, accuracy: 0.02, "rotation \(rotation)")
+            XCTAssertEqual(rendered.y, expected.y, accuracy: 0.02, "rotation \(rotation)")
+            let back = frame.pagePoint(expected)
+            XCTAssertEqual(back.x, square.midX, accuracy: 1e-6); XCTAssertEqual(back.y, square.midY, accuracy: 1e-6)
+        }
+    }
+}
+
+final class PageCleanerTests: XCTestCase {
+    func testShadowedPaperBecomesWhiteAndInkStaysDark() {
+        // Papier jauni avec une ombre de gauche à droite (220 → 110), trait d'encre au milieu (≈ 45 % du papier).
+        let w = 160, h = 80
+        var rgb = [UInt8](repeating: 0, count: w * h * 3)
+        for y in 0..<h {
+            for x in 0..<w {
+                let paper = 220 - Double(x) * 110 / Double(w)
+                let ink = (38...41).contains(y)
+                let v = ink ? paper * 0.45 : paper
+                let i = (y * w + x) * 3
+                rgb[i] = UInt8(v); rgb[i + 1] = UInt8(v * 0.95); rgb[i + 2] = UInt8(v * 0.82)
+            }
+        }
+        for mode in PageCleaner.Mode.allCases {
+            let out = PageCleaner.clean(rgb, width: w, height: h, mode: mode)
+            for x in [10, 80, 150] {
+                XCTAssertGreaterThan(out[(10 * w + x) * 3], 235, "papier \(mode) x=\(x)")
+                XCTAssertLessThan(out[(39 * w + x) * 3], 60, "encre \(mode) x=\(x)")
+            }
+        }
+    }
+}

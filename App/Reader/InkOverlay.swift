@@ -130,7 +130,8 @@ final class InkStore: NSObject, PDFPageOverlayViewProvider {
             // Surcouche légère pour chaque page affichée (PDFKit ne la redemande pas quand on passe en
             // mode dessin) ; la vue PencilKit n'est créée qu'en mode dessin ou si la page a un dessin.
             let overlay = InkPageView(store: self, sourcePage: source, box: page.bounds(for: .cropBox), rotation: page.rotation,
-                                      sourceBox: controller.originalBox(ofSource: source) ?? page.bounds(for: .cropBox))
+                                      sourceFrame: controller.pageFrame(ofSource: source)
+                                          ?? PageFrame(box: page.bounds(for: .cropBox), rotation: page.rotation))
             if pagesWithInk.contains(source) { overlay.show(drawing(forSource: source)) }
             if showOCRBoxes { overlay.showOCR(ocrPages[source]) }
             overlay.setEditing(editing, toolPicker: toolPicker, finger: model.drawWithFinger)
@@ -157,7 +158,8 @@ final class InkPageView: UIView, PKCanvasViewDelegate {
     private let box: CGRect
     private let rotation: Int
     /// `cropBox` d'origine de la page source : repère des résultats OCR.
-    private let sourceBox: CGRect
+    /// Repère des boîtes OCR (cadre d'origine + rotation intrinsèque de la page).
+    private let sourceFrame: PageFrame
     private weak var store: InkStore?
     private let ocrLineLayer = CAShapeLayer()
     private let ocrCharLayer = CAShapeLayer()
@@ -166,12 +168,12 @@ final class InkPageView: UIView, PKCanvasViewDelegate {
     private var lastSize: CGSize = .zero
     private var canonical = PKDrawing()
 
-    init(store: InkStore, sourcePage: Int, box: CGRect, rotation: Int, sourceBox: CGRect) {
+    init(store: InkStore, sourcePage: Int, box: CGRect, rotation: Int, sourceFrame: PageFrame) {
         self.store = store
         self.sourcePage = sourcePage
         self.box = box
         self.rotation = rotation
-        self.sourceBox = sourceBox
+        self.sourceFrame = sourceFrame
         super.init(frame: .zero)
         backgroundColor = .clear
         isOpaque = false
@@ -193,7 +195,7 @@ final class InkPageView: UIView, PKCanvasViewDelegate {
     }
 
     private func drawOCR() {
-        guard let page = ocrPage, bounds.width > 0, sourceBox.width > 0 else {
+        guard let page = ocrPage, bounds.width > 0, sourceFrame.box.width > 0 else {
             ocrLineLayer.path = nil
             ocrCharLayer.path = nil
             return
@@ -202,8 +204,7 @@ final class InkPageView: UIView, PKCanvasViewDelegate {
         func path(_ boxes: [NormBox]) -> CGPath {
             let p = CGMutablePath()
             for b in boxes {
-                p.addRect(CGRect(x: sourceBox.minX + b.x * sourceBox.width, y: sourceBox.maxY - (b.y + b.h) * sourceBox.height,
-                                 width: b.w * sourceBox.width, height: b.h * sourceBox.height), transform: transform)
+                p.addRect(sourceFrame.pageRect(b), transform: transform)
             }
             return p
         }

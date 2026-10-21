@@ -62,7 +62,8 @@ public struct OCRLine: Codable, Hashable, Sendable {
 public struct OCRPage: Codable, Hashable, Sendable {
     /// Version du format/rendu : un résultat plus ancien en cache est refait automatiquement.
     /// 4 : boîtes de caractères de NDLOCR mesurées par PP-OCRv5 (si installé).
-    public static let currentVersion = 4
+    /// 5 : texte intégré dans le repère tourné (pages /Rotate), comme le rendu OCR.
+    public static let currentVersion = 5
 
     public var engine: String
     public var lines: [OCRLine]
@@ -149,5 +150,48 @@ public enum OCRError: LocalizedError, Equatable {
         case .cancelled: return "OCR annulé."
         case .modelMissing(let name): return "Modèle « \(name) » pas téléchargé : Réglages → Japonais → OCR."
         }
+    }
+}
+
+/// Repère des résultats OCR d'une page : sa `cropBox` d'origine **et sa rotation intrinsèque** (/Rotate du PDF,
+/// fréquente sur les photos de pages). Le rendu pour l'OCR applique cette rotation : les boîtes normalisées
+/// sont dans le sens affiché, alors que PDFKit donne les points dans le repère non tourné de la page.
+public struct PageFrame: Sendable, Equatable {
+    public var box: CGRect
+    /// 0, 90, 180 ou 270 (sens horaire, comme `PDFPage.rotation`).
+    public var rotation: Int
+
+    public init(box: CGRect, rotation: Int) {
+        self.box = box
+        self.rotation = ((rotation % 360) + 360) % 360
+    }
+
+    /// Point de la page (repère PDF, y vers le haut) → point normalisé du rendu OCR (haut-gauche, y vers le bas).
+    public func normalized(_ p: CGPoint) -> CGPoint {
+        let px = (p.x - box.minX) / max(box.width, 1e-9), py = (p.y - box.minY) / max(box.height, 1e-9)
+        switch rotation {
+        case 90: return CGPoint(x: py, y: px)
+        case 180: return CGPoint(x: 1 - px, y: py)
+        case 270: return CGPoint(x: 1 - py, y: 1 - px)
+        default: return CGPoint(x: px, y: 1 - py)
+        }
+    }
+
+    /// Inverse de `normalized`.
+    public func pagePoint(_ n: CGPoint) -> CGPoint {
+        let px: CGFloat, py: CGFloat
+        switch rotation {
+        case 90: px = n.y; py = n.x
+        case 180: px = 1 - n.x; py = n.y
+        case 270: px = 1 - n.y; py = 1 - n.x
+        default: px = n.x; py = 1 - n.y
+        }
+        return CGPoint(x: box.minX + px * box.width, y: box.minY + py * box.height)
+    }
+
+    /// Boîte normalisée (OCR, mise en page) → rectangle dans le repère de la page.
+    public func pageRect(_ n: NormBox) -> CGRect {
+        let a = pagePoint(CGPoint(x: n.x, y: n.y)), b = pagePoint(CGPoint(x: n.x + n.w, y: n.y + n.h))
+        return CGRect(x: min(a.x, b.x), y: min(a.y, b.y), width: abs(b.x - a.x), height: abs(b.y - a.y))
     }
 }

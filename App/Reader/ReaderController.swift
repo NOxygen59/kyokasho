@@ -402,7 +402,7 @@ final class ReaderController: NSObject, ObservableObject {
         }
 
         // 2. OCR de la page (cache, sinon le moteur choisi : NDLOCR / PP-OCRv5 s'ils sont installés).
-        guard let box = originalBoxes[source] else { return }
+        guard let box = originalBoxes[source], let frame = pageFrame(ofSource: source) else { return }
         var ocr = source == focusSource ? ocrPage : nil
         if ocr == nil { ocr = await cachedOCR(source: source) }
         if ocr == nil, fromHover {
@@ -419,10 +419,13 @@ final class ReaderController: NSObject, ObservableObject {
             if let ocr { if source == focusSource { ocrPage = ocr }; showOCR(ocr, source: source) }
         }
         guard let ocr else { return }
-        let normalized = CGPoint(x: (pagePoint.x - box.minX) / box.width, y: (box.maxY - pagePoint.y) / box.height)
+        // Rotation intrinsèque comprise (photos de pages) : sans elle, le toucher visait à côté.
+        let normalized = frame.normalized(pagePoint)
         // Marge de toucher : ~14 pt au doigt, ~4 pt au curseur, convertis en fraction de la page affichée.
         let margin: CGFloat = fromHover ? 4 : 14
-        let tolerance = Double(margin / max(box.width * pdfView.scaleFactor, 1))
+        // Largeur affichée de la page (côté qui correspond à l'axe x du repère OCR, rotation comprise).
+        let shownWidth = frame.rotation % 180 == 0 ? box.width : box.height
+        let tolerance = Double(margin / max(shownWidth * pdfView.scaleFactor, 1))
         guard let hit = ocr.character(at: normalized, tolerance: tolerance) else {
             if !fromHover { lookupHighlight = [] }
             return
@@ -430,8 +433,7 @@ final class ReaderController: NSObject, ObservableObject {
         let hitLine = ocr.lines[hit.line]
         let lb = hitLine.box
         let context = LookupContext(source: source, presentedIndex: index, sentence: hitLine.text,
-                                    lineRect: CGRect(x: box.minX + lb.x * box.width, y: box.maxY - (lb.y + lb.h) * box.height,
-                                                     width: lb.w * box.width, height: lb.h * box.height),
+                                    lineRect: frame.pageRect(lb),
                                     vertical: hitLine.vertical)
         var text = ""
         var rects: [CGRect] = []
@@ -445,8 +447,7 @@ final class ReaderController: NSObject, ObservableObject {
                 text.append(chars[k])
                 if l.charBoxes.indices.contains(k) {
                     let b = l.charBoxes[k]
-                    let pageRect = CGRect(x: box.minX + b.x * box.width, y: box.maxY - (b.y + b.h) * box.height,
-                                          width: b.w * box.width, height: b.h * box.height)
+                    let pageRect = frame.pageRect(b)
                     rects.append(pdfView.convert(pageRect, from: page))
                 } else {
                     rects.append(.zero)
@@ -576,6 +577,11 @@ final class ReaderController: NSObject, ObservableObject {
     /// `cropBox` d'origine d'une page source (repère des résultats OCR).
     func originalBox(ofSource source: Int) -> CGRect? { originalBoxes[source] }
 
+    /// Repère des résultats OCR d'une page source (cadre d'origine + rotation intrinsèque du PDF).
+    func pageFrame(ofSource source: Int) -> PageFrame? {
+        originalBoxes[source].map { PageFrame(box: $0, rotation: originalRotations[source] ?? 0) }
+    }
+
     // MARK: Réglages
 
     func applyDisplaySettings() {
@@ -620,7 +626,7 @@ final class ReaderController: NSObject, ObservableObject {
     /// Pages visibles scannées : version nettoyée préparée en tâche de fond, puis redessinées.
     func scheduleSharpening(_ pages: [Int]) {
         sharpenTask?.cancel()
-        guard ScanSharpening.enabled, ScanSharpening.isInstalled else { return }
+        guard ScanSharpening.enabled else { return }
         let url = fileURL, id = document.id
         sharpenTask = Task.detached(priority: .utility) { [weak self] in
             var changed = false
@@ -645,9 +651,11 @@ final class ReaderController: NSObject, ObservableObject {
         let key = ScanSharpening.key(documentId: document.id, page: source), url = fileURL
         Task.detached(priority: .utility) { [weak self] in
             guard !PDFTextEngine.hasTextLayer(url: url, pageIndex: source) else { return }
-            let box: CGRect? = (try? PDFPool.withDocument(url) { $0.page(at: source)?.bounds(for: .cropBox) }) ?? nil
-            guard let box else { return }
-            FuriganaLayer.set(FuriganaLayer.marks(from: ocr, box: box), for: key)
+            let frame: PageFrame? = (try? PDFPool.withDocument(url) { doc -> PageFrame? in
+                doc.page(at: source).map { PageFrame(box: $0.bounds(for: .cropBox), rotation: $0.rotation) }
+            }) ?? nil
+            guard let frame else { return }
+            FuriganaLayer.set(FuriganaLayer.marks(from: ocr, frame: frame), for: key)
             await self?.pdfView.redrawVisiblePages()
         }
     }
@@ -681,9 +689,10 @@ final class ReaderController: NSObject, ObservableObject {
         pdfView.redrawVisiblePages()
     }
 
-    func setSharpening(_ on: Bool) {
-        UserDefaults.standard.set(on, forKey: ScanSharpening.storageKey)
-        if on { scheduleSharpening(visibleSources()) } else { sharpenTask?.cancel() }
+    func setScanCleaning(_ method: ScanSharpening.Method) {
+        UserDefaults.standard.set(method.rawValue, forKey: ScanSharpening.storageKey)
+        sharpenTask?.cancel()
+        if ScanSharpening.enabled { scheduleSharpening(visibleSources()) }
         pdfView.redrawVisiblePages()
     }
 

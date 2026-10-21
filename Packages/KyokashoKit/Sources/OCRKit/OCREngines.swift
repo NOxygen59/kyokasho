@@ -178,17 +178,20 @@ public struct PDFTextEngine: OCREngine {
         var text = ""
         var boxes: [NormBox] = []
 
+        // Même repère que le rendu OCR (rotation intrinsèque comprise), voir `PageFrame`.
+        let frame = PageFrame(box: box, rotation: page.rotation)
         func normalized(_ r: CGRect) -> NormBox {
-            NormBox(x: (r.minX - box.minX) / box.width, y: (box.maxY - r.maxY) / box.height,
-                    w: r.width / box.width, h: r.height / box.height)
+            let a = frame.normalized(CGPoint(x: r.minX, y: r.minY)), b = frame.normalized(CGPoint(x: r.maxX, y: r.maxY))
+            return NormBox(x: min(a.x, b.x), y: min(a.y, b.y), w: abs(b.x - a.x), h: abs(b.y - a.y))
         }
+        let aspect = frame.rotation % 180 == 0 ? box.width / box.height : box.height / box.width
         func flush() {
             let trimmed = text.trimmingCharacters(in: .whitespaces)
             defer { text = ""; boxes = [] }
             guard !trimmed.isEmpty, !boxes.isEmpty, boxes.count == text.count else { return }
             let union = boxes.dropFirst().reduce(boxes[0].rect) { $0.union($1.rect) }
             let lineBox = NormBox(union)
-            let vertical = CharacterLayout.isVertical(lineBox, imageAspect: box.width / box.height, characters: text.count)
+            let vertical = CharacterLayout.isVertical(lineBox, imageAspect: aspect, characters: text.count)
             lines.append(OCRLine(text: text, box: lineBox, charBoxes: boxes, measuredCharBoxes: true,
                                  vertical: vertical, confidence: 1))
         }
