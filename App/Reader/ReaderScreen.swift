@@ -20,13 +20,7 @@ struct ReaderScreen: View {
     @State private var side: Side? = nil
     @State private var studyTab: StudyPanel.Tab = .text
     @AppStorage("reader.filmstripShown") private var filmstripShown = true
-    @AppStorage("toolbar.style") private var toolbarStyleRaw = ToolbarStyle.vertical.rawValue
-    @AppStorage("toolbar.lastOpen") private var toolbarLastOpen = ToolbarStyle.vertical.rawValue
-    @AppStorage("toolbar.x") private var toolbarX = 0.0
-    @AppStorage("toolbar.y") private var toolbarY = 0.1
     @AppStorage("pencil.lookupOption") private var pencilOption = false
-    @State private var dragOffset: CGSize = .zero
-    @State private var toolbarSize: CGSize = .zero
     @State private var pageField = ""
     @ObservedObject private var keyboard = HardwareKeyboard.shared
 
@@ -167,7 +161,9 @@ struct ReaderScreen: View {
             }
             .padding(.horizontal, Atelier.gap)
             .padding(.top, 8)
-            GeometryReader { area in floatingToolbar(in: area.size) }
+            GeometryReader { area in
+                FloatingToolbar(area: area.size) { vertical in toolItems(vertical: vertical) }
+            }
                 .padding(Atelier.gap)
             if !reader.isDrawing {
                 if filmstripShown {
@@ -268,80 +264,6 @@ struct ReaderScreen: View {
         }
         .padding(4)
         .atelierPanel(radius: 26)
-    }
-
-    enum ToolbarStyle: String { case vertical, horizontal, collapsed }
-
-    /// Barre d'outils flottante : se déplace par sa poignée, verticale, horizontale ou rétractée.
-    private func floatingToolbar(in size: CGSize) -> some View {
-        let style = ToolbarStyle(rawValue: toolbarStyleRaw) ?? .vertical
-        let maxX = max(0, size.width - toolbarSize.width)
-        let maxY = max(0, size.height - toolbarSize.height)
-        let x = min(max(0, toolbarX * maxX + dragOffset.width), maxX)
-        let y = min(max(0, toolbarY * maxY + dragOffset.height), maxY)
-        let drag = DragGesture(minimumDistance: 2)
-            .onChanged { dragOffset = $0.translation }
-            .onEnded { _ in
-                toolbarX = maxX > 0 ? x / maxX : 0
-                toolbarY = maxY > 0 ? y / maxY : 0
-                dragOffset = .zero
-            }
-        return Group {
-            switch style {
-            case .collapsed:
-                HStack(spacing: 2) {
-                    grip(vertical: false).gesture(drag)
-                    ToolButton(icon: "square.grid.2x2", label: "Ouvrir les outils", tint: Atelier.Tint.read) {
-                        toolbarStyleRaw = toolbarLastOpen
-                    }
-                }
-            case .vertical:
-                VStack(spacing: 6) {
-                    grip(vertical: true).gesture(drag)
-                    toolItems(vertical: true)
-                    styleMenu
-                }
-            case .horizontal:
-                HStack(spacing: 6) {
-                    grip(vertical: false).gesture(drag)
-                    toolItems(vertical: false)
-                    styleMenu
-                }
-            }
-        }
-        .padding(6)
-        .atelierPanel(radius: 16)
-        .background(GeometryReader { g in Color.clear.preference(key: ToolbarSizeKey.self, value: g.size) })
-        .onPreferenceChange(ToolbarSizeKey.self) { toolbarSize = $0 }
-        .offset(x: x, y: y)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-    }
-
-    private func grip(vertical: Bool) -> some View {
-        Image(systemName: vertical ? "line.3.horizontal" : "line.3.horizontal")
-            .rotationEffect(.degrees(vertical ? 0 : 90))
-            .font(.system(size: 13, weight: .bold))
-            .foregroundStyle(Atelier.textTertiary)
-            .frame(width: vertical ? 46 : 20, height: vertical ? 20 : 46)
-            .contentShape(Rectangle())
-            .accessibilityLabel("Déplacer la barre d'outils")
-    }
-
-    private var styleMenu: some View {
-        Menu {
-            Button { setToolbarStyle(.vertical) } label: { Label("Verticale", systemImage: "rectangle.portrait") }
-            Button { setToolbarStyle(.horizontal) } label: { Label("Horizontale", systemImage: "rectangle") }
-            Button { setToolbarStyle(.collapsed) } label: { Label("Rétracter", systemImage: "arrow.down.right.and.arrow.up.left") }
-        } label: {
-            Image(systemName: "ellipsis").font(.system(size: 15, weight: .semibold))
-                .frame(width: 46, height: 30).foregroundStyle(Atelier.textSecondary)
-        }
-        .accessibilityLabel("Forme de la barre d'outils")
-    }
-
-    private func setToolbarStyle(_ style: ToolbarStyle) {
-        if style != .collapsed { toolbarLastOpen = style.rawValue }
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { toolbarStyleRaw = style.rawValue }
     }
 
     private func railDivider(_ vertical: Bool) -> some View {
@@ -622,9 +544,4 @@ enum PopupPlacement {
         let y = useBelow ? word.maxY + gap : max(margin, word.minY - gap - h)
         return CGRect(x: x, y: y, width: w, height: h)
     }
-}
-
-private struct ToolbarSizeKey: PreferenceKey {
-    static var defaultValue: CGSize = .zero
-    static func reduce(value: inout CGSize, nextValue: () -> CGSize) { value = nextValue() }
 }
