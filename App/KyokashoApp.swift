@@ -7,10 +7,14 @@ import UIKit
 @main
 struct KyokashoApp: App {
     @StateObject private var model = AppModel()
+    @StateObject private var themes = ThemeManager()
 
     var body: some Scene {
         WindowGroup {
             RootView()
+                // Changer de thème reconstruit toute l'interface avec les nouvelles couleurs.
+                .id(themes.theme.id)
+                .environmentObject(themes)
                 .environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review)
                 .preferredColorScheme(.dark)
                 .tint(Atelier.Tint.read)

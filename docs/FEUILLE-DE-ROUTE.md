@@ -164,6 +164,17 @@ Nouveau fichier `Sources/ReviewKit/Exporters.swift`.
 5. Crédits « À propos » : swift-fsrs, genanki (format). Compiler.
 6. **Release 0.5.0** (méthode du § 6). Notes : vérifié = tests unitaires ; non vérifié = tout l'écran, l'import réel dans Anki, AnkiMobile.
 
+### [x] Hors plan — demandes du 21/10 (après 0.5.0, **pas testé à l'écran**)
+- Menu de sélection iOS → « Dictionnaire » (`ReaderPDFView.buildMenu`, `ReaderController.lookupSelection`).
+- Bande des pages rétractable ; champ « page » à côté de la recherche (numéro imprimé ou romain).
+- Tap = barres seulement (plus de zones de tap) ; clavier branché (`HardwareKeyboard`) → flèches + ← →.
+- Barre d'outils flottante : poignée pour la déplacer, verticale / horizontale / rétractée (`@AppStorage toolbar.*`).
+- Option « Pencil → dictionnaire » (Réglages → Apple Pencil) : bouton dans la barre, `pencilTap`.
+- Thèmes : `App/Design/Themes.swift` (Atelier + Forêt, Braise, Sable, Lagon), `ThemeManager`, racine `.id(theme)`.
+  Les couleurs `Atelier.*` sont lues dans `Theme.current`. Le CSS des définitions (WebView) ne suit pas encore le thème.
+- Réglages rangés : Apparence / Lecture / Japonais / Cartes / Comptes / À propos.
+- **Prochaine session demandée par l'utilisateur : revue complète du code pour optimiser.**
+
 ### [ ] Session 5 — V5-a : moteur NDLOCR-Lite, partie 1
 1. **Vérifier d'abord** (lecture seule, peu de tokens) le dépôt `ndl-lab/ndlocr-lite` sur GitHub :
    - licence du code et des modèles ;

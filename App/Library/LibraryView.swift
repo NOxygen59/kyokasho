@@ -18,6 +18,7 @@ struct LibraryView: View {
     @State private var showDictionary = false
     @State private var renaming: LibraryDocument?
     @EnvironmentObject private var review: ReviewModel
+    @EnvironmentObject private var themes: ThemeManager
     @State private var showReview = false
     @State private var settingPageOne: LibraryDocument?
     @State private var pageOneText = ""
@@ -67,7 +68,7 @@ struct LibraryView: View {
             DocumentPicker { urls in model.importFiles(urls) }.ignoresSafeArea()
         }
         .sheet(isPresented: $showSettings) {
-            SettingsView().environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review).preferredColorScheme(.dark)
+            SettingsView().environmentObject(themes).environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review).preferredColorScheme(.dark)
         }
         .sheet(isPresented: $showDrive) {
             DriveBrowserView().environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review).preferredColorScheme(.dark)

@@ -7,52 +7,99 @@ import SwiftUI
 
 struct SettingsView: View {
     @EnvironmentObject private var model: AppModel
+    @EnvironmentObject private var themes: ThemeManager
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         NavigationStack {
             Form {
-                TranslationSettingsSection()
-                ReaderSettingsSections(settings: $model.readerDefaults)
-                Section {
-                    Toggle("Dessiner aussi au doigt", isOn: $model.drawWithFinger)
-                } header: {
-                    Text("Annotations")
-                } footer: {
-                    Text("Désactivé : seul l'Apple Pencil dessine, le doigt fait défiler. Le PDF original n'est jamais modifié.")
+                Section("Apparence") {
+                    NavigationLink { ThemePickerView() } label: {
+                        row("paintpalette", "Thème", tint: Atelier.Tint.annotate, detail: themes.theme.name)
+                    }
+                }
+                Section("Lecture") {
+                    NavigationLink { ReadingSettingsView() } label: {
+                        row("book", "Pages et gestes", tint: Atelier.Tint.read)
+                    }
+                    NavigationLink { AnnotationSettingsView() } label: {
+                        row("pencil.tip", "Apple Pencil et annotations", tint: Atelier.Tint.annotate)
+                    }
+                }
+                Section("Japonais") {
+                    NavigationLink { DictionaryManagerView() } label: {
+                        row("character.book.closed.ja", "Dictionnaires", tint: Atelier.Tint.japanese)
+                    }
+                    NavigationLink { OCRSettingsView() } label: {
+                        row("text.viewfinder", "OCR (lecture des scans)", tint: Atelier.Tint.japanese,
+                            detail: model.readerDefaults.ocrEngine.label)
+                    }
+                    NavigationLink { Form { TranslationSettingsSection() }.navigationTitle("Traduction") } label: {
+                        row("character.bubble", "Traduction (DeepL)", tint: Atelier.Tint.ai)
+                    }
+                }
+                Section("Cartes") {
+                    NavigationLink { ReviewSettingsView() } label: {
+                        row("rectangle.stack", "Révisions et export Anki", tint: Atelier.Tint.japanese)
+                    }
+                }
+                Section("Comptes") {
+                    NavigationLink { DriveAccountView() } label: {
+                        row("externaldrive.badge.icloud", "Google Drive", tint: Atelier.Tint.cloud)
+                    }
                 }
                 Section {
-                    NavigationLink("Moteur, texte et banc d'essai") { OCRSettingsView() }
-                } header: {
-                    Text("OCR")
-                } footer: {
-                    Text("Moteur par défaut : \(model.readerDefaults.ocrEngine.label).")
-                }
-                Section {
-                    NavigationLink("Dictionnaires") { DictionaryManagerView() }
-                } header: {
-                    Text("Dictionnaire")
-                } footer: {
-                    Text("Dictionnaires Yomitan (.zip) : JMdict, Jitendex, kanji, fréquences, accents…")
-                }
-                Section {
-                    NavigationLink("Révisions et export Anki") { ReviewSettingsView() }
-                } header: {
-                    Text("Cartes")
-                } footer: {
-                    Text("Rythme des révisions (FSRS), modèle de carte, AnkiMobile, export .apkg / CSV.")
-                }
-                Section("Google Drive") {
-                    NavigationLink("Compte Google Drive") { DriveAccountView() }
-                }
-                Section {
-                    NavigationLink("À propos") { AboutView() }
+                    NavigationLink { AboutView() } label: { row("info.circle", "À propos", tint: Atelier.textSecondary) }
                 }
             }
             .navigationTitle("Réglages")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("OK") { dismiss() } } }
         }
+    }
+
+    private func row(_ icon: String, _ title: String, tint: Color, detail: String? = nil) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon).font(.system(size: 15, weight: .semibold)).foregroundStyle(Color.black.opacity(0.8))
+                .frame(width: 30, height: 30).background(tint, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            Text(title)
+            if let detail {
+                Spacer()
+                Text(detail).foregroundStyle(.secondary).lineLimit(1)
+            }
+        }
+    }
+}
+
+/// Réglages → Lecture : réglages par défaut du lecteur.
+struct ReadingSettingsView: View {
+    @EnvironmentObject private var model: AppModel
+
+    var body: some View {
+        Form { ReaderSettingsSections(settings: $model.readerDefaults) }
+            .navigationTitle("Pages et gestes")
+    }
+}
+
+/// Réglages → Apple Pencil et annotations.
+struct AnnotationSettingsView: View {
+    @EnvironmentObject private var model: AppModel
+    @AppStorage("pencil.lookupOption") private var pencilOption = false
+
+    var body: some View {
+        Form {
+            Section {
+                Toggle("Dessiner aussi au doigt", isOn: $model.drawWithFinger)
+            } footer: {
+                Text("Désactivé : seul l'Apple Pencil dessine, le doigt fait défiler. Le PDF original n'est jamais modifié.")
+            }
+            Section {
+                Toggle("Bouton « Pencil → dictionnaire »", isOn: $pencilOption)
+            } footer: {
+                Text("Ajoute un bouton ✎ dans la barre d'outils du lecteur. Allumé, toucher un mot avec le Pencil ouvre sa fiche dans le dictionnaire (le doigt et la souris gardent leur rôle).")
+            }
+        }
+        .navigationTitle("Apple Pencil")
     }
 }
 
@@ -96,11 +143,13 @@ struct ReaderSettingsSections: View {
         } footer: {
             Text("Le glissement n'existe qu'en page simple paginée. Le préchargement prépare les aperçus des pages voisines ; PDFKit gère lui-même le rendu des pages affichées. Pivoter ou couper une seule page : menu ⋯ du lecteur.")
         }
-        Section("Gestes") {
-            Toggle("Zones de tap (précédent / suivant)", isOn: $settings.tapZonesEnabled)
-            Toggle("Inverser les zones de tap", isOn: $settings.invertTapZones).disabled(!settings.tapZonesEnabled)
+        Section {
             Toggle("Double tap pour zoomer", isOn: $settings.doubleTapZoom)
             Toggle("Masquer les barres en tournant les pages", isOn: $settings.hideBarsOnScroll)
+        } header: {
+            Text("Gestes")
+        } footer: {
+            Text("Tourner les pages : glisser au doigt, ou avec un clavier / une souris, les flèches sur les bords et les touches ← →. Un tap montre ou cache les barres.")
         }
     }
 }
@@ -138,8 +187,6 @@ struct DocumentSettingsSheet: View {
                     OptionalBool("Couper les doubles pages", value: $override.splitWidePages, defaultValue: d.splitWidePages)
                 }
                 Section("Gestes") {
-                    OptionalBool("Zones de tap", value: $override.tapZonesEnabled, defaultValue: d.tapZonesEnabled)
-                    OptionalBool("Inverser les zones", value: $override.invertTapZones, defaultValue: d.invertTapZones)
                     OptionalBool("Double tap zoom", value: $override.doubleTapZoom, defaultValue: d.doubleTapZoom)
                     OptionalBool("Masquer les barres", value: $override.hideBarsOnScroll, defaultValue: d.hideBarsOnScroll)
                 }

@@ -8,21 +8,22 @@ import SwiftUI
 enum Atelier {
     // MARK: Couleurs
 
-    static let canvas = Color(red: 0.055, green: 0.063, blue: 0.075)       // fond graphite
-    static let surface = Color(red: 0.105, green: 0.115, blue: 0.135)      // panneaux
-    static let surfaceHigh = Color(red: 0.150, green: 0.162, blue: 0.188)  // éléments posés sur un panneau
+    // Lues dans le thème en cours (`Theme.current`, voir Themes.swift).
+    static var canvas: Color { Theme.current.canvas }               // fond
+    static var surface: Color { Theme.current.surface }             // panneaux
+    static var surfaceHigh: Color { Theme.current.surfaceHigh }     // éléments posés sur un panneau
     static let hairline = Color.white.opacity(0.08)
-    static let textPrimary = Color.white.opacity(0.94)
-    static let textSecondary = Color.white.opacity(0.56)
-    static let textTertiary = Color.white.opacity(0.34)
+    static var textPrimary: Color { Theme.current.ink.opacity(0.94) }
+    static var textSecondary: Color { Theme.current.ink.opacity(0.56) }
+    static var textTertiary: Color { Theme.current.ink.opacity(0.34) }
 
     /// Une couleur par fonction.
     enum Tint {
-        static let read = Color(red: 0.31, green: 0.82, blue: 0.77)        // lecture, navigation
-        static let annotate = Color(red: 0.97, green: 0.73, blue: 0.23)    // stylo, surligneur, notes
-        static let japanese = Color(red: 1.00, green: 0.38, blue: 0.33)    // japonais : texte, vocabulaire
-        static let ai = Color(red: 0.62, green: 0.56, blue: 1.00)          // IA, traduction
-        static let cloud = Color(red: 0.36, green: 0.66, blue: 1.00)       // Drive, import
+        static var read: Color { Theme.current.read }           // lecture, navigation
+        static var annotate: Color { Theme.current.annotate }   // stylo, surligneur, notes
+        static var japanese: Color { Theme.current.japanese }   // japonais : texte, vocabulaire
+        static var ai: Color { Theme.current.ai }               // IA, traduction
+        static var cloud: Color { Theme.current.cloud }         // Drive, import
     }
 
     // MARK: Mesures

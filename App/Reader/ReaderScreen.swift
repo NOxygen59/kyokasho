@@ -19,6 +19,16 @@ struct ReaderScreen: View {
     @State private var sheet: Sheet?
     @State private var side: Side? = nil
     @State private var studyTab: StudyPanel.Tab = .text
+    @AppStorage("reader.filmstripShown") private var filmstripShown = true
+    @AppStorage("toolbar.style") private var toolbarStyleRaw = ToolbarStyle.vertical.rawValue
+    @AppStorage("toolbar.lastOpen") private var toolbarLastOpen = ToolbarStyle.vertical.rawValue
+    @AppStorage("toolbar.x") private var toolbarX = 0.0
+    @AppStorage("toolbar.y") private var toolbarY = 0.1
+    @AppStorage("pencil.lookupOption") private var pencilOption = false
+    @State private var dragOffset: CGSize = .zero
+    @State private var toolbarSize: CGSize = .zero
+    @State private var pageField = ""
+    @ObservedObject private var keyboard = HardwareKeyboard.shared
 
     enum Sheet: String, Identifiable {
         case search, ai, settings
@@ -62,6 +72,15 @@ struct ReaderScreen: View {
                         Button("") { reader.endLookup() }
                             .keyboardShortcut(.escape, modifiers: [])
                             .opacity(0).allowsHitTesting(false)
+                    }
+                    // Clavier / souris branchés : flèches pour tourner les pages (← → aussi au clavier).
+                    if keyboard.connected {
+                        HStack {
+                            pageArrow(left: true)
+                            Spacer()
+                            pageArrow(left: false)
+                        }
+                        .padding(.horizontal, 8)
                     }
                     if let error = reader.loadError {
                         Text(error).padding().atelierPanel()
@@ -137,16 +156,34 @@ struct ReaderScreen: View {
             }
             .padding(.horizontal, Atelier.gap)
             .padding(.top, 8)
-            HStack {
-                toolRail
-                Spacer()
-            }
-            .padding(.horizontal, Atelier.gap)
-            .frame(maxHeight: .infinity)
+            GeometryReader { area in floatingToolbar(in: area.size) }
+                .padding(Atelier.gap)
             if !reader.isDrawing {
-                PageFilmstrip(reader: reader)
-                    .padding(.horizontal, Atelier.gap)
+                if filmstripShown {
+                    PageFilmstrip(reader: reader)
+                        .overlay(alignment: .topTrailing) {
+                            Button { withAnimation(.easeOut(duration: 0.2)) { filmstripShown = false } } label: {
+                                Image(systemName: "chevron.down").font(.system(size: 12, weight: .bold))
+                                    .frame(width: 28, height: 28).foregroundStyle(Atelier.textPrimary)
+                                    .background(Atelier.surfaceHigh, in: Circle())
+                            }
+                            .buttonStyle(PressScale())
+                            .accessibilityLabel("Rentrer la bande des pages")
+                            .offset(x: -10, y: -12)
+                        }
+                        .padding(.horizontal, Atelier.gap)
+                        .padding(.bottom, 10)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                } else {
+                    Button { withAnimation(.easeOut(duration: 0.2)) { filmstripShown = true } } label: {
+                        Label("Pages", systemImage: "chevron.up").font(.system(size: 13, weight: .semibold))
+                            .padding(.horizontal, 14).padding(.vertical, 8)
+                            .foregroundStyle(Atelier.textPrimary)
+                            .atelierPanel(radius: 18)
+                    }
+                    .buttonStyle(PressScale())
                     .padding(.bottom, 10)
+                }
             }
         }
     }
@@ -173,6 +210,17 @@ struct ReaderScreen: View {
 
     private var actionsCapsule: some View {
         HStack(spacing: 0) {
+            TextField(reader.document.pageLabel(reader.currentSourcePage), text: $pageField)
+                .font(Atelier.mono)
+                .multilineTextAlignment(.center)
+                .keyboardType(.numbersAndPunctuation)
+                .submitLabel(.go)
+                .onSubmit(goToTypedPage)
+                .frame(width: 58)
+                .padding(.vertical, 8)
+                .background(Atelier.surfaceHigh, in: Capsule())
+                .accessibilityLabel("Aller à la page")
+                .padding(.horizontal, 4)
             CapsuleButton(icon: "magnifyingglass", label: "Rechercher") { sheet = .search }
             CapsuleButton(icon: reader.isCurrentPageBookmarked ? "bookmark.fill" : "bookmark", label: "Signet",
                           active: reader.isCurrentPageBookmarked) { reader.toggleBookmark() }
@@ -211,10 +259,89 @@ struct ReaderScreen: View {
         .atelierPanel(radius: 26)
     }
 
-    /// Outils, une couleur par fonction : lecture (turquoise), annotation (ambre),
-    /// japonais (vermillon), IA (violet).
-    private var toolRail: some View {
-        VStack(spacing: 6) {
+    enum ToolbarStyle: String { case vertical, horizontal, collapsed }
+
+    /// Barre d'outils flottante : se déplace par sa poignée, verticale, horizontale ou rétractée.
+    private func floatingToolbar(in size: CGSize) -> some View {
+        let style = ToolbarStyle(rawValue: toolbarStyleRaw) ?? .vertical
+        let maxX = max(0, size.width - toolbarSize.width)
+        let maxY = max(0, size.height - toolbarSize.height)
+        let x = min(max(0, toolbarX * maxX + dragOffset.width), maxX)
+        let y = min(max(0, toolbarY * maxY + dragOffset.height), maxY)
+        let drag = DragGesture(minimumDistance: 2)
+            .onChanged { dragOffset = $0.translation }
+            .onEnded { _ in
+                toolbarX = maxX > 0 ? x / maxX : 0
+                toolbarY = maxY > 0 ? y / maxY : 0
+                dragOffset = .zero
+            }
+        return Group {
+            switch style {
+            case .collapsed:
+                HStack(spacing: 2) {
+                    grip(vertical: false).gesture(drag)
+                    ToolButton(icon: "square.grid.2x2", label: "Ouvrir les outils", tint: Atelier.Tint.read) {
+                        toolbarStyleRaw = toolbarLastOpen
+                    }
+                }
+            case .vertical:
+                VStack(spacing: 6) {
+                    grip(vertical: true).gesture(drag)
+                    toolItems(vertical: true)
+                    styleMenu
+                }
+            case .horizontal:
+                HStack(spacing: 6) {
+                    grip(vertical: false).gesture(drag)
+                    toolItems(vertical: false)
+                    styleMenu
+                }
+            }
+        }
+        .padding(6)
+        .atelierPanel(radius: 16)
+        .background(GeometryReader { g in Color.clear.preference(key: ToolbarSizeKey.self, value: g.size) })
+        .onPreferenceChange(ToolbarSizeKey.self) { toolbarSize = $0 }
+        .offset(x: x, y: y)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    private func grip(vertical: Bool) -> some View {
+        Image(systemName: vertical ? "line.3.horizontal" : "line.3.horizontal")
+            .rotationEffect(.degrees(vertical ? 0 : 90))
+            .font(.system(size: 13, weight: .bold))
+            .foregroundStyle(Atelier.textTertiary)
+            .frame(width: vertical ? 46 : 20, height: vertical ? 20 : 46)
+            .contentShape(Rectangle())
+            .accessibilityLabel("Déplacer la barre d'outils")
+    }
+
+    private var styleMenu: some View {
+        Menu {
+            Button { setToolbarStyle(.vertical) } label: { Label("Verticale", systemImage: "rectangle.portrait") }
+            Button { setToolbarStyle(.horizontal) } label: { Label("Horizontale", systemImage: "rectangle") }
+            Button { setToolbarStyle(.collapsed) } label: { Label("Rétracter", systemImage: "arrow.down.right.and.arrow.up.left") }
+        } label: {
+            Image(systemName: "ellipsis").font(.system(size: 15, weight: .semibold))
+                .frame(width: 46, height: 30).foregroundStyle(Atelier.textSecondary)
+        }
+        .accessibilityLabel("Forme de la barre d'outils")
+    }
+
+    private func setToolbarStyle(_ style: ToolbarStyle) {
+        if style != .collapsed { toolbarLastOpen = style.rawValue }
+        withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { toolbarStyleRaw = style.rawValue }
+    }
+
+    private func railDivider(_ vertical: Bool) -> some View {
+        Rectangle().fill(Atelier.hairline)
+            .frame(width: vertical ? 26 : 1, height: vertical ? 1 : 26)
+            .padding(vertical ? .vertical : .horizontal, 2)
+    }
+
+    /// Outils, une couleur par fonction : lecture, annotation, japonais, IA.
+    @ViewBuilder
+    private func toolItems(vertical: Bool) -> some View {
             ToolButton(icon: "hand.point.up.left", label: "Lire", tint: Atelier.Tint.read, active: !reader.isDrawing) {
                 if reader.isDrawing { reader.setDrawing(false) }
             }
@@ -222,7 +349,7 @@ struct ReaderScreen: View {
                        active: reader.isDrawing) {
                 reader.setDrawing(!reader.isDrawing)
             }
-            Rectangle().fill(Atelier.hairline).frame(width: 26, height: 1).padding(.vertical, 2)
+            railDivider(vertical)
             Button {
                 reader.lookupMode.toggle()
                 if reader.isDrawing { reader.setDrawing(false) }
@@ -245,20 +372,54 @@ struct ReaderScreen: View {
                     if !reader.hoverLookup { reader.endLookup() }
                 }
             }
+            // Pencil → dictionnaire : seulement si l'option est activée dans les réglages.
+            if pencilOption {
+                ToolButton(icon: "applepencil", label: "Le Pencil cherche dans le dictionnaire",
+                           tint: Atelier.Tint.japanese, active: reader.pencilLookup) {
+                    reader.pencilLookup.toggle()
+                    if reader.pencilLookup, reader.isDrawing { reader.setDrawing(false) }
+                }
+            }
             ToolButton(icon: "character.ja", label: "Texte de la page", tint: Atelier.Tint.japanese,
                        active: side == .study && studyTab == .text) { openStudy(.text) }
             ToolButton(icon: "character.book.closed.ja", label: "Mots de la page", tint: Atelier.Tint.japanese,
                        active: side == .study && studyTab == .vocab) { openStudy(.vocab) }
             ToolButton(icon: "text.bubble", label: "Notes", tint: Atelier.Tint.annotate,
                        active: side == .study && studyTab == .notes) { openStudy(.notes) }
-            Rectangle().fill(Atelier.hairline).frame(width: 26, height: 1).padding(.vertical, 2)
+            railDivider(vertical)
             ToolButton(icon: "sparkles", label: "Page vers IA", tint: Atelier.Tint.ai) { sheet = .ai }
             ToolButton(icon: "globe", label: "claude.ai à côté", tint: Atelier.Tint.ai, active: side == .web) {
                 side = side == .web ? nil : .web
             }
+    }
+
+    /// Flèche de bord : la gauche recule en lecture gauche → droite, avance en droite → gauche.
+    private func pageArrow(left: Bool) -> some View {
+        let forward = (reader.settings.direction == .rightToLeft) == left
+        return Button { forward ? reader.next() : reader.previous() } label: {
+            Image(systemName: left ? "chevron.left" : "chevron.right")
+                .font(.system(size: 20, weight: .semibold))
+                .frame(width: 40, height: 64)
+                .foregroundStyle(Atelier.textPrimary)
+                .background(Atelier.surface.opacity(0.7), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
-        .padding(6)
-        .atelierPanel(radius: 16)
+        .buttonStyle(PressScale())
+        .keyboardShortcut(left ? .leftArrow : .rightArrow, modifiers: [])
+        .opacity(chromeVisible ? 1 : 0.35)
+        .accessibilityLabel(forward ? "Page suivante" : "Page précédente")
+    }
+
+    /// Champ « page » : numéro imprimé (ou chiffre romain des pages d'avant).
+    private func goToTypedPage() {
+        let typed = pageField.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        pageField = ""
+        guard !typed.isEmpty else { return }
+        let doc = reader.document
+        if let index = (0..<doc.pageCount).first(where: { doc.pageLabel($0) == typed }) {
+            reader.go(toSource: index)
+        } else if let n = Int(typed) {
+            reader.go(toSource: doc.sourceIndex(forPrintedPage: n))
+        }
     }
 
     private func openStudy(_ tab: StudyPanel.Tab) {
@@ -450,4 +611,9 @@ enum PopupPlacement {
         let y = useBelow ? word.maxY + gap : max(margin, word.minY - gap - h)
         return CGRect(x: x, y: y, width: w, height: h)
     }
+}
+
+private struct ToolbarSizeKey: PreferenceKey {
+    static var defaultValue: CGSize = .zero
+    static func reduce(value: inout CGSize, nextValue: () -> CGSize) { value = nextValue() }
 }

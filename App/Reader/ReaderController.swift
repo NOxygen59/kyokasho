@@ -61,6 +61,16 @@ final class ReaderController: NSObject, ObservableObject {
         ocrPage != nil || pdf?.page(at: currentIndex)?.string?.isEmpty == false
     }
     private var hover: UIHoverGestureRecognizer!
+    private var pencilTap: UITapGestureRecognizer!
+    /// Le Pencil cherche le mot touché dans le dictionnaire (au lieu de dessiner ou d'afficher les barres).
+    @Published var pencilLookup = false {
+        didSet {
+            // Le doigt et la souris gardent le tap normal ; le Pencil passe par `pencilTap`.
+            let all: [UITouch.TouchType] = pencilLookup ? [.direct, .indirect, .indirectPointer] : [.direct, .indirect, .indirectPointer, .pencil]
+            singleTap?.allowedTouchTypes = all.map { NSNumber(value: $0.rawValue) }
+            pencilTap?.isEnabled = pencilLookup
+        }
+    }
     private var hoverTask: Task<Void, Never>?
 
     /// Contexte du mot cherché, pour fabriquer une carte : phrase, ligne dans la page.
@@ -126,6 +136,7 @@ final class ReaderController: NSObject, ObservableObject {
         super.init()
         ink.controller = self
         configureGestures()
+        pdfView.onLookupSelection = { [weak self] in self?.lookupSelection() }
         observe()
     }
 
@@ -327,6 +338,23 @@ final class ReaderController: NSObject, ObservableObject {
     /// Le dictionnaire a reconnu `length` caractères : on surligne exactement le mot.
     func setLookupMatchLength(_ length: Int) {
         lookupHighlight = Array(lookupCharacterRects.prefix(max(1, length))).filter { !$0.isEmpty }
+    }
+
+    /// Cherche le texte sélectionné (menu iOS → « Dictionnaire »). Texte du PDF seulement.
+    func lookupSelection() {
+        guard let pdf, let selection = pdfView.currentSelection, let page = selection.pages.first,
+              let raw = selection.string?.trimmingCharacters(in: .whitespacesAndNewlines), !raw.isEmpty else { return }
+        let index = pdf.index(for: page)
+        guard presented.indices.contains(index) else { return }
+        let pageRect = selection.bounds(for: page)
+        let viewRect = pdfView.convert(pageRect, from: page)
+        let line = page.selectionForLine(at: CGPoint(x: pageRect.midX, y: pageRect.midY))
+        let context = LookupContext(source: presented[index].source, presentedIndex: index,
+                                    sentence: line?.string?.trimmingCharacters(in: .whitespacesAndNewlines) ?? raw,
+                                    lineRect: line?.bounds(for: page) ?? pageRect, vertical: false)
+        let text = String(raw.prefix(model.dictionary.profile.lookup.scanLength))
+        pdfView.clearSelection()
+        present(text: text, rects: [viewRect], anchor: CGPoint(x: viewRect.maxX, y: viewRect.minY), context: context)
     }
 
     /// « Titre · p. N » (numéro imprimé) de la page du mot cherché.
@@ -680,10 +708,16 @@ final class ReaderController: NSObject, ObservableObject {
         longPressWatcher.cancelsTouchesInView = false
         longPressWatcher.delaysTouchesEnded = false
         longPressWatcher.delegate = self
+        pencilTap = UITapGestureRecognizer(target: self, action: #selector(handlePencilTap(_:)))
+        pencilTap.allowedTouchTypes = [NSNumber(value: UITouch.TouchType.pencil.rawValue)]
+        pencilTap.cancelsTouchesInView = false
+        pencilTap.delegate = self
+        pencilTap.isEnabled = false
         hover = UIHoverGestureRecognizer(target: self, action: #selector(handleHover(_:)))
         hover.delegate = self
         if attach {
             pdfView.addGestureRecognizer(hover)
+            pdfView.addGestureRecognizer(pencilTap)
             pdfView.addGestureRecognizer(doubleTap)
             pdfView.addGestureRecognizer(singleTap)
             pdfView.addGestureRecognizer(longPressWatcher)
@@ -707,6 +741,12 @@ final class ReaderController: NSObject, ObservableObject {
         let towardLeft = gesture.direction == .left
         let forward = settings.direction == .rightToLeft ? !towardLeft : towardLeft
         forward ? next() : previous()
+    }
+
+    @objc private func handlePencilTap(_ gesture: UITapGestureRecognizer) {
+        guard pencilLookup, !isDrawing else { return }
+        let point = gesture.location(in: pdfView)
+        Task { await lookup(at: point) }
     }
 
     @objc private func handleHover(_ gesture: UIHoverGestureRecognizer) {
@@ -759,11 +799,8 @@ final class ReaderController: NSObject, ObservableObject {
                 return
             }
         }
-        switch TapZones.action(atFraction: point.x / max(pdfView.bounds.width, 1), settings: settings) {
-        case .next: next()
-        case .previous: previous()
-        case .toggleBars: barsVisible.toggle()
-        }
+        // Un tap ne tourne plus la page (glisser au doigt, flèches ou ← → au clavier) : il montre / cache les barres.
+        barsVisible.toggle()
     }
 
     @objc private func handleDoubleTap(_ gesture: UITapGestureRecognizer) {
@@ -1133,6 +1170,17 @@ extension ReaderController: PDFDocumentDelegate {
 /// `PDFView` qui garde l'échelle « page entière » à jour quand la taille change (rotation, Split View).
 final class ReaderPDFView: PDFView {
     private var lastSize: CGSize = .zero
+    /// Action « Dictionnaire » du menu de sélection d'iOS (Copier, Rechercher…).
+    var onLookupSelection: (() -> Void)?
+
+    override func buildMenu(with builder: UIMenuBuilder) {
+        super.buildMenu(with: builder)
+        guard let onLookupSelection, currentSelection?.string?.isEmpty == false else { return }
+        let action = UIAction(title: "Dictionnaire", image: UIImage(systemName: "character.book.closed.ja")) { _ in
+            onLookupSelection()
+        }
+        builder.insertSibling(UIMenu(options: .displayInline, children: [action]), beforeMenu: .standardEdit)
+    }
     private var lastFit: CGFloat = 0
 
     /// Vrai si la page est affichée « entière » (pas de zoom de l'utilisateur).

@@ -151,7 +151,7 @@ struct LookupPopup: View {
             }
         }
         .animation(.easeOut(duration: 0.2), value: toast)
-        .background(Color(red: 0.105, green: 0.115, blue: 0.135))
+        .background(Atelier.surface)
         .clipShape(RoundedRectangle(cornerRadius: Atelier.radius, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: Atelier.radius, style: .continuous).strokeBorder(Atelier.Tint.japanese.opacity(0.35), lineWidth: 1))
         .shadow(color: .black.opacity(0.55), radius: 24, y: 10)
