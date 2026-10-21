@@ -5,13 +5,17 @@ import DictionaryKit
 import OCRKit
 import PDFKit
 import ReaderCore
+import Combine
 import SwiftUI
 
 /// Lecteur « Atelier », pensé pour l'iPad en paysage :
 /// page au centre, outils à gauche (une couleur par fonction), panneau d'étude à droite,
 /// pellicule des pages en bas. Tout s'efface d'un tap au centre de la page.
 struct ReaderScreen: View {
-    @EnvironmentObject private var model: AppModel
+    /// Pas observé : sinon tout le lecteur se redessine à chaque changement d'`AppModel`
+    /// (bibliothèque, import…). Les seules valeurs utiles arrivent par `onReceive`.
+    private let model: AppModel
+    @State private var showOCRBoxes = false
     @EnvironmentObject private var review: ReviewModel
     @Environment(\.dismiss) private var dismiss
     @StateObject private var reader: ReaderController
@@ -32,6 +36,7 @@ struct ReaderScreen: View {
     enum Side: Equatable { case study, web }
 
     init(document: LibraryDocument, model: AppModel) {
+        self.model = model
         _reader = StateObject(wrappedValue: ReaderController(document: document, model: model))
         _lookup = StateObject(wrappedValue: LookupSession(dictionary: model.dictionary))
     }
@@ -121,9 +126,10 @@ struct ReaderScreen: View {
         }
         .onChange(of: lookup.matchedLength) { reader.setLookupMatchLength($0) }
         .animation(.spring(response: 0.3, dampingFraction: 0.86), value: reader.lookupRequest)
-        .onChange(of: model.readerDefaults) { defaults in
+        .onReceive(model.$readerDefaults.removeDuplicates().dropFirst()) { defaults in
             reader.update(settings: defaults.applying(reader.document.settingsOverride))
         }
+        .onReceive(model.$appSettings.map(\.showOCRBoxes).removeDuplicates()) { showOCRBoxes = $0 }
         .sheet(item: $sheet) { sheet in
             Group {
                 switch sheet {
@@ -237,8 +243,8 @@ struct ReaderScreen: View {
                     Label(reader.isCurrentPageSplit ? "Ne plus couper la page" : "Couper la page en deux",
                           systemImage: "rectangle.split.2x1")
                 }
-                Button { reader.setShowOCRBoxes(!model.appSettings.showOCRBoxes) } label: {
-                    Label(model.appSettings.showOCRBoxes ? "Masquer les zones OCR" : "Montrer les zones OCR",
+                Button { reader.setShowOCRBoxes(!showOCRBoxes) } label: {
+                    Label(showOCRBoxes ? "Masquer les zones OCR" : "Montrer les zones OCR",
                           systemImage: "rectangle.dashed")
                 }
                 Divider()
@@ -390,7 +396,7 @@ struct PageFilmstrip: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(spacing: 8) {
                     ForEach(0..<reader.document.pageCount, id: \.self) { page in
-                        FilmstripCell(documentId: reader.document.id, fileURL: reader.fileURL, page: page,
+                        FilmstripCell(thumbnails: reader.model.thumbnails, documentId: reader.document.id, fileURL: reader.fileURL, page: page,
                                       label: reader.document.pageLabel(page),
                                       current: page == reader.currentSourcePage)
                             .id(page)
@@ -412,7 +418,7 @@ struct PageFilmstrip: View {
 }
 
 struct FilmstripCell: View {
-    @EnvironmentObject private var model: AppModel
+    let thumbnails: ThumbnailCache
     let documentId: String
     let fileURL: URL
     let page: Int
@@ -435,10 +441,10 @@ struct FilmstripCell: View {
     }
 
     private func load() {
-        if let cached = model.thumbnails.cached(documentId: documentId, page: page, width: 120) {
+        if let cached = thumbnails.cached(documentId: documentId, page: page, width: 120) {
             image = cached
         } else {
-            model.thumbnails.thumbnail(documentId: documentId, fileURL: fileURL, page: page, width: 120) { image = $0 }
+            thumbnails.thumbnail(documentId: documentId, fileURL: fileURL, page: page, width: 120) { image = $0 }
         }
     }
 }

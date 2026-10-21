@@ -62,7 +62,11 @@ Pas de simulateur, pas d'iPad sans ma permission.
 
 > **Priorité absolue : les retours de l'utilisateur** (bugs vus sur l'iPad) avant toute étape ci-dessous.
 
-### [ ] A — Optimisation, 3e passe (lecteur)
+### [x] A — Optimisation, 3e passe (lecteur) — fait le 21/10 (non testé sur l'iPad)
+Fait : 1 (`ReaderScreen` n'observe plus `AppModel`), 2 (vider puis réinsérer dans le même document, sommaire
+gardé : vérifié par script PDFKit sur Mac), 3 (`PagedText`), 5 (contexte non calculé quand la liste est pleine ;
+reste sur le fil principal, PDFKit pas sûr entre fils). 4 laissé : ouverture des bases légère (compteurs stockés),
+la déplacer demanderait de rendre `DictionaryModel.database` optionnelle partout.
 Déjà fait (passes 1-2) : `PDFPool`, miniatures Core Graphics, document construit hors du fil principal
 (`rebuild` → `build` → `install`), caches bornés, recherche par lots, bibliothèque gelée pendant la lecture.
 Reste, du plus rentable au moins :

@@ -135,20 +135,50 @@ struct OCRTextView: View {
                         .padding(.vertical, 24)
                 }
             case .pages:
-                let pages = TextPaginator.pages(text, size: geo.size, settings: settings)
-                TabView {
-                    ForEach(pages.indices, id: \.self) { i in
-                        Text(pages[i])
-                            .font(font)
-                            .lineSpacing(settings.fontSize * settings.lineSpacing)
-                            .textSelection(.enabled)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                            .padding(.horizontal, settings.horizontalMargin)
-                            .padding(.vertical, 24)
-                    }
-                }
-                .tabViewStyle(.page(indexDisplayMode: pages.count > 1 ? .always : .never))
+                PagedText(text: text, size: geo.size, settings: settings, font: font)
             }
+        }
+    }
+}
+
+/// Mode « pages » : découpage calculé une seule fois par texte / taille / réglages
+/// (et non à chaque redessin de la vue).
+private struct PagedText: View {
+    let text: String
+    let size: CGSize
+    let settings: TextReaderSettings
+    let font: Font
+    @State private var pages: [String]
+
+    init(text: String, size: CGSize, settings: TextReaderSettings, font: Font) {
+        self.text = text
+        self.size = size
+        self.settings = settings
+        self.font = font
+        _pages = State(initialValue: TextPaginator.pages(text, size: size, settings: settings))
+    }
+
+    private struct Key: Equatable {
+        var text: String
+        var size: CGSize
+        var settings: TextReaderSettings
+    }
+
+    var body: some View {
+        TabView {
+            ForEach(pages.indices, id: \.self) { i in
+                Text(pages[i])
+                    .font(font)
+                    .lineSpacing(settings.fontSize * settings.lineSpacing)
+                    .textSelection(.enabled)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    .padding(.horizontal, settings.horizontalMargin)
+                    .padding(.vertical, 24)
+            }
+        }
+        .tabViewStyle(.page(indexDisplayMode: pages.count > 1 ? .always : .never))
+        .onChange(of: Key(text: text, size: size, settings: settings)) { key in
+            pages = TextPaginator.pages(key.text, size: key.size, settings: key.settings)
         }
     }
 }

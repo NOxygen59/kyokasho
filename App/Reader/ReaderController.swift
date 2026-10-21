@@ -212,12 +212,15 @@ final class ReaderController: NSObject, ObservableObject {
         boxes.reserveCapacity(count)
         rotations.reserveCapacity(count)
 
-        // De la fin vers le début : les insertions ne décalent pas les pages restant à traiter.
-        for index in stride(from: count - 1, through: 0, by: -1) {
+        // Pages dans l'ordre final, puis un seul rangement du document (voir plus bas).
+        var ordered: [PDFPage] = []
+        ordered.reserveCapacity(count)
+        for index in 0..<count {
             guard let page = pdf.page(at: index) else { continue }
             let box = page.bounds(for: .cropBox)
             boxes[index] = box
             rotations[index] = page.rotation
+            ordered.append(page)
             let transform = transforms[index]
             if let extra = transform?.rotation, extra % 360 != 0 {
                 page.rotation = ((page.rotation + extra) % 360 + 360) % 360
@@ -230,24 +233,28 @@ final class ReaderController: NSObject, ObservableObject {
                 let second: PresentedPage.Part = rtl ? .left : .right
                 page.setBounds(PresentationLayout.box(for: first, in: box), for: .cropBox)
                 copy.setBounds(PresentationLayout.box(for: second, in: box), for: .cropBox)
-                pdf.insert(copy, at: index + 1)
+                ordered.append(copy)
             } else if settings.autoCrop, let crop = transform?.autoCrop {
                 page.setBounds(ContentBounds.apply(crop, to: box), for: .cropBox)
             }
         }
         var presented = PresentationLayout.pages(pageCount: boxes.count, splitPages: splitPages, rightToLeft: rtl)
+        var reordered = !splitPages.isEmpty
         if rtl && settings.layout == .double {
             // Double page de droite à gauche : on range les pages dans l'ordre visuel nous-mêmes
             // (l'option RTL de PDFKit intervertit les tailles des pages d'une même double page).
-            // Un seul passage : chaque paire inversée est déplacée une fois (et non page par page).
-            // (`exchangePage` de PDFKit lève une exception avec des pages copiées : on retire puis réinsère.)
-            let order = PresentationLayout.rightToLeftSpreadOrder(count: pdf.pageCount, firstPageAlone: settings.firstPageAlone)
-            for i in order.indices where order[i] == i + 1 {
-                guard let second = pdf.page(at: i + 1) else { continue }
-                pdf.removePage(at: i + 1)
-                pdf.insert(second, at: i)
-            }
+            let order = PresentationLayout.rightToLeftSpreadOrder(count: ordered.count, firstPageAlone: settings.firstPageAlone)
+            ordered = order.map { ordered[$0] }
             presented = order.map { presented[$0] }
+            reordered = reordered || ordered.count > 1
+        }
+        // (Une page illisible manquerait à la liste : dans ce cas on ne touche pas au document.)
+        if reordered, boxes.count == count {
+            // Vider puis remplir par la fin : chaque opération est immédiate, alors que retirer / insérer
+            // au milieu décale toutes les pages suivantes (lent sur un gros livre). Même document et mêmes
+            // pages : le sommaire reste valable. (`exchangePage` lève une exception avec des pages copiées.)
+            for i in stride(from: pdf.pageCount - 1, through: 0, by: -1) { pdf.removePage(at: i) }
+            for (i, page) in ordered.enumerated() { pdf.insert(page, at: i) }
         }
         return Built(pdf: pdf, boxes: boxes, rotations: rotations, splits: splitPages, presented: presented)
     }
@@ -1327,6 +1334,9 @@ extension ReaderController: PDFDocumentDelegate {
     nonisolated func didMatchString(_ instance: PDFSelection) {
         MainActor.assumeIsolated {
             guard let pdf, let page = instance.pages.first else { return }
+            // Liste pleine : pas la peine de calculer le contexte (la recherche va s'arrêter).
+            // Reste sur le fil principal : le document affiché n'est pas sûr entre fils.
+            guard searchResults.count + pendingResults.count < Self.maxSearchResults else { return }
             let index = pdf.index(for: page)
             let context = instance.copy() as? PDFSelection
             context?.extend(atStart: 20)
