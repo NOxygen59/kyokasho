@@ -231,7 +231,13 @@ Rythme choisi le 22/10 au soir : **2 sections de la liste de l'utilisateur par s
   Détail de l'ancien texte de l'étape : (≈ 50 Mo, téléchargé à la demande, **demander**) : lectures des furigana
   selon le contexte (bien meilleur que `CFStringTokenizer` : 上手/うわて, 今日, 一日, noms composés) et découpage en
   mots pour le dictionnaire et la grammaire (`docs/GRAMMAIRE.md` § 2, même socle). Furigana page + panneau.
-- [ ] **M — OCR « relu » sans IA lourde** : (1) lignes douteuses = confiance basse (`OCRLine.confidence`) ou mots
+- [x] **M — OCR relu** (22/10, non vérifié iPad) : `OCRProofreader` (OCRKit, testé) appliqué à chaque nouvel OCR
+  par `OCRService.setPostProcess` (posé dans `AppModel` avec `DictionaryModel.segment`) → `OCRLine.doubt`.
+  `ReaderController.ocrPage didSet` → `rereadDoubtful` : `GLMOCREngine.reread(lines:)` sur les seules lignes
+  douteuses (option Réglages → OCR → Relecture, clé `ocr.aiReread`, vrai par défaut). Panneau : ligne « N
+  caractères douteux » + « Relire avec l'IA », soulignés orange (Brut et ふりがな brut), appui long → « Corriger
+  cette ligne » (`correctOCRLine`, `edited` = jamais retouchée). Les pages déjà en cache ne sont pas relues.
+  Texte d'origine de l'étape : : (1) lignes douteuses = confiance basse (`OCRLine.confidence`) ou mots
   absents du dictionnaire ; (2) correction par paires de caractères qui se ressemblent (未/末, 土/士, 口/ロ, 一/ー,
   力/カ, 夕/タ, 二/ニ, 工/エ…) gardée seulement si elle forme un mot du dictionnaire ; (3) **seules** les lignes encore
   douteuses sont relues par GLM-OCR (déjà dans l'app), en fond, pas toute la page ; (4) dans le panneau, caractères

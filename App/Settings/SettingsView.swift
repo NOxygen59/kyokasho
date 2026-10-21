@@ -284,6 +284,7 @@ extension OCREngineChoice {
 struct OCRSettingsView: View {
     @EnvironmentObject private var model: AppModel
     @AppStorage("study.layoutEngine") private var layoutEngineRaw = LayoutDetector.Engine.geometry.rawValue
+    @AppStorage(ReaderController.aiRereadKey) private var aiReread = true
     @State private var cache: (bytes: Int, pages: Int) = (0, 0)
 
     var body: some View {
@@ -301,6 +302,13 @@ struct OCRSettingsView: View {
             }
             Section {
                 NavigationLink { ModelsView() } label: { Label("Modèles téléchargés (OCR, netteté)", systemImage: "shippingbox") }
+            }
+            Section {
+                Toggle("Relire les lignes douteuses avec GLM-OCR", isOn: $aiReread)
+            } header: {
+                Text("Relecture")
+            } footer: {
+                Text("Chaque page lue est relue avec ton dictionnaire : les caractères qui se ressemblent (未/末, 土/士, ロ/口…) sont corrigés quand ça forme un vrai mot, le reste est souligné en orange. Si GLM-OCR est installé, seules les lignes encore douteuses lui sont envoyées, en fond (rien ne part en ligne).")
             }
             Section {
                 LayoutEnginePicker(selection: $layoutEngineRaw)

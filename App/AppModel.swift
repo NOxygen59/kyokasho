@@ -82,12 +82,13 @@ final class AppModel: ObservableObject {
         storage = DocumentStorage(root: support.appendingPathComponent("Documents", isDirectory: true))
         importer = DocumentImporter(storage: storage, database: database)
         thumbnails = ThumbnailCache(directory: caches.appendingPathComponent("Thumbnails", isDirectory: true))
-        ocr = OCRService(database: database)
         // Moteurs à modèle téléchargé : toujours enregistrés, disponibles une fois le modèle installé.
         OCRService.register(NDLOCREngine())
         OCRService.register(PPOCREngine())
         OCRService.register(GLMOCREngine())
         dictionary = DictionaryModel(appDatabase: database)
+        // Chaque nouveau résultat OCR est relu (mots du dictionnaire, caractères qui se ressemblent) avant le cache.
+        ocr = OCRService(database: database, postProcess: Self.proofreader(dictionary))
         review = ReviewModel(appDatabase: database)
         benchDirectory = support.appendingPathComponent("Bench", isDirectory: true)
         try? FileManager.default.createDirectory(at: benchDirectory, withIntermediateDirectories: true)
@@ -131,6 +132,16 @@ final class AppModel: ObservableObject {
     // MARK: Import
 
     /// Importe des fichiers déjà copiés localement par le sélecteur (hors fil principal).
+    /// Relecture OCR par le dictionnaire (rien si aucun dictionnaire : la page sera relue plus tard).
+    nonisolated static func proofreader(_ dict: DictionaryModel) -> @Sendable (OCRPage) async -> OCRPage {
+        { page in
+            guard await dict.hasTermDictionaries else { return page }
+            return await OCRProofreader.proofread(page) { text in
+                await dict.segment(text).map { (length: $0.text.count, known: $0.term != nil) }
+            }
+        }
+    }
+
     func importFiles(_ urls: [URL], cleanUp: Bool = true, openWhenSingle: Bool = true) {
         guard !urls.isEmpty else { return }
         importProgress = ImportProgress(done: 0, total: urls.count, currentName: urls[0].lastPathComponent)

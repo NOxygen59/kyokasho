@@ -47,6 +47,10 @@ public struct OCRLine: Codable, Hashable, Sendable {
     public var measuredCharBoxes: Bool
     public var vertical: Bool
     public var confidence: Double
+    /// Caractères douteux après relecture (index de graphème), `nil` si la ligne n'a pas été relue.
+    public var doubt: [Int]?
+    /// Ligne corrigée à la main (jamais retouchée ensuite par la relecture automatique).
+    public var edited: Bool?
 
     public init(text: String, box: NormBox, charBoxes: [NormBox], measuredCharBoxes: Bool, vertical: Bool, confidence: Double) {
         self.text = text
@@ -69,6 +73,9 @@ public struct OCRPage: Codable, Hashable, Sendable {
     public var lines: [OCRLine]
     public var durationMs: Int
     public var version: Int
+    /// Relecture faite (dictionnaire, paires de caractères) ; `reread` : lignes douteuses relues par GLM-OCR.
+    public var proofread: Bool?
+    public var reread: Bool?
 
     public init(engine: String, lines: [OCRLine], durationMs: Int, version: Int = OCRPage.currentVersion) {
         self.engine = engine
@@ -83,6 +90,8 @@ public struct OCRPage: Codable, Hashable, Sendable {
         lines = try c.decode([OCRLine].self, forKey: .lines)
         durationMs = try c.decode(Int.self, forKey: .durationMs)
         version = try c.decodeIfPresent(Int.self, forKey: .version) ?? 1
+        proofread = try c.decodeIfPresent(Bool.self, forKey: .proofread)
+        reread = try c.decodeIfPresent(Bool.self, forKey: .reread)
     }
 
     /// Texte de la page, une ligne par ligne reconnue.

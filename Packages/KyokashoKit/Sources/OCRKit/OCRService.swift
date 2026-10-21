@@ -20,11 +20,16 @@ public actor OCRService {
 
     private let database: AppDatabase
     private var running: [String: Task<OCRPage, Error>] = [:]
+    /// Relecture appliquée à chaque nouveau résultat avant sa mise en cache (dictionnaire, posée par l'app).
+    private var postProcess: (@Sendable (OCRPage) async -> OCRPage)?
+
+    public func setPostProcess(_ process: (@Sendable (OCRPage) async -> OCRPage)?) { postProcess = process }
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
 
-    public init(database: AppDatabase) {
+    public init(database: AppDatabase, postProcess: (@Sendable (OCRPage) async -> OCRPage)? = nil) {
         self.database = database
+        self.postProcess = postProcess
     }
 
     public nonisolated static func engine(_ id: String) -> (any OCREngine)? {
@@ -61,8 +66,12 @@ public actor OCRService {
         let key = "\(documentId)#\(pageIndex)#\(engine)"
         if let existing = running[key] { return try await existing.value }
         guard let implementation = Self.engine(engine) else { throw OCRError.pageUnavailable }
+        let process = postProcess
+        // Relecture dans la même tâche : un second appel pour la même page reçoit le résultat déjà relu.
         let task = Task.detached(priority: .userInitiated) {
-            try await implementation.recognize(.pdfPage(url: url, index: pageIndex))
+            var result = try await implementation.recognize(.pdfPage(url: url, index: pageIndex))
+            if result.engine != OCREngineID.pdfText, let process { result = await process(result) }
+            return result
         }
         running[key] = task
         defer { running[key] = nil }
@@ -71,6 +80,12 @@ public actor OCRService {
         try database.save(OCRResultRecord(documentId: documentId, pageIndex: pageIndex, engine: engine,
                                           json: json, durationMs: result.durationMs))
         return result
+    }
+
+    /// Remplace le résultat en cache (relecture par l'IA, correction à la main).
+    public func store(_ page: OCRPage, documentId: String, pageIndex: Int) throws {
+        try database.save(OCRResultRecord(documentId: documentId, pageIndex: pageIndex, engine: page.engine,
+                                          json: try encoder.encode(page), durationMs: page.durationMs))
     }
 
     /// Pages (source) dont le texte OCR contient `query`, avec un extrait autour.

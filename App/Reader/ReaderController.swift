@@ -2,6 +2,7 @@
 // Copyright (c) 2026 NOxygen59
 
 import Combine
+import GLMOCRKit
 import OCRKit
 import PDFKit
 import PencilKit
@@ -38,7 +39,16 @@ final class ReaderController: NSObject, ObservableObject {
     @Published private(set) var isSearching = false
     /// OCR de la page lue (première page lue en double page).
     /// OCR de la page de travail (`focusSource`) : panneau Texte / Mots.
-    @Published private(set) var ocrPage: OCRPage?
+    @Published private(set) var ocrPage: OCRPage? {
+        // Nouvelle page de travail lue : ses lignes douteuses partent à GLM-OCR (s'il est installé et l'option active).
+        didSet {
+            // Autre page : la relecture de l'ancienne s'arrête (son résultat est jeté).
+            if ocrPage == nil { rereadTask?.cancel(); rereading = false }
+            if ocrPage != nil, oldValue?.lines != ocrPage?.lines || oldValue == nil {
+                DispatchQueue.main.async { [weak self] in self?.refineOCR() }
+            }
+        }
+    }
     /// Pages affichées (deux en double page) et celle choisie dans le panneau (pilules).
     @Published private(set) var shownSources: [Int] = []
     @Published private(set) var focusSource = 0
@@ -1104,6 +1114,7 @@ final class ReaderController: NSObject, ObservableObject {
 
     func close() {
         savePositionWork?.perform()
+        rereadTask?.cancel()
         cropTask?.cancel()
         sharpenTask?.cancel()
         furiganaTask?.cancel()
@@ -1286,6 +1297,77 @@ final class ReaderController: NSObject, ObservableObject {
         ink.setEditing(on)
         applyDisplaySettings()
         DispatchQueue.main.async { [ink] in ink.showToolPicker(on) }
+    }
+
+    // MARK: Relecture de l'OCR
+
+    static let aiRereadKey = "ocr.aiReread"
+    /// Relecture IA en cours sur la page de travail.
+    @Published private(set) var rereading = false
+    private var rereadTask: Task<Void, Never>?
+
+    /// Page de travail : relecture par le dictionnaire si pas encore faite (pages en cache d'avant, dictionnaire
+    /// chargé après l'OCR), puis lignes douteuses à GLM-OCR.
+    private func refineOCR() {
+        guard let page = ocrPage, page.engine != OCREngineID.pdfText else { return }
+        guard page.proofread != true else { rereadDoubtful(); return }
+        let source = focusSource, documentId = document.id, service = model.ocr
+        let process = AppModel.proofreader(model.dictionary)
+        Task { [weak self] in
+            let read = await process(page)
+            guard let self, self.ocrPage == page else { return }
+            // Pas de dictionnaire : seules les lignes peu sûres partent à GLM-OCR.
+            guard read.proofread == true else { self.rereadDoubtful(); return }
+            try? await service.store(read, documentId: documentId, pageIndex: source)
+            self.showOCR(read, source: source)
+            self.ocrPage = read
+        }
+    }
+
+    /// Lignes douteuses de la page de travail relues par GLM-OCR (installé, option active ou demande directe).
+    func rereadDoubtful(force: Bool = false) {
+        guard let page = ocrPage, page.engine != OCREngineID.pdfText, force || page.reread != true else { return }
+        guard force || UserDefaults.standard.object(forKey: Self.aiRereadKey) as? Bool ?? true else { return }
+        let engine = GLMOCREngine()
+        let lines = OCRProofreader.doubtful(page)
+        guard engine.isAvailable, !lines.isEmpty else { return }
+        // Une seule relecture à la fois : la précédente (autre version de la page) est abandonnée.
+        rereadTask?.cancel()
+        let source = focusSource, url = fileURL, documentId = document.id, service = model.ocr
+        rereading = true
+        rereadTask = Task { [weak self] in
+            defer { if !Task.isCancelled { self?.rereading = false } }
+            guard let read = try? await engine.reread(page, lines: lines, input: .pdfPage(url: url, index: source)),
+                  !Task.isCancelled, let self,
+                  // Page changée entre-temps (correction à la main, autre OCR) : résultat jeté.
+                  self.ocrPage == page else { return }
+            try? await service.store(read, documentId: documentId, pageIndex: source)
+            self.showOCR(read, source: source)
+            if self.focusSource == source { self.ocrPage = read }
+        }
+    }
+
+    /// Correction à la main d'une ligne (gardée : la relecture automatique n'y touche plus).
+    func correctOCRLine(_ index: Int, text: String) {
+        guard var page = ocrPage, page.lines.indices.contains(index) else { return }
+        rereadTask?.cancel()
+        rereading = false
+        let new = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !new.isEmpty else { return }
+        var line = page.lines[index]
+        if new.count != line.charBoxes.count {
+            line.charBoxes = CharacterLayout.proportional(new, in: line.box, vertical: line.vertical)
+            line.measuredCharBoxes = false
+        }
+        line.text = new
+        line.edited = true
+        line.doubt = []
+        page.lines[index] = line
+        ocrPage = page
+        showOCR(page, source: focusSource)
+        wordStartMemo.removeAll()
+        let source = focusSource, documentId = document.id, service = model.ocr
+        Task { try? await service.store(page, documentId: documentId, pageIndex: source) }
     }
 
     // MARK: Notes (fenêtre flottante, ancres)

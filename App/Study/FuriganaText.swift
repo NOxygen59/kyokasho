@@ -71,6 +71,10 @@ struct FuriganaTextView: View {
     /// Unités de texte : titres, paragraphes, cellules (mis en forme) ou lignes (brut).
     private var units: [(tag: String, text: String, row: Int?)] {
         guard formatted else { return page.lines.map { ("p", $0.text, nil) } }
+        return formattedUnits
+    }
+
+    private var formattedUnits: [(tag: String, text: String, row: Int?)] {
         var out: [(String, String, Int?)] = []
         let blocks = regions.isEmpty ? OCRLayout.blocks(page) : OCRLayout.blocks(page, regions: regions)
         for (b, block) in blocks.enumerated() {
@@ -93,11 +97,13 @@ struct FuriganaTextView: View {
     private func build() async {
         var body = ""
         var openRow: Int?
-        for unit in units {
+        for (u, unit) in units.enumerated() {
             guard !Task.isCancelled else { return }
+            // Brut : une unité = une ligne OCR, ses caractères douteux sont soulignés.
+            let doubt = formatted ? [] : Set(page.lines[u].doubt ?? [])
             let segments = await dictionary.segment(unit.text)
             let rubies = TextFurigana.rubies(unit.text, segments: segments)
-            let inner = Self.markup(unit.text, rubies: rubies, wordStarts: Self.wordStarts(unit.text, segments: segments))
+            let inner = Self.markup(unit.text, rubies: rubies, wordStarts: Self.wordStarts(unit.text, segments: segments), doubt: doubt)
             if unit.tag == "td" {
                 if openRow != unit.row { body += (openRow == nil ? "<table>" : "</tr>") + "<tr>"; openRow = unit.row }
                 body += "<td>\(inner)</td>"
@@ -127,11 +133,12 @@ struct FuriganaTextView: View {
     /// Chaque caractère dans un `<span data-q>` (texte à chercher à partir du début de son mot, calculé ici :
     /// pas de calcul d'index en JavaScript, qui compte autrement les caractères composés) ; kanji avec lecture
     /// dans `<ruby>`.
-    static func markup(_ text: String, rubies: [(range: Range<Int>, reading: String)], wordStarts: [Int]? = nil) -> String {
+    static func markup(_ text: String, rubies: [(range: Range<Int>, reading: String)], wordStarts: [Int]? = nil,
+                       doubt: Set<Int> = []) -> String {
         let chars = Array(text)
         func span(_ i: Int) -> String {
             let from = wordStarts.flatMap { $0.count == chars.count ? $0[i] : nil } ?? i
-            return "<span data-q=\"\(escape(String(chars[from..<min(chars.count, from + 24)])))\">\(escape(String(chars[i])))</span>"
+            return "<span\(doubt.contains(i) ? " class=\"doubt\"" : "") data-q=\"\(escape(String(chars[from..<min(chars.count, from + 24)])))\">\(escape(String(chars[i])))</span>"
         }
         var starts: [Int: (Range<Int>, String)] = [:]
         for r in rubies where r.range.upperBound <= chars.count && !r.range.isEmpty { starts[r.range.lowerBound] = (r.range, r.reading) }
@@ -165,6 +172,7 @@ struct FuriganaTextView: View {
         p,h2,h3,td{margin:0 0 .6em} h2{font-size:1.35em} h3{font-size:1.15em}
         table{border-collapse:collapse;margin:.4em 0 .8em} td{border:1px solid \(line);padding:2px 8px}
         rt{font-size:.5em;color:\(FuriganaLayer.Tint.current.panelHex)} span[data-q]{cursor:pointer} span.hit{background:\(accent)55;border-radius:3px}
+        span.doubt{text-decoration:underline solid #ff9f0a;background:#ff9f0a2e}
         </style></head><body>\(body)
         <script>
         function size(){window.webkit.messageHandlers.kyokasho.postMessage({type:'height',value:document.body.scrollHeight})}

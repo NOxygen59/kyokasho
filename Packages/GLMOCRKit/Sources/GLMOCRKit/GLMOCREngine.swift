@@ -53,6 +53,36 @@ public struct GLMOCREngine: OCREngine {
         return OCRPage(engine: id, lines: lines, durationMs: Int(Date().timeIntervalSince(start) * 1000))
     }
 
+    /// Relit par l'IA **seulement** les lignes données d'un résultat existant (lignes douteuses) ; les autres
+    /// restent telles quelles. Une ligne relue n'est plus douteuse.
+    public func reread(_ page: OCRPage, lines indices: [Int], input: OCRInput) async throws -> OCRPage {
+        guard isAvailable else { throw OCRError.modelMissing(ModelSpec.glmocr.title) }
+        let image: CGImage
+        switch input {
+        case .pdfPage(let url, let index): image = try PageRenderer.render(url: url, pageIndex: index, longSide: 3000)
+        case .image(let cg): image = cg
+        }
+        let model = try await GLMModel.shared.container(directory: store.directory(.glmocr))
+        var page = page
+        for i in indices where page.lines.indices.contains(i) {
+            try Task.checkCancellation()
+            let line = page.lines[i]
+            guard let crop = Self.crop(image, line.box, margin: line.vertical ? 0.5 : 0.15) else { continue }
+            let text = Self.clean(try await GLMModel.read(crop, container: model, maxTokens: max(24, line.text.count * 3 + 8)))
+            guard !text.isEmpty else { continue }
+            if text != line.text {
+                page.lines[i].text = text
+                if text.count != line.charBoxes.count {
+                    page.lines[i].charBoxes = CharacterLayout.proportional(text, in: line.box, vertical: line.vertical)
+                    page.lines[i].measuredCharBoxes = false
+                }
+            }
+            page.lines[i].doubt = []
+        }
+        page.reread = true
+        return page
+    }
+
     /// Ligne découpée avec une marge (l'IA lit mieux avec de l'air autour ; plus large pour les colonnes).
     static func crop(_ image: CGImage, _ box: NormBox, margin fraction: Double) -> CGImage? {
         let w = Double(image.width), h = Double(image.height)

@@ -2,6 +2,7 @@
 // Copyright (c) 2026 NOxygen59
 
 import OCRKit
+import GLMOCRKit
 import ONNXOCRKit
 import ReaderCore
 import DictionaryKit
@@ -97,6 +98,8 @@ struct StudyTextTab: View {
     @State private var showCompare = false
     @State private var query = ""
     @State private var matches: [PageTextSearch.Match] = []
+    @State private var editingLine: Int?
+    @State private var lineDraft = ""
 
     var body: some View {
         ScrollView {
@@ -117,6 +120,7 @@ struct StudyTextTab: View {
                     if let layoutError, formatted {
                         Text(layoutError).font(.caption).foregroundStyle(Atelier.textTertiary)
                     }
+                    doubtRow(page)
                     if furigana {
                         FuriganaTextView(page: page, formatted: formatted, regions: regions) { text in
                             let session = lookup ?? LookupSession(dictionary: model.dictionary)
@@ -127,12 +131,21 @@ struct StudyTextTab: View {
                     } else if formatted {
                         FormattedOCRText(page: page, regions: regions)
                     } else {
-                        Text(page.text)
-                            .font(Atelier.jp)
-                            .lineSpacing(7)
-                            .foregroundStyle(Atelier.textPrimary)
-                            .textSelection(.enabled)
-                            .frame(maxWidth: .infinity, alignment: .leading)
+                        // Brut : une ligne par ligne lue, caractères douteux soulignés, appui long → corriger.
+                        VStack(alignment: .leading, spacing: 7) {
+                            ForEach(Array(page.lines.enumerated()), id: \.offset) { index, line in
+                                Text(Self.marked(line))
+                                    .font(Atelier.jp)
+                                    .foregroundStyle(Atelier.textPrimary)
+                                    .textSelection(.enabled)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .contextMenu {
+                                        Button { lineDraft = line.text; editingLine = index } label: {
+                                            Label("Corriger cette ligne", systemImage: "pencil")
+                                        }
+                                    }
+                            }
+                        }
                     }
                     translationBlock(for: page.text)
                 default:
@@ -169,6 +182,16 @@ struct StudyTextTab: View {
                 .presentationDetents([.medium, .large])
                 .preferredColorScheme(.dark)
             }
+        }
+        .alert("Corriger la ligne", isPresented: Binding(get: { editingLine != nil }, set: { if !$0 { editingLine = nil } })) {
+            TextField("Texte de la ligne", text: $lineDraft)
+            Button("Annuler", role: .cancel) { editingLine = nil }
+            Button("Garder") {
+                if let editingLine { reader.correctOCRLine(editingLine, text: lineDraft) }
+                editingLine = nil
+            }
+        } message: {
+            Text("Ta correction est gardée ; la relecture automatique n'y touchera plus.")
         }
         .sheet(isPresented: $showCompare) { CompareEnginesView(reader: reader).environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review) }
     }
@@ -257,6 +280,53 @@ struct StudyTextTab: View {
                 .accessibilityLabel(formatted ? "Copier en Markdown" : "Copier le texte")
         }
         .foregroundStyle(Atelier.textPrimary)
+    }
+
+    /// Ligne avec ses caractères douteux soulignés (orange).
+    static func marked(_ line: OCRLine) -> AttributedString {
+        let doubt = Set(line.doubt ?? [])
+        guard !doubt.isEmpty else { return AttributedString(line.text) }
+        var out = AttributedString()
+        for (i, c) in line.text.enumerated() {
+            var piece = AttributedString(String(c))
+            if doubt.contains(i) {
+                piece.underlineStyle = Text.LineStyle(pattern: .solid, color: .orange)
+                piece.backgroundColor = Color.orange.opacity(0.18)
+            }
+            out += piece
+        }
+        return out
+    }
+
+    /// « N caractères douteux » + relecture par l'IA (GLM-OCR) ou indication pour corriger à la main.
+    @ViewBuilder
+    private func doubtRow(_ page: OCRPage) -> some View {
+        let lines = OCRProofreader.doubtful(page)
+        let count = page.lines.reduce(0) { $0 + ($1.doubt?.count ?? 0) }
+        if reader.rereading {
+            HStack(spacing: 8) {
+                ProgressView().controlSize(.small)
+                Text("Relecture par l'IA des lignes douteuses…").font(.caption)
+            }
+            .foregroundStyle(Atelier.textSecondary)
+        } else if !lines.isEmpty {
+            HStack(spacing: 8) {
+                Image(systemName: "exclamationmark.triangle").foregroundStyle(.orange)
+                Text(count > 0 ? "\(count) caractère\(count > 1 ? "s" : "") douteux" : "\(lines.count) ligne\(lines.count > 1 ? "s" : "") peu sûre\(lines.count > 1 ? "s" : "")")
+                    .font(.caption)
+                Spacer()
+                if GLMOCREngine().isAvailable {
+                    Button("Relire avec l'IA") { reader.rereadDoubtful(force: true) }
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Atelier.Tint.ai)
+                }
+            }
+            .foregroundStyle(Atelier.textSecondary)
+            if formatted {
+                Text("Pour corriger à la main : « Brut », puis appui long sur la ligne.")
+                    .font(.caption2).foregroundStyle(Atelier.textTertiary)
+            }
+        }
     }
 
     @ViewBuilder
