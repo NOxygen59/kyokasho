@@ -610,7 +610,10 @@ final class ReaderController: NSObject, ObservableObject {
         switch settings.ocrEngine {
         case .pdfText: return [OCREngineID.pdfText]
         case .vision: return [OCREngineID.vision]
-        case .auto: return [OCREngineID.pdfText, OCREngineID.vision]
+        case .ndlocr: return [OCREngineID.ndlocr]
+        case .ppocr5: return [OCREngineID.ppocr5]
+        case .glmocr: return [OCREngineID.glmocr]
+        case .auto: return [OCREngineID.pdfText, OCREngineID.glmocr, OCREngineID.ndlocr, OCREngineID.ppocr5, OCREngineID.vision]
         }
     }
 
@@ -1031,7 +1034,7 @@ final class ReaderController: NSObject, ObservableObject {
         pdf.beginFindString(trimmed, withOptions: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive])
         // Pages scannées : recherche aussi dans le texte OCR en cache.
         let documentId = document.id
-        let engines = [OCREngineID.vision]
+        let engines = [OCREngineID.glmocr, OCREngineID.ndlocr, OCREngineID.ppocr5, OCREngineID.vision]
         let service = model.ocr
         Task { [weak self] in
             let hits = await service.search(trimmed, documentId: documentId, engines: engines)

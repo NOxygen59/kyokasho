@@ -15,7 +15,13 @@ public enum OCRInput: @unchecked Sendable {
 /// Un moteur OCR : entrée → lignes de texte avec boîtes (ligne + caractères).
 public protocol OCREngine: Sendable {
     var id: String { get }
+    /// Faux tant que le modèle n'est pas téléchargé.
+    var isAvailable: Bool { get }
     func recognize(_ input: OCRInput) async throws -> OCRPage
+}
+
+public extension OCREngine {
+    var isAvailable: Bool { true }
 }
 
 // MARK: - Rendu d'une page de PDF en image

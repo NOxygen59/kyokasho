@@ -7,7 +7,16 @@ import ReaderCore
 /// Point d'entrée de l'OCR : choisit le moteur, lit le cache, lance un seul OCR à la fois par
 /// page/moteur (pas de doublon), enregistre le résultat. Tout se passe hors du fil principal.
 public actor OCRService {
-    public static let engines: [any OCREngine] = [PDFTextEngine(), VisionOCREngine()]
+    /// Moteurs connus. L'app ajoute ceux qui ont besoin d'un modèle (ONNX, IA) avec `register`.
+    public nonisolated static var engines: [any OCREngine] { registry.withLock { $0 } }
+    private nonisolated static let registry = LockedValue<[any OCREngine]>([PDFTextEngine(), VisionOCREngine()])
+
+    public nonisolated static func register(_ engine: any OCREngine) {
+        registry.withLock { list in
+            list.removeAll { $0.id == engine.id }
+            list.append(engine)
+        }
+    }
 
     private let database: AppDatabase
     private var running: [String: Task<OCRPage, Error>] = [:]
@@ -18,7 +27,7 @@ public actor OCRService {
         self.database = database
     }
 
-    public static func engine(_ id: String) -> (any OCREngine)? {
+    public nonisolated static func engine(_ id: String) -> (any OCREngine)? {
         engines.first { $0.id == id }
     }
 
@@ -27,7 +36,14 @@ public actor OCRService {
         switch choice {
         case .pdfText: return OCREngineID.pdfText
         case .vision: return OCREngineID.vision
-        case .auto: return PDFTextEngine.hasTextLayer(url: url, pageIndex: pageIndex) ? OCREngineID.pdfText : OCREngineID.vision
+        case .ppocr5: return OCREngineID.ppocr5
+        case .ndlocr: return OCREngineID.ndlocr
+        case .glmocr: return OCREngineID.glmocr
+        case .auto:
+            if PDFTextEngine.hasTextLayer(url: url, pageIndex: pageIndex) { return OCREngineID.pdfText }
+            // Scan : NDLOCR (fait pour les livres japonais), sinon PP-OCRv5, sinon Apple Vision.
+            for id in [OCREngineID.ndlocr, OCREngineID.ppocr5] where engine(id)?.isAvailable == true { return id }
+            return OCREngineID.vision
         }
     }
 
@@ -86,4 +102,12 @@ public actor OCRService {
     public func cancelAll(documentId: String) {
         for (key, task) in running where key.hasPrefix(documentId + "#") { task.cancel() }
     }
+}
+
+/// Valeur protégée par un verrou (registre de moteurs partagé entre fils).
+final class LockedValue<T>: @unchecked Sendable {
+    private var value: T
+    private let lock = NSLock()
+    init(_ value: T) { self.value = value }
+    func withLock<R>(_ body: (inout T) -> R) -> R { lock.lock(); defer { lock.unlock() }; return body(&value) }
 }

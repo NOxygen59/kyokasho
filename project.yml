@@ -41,6 +41,8 @@ targets:
         product: DictionaryKit
       - package: KyokashoKit
         product: ReviewKit
+      - package: KyokashoKit
+        product: ONNXOCRKit
       - sdk: PDFKit.framework
       - sdk: PencilKit.framework
       - sdk: WebKit.framework

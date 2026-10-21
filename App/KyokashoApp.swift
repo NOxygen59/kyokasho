@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 NOxygen59
 
+import ONNXOCRKit
 import SwiftUI
 import UIKit
 
@@ -34,6 +35,7 @@ struct KyokashoApp: App {
                 #endif
                 .onReceive(NotificationCenter.default.publisher(for: UIApplication.didReceiveMemoryWarningNotification)) { _ in
                     model.thumbnails.trim()
+                    ONNXEngines.unload()
                 }
         }
     }

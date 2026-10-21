@@ -23,6 +23,9 @@ struct TextPageSheet: View {
                         Menu {
                             Button { reader.runOCR(engine: OCREngineID.pdfText) } label: { Label("Texte du PDF", systemImage: "doc.plaintext") }
                             Button { reader.runOCR(engine: OCREngineID.vision) } label: { Label("Apple Vision", systemImage: "eye") }
+                            ForEach(OCREngineMenu.extra, id: \.self) { id in
+                                Button { reader.runOCR(engine: id) } label: { Label(OCREngineID.displayName(id), systemImage: "cpu") }
+                            }
                             Divider()
                             Button { reader.runOCR(engine: reader.ocrPage?.engine, force: true) } label: {
                                 Label("Relancer l'OCR", systemImage: "arrow.clockwise")
@@ -183,7 +186,7 @@ struct CompareEnginesView: View {
     @ObservedObject var reader: ReaderController
     @Environment(\.dismiss) private var dismiss
     @State private var results: [String: Result<OCRPage, Error>] = [:]
-    private let engines = [OCREngineID.pdfText, OCREngineID.vision]
+    private let engines = [OCREngineID.pdfText, OCREngineID.vision] + OCREngineMenu.extra
 
     var body: some View {
         NavigationStack {

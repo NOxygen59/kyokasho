@@ -104,11 +104,17 @@ public struct OCRPage: Codable, Hashable, Sendable {
 public enum OCREngineID {
     public static let pdfText = "pdfText"
     public static let vision = "vision"
+    public static let ppocr5 = "ppocr5"
+    public static let ndlocr = "ndlocr"
+    public static let glmocr = "glmocr"
 
     public static func displayName(_ id: String) -> String {
         switch id {
         case pdfText: return "Texte du PDF"
         case vision: return "Apple Vision"
+        case ppocr5: return "PP-OCRv5"
+        case ndlocr: return "NDLOCR-Lite"
+        case glmocr: return "GLM-OCR (IA)"
         default: return id
         }
     }
@@ -119,6 +125,7 @@ public enum OCRError: LocalizedError, Equatable {
     case noTextLayer
     case renderFailed
     case cancelled
+    case modelMissing(String)
 
     public var errorDescription: String? {
         switch self {
@@ -126,6 +133,7 @@ public enum OCRError: LocalizedError, Equatable {
         case .noTextLayer: return "Cette page n'a pas de texte intégré (c'est probablement une image) : utilise Apple Vision."
         case .renderFailed: return "Impossible de préparer l'image de la page."
         case .cancelled: return "OCR annulé."
+        case .modelMissing(let name): return "Modèle « \(name) » pas téléchargé : Réglages → Japonais → OCR."
         }
     }
 }

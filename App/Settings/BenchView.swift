@@ -20,6 +20,7 @@ struct BenchView: View {
 
     /// Moteurs qui lisent une image (le texte intégré au PDF n'a pas de sens ici).
     private let engines: [any OCREngine] = [VisionOCREngine()]
+        + OCREngineMenu.extra.compactMap { OCRService.engine($0) }
 
     var body: some View {
         List {

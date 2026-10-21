@@ -4,6 +4,7 @@
 import Combine
 import Foundation
 import OCRKit
+import ONNXOCRKit
 import ReaderCore
 import SwiftUI
 
@@ -70,6 +71,9 @@ final class AppModel: ObservableObject {
         importer = DocumentImporter(storage: storage, database: database)
         thumbnails = ThumbnailCache(directory: caches.appendingPathComponent("Thumbnails", isDirectory: true))
         ocr = OCRService(database: database)
+        // Moteurs à modèle téléchargé : toujours enregistrés, disponibles une fois le modèle installé.
+        OCRService.register(NDLOCREngine())
+        OCRService.register(PPOCREngine())
         dictionary = DictionaryModel(appDatabase: database)
         review = ReviewModel(appDatabase: database)
         benchDirectory = support.appendingPathComponent("Bench", isDirectory: true)

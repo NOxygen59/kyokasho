@@ -105,7 +105,7 @@ public enum AppTheme: String, Codable, CaseIterable, Sendable {
 
 /// Choix du moteur OCR. `auto` : texte intégré au PDF s'il existe, sinon Apple Vision.
 public enum OCREngineChoice: String, Codable, CaseIterable, Sendable {
-    case auto, pdfText, vision
+    case auto, pdfText, vision, ndlocr, ppocr5, glmocr
 }
 
 /// Style du lecteur de texte (texte OCR d'une page), inspiré du « lecteur de texte » d'Aidoku.

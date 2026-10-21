@@ -107,6 +107,9 @@ struct StudyTextTab: View {
             Menu {
                 Button("Texte du PDF") { reader.runOCR(engine: OCREngineID.pdfText) }
                 Button("Apple Vision") { reader.runOCR(engine: OCREngineID.vision) }
+                ForEach(OCREngineMenu.extra, id: \.self) { id in
+                    Button(OCREngineID.displayName(id)) { reader.runOCR(engine: id) }
+                }
                 Divider()
                 Button("Relancer") { reader.runOCR(engine: reader.ocrPage?.engine, force: true) }
                 Button("Comparer les moteurs") { showCompare = true }

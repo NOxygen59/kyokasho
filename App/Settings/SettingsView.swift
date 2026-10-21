@@ -254,6 +254,9 @@ extension OCREngineChoice {
         case .auto: return "Auto"
         case .pdfText: return "Texte du PDF"
         case .vision: return "Apple Vision"
+        case .ndlocr: return "NDLOCR-Lite"
+        case .ppocr5: return "PP-OCRv5"
+        case .glmocr: return "GLM-OCR (IA)"
         }
     }
 }
@@ -273,8 +276,9 @@ struct OCRSettingsView: View {
             } header: {
                 Text("Moteur")
             } footer: {
-                Text("Auto : texte intégré au PDF quand il existe (exact et instantané), sinon Apple Vision (japonais). Remplaçable par document. Vision ne lit pas encore le japonais vertical : NDLOCR-Lite arrive en V5.")
+                Text("Auto : texte intégré au PDF quand il existe (exact et instantané). Sinon NDLOCR-Lite s'il est installé (livres japonais, vertical), puis PP-OCRv5, puis Apple Vision. Remplaçable par document. Un moteur choisi mais pas téléchargé renvoie une erreur.")
             }
+            OCRModelsSection()
             Section("Lecteur de texte") {
                 Picker("Style", selection: $model.appSettings.textReader.style) {
                     Text("Défilement").tag(TextReaderSettings.Style.scroll)
@@ -342,6 +346,11 @@ struct AboutView: View {
                 credit("ZIPFoundation", "Thomas Zoechling", "MIT", "https://github.com/weichsel/ZIPFoundation")
                 credit("Yomitan (déconjugaison, texte japonais)", "yomidevs", "GPL-3.0", "https://github.com/yomidevs/yomitan")
                 credit("swift-fsrs (calcul des révisions)", "Ben Smiley", "MIT", "https://github.com/open-spaced-repetition/swift-fsrs")
+            }
+            Section("OCR") {
+                credit("ONNX Runtime", "Microsoft", "MIT", "https://github.com/microsoft/onnxruntime-swift-package-manager")
+                credit("PP-OCRv5 (modèles téléchargés)", "PaddlePaddle · RapidAI", "Apache-2.0", "https://github.com/PaddlePaddle/PaddleOCR")
+                credit("NDLOCR-Lite (modèles téléchargés)", "国立国会図書館 (National Diet Library)", "CC-BY-4.0", "https://github.com/ndl-lab/ndlocr-lite")
             }
             Section("Format de fichier") {
                 credit("genanki (format .apkg d'Anki, aucun code copié)", "Kerrick Staley", "MIT", "https://github.com/kerrickstaley/genanki")

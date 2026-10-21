@@ -43,3 +43,13 @@ Copyright (C) 2024-2026 Yomitan Authors, (C) 2020-2022 Yomichan Authors. https:/
 | Composant | Auteur | Licence | Usage |
 |---|---|---|---|
 | genanki (commit 73f1debf) | Kerrick Staley | MIT | Description du format `.apkg` d'Anki. **Format seulement, aucun code copié** : l'export est réécrit en Swift. |
+
+## OCR (V5)
+
+| Composant | Auteur | Licence | Usage |
+|---|---|---|---|
+| ONNX Runtime (onnxruntime-swift-package-manager 1.24.2) | Microsoft | MIT | Exécution des modèles OCR sur l'iPad |
+| Modèles PP-OCRv5 mobile (det + rec, ONNX) | PaddlePaddle ; conversion RapidAI/RapidOCR | Apache-2.0 | **Téléchargés à la demande**, jamais dans le dépôt |
+| Dictionnaire `ppocrv5_dict.txt` | PaddlePaddle | Apache-2.0 | Téléchargé avec le modèle |
+| NDLOCR-Lite (modèles DEIM + PARSeq, `NDLmoji.yaml`) | National Diet Library (Japon) | CC-BY-4.0 | **Téléchargés à la demande** ; crédit dans « À propos » |
+| PaddleOCR, RapidOCR, NDLOCR-Lite (code Python) | idem | Apache-2.0 / CC-BY-4.0 | **Comportement seulement** : prétraitement et décodage réécrits en Swift, aucun code copié |
