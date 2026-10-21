@@ -73,17 +73,15 @@ public extension ModelSpec {
     static let all: [ModelSpec] = [.ndlocr, .ppocr5, .glmocr]
 
     /// DE-GAN (Souibgui & Kessentini, GPL-3.0) : poids « binarisation » du dépôt d'origine convertis en ONNX
-    /// (tuiles 256×256) par `tools/degan_to_onnx.py`. Pas de source ONNX en ligne : le fichier est importé
-    /// depuis Fichiers (`ModelStore.importFile`), puis vérifié par son empreinte.
+    /// (tuiles 256×256) par `tools/degan_to_onnx.py`, publiés (avec la licence) sur le dépôt public
+    /// NOxygen59/kyokasho-models (release `degan-v1`).
     static let degan = ModelSpec(
         id: "degan", title: "DE-GAN (netteté des scans)",
         summary: "Nettoie le fond (taches, jaunissement) et rend les caractères noirs et nets sur les pages scannées.",
         license: "GPL-3.0 (M. A. Souibgui, Y. Kessentini) — conversion ONNX : tools/degan_to_onnx.py",
-        files: [File(name: "degan-binarize.onnx", url: URL(string: "https://github.com/dali92002/DE-GAN")!,
+        files: [File(name: "degan-binarize.onnx",
+                     url: URL(string: "https://github.com/NOxygen59/kyokasho-models/releases/download/degan-v1/degan-binarize.onnx")!,
                      size: 124_131_855, sha256: "b75e185e92c98e77b314f979ef339121a63fec9ac3a500f8b3b7e717ffe996c8")])
-
-    /// Modèles qui ne s'installent que par import de fichier (pas de téléchargement).
-    var importOnly: Bool { id == ModelSpec.degan.id }
 
     private static func ndl(_ path: String) -> URL {
         URL(string: "https://raw.githubusercontent.com/ndl-lab/ndlocr-lite/d001dad2013ceabb5736ff8d637474e443eb73c2/" + path)!
@@ -133,20 +131,6 @@ public final class ModelStore: @unchecked Sendable {
             let attributes = try? FileManager.default.attributesOfItem(atPath: url(spec, file.name).path)
             return total + ((attributes?[.size] as? NSNumber)?.int64Value ?? 0)
         }
-    }
-
-    /// Installe un fichier choisi par l'utilisateur (modèle sans téléchargement), après contrôle de l'empreinte.
-    public func importFile(_ spec: ModelSpec, from source: URL) throws {
-        guard let file = spec.files.first(where: { $0.name == source.lastPathComponent }) ?? spec.files.first,
-              spec.files.count == 1 || file.name == source.lastPathComponent
-        else { throw StoreError.badChecksum(source.lastPathComponent) }
-        if let expected = file.sha256 {
-            guard try Self.sha256(of: source) == expected else { throw StoreError.badChecksum(file.name) }
-        }
-        try FileManager.default.createDirectory(at: directory(spec), withIntermediateDirectories: true)
-        let destination = url(spec, file.name)
-        if FileManager.default.fileExists(atPath: destination.path) { try FileManager.default.removeItem(at: destination) }
-        try FileManager.default.copyItem(at: source, to: destination)
     }
 
     public func delete(_ spec: ModelSpec) throws {

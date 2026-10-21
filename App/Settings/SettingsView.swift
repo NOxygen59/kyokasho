@@ -329,6 +329,9 @@ struct OCRSettingsView: View {
 }
 
 struct AboutView: View {
+    @ObservedObject private var update = AppUpdate.shared
+    @Environment(\.openURL) private var openURL
+
     private var version: String {
         let info = Bundle.main.infoDictionary
         return "\(info?["CFBundleShortVersionString"] as? String ?? "?") (\(info?["CFBundleVersion"] as? String ?? "?"))"
@@ -338,6 +341,21 @@ struct AboutView: View {
         Form {
             Section {
                 LabeledContent("Version", value: version)
+                if let latest = update.available {
+                    Button { openURL(latest.page) } label: {
+                        Label("Télécharger la version \(latest.version)", systemImage: "arrow.down.app")
+                    }
+                } else {
+                    Button { Task { await update.check() } } label: {
+                        switch update.state {
+                        case .checking: Label("Vérification…", systemImage: "hourglass")
+                        case .upToDate: Label("À jour — vérifier encore", systemImage: "checkmark.circle")
+                        case .failed: Label("Pas de réponse — réessayer", systemImage: "exclamationmark.triangle")
+                        case .idle: Label("Vérifier les mises à jour", systemImage: "arrow.triangle.2.circlepath")
+                        }
+                    }
+                    .disabled(update.state == .checking)
+                }
                 Text("Lecteur personnel de cours et de manuels. Usage strictement personnel, non distribué.")
                     .foregroundStyle(.secondary)
             }
@@ -351,7 +369,7 @@ struct AboutView: View {
                 credit("ONNX Runtime", "Microsoft", "MIT", "https://github.com/microsoft/onnxruntime-swift-package-manager")
                 credit("PP-OCRv5 (modèles téléchargés)", "PaddlePaddle · RapidAI", "Apache-2.0", "https://github.com/PaddlePaddle/PaddleOCR")
                 credit("NDLOCR-Lite (modèles téléchargés)", "国立国会図書館 (National Diet Library)", "CC-BY-4.0", "https://github.com/ndl-lab/ndlocr-lite")
-                credit("DE-GAN (netteté des scans, modèle importé)", "M. A. Souibgui, Y. Kessentini", "GPL-3.0", "https://github.com/dali92002/DE-GAN")
+                credit("DE-GAN (netteté des scans, modèle téléchargé)", "M. A. Souibgui, Y. Kessentini", "GPL-3.0", "https://github.com/dali92002/DE-GAN")
                 credit("GLM-OCR (modèle téléchargé)", "Zhipu AI · conversion mlx-community", "MIT", "https://huggingface.co/zai-org/GLM-OCR")
                 credit("MLX Swift, mlx-swift-lm (GLM-OCR porté)", "ml-explore (Apple)", "MIT", "https://github.com/ml-explore/mlx-swift-lm")
                 credit("swift-transformers (tokenizer)", "Hugging Face", "Apache-2.0", "https://github.com/huggingface/swift-transformers")

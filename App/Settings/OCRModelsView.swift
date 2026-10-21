@@ -54,28 +54,6 @@ final class ModelDownloads: ObservableObject {
 
     func cancel(_ spec: ModelSpec) { tasks[spec.id]?.cancel() }
 
-    /// Modèle sans téléchargement (DE-GAN) : fichier choisi dans Fichiers, copié puis vérifié.
-    func importFile(_ spec: ModelSpec, from url: URL) {
-        guard tasks[spec.id] == nil else { return }
-        errors[spec.id] = nil
-        progress[spec.id] = 0
-        // Ancienne session libérée : le nouveau fichier sera relu.
-        ONNXEngines.unload()
-        let store = store
-        tasks[spec.id] = Task {
-            // Empreinte de 124 Mo + copie : hors du fil principal.
-            let failure: String? = await Task.detached(priority: .userInitiated) {
-                let scoped = url.startAccessingSecurityScopedResource()
-                defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-                do { try store.importFile(spec, from: url); return nil } catch { return error.localizedDescription }
-            }.value
-            errors[spec.id] = failure
-            tasks[spec.id] = nil
-            progress[spec.id] = nil
-            refresh()
-        }
-    }
-
     func delete(_ spec: ModelSpec) {
         ONNXEngines.unload()
         Task { await GLMOCREngine.unload() }
@@ -88,7 +66,6 @@ final class ModelDownloads: ObservableObject {
 struct OCRModelsSection: View {
     @ObservedObject private var downloads = ModelDownloads.shared
     @State private var deleting: ModelSpec?
-    @State private var importing: ModelSpec?
 
     var body: some View {
         Section {
@@ -103,12 +80,7 @@ struct OCRModelsSection: View {
         } header: {
             Text("Netteté des scans")
         } footer: {
-            Text("Envoie degan-binarize.onnx du Mac vers l'iPad (AirDrop → Fichiers), puis « Importer ». Ensuite, dans le lecteur : menu de la page → « Netteté des scans ». Seulement les pages scannées, une page à la fois quand elle s'affiche ; le résultat est gardé.")
-        }
-        .fileImporter(isPresented: Binding(get: { importing != nil }, set: { if !$0 { importing = nil } }),
-                      allowedContentTypes: [.data]) { result in
-            if let spec = importing, case .success(let url) = result { downloads.importFile(spec, from: url) }
-            importing = nil
+            Text("Après le téléchargement : dans le lecteur, menu de la page → « Netteté des scans ». Seulement les pages scannées, une page à la fois quand elle s'affiche ; le résultat est gardé.")
         }
         .confirmationDialog("Supprimer ce modèle ?", isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }),
                             titleVisibility: .visible) {
@@ -139,11 +111,6 @@ struct OCRModelsSection: View {
             } else if downloads.installed.contains(spec.id) {
                 Button("Supprimer (\(size(downloads.store.installedSize(spec))))", role: .destructive) { deleting = spec }
                     .buttonStyle(.borderless)
-            } else if spec.importOnly {
-                Button { importing = spec } label: {
-                    Label("Importer depuis Fichiers (\(size(spec.totalSize)))", systemImage: "square.and.arrow.down")
-                }
-                .buttonStyle(.borderless)
             } else {
                 Button { downloads.start(spec) } label: {
                     Label("Télécharger (\(size(spec.totalSize)))", systemImage: "arrow.down.circle")

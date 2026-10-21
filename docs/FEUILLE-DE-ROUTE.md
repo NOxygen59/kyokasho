@@ -30,7 +30,10 @@ Pas de simulateur, pas d'iPad sans ma permission.
   Toute dépendance / tout modèle → `THIRD_PARTY_NOTICES.md` + `AboutView` (`App/Settings/SettingsView.swift`).
 - **Jamais** de PDF, dictionnaire, modèle OCR ni donnée tierce dans le dépôt. Modèles = téléchargés à la demande.
 - En ligne : DeepL (option), téléchargements déclenchés par l'utilisateur (audio, modèles OCR), navigateur à
-  côté (tous sites, demandé le 21/10). Rien d'autre.
+  côté (tous sites, demandé le 21/10), avis de mise à jour (`latest.json`, voir § 4). Rien d'autre.
+- Dépôt **public** `NOxygen59/kyokasho-models` (dossier `~/Projets-iPad/kyokasho-modeles`) : seulement le modèle
+  DE-GAN (release `degan-v1`, licence GPL jointe) et `latest.json`. **Jamais** le code ni le `.tipa` (choix de
+  l'utilisateur le 21/10).
 - Télécharger quelque chose sur le Mac (outil, modèle de test) : dire quoi, d'où, quelle taille, et demander.
 - Release = tag + release GitHub avec le `.tipa` + notes « vérifié / non vérifié » + ligne du tableau du README.
   **Seulement quand l'utilisateur le demande** (il enchaîne souvent plusieurs retours avant).
@@ -58,6 +61,8 @@ Pas de simulateur, pas d'iPad sans ma permission.
    git add -A && git commit -m "Version X.Y.Z (…)" && git tag vX.Y.Z && git push origin HEAD --tags
    gh release create vX.Y.Z dist/Kyokasho-X.Y.Z.tipa --title "Kyōkasho X.Y.Z — …" --notes-file docs/releases/vX.Y.Z.md
    ```
+5. Avis dans l'app : dans `~/Projets-iPad/kyokasho-modeles/latest.json`, mettre `version`, `build`
+   (= `CURRENT_PROJECT_VERSION`), `page` (URL de la release) et `notes`, puis commit + `git push` de ce dossier.
 
 ## 5. Étapes restantes (cocher `[x]` quand fini)
 
@@ -112,8 +117,7 @@ Fait aussi : fond de page Blanc / Crème / Tamisé / Sombre (`PageTone.swift`), 
 navigateur ouvert (`WebPanel`), panneaux sans flou. DE-GAN : poids « binarisation » convertis par
 `tools/degan_to_onnx.py` (h5py + onnx, sans TensorFlow) en ONNX fp32 **256×256 fixe** (CoreML NeuralNetwork :
 0,009 s/tuile contre 0,31 s en CPU ; le fp16 / formes libres font retomber sur le CPU ; MLProgram refuse MaxPool).
-Fichier : `~/Projets-iPad/kyokasho-modeles/degan-binarize.onnx` (124 Mo), à envoyer par AirDrop puis
-Réglages → Netteté des scans → Importer. Lecteur : menu de la page → « Netteté des scans ».
+Téléchargé depuis la release publique `degan-v1` de NOxygen59/kyokasho-models (Réglages → Netteté des scans). Lecteur : menu de la page → « Netteté des scans ».
 Code : `PageEnhancer` (ONNXOCRKit, tuiles qui se recouvrent), `ScanSharpening` (rendu CGPDF, caches mémoire 8 pages
 + disque), `TonedPage.draw` (image posée avec `transform(for:)`, vérifié sur Mac). Test : `testDEGAN`.
 À vérifier sur l'iPad : la page nettoyée apparaît sans tourner la page (`redrawVisiblePages`, sinon
