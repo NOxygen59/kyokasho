@@ -92,7 +92,7 @@ final class NeuralOCRTests: XCTestCase {
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         try Data("abc".utf8).write(to: file)
         XCTAssertEqual(try ModelStore.sha256(of: file), "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad")
-        XCTAssertEqual(Set(ModelSpec.all.map(\.id)).count, 3)
+        XCTAssertEqual(Set(ModelSpec.all.map(\.id)).count, ModelSpec.all.count)
     }
 }
 
