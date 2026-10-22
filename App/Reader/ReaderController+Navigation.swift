@@ -142,7 +142,8 @@ extension ReaderController {
         doubleTap.delegate = self
         singleTap = UITapGestureRecognizer(target: self, action: #selector(handleTap(_:)))
         singleTap.delegate = self
-        singleTap.require(toFail: doubleTap)
+        // Pas de `require(toFail: doubleTap)` : le toucher répondait ≈ 0,3 s plus tard (attente du 2e toucher).
+        // Il agit tout de suite ; seul « montrer / cacher les barres » attend un peu et s'annule au double toucher.
         #if DEBUG
         let attach = !UserDefaults.standard.bool(forKey: "debugNoGestures")
         #else
@@ -262,11 +263,18 @@ extension ReaderController {
                 return
             }
         }
-        // Un tap ne tourne plus la page (glisser au doigt, flèches ou ← → au clavier) : il montre / cache les barres.
-        barsVisible.toggle()
+        // Un tap ne tourne plus la page (glisser au doigt, flèches ou ← → au clavier) : il montre / cache les barres,
+        // un instant plus tard, sauf si c'était le 1er toucher d'un double toucher (zoom).
+        barsToggleWork?.cancel()
+        let work = DispatchWorkItem { [weak self] in self?.barsVisible.toggle() }
+        barsToggleWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.28, execute: work)
     }
 
     @objc func handleDoubleTap(_ gesture: UITapGestureRecognizer) {
+        // Le 1er toucher a programmé « barres » : annulé (le double toucher ne sert qu'au zoom).
+        barsToggleWork?.cancel()
+        barsToggleWork = nil
         let point = gesture.location(in: pdfView)
         let fit = pdfView.scaleFactorForSizeToFit
         if !pdfView.isAtFit {

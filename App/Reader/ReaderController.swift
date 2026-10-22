@@ -55,6 +55,9 @@ final class ReaderController: NSObject, ObservableObject {
 
     // MARK: État des extensions (ReaderController+*.swift : une extension ne peut pas en avoir)
 
+    /// « Montrer / cacher les barres » d'un toucher simple, en attente d'un éventuel double toucher.
+    var barsToggleWork: DispatchWorkItem?
+
     /// Dernier calcul de furigana OCR lancé par page (`showOCR`).
     var furiganaGeneration: [Int: Int] = [:]
     var isAnimatingTurn = false
