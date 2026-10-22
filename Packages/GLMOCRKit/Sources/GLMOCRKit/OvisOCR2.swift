@@ -83,6 +83,7 @@ public struct OvisOCR2Reader: Sendable {
 /// Qwen3-VL-4B-Instruct (Alibaba, 4 milliards de paramètres, 4 bits) : le « gros » lecteur de l'analyse du
 /// document entier. Comprend le sens : utile sur les termes techniques (manuels japonais d'architecture et de
 /// design d'intérieur). Lourd : ≈ 3,5 Go de mémoire pendant la lecture.
+// FDR-U : ajouter translate(markdown:glossary:) — texte seul, même conteneur MLX, consigne « garder la structure ».
 public struct Qwen3VLReader: Sendable {
     let base: PageVLMReader
 

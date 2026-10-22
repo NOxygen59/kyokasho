@@ -311,6 +311,21 @@ Rythme choisi le 22/10 au soir : **2 sections de la liste de l'utilisateur par s
   Metal d'iOS 16 (le compilateur du Mac l'a même en mode 3.0 : le test Mac ne peut pas le voir). Remplacé par
   `mlx_remove_addrspace_t` (copie exacte de la définition d'Apple) via `tools/ipad-ios16-patch.py`. Autres
   fonctions `metal::` des noyaux : anciennes, conditionnées (`os_log` ≥ 3.2) ou réservées aux puces NAX.
+### Version 0.8.6 (demandée le 22/10) — dans cet ordre
+- [ ] **T — Vue « Mise en page IA » dans le panneau Texte** (3e choix à côté de « Mis en forme » / « Brut ») : le
+  Markdown d'OvisOCR2 (déjà gardé par la vérification et l'analyse : `Analysis/<id>/ovisocr2-<page>.md`, sinon lecture
+  à la demande) → **HTML filtré** (titres, paragraphes, listes, `<table>` ; aucune balise de script/style/lien) avec
+  le CSS du thème de `FuriganaTextView.page` ; furigana + dictionnaire au toucher comme le mode ふりがな ;
+  `<img src="images/bbox_l_t_r_b.jpg">` → **découpe de la figure** dans le rendu de la page (coordonnées sur 1000),
+  affichée à sa place. Balises `FDR-T`.
+- [ ] **U — Traduction hors ligne par Qwen3-VL-4B** : texte seul (pas d'image), Markdown d'OvisOCR2 en entrée,
+  consigne « traduire en français en gardant exactement la structure Markdown/HTML, termes du glossaire imposés »,
+  sortie affichée comme T (japonais / français côte à côte) ; bouton « Traduire la page (hors ligne) » à côté de
+  DeepL, et option « traduire tout le document » dans l'analyse. Garder par page (`Analysis/<id>/fr-<page>.md`).
+  Mesurer le temps sur Mac (texte seul, Metal 3.0) avant. Balises `FDR-U`.
+- [ ] **S (avancé dans la 0.8.6) — Lexique du domaine** partagé : relecture OCR, vote de l'analyse **et** glossaire
+  imposé à la traduction (天井 = plafond, 野縁 = tasseau de plafond, 建具 = menuiseries…), modifiable à la main.
+
 - [ ] **S — Lexique du domaine** (design d'intérieur / architecture) : les termes techniques absents de JMdict
   passent pour « douteux ». Lexique = mots confirmés par l'analyse (≥ 2 lectures) + ajout à la main ; utilisé comme
   « mots connus » par `OCRProofreader` et `DocumentAnalysisService.preferred`. Balises `FDR-S`.
