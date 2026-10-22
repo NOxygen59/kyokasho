@@ -2,7 +2,7 @@
 
 > Ce fichier suffit. Ne relis pas PLAN.md, ni le code « pour voir ». Une session = les retours de l'utilisateur,
 > sinon **une** étape du § 6 ; puis commit + push (+ release si demandée), puis stop.
-> État au 22/10/2026 : **v0.8.5.3 publiée** (build 24 : directive reassociate remplacée ; vue « Mise en page IA » = étape T de la 0.8.6).
+> État au 22/10/2026 : **v0.8.6 publiée** (build 25 : mise en page IA + traduction hors ligne Qwen3-VL ; reste S, lexique du domaine).
 > sur son iPad et fait ses retours. Tout ce qui est marqué « non vérifié » peut être faux sur l'appareil.
 
 ## 1. Prompt à coller dans le nouveau chat
