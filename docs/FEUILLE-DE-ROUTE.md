@@ -2,7 +2,7 @@
 
 > Ce fichier suffit. Ne relis pas PLAN.md, ni le code « pour voir ». Une session = les retours de l'utilisateur,
 > sinon **une** étape du § 6 ; puis commit + push (+ release si demandée), puis stop.
-> État au 22/10/2026 : **v0.8.4 publiée** (build 18 : MeCab, OCR relu, MLX récent sur iOS 16, OvisOCR2, réglages des modèles par usage).
+> État au 22/10/2026 : **v0.8.4.1 publiée** (build 19 : correctif du plantage au lancement de la 0.8.4 — ne JAMAIS utiliser `_LIBCPP_DISABLE_AVAILABILITY`).
 > sur son iPad et fait ses retours. Tout ce qui est marqué « non vérifié » peut être faux sur l'appareil.
 
 ## 1. Prompt à coller dans le nouveau chat
