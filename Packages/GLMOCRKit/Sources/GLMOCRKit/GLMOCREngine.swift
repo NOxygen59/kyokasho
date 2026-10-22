@@ -112,8 +112,25 @@ public struct GLMOCREngine: OCREngine {
     /// Libère la mémoire (≈ 1,5 Go) : avertissement mémoire, modèle supprimé.
     public static func unload() async { await GLMModel.shared.unload() }
 
+    /// État des modèles MLX (un seul chargé à la fois).
+    public static func status() async -> AIModelStatus { await GLMModel.shared.status() }
+
+    /// Libère ce modèle s'il est chargé (bouton « Décharger » des Réglages).
+    public static func unload(directory: URL) async { await GLMModel.shared.unload(directory: directory) }
+
     /// Libère le modèle seulement si aucune lecture n'est en cours (retour à la bibliothèque, app en arrière-plan).
     public static func unloadIfIdle() async { await GLMModel.shared.unloadIfIdle() }
+}
+
+public struct AIModelStatus: Sendable {
+    public let loaded: URL?
+    public let loading: URL?
+    /// Une lecture (ou le chat) s'en sert en ce moment.
+    public let inUse: Bool
+    public let lastUse: [URL: Date]
+    /// Mémoire du GPU tenue par MLX (poids et calculs) et cache de travail, en Mo.
+    public let gpuActiveMB: Int
+    public let gpuCacheMB: Int
 }
 
 /// Modèle chargé à la demande (chargement ≈ quelques secondes), libéré après `idleDelay` sans lecture.
@@ -125,6 +142,8 @@ actor GLMModel {
     /// Lectures en cours : jamais de libération pour inactivité tant qu'il y en a une.
     private var users = 0
     private var idleTask: Task<Void, Never>?
+    /// Dernière utilisation de chaque modèle (page de chaque IA dans les Réglages).
+    private var lastUse: [URL: Date] = [:]
     /// Chargement en cours : un second appel pour le même modèle attend celui-ci (jamais deux chargements).
     private var loading: (URL, Task<ModelContainer, Error>)?
 
@@ -166,8 +185,9 @@ actor GLMModel {
         }
     }
 
-    private func acquire(directory: URL, extraEOSTokens: Set<String>) async throws -> ModelContainer {
+    func acquire(directory: URL, extraEOSTokens: Set<String>) async throws -> ModelContainer {
         users += 1
+        lastUse[directory] = Date()
         idleTask?.cancel()
         idleTask = nil
         do { return try await container(directory: directory, extraEOSTokens: extraEOSTokens) } catch {
@@ -176,7 +196,7 @@ actor GLMModel {
         }
     }
 
-    private func release() {
+    func release() {
         users = max(0, users - 1)
         // Mémoire de travail de la lecture (images, cache clé-valeur) rendue tout de suite.
         MLX.GPU.clearCache()
@@ -192,6 +212,11 @@ actor GLMModel {
     func unloadIfIdle() {
         guard users == 0, loaded != nil || loading != nil else { return }
         unload()
+    }
+
+    func status() -> AIModelStatus {
+        AIModelStatus(loaded: loaded?.0, loading: loading?.0, inUse: users > 0, lastUse: lastUse,
+                      gpuActiveMB: MLX.GPU.activeMemory / 1_048_576, gpuCacheMB: MLX.GPU.cacheMemory / 1_048_576)
     }
 
     /// Libère le modèle (tous, ou seulement s'il s'agit de `directory`).

@@ -500,7 +500,6 @@ struct TranslationSettingsSection: View {
 }
 
 /// Tous les modèles à télécharger (OCR, netteté des scans), avec leurs liens.
-// FDR-V7 : une page par IA locale (état, mémoire, décharger, réglages, journal) + chat Qwen3-VL (chargé à l'ouverture, déchargé en quittant).
 struct ModelsView: View {
     var body: some View {
         Form {
@@ -509,6 +508,15 @@ struct ModelsView: View {
                     .font(.footnote)
             } footer: {
                 Text("Tout reste sur l'iPad (Application Support), hors de l'app. Le téléchargement reprend s'il est coupé ; chaque fichier est vérifié (empreinte SHA-256). Supprimer un modèle ne perd pas les pages déjà lues.")
+            }
+            Section {
+                ForEach([ModelSpec.ovisocr2, .qwen3vl4b, .glmocr, .ndlocr, .ppocr5]) { spec in
+                    NavigationLink { AIModelDetailView(spec: spec) } label: { Text(spec.title) }
+                }
+            } header: {
+                Text("Chaque IA")
+            } footer: {
+                Text("État, mémoire, « Décharger », réglages propres et dernières tâches. Qwen3-VL : conversation.")
             }
             OCRModelsSection(group: .ocr)
             MorphologySection()

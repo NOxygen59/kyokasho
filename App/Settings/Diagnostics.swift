@@ -78,17 +78,37 @@ enum Diagnostics {
 
     /// Mesure une étape (mode diagnostic) : durée et mémoire avant / après.
     static func measure<T>(_ name: String, _ area: String = "app", _ body: () async throws -> T) async rethrows -> T {
-        guard enabled else { return try await body() }
-        let start = Date(), before = footprintMB()
-        log("→ \(name) (mémoire \(Int(before)) Mo)", area)
+        let start = Date()
+        if enabled { log("→ \(name) (mémoire \(Int(footprintMB())) Mo)", area) }
         do {
             let result = try await body()
-            log("✓ \(name) en \(String(format: "%.1f", Date().timeIntervalSince(start))) s (mémoire \(Int(footprintMB())) Mo)", area)
+            let seconds = String(format: "%.1f", Date().timeIntervalSince(start))
+            remember(area, "✓ \(name) en \(seconds) s")
+            if enabled { log("✓ \(name) en \(seconds) s (mémoire \(Int(footprintMB())) Mo)", area) }
             return result
         } catch {
+            remember(area, "✗ \(name) : \(error.localizedDescription)")
             Diagnostics.error("\(name) : \(error.localizedDescription)", area)
             throw error
         }
+    }
+
+    // MARK: Dernières tâches (en mémoire, toujours) : journal de chaque IA dans les Réglages.
+
+    private static let recentLock = NSLock()
+    nonisolated(unsafe) private static var recentLines: [(area: String, line: String)] = []
+
+    static func remember(_ area: String, _ line: String) {
+        let time = Date().formatted(date: .abbreviated, time: .standard)
+        recentLock.withLock {
+            recentLines.append((area, "\(time)  \(line)"))
+            if recentLines.count > 300 { recentLines.removeFirst(recentLines.count - 300) }
+        }
+    }
+
+    /// Les plus récentes d'abord.
+    static func recent(areas: Set<String>, limit: Int = 30) -> [String] {
+        recentLock.withLock { Array(recentLines.filter { areas.contains($0.area) }.map(\.line).reversed().prefix(limit)) }
     }
 }
 

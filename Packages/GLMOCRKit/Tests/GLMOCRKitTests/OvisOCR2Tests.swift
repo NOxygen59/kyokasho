@@ -118,6 +118,23 @@ final class OvisOCR2Tests: XCTestCase {
         print("BENCH \(String(format: "%.1f", Date().timeIntervalSince(start))) s, \(text.count) caractères")
     }
 
+    /// Conversation : `KYOKASHO_CHAT=1` (+ `KYOKASHO_MODELS`). Deux tours : l'historique est bien gardé.
+    func testQwenChatAnswers() async throws {
+        let env = ProcessInfo.processInfo.environment
+        guard env["KYOKASHO_CHAT"] != nil, let root = env["KYOKASHO_MODELS"] else { throw XCTSkip("désactivé") }
+        let chat = QwenChat(store: ModelStore(root: URL(fileURLWithPath: root)))
+        try await chat.start(history: [])
+        var first = ""
+        for try await chunk in chat.stream("Comment se lit 天井 et que veut dire ce mot ?") { first += chunk }
+        print("CHAT 1 : \(first)")
+        var second = ""
+        for try await chunk in chat.stream("Et le mot suivant dans un plafond : 野縁 ?") { second += chunk }
+        print("CHAT 2 : \(second)")
+        await chat.stop()
+        XCTAssertTrue(first.contains("てんじょう"), "lecture de 天井")
+        XCTAssertFalse(second.isEmpty)
+    }
+
     /// Traduction d'une vraie page (Markdown d'OvisOCR2) : `KYOKASHO_TRANSLATE=<fichier .md>`.
     func testQwenTranslatesPage() async throws {
         let env = ProcessInfo.processInfo.environment

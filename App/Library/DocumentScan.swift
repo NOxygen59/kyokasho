@@ -21,10 +21,13 @@ enum DocumentScan {
 
     static func key(_ documentId: String) -> String { "scan|\(documentId)" }
 
+    /// Réglage (page d'OvisOCR2 dans les Réglages) : lecture automatique à l'import et à l'ouverture.
+    static let autoKey = "scan.auto"
+
     /// Lance la lecture si OvisOCR2 est installé et qu'il reste des pages ; rien si elle tourne déjà ou si l'analyse
     /// du document entier (qui lit les mêmes pages) est en cours.
     static func start(_ document: LibraryDocument, url: URL, ocr: OCRService) {
-        guard OvisOCR2Reader().isAvailable,
+        guard UserDefaults.standard.object(forKey: autoKey) as? Bool ?? true, OvisOCR2Reader().isAvailable,
               DocumentAnalysisService.shared.progress?.documentId != document.id else { return }
         let id = document.id
         let pages = (0..<document.pageCount).filter { !FileManager.default.fileExists(atPath: file(id, $0).path) }

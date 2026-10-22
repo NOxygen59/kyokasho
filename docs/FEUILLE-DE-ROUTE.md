@@ -289,7 +289,14 @@ Comptes (Drive) ; À propos (+ **connexion GitHub** device flow → mise à jour
   Ajout **à la fin** = aucun renumérotage (cas le plus courant : proposer d'office).
 - Balises `FDR-V14`.
 
-### [ ] V7 — Réglages : une page par IA locale (+ chat pour celles qui discutent)
+### [x] V7 — Réglages : une page par IA locale (+ chat pour celles qui discutent)
+- **Fait (22/10, non vérifié sur iPad)** : `App/Settings/AIModelViews.swift` (Réglages → Modèles → « Chaque IA ») :
+  `AIModelDetailView` (description, place, état chargé / en cours, mémoire GPU, dernier usage, « Décharger »,
+  réglages : lecture auto d'Ovis `scan.auto`, relecture GLM, Qwen dans l'analyse ; dernières tâches =
+  `Diagnostics.recent`, gardé en mémoire même sans mode diagnostic). `QwenChatView` + `GLMOCRKit/QwenChat.swift`
+  (`ChatSession` avec historique `Chats/qwen.json`, modèle tenu tant que l'écran est ouvert puis déchargé).
+  Qwen 4B inventait les lectures (天井 « あまね ») → `QwenChat.hints` ajoute lectures (MeCab) + glossaire du
+  manuel à chaque question : réponses justes (test Mac `testQwenChatAnswers`). Pas fait : longueur / résolution.
 - Une page par modèle (OvisOCR2, GLM-OCR, Qwen3-VL-4B, MeCab, NDLOCR…) : description, taille, état chargé / non,
   mémoire, dernier usage, bouton « Décharger », réglages propres (longueur de lecture, résolution, option
   « ajouter à l'analyse ») et **journal** des dernières tâches (via `Diagnostics`).
