@@ -114,14 +114,6 @@ final class AppModel: ObservableObject {
         PageShift.reconcile(self)
     }
 
-    var colorScheme: ColorScheme? {
-        switch appSettings.theme {
-        case .dark: return .dark
-        case .light: return .light
-        case .system: return nil
-        }
-    }
-
     func persist(_ work: @escaping @Sendable (AppDatabase) throws -> Void) {
         let database = database
         ioQueue.async {

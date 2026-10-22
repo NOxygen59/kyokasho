@@ -126,20 +126,6 @@ public final class ReviewStore: @unchecked Sendable {
         }
     }
 
-    public func renameDeck(_ id: Int64, to name: String) throws {
-        try writer.write { db in
-            try db.execute(sql: "UPDATE deck SET name = ? WHERE id = ?", arguments: [name, id])
-        }
-    }
-
-    /// Supprime le paquet et ses cartes (le dernier paquet ne peut pas être supprimé).
-    public func deleteDeck(_ id: Int64) throws {
-        try writer.write { db in
-            guard try Deck.fetchCount(db) > 1 else { return }
-            _ = try Deck.deleteOne(db, key: id)
-        }
-    }
-
     public func templates() throws -> [NoteTemplate] {
         try writer.read { try NoteTemplate.order(Column("id")).fetchAll($0) }
     }
@@ -205,14 +191,6 @@ public final class ReviewStore: @unchecked Sendable {
             let q = query.trimmingCharacters(in: .whitespaces)
             if !q.isEmpty { request = request.filter(Column("fields").like("%\(q)%") || Column("key").like("%\(q)%")) }
             return try request.order(Column("createdAt").desc).limit(limit).fetchAll(db)
-        }
-    }
-
-    public func cardCount(deckId: Int64? = nil) throws -> Int {
-        try writer.read { db in
-            var request = StudyCard.all()
-            if let deckId { request = request.filter(Column("deckId") == deckId) }
-            return try request.fetchCount(db)
         }
     }
 

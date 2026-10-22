@@ -105,7 +105,6 @@ public struct PageTransform: Codable, Hashable, Sendable {
         self.autoCrop = autoCrop
     }
 
-    public var isIdentity: Bool { rotation % 360 == 0 && !split }
 }
 
 extension PageTransform: FetchableRecord, PersistableRecord {

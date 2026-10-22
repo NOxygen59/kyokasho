@@ -23,7 +23,6 @@ public actor OCRService {
     /// Relecture appliquée à chaque nouveau résultat avant sa mise en cache (dictionnaire, posée par l'app).
     private var postProcess: (@Sendable (OCRPage) async -> OCRPage)?
 
-    public func setPostProcess(_ process: (@Sendable (OCRPage) async -> OCRPage)?) { postProcess = process }
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
 

@@ -62,10 +62,6 @@ final class ReviewModel: ObservableObject {
         settings.defaultTemplateId.flatMap { id in templates.first { $0.id == id } } ?? templates.first
     }
 
-    func hasCard(_ term: TermResult) -> Bool {
-        keys.contains(StudyCard.key(expression: term.expression, reading: term.reading))
-    }
-
     /// Cartes en cours d'ajout (audio en téléchargement) : un double clic ne crée pas de doublon.
     private var pending: Set<String> = []
 

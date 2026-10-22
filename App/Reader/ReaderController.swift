@@ -1634,12 +1634,6 @@ final class ReaderController: NSObject, ObservableObject {
     }
 
     /// Notes rechargées (ajoutées depuis le panneau d'étude).
-    func reloadNotes() {
-        notes = (try? model.database.comments(documentId: document.id)) ?? notes
-        guard let pdf else { return }
-        for note in notes { removeAnchor(note, in: pdf); annotateAnchor(note, in: pdf) }
-    }
-
     private func placeAnchor(for note: PageComment, at point: CGPoint) {
         guard let pdf, let page = pdfView.page(for: point, nearest: false) else { return }
         let index = pdf.index(for: page)
@@ -2006,18 +2000,6 @@ final class ReaderController: NSObject, ObservableObject {
     }
 
     // MARK: Image de la page (pour l'IA)
-
-    /// Rendu net de la page affichée (≈ 2 048 px de large), pour le presse-papiers.
-    func renderCurrentPage(maxWidth: CGFloat = 2048) -> UIImage? {
-        // La page lue (en double page : la première lue, pas la première dans l'ordre interne).
-        let index = presented.firstIndex { $0.source == currentSourcePage } ?? currentIndex
-        guard let pdf, let page = pdf.page(at: index) else { return nil }
-        let box = page.bounds(for: .cropBox)
-        let rotated = page.rotation % 180 != 0
-        let size = rotated ? CGSize(width: box.height, height: box.width) : box.size
-        let scale = maxWidth / max(size.width, 1)
-        return page.thumbnail(of: CGSize(width: size.width * scale, height: size.height * scale), for: .cropBox)
-    }
 
     /// Pages données (sources) en une image : côte à côte dans l'ordre affiché (double page « les deux »).
     func renderSources(_ sources: [Int], maxWidth: CGFloat = 2048) -> UIImage? {
