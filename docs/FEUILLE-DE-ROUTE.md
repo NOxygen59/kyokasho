@@ -307,7 +307,10 @@ Rythme choisi le 22/10 au soir : **2 sections de la liste de l'utilisateur par s
   dans le dépôt)**, Mac en Metal 3.0 forcé (`testRealSample`, `KYOKASHO_SAMPLE_PDF`) : OvisOCR2 ≈ 22 s/page, pic
   GPU 2,1 Go (1600 ou 1280 px : pareil), texte excellent ; Qwen3-VL-4B ≈ 37 s/page, pic 4 Go, **moins bon**
   (襖 → 桜 systématique, 縦繁 → 繊緻) → option « Ajouter Qwen3-VL-4B » décochée par défaut. Plantage iPad pendant la
-  lecture OvisOCR2 (0.8.4.2) : cause inconnue, attendre le journal de diagnostic (message MLX noté avant l'arrêt).
+  lecture OvisOCR2 : **cause trouvée par le journal** — `metal::remove_addrspace_t` (Metal 3.1) inconnu du compilateur
+  Metal d'iOS 16 (le compilateur du Mac l'a même en mode 3.0 : le test Mac ne peut pas le voir). Remplacé par
+  `mlx_remove_addrspace_t` (copie exacte de la définition d'Apple) via `tools/ipad-ios16-patch.py`. Autres
+  fonctions `metal::` des noyaux : anciennes, conditionnées (`os_log` ≥ 3.2) ou réservées aux puces NAX.
 - [ ] **S — Lexique du domaine** (design d'intérieur / architecture) : les termes techniques absents de JMdict
   passent pour « douteux ». Lexique = mots confirmés par l'analyse (≥ 2 lectures) + ajout à la main ; utilisé comme
   « mots connus » par `OCRProofreader` et `DocumentAnalysisService.preferred`. Balises `FDR-S`.
