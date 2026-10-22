@@ -141,8 +141,8 @@ Comptes (Drive) ; À propos (+ **connexion GitHub** device flow → mise à jour
 
 ### [x] V2 — IA : RAM au plus bas quand on ne s'en sert pas
 - **Fait (22/10, non vérifié sur iPad)** : `GLMModel.using(directory:)` compte les lectures en cours, vide
-  `MLX.GPU` après chaque lecture et libère le modèle après 90 s sans lecture (`idleDelay`) ; `SessionCache` (ONNX)
-  se vide après 120 s sans usage. MeCab gardé (mmap). Reste : mesurer au moniteur sur l'iPad.
+  `MLX.GPU` après chaque lecture et libère le modèle après 45 s sans lecture (`idleDelay`, 2 min jugé trop long) ; `SessionCache` (ONNX)
+  se vide après 30 s sans usage. MeCab gardé (mmap). Reste : mesurer au moniteur sur l'iPad.
 - Constat : `GLMModel` garde le dernier modèle MLX **chargé** jusqu'à la fin de l'app ; `SessionCache` (ONNX) garde
   les sessions NDLOCR / PP-OCR / mise en page ; `MLX.GPU` garde un cache (256 Mo max).
 - Faire : (1) `GLMModel` : minuteur d'inactivité (ex. 90 s sans lecture → `unload()`), compteur d'utilisations en
@@ -152,7 +152,11 @@ Comptes (Drive) ; À propos (+ **connexion GitHub** device flow → mise à jour
   `loadIfInstalled` de MeCab : `mmap`, coût faible, garder). Mesurer avec le moniteur avant / après.
 - Balises `FDR-V2`.
 
-### [ ] V12 — Retour à la bibliothèque = IA déchargées
+### [x] V12 — Retour à la bibliothèque = IA déchargées
+- **Fait (22/10, non vérifié sur iPad)** : `RootView.releaseAI()` (`App/KyokashoApp.swift`) quand le lecteur se
+  ferme (`openDocumentId` → nil ; `LibraryView.onAppear` ne se relance pas après un `fullScreenCover`) ou que l'app
+  passe en arrière-plan ; rien si une analyse tourne ; MLX via `GLMOCREngine.unloadIfIdle()` (jamais pendant une
+  lecture). Le chat V7 devra charger / décharger lui-même.
 - `LibraryView.onAppear` (et `scenePhase` → arrière-plan) : `GLMOCREngine.unload()` (tous modèles MLX),
   `SessionCache.clear()`, `MLX.GPU.clearCache()`. Exception : le chat des Réglages (V7) charge son modèle à
   l'ouverture de l'écran et le décharge à la fermeture. Ne pas interrompre une analyse en cours (V4) : si

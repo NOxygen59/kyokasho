@@ -111,13 +111,16 @@ public struct GLMOCREngine: OCREngine {
 
     /// Libère la mémoire (≈ 1,5 Go) : avertissement mémoire, modèle supprimé.
     public static func unload() async { await GLMModel.shared.unload() }
+
+    /// Libère le modèle seulement si aucune lecture n'est en cours (retour à la bibliothèque, app en arrière-plan).
+    public static func unloadIfIdle() async { await GLMModel.shared.unloadIfIdle() }
 }
 
 /// Modèle chargé à la demande (chargement ≈ quelques secondes), libéré après `idleDelay` sans lecture.
 actor GLMModel {
     static let shared = GLMModel()
     /// Sans lecture pendant ce temps, le modèle est libéré (≈ 1,5 à 3 Go rendus à l'iPad).
-    static let idleDelay: Duration = .seconds(90)
+    static let idleDelay: Duration = .seconds(45)
     private var loaded: (URL, ModelContainer)?
     /// Lectures en cours : jamais de libération pour inactivité tant qu'il y en a une.
     private var users = 0
@@ -186,7 +189,7 @@ actor GLMModel {
         }
     }
 
-    private func unloadIfIdle() {
+    func unloadIfIdle() {
         guard users == 0, loaded != nil || loading != nil else { return }
         unload()
     }

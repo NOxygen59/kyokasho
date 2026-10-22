@@ -65,11 +65,10 @@ extension ONNXModel.Tensor {
 }
 
 /// Sessions ouvertes à la demande (chargement ≈ 1 s), fermées après `idleDelay` sans usage (et sur avertissement
-/// mémoire). Une lecture en cours garde sa session : `clear()` ne fait qu'oublier la référence.
-// FDR-V12 : vidé au retour à la bibliothèque.
+/// mémoire, retour à la bibliothèque). Une lecture en cours garde sa session : `clear()` ne fait qu'oublier la référence.
 final class SessionCache: @unchecked Sendable {
     static let shared = SessionCache()
-    static let idleDelay: TimeInterval = 120
+    static let idleDelay: TimeInterval = 30
     private let lock = NSLock()
     private var models: [URL: ONNXModel] = [:]
     private var texts: [URL: [String]] = [:]

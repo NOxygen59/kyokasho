@@ -54,6 +54,7 @@ struct KyokashoApp: App {
 
 struct RootView: View {
     @EnvironmentObject private var model: AppModel
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         NavigationStack {
@@ -70,10 +71,21 @@ struct RootView: View {
                 .preferredColorScheme(.dark)
                 .tint(Atelier.Tint.read)
         }
+        // Retour à la bibliothèque ou app en arrière-plan : les IA rendent leur mémoire.
+        .onChange(of: model.openDocumentId) { if $0 == nil { Self.releaseAI() } }
+        .onChange(of: scenePhase) { if $0 == .background { Self.releaseAI() } }
         .alert("Erreur", isPresented: Binding(get: { model.lastError != nil }, set: { if !$0 { model.lastError = nil } })) {
             Button("OK", role: .cancel) {}
         } message: {
             Text(model.lastError ?? "")
         }
+    }
+
+    /// Décharge les modèles d'IA (MLX, ONNX, cache GPU), sauf pendant une analyse du document entier ou une lecture
+    /// en cours : celles-ci continuent et le modèle est libéré à la fin par inactivité.
+    private static func releaseAI() {
+        guard DocumentAnalysisService.shared.progress == nil else { return }
+        ONNXEngines.unload()
+        Task { await GLMOCREngine.unloadIfIdle() }
     }
 }
