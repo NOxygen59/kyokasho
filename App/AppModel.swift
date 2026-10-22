@@ -143,13 +143,14 @@ final class AppModel: ObservableObject {
         }
     }
 
-    // FDR-V3 : après import, lancer (via AITaskCenter, V4) la lecture IA des pages pas encore lues + fenêtre % et détail.
+    /// Chaque document importé est ensuite lu par l'IA (`DocumentScan`, pages pas encore lues).
     func importFiles(_ urls: [URL], cleanUp: Bool = true, openWhenSingle: Bool = true) {
         guard !urls.isEmpty else { return }
         importProgress = ImportProgress(done: 0, total: urls.count, currentName: urls[0].lastPathComponent)
         let importer = importer
         Task.detached(priority: .userInitiated) {
             var lastImported: String?
+            var imported: [LibraryDocument] = []
             var errors: [String] = []
             for (index, url) in urls.enumerated() {
                 await MainActor.run {
@@ -159,6 +160,7 @@ final class AppModel: ObservableObject {
                 do {
                     let result = try importer.importFile(at: url, displayName: url.lastPathComponent)
                     lastImported = result.document.id
+                    imported.append(result.document)
                 } catch {
                     errors.append("\(url.lastPathComponent) : \(error.localizedDescription)")
                 }
@@ -167,6 +169,9 @@ final class AppModel: ObservableObject {
             }
             await MainActor.run {
                 self.importProgress = nil
+                for document in imported {
+                    DocumentScan.start(document, url: self.storage.url(for: document.id), ocr: self.ocr)
+                }
                 if !errors.isEmpty { self.lastError = errors.joined(separator: "\n") }
                 if openWhenSingle, urls.count == 1, let lastImported { self.openDocumentId = lastImported }
             }

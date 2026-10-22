@@ -699,14 +699,33 @@ final class ReaderController: NSObject, ObservableObject {
         ink.setOCR(ocr, source: source)
         guard FuriganaLayer.enabled else { return }
         let key = ScanSharpening.key(documentId: document.id, page: source), url = fileURL
+        // Calculs lancés l'un après l'autre pour la même page : seul le dernier est gardé.
+        furiganaGeneration[source, default: 0] += 1
+        let generation = furiganaGeneration[source, default: 0]
+        // Texte d'OvisOCR2 (scan à l'import, vérification, mise en page IA) : lectures d'après lui.
+        let aiText = DocumentAnalysisService.rawURL(document.id, ModelSpec.ovisocr2.id, source)
         Task.detached(priority: .utility) { [weak self] in
             guard !PDFTextEngine.hasTextLayer(url: url, pageIndex: source) else { return }
             let frame: PageFrame? = (try? PDFPool.withDocument(url) { doc -> PageFrame? in
                 doc.page(at: source).map { PageFrame(box: $0.bounds(for: .cropBox), rotation: $0.rotation) }
             }) ?? nil
             guard let frame else { return }
-            FuriganaLayer.set(FuriganaLayer.marks(from: ocr, frame: frame), for: key)
+            let reference = try? String(contentsOf: aiText, encoding: .utf8)
+            let marks = FuriganaLayer.marks(from: ocr, reference: reference, frame: frame)
+            guard await self?.furiganaGeneration[source] == generation else { return }
+            FuriganaLayer.set(marks, for: key)
             await self?.pdfView.redrawVisiblePages()
+        }
+    }
+
+    /// Dernier calcul de furigana OCR lancé par page (`showOCR`).
+    private var furiganaGeneration: [Int: Int] = [:]
+
+    private func refreshFurigana(afterAIRead read: DocumentScan.PageRead) {
+        guard !closed, read.documentId == document.id, shownSources.contains(read.page), FuriganaLayer.enabled else { return }
+        Task { [weak self] in
+            guard let self, let cached = await self.cachedOCR(source: read.page) else { return }
+            self.showOCR(cached, source: read.page)
         }
     }
 
@@ -2017,6 +2036,13 @@ final class ReaderController: NSObject, ObservableObject {
         aiFinished = AITaskCenter.shared.$finished.dropFirst().sink { [weak self] _ in
             DispatchQueue.main.async { self?.reloadOCRAfterAITask() }
         }
+        // Page lue par l'IA (scan du document) : ses furigana sont refaits d'après ce texte si elle est affichée.
+        observers.append(center.addObserver(forName: .aiPageRead, object: nil, queue: .main) { [weak self] note in
+            guard let read = note.object as? DocumentScan.PageRead else { return }
+            MainActor.assumeIsolated { self?.refreshFurigana(afterAIRead: read) }
+        })
+        // Pages pas encore lues par l'IA : lecture en tâche de l'app (continue après la fermeture du lecteur).
+        DocumentScan.start(document, url: fileURL, ocr: model.ocr)
         observers.append(center.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated {
                 self?.savePositionWork?.perform()

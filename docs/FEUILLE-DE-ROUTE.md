@@ -216,7 +216,13 @@ Comptes (Drive) ; À propos (+ **connexion GitHub** device flow → mise à jour
   aperçu en direct ; le thème colore aussi le HTML (panneau, dictionnaire, cartes : voir backlog B4).
 - Balises `FDR-V6`.
 
-### [ ] V3 — Furigana refaits sur le texte de l'IA, document scanné à l'import
+### [x] V3 — Furigana refaits sur le texte de l'IA, document scanné à l'import
+- **Fait (22/10, non vérifié sur iPad ni par image d'essai)** : (a) `App/Library/DocumentScan.swift` : à l'import
+  (`AppModel.importFiles`) et à l'ouverture (`ReaderController.observe`), tâche `scan|<id>` (`AITaskCenter`) qui lit
+  par OvisOCR2 les pages sans `ovisocr2-<page>.md` ; une lecture de document à la fois ; cède la place à l'analyse ;
+  pastille : barre % + « Voir le détail » (`Job.log`). (b) `OCRReferenceDiff.alignedLines` / `match` (testés) :
+  texte IA posé sur les boîtes OCR ; `FuriganaLayer.marks(from:reference:frame:)` ; `.aiPageRead` → furigana refaits
+  (`furiganaGeneration` : dernier calcul seul gardé). Limite : relecture GLM pendant le scan = va-et-vient de modèle.
 - (a) **Scan obligatoire** : à l'import d'un PDF (`AppModel.importFiles`) et à l'ouverture d'un document, lancer
   (via V4) la lecture IA (OvisOCR2) des pages **pas encore lues** seulement ; petite fenêtre avec barre de
   pourcentage + « Voir le détail » (journal en direct : page, durée, erreurs — réutiliser `Diagnostics.measure`).

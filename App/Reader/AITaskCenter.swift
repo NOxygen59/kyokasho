@@ -18,9 +18,12 @@ final class AITaskCenter: ObservableObject {
         let title: String
         let started = Date()
         var progress: (done: Int, total: Int)?
+        /// Journal en direct (« Voir le détail »), 200 lignes au plus.
+        var log: [String] = []
 
         static func == (a: Job, b: Job) -> Bool {
             a.id == b.id && a.progress?.done == b.progress?.done && a.progress?.total == b.progress?.total
+                && a.log.count == b.log.count && a.log.last == b.log.last
         }
     }
 
@@ -60,6 +63,13 @@ final class AITaskCenter: ObservableObject {
         jobs[i].progress = (done, total)
     }
 
+    func log(_ id: UUID, _ line: String) {
+        guard let i = jobs.firstIndex(where: { $0.id == id }) else { return }
+        let time = Date().formatted(date: .omitted, time: .standard)
+        jobs[i].log.append("\(time)  \(line)")
+        if jobs[i].log.count > 200 { jobs[i].log.removeFirst(jobs[i].log.count - 200) }
+    }
+
     /// Arrêt demandé par l'utilisateur (la génération s'arrête au jeton suivant).
     func cancel(_ id: UUID) { tasks[id]?.cancel() }
 
@@ -82,6 +92,8 @@ final class AITaskCenter: ObservableObject {
 struct AITaskPill: View {
     @ObservedObject private var center = AITaskCenter.shared
     @State private var showList = false
+    /// Tâches dont le journal est déplié (« Voir le détail »).
+    @State private var expanded: Set<UUID> = []
     /// Tâche à arrêter (`nil` + `stopAll` = toutes) : 1re puis 2e confirmation.
     @State private var stopping: AITaskCenter.Job?
     @State private var stopAll = false
@@ -139,13 +151,38 @@ struct AITaskPill: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Tâches IA en cours").font(.headline)
             ForEach(center.jobs) { job in
-                HStack(spacing: 10) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(job.title).font(.subheadline.weight(.semibold))
-                        Text(detail(job)).font(.caption).foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 10) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(job.title).font(.subheadline.weight(.semibold))
+                            Text(detail(job)).font(.caption).foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Button("Arrêter", role: .destructive) { ask(job) }
                     }
-                    Spacer()
-                    Button("Arrêter", role: .destructive) { ask(job) }
+                    if let p = job.progress, p.total > 0 {
+                        ProgressView(value: Double(p.done), total: Double(p.total)) {
+                            EmptyView()
+                        } currentValueLabel: {
+                            Text("\(p.done * 100 / p.total) %").font(.caption2.monospacedDigit())
+                        }
+                    }
+                    if !job.log.isEmpty {
+                        DisclosureGroup(isExpanded: Binding(get: { expanded.contains(job.id) },
+                                                            set: { if $0 { expanded.insert(job.id) } else { expanded.remove(job.id) } })) {
+                            ScrollView {
+                                VStack(alignment: .leading, spacing: 3) {
+                                    ForEach(Array(job.log.enumerated().reversed()), id: \.offset) { _, line in
+                                        Text(line).font(.caption2.monospaced()).foregroundStyle(.secondary)
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                    }
+                                }
+                            }
+                            .frame(maxHeight: 180)
+                        } label: {
+                            Text("Voir le détail").font(.caption.weight(.semibold))
+                        }
+                    }
                 }
             }
             if center.jobs.count > 1 {
@@ -153,7 +190,7 @@ struct AITaskPill: View {
             }
         }
         .padding(16)
-        .frame(minWidth: 320)
+        .frame(minWidth: 360)
     }
 
     private func detail(_ job: AITaskCenter.Job) -> String {

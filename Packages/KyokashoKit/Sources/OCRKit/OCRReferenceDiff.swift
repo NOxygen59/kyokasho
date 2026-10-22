@@ -93,6 +93,54 @@ public enum OCRReferenceDiff {
         return out
     }
 
+    /// Une ligne OCR réécrite avec le texte de la seconde lecture, chaque caractère posé sur la boîte du caractère
+    /// OCR en face (identique ou remplacé) ; `nil` = caractère en plus, sans boîte propre.
+    public struct AlignedLine: Equatable, Sendable {
+        public let line: Int
+        public let text: String
+        public let boxes: [NormBox?]
+    }
+
+    /// Lignes que la seconde lecture recouvre de façon fiable (`align`), avec les boîtes de caractères de l'OCR.
+    /// Sert aux furigana : texte juste (IA), positions mesurées (OCR). Ligne sans boîte par caractère : absente.
+    public static func alignedLines(_ page: OCRPage, reference: String, minSimilarity: Double = 0.5) -> [AlignedLine] {
+        align(page, reference: reference, minSimilarity: minSimilarity).sorted { $0.key < $1.key }.compactMap { l, text in
+            let line = page.lines[l]
+            guard line.charBoxes.count == line.text.count else { return nil }
+            // Caractères OCR gardés par `align` (même filtre), avec leur boîte.
+            let kept = zip(line.text, line.charBoxes).filter { !$0.0.isWhitespace && !ignored.contains($0.0) }
+            let a = Array(text), b = kept.map(\.0)
+            guard !a.isEmpty, !b.isEmpty else { return nil }
+            return AlignedLine(line: l, text: text, boxes: match(a, b).map { $0.map { kept[$0].1 } })
+        }
+    }
+
+    /// Pour chaque caractère de `a`, l'index du caractère de `b` en face (égal ou remplacé), `nil` si ajouté.
+    static func match(_ a: [Character], _ b: [Character]) -> [Int?] {
+        if a == b { return Array(b.indices) }
+        let n = a.count, m = b.count
+        var cost = [[Int]](repeating: [Int](repeating: 0, count: m + 1), count: n + 1)
+        for i in 0...n { cost[i][0] = i }
+        for j in 0...m { cost[0][j] = j }
+        for i in 1...n {
+            for j in 1...m {
+                cost[i][j] = min(cost[i - 1][j] + 1, cost[i][j - 1] + 1, cost[i - 1][j - 1] + (a[i - 1] == b[j - 1] ? 0 : 1))
+            }
+        }
+        var out = [Int?](repeating: nil, count: n)
+        var i = n, j = m
+        while i > 0 && j > 0 {
+            if cost[i][j] == cost[i - 1][j - 1] + (a[i - 1] == b[j - 1] ? 0 : 1) {
+                out[i - 1] = j - 1; i -= 1; j -= 1
+            } else if cost[i][j] == cost[i - 1][j] + 1 {
+                i -= 1
+            } else {
+                j -= 1
+            }
+        }
+        return out
+    }
+
     /// Longueur de la plus longue sous-suite commune.
     static func commonCount(_ a: [Character], _ b: [Character]) -> Int {
         guard !a.isEmpty, !b.isEmpty else { return 0 }

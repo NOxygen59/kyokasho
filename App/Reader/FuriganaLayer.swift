@@ -109,14 +109,27 @@ enum FuriganaLayer {
 
     /// Scan : boîtes OCR normalisées → repère de la page (rotation intrinsèque comprise, voir `PageFrame`).
     // FDR-3 : sauter les kanji qui ont déjà des furigana imprimés (lignes OCR très fines collées à la ligne) et ne pas les compter comme obstacles. Voir § 6 étape 3.
-    // FDR-V3 : texte = Markdown d'OvisOCR2 aligné sur les lignes OCR (OCRReferenceDiff.align + CharacterAlignment), lectures MeCab, centrer sur le groupe de kanji.
-    static func marks(from ocr: OCRPage, frame: PageFrame) -> [Mark] {
+    /// `reference` : Markdown d'OvisOCR2 de la page (texte fiable). Les lignes qu'il recouvre prennent son texte
+    /// (lectures justes), posé sur les boîtes de caractères de l'OCR (`OCRReferenceDiff.alignedLines`) ; les
+    /// autres gardent le texte de l'OCR. Chaque lecture couvre son groupe de kanji (`Furigana.rubies`).
+    static func marks(from ocr: OCRPage, reference: String? = nil, frame: PageFrame) -> [Mark] {
         let lineRects = ocr.lines.map { frame.pageRect($0.box) }
+        var fromAI: [Int: OCRReferenceDiff.AlignedLine] = [:]
+        if let reference { for a in OCRReferenceDiff.alignedLines(ocr, reference: reference) { fromAI[a.line] = a } }
         return ocr.lines.enumerated().flatMap { l, line -> [Mark] in
-            // Une boîte par caractère, sinon les lectures tomberaient sur les mauvais caractères.
-            guard line.charBoxes.count == line.text.count else { return [] }
-            return Furigana.rubies(for: line.text).compactMap { ruby in
-                let rect = line.charBoxes[ruby.range].reduce(CGRect.null) { $0.union(frame.pageRect($1)) }
+            let text: String, boxes: [NormBox?]
+            if let aligned = fromAI[l] {
+                text = aligned.text
+                boxes = aligned.boxes
+            } else {
+                // Une boîte par caractère, sinon les lectures tomberaient sur les mauvais caractères.
+                guard line.charBoxes.count == line.text.count else { return [] }
+                text = line.text
+                boxes = line.charBoxes
+            }
+            return Furigana.rubies(for: text).compactMap { ruby in
+                // Caractère ajouté par l'IA (sans boîte) : la lecture se pose sur ceux du groupe qui en ont une.
+                let rect = boxes[ruby.range].compactMap { $0 }.reduce(CGRect.null) { $0.union(frame.pageRect($1)) }
                 guard !rect.isNull, rect.width > 0, rect.height > 0 else { return nil }
                 // La place se mesure depuis la ligne entière (pas seulement le mot).
                 let lineRect = lineRects[l]

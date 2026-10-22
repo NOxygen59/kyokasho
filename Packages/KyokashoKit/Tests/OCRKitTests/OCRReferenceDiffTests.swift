@@ -24,6 +24,21 @@ final class OCRReferenceDiffTests: XCTestCase {
         XCTAssertTrue(OCRReferenceDiff.suggestions(p, reference: "まったく別の文章です").isEmpty)
     }
 
+    func testAlignedLinesKeepOCRBoxes() {
+        // OCR : « 末来の土地 » (末 au lieu de 未), une boîte par caractère ; l'IA lit « 未来の土地 ».
+        let boxes = (0..<5).map { NormBox(x: Double($0) * 0.1, y: 0, w: 0.1, h: 0.1) }
+        let p = OCRPage(engine: "x", lines: [OCRLine(text: "末来の土地", box: NormBox(x: 0, y: 0, w: 0.5, h: 0.1),
+                                                        charBoxes: boxes, measuredCharBoxes: true, vertical: false, confidence: 1)],
+                        durationMs: 0)
+        let aligned = OCRReferenceDiff.alignedLines(p, reference: "# 未来の土地")
+        XCTAssertEqual(aligned.first?.text, "未来の土地")
+        XCTAssertEqual(aligned.first?.boxes, boxes)
+    }
+
+    func testMatchMarksInsertedCharacters() {
+        XCTAssertEqual(OCRReferenceDiff.match(Array("天井板"), Array("天板")), [0, nil, 1])
+    }
+
     func testPlainStripsMarkup() {
         XCTAssertEqual(String(OCRReferenceDiff.plain("## 表\n<table><tr><td>天井</td></tr></table> <img src=\"a\" />")), "表天井")
     }
