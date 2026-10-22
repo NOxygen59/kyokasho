@@ -69,7 +69,11 @@ struct SettingsView: View {
                     Text("CPU, mémoire et images par seconde de l'app, dans un panneau flottant ouvert depuis le menu « … » du lecteur.")
                 }
                 DiagnosticsSection()
-                // FDR-V10 : graphique de la place prise (documents, modèles, analyses, base, caches). FDR-V11 : « Effacer le cache » (garder PDF, base, OCR, notes, analyses, modèles).
+                Section("Stockage") {
+                    NavigationLink { StorageUsageView() } label: {
+                        row("internaldrive", "Place prise par l'app", tint: Atelier.Tint.cloud)
+                    }
+                }
                 Section("Comptes") {
                     NavigationLink { DriveAccountView() } label: {
                         row("externaldrive.badge.icloud", "Google Drive", tint: Atelier.Tint.cloud)

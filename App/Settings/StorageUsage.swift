@@ -1,0 +1,159 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 NOxygen59
+
+import Charts
+import OCRKit
+import SwiftUI
+
+/// Place prise par l'app sur l'iPad, par catégorie (Réglages → Stockage). Tailles réelles sur le disque
+/// (`totalFileAllocatedSize`), calculées hors du fil principal.
+enum StorageUsage {
+    struct Item: Identifiable, Equatable, Sendable {
+        var id: String { name }
+        let name: String
+        let detail: String
+        let bytes: Int64
+    }
+
+    static func compute() -> [Item] {
+        let fm = FileManager.default
+        let support = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        let app = support.appendingPathComponent("Kyokasho", isDirectory: true)
+        let caches = fm.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+        let documents = fm.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        let library = fm.urls(for: .libraryDirectory, in: .userDomainMask)[0]
+        let models = ModelStore.shared.root
+
+        var items: [Item] = []
+        // Déjà comptés dans une catégorie précise : retirés des catégories « reste ».
+        var counted: [URL] = []
+        func add(_ name: String, _ detail: String, _ urls: [URL]) {
+            let bytes = urls.reduce(Int64(0)) { $0 + size(of: $1) }
+            counted += urls
+            if bytes > 0 { items.append(Item(name: name, detail: detail, bytes: bytes)) }
+        }
+
+        add("Documents (PDF)", "Tes PDF importés", [app.appendingPathComponent("Documents", isDirectory: true)])
+        // Un élément par modèle d'IA installé (les petits ensemble).
+        let titles = Dictionary(uniqueKeysWithValues: [ModelSpec.ndlocr, .ppocr5, .glmocr, .ovisocr2, .qwen3vl4b].map { ($0.id, $0.title) })
+        var small: [URL] = []
+        for folder in (try? fm.contentsOfDirectory(at: models, includingPropertiesForKeys: nil)) ?? [] {
+            if folder.lastPathComponent == "unidic" { continue }
+            if size(of: folder) >= 200 * 1_048_576 {
+                add(titles[folder.lastPathComponent] ?? folder.lastPathComponent, "Modèle d'IA", [folder])
+            } else {
+                small.append(folder)
+            }
+        }
+        add("Autres modèles", "Mise en page, nettoyage des scans…", small)
+        add("UniDic (furigana)", "Dictionnaire de MeCab", [models.appendingPathComponent("unidic", isDirectory: true)])
+        add("Dictionnaires", "Yomitan importés", [app.appendingPathComponent("Dictionaries", isDirectory: true)])
+        add("Analyses IA", "Lectures IA, traductions, rapports", [support.appendingPathComponent("Analysis", isDirectory: true)])
+        let base = ((try? fm.contentsOfDirectory(at: app, includingPropertiesForKeys: nil)) ?? [])
+            .filter { $0.lastPathComponent.hasPrefix("kyokasho.sqlite") }
+        add("Base (OCR, notes, cartes)", "Textes lus, corrections, notes, surlignages, révisions", base)
+        add("Caches", "Vignettes, pages nettoyées, téléchargements (régénérables)", [caches])
+        add("Temporaires", "Exports, fichiers en cours", [fm.temporaryDirectory])
+        // Tout le reste du conteneur (données WebKit, réglages, journal…).
+        let rest = size(of: library) + size(of: documents) - counted.filter { $0.path.hasPrefix(library.path) || $0.path.hasPrefix(documents.path) }
+            .reduce(Int64(0)) { $0 + size(of: $1) }
+        if rest > 0 { items.append(Item(name: "Autres", detail: "Réglages, journal, données web", bytes: rest)) }
+        return items.sorted { $0.bytes > $1.bytes }
+    }
+
+    /// Taille sur le disque d'un fichier ou d'un dossier (0 s'il n'existe pas).
+    static func size(of url: URL) -> Int64 {
+        let keys: [URLResourceKey] = [.totalFileAllocatedSizeKey, .fileAllocatedSizeKey, .isRegularFileKey]
+        if let v = try? url.resourceValues(forKeys: Set(keys)), v.isRegularFile == true {
+            return Int64(v.totalFileAllocatedSize ?? v.fileAllocatedSize ?? 0)
+        }
+        guard let e = FileManager.default.enumerator(at: url, includingPropertiesForKeys: keys) else { return 0 }
+        var total: Int64 = 0
+        for case let file as URL in e {
+            guard let v = try? file.resourceValues(forKeys: Set(keys)), v.isRegularFile == true else { continue }
+            total += Int64(v.totalFileAllocatedSize ?? v.fileAllocatedSize ?? 0)
+        }
+        return total
+    }
+
+    static func format(_ bytes: Int64) -> String {
+        ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)
+    }
+}
+
+/// Réglages → Stockage → « Place prise par l'app » : barre empilée + légende détaillée.
+// FDR-V11 : « Effacer le cache » ici (garder PDF, base, OCR, notes, analyses, modèles), avec la place libérée.
+struct StorageUsageView: View {
+    @State private var items: [StorageUsage.Item]?
+    @State private var free: Int64?
+
+    private var total: Int64 { items?.reduce(0) { $0 + $1.bytes } ?? 0 }
+
+    var body: some View {
+        List {
+            if let items {
+                Section {
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack(alignment: .firstTextBaseline) {
+                            Text(StorageUsage.format(total)).font(.title2.weight(.semibold))
+                            Text("utilisés par Kyōkasho").foregroundStyle(.secondary)
+                            Spacer()
+                            if let free { Text("\(StorageUsage.format(free)) libres").font(.caption).foregroundStyle(.secondary) }
+                        }
+                        Chart(items) { item in
+                            BarMark(x: .value("Taille", item.bytes), y: .value("App", "Kyōkasho"))
+                                .foregroundStyle(by: .value("Catégorie", item.name))
+                        }
+                        .chartForegroundStyleScale(domain: items.map(\.name), range: colors(items.count))
+                        .chartXAxis(.hidden)
+                        .chartYAxis(.hidden)
+                        .chartLegend(.hidden)
+                        .frame(height: 28)
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                    }
+                    .padding(.vertical, 6)
+                }
+                Section("Détail") {
+                    ForEach(Array(items.enumerated()), id: \.element.id) { i, item in
+                        HStack(spacing: 12) {
+                            RoundedRectangle(cornerRadius: 3).fill(colors(items.count)[i]).frame(width: 14, height: 14)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(item.name)
+                                Text(item.detail).font(.caption).foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            VStack(alignment: .trailing, spacing: 2) {
+                                Text(StorageUsage.format(item.bytes)).monospacedDigit()
+                                Text("\(percent(item)) %").font(.caption).foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                }
+            } else {
+                HStack(spacing: 10) { ProgressView(); Text("Calcul de la place prise…").foregroundStyle(.secondary) }
+            }
+        }
+        .navigationTitle("Place prise par l'app")
+        .task { await refresh() }
+        .refreshable { await refresh() }
+    }
+
+    private func refresh() async {
+        let result = await Task.detached(priority: .utility) { StorageUsage.compute() }.value
+        let values = try? URL(fileURLWithPath: NSHomeDirectory()).resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey])
+        items = result
+        free = values?.volumeAvailableCapacityForImportantUsage
+    }
+
+    private func percent(_ item: StorageUsage.Item) -> String {
+        guard total > 0 else { return "0" }
+        let p = Double(item.bytes) / Double(total) * 100
+        return p < 1 ? "< 1" : String(Int(p.rounded()))
+    }
+
+    /// Couleurs du thème, puis variantes plus claires si les catégories sont nombreuses.
+    private func colors(_ n: Int) -> [Color] {
+        let base = [Atelier.Tint.read, Atelier.Tint.ai, Atelier.Tint.japanese, Atelier.Tint.annotate, Atelier.Tint.cloud]
+        return (0..<n).map { i in base[i % base.count].opacity(i < base.count ? 1 : 0.55) }
+    }
+}

@@ -255,7 +255,11 @@ Comptes (Drive) ; À propos (+ **connexion GitHub** device flow → mise à jour
   Choix des pages ; `ShareLink` / `UIDocumentPickerViewController(forExporting:)`.
 - Balises `FDR-V8`.
 
-### [ ] V10 — Réglages : graphique de la place prise par l'app
+### [x] V10 — Réglages : graphique de la place prise par l'app
+- **Fait (22/10, non vérifié sur iPad)** : `App/Settings/StorageUsage.swift` (Réglages → Stockage → « Place prise par
+  l'app ») : documents, un élément par gros modèle (≥ 200 Mo, les petits ensemble), UniDic, dictionnaires, analyses,
+  base, caches, temporaires, autres ; barre empilée Swift Charts + légende (taille, %) ; place libre de l'iPad ;
+  tirer pour recalculer. Balise `FDR-V11` posée dans `StorageUsageView`.
 - Tailles : Documents (PDF), modèles (`ModelStore.root` par modèle + `unidic`), analyses (`Analysis`), base SQLite
   (OCR, notes, cartes), caches (`Caches/*`, vignettes, nettoyage), temporaires. Barre empilée Swift Charts + légende,
   calcul hors du fil principal (`FileManager.enumerator` + `totalFileAllocatedSize`). Balises `FDR-V10`.
