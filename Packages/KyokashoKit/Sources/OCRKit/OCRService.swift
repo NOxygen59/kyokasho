@@ -90,6 +90,7 @@ public actor OCRService {
 
     /// Pages (source) dont le texte OCR contient `query`, avec un extrait autour.
     /// Un seul résultat par page et par moteur préféré (premier moteur de `engines` qui a la page).
+    // FDR-6.2 : décode toutes les pages → index FTS5 (GRDB) rempli à l'enregistrement. Voir § 6 étape 6.
     public func search(_ query: String, documentId: String, engines: [String]) -> [(page: Int, context: String)] {
         let needle = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !needle.isEmpty, let records = try? database.ocrResults(documentId: documentId) else { return [] }

@@ -345,6 +345,7 @@ public final class Translator: @unchecked Sendable {
     }
 
     /// Découpe un texte en mots (plus long mot à chaque position) : vocabulaire d'une page.
+    // FDR-6.1 : mémo des positions déjà cherchées pendant un appel (une recherche par caractère non trouvé). Voir § 6 étape 6.
     public func segment(_ text: String, options: LookupOptions = LookupOptions()) throws -> [Segment] {
         var opts = options
         opts.maxResults = 1

@@ -631,6 +631,7 @@ final class ReaderController: NSObject, ObservableObject {
 
     // MARK: Réglages
 
+    // FDR-1 : modes .singlePage/.twoUp non continus (zoom qui saute) et `fitToPage` relancé à chaque changement de taille (remet le zoom). Voir § 6 étape 1.
     func applyDisplaySettings() {
         let s = settings
         let paginated = s.scrollMode == .paginated
@@ -1139,6 +1140,7 @@ final class ReaderController: NSObject, ObservableObject {
 
     // MARK: Gestes
 
+    // FDR-1 : gestes / zoom « cassés » — pistes : tap simple qui attend l'échec du double-tap (~0,3 s), glisser en conflit avec le défilement, survol actif par défaut. Voir § 6 étape 1.
     private func configureGestures() {
         doubleTap = UITapGestureRecognizer(target: self, action: #selector(handleDoubleTap(_:)))
         doubleTap.numberOfTapsRequired = 2

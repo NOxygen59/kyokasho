@@ -10,6 +10,7 @@ import WebKit
 enum CardHTML {
     static let scheme = "kyocard"
 
+    // FDR-4 : couleurs du thème (`Theme.current`) comme `FuriganaTextView.page` (hexString). Voir § 6 étape 4.
     static func page(css: String, body: String) -> String {
         """
         <!doctype html><html><head><meta charset="utf-8">

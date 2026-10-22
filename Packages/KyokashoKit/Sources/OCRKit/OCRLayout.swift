@@ -171,6 +171,7 @@ public enum OCRLayout {
     }
 
     /// Coupe un bloc en paragraphes : alinéa (retrait d'un caractère) ou ligne précédente courte.
+    // FDR-5 : texte vertical (classe `vertical_text` de PP-DocLayout) → ordre droite → gauche. Voir § 6 étape 5.
     static func paragraphs(_ lines: [OCRLine]) -> [String] {
         guard let first = lines.first else { return [] }
         let s = lines.map(size).reduce(0, +) / Double(lines.count)
@@ -203,6 +204,7 @@ public enum OCRLayout {
 
     /// Tableaux : lignes horizontales groupées en rangées (même hauteur), cellules séparées par un vide
     /// de plus de deux caractères, cellules courtes ; au moins deux rangées voisines d'au moins deux cellules.
+    // FDR-5 : cellules exactes par PP-Structure SLANet (ONNX, demander le téléchargement). Voir § 6 étape 5.
     static func tables(_ lines: [OCRLine], median: Double) -> [Table] {
         let horizontal = lines.indices.filter { !lines[$0].vertical }.sorted { lines[$0].box.midY < lines[$1].box.midY }
         var rows: [[Int]] = []

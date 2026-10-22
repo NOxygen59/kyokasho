@@ -10,6 +10,7 @@ import WebKit
 /// Lectures d'un texte : mots reconnus par le dictionnaire Yomitan installé (lecture du dictionnaire,
 /// posée sur les kanji du mot), sinon l'analyseur japonais du système.
 enum TextFurigana {
+    // FDR-N : comparer la lecture MeCab et celle du dictionnaire Yomitan ; désaccord → lecture du dictionnaire + marque « doute ». Voir § 6 Fiabilité N.
     static func rubies(_ text: String, segments: [Translator.Segment]) -> [(range: Range<Int>, reading: String)] {
         // MeCab installé : lectures selon le contexte (plus justes que la forme de base du dictionnaire).
         if Furigana.analyzer != nil { return Furigana.rubies(for: text).map { ($0.range, $0.reading) } }
@@ -162,6 +163,7 @@ struct FuriganaTextView: View {
             .replacingOccurrences(of: ">", with: "&gt;").replacingOccurrences(of: "\"", with: "&quot;")
     }
 
+    // FDR-3 : page surtout verticale → `writing-mode: vertical-rl`. Voir § 6 étape 3.
     static func page(_ body: String) -> String {
         let text = UIColor(Atelier.textPrimary).hexString, accent = UIColor(Atelier.Tint.japanese).hexString
         let line = UIColor(Atelier.hairline).hexString

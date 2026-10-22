@@ -39,6 +39,7 @@ public struct GLMOCREngine: OCREngine {
         // 2. Relecture de chaque ligne par l'IA.
         let model = try await GLMModel.shared.container(directory: store.directory(.glmocr))
         var lines: [OCRLine] = []
+        // FDR-7 : une génération par ligne → grouper 3-5 lignes voisines par image, découper la réponse par \n. Voir § 6 étape 7.
         for line in base.lines {
             try Task.checkCancellation()
             guard let crop = Self.crop(image, line.box, margin: line.vertical ? 0.5 : 0.15) else { lines.append(line); continue }

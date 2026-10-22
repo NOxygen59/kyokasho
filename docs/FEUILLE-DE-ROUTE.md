@@ -55,6 +55,13 @@ Pas de simulateur, pas d'iPad sans ma permission.
   (Read d'un PNG réduit à ≤ 900 px) vaut mieux qu'une longue réflexion pour tout ce qui est visuel.
 - Fin de session : commit + `git push` + cocher ici + 3-6 lignes de résumé simple à l'utilisateur.
 
+### Balises dans le code (`FDR-…`)
+- Chaque endroit du code à modifier pour une étape non faite porte un commentaire `// FDR-<étape> : <quoi faire>`
+  (ex. `FDR-1`, `FDR-3`, `FDR-6.2`, `FDR-N`, `FDR-O`). Pour démarrer une étape : `grep -rn 'FDR-3' App Packages`
+  → liste exacte des fichiers et fonctions, sans explorer.
+- Étape finie : **retirer** ses balises (`grep -rn 'FDR-X'` doit être vide) et cocher l'étape ici.
+- Nouvelle étape planifiée : poser ses balises aux endroits à modifier dans le même commit que le plan.
+
 ## 4. Release (si demandée)
 
 1. `project.yml` : `MARKETING_VERSION` (+0.0.1 correctif, +0.1 grosse étape) et `CURRENT_PROJECT_VERSION` +1.

@@ -108,6 +108,7 @@ enum FuriganaLayer {
     // MARK: Calcul
 
     /// Scan : boîtes OCR normalisées → repère de la page (rotation intrinsèque comprise, voir `PageFrame`).
+    // FDR-3 : sauter les kanji qui ont déjà des furigana imprimés (lignes OCR très fines collées à la ligne) et ne pas les compter comme obstacles. Voir § 6 étape 3.
     static func marks(from ocr: OCRPage, frame: PageFrame) -> [Mark] {
         let lineRects = ocr.lines.map { frame.pageRect($0.box) }
         return ocr.lines.enumerated().flatMap { l, line -> [Mark] in
@@ -245,6 +246,7 @@ enum FuriganaLayer {
 
     /// Dans le repère de la page (y vers le haut), déjà transformé par l'appelant.
     /// Fond couleur papier sous les kana, pour rester lisible sur un dessin ou une trame.
+    // FDR-3 : texte vertical jamais vérifié (kana à droite de la colonne, de haut en bas ; `room` mesure la colonne de droite). Voir § 6 étape 3.
     static func draw(_ marks: [Mark], in context: CGContext) {
         context.saveGState()
         context.textMatrix = .identity

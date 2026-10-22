@@ -28,6 +28,7 @@ public enum Furigana {
     private static let analyzerLock = NSLock()
     nonisolated(unsafe) private static var storedAnalyzer: (@Sendable (String) -> [(range: NSRange, reading: String)])?
 
+    // FDR-N : même contrôle MeCab / dictionnaire pour les furigana de la page (le dictionnaire est dans l'app : passer un second analyseur ou un callback). Voir § 6 Fiabilité N.
     public static func rubies(for text: String) -> [Ruby] {
         let ns = text as NSString
         guard ns.length > 0, text.contains(where: isKanji) else { return [] }

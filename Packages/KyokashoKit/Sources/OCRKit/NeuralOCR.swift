@@ -68,6 +68,7 @@ public struct RGBImage: Sendable, Equatable {
     }
 
     /// Rotation de 90° dans le sens inverse des aiguilles (une colonne verticale devient une ligne).
+    // FDR-6.3 : pixel par pixel → vImageRotate90_ARGB8888 (passer par RGBA). Voir § 6 étape 6.
     public func rotatedCounterClockwise() -> RGBImage {
         var out = [UInt8](repeating: 0, count: pixels.count)
         // (x, y) → (y, width - 1 - x) dans une image de taille height × width.

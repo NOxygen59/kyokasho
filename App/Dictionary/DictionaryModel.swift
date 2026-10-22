@@ -142,6 +142,7 @@ final class DictionaryModel: ObservableObject {
         return await Task.detached(priority: .utility) { (try? translator.segment(text, options: options)) ?? [] }.value
     }
 
+    // FDR-4 : passer la palette du thème courant au rendu. Voir § 6 étape 4.
     func renderer(canAddCards: Bool = false, added: Set<String> = []) -> GlossaryRenderer {
         var options = profile.display
         options.canAddCards = canAddCards

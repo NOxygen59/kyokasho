@@ -200,6 +200,7 @@ struct ReviewScreen: View {
         withAnimation(.easeOut(duration: 0.15)) { showAnswer = true }
     }
 
+    // FDR-6.4 : accès base sur le fil principal → tâche de fond (aussi `answer`). Voir § 6 étape 6.
     private func advance(excluding: Int64?) {
         review.refresh()
         do {
