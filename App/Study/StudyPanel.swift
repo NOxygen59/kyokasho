@@ -82,6 +82,8 @@ struct StudyPanel: View {
 struct StudyTextTab: View {
     @EnvironmentObject private var model: AppModel
     @ObservedObject var reader: ReaderController
+    /// `reader.rereading` vient d'ici.
+    @ObservedObject private var aiTasks = AITaskCenter.shared
     @ObservedObject private var deepl = DeepLService.shared
     @State private var translation: String?
     /// Texte mis en forme (titres, paragraphes, tableaux) ou tel que lu, ligne par ligne.
@@ -323,7 +325,7 @@ struct StudyTextTab: View {
 
     /// « N caractères douteux » + relecture par l'IA (GLM-OCR) ou indication pour corriger à la main.
     @ViewBuilder
-    // FDR-V5 : se mettre à jour après chaque nouvelle analyse OCR de la page. FDR-V4 : afficher les tâches IA en cours (AITaskCenter).
+    // FDR-V5 : se mettre à jour après chaque nouvelle analyse OCR de la page.
     private func doubtRow(_ page: OCRPage) -> some View {
         let lines = OCRProofreader.doubtful(page)
         let count = page.lines.reduce(0) { $0 + ($1.doubt?.count ?? 0) }

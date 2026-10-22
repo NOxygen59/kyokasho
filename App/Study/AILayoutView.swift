@@ -19,12 +19,16 @@ struct AILayoutView: View {
     @State private var markdown: String?
     @State private var html = ""
     @State private var height: CGFloat = 200
-    @State private var reading = false
-    @State private var error: String?
+    @ObservedObject private var center = AITaskCenter.shared
+    /// Lecture / traduction : tâches de l'app (continuent si on change de page), une par page.
+    private var layoutKey: String { "layout|\(reader.document.id)|\(source)" }
+    private var translateKey: String { "translate|\(reader.document.id)|\(source)" }
+    private var reading: Bool { center.isRunning(layoutKey) }
+    private var translating: Bool { center.isRunning(translateKey) }
+    private var error: String? { center.errors[layoutKey] ?? center.errors[translateKey] }
     /// Traduction française (Qwen3-VL, hors ligne) de la mise en page, gardée par page.
     @AppStorage("study.aiLayoutFrench") private var french = false
     @State private var frenchMarkdown: String?
-    @State private var translating = false
 
     private var source: Int { reader.focusSource }
     private var file: URL { DocumentAnalysisService.rawURL(reader.document.id, ModelSpec.ovisocr2.id, source) }
@@ -40,7 +44,7 @@ struct AILayoutView: View {
             } else if markdown == nil {
                 Text("Pas encore de mise en page IA pour cette page.").font(.footnote).foregroundStyle(Atelier.textSecondary)
                 if OvisOCR2Reader().isAvailable {
-                    Button { Task { await read() } } label: {
+                    Button { read() } label: {
                         Label("Mettre en page avec OvisOCR2", systemImage: "sparkles.rectangle.stack")
                     }
                     .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.ai))
@@ -55,14 +59,14 @@ struct AILayoutView: View {
             if markdown != nil, !html.isEmpty {
                 RubyWebView(html: html, height: $height, onLookup: onLookup)
                     .frame(height: height)
-                Button { Task { await read() } } label: {
+                Button { read() } label: {
                     Label("Refaire la mise en page", systemImage: "arrow.clockwise").font(.caption)
                 }
                 .foregroundStyle(Atelier.textTertiary)
                 .disabled(reading || !OvisOCR2Reader().isAvailable)
             }
         }
-        .task(id: "\(reader.document.id)|\(source)|\(furigana)|\(tint.rawValue)|\(french)") { await load() }
+        .task(id: "\(reader.document.id)|\(source)|\(furigana)|\(tint.rawValue)|\(french)|\(center.finished)") { await load() }
     }
 
     /// Japonais / français (si traduit), ou bouton de traduction hors ligne par Qwen3-VL.
@@ -82,13 +86,13 @@ struct AILayoutView: View {
                 .pickerStyle(.segmented)
                 .frame(maxWidth: 220)
                 Spacer()
-                Button { Task { await translate() } } label: { Image(systemName: "arrow.clockwise") }
+                Button { translate() } label: { Image(systemName: "arrow.clockwise") }
                     .accessibilityLabel("Retraduire la page")
                     .foregroundStyle(Atelier.textTertiary)
                     .disabled(!Qwen3VLReader().isAvailable)
             }
         } else if Qwen3VLReader().isAvailable {
-            Button { Task { await translate() } } label: {
+            Button { translate() } label: {
                 Label("Traduire en français (hors ligne)", systemImage: "character.bubble")
             }
             .font(.footnote.weight(.semibold))
@@ -96,27 +100,23 @@ struct AILayoutView: View {
         }
     }
 
-    private func translate() async {
+    /// Traduction de la page (fichier gardé), même si on change de page entre-temps.
+    private func translate() {
         guard let markdown else { return }
-        translating = true
-        error = nil
-        defer { translating = false }
-        do {
+        let source = source, frenchFile = frenchFile
+        center.run(translateKey, title: "Traduction Qwen3-VL p. \(source + 1)") { _ in
             let fr = try await Diagnostics.measure("traduction p. \(source)", "traduction") {
                 try await Qwen3VLReader().translate(markdown: markdown)
             }
+            // Arrêtée : la génération rend un texte partiel, jamais gardé.
+            try Task.checkCancellation()
             try? FileManager.default.createDirectory(at: frenchFile.deletingLastPathComponent(), withIntermediateDirectories: true)
             try fr.write(to: frenchFile, atomically: true, encoding: .utf8)
-            await Qwen3VLReader().unload()
-            french = true
-            await load()
-        } catch {
-            self.error = error.localizedDescription
+            UserDefaults.standard.set(true, forKey: "study.aiLayoutFrench")
         }
     }
 
     private func load() async {
-        error = nil
         markdown = try? String(contentsOf: file, encoding: .utf8)
         frenchMarkdown = try? String(contentsOf: frenchFile, encoding: .utf8)
         html = ""
@@ -128,23 +128,19 @@ struct AILayoutView: View {
         html = built
     }
 
-    private func read() async {
-        reading = true
-        error = nil
-        defer { reading = false }
+    /// Mise en page de la page par OvisOCR2 (fichier gardé), même si on change de page entre-temps.
+    private func read() {
         let budget = reader.ocrPage.map(DocumentAnalysisService.tokenBudget) ?? 2048
-        do {
+        let source = source, file = file, frenchFile = frenchFile, url = reader.fileURL
+        center.run(layoutKey, title: "Mise en page IA p. \(source + 1)") { _ in
             let text = try await Diagnostics.measure("mise en page IA p. \(source)", "miseenpage") {
-                try await OvisOCR2Reader().read(.pdfPage(url: reader.fileURL, index: source), maxTokens: budget)
+                try await OvisOCR2Reader().read(.pdfPage(url: url, index: source), maxTokens: budget)
             }
+            try Task.checkCancellation()
             try? FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
             try text.write(to: file, atomically: true, encoding: .utf8)
             // Mise en page refaite : l'ancienne traduction ne correspond plus.
             try? FileManager.default.removeItem(at: frenchFile)
-            await OvisOCR2Reader().unload()
-            await load()
-        } catch {
-            self.error = error.localizedDescription
         }
     }
 

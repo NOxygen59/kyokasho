@@ -43,8 +43,6 @@ final class ReaderController: NSObject, ObservableObject {
     @Published private(set) var ocrPage: OCRPage? {
         // Nouvelle page de travail lue : ses lignes douteuses partent à GLM-OCR (s'il est installé et l'option active).
         didSet {
-            // Autre page : la relecture de l'ancienne s'arrête (son résultat est jeté).
-            if ocrPage == nil { rereadTask?.cancel(); rereading = false }
             if ocrPage != nil, oldValue?.lines != ocrPage?.lines || oldValue == nil {
                 DispatchQueue.main.async { [weak self] in self?.refineOCR() }
             }
@@ -151,6 +149,8 @@ final class ReaderController: NSObject, ObservableObject {
     /// Vrai pendant une reconstruction : le changement de page qui en résulte n'est pas un geste.
     private var rebuilding = false
     private var observers: [NSObjectProtocol] = []
+    /// Fin d'une tâche IA (peut-être lancée par un lecteur précédent) : la page affichée est relue du cache.
+    private var aiFinished: AnyCancellable?
     private var savePositionWork: DispatchWorkItem?
     private var cropTask: Task<Void, Never>?
     private var ocrTask: Task<Void, Never>?
@@ -1062,7 +1062,7 @@ final class ReaderController: NSObject, ObservableObject {
     }
 
     /// Pilule du panneau : travailler sur l'autre page affichée (double page).
-    // FDR-V4 : changer de page n'annule plus les tâches IA. FDR-V13 : ne rien republier si la page de travail ne change pas.
+    // FDR-V13 : ne rien republier si la page de travail ne change pas.
     func focus(_ source: Int) {
         guard source != focusSource, shownSources.contains(source) else { return }
         ocrTask?.cancel()
@@ -1118,10 +1118,9 @@ final class ReaderController: NSObject, ObservableObject {
         if on { pageSettled() }
     }
 
-    // FDR-V4 : ne plus annuler ici les tâches IA (relecture, vérification, mise en page, traduction) : elles passent à AITaskCenter.
+    /// Les tâches IA (relecture, vérification, mise en page, traduction) continuent : elles sont à `AITaskCenter`.
     func close() {
         savePositionWork?.perform()
-        rereadTask?.cancel()
         cropTask?.cancel()
         sharpenTask?.cancel()
         furiganaTask?.cancel()
@@ -1310,9 +1309,10 @@ final class ReaderController: NSObject, ObservableObject {
     // MARK: Relecture de l'OCR
 
     static let aiRereadKey = "ocr.aiReread"
-    /// Relecture IA en cours sur la page de travail.
-    @Published private(set) var rereading = false
-    private var rereadTask: Task<Void, Never>?
+    /// Relecture IA en cours sur la page de travail (vue : observer aussi `AITaskCenter.shared`).
+    var rereading: Bool { AITaskCenter.shared.isRunning(prefix: rereadKey(focusSource)) }
+    /// Préfixe des relectures d'une page ; la clé complète ajoute la version du résultat OCR relu.
+    func rereadKey(_ source: Int) -> String { "reread|\(document.id)|\(source)|" }
 
     /// Page de travail : relecture par le dictionnaire si pas encore faite (pages en cache d'avant, dictionnaire
     /// chargé après l'OCR), puis lignes douteuses à GLM-OCR.
@@ -1332,6 +1332,18 @@ final class ReaderController: NSObject, ObservableObject {
         }
     }
 
+    /// Résultat écrit en cache par une tâche IA pour la page affichée (même moteur) : affiché.
+    private func reloadOCRAfterAITask() {
+        guard !closed, let shown = ocrPage else { return }
+        let source = focusSource, documentId = document.id, service = model.ocr
+        Task { [weak self] in
+            guard let cached = await service.cached(documentId: documentId, pageIndex: source, engine: shown.engine),
+                  cached != shown, let self, !self.closed, self.focusSource == source, self.ocrPage == shown else { return }
+            self.showOCR(cached, source: source)
+            self.ocrPage = cached
+        }
+    }
+
     /// Lignes douteuses de la page de travail relues par GLM-OCR (installé, option active ou demande directe).
     func rereadDoubtful(force: Bool = false) {
         guard let page = ocrPage, page.engine != OCREngineID.pdfText, force || page.reread != true else { return }
@@ -1339,19 +1351,23 @@ final class ReaderController: NSObject, ObservableObject {
         let engine = GLMOCREngine()
         let lines = OCRProofreader.doubtful(page)
         guard engine.isAvailable, !lines.isEmpty else { return }
-        // Une seule relecture à la fois : la précédente (autre version de la page) est abandonnée.
-        rereadTask?.cancel()
+        // Tâche de l'app (continue si on change de page ou ferme le lecteur). Même version déjà en cours : rien
+        // (le lecteur se met à jour à la fin, cf. `AITaskCenter.finished`). Autre version : l'ancienne est remplacée.
         let source = focusSource, url = fileURL, documentId = document.id, service = model.ocr
-        rereading = true
-        rereadTask = Task { [weak self] in
-            defer { if !Task.isCancelled { self?.rereading = false } }
-            guard let read = try? await Diagnostics.measure("GLM-OCR relit \(lines.count) ligne(s) p. \(source)", "relecture", {
-                      try await engine.reread(page, lines: lines, input: .pdfPage(url: url, index: source))
-                  }),
-                  !Task.isCancelled, let self,
-                  // Page changée entre-temps (correction à la main, autre OCR) : résultat jeté.
-                  self.ocrPage == page else { return }
+        let key = rereadKey(source) + String(page.hashValue)
+        guard !AITaskCenter.shared.isRunning(key) else { return }
+        AITaskCenter.shared.cancel(prefix: rereadKey(source))
+        AITaskCenter.shared.run(key, title: "Relecture GLM-OCR p. \(source + 1)") { [weak self] _ in
+            let read = try await Diagnostics.measure("GLM-OCR relit \(lines.count) ligne(s) p. \(source)", "relecture") {
+                try await engine.reread(page, lines: lines, input: .pdfPage(url: url, index: source))
+            }
+            try Task.checkCancellation()
+            // Page changée entre-temps (correction à la main, autre OCR) : résultat jeté.
+            let shown = self.flatMap { $0.focusSource == source && !$0.closed ? $0.ocrPage : nil }
+            let current = shown == nil ? await service.cached(documentId: documentId, pageIndex: source, engine: page.engine) : shown
+            guard current == nil || current == page else { return }
             try? await service.store(read, documentId: documentId, pageIndex: source)
+            guard let self, !self.closed else { return }
             self.showOCR(read, source: source)
             if self.focusSource == source { self.ocrPage = read }
         }
@@ -1372,32 +1388,32 @@ final class ReaderController: NSObject, ObservableObject {
 
     @Published private(set) var verifyState: VerifyState = .idle
     @Published var verifications: [PageVerification] = []
-    private var verifyTask: Task<Void, Never>?
+    private var verifyKey: String { "verify|\(document.id)" }
     /// Acceptations appliquées l'une après l'autre (jamais deux écritures de la même page en même temps).
     private var acceptChain: Task<Void, Never>?
 
     /// Relit les pages affichées (double page : les deux) avec OvisOCR2 et propose les lignes qui diffèrent.
     /// Rien n'est changé sans accord ; le modèle est libéré à la fin.
     func verifyShownPages() {
-        guard OvisOCR2Reader().isAvailable else { return }
-        verifyTask?.cancel()
-        let sources = shownSources, url = fileURL, service = model.ocr
+        guard OvisOCR2Reader().isAvailable, !AITaskCenter.shared.isRunning(verifyKey) else { return }
+        let sources = shownSources, url = fileURL, service = model.ocr, documentId = document.id
+        let focused = focusSource, focusedPage = ocrPage, engines = preferredEngines()
         verifications = []
         verifyState = .running(done: 0, total: sources.count)
-        verifyTask = Task { [weak self] in
+        // Tâche de l'app : continue si on change de page ou ferme le lecteur (le Markdown lu reste gardé).
+        AITaskCenter.shared.run(verifyKey, title: "Vérification OvisOCR2") { [weak self] id in
+            defer { if let self, case .running = self.verifyState { self.verifyState = Task.isCancelled ? .idle : .done } }
             for (k, source) in sources.enumerated() {
-                guard let self, !Task.isCancelled else { return }
+                AITaskCenter.shared.setProgress(id, done: k, total: sources.count)
+                guard !Task.isCancelled else { break }
                 var result = PageVerification(source: source, suggestions: [])
-                let page = source == self.focusSource ? self.ocrPage : nil
-                let ocr: OCRPage?
-                if let page {
-                    ocr = page
-                } else {
-                    let cached = await self.cachedOCR(source: source)
-                    if let cached { ocr = cached } else {
-                        let engine = await self.scanEngine(source: source)
-                        ocr = try? await service.page(documentId: self.document.id, url: url, pageIndex: source, engine: engine)
-                    }
+                // Lecteur fermé entre-temps : on continue avec ce qui a été noté au départ (le Markdown est gardé).
+                var ocr: OCRPage? = source == focused ? focusedPage : nil
+                for engine in engines where ocr == nil {
+                    ocr = await service.cached(documentId: documentId, pageIndex: source, engine: engine)
+                }
+                if ocr == nil, let engine = await self?.scanEngine(source: source) {
+                    ocr = try? await service.page(documentId: documentId, url: url, pageIndex: source, engine: engine)
                 }
                 result.engine = ocr?.engine
                 if let ocr {
@@ -1406,9 +1422,11 @@ final class ReaderController: NSObject, ObservableObject {
                             try await OvisOCR2Reader().read(.pdfPage(url: url, index: source),
                                                             maxTokens: DocumentAnalysisService.tokenBudget(ocr))
                         }
+                        // Arrêtée : texte partiel, jamais gardé.
+                        try Task.checkCancellation()
                         Diagnostics.log("OvisOCR2 page \(source) : \(markdown.count) caractères lus", "verif")
                         // Gardé : sert aussi à la vue « Mise en page IA » du panneau Texte.
-                        let file = DocumentAnalysisService.rawURL(self.document.id, ModelSpec.ovisocr2.id, source)
+                        let file = DocumentAnalysisService.rawURL(documentId, ModelSpec.ovisocr2.id, source)
                         try? FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
                         try? markdown.write(to: file, atomically: true, encoding: .utf8)
                         result.suggestions = OCRReferenceDiff.suggestions(ocr, reference: markdown)
@@ -1419,22 +1437,17 @@ final class ReaderController: NSObject, ObservableObject {
                 } else {
                     result.error = "Page pas encore lue par l'OCR."
                 }
-                guard !Task.isCancelled else { return }
-                self.verifications.append(result)
-                self.verifyState = .running(done: k + 1, total: sources.count)
+                guard !Task.isCancelled else { break }
+                self?.verifications.append(result)
+                self?.verifyState = .running(done: k + 1, total: sources.count)
             }
-            // Seul OvisOCR2 est libéré (GLM-OCR peut servir à la relecture des lignes douteuses).
-            await OvisOCR2Reader().unload()
-            self?.verifyState = .done
         }
     }
 
+    /// Arrêt confirmé deux fois (feuille de vérification). Le modèle est libéré par inactivité (`GLMModel`).
     func cancelVerification() {
-        let task = verifyTask
-        task?.cancel()
+        AITaskCenter.shared.cancel(key: verifyKey)
         verifyState = .idle
-        // Libéré une fois la génération arrêtée (elle s'arrête au jeton suivant).
-        Task { await task?.value; await OvisOCR2Reader().unload() }
     }
 
     /// Propositions acceptées : chaque ligne prend le texte d'OvisOCR2 (marquée corrigée, comme à la main),
@@ -1490,8 +1503,6 @@ final class ReaderController: NSObject, ObservableObject {
     /// Correction à la main d'une ligne (gardée : la relecture automatique n'y touche plus).
     func correctOCRLine(_ index: Int, text: String) {
         guard var page = ocrPage, page.lines.indices.contains(index) else { return }
-        rereadTask?.cancel()
-        rereading = false
         let new = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !new.isEmpty else { return }
         var line = page.lines[index]
@@ -1968,6 +1979,9 @@ final class ReaderController: NSObject, ObservableObject {
                 self.hasSelection = !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             }
         })
+        aiFinished = AITaskCenter.shared.$finished.dropFirst().sink { [weak self] _ in
+            DispatchQueue.main.async { self?.reloadOCRAfterAITask() }
+        }
         observers.append(center.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated {
                 self?.savePositionWork?.perform()

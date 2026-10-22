@@ -162,7 +162,13 @@ Comptes (Drive) ; À propos (+ **connexion GitHub** device flow → mise à jour
   l'ouverture de l'écran et le décharge à la fermeture. Ne pas interrompre une analyse en cours (V4) : si
   `DocumentAnalysisService.progress != nil`, ne rien décharger. Balises `FDR-V12`.
 
-### [ ] V4 — Une tâche IA continue quand on change de page ou de vue ; arrêt seulement par bouton (double confirmation)
+### [x] V4 — Une tâche IA continue quand on change de page ou de vue ; arrêt seulement par bouton (double confirmation)
+- **Fait (22/10, non vérifié sur iPad)** : `App/Reader/AITaskCenter.swift` (`AITaskCenter` + pastille
+  `AITaskPill` sur le lecteur et la bibliothèque, « Arrêter » → 2 alertes). Passent par lui : relecture GLM
+  (clé `reread|doc|page|version`, nouvelle version = l'ancienne remplacée), vérification Ovis (continue lecteur fermé,
+  Markdown gardé ; propositions perdues si le lecteur est fermé), mise en page IA et traduction (`AILayoutView`).
+  Texte partiel après arrêt jamais gardé (`Task.checkCancellation`). Lecteur rafraîchi à la fin d'une tâche
+  (`AITaskCenter.finished` → `reloadOCRAfterAITask`). L'analyse du document reste dans `DocumentAnalysisService`.
 - Aujourd'hui annulées en changeant de page : `ReaderController.ocrPage didSet` (`rereadTask?.cancel()` quand
   `ocrPage == nil`), `focus(_:)`, `pageChanged`, `close()` (relecture, vérification), `ensureOCR` (file vidée).
 - Faire : un **gestionnaire de tâches IA** unique (`AITaskCenter`, `@MainActor ObservableObject`) qui possède les

@@ -10,6 +10,9 @@ import SwiftUI
 struct VerifySheet: View {
     @ObservedObject var reader: ReaderController
     @Environment(\.dismiss) private var dismiss
+    /// Arrêt : deux confirmations (la lecture coûte des minutes).
+    @State private var confirmStop = false
+    @State private var confirmStopAgain = false
 
     var body: some View {
         NavigationStack {
@@ -22,7 +25,7 @@ struct VerifySheet: View {
                             Text("OvisOCR2 lit la page \(done + 1) sur \(total)… (quelques dizaines de secondes par page)")
                                 .font(.footnote)
                         }
-                        Button("Arrêter", role: .destructive) { reader.cancelVerification() }
+                        Button("Arrêter", role: .destructive) { confirmStop = true }
                     }
                 case .done where reader.verifications.allSatisfy({ $0.suggestions.isEmpty && $0.error == nil }):
                     Section { Label("Aucune différence : OvisOCR2 lit la même chose.", systemImage: "checkmark.seal") }
@@ -61,6 +64,18 @@ struct VerifySheet: View {
             .navigationTitle("Vérification (OvisOCR2)")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("OK") { dismiss() } } }
+            .alert("Arrêter la vérification ?", isPresented: $confirmStop) {
+                Button("Continuer", role: .cancel) {}
+                Button("Arrêter", role: .destructive) {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { confirmStopAgain = true }
+                }
+            } message: {
+                Text("Elle continue même si tu fermes cette fenêtre ou changes de page.")
+            }
+            .alert("Vraiment arrêter ?", isPresented: $confirmStopAgain) {
+                Button("Non, continuer", role: .cancel) {}
+                Button("Oui, arrêter", role: .destructive) { reader.cancelVerification() }
+            }
         }
     }
 }

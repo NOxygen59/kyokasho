@@ -61,6 +61,8 @@ struct RootView: View {
             LibraryView()
                 .safeAreaInset(edge: .top, spacing: 0) { UpdateBanner() }
         }
+        // Tâches IA lancées dans le lecteur et toujours en cours.
+        .overlay(alignment: .bottomLeading) { AITaskPill().padding(Atelier.gap) }
         .task { AppUpdate.shared.checkAtLaunch(); MorphologyService.shared.loadIfInstalled() }
         .fullScreenCover(item: Binding(
             get: { model.openDocumentId.flatMap { id in model.documents.first { $0.id == id } } },

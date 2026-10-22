@@ -181,6 +181,9 @@ struct ReaderScreen: View {
             GeometryReader { area in
                 ZStack(alignment: .topLeading) {
                     FloatingToolbar(area: area.size) { vertical in toolItems(vertical: vertical) }
+                    AITaskPill()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+                        .padding(Atelier.gap)
                     if monitorEnabled && monitorShown {
                         ResourceMonitorPanel(area: area.size)
                     }
