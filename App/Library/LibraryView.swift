@@ -18,6 +18,7 @@ struct LibraryView: View {
     @State private var showMerge = false
     @State private var analyzing: LibraryDocument?
     @State private var exporting: LibraryDocument?
+    @State private var addingPages: LibraryDocument?
     @State private var showDictionary = false
     @State private var renaming: LibraryDocument?
     @EnvironmentObject private var review: ReviewModel
@@ -111,6 +112,9 @@ struct LibraryView: View {
             ReviewScreen().environmentObject(model).environmentObject(review).preferredColorScheme(.dark)
         }
         .onAppear { review.refresh() }
+        .sheet(item: $addingPages) { document in
+            AddPagesView(document: document).environmentObject(model).preferredColorScheme(.dark)
+        }
         .sheet(item: $exporting) { document in
             DocumentExportSheet(document: document)
                 .environmentObject(model).environmentObject(model.review).preferredColorScheme(.dark)
@@ -300,7 +304,6 @@ struct LibraryView: View {
     }
 
     @ViewBuilder
-    // FDR-V14 : « Ajouter des pages… » (ordre réglable).
     private func menu(for document: LibraryDocument) -> some View {
         Button { model.openDocumentId = document.id } label: { Label("Ouvrir", systemImage: "book") }
         Button {
@@ -320,6 +323,9 @@ struct LibraryView: View {
                 Label("Analyser le document entier", systemImage: "checkmark.seal")
             }
         }
+        Button {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { addingPages = document }
+        } label: { Label("Ajouter des pages…", systemImage: "doc.badge.plus") }
         Button {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { exporting = document }
         } label: { Label("Exporter…", systemImage: "square.and.arrow.up") }

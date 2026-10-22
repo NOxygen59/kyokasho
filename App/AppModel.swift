@@ -110,6 +110,8 @@ final class AppModel: ObservableObject {
                 }
             }
             .store(in: &cancellables)
+        // « Ajouter des pages… » interrompu (app arrêtée au milieu) : annulé ou terminé.
+        PageShift.reconcile(self)
     }
 
     var colorScheme: ColorScheme? {

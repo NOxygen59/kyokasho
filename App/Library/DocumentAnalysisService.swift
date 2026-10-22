@@ -34,10 +34,10 @@ final class DocumentAnalysisService: ObservableObject {
     private var cache: [String: DocumentAnalysis] = [:]
     private var task: Task<Void, Never>?
 
-    static var folder: URL {
+    nonisolated static var folder: URL {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("Analysis", isDirectory: true)
     }
-    static func rawURL(_ id: String, _ reader: String, _ page: Int) -> URL {
+    nonisolated static func rawURL(_ id: String, _ reader: String, _ page: Int) -> URL {
         folder.appendingPathComponent(id, isDirectory: true).appendingPathComponent("\(reader)-\(page).md")
     }
 
@@ -63,6 +63,18 @@ final class DocumentAnalysisService: ObservableObject {
         guard var r = report(for: id) else { return }
         change(&r)
         save(r)
+    }
+
+    /// Pages insérées avant celles du document (`PageShift`) : rapport renuméroté de `offset`.
+    func shiftReport(_ id: String, by offset: Int) {
+        guard offset != 0 else { return }
+        update(id) { r in
+            r.pages = Dictionary(uniqueKeysWithValues: r.pages.map { page, value in
+                var value = value
+                value.source = page + offset
+                return (page + offset, value)
+            })
+        }
     }
 
     func forget(_ id: String) {

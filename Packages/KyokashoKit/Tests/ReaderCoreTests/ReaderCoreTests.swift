@@ -175,6 +175,25 @@ final class DatabaseTests: XCTestCase {
         db = try AppDatabase.inMemory()
     }
 
+    func testShiftPagesMovesEverythingByOffset() throws {
+        var doc = LibraryDocument(id: "d", title: "Manuel", originalFileName: "m.pdf", pageCount: 3, fileSize: 1)
+        doc.lastPageIndex = 2
+        try db.save(doc)
+        try db.save(Highlight(documentId: "d", pageIndex: 0, rects: [], color: .yellow, text: "a"))
+        try db.save(PageComment(documentId: "d", pageIndex: 1, body: "note"))
+        try db.save(InkDrawing(documentId: "d", pageIndex: 0, data: Data([1])), isEmpty: false)
+        try db.save(InkDrawing(documentId: "d", pageIndex: 2, data: Data([2])), isEmpty: false)
+        try db.shiftPages(documentId: "d", by: 2, pageCount: 5, fileSize: 9)
+        XCTAssertEqual(try db.highlights(documentId: "d").map(\.pageIndex), [2])
+        XCTAssertEqual(try db.comments(documentId: "d").map(\.pageIndex), [3])
+        XCTAssertEqual(try db.inkDrawing(documentId: "d", pageIndex: 2)?.data, Data([1]))
+        XCTAssertEqual(try db.inkDrawing(documentId: "d", pageIndex: 4)?.data, Data([2]))
+        let moved = try db.document(id: "d")
+        XCTAssertEqual(moved?.pageCount, 5)
+        XCTAssertEqual(moved?.lastPageIndex, 4)
+        XCTAssertEqual(moved?.firstPageIndex, 2)
+    }
+
     func testFirstPageIndex() throws {
         var doc = LibraryDocument(id: "d", title: "Manuel", originalFileName: "m.pdf", pageCount: 100, fileSize: 1)
         XCTAssertEqual(doc.pageLabel(0), "1")

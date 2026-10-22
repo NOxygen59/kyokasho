@@ -7,7 +7,6 @@ import UIKit
 
 /// Fusion de PDF, sur l'iPad seulement (PDFKit) : choisir des fichiers, les ranger, fusionner, puis enregistrer
 /// dans Fichiers et / ou importer dans la bibliothèque.
-// FDR-V14 : réutiliser pour « Ajouter des pages » à un document : fusion + renumérotage des données par page (GRDB, Analysis/*.md).
 struct PDFMergeView: View {
     struct Item: Identifiable, Equatable {
         let id = UUID()

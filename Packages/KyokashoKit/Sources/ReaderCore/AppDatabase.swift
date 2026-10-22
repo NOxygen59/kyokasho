@@ -327,7 +327,28 @@ extension AppDatabase {
         try writer.write { db in _ = try Bookmark.deleteOne(db, key: id) }
     }
 
-    // FDR-V14 : ajouter remapPages(documentId:mapping:) (ocrResult, highlight, inkDrawing, bookmark, pageComment, pageTransform) en une transaction.
+    /// Pages insérées **avant** les pages d'un document (« Ajouter des pages… ») : tout ce qui est rangé par numéro
+    /// de page avance de `offset` (OCR, surlignages, dessins, repères, notes, transformations, position de lecture,
+    /// page 1), puis nombre de pages et taille du PDF. Une seule transaction : tout ou rien. `offset` négatif =
+    /// retour en arrière (opération interrompue). Les cartes sont dans `review.sqlite` : `ReviewStore.shiftSourcePages`.
+    public func shiftPages(documentId: String, by offset: Int, pageCount: Int, fileSize: Int64) throws {
+        try writer.write { db in
+            if offset != 0 {
+                // En deux temps (valeurs négatives puis positives) : jamais deux lignes sur la même clé.
+                for table in ["ocrResult", "highlight", "inkDrawing", "bookmark", "pageComment", "pageTransform"] {
+                    try db.execute(sql: "UPDATE \(table) SET pageIndex = -1 - (pageIndex + ?) WHERE documentId = ?",
+                                   arguments: [offset, documentId])
+                    try db.execute(sql: "UPDATE \(table) SET pageIndex = -1 - pageIndex WHERE documentId = ? AND pageIndex < 0",
+                                   arguments: [documentId])
+                }
+            }
+            try db.execute(sql: """
+                UPDATE document SET pageCount = ?, fileSize = ?, lastPageIndex = lastPageIndex + ?,
+                firstPageIndex = firstPageIndex + ? WHERE id = ?
+                """, arguments: [pageCount, fileSize, offset, offset, documentId])
+        }
+    }
+
     public func comments(documentId: String) throws -> [PageComment] {
         try writer.read { db in
             try PageComment.filter(Column("documentId") == documentId).order(Column("pageIndex"), Column("createdAt")).fetchAll(db)

@@ -273,7 +273,13 @@ Comptes (Drive) ; À propos (+ **connexion GitHub** device flow → mise à jour
   `LayoutRegionsCache`, `MLX.GPU.clearCache()`. **Garder** : PDF, base (notes, OCR, cartes), `Analysis`, modèles,
   UniDic, réglages. Confirmation + taille libérée affichée. Balises `FDR-V11`.
 
-### [ ] V14 — Ajouter un PDF à un document existant (suite du manuel), avec ordre
+### [x] V14 — Ajouter un PDF à un document existant (suite du manuel), avec ordre
+- **Fait (22/10, non vérifié sur iPad)** : `App/Library/AddPagesView.swift` (appui long → « Ajouter des pages… »,
+  liste réordonnable, ajout à la fin d'office) + `App/Library/PageShift.swift` : base (`AppDatabase.shiftPages`,
+  transaction, testé) → PDF (`replaceItemAt`) → rapport (`shiftReport`) → fichiers IA (dossier de passage
+  `<id>.shift`) → cartes (`ReviewStore.shiftSourcePages`, base `review.sqlite` à part, testé). Étapes dans
+  `page-shift.json` ; `PageShift.reconcile` au lancement (`AppModel.init`) annule ou termine. Refusé si une lecture
+  IA du document tourne. Limite : arrêt pile pendant l'écriture du rapport → rapport non décalé (jamais deux fois).
 - Menu du document → « Ajouter des pages… » : liste réordonnable [document actuel] + nouveaux PDF (réutiliser
   `PDFMergeView`). Fusion dans un nouveau fichier puis **remplacement** du PDF du document (même id).
 - **Délicat** : tout ce qui est rangé par numéro de page doit être renuméroté si des pages sont insérées **avant** :

@@ -25,7 +25,8 @@ public struct DocumentAnalysis: Codable, Sendable {
 
     public struct Page: Codable, Sendable, Identifiable {
         public var id: Int { source }
-        public let source: Int
+        /// `var` : renuméroté quand des pages sont insérées avant (« Ajouter des pages… »).
+        public var source: Int
         public var baseEngine: String
         public var lines: Int = 0
         public var confirmed: Int = 0
