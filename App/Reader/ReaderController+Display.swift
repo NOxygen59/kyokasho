@@ -13,19 +13,32 @@ import UIKit
 extension ReaderController {
     // MARK: Réglages
 
-    // FDR-1 : modes .singlePage/.twoUp non continus (zoom qui saute) et `fitToPage` relancé à chaque changement de taille (remet le zoom). Voir § 6 étape 1.
+    /// « Zoom fluide » (menu « … » → Affichage, activé d'office) : en mode page par page, les pages (ou planches)
+    /// sont posées côte à côte dans un seul défilement horizontal de PDFKit : pincer et se déplacer zoomé sont
+    /// ceux d'iOS (les modes non continus de PDFKit recentraient la page pendant le pincement et bloquaient le
+    /// déplacement). À la taille de la page, le défilement libre est coupé et le glisser tourne la page (planche
+    /// par planche) ; revenu à la taille de la page, la planche se recale. Désactivé : ancien comportement.
+    static let fluidZoomKey = "reader.fluidZoom"
+    static var fluidZoom: Bool { UserDefaults.standard.object(forKey: fluidZoomKey) as? Bool ?? true }
+
+    func setFluidZoom(_ on: Bool) {
+        UserDefaults.standard.set(on, forKey: Self.fluidZoomKey)
+        applyDisplaySettings()
+    }
+
     func applyDisplaySettings() {
         let s = settings
         let paginated = s.scrollMode == .paginated
         let double = s.layout == .double
         let rtl = s.direction == .rightToLeft
+        let fluid = paginated && Self.fluidZoom
 
         // Le contrôleur de pages de PDFKit (glissement entre pages) ne gère que la page simple.
-        let pageController = paginated && !double && s.transition == .slide
+        let pageController = paginated && !double && s.transition == .slide && !fluid
         if pdfView.isUsingPageViewController != pageController {
             pdfView.usePageViewController(pageController, withViewOptions: [UIPageViewController.OptionsKey.interPageSpacing: 24])
         }
-        switch (double, paginated) {
+        switch (double, paginated && !fluid) {
         case (false, true): pdfView.displayMode = .singlePage
         case (false, false): pdfView.displayMode = .singlePageContinuous
         case (true, true): pdfView.displayMode = .twoUp
@@ -38,16 +51,31 @@ extension ReaderController {
         pdfView.pageBreakMargins = paginated ? .zero : UIEdgeInsets(top: 6, left: 0, bottom: 6, right: 0)
         pdfView.pageShadowsEnabled = s.background != .black
         pdfView.backgroundColor = s.background.uiColor
-        DispatchQueue.main.async { [pdfView] in pdfView.fitToPage() }
+        pdfView.fluidPaging = fluid
+        DispatchQueue.main.async { [weak self] in
+            self?.pdfView.fitToPage()
+            self?.snapToSpread()
+        }
         // Sans contrôleur de pages, PDFKit ne tourne pas les pages au glisser : on le fait nous-mêmes.
         let manualSwipe = paginated && !pageController && !isDrawing
         swipeLeft.isEnabled = manualSwipe
         swipeRight.isEnabled = manualSwipe
         doubleTap.isEnabled = s.doubleTapZoom && !isDrawing
         singleTap.isEnabled = !isDrawing
-        if s.doubleTapZoom {
-            singleTap.require(toFail: doubleTap)
-        }
+        // Pas de `singleTap.require(toFail: doubleTap)` : voir `configureGestures` (toucher sans attente).
+    }
+
+    /// Pages (indices du document affiché) de la planche qui contient `index` (une seule en page simple).
+    func currentSpread(_ index: Int) -> [Int] {
+        settings.layout == .double ? spread(of: index) : [index]
+    }
+
+    /// Zoom fluide, à la taille de la page : planche courante calée dans la vue (après un zoom ou un déplacement).
+    func snapToSpread() {
+        guard pdfView.fluidPaging, pdfView.isAtFit, !isAnimatingTurn, let pdf,
+              let first = currentSpread(currentIndex).filter({ $0 >= 0 && $0 < pdf.pageCount }).min(),
+              let page = pdf.page(at: first) else { return }
+        pdfView.go(to: page)
     }
 
     /// Applique de nouveaux réglages (globaux ou du document). Reconstruit si la structure change.

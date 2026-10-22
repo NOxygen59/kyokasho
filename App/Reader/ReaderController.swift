@@ -55,6 +55,10 @@ final class ReaderController: NSObject, ObservableObject {
 
     // MARK: État des extensions (ReaderController+*.swift : une extension ne peut pas en avoir)
 
+    /// Zoom fluide : la vue était à la taille de la page au dernier changement de zoom (recaler une seule fois).
+    var scrollWasLocked = true
+    /// Heure du dernier toucher simple (reconnaître le 2e toucher d'un double toucher).
+    var lastTapAt = Date.distantPast
     /// « Montrer / cacher les barres » d'un toucher simple, en attente d'un éventuel double toucher.
     var barsToggleWork: DispatchWorkItem?
 
@@ -660,6 +664,18 @@ final class ReaderController: NSObject, ObservableObject {
         observers.append(center.addObserver(forName: .PDFViewPageChanged, object: pdfView, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated { self?.pageChanged() }
         })
+        // Zoom changé (pincer, double toucher) : défilement libre seulement zoomé ; revenu à la page entière, la
+        // planche se recale (zoom fluide).
+        observers.append(center.addObserver(forName: .PDFViewScaleChanged, object: pdfView, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                let wasLocked = self.pdfView.fluidPaging && self.scrollWasLocked
+                self.pdfView.updateScrollLock()
+                self.scrollWasLocked = self.pdfView.isAtFit
+                if self.pdfView.fluidPaging, self.pdfView.isAtFit, !wasLocked { self.snapToSpread() }
+            }
+        })
+        pdfView.onFitAfterResize = { [weak self] in self?.snapToSpread() }
         observers.append(center.addObserver(forName: .PDFViewSelectionChanged, object: pdfView, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated {
                 guard let self else { return }
@@ -743,6 +759,8 @@ final class ReaderPDFView: PDFView {
     private var lastSize: CGSize = .zero
     /// Action « Dictionnaire » du menu de sélection d'iOS (Copier, Rechercher…).
     var onLookupSelection: (() -> Void)?
+    /// Taille changée alors que la page était entière (rotation, panneau) : le lecteur recale la planche.
+    var onFitAfterResize: (() -> Void)?
 
     /// Redessine les pages affichées sans reconstruire le document (page nettoyée prête, réglage changé).
     func redrawVisiblePages() {
@@ -764,6 +782,40 @@ final class ReaderPDFView: PDFView {
     }
     private var lastFit: CGFloat = 0
 
+    /// Zoom fluide (voir `ReaderController.fluidZoom`) : défilement libre seulement quand on a zoomé.
+    var fluidPaging = false {
+        didSet { updateScrollLock() }
+    }
+
+    /// Défilement interne de PDFKit (pincer et déplacer passent par lui).
+    private var innerScrollView: UIScrollView? {
+        func find(_ view: UIView) -> UIScrollView? {
+            for sub in view.subviews {
+                if let scroll = sub as? UIScrollView { return scroll }
+                if let found = find(sub) { return found }
+            }
+            return nil
+        }
+        return find(self)
+    }
+
+    /// Zoom fluide à la taille de la page : pas de défilement libre (le glisser tourne la page). Le pincement, lui,
+    /// marche toujours (geste à part du défilement).
+    func updateScrollLock() {
+        guard let scroll = innerScrollView else {
+            Diagnostics.log("zoom fluide : défilement interne de PDFKit introuvable", "gestes")
+            return
+        }
+        if !loggedScroll {
+            loggedScroll = true
+            Diagnostics.log("zoom fluide : défilement \(type(of: scroll)) \(Int(scroll.frame.width))×\(Int(scroll.frame.height))", "gestes")
+        }
+        // Seul le glisser est coupé : le pincement (geste à part) reste actif.
+        scroll.panGestureRecognizer.isEnabled = !(fluidPaging && isAtFit)
+        scroll.alwaysBounceHorizontal = false
+    }
+    private var loggedScroll = false
+
     /// Vrai si la page est affichée « entière » (pas de zoom de l'utilisateur).
     var isAtFit: Bool {
         lastFit == 0 || abs(scaleFactor - lastFit) / lastFit < 0.02
@@ -779,6 +831,7 @@ final class ReaderPDFView: PDFView {
         maxScaleFactor = max(6, fit * 6)
         scaleFactor = fit
         lastFit = fit
+        updateScrollLock()
     }
 
     override func layoutSubviews() {
@@ -791,6 +844,7 @@ final class ReaderPDFView: PDFView {
             guard let self else { return }
             if wasFit {
                 self.fitToPage()
+                self.onFitAfterResize?()
             } else {
                 self.minScaleFactor = self.scaleFactorForSizeToFit
             }

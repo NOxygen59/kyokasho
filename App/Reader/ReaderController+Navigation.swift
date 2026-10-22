@@ -39,6 +39,14 @@ extension ReaderController {
     /// dans la même double page et rien ne bougeait.)
     func turnTarget(forward: Bool) -> PDFPage? {
         guard let pdf else { return nil }
+        // Zoom fluide : planche suivante / précédente d'après la planche courante (une page voisine peut dépasser
+        // un peu dans la vue), toujours sa première page (planche calée à gauche).
+        if pdfView.fluidPaging {
+            let spread = currentSpread(currentIndex)
+            let i = forward ? (spread.max() ?? currentIndex) + 1 : (spread.min() ?? currentIndex) - 1
+            guard i >= 0, i < pdf.pageCount, let first = currentSpread(i).filter({ $0 >= 0 }).min() else { return nil }
+            return pdf.page(at: first)
+        }
         let visible = pdfView.visiblePages.map { pdf.index(for: $0) }.filter { $0 != NSNotFound }
         let lo = visible.min() ?? currentIndex, hi = visible.max() ?? currentIndex
         let i = forward ? hi + 1 : lo - 1
@@ -189,7 +197,7 @@ extension ReaderController {
 
     @objc func handleSwipe(_ gesture: UISwipeGestureRecognizer) {
         // Zoomé : le glisser sert à se déplacer dans la page, pas à tourner.
-        guard pdfView.scaleFactor <= pdfView.scaleFactorForSizeToFit * 1.05 else { return }
+        guard pdfView.isAtFit else { return }
         // Glisser vers la gauche = page suivante en lecture gauche → droite, l'inverse en droite → gauche.
         let towardLeft = gesture.direction == .left
         let forward = settings.direction == .rightToLeft ? !towardLeft : towardLeft
@@ -229,6 +237,10 @@ extension ReaderController {
     @objc func handleTap(_ gesture: UITapGestureRecognizer) {
         // Un appui long sert à sélectionner du texte (PDFKit) : ce n'est pas un tap.
         guard !pressWasLong else { return }
+        // 2e toucher d'un double toucher (zoom) : rien de plus (ni barres, ni dictionnaire ou note une 2e fois).
+        let now = Date()
+        defer { lastTapAt = now }
+        if doubleTap.isEnabled, now.timeIntervalSince(lastTapAt) < 0.35 { return }
         let point = gesture.location(in: pdfView)
         if hasSelection {
             pdfView.clearSelection()
