@@ -164,7 +164,6 @@ struct FuriganaTextView: View {
     }
 
     // FDR-3 : page surtout verticale → `writing-mode: vertical-rl`. Voir § 6 étape 3.
-    // FDR-T : réutiliser ce CSS pour la vue « Mise en page IA » (HTML filtré du Markdown d'OvisOCR2, figures découpées).
     static func page(_ body: String) -> String {
         let text = UIColor(Atelier.textPrimary).hexString, accent = UIColor(Atelier.Tint.japanese).hexString
         let line = UIColor(Atelier.hairline).hexString

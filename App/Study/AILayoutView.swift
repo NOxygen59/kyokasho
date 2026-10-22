@@ -1,0 +1,195 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 NOxygen59
+
+import DictionaryKit
+import GLMOCRKit
+import OCRKit
+import SwiftUI
+import UIKit
+
+/// Panneau Texte → « Mise en page IA » : la page telle qu'OvisOCR2 l'a mise en forme (titres, paragraphes, listes,
+/// tableaux, figures découpées dans la page), en HTML **construit ici** à partir de blocs sûrs (`AILayout`), aux
+/// couleurs du thème, avec furigana et dictionnaire au toucher. Markdown gardé par page (le même que l'analyse).
+struct AILayoutView: View {
+    @ObservedObject var reader: ReaderController
+    let furigana: Bool
+    var onLookup: (String) -> Void
+    @EnvironmentObject private var dictionary: DictionaryModel
+    @AppStorage(FuriganaLayer.Tint.storageKey) private var tint = FuriganaLayer.Tint.red
+    @State private var markdown: String?
+    @State private var html = ""
+    @State private var height: CGFloat = 200
+    @State private var reading = false
+    @State private var error: String?
+
+    private var source: Int { reader.focusSource }
+    private var file: URL { DocumentAnalysisService.rawURL(reader.document.id, ModelSpec.ovisocr2.id, source) }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if reading {
+                HStack(spacing: 10) {
+                    ProgressView()
+                    Text("OvisOCR2 met la page en forme… (≈ 30 s)").font(.footnote).foregroundStyle(Atelier.textSecondary)
+                }
+            } else if markdown == nil {
+                Text("Pas encore de mise en page IA pour cette page.").font(.footnote).foregroundStyle(Atelier.textSecondary)
+                if OvisOCR2Reader().isAvailable {
+                    Button { Task { await read() } } label: {
+                        Label("Mettre en page avec OvisOCR2", systemImage: "sparkles.rectangle.stack")
+                    }
+                    .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.ai))
+                } else {
+                    Text("Télécharge OvisOCR2 dans Réglages → Modèles d'IA et outils.").font(.caption).foregroundStyle(Atelier.textTertiary)
+                }
+            }
+            if let error { Text(error).font(.caption).foregroundStyle(.red) }
+            if markdown != nil, !html.isEmpty {
+                RubyWebView(html: html, height: $height, onLookup: onLookup)
+                    .frame(height: height)
+                Button { Task { await read() } } label: {
+                    Label("Refaire la mise en page", systemImage: "arrow.clockwise").font(.caption)
+                }
+                .foregroundStyle(Atelier.textTertiary)
+                .disabled(reading || !OvisOCR2Reader().isAvailable)
+            }
+        }
+        .task(id: "\(reader.document.id)|\(source)|\(furigana)|\(tint.rawValue)") { await load() }
+    }
+
+    private func load() async {
+        error = nil
+        markdown = try? String(contentsOf: file, encoding: .utf8)
+        html = ""
+        guard let markdown else { return }
+        let built = await Self.html(markdown, furigana: furigana, dictionary: dictionary,
+                                    url: reader.fileURL, page: source)
+        guard !Task.isCancelled else { return }
+        html = built
+    }
+
+    private func read() async {
+        reading = true
+        error = nil
+        defer { reading = false }
+        let budget = reader.ocrPage.map(DocumentAnalysisService.tokenBudget) ?? 2048
+        do {
+            let text = try await Diagnostics.measure("mise en page IA p. \(source)", "miseenpage") {
+                try await OvisOCR2Reader().read(.pdfPage(url: reader.fileURL, index: source), maxTokens: budget)
+            }
+            try? FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try text.write(to: file, atomically: true, encoding: .utf8)
+            await OvisOCR2Reader().unload()
+            await load()
+        } catch {
+            self.error = error.localizedDescription
+        }
+    }
+
+    // MARK: HTML
+
+    /// Blocs → HTML. Tout texte passe par `FuriganaTextView.markup` (échappé, mot entier au toucher, furigana).
+    static func html(_ markdown: String, furigana: Bool, dictionary: DictionaryModel, url: URL, page: Int) async -> String {
+        let blocks = AILayout.blocks(markdown)
+        func text(_ s: String) async -> String {
+            let segments = await dictionary.segment(s)
+            let rubies = furigana ? TextFurigana.rubies(s, segments: segments) : []
+            return FuriganaTextView.markup(s, rubies: rubies, wordStarts: FuriganaTextView.wordStarts(s, segments: segments))
+        }
+        // Figures : une seule image de la page, découpée hors du fil principal.
+        let boxes = blocks.compactMap { b -> (Int, Int, Int, Int)? in
+            if case .figure(let l, let t, let r, let bt) = b { return (l, t, r, bt) }
+            return nil
+        }
+        let figures: [String] = boxes.isEmpty ? [] : await Task.detached(priority: .userInitiated) {
+            guard let image = try? PageRenderer.render(url: url, pageIndex: page, longSide: 1600) else { return [] }
+            return boxes.map { figureURI(image, $0) ?? "" }
+        }.value
+        var body = """
+        <style>
+        .figs{display:flex;flex-wrap:wrap;gap:10px;margin:.4em 0 .9em;justify-content:flex-start}
+        figure{margin:0;width:calc(33.3% - 7px);text-align:center}
+        figure img{max-width:100%;max-height:170px;border-radius:6px;background:#fff}
+        figcaption{font-size:.72em;line-height:1.4;margin-top:4px;opacity:.85}
+        p.figtitle{text-align:center;font-size:.8em;opacity:.8;margin-top:-.2em}
+        th{font-weight:700;opacity:.9} ul{margin:0 0 .6em;padding-left:1.3em} li{margin:.15em 0}
+        h2,h3,h4{line-height:1.6;margin:.8em 0 .4em}
+        </style>
+        """
+        var figureIndex = 0
+        // Figures qui se suivent (chacune avec sa courte légende) : grille de vignettes, comme dans le livre.
+        var index = 0
+        while index < blocks.count {
+            let block = blocks[index]
+            if case .figure = block {
+                body += "<div class=\"figs\">"
+                while index < blocks.count, case .figure = blocks[index] {
+                    var caption = ""
+                    if index + 1 < blocks.count, case .paragraph(let c) = blocks[index + 1], c.count <= 24 {
+                        caption = await text(c)
+                        index += 1
+                        // Petites notes entre parenthèses sous la légende : « (ルバードア) », « (2枚一組) ».
+                        while index + 1 < blocks.count, case .paragraph(let note) = blocks[index + 1], note.count <= 14,
+                              note.hasPrefix("(") || note.hasPrefix("（") {
+                            caption += "<br>" + (await text(note))
+                            index += 1
+                        }
+                    }
+                    let uri = figures.indices.contains(figureIndex) ? figures[figureIndex] : ""
+                    figureIndex += 1
+                    body += "<figure>" + (uri.isEmpty ? "" : "<img src=\"\(uri)\" alt=\"\">")
+                        + (caption.isEmpty ? "" : "<figcaption>\(caption)</figcaption>") + "</figure>"
+                    index += 1
+                }
+                body += "</div>"
+                continue
+            }
+            index += 1
+            switch block {
+            case .heading(let level, let s):
+                let tag = "h\(min(max(level, 2), 4))"
+                body += "<\(tag)>\(await text(s))</\(tag)>"
+            case .paragraph(let s):
+                // « 図表6-120 … » : titre de figure, centré en petit comme dans le livre.
+                let isFigureTitle = s.hasPrefix("図表") || s.hasPrefix("図 ") || s.hasPrefix("表 ")
+                body += isFigureTitle ? "<p class=\"figtitle\">\(await text(s))</p>" : "<p>\(await text(s))</p>"
+            case .list(let items):
+                body += "<ul>"
+                for item in items { body += "<li>\(await text(item))</li>" }
+                body += "</ul>"
+            case .table(let rows):
+                body += "<table>"
+                for row in rows {
+                    body += "<tr>"
+                    for cell in row {
+                        let tag = cell.header ? "th" : "td"
+                        let span = (cell.colspan > 1 ? " colspan=\"\(cell.colspan)\"" : "") + (cell.rowspan > 1 ? " rowspan=\"\(cell.rowspan)\"" : "")
+                        body += "<\(tag)\(span)>\(await text(cell.text))</\(tag)>"
+                    }
+                    body += "</tr>"
+                }
+                body += "</table>"
+            case .figure:
+                break  // traitées plus haut (grille)
+            }
+        }
+        return FuriganaTextView.page(body)
+    }
+
+    /// Découpe d'une figure (coordonnées sur 1000) → image JPEG en `data:` (≤ 900 px de large).
+    nonisolated static func figureURI(_ image: CGImage, _ box: (Int, Int, Int, Int)) -> String? {
+        let w = Double(image.width), h = Double(image.height)
+        let rect = CGRect(x: Double(box.0) / 1000 * w, y: Double(box.1) / 1000 * h,
+                          width: Double(box.2 - box.0) / 1000 * w, height: Double(box.3 - box.1) / 1000 * h)
+            .intersection(CGRect(x: 0, y: 0, width: w, height: h)).integral
+        guard rect.width >= 8, rect.height >= 8, let crop = image.cropping(to: rect) else { return nil }
+        let scale = min(1, 900 / rect.width)
+        let size = CGSize(width: rect.width * scale, height: rect.height * scale)
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        let jpeg = UIGraphicsImageRenderer(size: size, format: format).jpegData(withCompressionQuality: 0.8) { _ in
+            UIImage(cgImage: crop).draw(in: CGRect(origin: .zero, size: size))
+        }
+        return "data:image/jpeg;base64," + jpeg.base64EncodedString()
+    }
+}

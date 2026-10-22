@@ -85,6 +85,8 @@ struct StudyTextTab: View {
     @State private var translation: String?
     /// Texte mis en forme (titres, paragraphes, tableaux) ou tel que lu, ligne par ligne.
     @AppStorage("study.formattedText") private var formatted = true
+    /// 3e affichage : la page mise en forme par OvisOCR2 (`AILayoutView`).
+    @AppStorage("study.aiLayout") private var aiLayout = false
     /// Furigana (dictionnaire Yomitan) sur le texte extrait ; un appui ouvre le dictionnaire.
     @AppStorage("study.furigana") private var furigana = false
     /// Moteur de mise en page du mode « Mis en forme » (géométrie seule, PP-DocLayout, DocLayout-YOLO).
@@ -122,7 +124,14 @@ struct StudyTextTab: View {
                         Text(layoutError).font(.caption).foregroundStyle(Atelier.textTertiary)
                     }
                     doubtRow(page)
-                    if furigana {
+                    if aiLayout {
+                        AILayoutView(reader: reader, furigana: furigana) { text in
+                            let session = lookup ?? LookupSession(dictionary: model.dictionary)
+                            lookup = session
+                            session.start(text)
+                            showLookup = true
+                        }
+                    } else if furigana {
                         FuriganaTextView(page: page, formatted: formatted, regions: regions) { text in
                             let session = lookup ?? LookupSession(dictionary: model.dictionary)
                             lookup = session
@@ -258,14 +267,16 @@ struct StudyTextTab: View {
                 .padding(.horizontal, 10).padding(.vertical, 6)
                 .background(Atelier.surfaceHigh, in: Capsule())
             }
-            // FDR-T : 3e choix « Mise en page IA » (Markdown d'OvisOCR2 → HTML filtré). FDR-U : bouton « Traduire (hors ligne) » par Qwen3-VL à côté.
-            Picker("Affichage", selection: $formatted) {
-                Text("Mis en forme").tag(true)
-                Text("Brut").tag(false)
+            // FDR-U : bouton « Traduire (hors ligne) » par Qwen3-VL à côté.
+            Picker("Affichage", selection: Binding(get: { aiLayout ? 2 : (formatted ? 0 : 1) },
+                                                   set: { aiLayout = $0 == 2; if $0 < 2 { formatted = $0 == 0 } })) {
+                Text("Mis en forme").tag(0)
+                Text("Brut").tag(1)
+                Image(systemName: "sparkles").tag(2).accessibilityLabel("Mise en page IA")
             }
             .pickerStyle(.segmented)
-            .frame(maxWidth: 190)
-            if formatted {
+            .frame(maxWidth: 230)
+            if formatted && !aiLayout {
                 Menu {
                     LayoutEnginePicker(selection: $layoutEngineRaw)
                 } label: {

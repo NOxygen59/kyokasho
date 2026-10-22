@@ -98,6 +98,7 @@ final class OvisOCR2Tests: XCTestCase {
                 let text = try await read()
                 print("\(name) p.\(p) : \(String(format: "%.1f", Date().timeIntervalSince(start))) s, pic mémoire GPU \(MLX.GPU.peakMemory / 1_048_576) Mo, \(text.count) caractères")
                 print(String(text.prefix(600)))
+                if let dump = env["KYOKASHO_DUMP"] { try? text.write(toFile: "\(dump)/\(name.lowercased())-\(p).md", atomically: true, encoding: .utf8) }
                 print("— diff avec Vision : \(OCRReferenceDiff.suggestions(base, reference: text).count) ligne(s) différente(s) sur \(base.lines.count)")
             }
         }

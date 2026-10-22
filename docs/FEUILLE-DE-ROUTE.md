@@ -312,7 +312,11 @@ Rythme choisi le 22/10 au soir : **2 sections de la liste de l'utilisateur par s
   `mlx_remove_addrspace_t` (copie exacte de la définition d'Apple) via `tools/ipad-ios16-patch.py`. Autres
   fonctions `metal::` des noyaux : anciennes, conditionnées (`os_log` ≥ 3.2) ou réservées aux puces NAX.
 ### Version 0.8.6 (demandée le 22/10) — dans cet ordre
-- [ ] **T — Vue « Mise en page IA » dans le panneau Texte** (3e choix à côté de « Mis en forme » / « Brut ») : le
+- [x] **T — FAIT (22/10, non vérifié iPad)** : `AILayout` (OCRKit, testé : blocs sûrs, aucune balise de l'IA recopiée),
+  `AILayoutView` (panneau Texte, 3e segment ✨ ; Markdown gardé dans `Analysis/<id>/ovisocr2-<page>.md`, écrit aussi par
+  « Vérifier la double page » ; bouton « Mettre en page avec OvisOCR2 » sinon). Figures découpées dans la page et
+  regroupées en grille de vignettes avec légende (+ notes entre parenthèses) ; « 図表… » centré. Capture vérifiée sur
+  la page 3 du vrai manuel (outil `scratchpad/render`, non gardé). Texte d'origine : (3e choix à côté de « Mis en forme » / « Brut ») : le
   Markdown d'OvisOCR2 (déjà gardé par la vérification et l'analyse : `Analysis/<id>/ovisocr2-<page>.md`, sinon lecture
   à la demande) → **HTML filtré** (titres, paragraphes, listes, `<table>` ; aucune balise de script/style/lien) avec
   le CSS du thème de `FuriganaTextView.page` ; furigana + dictionnaire au toucher comme le mode ふりがな ;

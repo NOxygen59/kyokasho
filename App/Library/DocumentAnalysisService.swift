@@ -37,7 +37,7 @@ final class DocumentAnalysisService: ObservableObject {
     static var folder: URL {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("Analysis", isDirectory: true)
     }
-    private static func rawURL(_ id: String, _ reader: String, _ page: Int) -> URL {
+    static func rawURL(_ id: String, _ reader: String, _ page: Int) -> URL {
         folder.appendingPathComponent(id, isDirectory: true).appendingPathComponent("\(reader)-\(page).md")
     }
 

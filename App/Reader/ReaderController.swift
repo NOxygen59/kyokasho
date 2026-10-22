@@ -1402,6 +1402,10 @@ final class ReaderController: NSObject, ObservableObject {
                                                             maxTokens: DocumentAnalysisService.tokenBudget(ocr))
                         }
                         Diagnostics.log("OvisOCR2 page \(source) : \(markdown.count) caractères lus", "verif")
+                        // Gardé : sert aussi à la vue « Mise en page IA » du panneau Texte.
+                        let file = DocumentAnalysisService.rawURL(self.document.id, ModelSpec.ovisocr2.id, source)
+                        try? FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
+                        try? markdown.write(to: file, atomically: true, encoding: .utf8)
                         result.suggestions = OCRReferenceDiff.suggestions(ocr, reference: markdown)
                         Diagnostics.log("page \(source) : \(result.suggestions.count) différence(s)", "verif")
                     } catch {
