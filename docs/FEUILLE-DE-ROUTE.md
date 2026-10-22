@@ -324,6 +324,19 @@ Comptes (Drive) ; À propos (+ **connexion GitHub** device flow → mise à jour
   dictionnaire) **sans changer le comportement**. Profiler (moniteur) : rendus SwiftUI en trop, `@Published` trop
   larges. Toujours `cavecrew-reviewer` après. Balises `FDR-V9` (fichiers à regarder).
 
+## 7 bis. Idées pour la v1.0 (22/10, à faire dans cet ordre conseillé)
+
+- [ ] **P — Portrait = une page** : en portrait, le lecteur passe tout seul en page simple ; en revenant en paysage,
+  il reprend la disposition choisie (double page). Ne pas toucher au réglage enregistré : disposition **affichée**
+  = réglage sauf portrait (taille de la vue dans `ReaderScreen` / `ReaderPDFView.layoutSubviews`, puis
+  `applyDisplaySettings`), garder la page courante. Option dans Affichage pour couper.
+- [ ] **E — Double page de même taille** : option « Égaliser les pages » ; agrandir seulement l'**affichage** de la plus
+  petite (jamais ses coordonnées : notes, encre, surlignages, OCR sont en repère de page). À tester sur l'iPad.
+- [ ] **F — Cartes de la page** : « Créer des cartes de cette page » = termes du lexique trouvés dans le texte de la
+  page (lecture + sens) → cartes Anki du document.
+- [ ] **R — Reprendre** : bandeau « Continuer : <livre>, p. X » en haut de la bibliothèque + progression (pages lues,
+  pages lues par l'IA).
+
 ## 8. Backlog (plus ancien, après le § 7)
 
 - [x] **S — Lexique du domaine** (fait 22/10, non vérifié sur iPad : `App/Dictionary/DomainLexicon.swift`, `lexique.json`,
