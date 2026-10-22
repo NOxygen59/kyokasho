@@ -5,8 +5,11 @@
 	<!-- Identité de l'app (pseudo-signature ldid, installation TrollStore). -->
 	<key>application-identifier</key>
 	<string>fr.noxygen59.kyokasho</string>
-	<!-- Plus de mémoire pour le moteur OCR IA (GLM-OCR, ≈ 1,5 Go). -->
+	<!-- Plus de mémoire pour l'IA locale (GLM-OCR, OvisOCR2, Qwen3-VL-4B ≈ 3,5 Go pendant l'analyse). -->
 	<key>com.apple.developer.kernel.increased-memory-limit</key>
+	<true/>
+	<!-- Grand espace d'adressage : les gros modèles sont projetés en mémoire (mmap) sans manquer d'adresses. -->
+	<key>com.apple.developer.kernel.extended-virtual-addressing</key>
 	<true/>
 	<!-- Trousseau : jeton de connexion Google Drive. -->
 	<key>keychain-access-groups</key>

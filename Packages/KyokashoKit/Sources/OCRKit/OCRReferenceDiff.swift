@@ -28,6 +28,17 @@ public enum OCRReferenceDiff {
     /// `minSimilarity` : part de caractères communs exigée entre la ligne et sa proposition (sinon l'ordre de
     /// lecture diffère à cet endroit et l'alignement n'a pas de sens).
     public static func suggestions(_ page: OCRPage, reference: String, minSimilarity: Double = 0.5) -> [Suggestion] {
+        align(page, reference: reference, minSimilarity: minSimilarity).compactMap { line, proposed in
+            let current = page.lines[line].text.filter { !$0.isWhitespace && !ignored.contains($0) }
+            guard proposed != current, page.lines[line].edited != true else { return nil }
+            return Suggestion(line: line, current: page.lines[line].text, proposed: proposed)
+        }
+        .sorted { $0.line < $1.line }
+    }
+
+    /// Ce que la seconde lecture dit pour **chaque** ligne qu'elle recouvre de façon fiable (texte sans espaces),
+    /// identique ou non. Ligne absente : la seconde lecture n'a rien de comparable à cet endroit.
+    public static func align(_ page: OCRPage, reference: String, minSimilarity: Double = 0.5) -> [Int: String] {
         let ref = plain(reference)
         var ocr: [Character] = []
         var lineOf: [Int] = []
@@ -36,7 +47,7 @@ public enum OCRReferenceDiff {
             for c in line.text where !c.isWhitespace && !ignored.contains(c) { ocr.append(c); lineOf.append(l) }
         }
         let n = ocr.count, m = ref.count
-        guard n > 0, m > 0, n * m <= 16_000_000 else { return [] }
+        guard n > 0, m > 0, n * m <= 16_000_000 else { return [:] }
         // Distance d'édition, une rangée à la fois ; directions gardées pour remonter (0 diag, 1 haut, 2 gauche).
         var dir = [UInt8](repeating: 0, count: (n + 1) * (m + 1))
         var prev = [Int](0...m), cur = [Int](repeating: 0, count: m + 1)
@@ -71,13 +82,13 @@ public enum OCRReferenceDiff {
         }
         var proposed: [Int: [Character]] = [:]
         for (k, l) in refLine.enumerated() where l >= 0 { proposed[l, default: []].append(ref[k]) }
-        var out: [Suggestion] = []
+        var out: [Int: String] = [:]
         for (l, line) in page.lines.enumerated() {
             let current = line.text.filter { !$0.isWhitespace && !ignored.contains($0) }
-            guard !current.isEmpty, line.edited != true, let new = proposed[l], String(new) != current else { continue }
+            guard !current.isEmpty, let new = proposed[l] else { continue }
             let common = commonCount(Array(current), new)
             guard Double(common) / Double(max(current.count, new.count)) >= minSimilarity else { continue }
-            out.append(Suggestion(line: l, current: line.text, proposed: String(new)))
+            out[l] = String(new)
         }
         return out
     }

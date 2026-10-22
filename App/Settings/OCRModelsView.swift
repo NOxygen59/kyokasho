@@ -80,6 +80,7 @@ struct OCRModelsSection: View {
             case .ai:
                 row(.glmocr, badge: "Optionnel")
                 row(.ovisocr2, badge: "Optionnel")
+                row(.qwen3vl4b, badge: "Optionnel · lourd")
             case .layout:
                 ForEach(ModelSpec.layoutModels) { spec in row(spec, badge: "Optionnel") }
             case .sharpen:
@@ -112,7 +113,7 @@ struct OCRModelsSection: View {
         case .ocr:
             return "Sans modèle, Apple Vision lit déjà le japonais (moins bien). NDLOCR-Lite est fait pour les livres japonais (colonnes verticales). PP-OCRv5 sert aussi à placer chaque caractère pour le dictionnaire. Choix du moteur : Réglages → Lecture des scans, ou le bouton du moteur dans le panneau Texte."
         case .ai:
-            return "GLM-OCR relit automatiquement les seules lignes douteuses d'une page (option dans Réglages → Lecture des scans → Relecture). OvisOCR2 sert uniquement à la demande : panneau Texte → menu du moteur → « Vérifier la double page », différences à accepter ou refuser. Un seul de ces deux modèles est chargé à la fois ; tout reste sur l'iPad."
+            return "GLM-OCR relit automatiquement les seules lignes douteuses d'une page (option dans Réglages → Lecture des scans → Relecture). OvisOCR2 sert à la demande : panneau Texte → menu du moteur → « Vérifier la double page ». Qwen3-VL-4B (gros, ≈ 3,5 Go de mémoire) ne sert qu'à « Analyser le document entier » (bibliothèque → appui long sur un livre), avec OvisOCR2 et GLM-OCR : chaque page lue plusieurs fois, vote et note de fiabilité. Un seul modèle chargé à la fois ; tout reste sur l'iPad."
         case .layout:
             return "Sans modèle, la mise en forme se fait par la géométrie des lignes. Avec un modèle : titres, colonnes, tableaux, légendes repérés sur l'image ; en-têtes et pieds de page écartés. Choix : panneau Texte, mode « Mis en forme » (bouton Géo / PP / YOLO)."
         case .sharpen:

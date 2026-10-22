@@ -39,7 +39,7 @@ public enum OCRProofreader {
     }
 
     /// Index des caractères japonais hors de tout mot connu.
-    static func unknown(_ chars: [Character], _ segments: [Segment]) -> [Int] {
+    public static func unknown(_ chars: [Character], _ segments: [Segment]) -> [Int] {
         guard segments.reduce(0, { $0 + $1.length }) == chars.count else { return [] }
         var out: [Int] = []
         var i = 0

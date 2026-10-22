@@ -150,6 +150,7 @@ public enum OCRError: LocalizedError, Equatable {
     case renderFailed
     case cancelled
     case modelMissing(String)
+    case engineFailed(String)
 
     public var errorDescription: String? {
         switch self {
@@ -157,7 +158,8 @@ public enum OCRError: LocalizedError, Equatable {
         case .noTextLayer: return "Cette page n'a pas de texte intégré (c'est probablement une image) : utilise Apple Vision."
         case .renderFailed: return "Impossible de préparer l'image de la page."
         case .cancelled: return "OCR annulé."
-        case .modelMissing(let name): return "Modèle « \(name) » pas téléchargé : Réglages → Japonais → OCR."
+        case .modelMissing(let name): return "Modèle « \(name) » pas téléchargé : Réglages → Modèles d'IA et outils."
+        case .engineFailed(let message): return message
         }
     }
 }

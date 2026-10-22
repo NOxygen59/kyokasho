@@ -29,6 +29,7 @@ public struct ModelSpec: Identifiable, Sendable, Equatable {
         case "ndlocr": return URL(string: "https://github.com/ndl-lab/ndlocr-lite")
         case "glmocr": return URL(string: "https://huggingface.co/zai-org/GLM-OCR")
         case "ovisocr2": return URL(string: "https://huggingface.co/ATH-MaaS/OvisOCR2")
+        case "qwen3vl4b": return URL(string: "https://huggingface.co/Qwen/Qwen3-VL-4B-Instruct")
         case "degan": return URL(string: "https://github.com/dali92002/DE-GAN")
         case "ppdoclayout": return URL(string: "https://github.com/PaddlePaddle/PaddleOCR")
         case "doclayoutyolo": return URL(string: "https://github.com/opendatalab/DocLayout-YOLO")
@@ -102,7 +103,22 @@ public extension ModelSpec {
                File(name: "model.safetensors", url: ovis("model.safetensors"), size: 1_001_176_400,
                     sha256: "30971210227e1f0f2af39c59f569a2defbf85c5aa112e8eb5abb6f4ef1e33cec")])
 
-    static let all: [ModelSpec] = [.ndlocr, .ppocr5, .glmocr, .ovisocr2]
+    /// Qwen3-VL-4B-Instruct (Alibaba, Apache-2.0), MLX 4 bits (mlx-community) : le « gros » lecteur de l'analyse
+    /// du document entier. ≈ 3,1 Go sur le disque, ≈ 3,5 Go de mémoire pendant la lecture.
+    static let qwen3vl4b = ModelSpec(
+        id: "qwen3vl4b", title: "Qwen3-VL-4B (IA, analyse du document)",
+        summary: "Gros modèle IA (4 milliards de paramètres) qui comprend le sens de la page. Troisième lecture, la plus lourde, de « Analyser le document entier » : à lancer branché, l'iPad chauffe.",
+        license: "Apache-2.0 (Alibaba Qwen) — conversion MLX 4 bits : mlx-community",
+        files: ["added_tokens.json", "chat_template.jinja", "chat_template.json", "config.json", "generation_config.json",
+                "merges.txt", "model.safetensors.index.json", "preprocessor_config.json", "special_tokens_map.json",
+                "tokenizer_config.json", "video_preprocessor_config.json", "vocab.json"]
+            .map { File(name: $0, url: qwen($0), size: 0, sha256: nil) }
+            + [File(name: "tokenizer.json", url: qwen("tokenizer.json"), size: 11_422_654,
+                    sha256: "aeb13307a71acd8fe81861d94ad54ab689df773318809eed3cbe794b4492dae4"),
+               File(name: "model.safetensors", url: qwen("model.safetensors"), size: 3_093_767_283,
+                    sha256: "90eeb02604181dbcccd0a30a1f550a4a8928ca7dcbee4aee1449239306cfdfca")])
+
+    static let all: [ModelSpec] = [.ndlocr, .ppocr5, .glmocr, .ovisocr2, .qwen3vl4b]
 
     /// PP-DocLayout v3 (PaddleOCR / PP-Structure, Apache-2.0), version ONNX de RapidLayout :
     /// zones de la page (titre, texte, tableau, légende…) **et ordre de lecture**.
@@ -136,6 +152,10 @@ public extension ModelSpec {
 
     private static func ndl(_ path: String) -> URL {
         URL(string: "https://raw.githubusercontent.com/ndl-lab/ndlocr-lite/d001dad2013ceabb5736ff8d637474e443eb73c2/" + path)!
+    }
+
+    private static func qwen(_ name: String) -> URL {
+        URL(string: "https://huggingface.co/mlx-community/Qwen3-VL-4B-Instruct-4bit/resolve/2fd8dacbdb8f1e54b8c005f081ec5bf79c56376b/" + name)!
     }
 
     private static func ovis(_ name: String) -> URL {

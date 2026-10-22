@@ -37,4 +37,16 @@ final class OvisOCR2Tests: XCTestCase {
         let plain = String(OCRReferenceDiff.plain(markdown))
         for line in lines { XCTAssertTrue(plain.contains(line.filter { !$0.isWhitespace }), "manque : \(line)") }
     }
+
+    func testQwen3VLReadsInteriorDesignPage() async throws {
+        guard let root = ProcessInfo.processInfo.environment["KYOKASHO_MODELS"] else { throw XCTSkip("KYOKASHO_MODELS absent") }
+        let reader = Qwen3VLReader(store: ModelStore(root: URL(fileURLWithPath: root)))
+        guard reader.isAvailable else { throw XCTSkip("Qwen3-VL-4B absent") }
+        let lines = ["天井は小屋組、上階の構造体から吊られる。", "基本的には吊り木または吊りボルトで、", "野縁受けを吊り、野縁を付ける。", "照明器具の取り付け位置を決める。"]
+        let start = Date()
+        let markdown = try await reader.read(.image(page(lines)), maxTokens: 512)
+        print("QWEN (\(String(format: "%.1f", Date().timeIntervalSince(start))) s):\n\(markdown)")
+        let plain = String(OCRReferenceDiff.plain(markdown))
+        for line in lines { XCTAssertTrue(plain.contains(line.filter { !$0.isWhitespace }), "manque : \(line)") }
+    }
 }

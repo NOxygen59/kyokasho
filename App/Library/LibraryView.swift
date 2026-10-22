@@ -16,6 +16,7 @@ struct LibraryView: View {
     @State private var showDrive = false
     @State private var showBench = false
     @State private var showMerge = false
+    @State private var analyzing: LibraryDocument?
     @State private var showDictionary = false
     @State private var renaming: LibraryDocument?
     @EnvironmentObject private var review: ReviewModel
@@ -67,6 +68,9 @@ struct LibraryView: View {
         }
         .sheet(isPresented: $showPicker) {
             DocumentPicker { urls in model.importFiles(urls) }.ignoresSafeArea()
+        }
+        .sheet(item: $analyzing) { document in
+            DocumentAnalysisSheet(document: document).environmentObject(model).preferredColorScheme(.dark)
         }
         .sheet(isPresented: $showMerge) {
             PDFMergeView().environmentObject(model).preferredColorScheme(.dark)
@@ -301,6 +305,15 @@ struct LibraryView: View {
             pageOneText = String(document.firstPageIndex + 1)
             settingPageOne = document
         } label: { Label("Définir la page 1…", systemImage: "1.circle") }
+        Button {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { analyzing = document }
+        } label: {
+            if let r = DocumentAnalysisService.shared.report(for: document.id), !r.pages.isEmpty {
+                Label("Analyse : fiabilité \(Int(r.reliability * 100)) %", systemImage: "checkmark.seal")
+            } else {
+                Label("Analyser le document entier", systemImage: "checkmark.seal")
+            }
+        }
         Button(role: .destructive) {
             // Le menu d'appui long doit finir de se fermer, sinon iOS ignore la fenêtre de confirmation.
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { deleting = document }

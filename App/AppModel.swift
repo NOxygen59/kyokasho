@@ -133,6 +133,7 @@ final class AppModel: ObservableObject {
 
     /// Importe des fichiers déjà copiés localement par le sélecteur (hors fil principal).
     /// Relecture OCR par le dictionnaire (rien si aucun dictionnaire : la page sera relue plus tard).
+    // FDR-S : segment = dictionnaire + lexique du domaine (termes de design d'intérieur confirmés par l'analyse).
     nonisolated static func proofreader(_ dict: DictionaryModel) -> @Sendable (OCRPage) async -> OCRPage {
         { page in
             guard await dict.hasTermDictionaries else { return page }

@@ -290,6 +290,22 @@ Rythme choisi le 22/10 au soir : **2 sections de la liste de l'utilisateur par s
   `fft/radix.h`, puis les erreurs suivantes. Commande : `cd ~/Projets-iPad/mlx-swift-lm && xcodebuild -scheme MLXVLM
   -destination 'generic/platform=iOS Simulator' build`. Voie de repli si trop lourd : MLX 0.29.1 + couche Swift
   récente (≈ 95 erreurs d'API Swift, liste type OffsetLayer / gatherMM / quantizedMM / WiredMemoryTicket).
+- [x] **P — Analyse du document entier (22/10, non vérifié iPad)** : bibliothèque → appui long → « Analyser le
+  document entier » (`DocumentAnalysisSheet`). `DocumentAnalysisService` : OCR habituel → OvisOCR2 sur toutes les
+  pages → GLM-OCR sur toutes les pages (un modèle chargé à la fois) → `DocumentAnalysis.vote` (OCRKit, testé) :
+  ligne confirmée si ≥ 2 lectures identiques ; sinon désaccord + choix conseillé (majorité, ou dictionnaire à
+  égalité). Rapport `Application Support/Analysis/<id>.json`, reprise après arrêt (lectures brutes gardées par
+  page). « Appliquer les choix conseillés » ou choix ligne par ligne → cache OCR (`edited`). Droits TrollStore :
+  `increased-memory-limit` + `extended-virtual-addressing`.
+- [x] **Q — Gros modèle dans l'analyse (22/10)** : Qwen3-VL-4B-Instruct MLX 4 bits (`ModelSpec.qwen3vl4b`, 3,1 Go,
+  `Qwen3VLReader`, consigne « manuel japonais d'architecture / design d'intérieur ») = 3e lecteur, le plus lourd, de
+  l'analyse ; mémoire libre vérifiée avant chargement (`PageVLMReader.minimumFreeMemory`, `os_proc_available_memory`).
+  ✅ Mac en Metal 3.0 forcé : Qwen 12 s, Ovis 5 s, textes exacts (`OvisOCR2Tests`, modèles dans le scratchpad).
+  Rapport : lectures brutes `Analysis/<id>/<lecteur>-<page>.md`, vote hors fil principal, choix appliqués seulement
+  si la ligne n'a pas changé. Non vérifié sur iPad (vitesse, mémoire, chaleur).
+- [ ] **S — Lexique du domaine** (design d'intérieur / architecture) : les termes techniques absents de JMdict
+  passent pour « douteux ». Lexique = mots confirmés par l'analyse (≥ 2 lectures) + ajout à la main ; utilisé comme
+  « mots connus » par `OCRProofreader` et `DocumentAnalysisService.preferred`. Balises `FDR-S`.
 - [ ] **N — Furigana « vérifiés »** : lecture gardée seulement si MeCab et le dictionnaire Yomitan sont d'accord ;
   sinon, celle du dictionnaire si le mot y est, et petit point pour signaler le doute. Correction à la main gardée.
 - Écarté : petit modèle de langue local pour tout relire (1-3 Go de mémoire, lent, chauffe, gain incertain sur des
@@ -422,6 +438,8 @@ Outils Python : venv jetable (`python3 -m venv`, `pip install h5py onnx onnxrunt
 - Le paysage n'a **jamais** été vérifié (le simulateur sans fenêtre ne pivote pas).
 
 ## 10. Idées / plus tard
+
+**Version Mac (Mac Catalyst)** : faisable (1-2 sessions), mise de côté le 22/10 à la demande de l'utilisateur — ne pas la proposer d'office.
 
 PP-OCRv6, envoi des médias vers AnkiMobile, synchro des cartes par Drive, statistiques avancées, redressement des
 photos de pages (UVDoc, ONNX ?), super-résolution légère des scans flous, Surya via le Mac (refusé : « tout sur l'iPad »).
