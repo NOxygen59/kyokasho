@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 NOxygen59
 
+import CoreImage
 import PDFKit
 import UIKit
 
 /// Fond des pages PDF : blanc d'origine, adouci (crème, tamisé) ou inversé (sombre confortable).
-/// Appliqué par `ToneOverlay`, un filtre de mélange posé sur toute la vue du lecteur au moment de l'affichage :
-/// instantané, sur tout le PDF (pages pas encore dessinées comprises), sans redessiner ni reconstruire. (Avant :
-/// peint page par page après PDFKit → page blanche puis teinte qui arrivait, à chaque page et à chaque changement.)
+/// Appliqué au dessin de chaque page (aucun calcul à part, aucun fichier modifié).
 enum PageTone: String, CaseIterable, Identifiable {
-    case normal, cream, dim, dark
+    case normal, cream, dim, dark, smartDark
 
     var id: String { rawValue }
 
@@ -19,6 +18,7 @@ enum PageTone: String, CaseIterable, Identifiable {
         case .cream: return "Crème"
         case .dim: return "Tamisé"
         case .dark: return "Sombre (inversé)"
+        case .smartDark: return "Sombre intelligent (expérimental)"
         }
     }
 
@@ -28,6 +28,7 @@ enum PageTone: String, CaseIterable, Identifiable {
         case .cream: return "cup.and.saucer"
         case .dim: return "sun.min"
         case .dark: return "moon"
+        case .smartDark: return "moon.stars"
         }
     }
 
@@ -41,62 +42,102 @@ enum PageTone: String, CaseIterable, Identifiable {
         set { lock.withLock { stored = newValue } }
     }
 
-    /// Calques de mélange, de bas en haut (mêmes réglages que l'ancien dessin par page).
-    var blends: [(filter: String, color: UIColor)] {
+    /// Recouvre la page déjà dessinée (`rect` = zone visible du contexte).
+    func apply(in context: CGContext, rect: CGRect) {
+        guard self != .normal else { return }
+        context.saveGState()
+        func blend(_ mode: CGBlendMode, _ r: CGFloat, _ g: CGFloat, _ b: CGFloat) {
+            context.setBlendMode(mode)
+            context.setFillColor(red: r, green: g, blue: b, alpha: 1)
+            context.fill(rect)
+        }
         switch self {
-        case .normal: return []
-        // Multiplier : le noir reste noir, le blanc devient crème.
-        case .cream: return [("multiplyBlendMode", UIColor(red: 1.0, green: 0.94, blue: 0.82, alpha: 1))]
-        case .dim: return [("multiplyBlendMode", UIColor(red: 0.80, green: 0.78, blue: 0.74, alpha: 1))]
-        // Inverser, fond gris très foncé (pas noir pur), texte blanc cassé (moins éblouissant). Ancien calcul en
-        // trois mélanges : m × (1 − (1 − (1 − c))(1 − g)) = m − m(1 − g)·c, avec m = (0,86 ; 0,84 ; 0,80) et
-        // g = (0,11 ; 0,11 ; 0,12). Même résultat en deux : multiplier par k = m(1 − g), puis |k·c − m|.
-        case .dark: return [("multiplyBlendMode", UIColor(red: 0.7654, green: 0.7476, blue: 0.704, alpha: 1)),
-                            ("differenceBlendMode", UIColor(red: 0.86, green: 0.84, blue: 0.80, alpha: 1))]
+        case .normal: break
+        case .cream:
+            // Multiplier : le noir reste noir, le blanc devient crème.
+            blend(.multiply, 1.0, 0.94, 0.82)
+        case .dim:
+            blend(.multiply, 0.80, 0.78, 0.74)
+        case .dark, .smartDark:
+            // Inverser, puis fond gris très foncé (pas noir pur) et texte blanc cassé (moins éblouissant).
+            // (Sombre intelligent : seulement en attendant son image préparée, voir `ToneCache`.)
+            blend(.difference, 1, 1, 1)
+            blend(.screen, 0.11, 0.11, 0.12)
+            blend(.multiply, 0.86, 0.84, 0.80)
         }
-    }
-
-    /// Couleur à donner au fond du lecteur pour qu'il garde sa teinte une fois filtré (l'inversion le retourne).
-    func compensated(_ background: UIColor) -> UIColor {
-        guard self == .dark else { return background }
-        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
-        background.getRed(&r, green: &g, blue: &b, alpha: &a)
-        return UIColor(red: 1 - r, green: 1 - g, blue: 1 - b, alpha: a)
+        context.restoreGState()
     }
 }
 
-/// Filtre de teinte posé sur toute la vue du lecteur (au-dessus des pages, sous rien d'interactif) : une vue par
-/// calque de mélange (`compositingFilter`), composée par l'écran à l'affichage. Ne reçoit aucun toucher.
-final class ToneOverlay: UIView {
-    var tone: PageTone = .normal {
-        didSet { guard tone != oldValue else { return }; rebuild() }
+/// Pages teintées préparées à l'avance (planche affichée, précédente et suivante, voir
+/// `ReaderController.scheduleTone`) : le dessin pose l'image prête au lieu de teinter après coup (plus de page
+/// blanche puis teinte). Lu par PDFKit depuis ses fils de dessin : protégé par un verrou.
+enum ToneCache {
+    static let longSide: CGFloat = 2000
+    private static let lock = NSLock()
+    private static var images: [String: CGImage] = [:]
+
+    private static func full(_ key: String, _ tone: PageTone) -> String { key + "|" + tone.rawValue }
+
+    static func image(for key: String, tone: PageTone) -> CGImage? { lock.withLock { images[full(key, tone)] } }
+
+    /// Garde seulement ces pages (dans la teinte en cours) : le reste est libéré.
+    static func keep(_ keys: Set<String>, tone: PageTone) {
+        let wanted = Set(keys.map { full($0, tone) })
+        lock.withLock { images = images.filter { wanted.contains($0.key) } }
     }
 
-    override init(frame: CGRect) {
-        super.init(frame: frame)
-        isUserInteractionEnabled = false
-        autoresizingMask = [.flexibleWidth, .flexibleHeight]
-        backgroundColor = .clear
-    }
+    static func clear() { lock.withLock { images = [:] } }
 
-    required init?(coder: NSCoder) { fatalError("non utilisé") }
-
-    private func rebuild() {
-        subviews.forEach { $0.removeFromSuperview() }
-        for blend in tone.blends {
-            let layerView = UIView(frame: bounds)
-            layerView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-            layerView.isUserInteractionEnabled = false
-            layerView.backgroundColor = blend.color
-            layerView.layer.compositingFilter = blend.filter
-            addSubview(layerView)
+    /// Rend la page source (cadre `cropBox`, comme les pages nettoyées) puis la teinte. Hors du fil principal.
+    static func prepare(key: String, fileURL: URL, page index: Int, tone: PageTone) -> Bool {
+        guard tone != .normal, image(for: key, tone: tone) == nil,
+              let document = CGPDFDocument(fileURL as CFURL), let page = document.page(at: index + 1) else { return false }
+        let box = page.getBoxRect(.cropBox)
+        guard box.width > 0, box.height > 0 else { return false }
+        let scale = longSide / max(box.width, box.height)
+        let width = Int((box.width * scale).rounded()), height = Int((box.height * scale).rounded())
+        guard let ctx = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
+                                  space: CGColorSpaceCreateDeviceRGB(),
+                                  bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue) else { return false }
+        let rect = CGRect(x: 0, y: 0, width: width, height: height)
+        ctx.setFillColor(gray: 1, alpha: 1)
+        ctx.fill(rect)
+        ctx.saveGState()
+        ctx.interpolationQuality = .high
+        ctx.scaleBy(x: scale, y: scale)
+        ctx.translateBy(x: -box.minX, y: -box.minY)
+        ctx.drawPDFPage(page)
+        ctx.restoreGState()
+        guard var result = ctx.makeImage() else { return false }
+        if tone == .smartDark {
+            // Clair ↔ sombre inversés, teintes gardées (inversion puis rotation de teinte d'un demi-tour), puis le
+            // même adoucissement que « Sombre » (fond gris très foncé, blanc cassé).
+            let inverted = CIImage(cgImage: result).applyingFilter("CIColorInvert")
+                .applyingFilter("CIHueAdjust", parameters: [kCIInputAngleKey: Double.pi])
+            guard let smart = CIContext(options: [.cacheIntermediates: false]).createCGImage(inverted, from: inverted.extent)
+            else { return false }
+            ctx.draw(smart, in: rect)
+            ctx.saveGState()
+            ctx.setBlendMode(.screen)
+            ctx.setFillColor(red: 0.11, green: 0.11, blue: 0.12, alpha: 1)
+            ctx.fill(rect)
+            ctx.setBlendMode(.multiply)
+            ctx.setFillColor(red: 0.86, green: 0.84, blue: 0.80, alpha: 1)
+            ctx.fill(rect)
+            ctx.restoreGState()
+        } else {
+            tone.apply(in: ctx, rect: rect)
         }
-        isHidden = tone == .normal
+        guard let toned = ctx.makeImage() else { return false }
+        result = toned
+        lock.withLock { images[full(key, tone)] = result }
+        return true
     }
 }
 
-/// Page qui affiche sa version nettoyée par DE-GAN si elle est prête (`ScanSharpening`) et ses furigana. La teinte
-/// (`PageTone`) n'est plus peinte ici : `ToneOverlay` sur la vue.
+/// Page qui affiche sa version nettoyée par DE-GAN si elle est prête (`ScanSharpening`), puis applique
+/// `PageTone.current` par-dessus.
 final class TonedPage: PDFPage {
     /// Clé de la page d'origine (document + page) : version nettoyée, furigana.
     var pageKey: String?
@@ -104,6 +145,19 @@ final class TonedPage: PDFPage {
     var originalBox: CGRect = .zero
 
     override func draw(with box: PDFDisplayBox, to context: CGContext) {
+        let tone = PageTone.current
+        // Page teintée déjà prête (et assez nette pour le zoom actuel) : posée telle quelle, pas de teinte après coup.
+        if tone != .normal, let key = pageKey, ScanSharpening.image(for: key) == nil,
+           let toned = ToneCache.image(for: key, tone: tone), sharpEnough(toned, in: context) {
+            context.saveGState()
+            context.concatenate(transform(for: box))
+            context.clip(to: bounds(for: box))
+            context.interpolationQuality = .high
+            context.draw(toned, in: originalBox)
+            context.restoreGState()
+            drawFurigana(box, in: context)
+            return
+        }
         if let key = pageKey, let image = ScanSharpening.image(for: key) {
             // Même repère que `super.draw` (origine du cadre + rotation, vérifié sur Mac) ;
             // la découpe garde seulement la partie visible (moitié de page coupée, rognage).
@@ -119,13 +173,26 @@ final class TonedPage: PDFPage {
         } else {
             super.draw(with: box, to: context)
         }
-        if let key = pageKey, let marks = FuriganaLayer.marks(for: key), !marks.isEmpty {
-            context.saveGState()
-            context.concatenate(transform(for: box))
-            context.clip(to: bounds(for: box))
-            FuriganaLayer.draw(marks, in: context)
-            context.restoreGState()
-        }
+        drawFurigana(box, in: context)
+        guard tone != .normal else { return }
+        tone.apply(in: context, rect: context.boundingBoxOfClipPath)
+    }
+
+    private func drawFurigana(_ box: PDFDisplayBox, in context: CGContext) {
+        guard let key = pageKey, let marks = FuriganaLayer.marks(for: key), !marks.isEmpty else { return }
+        context.saveGState()
+        context.concatenate(transform(for: box))
+        context.clip(to: bounds(for: box))
+        FuriganaLayer.draw(marks, in: context)
+        context.restoreGState()
+    }
+
+    /// Image assez fine pour l'échelle du dessin (zoom) ; sinon teinte peinte comme avant (nette à tout zoom).
+    private func sharpEnough(_ image: CGImage, in context: CGContext) -> Bool {
+        guard originalBox.width > 0 else { return false }
+        let m = context.ctm
+        let pixelsPerPoint = (m.a * m.a + m.b * m.b).squareRoot()
+        return CGFloat(image.width) >= originalBox.width * pixelsPerPoint * 0.9
     }
 }
 

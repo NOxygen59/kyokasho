@@ -46,6 +46,7 @@ struct KyokashoApp: App {
                     PDFPool.release()
                     ScanSharpening.clearMemory()
                     FuriganaLayer.clearMemory()
+                    ToneCache.clear()
                     Task { await GLMOCREngine.unload() }
                 }
         }

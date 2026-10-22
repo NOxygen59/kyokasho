@@ -23,6 +23,7 @@ Textes des licences : [LICENSES/](LICENSES/) ; attributions : [THIRD_PARTY_NOTIC
 
 | Version | Release | Contenu |
 |---|---|---|
+| **0.9.0** | [v0.9.0](https://github.com/NOxygen59/kyokasho/releases/tag/v0.9.0) | Teintes préchargées, sombre intelligent, fenêtre OCR plus libre |
 | **0.8.9.2** | [v0.8.9.2](https://github.com/NOxygen59/kyokasho/releases/tag/v0.8.9.2) | Gestes du mode Pencil partout (retour arrière du zoom fluide), teinte des pages instantanée |
 | **0.8.9.1** | [v0.8.9.1](https://github.com/NOxygen59/kyokasho/releases/tag/v0.8.9.1) | Toucher sans attente, zoom fluide (premier essai), lexique du domaine, ménage du code |
 | **0.8.9** | [v0.8.9](https://github.com/NOxygen59/kyokasho/releases/tag/v0.8.9) | Export, ajout de pages, place prise et cache, une page par IA, chat Qwen |

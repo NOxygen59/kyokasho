@@ -57,6 +57,8 @@ final class ReaderController: NSObject, ObservableObject {
 
     /// Dernier calcul de furigana OCR lancé par page (`showOCR`).
     var furiganaGeneration: [Int: Int] = [:]
+    /// Préparation des pages teintées voisines (`scheduleTone`).
+    var toneTask: Task<Void, Never>?
     var isAnimatingTurn = false
     /// Page courante au dernier `pageSettled` (voir `schedulePageSettled`).
     var settledSource: Int?
@@ -739,8 +741,6 @@ extension ReaderController: PDFDocumentDelegate {
 
 /// `PDFView` qui garde l'échelle « page entière » à jour quand la taille change (rotation, Split View).
 final class ReaderPDFView: PDFView {
-    /// Teinte des pages (`PageTone`), toujours au premier plan.
-    let toneOverlay = ToneOverlay(frame: .zero)
     private var lastSize: CGSize = .zero
     /// Action « Dictionnaire » du menu de sélection d'iOS (Copier, Rechercher…).
     var onLookupSelection: (() -> Void)?
@@ -784,11 +784,6 @@ final class ReaderPDFView: PDFView {
 
     override func layoutSubviews() {
         super.layoutSubviews()
-        // Filtre de teinte au-dessus des pages (PDFKit ajoute ses vues après coup).
-        if toneOverlay.superview !== self || subviews.last !== toneOverlay {
-            toneOverlay.frame = bounds
-            addSubview(toneOverlay)
-        }
         guard bounds.size != lastSize, bounds.width > 0 else { return }
         lastSize = bounds.size
         let wasFit = isAtFit

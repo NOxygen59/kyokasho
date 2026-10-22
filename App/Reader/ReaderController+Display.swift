@@ -149,16 +149,41 @@ extension ReaderController {
         pdfView.redrawVisiblePages()
     }
 
-    /// Fond des pages changé : seul le filtre de la vue change (instantané, rien n'est redessiné).
+    /// Fond des pages changé : redessin immédiat (teinte peinte), puis pages voisines préparées (`scheduleTone`).
     func setPageTone(_ tone: PageTone) {
         guard tone != PageTone.current else { return }
         PageTone.current = tone
-        applyTone()
+        ToneCache.clear()
+        pdfView.redrawVisiblePages()
+        scheduleTone(shownSources)
+    }
+
+    /// Pages teintées préparées : planche affichée, précédente et suivante ; les autres sont libérées (la fenêtre
+    /// suit la lecture : en tournant, la nouvelle voisine se prépare, l'ancienne s'en va).
+    func scheduleTone(_ visible: [Int]) {
+        toneTask?.cancel()
+        let tone = PageTone.current
+        guard tone != .normal, let low = visible.min(), let high = visible.max() else { ToneCache.clear(); return }
+        let reach = settings.layout == .double ? 2 : 1
+        let window = Array(max(0, low - reach)...min(document.pageCount - 1, high + reach))
+        let id = document.id, url = fileURL
+        ToneCache.keep(Set(window.map { ScanSharpening.key(documentId: id, page: $0) }), tone: tone)
+        // D'abord les pages affichées, puis les voisines.
+        let order = visible + window.filter { !visible.contains($0) }
+        toneTask = Task.detached(priority: .utility) { [weak self] in
+            var shownReady = false
+            for page in order {
+                guard !Task.isCancelled else { return }
+                let key = ScanSharpening.key(documentId: id, page: page)
+                if ToneCache.prepare(key: key, fileURL: url, page: page, tone: tone), visible.contains(page) { shownReady = true }
+            }
+            guard shownReady, !Task.isCancelled else { return }
+            await self?.pdfView.redrawVisiblePages()
+        }
     }
 
     func applyTone() {
-        pdfView.toneOverlay.tone = PageTone.current
-        pdfView.backgroundColor = PageTone.current.compensated(settings.background.uiColor)
+        pdfView.backgroundColor = settings.background.uiColor
     }
 
     func update(settings newSettings: ReaderSettings) {

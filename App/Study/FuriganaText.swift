@@ -168,7 +168,7 @@ struct FuriganaTextView: View {
         let text = UIColor(Atelier.textPrimary).hexString, accent = UIColor(Atelier.Tint.japanese).hexString
         let line = UIColor(Atelier.hairline).hexString
         return """
-        <!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1">
+        <!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=5,user-scalable=yes">
         <style>
         html,body{margin:0;background:transparent;color:\(text);font:17px/2.1 "Hiragino Mincho ProN",serif;-webkit-user-select:none}
         p,h2,h3,td{margin:0 0 .6em} h2{font-size:1.35em} h3{font-size:1.15em}
@@ -209,10 +209,14 @@ struct RubyWebView: UIViewRepresentable {
         // Pas zoomé, la hauteur suit le contenu : un glisser vertical fait défiler la fenêtre OCR, pas le texte.
         let scroll = view.scrollView
         scroll.isScrollEnabled = true
-        scroll.isDirectionalLockEnabled = true
+        // Déplacement libre dans toutes les directions ; pincer de 1× à 5×.
+        scroll.isDirectionalLockEnabled = false
         scroll.alwaysBounceVertical = false
         scroll.alwaysBounceHorizontal = false
-        scroll.bounces = false
+        scroll.bounces = true
+        scroll.bouncesZoom = true
+        scroll.minimumZoomScale = 1
+        scroll.maximumZoomScale = 5
         scroll.contentInsetAdjustmentBehavior = .never
         return view
     }

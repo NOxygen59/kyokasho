@@ -61,6 +61,7 @@ extension ReaderController {
         if shownSources != visible { shownSources = visible }
         if !keepFocus { focusSource = pinnedFocus.flatMap { visible.contains($0) ? $0 : nil } ?? source }
         scheduleSharpening(visible)
+        scheduleTone(visible)
         scheduleFurigana(visible)
         Task { [weak self] in
             guard let self else { return }
@@ -258,6 +259,8 @@ extension ReaderController {
         savePositionWork?.perform()
         cropTask?.cancel()
         sharpenTask?.cancel()
+        toneTask?.cancel()
+        ToneCache.clear()
         furiganaTask?.cancel()
         cancelEnsureOCR()
         ocrTask?.cancel()
