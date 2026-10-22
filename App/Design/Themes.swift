@@ -4,6 +4,7 @@
 import SwiftUI
 
 /// Un thème = fonds (toujours sombres) + une couleur par fonction.
+// FDR-V6 : nouveaux thèmes à fonds dessinés (washi, grille d'architecte, plan d'intérieur, encre et or…), aperçu en direct, couleurs aussi dans le HTML.
 struct Theme: Identifiable, Equatable {
     let id: String
     let name: String

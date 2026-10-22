@@ -69,6 +69,7 @@ struct SettingsView: View {
                     Text("CPU, mémoire et images par seconde de l'app, dans un panneau flottant ouvert depuis le menu « … » du lecteur.")
                 }
                 DiagnosticsSection()
+                // FDR-V10 : graphique de la place prise (documents, modèles, analyses, base, caches). FDR-V11 : « Effacer le cache » (garder PDF, base, OCR, notes, analyses, modèles).
                 Section("Comptes") {
                     NavigationLink { DriveAccountView() } label: {
                         row("externaldrive.badge.icloud", "Google Drive", tint: Atelier.Tint.cloud)
@@ -495,6 +496,7 @@ struct TranslationSettingsSection: View {
 }
 
 /// Tous les modèles à télécharger (OCR, netteté des scans), avec leurs liens.
+// FDR-V7 : une page par IA locale (état, mémoire, décharger, réglages, journal) + chat Qwen3-VL (chargé à l'ouverture, déchargé en quittant).
 struct ModelsView: View {
     var body: some View {
         Form {

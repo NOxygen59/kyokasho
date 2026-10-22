@@ -65,6 +65,7 @@ extension ONNXModel.Tensor {
 }
 
 /// Sessions ouvertes une fois (chargement ≈ 1 s), gardées tant que l'app tourne.
+// FDR-V2 : clear() + décharge après inactivité / avertissement mémoire. FDR-V12 : vidé au retour à la bibliothèque.
 final class SessionCache: @unchecked Sendable {
     static let shared = SessionCache()
     private let lock = NSLock()

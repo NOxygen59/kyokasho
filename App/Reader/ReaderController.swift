@@ -13,6 +13,7 @@ import UIKit
 /// rotation — en mémoire, le fichier n'est jamais réécrit), réglages, navigation, gestes,
 /// surlignages, signets, recherche, sauvegarde de la position.
 @MainActor
+// FDR-V9 : découper ce fichier en extensions par thème (OCR, IA, notes, dictionnaire, gestes) sans changer le comportement.
 final class ReaderController: NSObject, ObservableObject {
     let model: AppModel
     @Published private(set) var document: LibraryDocument
@@ -855,6 +856,7 @@ final class ReaderController: NSObject, ObservableObject {
         }
     }
 
+    // FDR-V13 : glisser dans la même page ne doit pas changer focusSource / ocrPage (sinon le panneau revient en haut).
     private func pageChanged() {
         guard let pdf, let page = pdfView.currentPage else { return }
         let index = pdf.index(for: page)
@@ -1018,6 +1020,7 @@ final class ReaderController: NSObject, ObservableObject {
     /// - Parameters:
     ///   - engine: moteur imposé (sinon : réglage du document, « auto » résolu selon la page).
     ///   - force: ignore le cache (bouton « Relancer »).
+    // FDR-V5 : chaque OCR (même en cache / forcé) → relancer OCRProofreader et rafraîchir les caractères douteux.
     func runOCR(engine: String? = nil, force: Bool = false) {
         ocrTask?.cancel()
         let source = focusSource
@@ -1059,6 +1062,7 @@ final class ReaderController: NSObject, ObservableObject {
     }
 
     /// Pilule du panneau : travailler sur l'autre page affichée (double page).
+    // FDR-V4 : changer de page n'annule plus les tâches IA. FDR-V13 : ne rien republier si la page de travail ne change pas.
     func focus(_ source: Int) {
         guard source != focusSource, shownSources.contains(source) else { return }
         ocrTask?.cancel()
@@ -1114,6 +1118,7 @@ final class ReaderController: NSObject, ObservableObject {
         if on { pageSettled() }
     }
 
+    // FDR-V4 : ne plus annuler ici les tâches IA (relecture, vérification, mise en page, traduction) : elles passent à AITaskCenter.
     func close() {
         savePositionWork?.perform()
         rereadTask?.cancel()

@@ -109,6 +109,7 @@ enum FuriganaLayer {
 
     /// Scan : boîtes OCR normalisées → repère de la page (rotation intrinsèque comprise, voir `PageFrame`).
     // FDR-3 : sauter les kanji qui ont déjà des furigana imprimés (lignes OCR très fines collées à la ligne) et ne pas les compter comme obstacles. Voir § 6 étape 3.
+    // FDR-V3 : texte = Markdown d'OvisOCR2 aligné sur les lignes OCR (OCRReferenceDiff.align + CharacterAlignment), lectures MeCab, centrer sur le groupe de kanji.
     static func marks(from ocr: OCRPage, frame: PageFrame) -> [Mark] {
         let lineRects = ocr.lines.map { frame.pageRect($0.box) }
         return ocr.lines.enumerated().flatMap { l, line -> [Mark] in

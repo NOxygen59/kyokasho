@@ -78,6 +78,7 @@ struct StudyPanel: View {
 
 // MARK: - Texte + traduction
 
+// FDR-V13 : garder la position de défilement par page ; ne rien recharger si la page de travail ne change pas.
 struct StudyTextTab: View {
     @EnvironmentObject private var model: AppModel
     @ObservedObject var reader: ReaderController
@@ -322,6 +323,7 @@ struct StudyTextTab: View {
 
     /// « N caractères douteux » + relecture par l'IA (GLM-OCR) ou indication pour corriger à la main.
     @ViewBuilder
+    // FDR-V5 : se mettre à jour après chaque nouvelle analyse OCR de la page. FDR-V4 : afficher les tâches IA en cours (AITaskCenter).
     private func doubtRow(_ page: OCRPage) -> some View {
         let lines = OCRProofreader.doubtful(page)
         let count = page.lines.reduce(0) { $0 + ($1.doubt?.count ?? 0) }

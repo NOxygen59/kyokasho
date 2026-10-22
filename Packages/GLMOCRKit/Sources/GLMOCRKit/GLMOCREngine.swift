@@ -111,6 +111,7 @@ public struct GLMOCREngine: OCREngine {
 }
 
 /// Modèle chargé une fois, gardé tant que l'app tourne (chargement ≈ quelques secondes).
+// FDR-V2 : décharger après inactivité (≈ 90 s), compteur d'utilisations en cours, MLX.GPU.clearCache() après lecture.
 actor GLMModel {
     static let shared = GLMModel()
     private var loaded: (URL, ModelContainer)?

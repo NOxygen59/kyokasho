@@ -143,6 +143,7 @@ final class AppModel: ObservableObject {
         }
     }
 
+    // FDR-V3 : après import, lancer (via AITaskCenter, V4) la lecture IA des pages pas encore lues + fenêtre % et détail.
     func importFiles(_ urls: [URL], cleanUp: Bool = true, openWhenSingle: Bool = true) {
         guard !urls.isEmpty else { return }
         importProgress = ImportProgress(done: 0, total: urls.count, currentName: urls[0].lastPathComponent)

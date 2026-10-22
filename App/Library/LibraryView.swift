@@ -6,6 +6,7 @@ import SwiftUI
 
 /// Bibliothèque « Atelier » : barre latérale (sources, outils) + planche de documents sur fond
 /// quadrillé. Pensée pour le paysage ; en portrait la barre latérale se replie en haut.
+// FDR-V12 : à l'apparition, décharger les IA (MLX + ONNX + cache GPU) sauf si une analyse tourne.
 struct LibraryView: View {
     enum Filter: String, CaseIterable { case all, inProgress, drive }
 
@@ -295,6 +296,7 @@ struct LibraryView: View {
     }
 
     @ViewBuilder
+    // FDR-V8 : « Exporter… » (PDF d'origine, PDF annoté, texte / Markdown + traduction, PNG, .apkg). FDR-V14 : « Ajouter des pages… » (ordre réglable).
     private func menu(for document: LibraryDocument) -> some View {
         Button { model.openDocumentId = document.id } label: { Label("Ouvrir", systemImage: "book") }
         Button {

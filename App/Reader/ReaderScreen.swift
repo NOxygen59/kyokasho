@@ -448,6 +448,7 @@ struct ReaderScreen: View {
     private func sidePanel(_ side: Side) -> some View {
         switch side {
         case .study:
+            // FDR-V1 : panneau détachable (réduire / ancrer à droite / plein écran / redimensionner), sur le modèle de FloatingToolbar et NoteWindow.
             StudyPanel(reader: reader, tab: $studyTab, openSearch: { sheet = .search }, close: { self.side = nil })
         case .web:
             WebPanel(onClose: { self.side = nil })

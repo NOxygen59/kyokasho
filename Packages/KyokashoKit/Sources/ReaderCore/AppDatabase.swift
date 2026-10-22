@@ -327,6 +327,7 @@ extension AppDatabase {
         try writer.write { db in _ = try Bookmark.deleteOne(db, key: id) }
     }
 
+    // FDR-V14 : ajouter remapPages(documentId:mapping:) (ocrResult, highlight, inkDrawing, bookmark, pageComment, pageTransform) en une transaction.
     public func comments(documentId: String) throws -> [PageComment] {
         try writer.read { db in
             try PageComment.filter(Column("documentId") == documentId).order(Column("pageIndex"), Column("createdAt")).fetchAll(db)
