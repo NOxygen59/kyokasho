@@ -27,8 +27,6 @@ struct ReaderScreen: View {
     @AppStorage(StudyPanelMode.storageKey) private var studyMode = StudyPanelMode.docked
     @AppStorage(StudyPanelMode.restoreKey) private var studyRestore = StudyPanelMode.docked
     @AppStorage("reader.filmstripShown") private var filmstripShown = true
-    /// Pincer et se déplacer zoomé à la façon d'iOS en mode page par page (`ReaderController.fluidZoom`).
-    @AppStorage(ReaderController.fluidZoomKey) private var fluidZoom = true
     @AppStorage("pencil.lookupOption") private var pencilOption = false
     @AppStorage(PageTone.storageKey) private var pageTone = PageTone.normal
     @State private var scanCleaning = ScanSharpening.method
@@ -298,9 +296,6 @@ struct ReaderScreen: View {
                         Label("Fond de page", systemImage: "circle.lefthalf.filled")
                     }
                     .pickerStyle(.menu)
-                    Toggle(isOn: Binding(get: { fluidZoom }, set: { fluidZoom = $0; reader.setFluidZoom($0) })) {
-                        Label("Zoom fluide", systemImage: "plus.magnifyingglass")
-                    }
                     Toggle(isOn: Binding(get: { furigana }, set: { furigana = $0; reader.setFurigana($0) })) {
                         Label("Furigana sur les kanji", systemImage: "character.ja")
                     }
