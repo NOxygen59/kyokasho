@@ -2,8 +2,11 @@
 // Copyright (c) 2026 NOxygen59
 
 import Charts
+import GLMOCRKit
 import OCRKit
+import ONNXOCRKit
 import SwiftUI
+import WebKit
 
 /// Place prise par l'app sur l'iPad, par catégorie (Réglages → Stockage). Tailles réelles sur le disque
 /// (`totalFileAllocatedSize`), calculées hors du fil principal.
@@ -61,6 +64,32 @@ enum StorageUsage {
         return items.sorted { $0.bytes > $1.bytes }
     }
 
+    /// « Effacer le cache » : seulement ce que l'app sait refaire (vignettes, pages nettoyées, téléchargements de
+    /// mise à jour, fichiers temporaires). Jamais : PDF, base (OCR, notes, cartes), analyses IA, modèles, UniDic,
+    /// dictionnaires, réglages. Les dossiers restent (les caches les attendent), seul leur contenu part ; ce qui
+    /// a bougé depuis moins de 5 min (export ou téléchargement en cours) est laissé. Rend la place libérée.
+    static func clearCaches() -> Int64 {
+        let fm = FileManager.default
+        let caches = fm.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+        let roots = [caches, fm.temporaryDirectory]
+        let before = roots.reduce(Int64(0)) { $0 + size(of: $1) }
+        let recent = Date().addingTimeInterval(-300)
+        func empty(_ folder: URL, depth: Int) {
+            let keys: [URLResourceKey] = [.isDirectoryKey, .contentModificationDateKey]
+            for item in (try? fm.contentsOfDirectory(at: folder, includingPropertiesForKeys: keys)) ?? [] {
+                let values = try? item.resourceValues(forKeys: Set(keys))
+                if values?.isDirectory == true, depth == 0 {
+                    empty(item, depth: 1)
+                } else if (values?.contentModificationDate ?? .distantPast) < recent {
+                    try? fm.removeItem(at: item)
+                }
+            }
+        }
+        roots.forEach { empty($0, depth: 0) }
+        let after = roots.reduce(Int64(0)) { $0 + size(of: $1) }
+        return max(0, before - after)
+    }
+
     /// Taille sur le disque d'un fichier ou d'un dossier (0 s'il n'existe pas).
     static func size(of url: URL) -> Int64 {
         let keys: [URLResourceKey] = [.totalFileAllocatedSizeKey, .fileAllocatedSizeKey, .isRegularFileKey]
@@ -82,10 +111,13 @@ enum StorageUsage {
 }
 
 /// Réglages → Stockage → « Place prise par l'app » : barre empilée + légende détaillée.
-// FDR-V11 : « Effacer le cache » ici (garder PDF, base, OCR, notes, analyses, modèles), avec la place libérée.
 struct StorageUsageView: View {
+    @EnvironmentObject private var model: AppModel
     @State private var items: [StorageUsage.Item]?
     @State private var free: Int64?
+    @State private var confirmClear = false
+    @State private var clearing = false
+    @State private var cleared: Int64?
 
     private var total: Int64 { items?.reduce(0) { $0 + $1.bytes } ?? 0 }
 
@@ -113,6 +145,22 @@ struct StorageUsageView: View {
                     }
                     .padding(.vertical, 6)
                 }
+                Section {
+                    Button(role: .destructive) { confirmClear = true } label: {
+                        HStack {
+                            Label("Effacer le cache", systemImage: "trash")
+                            Spacer()
+                            if clearing { ProgressView() }
+                        }
+                    }
+                    .disabled(clearing)
+                } footer: {
+                    if let cleared {
+                        Text("\(StorageUsage.format(cleared)) libérés.")
+                    } else {
+                        Text("Vignettes, pages nettoyées, fichiers temporaires et cache web : l'app les refait au besoin. Tes PDF, notes, textes lus, analyses et modèles restent.")
+                    }
+                }
                 Section("Détail") {
                     ForEach(Array(items.enumerated()), id: \.element.id) { i, item in
                         HStack(spacing: 12) {
@@ -134,6 +182,11 @@ struct StorageUsageView: View {
             }
         }
         .navigationTitle("Place prise par l'app")
+        .confirmationDialog("Effacer le cache ?", isPresented: $confirmClear, titleVisibility: .visible) {
+            Button("Effacer le cache", role: .destructive) { Task { await clear() } }
+        } message: {
+            Text("Rien d'important n'est perdu : PDF, notes, textes lus, analyses, modèles et réglages restent.")
+        }
         .task { await refresh() }
         .refreshable { await refresh() }
     }
@@ -143,6 +196,25 @@ struct StorageUsageView: View {
         let values = try? URL(fileURLWithPath: NSHomeDirectory()).resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey])
         items = result
         free = values?.volumeAvailableCapacityForImportantUsage
+    }
+
+    private func clear() async {
+        clearing = true
+        defer { clearing = false }
+        // Mémoire : caches des pages et modèles inactifs (une lecture en cours garde le sien).
+        model.thumbnails.trim()
+        ScanSharpening.clearMemory()
+        FuriganaLayer.clearMemory()
+        LayoutRegionsCache.shared.clear()
+        PDFPool.release()
+        ONNXEngines.unload()
+        await GLMOCREngine.unloadIfIdle()
+        // Cache web seulement : les connexions (cookies) du navigateur à côté restent.
+        let web: Set<String> = [WKWebsiteDataTypeDiskCache, WKWebsiteDataTypeMemoryCache,
+                                WKWebsiteDataTypeOfflineWebApplicationCache, WKWebsiteDataTypeFetchCache]
+        await WKWebsiteDataStore.default().removeData(ofTypes: web, modifiedSince: .distantPast)
+        cleared = await Task.detached(priority: .userInitiated) { StorageUsage.clearCaches() }.value
+        await refresh()
     }
 
     private func percent(_ item: StorageUsage.Item) -> String {

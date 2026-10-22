@@ -264,7 +264,11 @@ Comptes (Drive) ; À propos (+ **connexion GitHub** device flow → mise à jour
   (OCR, notes, cartes), caches (`Caches/*`, vignettes, nettoyage), temporaires. Barre empilée Swift Charts + légende,
   calcul hors du fil principal (`FileManager.enumerator` + `totalFileAllocatedSize`). Balises `FDR-V10`.
 
-### [ ] V11 — Effacer le cache (sans rien perdre d'important)
+### [x] V11 — Effacer le cache (sans rien perdre d'important)
+- **Fait (22/10, non vérifié sur iPad)** : bouton dans `StorageUsageView` (confirmation, place libérée affichée).
+  `StorageUsage.clearCaches` vide le **contenu** de `Caches/*` et `tmp` (dossiers gardés : `ThumbnailCache` ne les
+  recrée pas ; rien de modifié depuis < 5 min), + caches mémoire (vignettes, pages nettoyées, furigana, mise en page,
+  `PDFPool`, ONNX, MLX inactif) + cache web seulement (cookies du navigateur gardés).
 - Effacer seulement : `Caches/` (vignettes régénérables, `Sharpened`, `Update`), `tmp`, données WebKit, cache
   `LayoutRegionsCache`, `MLX.GPU.clearCache()`. **Garder** : PDF, base (notes, OCR, cartes), `Analysis`, modèles,
   UniDic, réglages. Confirmation + taille libérée affichée. Balises `FDR-V11`.

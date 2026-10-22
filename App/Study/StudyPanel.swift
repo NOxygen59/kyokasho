@@ -813,4 +813,6 @@ final class LayoutRegionsCache {
         order.append(key)
         while order.count > 30 { entries[order.removeFirst()] = nil }
     }
+
+    func clear() { entries = [:]; order = [] }
 }
