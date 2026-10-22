@@ -103,10 +103,10 @@ struct AILayoutView: View {
     /// Traduction de la page (fichier gardé), même si on change de page entre-temps.
     private func translate() {
         guard let markdown else { return }
-        let source = source, frenchFile = frenchFile
+        let source = source, frenchFile = frenchFile, glossary = DomainLexicon.shared.glossary
         center.run(translateKey, title: "Traduction Qwen3-VL p. \(source + 1)") { _ in
             let fr = try await Diagnostics.measure("traduction p. \(source)", "traduction") {
-                try await Qwen3VLReader().translate(markdown: markdown)
+                try await Qwen3VLReader().translate(markdown: markdown, glossary: glossary)
             }
             // Arrêtée : la génération rend un texte partiel, jamais gardé.
             try Task.checkCancellation()

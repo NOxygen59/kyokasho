@@ -325,7 +325,9 @@ Comptes (Drive) ; À propos (+ **connexion GitHub** device flow → mise à jour
 
 ## 8. Backlog (plus ancien, après le § 7)
 
-- [ ] **S — Lexique du domaine** (design d'intérieur) modifiable : mots connus pour `OCRProofreader` /
+- [x] **S — Lexique du domaine** (fait 22/10, non vérifié sur iPad : `App/Dictionary/DomainLexicon.swift`, `lexique.json`,
+  Réglages → Japonais ; `OCRProofreader.addingTerms` testé ; relecture, analyse, traductions, chat ; pages déjà
+  relues : prises en compte à la prochaine lecture) (design d'intérieur) modifiable : mots connus pour `OCRProofreader` /
   `DocumentAnalysisService.preferred` **et** glossaire de traduction (aujourd'hui `Qwen3VLReader.defaultGlossary`,
   ≈ 50 termes). Balises `FDR-S`.
 - [ ] **N — Furigana « vérifiés »** : MeCab et dictionnaire d'accord, sinon doute signalé (à fondre dans V3).

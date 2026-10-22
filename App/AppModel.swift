@@ -112,6 +112,8 @@ final class AppModel: ObservableObject {
             .store(in: &cancellables)
         // « Ajouter des pages… » interrompu (app arrêtée au milieu) : annulé ou terminé.
         PageShift.reconcile(self)
+        // Lexique du domaine lu tout de suite : la relecture de l'OCR (hors du fil principal) s'en sert.
+        _ = DomainLexicon.shared
     }
 
     func persist(_ work: @escaping @Sendable (AppDatabase) throws -> Void) {
@@ -127,12 +129,13 @@ final class AppModel: ObservableObject {
 
     /// Importe des fichiers déjà copiés localement par le sélecteur (hors fil principal).
     /// Relecture OCR par le dictionnaire (rien si aucun dictionnaire : la page sera relue plus tard).
-    // FDR-S : segment = dictionnaire + lexique du domaine (termes de design d'intérieur confirmés par l'analyse).
+    /// Les termes du lexique du domaine (`DomainLexicon`) comptent comme des mots connus.
     nonisolated static func proofreader(_ dict: DictionaryModel) -> @Sendable (OCRPage) async -> OCRPage {
         { page in
             guard await dict.hasTermDictionaries else { return page }
+            let terms = DomainLexicon.terms
             return await OCRProofreader.proofread(page) { text in
-                await dict.segment(text).map { (length: $0.text.count, known: $0.term != nil) }
+                OCRProofreader.addingTerms(terms, to: await dict.segment(text).map { (length: $0.text.count, known: $0.term != nil) }, in: text)
             }
         }
     }

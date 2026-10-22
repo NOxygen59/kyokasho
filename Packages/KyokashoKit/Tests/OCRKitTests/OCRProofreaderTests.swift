@@ -59,4 +59,14 @@ final class OCRProofreaderTests: XCTestCase {
         XCTAssertNil(page.lines[0].doubt)
         XCTAssertEqual(page.lines[0].text, "末来")
     }
+
+    func testLexiconTermsBecomeKnown() {
+        // 野縁 inconnu du dictionnaire (2 caractères inconnus), connu grâce au lexique.
+        let text = "野縁を張る"
+        let segments: [OCRProofreader.Segment] = [(1, false), (1, false), (1, true), (2, true)]
+        XCTAssertEqual(OCRProofreader.unknown(Array(text), segments), [0, 1])
+        let merged = OCRProofreader.addingTerms(["野縁"], to: segments, in: text)
+        XCTAssertEqual(OCRProofreader.unknown(Array(text), merged), [])
+        XCTAssertEqual(merged.reduce(0) { $0 + $1.length }, 5)
+    }
 }

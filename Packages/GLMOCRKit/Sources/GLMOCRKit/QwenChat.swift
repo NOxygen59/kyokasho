@@ -24,6 +24,10 @@ public final class QwenChat: @unchecked Sendable {
         lecture en hiragana et le sens. Si tu n'es pas sûr, dis-le.
         """
 
+    /// Lexique du domaine (terme → sens) et lectures sûres (terme → kana), fournis par l'app (lexique modifiable).
+    public var glossary: [(String, String)] = Qwen3VLReader.defaultGlossary
+    public var readings: [String: String] = [:]
+
     private let reader: Qwen3VLReader
     private var session: ChatSession?
     private var holding = false
@@ -47,16 +51,19 @@ public final class QwenChat: @unchecked Sendable {
 
     /// Aide fiable ajoutée à la question (le modèle de 4 milliards invente souvent les lectures, ex. 天井 « あまね ») :
     /// lectures de l'analyseur japonais de l'app (MeCab si installé) et termes du glossaire du manuel présents.
-    public static func hints(for prompt: String) -> String? {
+    public static func hints(for prompt: String, glossary: [(String, String)] = Qwen3VLReader.defaultGlossary,
+                             knownReadings: [String: String] = [:]) -> String? {
         var readings: [String] = []
+        // Lectures du lexique d'abord (plus sûres que l'analyseur pour les termes du métier).
+        for (term, kana) in knownReadings where prompt.contains(term) { readings.append("\(term) = \(kana)") }
         for ruby in Furigana.rubies(for: prompt) {
             let chars = Array(prompt)
             guard ruby.range.upperBound <= chars.count else { continue }
             let word = String(chars[ruby.range])
             let line = "\(word) = \(ruby.reading)"
-            if !readings.contains(line) { readings.append(line) }
+            if !readings.contains(line), !readings.contains(where: { $0.hasPrefix(word + " = ") }) { readings.append(line) }
         }
-        let terms = Qwen3VLReader.defaultGlossary.filter { prompt.contains($0.0) }.map { "\($0.0) = \($0.1)" }
+        let terms = glossary.filter { prompt.contains($0.0) }.map { "\($0.0) = \($0.1)" }
         guard !readings.isEmpty || !terms.isEmpty else { return nil }
         var text = "(Informations fiables à utiliser telles quelles"
         if !readings.isEmpty { text += " — lectures : " + readings.joined(separator: ", ") }
@@ -66,7 +73,7 @@ public final class QwenChat: @unchecked Sendable {
 
     /// Réponse en morceaux, au fil de l'écriture. Une erreur MLX devient une erreur Swift (pas d'arrêt de l'app).
     public func stream(_ prompt: String) -> AsyncThrowingStream<String, Error> {
-        let prompt = Self.hints(for: prompt).map { prompt + "\n\n" + $0 } ?? prompt
+        let prompt = Self.hints(for: prompt, glossary: glossary, knownReadings: readings).map { prompt + "\n\n" + $0 } ?? prompt
         guard let session else {
             return AsyncThrowingStream { $0.finish(throwing: OCRError.engineFailed("Conversation pas démarrée.")) }
         }

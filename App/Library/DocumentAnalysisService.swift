@@ -208,7 +208,7 @@ final class DocumentAnalysisService: ObservableObject {
                 guard !Task.isCancelled else { break }
                 guard let md = try? String(contentsOf: Self.rawURL(id, ModelSpec.ovisocr2.id, p), encoding: .utf8) else { continue }
                 do {
-                    let fr = try await Diagnostics.measure("traduction p. \(p)", "traduction") { try await Qwen3VLReader().translate(markdown: md) }
+                    let fr = try await Diagnostics.measure("traduction p. \(p)", "traduction") { try await Qwen3VLReader().translate(markdown: md, glossary: DomainLexicon.shared.glossary) }
                     try? fr.write(to: Self.rawURL(id, "fr", p), atomically: true, encoding: .utf8)
                 } catch {
                     self?.lastError = "Traduction page \(p + 1) : \(error.localizedDescription)"
@@ -282,12 +282,13 @@ final class DocumentAnalysisService: ObservableObject {
     }
 
     /// Égalité : le texte avec le moins de caractères hors dictionnaire ; `nil` si personne ne se détache.
-    // FDR-S : compter aussi les mots du lexique du domaine comme connus.
     static func preferred(_ candidates: [String], dictionary: DictionaryModel) async -> String? {
         guard await dictionary.hasTermDictionaries else { return nil }
         var scored: [(String, Int)] = []
+        let terms = DomainLexicon.terms
         for text in candidates {
-            let segments = await dictionary.segment(text).map { (length: $0.text.count, known: $0.term != nil) }
+            // Termes du lexique du domaine comptés comme connus.
+            let segments = OCRProofreader.addingTerms(terms, to: await dictionary.segment(text).map { (length: $0.text.count, known: $0.term != nil) }, in: text)
             scored.append((text, OCRProofreader.unknown(Array(text), segments).count))
         }
         let best = scored.map(\.1).min() ?? 0

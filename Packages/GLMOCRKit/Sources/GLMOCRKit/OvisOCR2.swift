@@ -105,7 +105,7 @@ public struct Qwen3VLReader: Sendable {
     public func unload() async { await base.unload() }
 
     /// Glossaire de départ du domaine (manuel japonais de design d'intérieur) : termes traduits toujours pareil.
-    // FDR-S : remplacer / compléter par le lexique du domaine modifiable par l'utilisateur.
+    /// Sert à préremplir le lexique modifiable de l'app (`DomainLexicon`), qui le remplace ensuite.
     public static let defaultGlossary: [(String, String)] = [
         ("天井", "plafond"), ("天井裏", "plénum (espace au-dessus du plafond)"), ("小屋裏", "comble"),
         ("小屋組", "charpente de toit"), ("野縁", "tasseau de plafond"), ("野縁受け", "lambourde porteuse de tasseaux"),

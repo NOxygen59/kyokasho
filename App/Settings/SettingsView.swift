@@ -32,6 +32,10 @@ struct SettingsView: View {
                     NavigationLink { DictionaryManagerView() } label: {
                         row("character.book.closed.ja", "Dictionnaires", tint: Atelier.Tint.japanese)
                     }
+                    NavigationLink { DomainLexiconView() } label: {
+                        row("text.book.closed", "Lexique du domaine", tint: Atelier.Tint.japanese,
+                            detail: "\(DomainLexicon.shared.entries.count) termes")
+                    }
                     NavigationLink { OCRSettingsView() } label: {
                         row("text.viewfinder", "Lecture des scans (OCR)", tint: Atelier.Tint.japanese,
                             detail: model.readerDefaults.ocrEngine.label)

@@ -194,6 +194,9 @@ struct QwenChatView: View {
         }
         .task {
             messages = (try? JSONDecoder().decode([QwenChat.Message].self, from: Data(contentsOf: Self.file))) ?? []
+            // Lexique du domaine : sens et lectures sûres ajoutés aux questions.
+            chat.glossary = DomainLexicon.shared.glossary
+            chat.readings = DomainLexicon.shared.readings
             do {
                 try await Diagnostics.measure("chargement de Qwen3-VL (chat)", "chat") {
                     try await chat.start(history: messages)

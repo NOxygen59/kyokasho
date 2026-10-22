@@ -38,6 +38,30 @@ public enum OCRProofreader {
         }
     }
 
+    /// Découpage du dictionnaire complété par le lexique du domaine : chaque occurrence d'un terme du lexique devient
+    /// un mot connu (ex. 野縁 absent des dictionnaires généraux). Même longueur totale que `segments`.
+    public static func addingTerms(_ terms: [String], to segments: [Segment], in text: String) -> [Segment] {
+        let chars = Array(text)
+        guard !terms.isEmpty, segments.reduce(0, { $0 + $1.length }) == chars.count else { return segments }
+        var known = [Bool](); known.reserveCapacity(chars.count)
+        for s in segments { known += Array(repeating: s.known, count: s.length) }
+        var changed = false
+        for term in terms where !term.isEmpty {
+            let t = Array(term)
+            guard t.count <= chars.count else { continue }
+            for start in 0...(chars.count - t.count) where Array(chars[start..<(start + t.count)]) == t {
+                for k in start..<(start + t.count) where !known[k] { known[k] = true; changed = true }
+            }
+        }
+        guard changed else { return segments }
+        // Nouveau découpage : suites de caractères connus / inconnus (seul le statut sert ensuite).
+        var out: [Segment] = []
+        for k in known.indices {
+            if let last = out.last, last.known == known[k] { out[out.count - 1].length += 1 } else { out.append((length: 1, known: known[k])) }
+        }
+        return out
+    }
+
     /// Index des caractères japonais hors de tout mot connu.
     public static func unknown(_ chars: [Character], _ segments: [Segment]) -> [Int] {
         guard segments.reduce(0, { $0 + $1.length }) == chars.count else { return [] }
