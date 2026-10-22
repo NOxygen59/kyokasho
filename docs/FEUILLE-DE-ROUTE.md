@@ -303,6 +303,11 @@ Rythme choisi le 22/10 au soir : **2 sections de la liste de l'utilisateur par s
   ✅ Mac en Metal 3.0 forcé : Qwen 12 s, Ovis 5 s, textes exacts (`OvisOCR2Tests`, modèles dans le scratchpad).
   Rapport : lectures brutes `Analysis/<id>/<lecteur>-<page>.md`, vote hors fil principal, choix appliqués seulement
   si la ligne n'a pas changé. Non vérifié sur iPad (vitesse, mémoire, chaleur).
+- **Mesures sur le vrai manuel (22/10, `INTERIOR COORDINATOR HANDBOOK HAWE.pdf` de l'utilisateur, ~/Downloads, 24 p., jamais
+  dans le dépôt)**, Mac en Metal 3.0 forcé (`testRealSample`, `KYOKASHO_SAMPLE_PDF`) : OvisOCR2 ≈ 22 s/page, pic
+  GPU 2,1 Go (1600 ou 1280 px : pareil), texte excellent ; Qwen3-VL-4B ≈ 37 s/page, pic 4 Go, **moins bon**
+  (襖 → 桜 systématique, 縦繁 → 繊緻) → option « Ajouter Qwen3-VL-4B » décochée par défaut. Plantage iPad pendant la
+  lecture OvisOCR2 (0.8.4.2) : cause inconnue, attendre le journal de diagnostic (message MLX noté avant l'arrêt).
 - [ ] **S — Lexique du domaine** (design d'intérieur / architecture) : les termes techniques absents de JMdict
   passent pour « douteux ». Lexique = mots confirmés par l'analyse (≥ 2 lectures) + ajout à la main ; utilisé comme
   « mots connus » par `OCRProofreader` et `DocumentAnalysisService.preferred`. Balises `FDR-S`.

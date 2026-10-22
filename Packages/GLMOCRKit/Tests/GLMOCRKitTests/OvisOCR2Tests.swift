@@ -5,6 +5,7 @@ import CoreGraphics
 import CoreText
 import Foundation
 @testable import GLMOCRKit
+import MLX
 import OCRKit
 import XCTest
 
@@ -73,5 +74,32 @@ final class OvisOCR2Tests: XCTestCase {
         let start = Date()
         let md = try await reader.read(.image(ctx.makeImage()!))
         print("FULL OVIS \(String(format: "%.1f", Date().timeIntervalSince(start))) s, \(md.count) caractères")
+    }
+
+    /// Vraies pages du manuel de l'utilisateur (jamais dans le dépôt) :
+    /// `KYOKASHO_SAMPLE_PDF=<pdf> KYOKASHO_SAMPLE_PAGES=1,2 KYOKASHO_MODELS=<dossier> swift test --filter testRealSample`.
+    func testRealSample() async throws {
+        let env = ProcessInfo.processInfo.environment
+        guard let pdf = env["KYOKASHO_SAMPLE_PDF"], let root = env["KYOKASHO_MODELS"] else { throw XCTSkip("désactivé") }
+        let store = ModelStore(root: URL(fileURLWithPath: root))
+        let pages = (env["KYOKASHO_SAMPLE_PAGES"] ?? "1").split(separator: ",").compactMap { Int($0) }
+        let url = URL(fileURLWithPath: pdf)
+        for p in pages {
+            let base = try await VisionOCREngine().recognize(.pdfPage(url: url, index: p))
+            let chars = base.lines.reduce(0) { $0 + $1.text.count }
+            let budget = min(4096, max(384, chars * 2 + 256))
+            print("PAGE \(p) : Vision \(base.lines.count) lignes, \(chars) caractères, budget \(budget)")
+            let only = env["KYOKASHO_ONLY"]
+            for (name, read) in [("OVIS", { try await OvisOCR2Reader(store: store).read(.pdfPage(url: url, index: p), maxTokens: budget) }),
+                                 ("QWEN", { try await Qwen3VLReader(store: store).read(.pdfPage(url: url, index: p), maxTokens: budget) })]
+                as [(String, () async throws -> String)] where only == nil || only == name {
+                MLX.GPU.resetPeakMemory()
+                let start = Date()
+                let text = try await read()
+                print("\(name) p.\(p) : \(String(format: "%.1f", Date().timeIntervalSince(start))) s, pic mémoire GPU \(MLX.GPU.peakMemory / 1_048_576) Mo, \(text.count) caractères")
+                print(String(text.prefix(600)))
+                print("— diff avec Vision : \(OCRReferenceDiff.suggestions(base, reference: text).count) ligne(s) différente(s) sur \(base.lines.count)")
+            }
+        }
     }
 }

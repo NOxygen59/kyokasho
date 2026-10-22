@@ -72,12 +72,16 @@ final class DocumentAnalysisService: ObservableObject {
         revision += 1
     }
 
-    /// Modèles qui liront le document en plus de l'OCR habituel (le plus lourd en dernier).
+    static let useQwenKey = "analysis.useQwen"
+
+    /// Modèles qui liront le document en plus de l'OCR habituel (le plus lourd en dernier). Qwen3-VL-4B seulement
+    /// si l'option est cochée : sur le manuel de l'utilisateur (22/10) il lit moins bien qu'OvisOCR2 (襖 → 桜) pour
+    /// deux fois plus de mémoire (4 Go contre 2,1 Go) et de temps.
     static var readers: [String] {
         var list: [String] = []
         if OvisOCR2Reader().isAvailable { list.append(ModelSpec.ovisocr2.id) }
         if GLMOCREngine().isAvailable { list.append(OCREngineID.glmocr) }
-        if Qwen3VLReader().isAvailable { list.append(ModelSpec.qwen3vl4b.id) }
+        if Qwen3VLReader().isAvailable, UserDefaults.standard.bool(forKey: useQwenKey) { list.append(ModelSpec.qwen3vl4b.id) }
         return list
     }
 

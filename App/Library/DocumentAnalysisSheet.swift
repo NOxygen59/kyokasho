@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 NOxygen59
 
+import GLMOCRKit
 import OCRKit
 import ReaderCore
 import SwiftUI
@@ -11,6 +12,7 @@ struct DocumentAnalysisSheet: View {
     @EnvironmentObject private var model: AppModel
     @ObservedObject private var service = DocumentAnalysisService.shared
     @Environment(\.dismiss) private var dismiss
+    @AppStorage(DocumentAnalysisService.useQwenKey) private var useQwen = false
 
     private var running: DocumentAnalysisService.Progress? {
         service.progress?.documentId == document.id ? service.progress : nil
@@ -50,6 +52,13 @@ struct DocumentAnalysisSheet: View {
                 if readers.isEmpty {
                     Text("Télécharge OvisOCR2 (et si tu veux GLM-OCR) dans Réglages → Modèles d'IA et outils.")
                         .font(.footnote).foregroundStyle(.orange)
+                }
+            }
+            if Qwen3VLReader().isAvailable {
+                Section {
+                    Toggle("Ajouter Qwen3-VL-4B (gros modèle)", isOn: $useQwen)
+                } footer: {
+                    Text("Comprend le sens, mais sur ce manuel il lit moins bien qu'OvisOCR2 (襖 lu « 桜 ») et demande deux fois plus de mémoire et de temps. À essayer en complément, pas indispensable.")
                 }
             }
             Section {
