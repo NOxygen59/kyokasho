@@ -33,11 +33,11 @@ public struct PageVLMReader: Sendable {
         case .pdfPage(let url, let index): image = try PageRenderer.render(url: url, pageIndex: index, longSide: longSide)
         case .image(let cg): image = cg
         }
-        let container = try await GLMModel.shared.container(directory: store.directory(spec), extraEOSTokens: [])
         let user = UserInput(chat: [.user(prompt, images: [.ciImage(CIImage(cgImage: image))])], additionalContext: context)
         // Une erreur MLX (mémoire, noyau Metal) pendant la lecture devient une erreur Swift : la page est notée en
         // erreur au lieu d'arrêter l'app.
-        return try await withError {
+        return try await GLMModel.using(directory: store.directory(spec), extraEOSTokens: []) { container in
+        try await withError {
             try await container.perform { context in
                 let prepared = try await context.processor.prepare(input: user)
                 let result = try MLXLMCommon.generate(
@@ -45,6 +45,7 @@ public struct PageVLMReader: Sendable {
                 ) { (_: [Int]) in Task.isCancelled ? .stop : .more }
                 return result.output
             }
+        }
         }
     }
 
@@ -141,10 +142,10 @@ public struct Qwen3VLReader: Sendable {
         Page:
         \(markdown)
         """
-        let container = try await GLMModel.shared.container(directory: base.store.directory(base.spec), extraEOSTokens: [])
         let user = UserInput(chat: [.user(prompt)])
         let budget = maxTokens ?? min(6000, max(512, markdown.count * 3 + 256))
-        return try await withError {
+        return try await GLMModel.using(directory: base.store.directory(base.spec), extraEOSTokens: []) { container in
+        try await withError {
             try await container.perform { context in
                 let prepared = try await context.processor.prepare(input: user)
                 let result = try MLXLMCommon.generate(
@@ -152,6 +153,7 @@ public struct Qwen3VLReader: Sendable {
                 ) { (_: [Int]) in Task.isCancelled ? .stop : .more }
                 return result.output
             }
+        }
         }
     }
 }

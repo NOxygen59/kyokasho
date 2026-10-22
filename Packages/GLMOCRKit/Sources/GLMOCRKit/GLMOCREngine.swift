@@ -36,7 +36,7 @@ public struct GLMOCREngine: OCREngine {
         let base = detector.isAvailable ? try await detector.recognize(.image(image))
                                         : try await VisionOCREngine().recognize(.image(image))
         // 2. Relecture de chaque ligne par l'IA.
-        let model = try await GLMModel.shared.container(directory: store.directory(.glmocr))
+        let lines: [OCRLine] = try await GLMModel.using(directory: store.directory(.glmocr)) { model in
         var lines: [OCRLine] = []
         // FDR-7 : une génération par ligne → grouper 3-5 lignes voisines par image, découper la réponse par \n. Voir § 6 étape 7.
         for line in base.lines {
@@ -50,6 +50,8 @@ public struct GLMOCREngine: OCREngine {
             lines.append(OCRLine(text: text, box: line.box, charBoxes: charBoxes, measuredCharBoxes: false,
                                  vertical: line.vertical, confidence: line.confidence))
         }
+        return lines
+        }
         return OCRPage(engine: id, lines: lines, durationMs: Int(Date().timeIntervalSince(start) * 1000))
     }
 
@@ -62,7 +64,7 @@ public struct GLMOCREngine: OCREngine {
         case .pdfPage(let url, let index): image = try PageRenderer.render(url: url, pageIndex: index, longSide: 3000)
         case .image(let cg): image = cg
         }
-        let model = try await GLMModel.shared.container(directory: store.directory(.glmocr))
+        return try await GLMModel.using(directory: store.directory(.glmocr)) { model in
         var page = page
         for i in indices where page.lines.indices.contains(i) {
             try Task.checkCancellation()
@@ -81,6 +83,7 @@ public struct GLMOCREngine: OCREngine {
         }
         page.reread = true
         return page
+        }
     }
 
     /// Ligne découpée avec une marge (l'IA lit mieux avec de l'air autour ; plus large pour les colonnes).
@@ -110,11 +113,15 @@ public struct GLMOCREngine: OCREngine {
     public static func unload() async { await GLMModel.shared.unload() }
 }
 
-/// Modèle chargé une fois, gardé tant que l'app tourne (chargement ≈ quelques secondes).
-// FDR-V2 : décharger après inactivité (≈ 90 s), compteur d'utilisations en cours, MLX.GPU.clearCache() après lecture.
+/// Modèle chargé à la demande (chargement ≈ quelques secondes), libéré après `idleDelay` sans lecture.
 actor GLMModel {
     static let shared = GLMModel()
+    /// Sans lecture pendant ce temps, le modèle est libéré (≈ 1,5 à 3 Go rendus à l'iPad).
+    static let idleDelay: Duration = .seconds(90)
     private var loaded: (URL, ModelContainer)?
+    /// Lectures en cours : jamais de libération pour inactivité tant qu'il y en a une.
+    private var users = 0
+    private var idleTask: Task<Void, Never>?
     /// Chargement en cours : un second appel pour le même modèle attend celui-ci (jamais deux chargements).
     private var loading: (URL, Task<ModelContainer, Error>)?
 
@@ -139,6 +146,49 @@ actor GLMModel {
         loading = nil
         loaded = (directory, container)
         return container
+    }
+
+    /// Prête le modèle à `body` le temps d'une lecture : compté comme utilisé, puis cache GPU vidé et libération
+    /// programmée après `idleDelay` si plus personne ne s'en sert.
+    static func using<T>(directory: URL, extraEOSTokens: Set<String> = ["<|endoftext|>", "<|user|>", "<|observation|>"],
+                         _ body: (ModelContainer) async throws -> T) async throws -> T {
+        let container = try await shared.acquire(directory: directory, extraEOSTokens: extraEOSTokens)
+        do {
+            let result = try await body(container)
+            await shared.release()
+            return result
+        } catch {
+            await shared.release()
+            throw error
+        }
+    }
+
+    private func acquire(directory: URL, extraEOSTokens: Set<String>) async throws -> ModelContainer {
+        users += 1
+        idleTask?.cancel()
+        idleTask = nil
+        do { return try await container(directory: directory, extraEOSTokens: extraEOSTokens) } catch {
+            release()
+            throw error
+        }
+    }
+
+    private func release() {
+        users = max(0, users - 1)
+        // Mémoire de travail de la lecture (images, cache clé-valeur) rendue tout de suite.
+        MLX.GPU.clearCache()
+        guard users == 0 else { return }
+        idleTask?.cancel()
+        idleTask = Task {
+            try? await Task.sleep(for: Self.idleDelay)
+            guard !Task.isCancelled else { return }
+            self.unloadIfIdle()
+        }
+    }
+
+    private func unloadIfIdle() {
+        guard users == 0, loaded != nil || loading != nil else { return }
+        unload()
     }
 
     /// Libère le modèle (tous, ou seulement s'il s'agit de `directory`).

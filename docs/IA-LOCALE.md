@@ -85,6 +85,7 @@ contrôle (mémoire `ios16-backport-rules`). Chaque correctif est listé dans `I
 - **`GLMModel`** (actor) : **un seul modèle MLX en mémoire**. `container(directory:extraEOSTokens:)` garde le chargé,
   partage un chargement en cours (`loading`), libère l'autre modèle avant d'en charger un nouveau ;
   `unload(directory:)` ne libère que celui-là. `MLX.GPU.set(cacheLimit: 256 Mo)`.
+  Toute lecture passe par `GLMModel.using` : cache GPU vidé après, modèle libéré après 90 s d'inactivité.
 - **Chargement** : `VLMModelFactory.shared.loadContainer(from: LocalOnly(), using: TransformersTokenizerLoader(),
   configuration: ModelConfiguration(directory:extraEOSTokens:))` — modèles déjà sur l'iPad (`ModelStore`), aucun
   téléchargement ici ; `TransformersTokenizerLoader` = pont écrit à la main (même code que la macro

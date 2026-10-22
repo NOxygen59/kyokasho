@@ -139,7 +139,10 @@ Comptes (Drive) ; À propos (+ **connexion GitHub** device flow → mise à jour
 > Ordre proposé : d'abord ce qui évite les plantages et la RAM (V2, V12, V4, V13), puis l'interface (V1, V6),
 > puis les fonctions (V3, V5, V8, V10, V11, V14, V7), et le nettoyage (V9) en dernier.
 
-### [ ] V2 — IA : RAM au plus bas quand on ne s'en sert pas
+### [x] V2 — IA : RAM au plus bas quand on ne s'en sert pas
+- **Fait (22/10, non vérifié sur iPad)** : `GLMModel.using(directory:)` compte les lectures en cours, vide
+  `MLX.GPU` après chaque lecture et libère le modèle après 90 s sans lecture (`idleDelay`) ; `SessionCache` (ONNX)
+  se vide après 120 s sans usage. MeCab gardé (mmap). Reste : mesurer au moniteur sur l'iPad.
 - Constat : `GLMModel` garde le dernier modèle MLX **chargé** jusqu'à la fin de l'app ; `SessionCache` (ONNX) garde
   les sessions NDLOCR / PP-OCR / mise en page ; `MLX.GPU` garde un cache (256 Mo max).
 - Faire : (1) `GLMModel` : minuteur d'inactivité (ex. 90 s sans lecture → `unload()`), compteur d'utilisations en

@@ -64,19 +64,30 @@ extension ONNXModel.Tensor {
     var int64s: [Int64] { data.withUnsafeBytes { Array($0.bindMemory(to: Int64.self)) } }
 }
 
-/// Sessions ouvertes une fois (chargement ≈ 1 s), gardées tant que l'app tourne.
-// FDR-V2 : clear() + décharge après inactivité / avertissement mémoire. FDR-V12 : vidé au retour à la bibliothèque.
+/// Sessions ouvertes à la demande (chargement ≈ 1 s), fermées après `idleDelay` sans usage (et sur avertissement
+/// mémoire). Une lecture en cours garde sa session : `clear()` ne fait qu'oublier la référence.
+// FDR-V12 : vidé au retour à la bibliothèque.
 final class SessionCache: @unchecked Sendable {
     static let shared = SessionCache()
+    static let idleDelay: TimeInterval = 120
     private let lock = NSLock()
     private var models: [URL: ONNXModel] = [:]
     private var texts: [URL: [String]] = [:]
+    private var idle: DispatchWorkItem?
 
     func model(_ url: URL, coreML: Bool = false) throws -> ONNXModel {
+        scheduleIdleClear()
         if let m = lock.withLock({ models[url] }) { return m }
         let m = try ONNXModel(path: url, coreML: coreML)
         lock.withLock { models[url] = m }
         return m
+    }
+
+    /// Chaque usage repousse la fermeture des sessions.
+    private func scheduleIdleClear() {
+        let item = DispatchWorkItem { [weak self] in self?.clear() }
+        lock.withLock { idle?.cancel(); idle = item }
+        DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + Self.idleDelay, execute: item)
     }
 
     func charset(_ url: URL, parse: (String) -> [String]?) throws -> [String] {
