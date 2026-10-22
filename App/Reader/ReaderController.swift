@@ -26,7 +26,7 @@ final class ReaderController: NSObject, ObservableObject {
     @Published var currentIndex = 0
     @Published var barsVisible = true
     @Published var isDrawing = false
-    @Published private(set) var hasSelection = false
+    @Published var hasSelection = false
     @Published var bookmarks: [Bookmark] = []
     @Published var tappedHighlight: Highlight?
     /// Note ouverte dans la fenêtre flottante.
@@ -180,6 +180,8 @@ final class ReaderController: NSObject, ObservableObject {
     var swipeLeft: UISwipeGestureRecognizer!
     /// Appui long en cours ou terminé (sélection de texte de PDFKit) : le tap qui suit est ignoré.
     var pressWasLong = false
+    /// Début d'une sélection au doigt (page, point dans la page).
+    var selectionAnchor: (PDFPage, CGPoint)?
     var longPressWatcher: UILongPressGestureRecognizer!
     var swipeRight: UISwipeGestureRecognizer!
 
@@ -737,6 +739,8 @@ extension ReaderController: PDFDocumentDelegate {
 
 /// `PDFView` qui garde l'échelle « page entière » à jour quand la taille change (rotation, Split View).
 final class ReaderPDFView: PDFView {
+    /// Teinte des pages (`PageTone`), toujours au premier plan.
+    let toneOverlay = ToneOverlay(frame: .zero)
     private var lastSize: CGSize = .zero
     /// Action « Dictionnaire » du menu de sélection d'iOS (Copier, Rechercher…).
     var onLookupSelection: (() -> Void)?
@@ -780,6 +784,11 @@ final class ReaderPDFView: PDFView {
 
     override func layoutSubviews() {
         super.layoutSubviews()
+        // Filtre de teinte au-dessus des pages (PDFKit ajoute ses vues après coup).
+        if toneOverlay.superview !== self || subviews.last !== toneOverlay {
+            toneOverlay.frame = bounds
+            addSubview(toneOverlay)
+        }
         guard bounds.size != lastSize, bounds.width > 0 else { return }
         lastSize = bounds.size
         let wasFit = isAtFit

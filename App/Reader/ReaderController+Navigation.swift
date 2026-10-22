@@ -154,7 +154,11 @@ extension ReaderController {
             gesture.cancelsTouchesInView = false
             gesture.delaysTouchesEnded = false
         }
-        // Observe seulement (n'empêche rien) : marque les appuis longs pour que le tap les ignore.
+        // Même traitement tactile que le mode Pencil (qui marche bien) : PDFKit en « mode annotation » en permanence.
+        // Ses gestes de texte (sélection au doigt, liens) ne se mêlent plus au pincement et au défilement d'iOS ;
+        // la sélection de texte est faite ici (appui long sur un mot, puis glisser pour l'étendre).
+        pdfView.isInMarkupMode = true
+        // Appui long : sélection d'un mot, étendue en glissant (le tap l'ignore ensuite).
         longPressWatcher = UILongPressGestureRecognizer(target: self, action: #selector(handleLongPress(_:)))
         longPressWatcher.minimumPressDuration = 0.35
         longPressWatcher.cancelsTouchesInView = false
@@ -223,6 +227,49 @@ extension ReaderController {
 
     @objc func handleLongPress(_ gesture: UILongPressGestureRecognizer) {
         if gesture.state == .began { pressWasLong = true }
+        let point = gesture.location(in: pdfView)
+        switch gesture.state {
+        case .began:
+            guard !isDrawing, let page = pdfView.page(for: point, nearest: false) else { return }
+            let pagePoint = pdfView.convert(point, to: page)
+            selectionAnchor = (page, pagePoint)
+            // Pendant la sélection, le doigt ne fait pas défiler la page.
+            setInnerPan(enabled: false)
+            select(page.selectionForWord(at: pagePoint))
+        case .changed:
+            // Document reconstruit pendant l'appui (réglage, page nettoyée) : sélection abandonnée.
+            guard let (page, start) = selectionAnchor, page.document === pdfView.document, !isDrawing else {
+                selectionAnchor = nil
+                setInnerPan(enabled: true)
+                return
+            }
+            select(page.selection(from: start, to: pdfView.convert(point, to: page)))
+        default:
+            selectionAnchor = nil
+            setInnerPan(enabled: true)
+        }
+    }
+
+    private func select(_ selection: PDFSelection?) {
+        guard let selection, selection.string?.isEmpty == false else { return }
+        pdfView.setCurrentSelection(selection, animate: false)
+        hasSelection = true
+    }
+
+    /// Glisser du défilement interne de PDFKit (le pincement est un autre geste et reste actif).
+    private func setInnerPan(enabled: Bool) {
+        func find(_ view: UIView) -> UIScrollView? {
+            for sub in view.subviews {
+                if let scroll = sub as? UIScrollView { return scroll }
+                if let found = find(sub) { return found }
+            }
+            return nil
+        }
+        guard let scroll = find(pdfView) else {
+            Diagnostics.log("sélection : défilement interne de PDFKit introuvable", "gestes")
+            return
+        }
+        scroll.panGestureRecognizer.isEnabled = enabled
     }
 
     @objc func handleTap(_ gesture: UITapGestureRecognizer) {
@@ -286,7 +333,8 @@ extension ReaderController {
 
     func setDrawing(_ on: Bool) {
         isDrawing = on
-        pdfView.isInMarkupMode = on
+        // Toujours en mode annotation (voir `configureGestures`), dessin ou non.
+        pdfView.isInMarkupMode = true
         if on {
             pdfView.clearSelection()
             barsVisible = true

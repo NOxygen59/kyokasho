@@ -5,7 +5,9 @@ import PDFKit
 import UIKit
 
 /// Fond des pages PDF : blanc d'origine, adouci (crème, tamisé) ou inversé (sombre confortable).
-/// Appliqué au dessin de chaque page (aucun calcul à part, aucun fichier modifié).
+/// Appliqué par `ToneOverlay`, un filtre de mélange posé sur toute la vue du lecteur au moment de l'affichage :
+/// instantané, sur tout le PDF (pages pas encore dessinées comprises), sans redessiner ni reconstruire. (Avant :
+/// peint page par page après PDFKit → page blanche puis teinte qui arrivait, à chaque page et à chaque changement.)
 enum PageTone: String, CaseIterable, Identifiable {
     case normal, cream, dim, dark
 
@@ -39,34 +41,62 @@ enum PageTone: String, CaseIterable, Identifiable {
         set { lock.withLock { stored = newValue } }
     }
 
-    /// Recouvre la page déjà dessinée (`rect` = zone visible du contexte).
-    func apply(in context: CGContext, rect: CGRect) {
-        guard self != .normal else { return }
-        context.saveGState()
-        func blend(_ mode: CGBlendMode, _ r: CGFloat, _ g: CGFloat, _ b: CGFloat) {
-            context.setBlendMode(mode)
-            context.setFillColor(red: r, green: g, blue: b, alpha: 1)
-            context.fill(rect)
-        }
+    /// Calques de mélange, de bas en haut (mêmes réglages que l'ancien dessin par page).
+    var blends: [(filter: String, color: UIColor)] {
         switch self {
-        case .normal: break
-        case .cream:
-            // Multiplier : le noir reste noir, le blanc devient crème.
-            blend(.multiply, 1.0, 0.94, 0.82)
-        case .dim:
-            blend(.multiply, 0.80, 0.78, 0.74)
-        case .dark:
-            // Inverser, puis fond gris très foncé (pas noir pur) et texte blanc cassé (moins éblouissant).
-            blend(.difference, 1, 1, 1)
-            blend(.screen, 0.11, 0.11, 0.12)
-            blend(.multiply, 0.86, 0.84, 0.80)
+        case .normal: return []
+        // Multiplier : le noir reste noir, le blanc devient crème.
+        case .cream: return [("multiplyBlendMode", UIColor(red: 1.0, green: 0.94, blue: 0.82, alpha: 1))]
+        case .dim: return [("multiplyBlendMode", UIColor(red: 0.80, green: 0.78, blue: 0.74, alpha: 1))]
+        // Inverser, fond gris très foncé (pas noir pur), texte blanc cassé (moins éblouissant). Ancien calcul en
+        // trois mélanges : m × (1 − (1 − (1 − c))(1 − g)) = m − m(1 − g)·c, avec m = (0,86 ; 0,84 ; 0,80) et
+        // g = (0,11 ; 0,11 ; 0,12). Même résultat en deux : multiplier par k = m(1 − g), puis |k·c − m|.
+        case .dark: return [("multiplyBlendMode", UIColor(red: 0.7654, green: 0.7476, blue: 0.704, alpha: 1)),
+                            ("differenceBlendMode", UIColor(red: 0.86, green: 0.84, blue: 0.80, alpha: 1))]
         }
-        context.restoreGState()
+    }
+
+    /// Couleur à donner au fond du lecteur pour qu'il garde sa teinte une fois filtré (l'inversion le retourne).
+    func compensated(_ background: UIColor) -> UIColor {
+        guard self == .dark else { return background }
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        background.getRed(&r, green: &g, blue: &b, alpha: &a)
+        return UIColor(red: 1 - r, green: 1 - g, blue: 1 - b, alpha: a)
     }
 }
 
-/// Page qui affiche sa version nettoyée par DE-GAN si elle est prête (`ScanSharpening`), puis applique
-/// `PageTone.current` par-dessus.
+/// Filtre de teinte posé sur toute la vue du lecteur (au-dessus des pages, sous rien d'interactif) : une vue par
+/// calque de mélange (`compositingFilter`), composée par l'écran à l'affichage. Ne reçoit aucun toucher.
+final class ToneOverlay: UIView {
+    var tone: PageTone = .normal {
+        didSet { guard tone != oldValue else { return }; rebuild() }
+    }
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        isUserInteractionEnabled = false
+        autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        backgroundColor = .clear
+    }
+
+    required init?(coder: NSCoder) { fatalError("non utilisé") }
+
+    private func rebuild() {
+        subviews.forEach { $0.removeFromSuperview() }
+        for blend in tone.blends {
+            let layerView = UIView(frame: bounds)
+            layerView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+            layerView.isUserInteractionEnabled = false
+            layerView.backgroundColor = blend.color
+            layerView.layer.compositingFilter = blend.filter
+            addSubview(layerView)
+        }
+        isHidden = tone == .normal
+    }
+}
+
+/// Page qui affiche sa version nettoyée par DE-GAN si elle est prête (`ScanSharpening`) et ses furigana. La teinte
+/// (`PageTone`) n'est plus peinte ici : `ToneOverlay` sur la vue.
 final class TonedPage: PDFPage {
     /// Clé de la page d'origine (document + page) : version nettoyée, furigana.
     var pageKey: String?
@@ -96,9 +126,6 @@ final class TonedPage: PDFPage {
             FuriganaLayer.draw(marks, in: context)
             context.restoreGState()
         }
-        let tone = PageTone.current
-        guard tone != .normal else { return }
-        tone.apply(in: context, rect: context.boundingBoxOfClipPath)
     }
 }
 

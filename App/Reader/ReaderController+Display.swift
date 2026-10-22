@@ -37,7 +37,7 @@ extension ReaderController {
         pdfView.displaysPageBreaks = true
         pdfView.pageBreakMargins = paginated ? .zero : UIEdgeInsets(top: 6, left: 0, bottom: 6, right: 0)
         pdfView.pageShadowsEnabled = s.background != .black
-        pdfView.backgroundColor = s.background.uiColor
+        applyTone()
         DispatchQueue.main.async { [pdfView] in pdfView.fitToPage() }
         // Sans contrôleur de pages, PDFKit ne tourne pas les pages au glisser : on le fait nous-mêmes.
         let manualSwipe = paginated && !pageController && !isDrawing
@@ -149,11 +149,16 @@ extension ReaderController {
         pdfView.redrawVisiblePages()
     }
 
-    /// Fond des pages changé : on redessine (le document est reconstruit en tâche de fond).
+    /// Fond des pages changé : seul le filtre de la vue change (instantané, rien n'est redessiné).
     func setPageTone(_ tone: PageTone) {
         guard tone != PageTone.current else { return }
         PageTone.current = tone
-        rebuild(keepingSource: currentSourcePage)
+        applyTone()
+    }
+
+    func applyTone() {
+        pdfView.toneOverlay.tone = PageTone.current
+        pdfView.backgroundColor = PageTone.current.compensated(settings.background.uiColor)
     }
 
     func update(settings newSettings: ReaderSettings) {

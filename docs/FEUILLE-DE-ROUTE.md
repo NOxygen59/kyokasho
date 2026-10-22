@@ -3,7 +3,7 @@
 > Ce fichier + `docs/IA-LOCALE.md` (avant de toucher à l'IA) suffisent. Ne relis pas le code « pour voir » :
 > `grep -rn 'FDR-V3' App Packages` donne les endroits exacts d'une étape. Une session = les retours de l'utilisateur,
 > sinon l'étape suivante du § 7 ; puis commit + push (+ release **si demandée**), puis résumé simple.
-> **État au 22/10/2026 : v0.8.9.1 publiée (build 29)** (gestes : premier essai à l'aveugle, à confirmer sur l'iPad) ; (V1→V8, V10, V11, V14, V7 faits ; reste V9 ; Qwen confirmé sur l'iPad en 0.8.8). L'IA locale (OvisOCR2, analyse, vérification) **marche sur
+> **État au 22/10/2026 : v0.8.9.2 publiée (build 30)** (gestes : 0.8.9.1 jugée pire et annulée ; mode annotation permanent, à confirmer) ; (V1→V8, V10, V11, V14, V7 faits ; reste V9 ; Qwen confirmé sur l'iPad en 0.8.8). L'IA locale (OvisOCR2, analyse, vérification) **marche sur
 > l'iPad** (confirmé par l'utilisateur). Le reste marqué « non vérifié » peut être faux sur l'appareil.
 
 ## 1. Prompt à coller dans le nouveau chat
@@ -335,7 +335,9 @@ Comptes (Drive) ; À propos (+ **connexion GitHub** device flow → mise à jour
 - [ ] **B1 — Gestes / zoom** — en cours (0.8.9.1, pas testé : simulateur sans système iOS, 8-9 Go à télécharger si
   l'utilisateur accepte). Retour du 22/10 : pincement qui saute, toucher lent, zoomé on bouge mal ; voulu = liseuse,
   double page. Fait : toucher sans `require(toFail: doubleTap)` (barres différées `barsToggleWork`, 2e toucher ignoré
-  `lastTapAt`) ; « Zoom fluide » (`ReaderController.fluidZoom`, menu Affichage) = modes continus horizontaux de PDFKit,
+  `lastTapAt`) ; [0.8.9.1 jugée « catastrophique » → annulée (f5de73c). 0.8.9.2 : `isInMarkupMode = true` en
+  permanence (le mode Pencil était parfait au doigt), sélection au doigt maison (`handleLongPress`), teinte =
+  `ToneOverlay` (compositingFilter) au lieu du dessin par page.] Ancien essai : « Zoom fluide » (`ReaderController.fluidZoom`, menu Affichage) = modes continus horizontaux de PDFKit,
   `panGestureRecognizer` du défilement interne coupé à la taille de la page, tour par planche (`turnTarget`),
   recalage `snapToSpread`. Journal « gestes » : classe du défilement trouvé. Ancien texte : (retour du 21/10, cause pas trouvée) : demander lesquels. Pistes (`configureGestures`,
   `applyDisplaySettings`) : modes non continus, `singleTap.require(toFail: doubleTap)`, survol, glisser, `fitToPage`
