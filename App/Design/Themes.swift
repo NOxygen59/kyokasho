@@ -3,8 +3,7 @@
 
 import SwiftUI
 
-/// Un thème = fonds (toujours sombres) + une couleur par fonction.
-// FDR-V6 : nouveaux thèmes à fonds dessinés (washi, grille d'architecte, plan d'intérieur, encre et or…), aperçu en direct, couleurs aussi dans le HTML.
+/// Un thème = fonds (toujours sombres) + une couleur par fonction + un fond dessiné (`ThemeBackdrop`).
 struct Theme: Identifiable, Equatable {
     let id: String
     let name: String
@@ -18,6 +17,10 @@ struct Theme: Identifiable, Equatable {
     let japanese: Color
     let ai: Color
     let cloud: Color
+    /// Fond de la bibliothèque et du dictionnaire, dessiné ici (aucune image tierce).
+    var backdrop: Backdrop = .grid
+
+    enum Backdrop: Equatable { case grid, washi, blueprint, floorplan, dusk, ink, sakura }
 
     static let atelier = Theme(
         id: "atelier", name: "Atelier (graphite)",
@@ -58,10 +61,62 @@ struct Theme: Identifiable, Equatable {
         read: Color(hex: 0x86A9AD), annotate: Color(hex: 0xE1C478), japanese: Color(hex: 0xFFDC07),
         ai: Color(hex: 0xB4A6E0), cloud: Color(hex: 0x7FB6D3))
 
-    static let all: [Theme] = [.atelier, .foret, .braise, .sable, .lagon]
+    static let washi = Theme(
+        id: "washi", name: "Washi (papier et encre)",
+        canvas: Color(hex: 0x1A1714), surface: Color(hex: 0x24201C), surfaceHigh: Color(hex: 0x302A25),
+        ink: Color(hex: 0xF4EEE4),
+        read: Color(hex: 0x9DB8A0), annotate: Color(hex: 0xE0B862), japanese: Color(hex: 0xD9503F),
+        ai: Color(hex: 0xA99BD6), cloud: Color(hex: 0x86A8C2), backdrop: .washi)
+
+    /// Grille d'architecte : le thème du manuel.
+    static let architecte = Theme(
+        id: "architecte", name: "Architecte (plan bleu)",
+        canvas: Color(hex: 0x0A1626), surface: Color(hex: 0x10203A), surfaceHigh: Color(hex: 0x182C4C),
+        ink: Color(hex: 0xEAF2FF),
+        read: Color(hex: 0x6CC4FF), annotate: Color(hex: 0xFFD166), japanese: Color(hex: 0xFF6B6B),
+        ai: Color(hex: 0xB79CFF), cloud: Color(hex: 0x7FD1C8), backdrop: .blueprint)
+
+    static let interieur = Theme(
+        id: "interieur", name: "Intérieur (plan et chêne)",
+        canvas: Color(hex: 0x121314), surface: Color(hex: 0x1C1D1F), surfaceHigh: Color(hex: 0x28292C),
+        ink: Color(hex: 0xF2EFEA),
+        read: Color(hex: 0xC9A47A), annotate: Color(hex: 0xE8C37A), japanese: Color(hex: 0xE0644B),
+        ai: Color(hex: 0xA7A0D8), cloud: Color(hex: 0x8FB3C4), backdrop: .floorplan)
+
+    static let soir = Theme(
+        id: "soir", name: "Lumière du soir",
+        canvas: Color(hex: 0x16121F), surface: Color(hex: 0x211A2C), surfaceHigh: Color(hex: 0x2D2439),
+        ink: Color(hex: 0xFBF1EA),
+        read: Color(hex: 0xF2A65A), annotate: Color(hex: 0xF7D06B), japanese: Color(hex: 0xFF6F61),
+        ai: Color(hex: 0xB9A3F5), cloud: Color(hex: 0x8EB7E8), backdrop: .dusk)
+
+    static let encre = Theme(
+        id: "encre", name: "Encre et or",
+        canvas: Color(hex: 0x0A0A0A), surface: Color(hex: 0x151515), surfaceHigh: Color(hex: 0x202020),
+        ink: Color(hex: 0xF5F0E6),
+        read: Color(hex: 0xD4AF37), annotate: Color(hex: 0xE9C46A), japanese: Color(hex: 0xE34234),
+        ai: Color(hex: 0xB8A9E8), cloud: Color(hex: 0x9DB4C8), backdrop: .ink)
+
+    static let sakura = Theme(
+        id: "sakura", name: "Sakura (nuit de printemps)",
+        canvas: Color(hex: 0x1A1218), surface: Color(hex: 0x251A22), surfaceHigh: Color(hex: 0x32232E),
+        ink: Color(hex: 0xFFF3F6),
+        read: Color(hex: 0x9FC9B3), annotate: Color(hex: 0xF3C98B), japanese: Color(hex: 0xF28AB3),
+        ai: Color(hex: 0xB9A6F0), cloud: Color(hex: 0x93B8E0), backdrop: .sakura)
+
+    static let all: [Theme] = [.atelier, .washi, .architecte, .interieur, .soir, .encre, .sakura,
+                               .foret, .braise, .sable, .lagon]
 
     /// Thème en cours (lu par `Atelier`). Changé par `ThemeManager`.
     static var current: Theme = .atelier
+
+    /// Couleurs du thème en cours pour le HTML du dictionnaire (`GlossaryRenderer.palette`).
+    static var cssPalette: [String: String] {
+        let t = current
+        func hex(_ c: Color) -> String { UIColor(c).hexString }
+        return ["fg": hex(t.ink), "bg": hex(t.surface), "bg2": hex(t.surfaceHigh), "jp": hex(t.japanese),
+                "read": hex(t.read), "ann": hex(t.annotate), "ai": hex(t.ai)]
+    }
 }
 
 /// Choix du thème, gardé entre deux lancements. La racine de l'app se reconstruit au changement.
@@ -90,7 +145,7 @@ extension Color {
     }
 }
 
-/// Réglages → Apparence : aperçu de chaque thème, un toucher l'applique.
+/// Réglages → Apparence : aperçu de chaque thème (son vrai fond), un toucher l'applique.
 struct ThemePickerView: View {
     @EnvironmentObject private var themes: ThemeManager
 
@@ -127,9 +182,11 @@ struct ThemePickerView: View {
             }
         }
         .padding(16)
-        .background(t.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(t.surface.opacity(0.94), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .padding(14)
+        .background(ThemeBackdrop(theme: t))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
             .strokeBorder(on ? t.read : Color.white.opacity(0.08), lineWidth: on ? 2 : 1))
-        .background(t.canvas, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }

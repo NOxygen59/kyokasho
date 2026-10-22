@@ -162,28 +162,10 @@ struct AtelierButtonStyle: ButtonStyle {
     }
 }
 
-/// Fond quadrillé discret (papier millimétré d'atelier).
+/// Fond de la bibliothèque et du dictionnaire : celui du thème en cours (`ThemeBackdrop`, quadrillé d'origine).
 struct GridBackground: View {
-    var spacing: CGFloat = 28
-
     var body: some View {
-        Canvas { context, size in
-            var minor = Path()
-            var x: CGFloat = 0
-            while x <= size.width { minor.move(to: CGPoint(x: x, y: 0)); minor.addLine(to: CGPoint(x: x, y: size.height)); x += spacing }
-            var y: CGFloat = 0
-            while y <= size.height { minor.move(to: CGPoint(x: 0, y: y)); minor.addLine(to: CGPoint(x: size.width, y: y)); y += spacing }
-            context.stroke(minor, with: .color(.white.opacity(0.035)), lineWidth: 0.5)
-            var major = Path()
-            x = 0
-            while x <= size.width { major.move(to: CGPoint(x: x, y: 0)); major.addLine(to: CGPoint(x: x, y: size.height)); x += spacing * 5 }
-            y = 0
-            while y <= size.height { major.move(to: CGPoint(x: 0, y: y)); major.addLine(to: CGPoint(x: size.width, y: y)); y += spacing * 5 }
-            context.stroke(major, with: .color(.white.opacity(0.06)), lineWidth: 0.6)
-        }
-        .background(Atelier.canvas)
-        .ignoresSafeArea()
-        .drawingGroup()
+        ThemeBackdrop(theme: Theme.current).ignoresSafeArea()
     }
 }
 

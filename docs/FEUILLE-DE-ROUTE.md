@@ -204,7 +204,12 @@ Comptes (Drive) ; À propos (+ **connexion GitHub** device flow → mise à jour
   droite** (comportement actuel), **plein écran** ; état persistant. Garder l'ouverture d'office en paysage.
 - Balises `FDR-V1`.
 
-### [ ] V6 — Thèmes (fonds personnalisés, innover)
+### [x] V6 — Thèmes (fonds personnalisés, innover)
+- **Fait (22/10, non vérifié sur iPad)** : `App/Design/ThemeBackdrop.swift` (fonds tracés en `Canvas`, hasard fixé
+  `Seeded`) ; 6 thèmes : Washi, Architecte (plan bleu, cotes), Intérieur (plan d'appartement), Lumière du soir,
+  Encre et or, Sakura (`Theme.backdrop`). `GridBackground` = fond du thème. Cartes du choix de thème = vrai fond.
+  B4 fait : `GlossaryRenderer.palette` (← `Theme.cssPalette`) et `CardHTML.page` aux couleurs du thème.
+  Image d'essai Mac des 7 fonds : OK.
 - `App/Design/Themes.swift` (`Theme`, `ThemeManager`, `ThemePickerView`) + `Atelier.swift` (couleurs).
 - Idées : fonds dessinés en SwiftUI (pas d'image tierce) : papier washi (bruit), grille d'architecte (lignes fines,
   thème du manuel), plan d'intérieur discret, dégradé « lumière du soir », mode encre (noir et or), sakura discret ;
@@ -281,7 +286,7 @@ Comptes (Drive) ; À propos (+ **connexion GitHub** device flow → mise à jour
   `applyDisplaySettings`) : modes non continus, `singleTap.require(toFail: doubleTap)`, survol, glisser, `fitToPage`
   à chaque changement de taille. Balises `FDR-1`.
 - [ ] **B3 — Furigana vertical**, furigana imprimés à sauter, texte vertical du panneau (`writing-mode`). `FDR-3`.
-- [ ] **B4 — Thème dans le dictionnaire et les cartes** (`GlossaryRenderer`, `CardHTML` : palette non enregistrée).
+- [x] **B4 — Thème dans le dictionnaire et les cartes** (fait avec V6) (`GlossaryRenderer`, `CardHTML` : palette non enregistrée).
   `FDR-4` (à fondre dans V6).
 - [ ] **B5 — Mise en page** : tableaux (SLANet), texte vertical (PP-DocLayout `vertical_text`). `FDR-5`.
 - [ ] **B6 — Performance** : `Translator.segment` mémo, recherche FTS5, rotation vImage, révisions hors fil

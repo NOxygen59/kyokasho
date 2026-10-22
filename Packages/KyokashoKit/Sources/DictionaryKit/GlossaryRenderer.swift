@@ -7,7 +7,6 @@ import YomitanKit
 /// Rendu HTML des résultats (popup et page de recherche). Tout le texte venant des dictionnaires
 /// est échappé ; le contenu structuré n'autorise qu'une liste fermée de balises et de styles.
 public struct GlossaryRenderer: Sendable {
-    // FDR-4 : couleurs en dur → paramètre `palette` NON enregistré (pas dans Options Codable, sinon décodage tolérant obligatoire). Voir § 6 étape 4.
     public struct Options: Codable, Sendable, Equatable {
         public var fontSize: Double = 17
         public var showFrequencies = true
@@ -26,6 +25,9 @@ public struct GlossaryRenderer: Sendable {
     public var options: Options
     /// Termes (`TermResult.id`) qui ont déjà une carte : bouton ✓ au lieu de ＋.
     public var addedTermIds: Set<String> = []
+    /// Couleurs du thème de l'app (variables CSS sans `--` : `fg`, `bg`, `bg2`, `jp`, `read`, `ann`, `ai`) ; vide =
+    /// couleurs d'origine. Pas dans `Options` (enregistrées) : changer de thème ne touche pas aux réglages.
+    public var palette: [String: String] = [:]
     let inflectionName: @Sendable (String) -> String
 
     public init(options: Options = Options(), inflectionName: @escaping @Sendable (String) -> String = { $0 }) {
@@ -269,7 +271,7 @@ public struct GlossaryRenderer: Sendable {
         return """
             <!doctype html><html lang="ja"><head><meta charset="utf-8">
             <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
-            <style>\(Self.baseCSS.replacingOccurrences(of: "FONTSIZE", with: String(options.fontSize)))</style>
+            <style>\(Self.baseCSS.replacingOccurrences(of: "FONTSIZE", with: String(options.fontSize)))\(paletteCSS)</style>
             <style>\(styles)</style></head><body>\(body)<script>\(Self.script)</script></body></html>
             """
     }
@@ -287,6 +289,15 @@ public struct GlossaryRenderer: Sendable {
             out += "\(scoped){\(rules)}\n"
         }
         return out
+    }
+
+    /// Variables du thème, après celles d'origine (elles les remplacent). Valeurs limitées à une couleur CSS simple.
+    var paletteCSS: String {
+        let safe = palette.filter { key, value in
+            key.allSatisfy { $0.isLetter || $0.isNumber } && value.allSatisfy { $0.isHexDigit || "#(),. %rgba".contains($0) }
+        }
+        guard !safe.isEmpty else { return "" }
+        return ":root{" + safe.sorted { $0.key < $1.key }.map { "--\($0.key):\($0.value);" }.joined() + "}"
     }
 
     static let baseCSS = """

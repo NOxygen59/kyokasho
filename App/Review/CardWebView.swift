@@ -10,15 +10,17 @@ import WebKit
 enum CardHTML {
     static let scheme = "kyocard"
 
-    // FDR-4 : couleurs du thème (`Theme.current`) comme `FuriganaTextView.page` (hexString). Voir § 6 étape 4.
+    /// Fond et bouton ▶︎ aux couleurs du thème (le CSS du modèle de carte garde la main sur le reste).
     static func page(css: String, body: String) -> String {
-        """
+        let bg = UIColor(Atelier.canvas).hexString, button = UIColor(Atelier.surfaceHigh).hexString
+        let accent = UIColor(Atelier.Tint.japanese).hexString
+        return """
         <!doctype html><html><head><meta charset="utf-8">
         <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
         <style>
-        html,body{margin:0;padding:0;background:#16181c;-webkit-text-size-adjust:none;-webkit-user-select:none}
+        html,body{margin:0;padding:0;background:\(bg);-webkit-text-size-adjust:none;-webkit-user-select:none}
         .snd{display:inline-block;border:none;border-radius:50%;width:38px;height:38px;margin:6px;font-size:16px;
-          background:#22262c;color:#ff6f59;cursor:pointer}
+          background:\(button);color:\(accent);cursor:pointer}
         \(css)
         </style></head><body><div class="card">\(rewrite(body))</div>
         <script>
