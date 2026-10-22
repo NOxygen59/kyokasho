@@ -104,6 +104,20 @@ final class OvisOCR2Tests: XCTestCase {
         }
     }
 
+    /// Mesure d'une vraie page (chargement et compilation à part) : `KYOKASHO_BENCH_PDF=<pdf> KYOKASHO_BENCH_PAGE=<index>`
+    /// (+ `MLX_METAL_LANGUAGE_VERSION=30` = conditions iOS 16).
+    func testProfileRealPage() async throws {
+        let env = ProcessInfo.processInfo.environment
+        guard let root = env["KYOKASHO_MODELS"], let pdf = env["KYOKASHO_BENCH_PDF"] else { throw XCTSkip("désactivé") }
+        let index = Int(env["KYOKASHO_BENCH_PAGE"] ?? "") ?? 2
+        let reader = OvisOCR2Reader(store: ModelStore(root: URL(fileURLWithPath: root)))
+        let input = OCRInput.pdfPage(url: URL(fileURLWithPath: pdf), index: index)
+        _ = try await reader.read(input, maxTokens: 3072)
+        let start = Date()
+        let text = try await reader.read(input, maxTokens: 3072)
+        print("BENCH \(String(format: "%.1f", Date().timeIntervalSince(start))) s, \(text.count) caractères")
+    }
+
     /// Traduction d'une vraie page (Markdown d'OvisOCR2) : `KYOKASHO_TRANSLATE=<fichier .md>`.
     func testQwenTranslatesPage() async throws {
         let env = ProcessInfo.processInfo.environment

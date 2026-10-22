@@ -84,6 +84,16 @@ contrôle (mémoire `ios16-backport-rules`). Chaque correctif est listé dans `I
   `fatalError` (dernier recours) ; les lectures sont dans `withError { }` (`PageVLMReader.read`, `GLMModel.read`,
   `Qwen3VLReader.translate`) → erreur de page affichée.
 
+## 2 bis. Vitesse (mesures du 22/10, Mac Metal 3.0, vraie page du manuel)
+
+- OvisOCR2 (8 bits) : **lecture de l'image 1,6 s** (1358 jetons à ≈ 830 /s), **écriture du texte 19 s** (849 jetons
+  à ≈ 44 /s) = 92 % du temps. L'écriture est limitée par la bande passante mémoire (poids relus à chaque jeton).
+- Essayé et **écarté** : passer les paramètres `bfloat16` en `float16` au chargement (texte identique, **aucun gain** :
+  21,0 s contre 21,0 s). Le `bfloat16` logiciel n'est pas le goulot.
+- Gains sans perte faits : ne jamais relire une page déjà lue (scan à l'ouverture → vérification, mise en page,
+  analyse réutilisent `ovisocr2-<page>.md`). Pistes restantes, **avec** risque de qualité : Ovis en 4 bits (≈ ×1,6
+  attendu), cache clé-valeur quantifié, GLM-OCR par groupes de lignes (B7). Mesure : `testProfileRealPage`.
+
 ## 3. Nos lecteurs (Packages/GLMOCRKit)
 
 - **`GLMModel`** (actor) : **un seul modèle MLX en mémoire**. `container(directory:extraEOSTokens:)` garde le chargé,

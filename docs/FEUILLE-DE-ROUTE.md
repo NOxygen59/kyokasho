@@ -16,6 +16,7 @@ l'IA) puis `git log -5 --oneline`. Fais mes retours s'il y en a, sinon l'étape 
 
 ## 2. Règles de l'utilisateur (obligatoires)
 
+- **Vocabulaire** : la « **fenêtre OCR** » = le panneau d'étude (`StudyPanel`, Texte / Mots / Notes / Repères).
 - **Français, court, simple** (l'utilisateur ne code pas) : dire *ce qui change pour lui* et *pourquoi*. Le plugin
   « caveman » ne remplace **pas** cette règle.
 - **Jamais** demander ni taper un mot de passe, une clé API ou un jeton.
@@ -241,7 +242,13 @@ Comptes (Drive) ; À propos (+ **connexion GitHub** device flow → mise à jour
   (aujourd'hui seulement à la 1re lecture : `postProcess` sur calcul neuf, `refineOCR` si `proofread != true`).
 - Balises `FDR-V5`.
 
-### [ ] V8 — Exporter un document depuis la bibliothèque (plusieurs formats, style GoodNotes)
+### [x] V8 — Exporter un document depuis la bibliothèque (plusieurs formats, style GoodNotes)
+- **Fait (22/10, non vérifié sur iPad)** : `App/Library/DocumentExport.swift` (appui long → « Exporter… ») : PDF
+  d'origine, PDF annoté (surlignages, encre, pastilles des notes ancrées + pages « Notes »), Markdown (mise en page
+  IA sinon OCR, traduction, surlignages, notes), PNG ≈ 200 ppp en zip (`NSFileCoordinator .forUploading`), `.apkg` des
+  cartes du document ; pages au choix ; dossier `tmp/Export/<uuid>` par export, annulé à la fermeture.
+- Aussi (retours 0.8.8) : fenêtre OCR, texte IA déplaçable (`RubyWebView` : défilement réactivé, verrou de direction) ;
+  vérification Ovis = réutilise la lecture déjà faite (scan) au lieu de relire.
 - Menu d'appui long `LibraryView.menu(for:)` → « Exporter… » : PDF d'origine ; **PDF annoté** (surlignages, dessins
   `InkOverlay`, notes / ancres aplaties : rendre chaque page dans un `UIGraphicsPDFRenderer`) ; **texte / Markdown**
   (OCR, mise en page IA, traduction FR si présente, notes) ; **images PNG** par page (zip) ; cartes `.apkg` (existe).

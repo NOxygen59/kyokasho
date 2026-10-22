@@ -1487,19 +1487,27 @@ final class ReaderController: NSObject, ObservableObject {
                 result.engine = ocr?.engine
                 if let ocr {
                     do {
-                        let markdown = try await Diagnostics.measure("OvisOCR2 page \(source)", "verif") {
-                            try await OvisOCR2Reader().read(.pdfPage(url: url, index: source),
-                                                            maxTokens: DocumentAnalysisService.tokenBudget(ocr))
-                        }
-                        // Arrêtée : texte partiel, jamais gardé.
-                        try Task.checkCancellation()
-                        Diagnostics.log("OvisOCR2 page \(source) : \(markdown.count) caractères lus", "verif")
-                        // Gardé : sert aussi à la vue « Mise en page IA » du panneau Texte.
                         let file = DocumentAnalysisService.rawURL(documentId, ModelSpec.ovisocr2.id, source)
-                        try? FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
-                        try? markdown.write(to: file, atomically: true, encoding: .utf8)
-                        NotificationCenter.default.post(name: .aiPageRead,
-                                                        object: DocumentScan.PageRead(documentId: documentId, page: source))
+                        let markdown: String
+                        // Page déjà lue par OvisOCR2 (scan à l'ouverture, mise en page IA, analyse) : même modèle,
+                        // même page, température 0 → même texte ; réutilisé au lieu de ≈ 20 à 40 s de lecture.
+                        if let known = try? String(contentsOf: file, encoding: .utf8), !known.isEmpty {
+                            markdown = known
+                            Diagnostics.log("OvisOCR2 page \(source) : déjà lue (\(markdown.count) caractères)", "verif")
+                        } else {
+                            markdown = try await Diagnostics.measure("OvisOCR2 page \(source)", "verif") {
+                                try await OvisOCR2Reader().read(.pdfPage(url: url, index: source),
+                                                                maxTokens: DocumentAnalysisService.tokenBudget(ocr))
+                            }
+                            // Arrêtée : texte partiel, jamais gardé.
+                            try Task.checkCancellation()
+                            Diagnostics.log("OvisOCR2 page \(source) : \(markdown.count) caractères lus", "verif")
+                            // Gardé : sert aussi à la vue « Mise en page IA » du panneau Texte.
+                            try? FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
+                            try? markdown.write(to: file, atomically: true, encoding: .utf8)
+                            NotificationCenter.default.post(name: .aiPageRead,
+                                                            object: DocumentScan.PageRead(documentId: documentId, page: source))
+                        }
                         result.suggestions = OCRReferenceDiff.suggestions(ocr, reference: markdown)
                         Diagnostics.log("page \(source) : \(result.suggestions.count) différence(s)", "verif")
                     } catch {

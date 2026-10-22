@@ -205,7 +205,15 @@ struct RubyWebView: UIViewRepresentable {
         let view = WKWebView(frame: .zero, configuration: config)
         view.isOpaque = false
         view.backgroundColor = .clear
-        view.scrollView.isScrollEnabled = false
+        // Se déplacer dans le texte (tableaux larges, texte zoomé) : glisser à l'horizontale ou, zoomé, partout.
+        // Pas zoomé, la hauteur suit le contenu : un glisser vertical fait défiler la fenêtre OCR, pas le texte.
+        let scroll = view.scrollView
+        scroll.isScrollEnabled = true
+        scroll.isDirectionalLockEnabled = true
+        scroll.alwaysBounceVertical = false
+        scroll.alwaysBounceHorizontal = false
+        scroll.bounces = false
+        scroll.contentInsetAdjustmentBehavior = .never
         return view
     }
 
