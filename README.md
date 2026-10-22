@@ -23,6 +23,7 @@ Textes des licences : [LICENSES/](LICENSES/) ; attributions : [THIRD_PARTY_NOTIC
 
 | Version | Release | Contenu |
 |---|---|---|
+| **0.8.5.2** | [v0.8.5.2](https://github.com/NOxygen59/kyokasho/releases/tag/v0.8.5.2) | Correctif : l'IA locale compile ses calculs sur iOS 16 (remove_addrspace_t de Metal 3.1 remplacé) |
 | **0.8.5.1** | [v0.8.5.1](https://github.com/NOxygen59/kyokasho/releases/tag/v0.8.5.1) | Correctif : plus d'arrêt pendant la lecture IA, lecture bornée, Qwen3-VL-4B optionnel |
 | **0.8.5** | [v0.8.5](https://github.com/NOxygen59/kyokasho/releases/tag/v0.8.5) | Analyser le document entier (OCR + OvisOCR2 + GLM-OCR + Qwen3-VL-4B, vote, fiabilité, choix conseillés), mémoire étendue |
 | **0.8.4.2** | [v0.8.4.2](https://github.com/NOxygen59/kyokasho/releases/tag/v0.8.4.2) | Correctif : IA (OvisOCR2, GLM-OCR) sur iOS 16 + mode diagnostic |
