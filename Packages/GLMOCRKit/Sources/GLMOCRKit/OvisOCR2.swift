@@ -35,12 +35,16 @@ public struct PageVLMReader: Sendable {
         }
         let container = try await GLMModel.shared.container(directory: store.directory(spec), extraEOSTokens: [])
         let user = UserInput(chat: [.user(prompt, images: [.ciImage(CIImage(cgImage: image))])], additionalContext: context)
-        return try await container.perform { context in
-            let prepared = try await context.processor.prepare(input: user)
-            let result = try MLXLMCommon.generate(
-                input: prepared, parameters: GenerateParameters(maxTokens: maxTokens, temperature: 0), context: context
-            ) { (_: [Int]) in Task.isCancelled ? .stop : .more }
-            return result.output
+        // Une erreur MLX (mémoire, noyau Metal) pendant la lecture devient une erreur Swift : la page est notée en
+        // erreur au lieu d'arrêter l'app.
+        return try await withError {
+            try await container.perform { context in
+                let prepared = try await context.processor.prepare(input: user)
+                let result = try MLXLMCommon.generate(
+                    input: prepared, parameters: GenerateParameters(maxTokens: maxTokens, temperature: 0), context: context
+                ) { (_: [Int]) in Task.isCancelled ? .stop : .more }
+                return result.output
+            }
         }
     }
 

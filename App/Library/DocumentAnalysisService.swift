@@ -121,8 +121,9 @@ final class DocumentAnalysisService: ObservableObject {
                     let file = Self.rawURL(id, reader, p)
                     if let b = base[p], b.engine != OCREngineID.pdfText, !FileManager.default.fileExists(atPath: file.path) {
                         do {
-                            let text = try await Diagnostics.measure("\(reader) p. \(p)", "analyse") {
-                                try await Self.read(reader, url: url, page: p, service: service, documentId: id)
+                            let budget = Self.tokenBudget(b)
+                            let text = try await Diagnostics.measure("\(reader) p. \(p) (≤ \(budget) jetons)", "analyse") {
+                                try await Self.read(reader, url: url, page: p, maxTokens: budget, service: service, documentId: id)
                             }
                             try? FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
                             try? text.write(to: file, atomically: true, encoding: .utf8)
@@ -201,10 +202,17 @@ final class DocumentAnalysisService: ObservableObject {
     }
 
     /// Lecture d'une page par un modèle → texte (Markdown pour OvisOCR2 / Qwen3-VL, lignes pour GLM-OCR).
-    private static func read(_ reader: String, url: URL, page: Int, service: OCRService, documentId: String) async throws -> String {
+    /// Longueur maximale d'une lecture : ≈ deux fois le texte que l'OCR a trouvé (Markdown compris). Évite qu'un
+    /// modèle qui boucle remplisse la mémoire jusqu'à 4096 jetons.
+    static func tokenBudget(_ page: OCRPage) -> Int {
+        let chars = page.lines.reduce(0) { $0 + $1.text.count }
+        return min(4096, max(384, chars * 2 + 256))
+    }
+
+    private static func read(_ reader: String, url: URL, page: Int, maxTokens: Int, service: OCRService, documentId: String) async throws -> String {
         switch reader {
-        case ModelSpec.ovisocr2.id: return try await OvisOCR2Reader().read(.pdfPage(url: url, index: page))
-        case ModelSpec.qwen3vl4b.id: return try await Qwen3VLReader().read(.pdfPage(url: url, index: page))
+        case ModelSpec.ovisocr2.id: return try await OvisOCR2Reader().read(.pdfPage(url: url, index: page), maxTokens: maxTokens)
+        case ModelSpec.qwen3vl4b.id: return try await Qwen3VLReader().read(.pdfPage(url: url, index: page), maxTokens: maxTokens)
         default:
             let glm = try await service.page(documentId: documentId, url: url, pageIndex: page, engine: OCREngineID.glmocr)
             return glm.lines.map(\.text).joined(separator: "\n")

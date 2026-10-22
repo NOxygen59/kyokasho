@@ -49,4 +49,29 @@ final class OvisOCR2Tests: XCTestCase {
         let plain = String(OCRReferenceDiff.plain(markdown))
         for line in lines { XCTAssertTrue(plain.contains(line.filter { !$0.isWhitespace }), "manque : \(line)") }
     }
+
+    /// Page pleine (1600 px de haut, ~30 lignes) comme une vraie page de manuel : `KYOKASHO_FULLPAGE=1`.
+    func testFullPageOvis() async throws {
+        guard ProcessInfo.processInfo.environment["KYOKASHO_FULLPAGE"] != nil,
+              let root = ProcessInfo.processInfo.environment["KYOKASHO_MODELS"] else { throw XCTSkip("désactivé") }
+        let text = "天井を張る場合、一般的に小屋裏、天井裏にスペースをとる。上階からの防音にも役立ち、配管、配線、空調機器、照明器具等を取り付ける空間になる。"
+        let w = 1131, h = 1600
+        let ctx = CGContext(data: nil, width: w, height: h, bitsPerComponent: 8, bytesPerRow: 0,
+                            space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+        ctx.setFillColor(CGColor(gray: 1, alpha: 1)); ctx.fill(CGRect(x: 0, y: 0, width: w, height: h))
+        let font = CTFontCreateWithName("HiraginoSans-W3" as CFString, 30, nil)
+        let chars = Array(text)
+        for i in 0..<30 {
+            let start = (i * 31) % chars.count
+            let line = String((chars + chars)[start..<(start + 33)])
+            let attr = NSAttributedString(string: line, attributes: [.init(kCTFontAttributeName as String): font,
+                                                                     .init(kCTForegroundColorAttributeName as String): CGColor(gray: 0, alpha: 1)])
+            ctx.textPosition = CGPoint(x: 50, y: h - 80 - i * 50)
+            CTLineDraw(CTLineCreateWithAttributedString(attr), ctx)
+        }
+        let reader = OvisOCR2Reader(store: ModelStore(root: URL(fileURLWithPath: root)))
+        let start = Date()
+        let md = try await reader.read(.image(ctx.makeImage()!))
+        print("FULL OVIS \(String(format: "%.1f", Date().timeIntervalSince(start))) s, \(md.count) caractères")
+    }
 }

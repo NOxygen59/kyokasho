@@ -153,12 +153,13 @@ actor GLMModel {
     static func read(_ image: CGImage, container: ModelContainer, maxTokens: Int) async throws -> String {
         // `UserInput(prompt:images:)` de la 2.29.3 perd les images : on passe par `chat`.
         let input = UserInput(chat: [.user("Text Recognition:", images: [.ciImage(CIImage(cgImage: image))])])
-        return try await container.perform { context in
+        // Erreur MLX pendant la lecture → erreur Swift (pas d'arrêt de l'app).
+        return try await withError { try await container.perform { context in
             let prepared = try await context.processor.prepare(input: input)
             let result = try MLXLMCommon.generate(
                 input: prepared, parameters: GenerateParameters(maxTokens: maxTokens, temperature: 0), context: context
             ) { (_: [Int]) in Task.isCancelled ? .stop : .more }
             return result.output
-        }
+        } }
     }
 }

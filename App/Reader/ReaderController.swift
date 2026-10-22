@@ -1398,7 +1398,8 @@ final class ReaderController: NSObject, ObservableObject {
                 if let ocr {
                     do {
                         let markdown = try await Diagnostics.measure("OvisOCR2 page \(source)", "verif") {
-                            try await OvisOCR2Reader().read(.pdfPage(url: url, index: source))
+                            try await OvisOCR2Reader().read(.pdfPage(url: url, index: source),
+                                                            maxTokens: DocumentAnalysisService.tokenBudget(ocr))
                         }
                         Diagnostics.log("OvisOCR2 page \(source) : \(markdown.count) caractères lus", "verif")
                         result.suggestions = OCRReferenceDiff.suggestions(ocr, reference: markdown)
