@@ -4,7 +4,6 @@
 import CoreGraphics
 import CoreImage
 import Foundation
-import Hub
 import MLX
 import MLXLMCommon
 import MLXVLM
@@ -115,35 +114,37 @@ public struct GLMOCREngine: OCREngine {
 actor GLMModel {
     static let shared = GLMModel()
     private var loaded: (URL, ModelContainer)?
-    private var registered = false
+    /// Chargement en cours : un second appel pour le même modèle attend celui-ci (jamais deux chargements).
+    private var loading: (URL, Task<ModelContainer, Error>)?
 
-    func container(directory: URL) async throws -> ModelContainer {
+    /// Un seul modèle en mémoire à la fois (GLM-OCR ou OvisOCR2) : changer de dossier libère l'autre.
+    func container(directory: URL, extraEOSTokens: Set<String> = ["<|endoftext|>", "<|user|>", "<|observation|>"]) async throws -> ModelContainer {
         if let loaded, loaded.0 == directory { return loaded.1 }
-        if !registered {
-            // GLM-OCR n'est pas dans la liste de mlx-swift-lm 2.29.3 : on l'ajoute (portage local).
-            await VLMTypeRegistry.shared.registerModelType("glm_ocr") { url in
-                GlmOcr(try JSONDecoder().decode(GlmOcrConfiguration.self, from: Data(contentsOf: url)))
-            }
-            for name in ["Glm46VProcessor", "GlmOcrProcessor"] {
-                await VLMProcessorTypeRegistry.shared.registerProcessorType(name) { url, tokenizer in
-                    GlmOcrProcessor(try JSONDecoder().decode(GlmOcrProcessorConfiguration.self, from: Data(contentsOf: url)),
-                                    tokenizer: tokenizer)
-                }
-            }
-            registered = true
-        }
+        if let loading, loading.0 == directory { return try await loading.1.value }
+        loading?.1.cancel()
+        if loaded != nil { loaded = nil; MLX.GPU.clearCache() }
         // Mémoire GPU de travail limitée : l'iPad garde de la place pour le reste de l'app.
         MLX.GPU.set(cacheLimit: 256 * 1024 * 1024)
-        let hub = HubApi(downloadBase: directory.deletingLastPathComponent())
-        let container = try await VLMModelFactory.shared.loadContainer(
-            hub: hub,
-            // Fin de réponse : <|endoftext|> (59246) et <|user|> (59253), cf. `eos_token_id` du modèle.
-            configuration: ModelConfiguration(directory: directory, extraEOSTokens: ["<|endoftext|>", "<|user|>", "<|observation|>"]))
+        let task = Task {
+            try await VLMModelFactory.shared.loadContainer(
+                from: LocalOnly(), using: TransformersTokenizerLoader(),
+                // Fin de réponse GLM : <|endoftext|> (59246) et <|user|> (59253), cf. `eos_token_id` du modèle.
+                configuration: ModelConfiguration(directory: directory, extraEOSTokens: extraEOSTokens))
+        }
+        loading = (directory, task)
+        let container = try await task.value
+        // Pendant le chargement, un autre modèle a pu être demandé ou la mémoire libérée : on ne garde pas celui-ci.
+        guard loading?.0 == directory, !task.isCancelled else { return container }
+        loading = nil
         loaded = (directory, container)
         return container
     }
 
-    func unload() {
+    /// Libère le modèle (tous, ou seulement s'il s'agit de `directory`).
+    func unload(directory: URL? = nil) {
+        if let directory, loaded?.0 != directory, loading?.0 != directory { return }
+        loading?.1.cancel()
+        loading = nil
         loaded = nil
         MLX.GPU.clearCache()
     }
@@ -156,7 +157,7 @@ actor GLMModel {
             let prepared = try await context.processor.prepare(input: input)
             let result = try MLXLMCommon.generate(
                 input: prepared, parameters: GenerateParameters(maxTokens: maxTokens, temperature: 0), context: context
-            ) { (_: [Int]) in .more }
+            ) { (_: [Int]) in Task.isCancelled ? .stop : .more }
             return result.output
         }
     }

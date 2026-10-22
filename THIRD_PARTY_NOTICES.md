@@ -68,3 +68,13 @@ Copyright (C) 2024-2026 Yomitan Authors, (C) 2020-2022 Yomichan Authors. https:/
 - **UniDic 2.1.2** (via **unidic-lite 1.0.8**, Paul McCann, MIT) — UniDic Consortium, licence triple GPL / LGPL /
   **BSD** : BSD choisie. **Pas dans le dépôt ni dans l'app** : téléchargé à la demande depuis PyPI
   (`unidic-lite-1.0.8.tar.gz`, SHA-256 vérifié). https://github.com/polm/unidic-lite
+
+## MLX récent sur iOS 16 + OvisOCR2 (0.8.4)
+
+- **mlx-swift 0.32.3** et **mlx-swift-lm 3.32.3** (Apple, MIT) — utilisés via les forks
+  `NOxygen59/mlx-swift` et `NOxygen59/mlx-swift-lm`, branche `ipad-ios16` (rétroportage iOS 16 : bfloat logiciel
+  dans les noyaux Metal, voir leur `IPAD-IOS16.md`). GLM-OCR vient désormais de mlx-swift-lm (notre copie retirée).
+- **swift-transformers 1.3.5** (Hugging Face, Apache-2.0) — tokenizers (et ses dépendances swift-jinja,
+  swift-huggingface, swift-collections, swift-crypto, yyjson : Apache-2.0 / MIT).
+- **OvisOCR2** (ATH-MaaS, Apache-2.0), conversion MLX 8 bits par tokimoa (Apache-2.0). **Pas dans le dépôt ni
+  dans l'app** : téléchargé à la demande depuis Hugging Face (`tokimoa/ovisocr2-mlx-8bit`, SHA-256 vérifié).

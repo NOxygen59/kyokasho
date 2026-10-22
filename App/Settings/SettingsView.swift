@@ -404,6 +404,11 @@ struct AboutView: View {
                 credit("Yomitan (déconjugaison, texte japonais)", "yomidevs", "GPL-3.0", "https://github.com/yomidevs/yomitan")
                 credit("swift-fsrs (calcul des révisions)", "Ben Smiley", "MIT", "https://github.com/open-spaced-repetition/swift-fsrs")
             }
+            Section("IA locale (MLX)") {
+                credit("MLX / mlx-swift-lm (fork iOS 16)", "Apple · NOxygen59", "MIT", "https://github.com/NOxygen59/mlx-swift-lm")
+                credit("swift-transformers (tokenizers)", "Hugging Face", "Apache-2.0", "https://github.com/huggingface/swift-transformers")
+                credit("OvisOCR2 (modèle téléchargé)", "ATH-MaaS · conversion MLX tokimoa", "Apache-2.0", "https://huggingface.co/ATH-MaaS/OvisOCR2")
+            }
             Section("Analyseur japonais") {
                 credit("MeCab", "Taku Kudo · NTT", "BSD", "https://github.com/taku910/mecab")
                 credit("UniDic (dictionnaire téléchargé)", "UniDic Consortium", "BSD", "https://clrd.ninjal.ac.jp/unidic/")

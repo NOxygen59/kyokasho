@@ -1,0 +1,66 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 NOxygen59
+
+import GLMOCRKit
+import OCRKit
+import SwiftUI
+
+/// « Vérifier la double page » : OvisOCR2 relit les pages affichées ; chaque ligne qui diffère est proposée,
+/// à accepter ou refuser. Rien ne change sans accord.
+struct VerifySheet: View {
+    @ObservedObject var reader: ReaderController
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            List {
+                switch reader.verifyState {
+                case .running(let done, let total):
+                    Section {
+                        HStack(spacing: 10) {
+                            ProgressView()
+                            Text("OvisOCR2 lit la page \(done + 1) sur \(total)… (quelques dizaines de secondes par page)")
+                                .font(.footnote)
+                        }
+                        Button("Arrêter", role: .destructive) { reader.cancelVerification() }
+                    }
+                case .done where reader.verifications.allSatisfy({ $0.suggestions.isEmpty && $0.error == nil }):
+                    Section { Label("Aucune différence : OvisOCR2 lit la même chose.", systemImage: "checkmark.seal") }
+                default:
+                    EmptyView()
+                }
+                ForEach(reader.verifications) { page in
+                    Section {
+                        if let error = page.error { Text(error).font(.footnote).foregroundStyle(.red) }
+                        ForEach(page.suggestions) { s in
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text(s.current).font(Atelier.jp).foregroundStyle(.secondary).strikethrough(color: .red.opacity(0.6))
+                                Text(s.proposed).font(Atelier.jp)
+                                HStack {
+                                    Button("Accepter") { reader.acceptSuggestions([s], source: page.source) }
+                                        .buttonStyle(.borderedProminent).tint(Atelier.Tint.ai)
+                                    Button("Refuser") { reader.dropSuggestion(s, source: page.source) }
+                                        .buttonStyle(.bordered)
+                                }
+                                .font(.footnote)
+                            }
+                            .padding(.vertical, 4)
+                        }
+                    } header: {
+                        HStack {
+                            Text("Page \(reader.document.pageLabel(page.source)) · \(page.suggestions.count) différence\(page.suggestions.count > 1 ? "s" : "")")
+                            Spacer()
+                            if page.suggestions.count > 1 {
+                                Button("Tout accepter") { reader.acceptSuggestions(page.suggestions, source: page.source) }
+                                    .font(.caption)
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Vérification (OvisOCR2)")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("OK") { dismiss() } } }
+        }
+    }
+}

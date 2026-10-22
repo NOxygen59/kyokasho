@@ -249,7 +249,15 @@ Rythme choisi le 22/10 au soir : **2 sections de la liste de l'utilisateur par s
   力/カ, 夕/タ, 二/ニ, 工/エ…) gardée seulement si elle forme un mot du dictionnaire ; (3) **seules** les lignes encore
   douteuses sont relues par GLM-OCR (déjà dans l'app), en fond, pas toute la page ; (4) dans le panneau, caractères
   douteux soulignés, toucher → corriger à la main (correction gardée dans le cache OCR).
-- [ ] **O — PROCHAINE SESSION (choix du 22/10) : MLX récent rétroporté sur iOS 16** (« chemin 2 ») pour avoir
+- [x] **O — FAIT (22/10, compile seulement, rien testé sur l'iPad)** : MLX 0.32.3 + mlx-swift-lm 3.32.3 sur iOS 16
+  via les forks `NOxygen59/mlx-swift` et `NOxygen59/mlx-swift-lm` (branche par défaut `ipad-ios16`, détail des
+  polyfills dans leur `IPAD-IOS16.md` : bfloat logiciel dans `Source/Cmlx/mlx-generated/metal`, libc++ sans contrôle
+  de version, `QueueSerialExecutor`). `GLMOCRKit` dépend du fork + swift-transformers 1.3.5 (`Tokenizers+MLX.swift`
+  = pont tokenizer écrit à la main) ; notre copie de GLM-OCR retirée (amont). **OvisOCR2** au catalogue
+  (`ModelSpec.ovisocr2`), lu par `OvisOCR2Reader` ; `ReaderController.verifyShownPages` + `OCRReferenceDiff`
+  (OCRKit, testé) + `VerifySheet` (menu du moteur OCR → « Vérifier la double page »). Un seul modèle MLX en mémoire
+  (`GLMModel.container`). À mettre à jour plus tard : refaire les polyfills sur une nouvelle version de MLX.
+  Texte d'origine de l'étape : (« chemin 2 ») pour avoir
   tous les modèles récents (Qwen3.5, Qwen3-VL, OvisOCR2…). Constat du 22/10 : `mlx-swift` 0.32.3 ne déclare pas
   iOS 17 ; `mlx-swift-lm` 3.32.3 déclare `.iOS(.v17)` et tools 6.2, mais l'iOS 17+ vient surtout de
   `MLXFoundationModels` (inutile ici). Plan : forks `NOxygen59/mlx-swift-lm` (+ `mlx-swift` si besoin) branche

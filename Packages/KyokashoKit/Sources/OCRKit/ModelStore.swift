@@ -28,6 +28,7 @@ public struct ModelSpec: Identifiable, Sendable, Equatable {
         case "ppocr5": return URL(string: "https://github.com/PaddlePaddle/PaddleOCR")
         case "ndlocr": return URL(string: "https://github.com/ndl-lab/ndlocr-lite")
         case "glmocr": return URL(string: "https://huggingface.co/zai-org/GLM-OCR")
+        case "ovisocr2": return URL(string: "https://huggingface.co/ATH-MaaS/OvisOCR2")
         case "degan": return URL(string: "https://github.com/dali92002/DE-GAN")
         case "ppdoclayout": return URL(string: "https://github.com/PaddlePaddle/PaddleOCR")
         case "doclayoutyolo": return URL(string: "https://github.com/opendatalab/DocLayout-YOLO")
@@ -86,7 +87,22 @@ public extension ModelSpec {
             + [File(name: "model.safetensors", url: glm("model.safetensors"),
                     size: 1_247_191_941, sha256: "089e0339fcbc0fbf2225c3bd1cd94c6b4d49fdb3b1adfbb35ea22eb60b2afc95")])
 
-    static let all: [ModelSpec] = [.ndlocr, .ppocr5, .glmocr]
+    /// OvisOCR2 (ATH-MaaS, Apache-2.0, 0,9 milliard de paramètres, famille Qwen3.5), conversion MLX 8 bits
+    /// par tokimoa (vérifiée sur des documents japonais). Lit une page entière en Markdown, dans l'ordre de lecture.
+    /// Seulement à la demande (« Vérifier la double page ») : lent et ≈ 1,5 Go de mémoire pendant la lecture.
+    static let ovisocr2 = ModelSpec(
+        id: "ovisocr2", title: "OvisOCR2 (IA, vérification de page)",
+        summary: "Modèle IA spécialisé japonais (0,9 milliard de paramètres) qui relit une page entière. Sert à vérifier le texte de la double page, à la demande : compte quelques dizaines de secondes par page.",
+        license: "Apache-2.0 (ATH-MaaS) — conversion MLX 8 bits : tokimoa",
+        files: ["config.json", "model.safetensors.index.json", "preprocessor_config.json", "processor_config.json",
+                "video_preprocessor_config.json", "tokenizer_config.json", "chat_template.jinja", "vocab.json", "LICENSE"]
+            .map { File(name: $0, url: ovis($0), size: 0, sha256: nil) }
+            + [File(name: "tokenizer.json", url: ovis("tokenizer.json"), size: 19_989_325,
+                    sha256: "06b9509352d2af50381ab2247e083b80d32d5c0aba91c272ca9ff729b6a0e523"),
+               File(name: "model.safetensors", url: ovis("model.safetensors"), size: 1_001_176_400,
+                    sha256: "30971210227e1f0f2af39c59f569a2defbf85c5aa112e8eb5abb6f4ef1e33cec")])
+
+    static let all: [ModelSpec] = [.ndlocr, .ppocr5, .glmocr, .ovisocr2]
 
     /// PP-DocLayout v3 (PaddleOCR / PP-Structure, Apache-2.0), version ONNX de RapidLayout :
     /// zones de la page (titre, texte, tableau, légende…) **et ordre de lecture**.
@@ -120,6 +136,10 @@ public extension ModelSpec {
 
     private static func ndl(_ path: String) -> URL {
         URL(string: "https://raw.githubusercontent.com/ndl-lab/ndlocr-lite/d001dad2013ceabb5736ff8d637474e443eb73c2/" + path)!
+    }
+
+    private static func ovis(_ name: String) -> URL {
+        URL(string: "https://huggingface.co/tokimoa/ovisocr2-mlx-8bit/resolve/3f339323b95c61ab2c2ee77023d2cfa66b150aaa/" + name)!
     }
 
     private static func glm(_ name: String) -> URL {

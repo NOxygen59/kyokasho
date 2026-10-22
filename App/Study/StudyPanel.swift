@@ -99,6 +99,7 @@ struct StudyTextTab: View {
     @State private var query = ""
     @State private var matches: [PageTextSearch.Match] = []
     @State private var editingLine: Int?
+    @State private var showVerify = false
     @State private var lineDraft = ""
 
     var body: some View {
@@ -193,6 +194,7 @@ struct StudyTextTab: View {
         } message: {
             Text("Ta correction est gardée ; la relecture automatique n'y touchera plus.")
         }
+        .sheet(isPresented: $showVerify) { VerifySheet(reader: reader).preferredColorScheme(.dark) }
         .sheet(isPresented: $showCompare) { CompareEnginesView(reader: reader).environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review) }
     }
 
@@ -237,6 +239,15 @@ struct StudyTextTab: View {
                 Divider()
                 Button("Relancer") { reader.runOCR(engine: reader.ocrPage?.engine, force: true) }
                 Button("Comparer les moteurs") { showCompare = true }
+                if OvisOCR2Reader().isAvailable {
+                    Button {
+                        reader.verifyShownPages()
+                        showVerify = true
+                    } label: {
+                        Label(reader.shownSources.count > 1 ? "Vérifier la double page (OvisOCR2)" : "Vérifier la page (OvisOCR2)",
+                              systemImage: "checkmark.seal")
+                    }
+                }
             } label: {
                 // Icône seule (le nom s'écrivait en colonne dans le panneau étroit) ; le nom est dans le menu.
                 HStack(spacing: 4) {

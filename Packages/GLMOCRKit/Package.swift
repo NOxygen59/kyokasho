@@ -5,14 +5,17 @@
 import PackageDescription
 
 // Moteur OCR IA (GLM-OCR) sur MLX. Paquet à part : MLX est lourd à compiler et n'est pas
-// nécessaire aux tests de KyokashoKit. mlx-swift-lm 2.29.3 = dernière version pour iOS 16.
+// nécessaire aux tests de KyokashoKit. MLX récent rétroporté sur iOS 16 : forks NOxygen59/mlx-swift et
+// NOxygen59/mlx-swift-lm, branche ipad-ios16 (voir leur IPAD-IOS16.md). GLM-OCR et Qwen3.5 y sont en amont.
 let package = Package(
     name: "GLMOCRKit",
     platforms: [.iOS(.v16), .macOS(.v14)],
     products: [.library(name: "GLMOCRKit", targets: ["GLMOCRKit"])],
     dependencies: [
         .package(path: "../KyokashoKit"),
-        .package(url: "https://github.com/ml-explore/mlx-swift-lm", exact: "2.29.3"),
+        .package(url: "https://github.com/NOxygen59/mlx-swift-lm", branch: "ipad-ios16"),
+        // Tokenizers (iOS 16) : mlx-swift-lm 3.x ne charge plus les tokenizers lui-même.
+        .package(url: "https://github.com/huggingface/swift-transformers", exact: "1.3.5"),
     ],
     targets: [
         .target(name: "GLMOCRKit", dependencies: [
@@ -20,6 +23,7 @@ let package = Package(
             .product(name: "ONNXOCRKit", package: "KyokashoKit"),
             .product(name: "MLXVLM", package: "mlx-swift-lm"),
             .product(name: "MLXLMCommon", package: "mlx-swift-lm"),
+            .product(name: "Tokenizers", package: "swift-transformers"),
         ]),
         .testTarget(name: "GLMOCRKitTests", dependencies: ["GLMOCRKit"]),
     ]

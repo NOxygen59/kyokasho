@@ -1349,6 +1349,127 @@ final class ReaderController: NSObject, ObservableObject {
         }
     }
 
+    // MARK: Vérification par OvisOCR2 (à la demande)
+
+    struct PageVerification: Identifiable {
+        var id: Int { source }
+        let source: Int
+        /// Moteur du résultat OCR vérifié (les propositions ne valent que pour lui).
+        var engine: String?
+        var suggestions: [OCRReferenceDiff.Suggestion]
+        var error: String?
+    }
+
+    enum VerifyState: Equatable { case idle, running(done: Int, total: Int), done }
+
+    @Published private(set) var verifyState: VerifyState = .idle
+    @Published var verifications: [PageVerification] = []
+    private var verifyTask: Task<Void, Never>?
+    /// Acceptations appliquées l'une après l'autre (jamais deux écritures de la même page en même temps).
+    private var acceptChain: Task<Void, Never>?
+
+    /// Relit les pages affichées (double page : les deux) avec OvisOCR2 et propose les lignes qui diffèrent.
+    /// Rien n'est changé sans accord ; le modèle est libéré à la fin.
+    func verifyShownPages() {
+        guard OvisOCR2Reader().isAvailable else { return }
+        verifyTask?.cancel()
+        let sources = shownSources, url = fileURL, service = model.ocr
+        verifications = []
+        verifyState = .running(done: 0, total: sources.count)
+        verifyTask = Task { [weak self] in
+            for (k, source) in sources.enumerated() {
+                guard let self, !Task.isCancelled else { return }
+                var result = PageVerification(source: source, suggestions: [])
+                let page = source == self.focusSource ? self.ocrPage : nil
+                let ocr: OCRPage?
+                if let page {
+                    ocr = page
+                } else {
+                    let cached = await self.cachedOCR(source: source)
+                    if let cached { ocr = cached } else {
+                        let engine = await self.scanEngine(source: source)
+                        ocr = try? await service.page(documentId: self.document.id, url: url, pageIndex: source, engine: engine)
+                    }
+                }
+                result.engine = ocr?.engine
+                if let ocr {
+                    do {
+                        let markdown = try await OvisOCR2Reader().read(.pdfPage(url: url, index: source))
+                        result.suggestions = OCRReferenceDiff.suggestions(ocr, reference: markdown)
+                    } catch {
+                        result.error = error.localizedDescription
+                    }
+                } else {
+                    result.error = "Page pas encore lue par l'OCR."
+                }
+                guard !Task.isCancelled else { return }
+                self.verifications.append(result)
+                self.verifyState = .running(done: k + 1, total: sources.count)
+            }
+            // Seul OvisOCR2 est libéré (GLM-OCR peut servir à la relecture des lignes douteuses).
+            await OvisOCR2Reader().unload()
+            self?.verifyState = .done
+        }
+    }
+
+    func cancelVerification() {
+        let task = verifyTask
+        task?.cancel()
+        verifyState = .idle
+        // Libéré une fois la génération arrêtée (elle s'arrête au jeton suivant).
+        Task { await task?.value; await OvisOCR2Reader().unload() }
+    }
+
+    /// Propositions acceptées : chaque ligne prend le texte d'OvisOCR2 (marquée corrigée, comme à la main),
+    /// **seulement** si elle n'a pas changé depuis la vérification. Appliquées à la suite, page relue à chaque fois.
+    func acceptSuggestions(_ suggestions: [OCRReferenceDiff.Suggestion], source: Int) {
+        guard let engine = verifications.first(where: { $0.source == source })?.engine else { return }
+        suggestions.forEach { dropSuggestion($0, source: source) }
+        let previous = acceptChain, documentId = document.id, service = model.ocr
+        acceptChain = Task { [weak self] in
+            await previous?.value
+            guard let self else { return }
+            let live = source == self.focusSource && self.ocrPage?.engine == engine ? self.ocrPage : nil
+            var found = live
+            if found == nil { found = await service.cached(documentId: documentId, pageIndex: source, engine: engine) }
+            guard var page = found else { return }
+            var changed = false
+            for s in suggestions where page.lines.indices.contains(s.line) {
+                let now = page.lines[s.line].text.filter { !$0.isWhitespace }
+                guard now == s.current.filter({ !$0.isWhitespace }) else { continue }  // changée entre-temps
+                page.lines[s.line] = Self.corrected(page.lines[s.line], text: s.proposed)
+                changed = true
+            }
+            guard changed else { return }
+            do {
+                try await service.store(page, documentId: documentId, pageIndex: source)
+            } catch {
+                self.loadError = "Correction non enregistrée : \(error.localizedDescription)"
+                return
+            }
+            self.showOCR(page, source: source)
+            if source == self.focusSource, self.ocrPage?.engine == engine { self.ocrPage = page }
+            self.wordStartMemo.removeAll()
+        }
+    }
+
+    func dropSuggestion(_ suggestion: OCRReferenceDiff.Suggestion, source: Int) {
+        guard let i = verifications.firstIndex(where: { $0.source == source }) else { return }
+        verifications[i].suggestions.removeAll { $0.line == suggestion.line }
+    }
+
+    static func corrected(_ line: OCRLine, text: String) -> OCRLine {
+        var line = line
+        if text.count != line.charBoxes.count {
+            line.charBoxes = CharacterLayout.proportional(text, in: line.box, vertical: line.vertical)
+            line.measuredCharBoxes = false
+        }
+        line.text = text
+        line.edited = true
+        line.doubt = []
+        return line
+    }
+
     /// Correction à la main d'une ligne (gardée : la relecture automatique n'y touche plus).
     func correctOCRLine(_ index: Int, text: String) {
         guard var page = ocrPage, page.lines.indices.contains(index) else { return }
