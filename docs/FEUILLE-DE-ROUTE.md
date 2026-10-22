@@ -260,6 +260,17 @@ Rythme choisi le 22/10 au soir : **2 sections de la liste de l'utilisateur par s
   **OvisOCR2** (`tokimoa/ovisocr2-mlx-8bit`, Apache-2.0, ≈ 1 Go, qwen3_5, japonais) au catalogue `ModelStore`, et
   un bouton « Vérifier la double page » (différences à accepter / refuser). **L'utilisateur ne veut ni
   téléchargement de modèle ni test sur le Mac** : compiler seulement ; prévenir que l'essai réel se fera sur iPad.
+  **En pause (22/10, à la demande de l'utilisateur)** — état : forks GitHub créés `NOxygen59/mlx-swift` et
+  `NOxygen59/mlx-swift-lm`, clones `~/Projets-iPad/mlx-swift` et `~/Projets-iPad/mlx-swift-lm`, branche locale
+  `ipad-ios16` (tags 0.32.3 / 3.32.3), **rien de commité ni poussé dans les forks**. Fait en local : plateformes
+  `.iOS(.v16)`, trait FoundationModels coupé, lm → `.package(path: "../mlx-swift")`. **Vrai obstacle** : MLX ≥ 0.30
+  utilise le type Metal `bfloat` natif (Metal 3.1 = iOS 17). Polyfill en cours : `bf16.h` logiciel de mlx-swift
+  0.29.1 copié dans `Source/Cmlx/mlx-generated/metal/` et `Source/Cmlx/mlx/mlx/backend/metal/kernels/`,
+  `utils.h` (`val.bits_`) et `fp8.h` (constructeur `bits_to_bfloat`) patchés. Reste : `complex.h` (vec<T,2> et
+  `complex_t<bfloat16_t>` l. 159 et 301), `gemv.h`, `dot.h` (vec<T,4> de bfloat → boucle scalaire comme en 0.29.1),
+  `fft/radix.h`, puis les erreurs suivantes. Commande : `cd ~/Projets-iPad/mlx-swift-lm && xcodebuild -scheme MLXVLM
+  -destination 'generic/platform=iOS Simulator' build`. Voie de repli si trop lourd : MLX 0.29.1 + couche Swift
+  récente (≈ 95 erreurs d'API Swift, liste type OffsetLayer / gatherMM / quantizedMM / WiredMemoryTicket).
 - [ ] **N — Furigana « vérifiés »** : lecture gardée seulement si MeCab et le dictionnaire Yomitan sont d'accord ;
   sinon, celle du dictionnaire si le mot y est, et petit point pour signaler le doute. Correction à la main gardée.
 - Écarté : petit modèle de langue local pour tout relire (1-3 Go de mémoire, lent, chauffe, gain incertain sur des
