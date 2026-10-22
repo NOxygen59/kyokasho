@@ -52,7 +52,7 @@ l'IA) puis `git log -5 --oneline`. Fais mes retours s'il y en a, sinon l'étape 
 
 ## 4. Économiser les tokens (méthode qui marche)
 
-- Gros fichier : `grep -n` puis `sed -n 'A,Bp'`. Jamais `ReaderController.swift` (2100 l.) en entier.
+- Gros fichier : `grep -n` puis `sed -n 'A,Bp'`. `ReaderController` : fichier principal + `ReaderController+<thème>.swift`.
 - Modifier : `python3 - <<'EOF' … assert s.count(a)==1 … EOF` (attention aux `"""` collés à un `"` : préférer
   des chaînes `'…'` Python quand le texte Swift contient des guillemets).
 - Fichier ajouté dans `App/` → `xcodegen generate -q` avant de compiler.
@@ -305,7 +305,18 @@ Comptes (Drive) ; À propos (+ **connexion GitHub** device flow → mise à jour
   modèle chargé à l'ouverture, **déchargé en quittant** l'écran (V12). Uniquement dans les Réglages.
 - Balises `FDR-V7`.
 
-### [ ] V9 — Désencombrer le code (en dernier)
+### [x] V9 — Désencombrer le code (en dernier)
+- **Fait (22/10)** : code mort retiré (366 + 30 lignes : `TextPageSheet`, `BookmarksSheet`, `OutlineList`,
+  `CommentsSheet`, `reloadNotes`, `renderCurrentPage`, `hasCard`, `renameDeck`, `deleteDeck`, `cardCount`,
+  `setPostProcess`, `colorScheme`, `isIdentity`) ; `TextPageSheet.swift` → `OCRTextViews.swift` (`OCRTextView`,
+  `CompareEnginesView` gardés). `ReaderController.swift` (2 216 l.) découpé : fichier principal (état, chargement,
+  dictionnaire, notifications, ≈ 850 l.) + `ReaderController+Display / Navigation / OCR / Verification /
+  Annotations / PageLayout / Search.swift`, code déplacé tel quel (contrôle ligne à ligne) ; variables des
+  extensions remontées dans « État des extensions » ; `private` retirés (un fichier ne voit pas le `private` d'un
+  autre). Gardé : `AppSettings.theme` (enregistré), `BenchView` (utilisé). **Pas fait** : profilage au moniteur
+  (rendus SwiftUI, `@Published` trop larges) — il faut l'iPad.
+- Méthode pour retrouver du code mort : script `grep` des noms déclarés qui n'apparaissent qu'une fois (en excluant
+  les méthodes appelées par iOS : délégués, `body`, `makeUIView`…).
 - Chercher les types / fichiers inutilisés (`grep` du nom de chaque `struct` / `func` hors de son fichier), ex. à
   vérifier : `BenchView` (banc d'essai OCR), `TextPageSheet`, anciennes options (`LayoutEngineMenu`…), copies
   devenues inutiles. Découper `ReaderController.swift` (2100 l.) en extensions par thème (OCR, notes, IA, gestes,
