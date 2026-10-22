@@ -78,7 +78,6 @@ struct StudyPanel: View {
 
 // MARK: - Texte + traduction
 
-// FDR-V13 : garder la position de défilement par page ; ne rien recharger si la page de travail ne change pas.
 struct StudyTextTab: View {
     @EnvironmentObject private var model: AppModel
     @ObservedObject var reader: ReaderController

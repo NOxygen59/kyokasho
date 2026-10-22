@@ -856,7 +856,6 @@ final class ReaderController: NSObject, ObservableObject {
         }
     }
 
-    // FDR-V13 : glisser dans la même page ne doit pas changer focusSource / ocrPage (sinon le panneau revient en haut).
     private func pageChanged() {
         guard let pdf, let page = pdfView.currentPage else { return }
         let index = pdf.index(for: page)
@@ -867,7 +866,8 @@ final class ReaderController: NSObject, ObservableObject {
         if changed, lookupRequest != nil { endLookup() }
         if changed, !rebuilding, settings.hideBarsOnScroll, barsVisible { barsVisible = false }
         scheduleSavePosition()
-        schedulePageSettled()
+        // Glisser ou zoomer dans la même page : la page de travail reste (le panneau ne revient pas en haut).
+        schedulePageSettled(samePageKeeps: true)
     }
 
     private func updateCurrentSourcePage() {
@@ -910,24 +910,37 @@ final class ReaderController: NSObject, ObservableObject {
 
     // MARK: OCR
 
-    /// Page stable depuis un instant : OCR en cache affiché, OCR auto si demandé.
-    func schedulePageSettled() {
+    /// Page stable depuis un instant : OCR en cache affiché, OCR auto si demandé. `samePageKeeps` : page courante
+    /// inchangée et page de travail encore visible (glisser, zoom, bord de la page voisine) → `focusSource` et
+    /// `ocrPage` gardés : le panneau ne revient pas en haut.
+    func schedulePageSettled(samePageKeeps: Bool = false) {
         settleWork?.cancel()
-        let work = DispatchWorkItem { [weak self] in self?.pageSettled() }
+        let work = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            let keep = samePageKeeps && self.currentSourcePage == self.settledSource
+                && self.visibleSources().contains(self.focusSource)
+            self.pageSettled(keepFocus: keep)
+        }
         settleWork = work
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35, execute: work)
     }
 
-    private func pageSettled() {
+    /// Page courante au dernier `pageSettled` (voir `schedulePageSettled`).
+    private var settledSource: Int?
+
+    private func pageSettled(keepFocus: Bool = false) {
         ink.showOCRBoxes = model.appSettings.showOCRBoxes
-        ocrPage = nil
-        ocrState = .idle
+        if !keepFocus {
+            ocrPage = nil
+            ocrState = .idle
+        }
         let source = currentSourcePage
+        settledSource = source
         // Miniatures voisines et test « la page a du texte » seulement une fois la page posée
         // (pas à chaque page qui défile).
         preloadThumbnails(around: source)
         ink.trim(around: source)
-        pageHasPDFText = false
+        if !keepFocus { pageHasPDFText = false }
         pageTextTask?.cancel()
         let url = fileURL
         pageTextTask = Task.detached(priority: .utility) { [weak self] in
@@ -941,8 +954,8 @@ final class ReaderController: NSObject, ObservableObject {
         let visible = visibleSources()
         // Nouvelle page : la file d'OCR de l'ancienne ne sert plus.
         if visible != shownSources { cancelEnsureOCR() }
-        shownSources = visible
-        focusSource = source
+        if shownSources != visible { shownSources = visible }
+        if !keepFocus { focusSource = source }
         scheduleSharpening(visible)
         scheduleFurigana(visible)
         Task { [weak self] in
@@ -952,7 +965,7 @@ final class ReaderController: NSObject, ObservableObject {
             for page in visible {
                 if let cached = await self.cachedOCR(source: page) {
                     self.showOCR(cached, source: page)
-                    if page == self.focusSource { self.ocrPage = cached }
+                    if page == self.focusSource, !keepFocus || self.ocrPage == nil { self.ocrPage = cached }
                 } else {
                     missing.append(page)
                 }
@@ -1062,7 +1075,6 @@ final class ReaderController: NSObject, ObservableObject {
     }
 
     /// Pilule du panneau : travailler sur l'autre page affichée (double page).
-    // FDR-V13 : ne rien republier si la page de travail ne change pas.
     func focus(_ source: Int) {
         guard source != focusSource, shownSources.contains(source) else { return }
         ocrTask?.cancel()

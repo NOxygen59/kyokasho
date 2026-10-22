@@ -178,7 +178,11 @@ Comptes (Drive) ; À propos (+ **connexion GitHub** device flow → mise à jour
   `close()` du lecteur ne doit plus annuler ces tâches (seulement la file `ensureOCR` d'affichage).
 - Balises `FDR-V4`.
 
-### [ ] V13 — Panneau de droite : ne pas revenir en haut quand on bouge dans la même page
+### [x] V13 — Panneau de droite : ne pas revenir en haut quand on bouge dans la même page
+- **Fait (22/10, non vérifié sur iPad)** : `pageChanged` → `schedulePageSettled(samePageKeeps: true)` ; si la page
+  courante n'a pas changé (`settledSource`) et que la page de travail est encore visible, `pageSettled(keepFocus:)`
+  ne republie ni `ocrPage`, ni `focusSource`, ni `pageHasPDFText`. Position de défilement par page : pas faite
+  (changer de page remonte en haut, voulu).
 - Cause probable : glisser change `currentSourcePage` / `focusSource` ou republie `ocrPage` (même contenu) →
   `StudyTextTab` refait ses `.task(id:)` / reconstruit `FuriganaTextView` (WKWebView rechargée) → défilement à 0.
 - Faire : ne mettre à jour `focusSource` / `ocrPage` que si la **page de travail** change vraiment (comparer avant
