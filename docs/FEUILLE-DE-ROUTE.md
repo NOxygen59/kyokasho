@@ -3,7 +3,7 @@
 > Ce fichier + `docs/IA-LOCALE.md` (avant de toucher à l'IA) suffisent. Ne relis pas le code « pour voir » :
 > `grep -rn 'FDR-V3' App Packages` donne les endroits exacts d'une étape. Une session = les retours de l'utilisateur,
 > sinon l'étape suivante du § 7 ; puis commit + push (+ release **si demandée**), puis résumé simple.
-> **État au 22/10/2026 : v0.8.8 publiée (build 27)** (V2→V5 faits ; non vérifiés sur l'iPad sauf mention). L'IA locale (OvisOCR2, analyse, vérification) **marche sur
+> **État au 22/10/2026 : v0.8.9 publiée (build 28)** (V1→V8, V10, V11, V14, V7 faits ; reste V9 ; Qwen confirmé sur l'iPad en 0.8.8). L'IA locale (OvisOCR2, analyse, vérification) **marche sur
 > l'iPad** (confirmé par l'utilisateur). Le reste marqué « non vérifié » peut être faux sur l'appareil.
 
 ## 1. Prompt à coller dans le nouveau chat

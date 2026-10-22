@@ -23,6 +23,7 @@ Textes des licences : [LICENSES/](LICENSES/) ; attributions : [THIRD_PARTY_NOTIC
 
 | Version | Release | Contenu |
 |---|---|---|
+| **0.8.9** | [v0.8.9](https://github.com/NOxygen59/kyokasho/releases/tag/v0.8.9) | Export, ajout de pages, place prise et cache, une page par IA, chat Qwen |
 | **0.8.8** | [v0.8.8](https://github.com/NOxygen59/kyokasho/releases/tag/v0.8.8) | Qwen réparé sur iOS 16, document lu par l'IA à l'import, furigana et doutes d'après l'IA, thèmes à fonds dessinés |
 | **0.8.7** | [v0.8.7](https://github.com/NOxygen59/kyokasho/releases/tag/v0.8.7) | IA : mémoire rendue, tâches qui continuent (pastille, arrêt confirmé) ; panneau d'étude détachable et stable |
 | **0.8.6** | [v0.8.6](https://github.com/NOxygen59/kyokasho/releases/tag/v0.8.6) | Mise en page IA (OvisOCR2) et traduction française hors ligne (Qwen3-VL-4B), page ou document entier |
