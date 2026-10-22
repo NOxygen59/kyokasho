@@ -18,6 +18,8 @@ struct StudyPanel: View {
     @Binding var tab: Tab
     var openSearch: () -> Void
     var close: () -> Void
+    /// Colonne de droite : largeur fixe ; fenêtre ou plein écran (`DetachedPanel`) : toute la place donnée.
+    var fixedWidth = true
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -42,10 +44,13 @@ struct StudyPanel: View {
                     AtelierLabel("Étude · page \(reader.document.pageLabel(reader.focusSource))", tint: Atelier.textSecondary)
                 }
                 Spacer()
+                StudyWindowButtons()
                 Button(action: close) {
-                    Image(systemName: "sidebar.trailing").font(.system(size: 15, weight: .semibold))
+                    Image(systemName: "xmark").font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(Atelier.textSecondary)
+                        .frame(minWidth: 22, minHeight: 22)
                 }
+                .padding(.leading, 6)
                 .accessibilityLabel("Fermer le panneau d'étude")
             }
             PillTabs(items: [(Tab.text, "character.ja", "Texte"), (.vocab, "character.book.closed.ja", "Mots"),
@@ -62,8 +67,8 @@ struct StudyPanel: View {
             .frame(maxHeight: .infinity, alignment: .top)
         }
         .padding(16)
-        .frame(width: Atelier.panelWidth)
-        .frame(maxHeight: .infinity)
+        .frame(width: fixedWidth ? Atelier.panelWidth : nil)
+        .frame(maxWidth: fixedWidth ? nil : .infinity, maxHeight: .infinity)
         .atelierPanel()
     }
 

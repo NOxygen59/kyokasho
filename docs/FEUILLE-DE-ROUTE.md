@@ -191,7 +191,11 @@ Comptes (Drive) ; À propos (+ **connexion GitHub** device flow → mise à jour
   dans le coordinateur). Le panneau ne bouge **que** si l'utilisateur interagit avec lui ou change de page.
 - Balises `FDR-V13`.
 
-### [ ] V1 — Panneau de droite détachable (style fenêtre : réduire, plein écran, redimensionner)
+### [x] V1 — Panneau de droite détachable (style fenêtre : réduire, plein écran, redimensionner)
+- **Fait (22/10, non vérifié sur iPad)** : `App/Reader/DetachedPanel.swift` (`StudyPanelMode` docked / floating /
+  full / minimized en `@AppStorage`, `StudyWindowButtons` dans l'en-tête de `StudyPanel`, `DetachedPanel` : poignée
+  du haut, coin, plein écran, pastille « Étude »). `ReaderScreen.docked` : la colonne de droite n'existe que pour le
+  navigateur ou le panneau ancré. Passer d'ancré à détaché reconstruit le panneau (onglet gardé, défilement non).
 - Aujourd'hui : `StudyPanel` collé à droite dans `ReaderScreen` (`side == .study`).
 - Faire : conteneur `DetachedPanel` sur le modèle de `FloatingToolbar` / `NoteWindow` (déjà : glisser par l'en-tête,
   coin de redimensionnement, `@AppStorage` x/y/w/h) avec 3 boutons d'en-tête : **réduire** (pastille), **ancrer à

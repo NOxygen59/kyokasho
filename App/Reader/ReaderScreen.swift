@@ -24,6 +24,8 @@ struct ReaderScreen: View {
     @State private var side: Side? = nil
     @State private var autoOpenedSide = false
     @State private var studyTab: StudyPanel.Tab = .text
+    @AppStorage(StudyPanelMode.storageKey) private var studyMode = StudyPanelMode.docked
+    @AppStorage(StudyPanelMode.restoreKey) private var studyRestore = StudyPanelMode.docked
     @AppStorage("reader.filmstripShown") private var filmstripShown = true
     @AppStorage("pencil.lookupOption") private var pencilOption = false
     @AppStorage(PageTone.storageKey) private var pageTone = PageTone.normal
@@ -51,13 +53,18 @@ struct ReaderScreen: View {
 
     private var chromeVisible: Bool { reader.barsVisible || reader.isDrawing }
 
+    /// Panneau dans la colonne de droite (navigateur, ou panneau d'étude ancré) : la page lui laisse la place.
+    private var docked: Side? {
+        side == .study && studyMode != .docked ? nil : side
+    }
+
     var body: some View {
         GeometryReader { geo in
             let landscape = geo.size.width > geo.size.height
             HStack(spacing: Atelier.gap) {
                 ZStack {
                     PDFViewHost(view: reader.pdfView)
-                        .clipShape(RoundedRectangle(cornerRadius: side == nil ? 0 : Atelier.radius, style: .continuous))
+                        .clipShape(RoundedRectangle(cornerRadius: docked == nil ? 0 : Atelier.radius, style: .continuous))
                     LookupHighlightLayer(rects: reader.lookupHighlight)
                     if chromeVisible {
                         chrome.transition(.opacity)
@@ -106,22 +113,33 @@ struct ReaderScreen: View {
                     }
                 }
                 .animation(.easeOut(duration: 0.18), value: chromeVisible)
-                if let side, landscape || side == .web {
-                    sidePanel(side)
+                if let docked, landscape || docked == .web {
+                    sidePanel(docked)
                         .transition(.move(edge: .trailing).combined(with: .opacity))
                 }
             }
-            .padding(side == nil ? 0 : Atelier.gap)
+            .padding(docked == nil ? 0 : Atelier.gap)
             .onAppear {
                 // Paysage (taille réelle de la vue, pas l'orientation de la scène) : panneau d'étude ouvert d'office.
                 if landscape, !autoOpenedSide { autoOpenedSide = true; side = .study }
             }
             .overlay(alignment: .trailing) {
                 // Portrait : le panneau d'étude passe par-dessus la page.
-                if side == .study, !landscape {
+                if docked == .study, !landscape {
                     sidePanel(.study).padding(Atelier.gap).transition(.move(edge: .trailing))
                 }
             }
+            .overlay {
+                // Panneau d'étude détaché : fenêtre, plein écran ou pastille, par-dessus la page.
+                if side == .study, studyMode != .docked {
+                    DetachedPanel(area: geo.size) {
+                        StudyPanel(reader: reader, tab: $studyTab, openSearch: { sheet = .search },
+                                   close: { self.side = nil }, fixedWidth: false)
+                    }
+                    .transition(.opacity)
+                }
+            }
+            .animation(.spring(response: 0.38, dampingFraction: 0.88), value: studyMode)
             .animation(.spring(response: 0.38, dampingFraction: 0.88), value: side)
         }
         .background(Atelier.canvas.ignoresSafeArea())
@@ -342,7 +360,13 @@ struct ReaderScreen: View {
             Rectangle().fill(Atelier.hairline).frame(width: 1, height: 22).padding(.horizontal, 4)
             CapsuleButton(icon: "sidebar.trailing", label: "Panneau d'étude", active: side == .study,
                           tint: Atelier.Tint.japanese) {
-                side = side == .study ? nil : .study
+                // Panneau réduit en pastille : le bouton le rouvre au lieu de le fermer.
+                if studyMode == .minimized {
+                    studyMode = studyRestore == .minimized ? .docked : studyRestore
+                    side = .study
+                } else {
+                    side = side == .study ? nil : .study
+                }
             }
         }
         .padding(4)
@@ -443,6 +467,8 @@ struct ReaderScreen: View {
         } else {
             studyTab = tab
             side = .study
+            // Panneau réduit : l'ouvrir sur un onglet le rouvre comme avant.
+            if studyMode == .minimized { studyMode = studyRestore == .minimized ? .docked : studyRestore }
         }
         if tab == .text, reader.ocrPage == nil, reader.ocrState != .running { reader.runOCR() }
     }
@@ -451,7 +477,6 @@ struct ReaderScreen: View {
     private func sidePanel(_ side: Side) -> some View {
         switch side {
         case .study:
-            // FDR-V1 : panneau détachable (réduire / ancrer à droite / plein écran / redimensionner), sur le modèle de FloatingToolbar et NoteWindow.
             StudyPanel(reader: reader, tab: $studyTab, openSearch: { sheet = .search }, close: { self.side = nil })
         case .web:
             WebPanel(onClose: { self.side = nil })
