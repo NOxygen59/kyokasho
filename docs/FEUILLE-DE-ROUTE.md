@@ -181,7 +181,9 @@ Comptes (Drive) ; À propos (+ **connexion GitHub** device flow → mise à jour
 ### [x] V13 — Panneau de droite : ne pas revenir en haut quand on bouge dans la même page
 - **Fait (22/10, non vérifié sur iPad)** : `pageChanged` → `schedulePageSettled(samePageKeeps: true)` ; si la page
   courante n'a pas changé (`settledSource`) et que la page de travail est encore visible, `pageSettled(keepFocus:)`
-  ne republie ni `ocrPage`, ni `focusSource`, ni `pageHasPDFText`. Position de défilement par page : pas faite
+  ne republie ni `ocrPage`, ni `focusSource`, ni `pageHasPDFText`. Retour 0.8.7 (double page, p. 2 choisie → regarder
+  la p. 1 la remettait sur 1) : `pinnedFocus` (pilule) gardé tant que visible ; en double page `visibleSources` et la
+  page courante comptent la planche entière (`spread(of:)`), même zoomée sur une page. Position de défilement par page : pas faite
   (changer de page remonte en haut, voulu).
 - Cause probable : glisser change `currentSourcePage` / `focusSource` ou republie `ocrPage` (même contenu) →
   `StudyTextTab` refait ses `.task(id:)` / reconstruit `FuriganaTextView` (WKWebView rechargée) → défilement à 0.

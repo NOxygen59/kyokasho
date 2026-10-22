@@ -874,7 +874,9 @@ final class ReaderController: NSObject, ObservableObject {
         guard let pdf, presented.indices.contains(currentIndex) else { return }
         var source = presented[currentIndex].source
         if settings.layout == .double {
+            // Planche entière (même zoomée sur une page) : la page courante reste la première de la planche.
             let visible = pdfView.visiblePages.map { pdf.index(for: $0) }.filter { presented.indices.contains($0) }
+                .flatMap(spread(of:)).filter { presented.indices.contains($0) }
             if let first = visible.map({ presented[$0].source }).min() { source = min(source, first) }
         }
         if source != currentSourcePage {
@@ -917,8 +919,11 @@ final class ReaderController: NSObject, ObservableObject {
         settleWork?.cancel()
         let work = DispatchWorkItem { [weak self] in
             guard let self else { return }
-            let keep = samePageKeeps && self.currentSourcePage == self.settledSource
-                && self.visibleSources().contains(self.focusSource)
+            let visible = self.visibleSources()
+            if let pinned = self.pinnedFocus, !visible.contains(pinned) { self.pinnedFocus = nil }
+            // Page choisie dans le panneau : gardée tant qu'elle est à l'écran, même si on regarde l'autre.
+            let keep = samePageKeeps && visible.contains(self.focusSource)
+                && (self.pinnedFocus == self.focusSource || self.currentSourcePage == self.settledSource)
             self.pageSettled(keepFocus: keep)
         }
         settleWork = work
@@ -927,6 +932,8 @@ final class ReaderController: NSObject, ObservableObject {
 
     /// Page courante au dernier `pageSettled` (voir `schedulePageSettled`).
     private var settledSource: Int?
+    /// Page de travail choisie à la main (pilule du panneau) : gardée tant qu'elle reste visible.
+    private var pinnedFocus: Int?
 
     private func pageSettled(keepFocus: Bool = false) {
         ink.showOCRBoxes = model.appSettings.showOCRBoxes
@@ -955,7 +962,7 @@ final class ReaderController: NSObject, ObservableObject {
         // Nouvelle page : la file d'OCR de l'ancienne ne sert plus.
         if visible != shownSources { cancelEnsureOCR() }
         if shownSources != visible { shownSources = visible }
-        if !keepFocus { focusSource = source }
+        if !keepFocus { focusSource = pinnedFocus.flatMap { visible.contains($0) ? $0 : nil } ?? source }
         scheduleSharpening(visible)
         scheduleFurigana(visible)
         Task { [weak self] in
@@ -977,10 +984,25 @@ final class ReaderController: NSObject, ObservableObject {
         }
     }
 
+    /// Pages affichées. Double page : la planche entière compte, même zoomée sur une seule page (sinon la page
+    /// choisie dans le panneau disparaissait de la liste et le panneau retombait sur l'autre).
     private func visibleSources() -> [Int] {
         guard let pdf else { return [currentSourcePage] }
-        let sources = pdfView.visiblePages.map { pdf.index(for: $0) }.filter { presented.indices.contains($0) }.map { presented[$0].source }
+        var indices = pdfView.visiblePages.map { pdf.index(for: $0) }.filter { presented.indices.contains($0) }
+        if settings.layout == .double { indices = indices.flatMap(spread(of:)) }
+        let sources = indices.filter { presented.indices.contains($0) }.map { presented[$0].source }
         return Array(Set(sources)).sorted()
+    }
+
+    /// Les pages de la planche (double page) qui contient `index` : (0,1), (2,3)… ou, en livre, 0 seule puis (1,2)…
+    private func spread(of index: Int) -> [Int] {
+        if pdfView.displaysAsBook {
+            guard index > 0 else { return [0] }
+            let first = (index - 1) / 2 * 2 + 1
+            return [first, first + 1]
+        }
+        let first = index / 2 * 2
+        return [first, first + 1]
     }
 
     /// Moteurs à essayer, dans l'ordre, pour lire le cache d'une page.
@@ -1077,6 +1099,7 @@ final class ReaderController: NSObject, ObservableObject {
     /// Pilule du panneau : travailler sur l'autre page affichée (double page).
     func focus(_ source: Int) {
         guard source != focusSource, shownSources.contains(source) else { return }
+        pinnedFocus = source
         ocrTask?.cancel()
         focusSource = source
         ocrPage = nil
