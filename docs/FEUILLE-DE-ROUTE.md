@@ -311,6 +311,10 @@ Rythme choisi le 22/10 au soir : **2 sections de la liste de l'utilisateur par s
   Metal d'iOS 16 (le compilateur du Mac l'a même en mode 3.0 : le test Mac ne peut pas le voir). Remplacé par
   `mlx_remove_addrspace_t` (copie exacte de la définition d'Apple) via `tools/ipad-ios16-patch.py`. Autres
   fonctions `metal::` des noyaux : anciennes, conditionnées (`os_log` ≥ 3.2) ou réservées aux puces NAX.
+  Journal suivant (0.8.5.2) : `#pragma clang fp reassociate(off)` (noyau GatedDelta de mlx-swift-lm = Qwen3.5 /
+  OvisOCR2) inconnu du clang d'iOS 16 → retiré **et** bibliothèque compilée sans maths rapides (même garantie), dans
+  `ios16-overrides/src/metal_device.cpp`. Autres `#pragma` des noyaux : anciens. Méthode : à chaque journal, corriger
+  le **premier** obstacle et chercher tout de suite ses semblables dans tous les noyaux.
 ### Version 0.8.6 (demandée le 22/10) — dans cet ordre
 - [x] **T — FAIT (22/10, non vérifié iPad)** : `AILayout` (OCRKit, testé : blocs sûrs, aucune balise de l'IA recopiée),
   `AILayoutView` (panneau Texte, 3e segment ✨ ; Markdown gardé dans `Analysis/<id>/ovisocr2-<page>.md`, écrit aussi par
