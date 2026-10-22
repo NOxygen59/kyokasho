@@ -74,6 +74,7 @@ final class MorphologyService: ObservableObject {
                 if Task.isCancelled || (error as? URLError)?.code == .cancelled || error is CancellationError {
                     state = .absent
                 } else {
+                    Diagnostics.error("MeCab / UniDic : \(error.localizedDescription)", "mecab")
                     state = .failed(error.localizedDescription)
                 }
             }

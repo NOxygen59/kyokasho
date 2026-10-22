@@ -1046,6 +1046,7 @@ final class ReaderController: NSObject, ObservableObject {
             } catch is CancellationError {
                 return
             } catch {
+                Diagnostics.error("OCR \(engineID) p. \(source) : \(error.localizedDescription)", "ocr")
                 guard let self, self.focusSource == source else { return }
                 self.ocrState = .failed(error.localizedDescription)
             }
@@ -1339,7 +1340,9 @@ final class ReaderController: NSObject, ObservableObject {
         rereading = true
         rereadTask = Task { [weak self] in
             defer { if !Task.isCancelled { self?.rereading = false } }
-            guard let read = try? await engine.reread(page, lines: lines, input: .pdfPage(url: url, index: source)),
+            guard let read = try? await Diagnostics.measure("GLM-OCR relit \(lines.count) ligne(s) p. \(source)", "relecture", {
+                      try await engine.reread(page, lines: lines, input: .pdfPage(url: url, index: source))
+                  }),
                   !Task.isCancelled, let self,
                   // Page changée entre-temps (correction à la main, autre OCR) : résultat jeté.
                   self.ocrPage == page else { return }
@@ -1394,8 +1397,12 @@ final class ReaderController: NSObject, ObservableObject {
                 result.engine = ocr?.engine
                 if let ocr {
                     do {
-                        let markdown = try await OvisOCR2Reader().read(.pdfPage(url: url, index: source))
+                        let markdown = try await Diagnostics.measure("OvisOCR2 page \(source)", "verif") {
+                            try await OvisOCR2Reader().read(.pdfPage(url: url, index: source))
+                        }
+                        Diagnostics.log("OvisOCR2 page \(source) : \(markdown.count) caractères lus", "verif")
                         result.suggestions = OCRReferenceDiff.suggestions(ocr, reference: markdown)
+                        Diagnostics.log("page \(source) : \(result.suggestions.count) différence(s)", "verif")
                     } catch {
                         result.error = error.localizedDescription
                     }

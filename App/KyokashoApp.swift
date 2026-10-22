@@ -9,6 +9,11 @@ import UIKit
 
 @main
 struct KyokashoApp: App {
+    init() {
+        // Avant tout : journal de diagnostic et gestionnaire d'erreurs MLX (message noté avant un arrêt).
+        Diagnostics.start()
+    }
+
     @StateObject private var model = AppModel()
     @StateObject private var themes = ThemeManager()
 

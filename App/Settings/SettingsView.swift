@@ -68,6 +68,7 @@ struct SettingsView: View {
                 } footer: {
                     Text("CPU, mémoire et images par seconde de l'app, dans un panneau flottant ouvert depuis le menu « … » du lecteur.")
                 }
+                DiagnosticsSection()
                 Section("Comptes") {
                     NavigationLink { DriveAccountView() } label: {
                         row("externaldrive.badge.icloud", "Google Drive", tint: Atelier.Tint.cloud)

@@ -2,7 +2,7 @@
 
 > Ce fichier suffit. Ne relis pas PLAN.md, ni le code « pour voir ». Une session = les retours de l'utilisateur,
 > sinon **une** étape du § 6 ; puis commit + push (+ release si demandée), puis stop.
-> État au 22/10/2026 : **v0.8.4.1 publiée** (build 19 : correctif du plantage au lancement de la 0.8.4 — ne JAMAIS utiliser `_LIBCPP_DISABLE_AVAILABILITY`).
+> État au 22/10/2026 : **v0.8.4.2 publiée** (build 20 : IA locale sur iOS 16 — Metal 3.0 + bfloat logiciel aussi en JIT ; mode diagnostic).
 > sur son iPad et fait ses retours. Tout ce qui est marqué « non vérifié » peut être faux sur l'appareil.
 
 ## 1. Prompt à coller dans le nouveau chat
@@ -36,6 +36,17 @@ Pas de simulateur, pas d'iPad sans ma permission.
 - Télécharger quelque chose sur le Mac (outil, modèle de test) : dire quoi, d'où, quelle taille, **demander**.
   Le Mac chauffe sur les gros calculs : rester léger.
 - Release **seulement quand l'utilisateur la demande** (il enchaîne souvent plusieurs retours avant).
+
+### Déboguer avec l'utilisateur
+- **Mode diagnostic** (Réglages → Outils → Diagnostic, `App/Settings/Diagnostics.swift`) : demander à
+  l'utilisateur d'activer le mode, refaire le geste, puis « Partager le journal » (ou Fichiers → Kyōkasho →
+  Diagnostics/journal.txt). Les erreurs MLX y sont notées avant l'arrêt. Ajouter `Diagnostics.log/measure/error`
+  aux nouveaux chemins lourds.
+- Rapport de plantage `.ips` : symboliser avec `atos -o build/ipa/Kyokasho.xcarchive/dSYMs/Kyokasho.app.dSYM/...
+  -l <base du binaire Kyokasho> <adresses>` (UUID à vérifier avec `dwarfdump --uuid`).
+- MLX sur iOS 16 : tester sur Mac avec `MLX_METAL_LANGUAGE_VERSION=30` (mêmes conditions que l'iPad). Modèle
+  d'essai : `KYOKASHO_MODELS=<dossier> swift test --filter OvisOCR2Tests` dans `Packages/GLMOCRKit`
+  (l'utilisateur a autorisé le téléchargement d'OvisOCR2 le 22/10).
 
 ## 3. Économiser les tokens (méthode qui marche)
 

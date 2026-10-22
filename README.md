@@ -23,6 +23,7 @@ Textes des licences : [LICENSES/](LICENSES/) ; attributions : [THIRD_PARTY_NOTIC
 
 | Version | Release | Contenu |
 |---|---|---|
+| **0.8.4.2** | [v0.8.4.2](https://github.com/NOxygen59/kyokasho/releases/tag/v0.8.4.2) | Correctif : IA (OvisOCR2, GLM-OCR) sur iOS 16 + mode diagnostic |
 | **0.8.4.1** | [v0.8.4.1](https://github.com/NOxygen59/kyokasho/releases/tag/v0.8.4.1) | Correctif : la 0.8.4 plantait au lancement sur iOS 16 |
 | **0.8.4** | [v0.8.4](https://github.com/NOxygen59/kyokasho/releases/tag/v0.8.4) | Furigana par MeCab, OCR relu (dictionnaire + GLM-OCR), dictionnaire au mot entier, MLX récent sur iOS 16, OvisOCR2 « Vérifier la double page », réglages des modèles réorganisés |
 | **0.8.3.1** | [v0.8.3.1](https://github.com/NOxygen59/kyokasho/releases/tag/v0.8.3.1) | Fusion de PDF sur l'iPad (ordre au glisser, Fichiers ou bibliothèque) |
