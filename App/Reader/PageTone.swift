@@ -143,6 +143,9 @@ final class TonedPage: PDFPage {
     var pageKey: String?
     /// Cadre d'origine de la page (avant rognage / coupe), là où l'image nettoyée se pose.
     var originalBox: CGRect = .zero
+    /// Cadre de la page dans le PDF d'origine. Différent de `originalBox` si la page a été remise à la hauteur
+    /// commune du livre : les furigana (calculés sur l'origine) sont alors agrandis d'autant.
+    var sourceBox: CGRect = .zero
 
     override func draw(with box: PDFDisplayBox, to context: CGContext) {
         let tone = PageTone.current
@@ -183,6 +186,12 @@ final class TonedPage: PDFPage {
         context.saveGState()
         context.concatenate(transform(for: box))
         context.clip(to: bounds(for: box))
+        if sourceBox.height > 0, originalBox.height > 0, abs(originalBox.height / sourceBox.height - 1) > 0.001 {
+            let f = originalBox.height / sourceBox.height
+            context.translateBy(x: originalBox.minX, y: originalBox.minY)
+            context.scaleBy(x: f, y: f)
+            context.translateBy(x: -sourceBox.minX, y: -sourceBox.minY)
+        }
         FuriganaLayer.draw(marks, in: context)
         context.restoreGState()
     }

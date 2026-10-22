@@ -57,6 +57,10 @@ final class ReaderController: NSObject, ObservableObject {
 
     /// Dernier calcul de furigana OCR lancé par page (`showOCR`).
     var furiganaGeneration: [Int: Int] = [:]
+    /// Documents des pages remises à la hauteur commune (`Built.helpers`), gardés tant que le livre est affiché.
+    var pageHelpers: [PDFDocument] = []
+    /// Orientation de l'écran du lecteur (`adaptLayout`) ; `nil` tant qu'elle n'est pas connue.
+    var portraitMode: Bool?
     /// Préparation des pages teintées voisines (`scheduleTone`).
     var toneTask: Task<Void, Never>?
     var isAnimatingTurn = false
@@ -231,6 +235,41 @@ final class ReaderController: NSObject, ObservableObject {
         let rotations: [Int: Int]
         let splits: Set<Int>
         let presented: [PresentedPage]
+        /// Documents d'une page des pages remises à la taille commune (gardés en vie avec le document affiché).
+        var helpers: [PDFDocument] = []
+    }
+
+    /// Page recréée à `factor` × sa taille (contenu vectoriel, texte intégré gardé), pour que les pages d'un livre
+    /// aient la même hauteur (doubles pages égales). Rotation reprise.
+    nonisolated static func scaledPage(_ page: PDFPage, factor: CGFloat) -> (PDFPage, PDFDocument)? {
+        guard let source = page.pageRef else { return nil }
+        let box = page.bounds(for: .cropBox)
+        var media = CGRect(x: 0, y: 0, width: (box.width * factor).rounded(), height: (box.height * factor).rounded())
+        let data = NSMutableData()
+        guard let consumer = CGDataConsumer(data: data as CFMutableData),
+              let ctx = CGContext(consumer: consumer, mediaBox: &media, nil) else { return nil }
+        ctx.beginPDFPage(nil)
+        ctx.scaleBy(x: factor, y: factor)
+        ctx.translateBy(x: -box.minX, y: -box.minY)
+        ctx.drawPDFPage(source)
+        ctx.endPDFPage()
+        ctx.closePDF()
+        guard let doc = PDFDocument(data: data as Data) else { return nil }
+        doc.delegate = TonedPageProvider.shared
+        guard let scaled = doc.page(at: 0) else { return nil }
+        scaled.rotation = page.rotation
+        return (scaled, doc)
+    }
+
+    /// Hauteur la plus courante des pages (telles qu'affichées, rotation comprise), arrondie au point.
+    nonisolated static func commonHeight(_ pdf: PDFDocument) -> CGFloat? {
+        var counts: [Int: Int] = [:]
+        for i in 0..<pdf.pageCount {
+            guard let page = pdf.page(at: i) else { continue }
+            let b = page.bounds(for: .cropBox)
+            counts[Int((page.rotation % 180 == 0 ? b.height : b.width).rounded()), default: 0] += 1
+        }
+        return counts.max { $0.value < $1.value }.map { CGFloat($0.key) }
     }
 
     /// Numéro de la dernière construction demandée : un résultat plus ancien est ignoré.
@@ -274,8 +313,24 @@ final class ReaderController: NSObject, ObservableObject {
         // Pages dans l'ordre final, puis un seul rangement du document (voir plus bas).
         var ordered: [PDFPage] = []
         ordered.reserveCapacity(count)
+        // Pages de même hauteur (doubles pages égales) : une page plus grande ou plus petite que la hauteur la plus
+        // courante (scans de résolutions différentes, PDF ajoutés) est recréée à cette hauteur. Tout ce qui est
+        // placé sur la page suit son cadre (`boxes`) ; les furigana, calculés sur la page d'origine, sont agrandis
+        // au dessin (`TonedPage.sourceBox`).
+        let common = commonHeight(pdf)
+        var helpers: [PDFDocument] = []
+        var rescaled = false
         for index in 0..<count {
-            guard let page = pdf.page(at: index) else { continue }
+            guard var page = pdf.page(at: index) else { continue }
+            let sourceBox = page.bounds(for: .cropBox)
+            let height = page.rotation % 180 == 0 ? sourceBox.height : sourceBox.width
+            if let common, height > 0, abs(common / height - 1) > 0.03,
+               let (scaled, doc) = scaledPage(page, factor: common / height) {
+                page = scaled
+                helpers.append(doc)
+                rescaled = true
+            }
+            (page as? TonedPage)?.sourceBox = sourceBox
             let box = page.bounds(for: .cropBox)
             boxes[index] = box
             rotations[index] = page.rotation
@@ -299,13 +354,14 @@ final class ReaderController: NSObject, ObservableObject {
                 // `copy()` ne recopie pas les propriétés Swift.
                 (copy as? TonedPage)?.pageKey = pageKey
                 (copy as? TonedPage)?.originalBox = box
+                (copy as? TonedPage)?.sourceBox = sourceBox
                 ordered.append(copy)
             } else if settings.autoCrop, let crop = transform?.autoCrop {
                 page.setBounds(ContentBounds.apply(crop, to: box), for: .cropBox)
             }
         }
         var presented = PresentationLayout.pages(pageCount: boxes.count, splitPages: splitPages, rightToLeft: rtl)
-        var reordered = !splitPages.isEmpty
+        var reordered = !splitPages.isEmpty || rescaled
         if rtl && settings.layout == .double {
             // Double page de droite à gauche : on range les pages dans l'ordre visuel nous-mêmes
             // (l'option RTL de PDFKit intervertit les tailles des pages d'une même double page).
@@ -322,7 +378,7 @@ final class ReaderController: NSObject, ObservableObject {
             for i in stride(from: pdf.pageCount - 1, through: 0, by: -1) { pdf.removePage(at: i) }
             for (i, page) in ordered.enumerated() { pdf.insert(page, at: i) }
         }
-        return Built(pdf: pdf, boxes: boxes, rotations: rotations, splits: splitPages, presented: presented)
+        return Built(pdf: pdf, boxes: boxes, rotations: rotations, splits: splitPages, presented: presented, helpers: helpers)
     }
 
     func install(_ built: Built?, source: Int, generation: Int) {
@@ -339,6 +395,7 @@ final class ReaderController: NSObject, ObservableObject {
         splitSources = built.splits
         presented = built.presented
         let pdf = built.pdf
+        pageHelpers = built.helpers
         // Rognages calculés pendant la construction (l'instantané des transformations était plus ancien).
         if settings.autoCrop {
             var pagesBySource: [Int: [PDFPage]] = [:]

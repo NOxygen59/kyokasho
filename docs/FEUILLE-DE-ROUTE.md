@@ -3,7 +3,8 @@
 > Ce fichier + `docs/IA-LOCALE.md` (avant de toucher à l'IA) suffisent. Ne relis pas le code « pour voir » :
 > `grep -rn 'FDR-V3' App Packages` donne les endroits exacts d'une étape. Une session = les retours de l'utilisateur,
 > sinon l'étape suivante du § 7 ; puis commit + push (+ release **si demandée**), puis résumé simple.
-> **État au 22/10/2026 : v0.9.0 publiée (build 31)** (gestes 0.8.9.2 confirmés ✅ iPad ; filtre sur la vue annulé → `ToneCache` :
+> **État au 22/10/2026 : v1.0.0 publiée (build 32)** (P et E faits, non vérifiés sur l'iPad : `adaptLayout`, `scaledPage` /
+> `commonHeight`, `TonedPage.sourceBox` ; furigana sans fond). Avant : v0.9.0 (gestes 0.8.9.2 confirmés ✅ iPad ; filtre sur la vue annulé → `ToneCache` :
 > pages teintées préparées planche ±1, `smartDark` ; fenêtre OCR libre ; double page même taille : pas fait, voir V1.0) ; (V1→V8, V10, V11, V14, V7 faits ; reste V9 ; Qwen confirmé sur l'iPad en 0.8.8). L'IA locale (OvisOCR2, analyse, vérification) **marche sur
 > l'iPad** (confirmé par l'utilisateur). Le reste marqué « non vérifié » peut être faux sur l'appareil.
 
@@ -326,11 +327,12 @@ Comptes (Drive) ; À propos (+ **connexion GitHub** device flow → mise à jour
 
 ## 7 bis. Idées pour la v1.0 (22/10, à faire dans cet ordre conseillé)
 
-- [ ] **P — Portrait = une page** : en portrait, le lecteur passe tout seul en page simple ; en revenant en paysage,
+- [x] **P — Portrait = une page** (1.0.0, `ReaderController.adaptLayout`, sans option : comportement par défaut) : en portrait, le lecteur passe tout seul en page simple ; en revenant en paysage,
   il reprend la disposition choisie (double page). Ne pas toucher au réglage enregistré : disposition **affichée**
   = réglage sauf portrait (taille de la vue dans `ReaderScreen` / `ReaderPDFView.layoutSubviews`, puis
   `applyDisplaySettings`), garder la page courante. Option dans Affichage pour couper.
-- [ ] **E — Double page de même taille** : option « Égaliser les pages » ; agrandir seulement l'**affichage** de la plus
+- [x] **E — Double page de même taille** (1.0.0 : pages recréées à la hauteur commune à la construction ; annotations
+  d'avant sur une page agrandie = décalées ; export annoté de ces pages pas adapté) : option « Égaliser les pages » ; agrandir seulement l'**affichage** de la plus
   petite (jamais ses coordonnées : notes, encre, surlignages, OCR sont en repère de page). À tester sur l'iPad.
 - [ ] **F — Cartes de la page** : « Créer des cartes de cette page » = termes du lexique trouvés dans le texte de la
   page (lecture + sens) → cartes Anki du document.

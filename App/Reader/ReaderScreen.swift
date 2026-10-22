@@ -119,7 +119,10 @@ struct ReaderScreen: View {
                 }
             }
             .padding(docked == nil ? 0 : Atelier.gap)
+            // Portrait : une page ; paysage : double page (affichage seulement).
+            .onChange(of: landscape) { reader.adaptLayout(portrait: !$0) }
             .onAppear {
+                reader.adaptLayout(portrait: !landscape)
                 // Paysage (taille réelle de la vue, pas l'orientation de la scène) : panneau d'étude ouvert d'office.
                 if landscape, !autoOpenedSide { autoOpenedSide = true; side = .study }
             }

@@ -272,11 +272,7 @@ enum FuriganaLayer {
                 NSAttributedString.Key(kCTFontAttributeName as String): font,
                 NSAttributedString.Key(kCTForegroundColorFromContextAttributeName as String): true,
             ]
-            let pad = size * 0.12
-            context.setFillColor(gray: 1, alpha: 0.78)
-            context.addPath(CGPath(roundedRect: strip.insetBy(dx: -pad, dy: -pad * 0.6), cornerWidth: pad * 1.5,
-                                   cornerHeight: pad * 1.5, transform: nil))
-            context.fillPath()
+            // Pas de fond derrière les lectures (demande de l'utilisateur) : texte seul, dans la couleur choisie.
             context.setFillColor(red: color.r, green: color.g, blue: color.b, alpha: 1)
             for (i, c) in mark.reading.enumerated() {
                 let line = CTLineCreateWithAttributedString(NSAttributedString(string: String(c), attributes: attributes))
