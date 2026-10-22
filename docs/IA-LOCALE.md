@@ -60,6 +60,10 @@ contrôle (mémoire `ios16-backport-rules`). Chaque correctif est listé dans `I
 7. `std::format` (mlx-c `private/io.h`) exige libc++ d'iOS 16.3+ → `ios16-overrides/mlx/c/private/io.h` = copie avec
    les **mêmes messages** construits par concaténation. **Interdit** : `_LIBCPP_DISABLE_AVAILABILITY` (a fait
    planter la 0.8.4 au lancement : `exception_ptr::__from_native_exception_pointer` absent d'iOS 16).
+8. **`simdgroup_matrix<bool>`** (masque booléen de l'attention « steel », Qwen3-VL en traduction) : le compilateur
+   d'iOS 16 refuse même sa **déclaration** dans `BaseMMAFrag<bool>` (le Mac l'accepte : pas reproductible) →
+   `mlx_simdgroup_matrix_or_none` (script) : type vide pour `bool` seulement, jamais utilisé. Journal 0.8.7 :
+   « Unable to build metal library … is_simdgroup_matrix_element<bool> ». Test Mac Metal 3.0 : traduction OK.
 
 ### mlx-swift-lm (`~/Projets-iPad/mlx-swift-lm`)
 1. `Package.swift` : `.iOS(.v16)`, trait `FoundationModelsIntegration` coupé par défaut, dépend du fork mlx-swift

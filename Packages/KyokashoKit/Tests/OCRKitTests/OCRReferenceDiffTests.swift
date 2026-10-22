@@ -35,6 +35,13 @@ final class OCRReferenceDiffTests: XCTestCase {
         XCTAssertEqual(aligned.first?.boxes, boxes)
     }
 
+    func testMarkDifferencesFlagsMismatchedCharacters() {
+        let p = page(["天井を張る場合、", "末来の 土地"])
+        let marked = OCRReferenceDiff.markDifferences(p, reference: "天井を張る場合、未来の土地")
+        XCTAssertEqual(marked.lines[1].doubt, [0])
+        XCTAssertEqual(OCRReferenceDiff.markDifferences(marked, reference: "天井を張る場合、未来の土地"), marked)
+    }
+
     func testMatchMarksInsertedCharacters() {
         XCTAssertEqual(OCRReferenceDiff.match(Array("天井板"), Array("天板")), [0, nil, 1])
     }

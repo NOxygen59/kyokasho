@@ -1074,7 +1074,6 @@ final class ReaderController: NSObject, ObservableObject {
     /// - Parameters:
     ///   - engine: moteur imposé (sinon : réglage du document, « auto » résolu selon la page).
     ///   - force: ignore le cache (bouton « Relancer »).
-    // FDR-V5 : chaque OCR (même en cache / forcé) → relancer OCRProofreader et rafraîchir les caractères douteux.
     func runOCR(engine: String? = nil, force: Bool = false) {
         ocrTask?.cancel()
         let source = focusSource
@@ -1093,12 +1092,16 @@ final class ReaderController: NSObject, ObservableObject {
                 }.value
             }
             do {
-                let page = try await service.page(documentId: documentId, url: url, pageIndex: source, engine: engineID, force: force)
+                var page = try await service.page(documentId: documentId, url: url, pageIndex: source, engine: engineID, force: force)
                 guard let self, !Task.isCancelled else { return }
+                // Chaque lecture demandée (même en cache) : caractères douteux revérifiés (`refineOCR`).
+                page.proofread = false
                 self.showOCR(page, source: source)
                 if self.focusSource == source {
                     self.ocrPage = page
                     self.ocrState = .idle
+                    // Même texte qu'avant : `ocrPage` ne relance rien tout seul.
+                    self.refineOCR()
                 }
             } catch is CancellationError {
                 return
@@ -1369,21 +1372,33 @@ final class ReaderController: NSObject, ObservableObject {
     func rereadKey(_ source: Int) -> String { "reread|\(document.id)|\(source)|" }
 
     /// Page de travail : relecture par le dictionnaire si pas encore faite (pages en cache d'avant, dictionnaire
-    /// chargé après l'OCR), puis lignes douteuses à GLM-OCR.
+    /// chargé après l'OCR, nouvel OCR), puis caractères qui diffèrent du texte d'OvisOCR2 (s'il a lu la page) marqués
+    /// douteux, puis lignes douteuses à GLM-OCR. Rejouable : sans changement, rien n'est réécrit.
     private func refineOCR() {
         guard let page = ocrPage, page.engine != OCREngineID.pdfText else { return }
-        guard page.proofread != true else { rereadDoubtful(); return }
         let source = focusSource, documentId = document.id, service = model.ocr
         let process = AppModel.proofreader(model.dictionary)
+        let aiFile = DocumentScan.file(documentId, source)
         Task { [weak self] in
-            let read = await process(page)
+            var read = page.proofread == true ? page : await process(page)
+            // Pas de dictionnaire : la page reste « non relue » (réessayée plus tard), le contrôle par l'IA a lieu.
+            let proofreadFailed = read.proofread != true
+            if let reference = try? String(contentsOf: aiFile, encoding: .utf8) {
+                read = OCRReferenceDiff.markDifferences(read, reference: reference)
+            }
             guard let self, self.ocrPage == page else { return }
-            // Pas de dictionnaire : seules les lignes peu sûres partent à GLM-OCR.
-            guard read.proofread == true else { self.rereadDoubtful(); return }
-            try? await service.store(read, documentId: documentId, pageIndex: source)
+            guard read != page else { self.rereadDoubtful(); return }
+            if !proofreadFailed { try? await service.store(read, documentId: documentId, pageIndex: source) }
             self.showOCR(read, source: source)
             self.ocrPage = read
+            if proofreadFailed { self.rereadDoubtful() }
         }
+    }
+
+    /// Nouvelle lecture de la page de travail par l'IA (scan, vérification, mise en page) : doutes revérifiés.
+    func recheckDoubtsAfterAIRead(page source: Int) {
+        guard !closed, source == focusSource else { return }
+        refineOCR()
     }
 
     /// Résultat écrit en cache par une tâche IA pour la page affichée (même moteur) : affiché.
@@ -1483,6 +1498,8 @@ final class ReaderController: NSObject, ObservableObject {
                         let file = DocumentAnalysisService.rawURL(documentId, ModelSpec.ovisocr2.id, source)
                         try? FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
                         try? markdown.write(to: file, atomically: true, encoding: .utf8)
+                        NotificationCenter.default.post(name: .aiPageRead,
+                                                        object: DocumentScan.PageRead(documentId: documentId, page: source))
                         result.suggestions = OCRReferenceDiff.suggestions(ocr, reference: markdown)
                         Diagnostics.log("page \(source) : \(result.suggestions.count) différence(s)", "verif")
                     } catch {
@@ -2039,7 +2056,10 @@ final class ReaderController: NSObject, ObservableObject {
         // Page lue par l'IA (scan du document) : ses furigana sont refaits d'après ce texte si elle est affichée.
         observers.append(center.addObserver(forName: .aiPageRead, object: nil, queue: .main) { [weak self] note in
             guard let read = note.object as? DocumentScan.PageRead else { return }
-            MainActor.assumeIsolated { self?.refreshFurigana(afterAIRead: read) }
+            MainActor.assumeIsolated {
+                self?.refreshFurigana(afterAIRead: read)
+                if read.documentId == self?.document.id { self?.recheckDoubtsAfterAIRead(page: read.page) }
+            }
         })
         // Pages pas encore lues par l'IA : lecture en tâche de l'app (continue après la fermeture du lecteur).
         DocumentScan.start(document, url: fileURL, ocr: model.ocr)

@@ -233,7 +233,10 @@ Comptes (Drive) ; À propos (+ **connexion GitHub** device flow → mise à jour
   `FuriganaLayer.marks(from:frame:)` + `layout`. Vérifier par une image d'essai Mac sur le manuel.
 - Balises `FDR-V3`.
 
-### [ ] V5 — Revérifier les « caractères douteux » à chaque nouvel OCR de la page
+### [x] V5 — Revérifier les « caractères douteux » à chaque nouvel OCR de la page
+- **Fait (22/10, non vérifié sur iPad)** : `runOCR` → `proofread = false` + `refineOCR()` (dictionnaire relancé
+  même en cache) ; `refineOCR` ajoute `OCRReferenceDiff.markDifferences` (caractères ≠ OvisOCR2 = douteux, testé) ;
+  `.aiPageRead` (scan, vérification, mise en page IA) → `recheckDoubtsAfterAIRead`.
 - `runOCR(force:)` / « Relancer » / nouvelle lecture IA → relancer `OCRProofreader` et rafraîchir `doubtRow`
   (aujourd'hui seulement à la 1re lecture : `postProcess` sur calcul neuf, `refineOCR` si `proofread != true`).
 - Balises `FDR-V5`.

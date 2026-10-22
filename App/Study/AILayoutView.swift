@@ -131,7 +131,7 @@ struct AILayoutView: View {
     /// Mise en page de la page par OvisOCR2 (fichier gardé), même si on change de page entre-temps.
     private func read() {
         let budget = reader.ocrPage.map(DocumentAnalysisService.tokenBudget) ?? 2048
-        let source = source, file = file, frenchFile = frenchFile, url = reader.fileURL
+        let source = source, file = file, frenchFile = frenchFile, url = reader.fileURL, documentId = reader.document.id
         center.run(layoutKey, title: "Mise en page IA p. \(source + 1)") { _ in
             let text = try await Diagnostics.measure("mise en page IA p. \(source)", "miseenpage") {
                 try await OvisOCR2Reader().read(.pdfPage(url: url, index: source), maxTokens: budget)
@@ -139,6 +139,7 @@ struct AILayoutView: View {
             try Task.checkCancellation()
             try? FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
             try text.write(to: file, atomically: true, encoding: .utf8)
+            NotificationCenter.default.post(name: .aiPageRead, object: DocumentScan.PageRead(documentId: documentId, page: source))
             // Mise en page refaite : l'ancienne traduction ne correspond plus.
             try? FileManager.default.removeItem(at: frenchFile)
         }

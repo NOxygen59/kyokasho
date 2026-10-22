@@ -329,7 +329,6 @@ struct StudyTextTab: View {
 
     /// « N caractères douteux » + relecture par l'IA (GLM-OCR) ou indication pour corriger à la main.
     @ViewBuilder
-    // FDR-V5 : se mettre à jour après chaque nouvelle analyse OCR de la page.
     private func doubtRow(_ page: OCRPage) -> some View {
         let lines = OCRProofreader.doubtful(page)
         let count = page.lines.reduce(0) { $0 + ($1.doubt?.count ?? 0) }

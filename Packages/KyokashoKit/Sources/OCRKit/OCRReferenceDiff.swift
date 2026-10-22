@@ -115,6 +115,24 @@ public enum OCRReferenceDiff {
         }
     }
 
+    /// Caractères OCR qui ne correspondent pas à la seconde lecture (remplacés ou absents chez elle) ajoutés aux
+    /// doutes de leur ligne (index dans `line.text`). Lignes corrigées à la main : jamais touchées. Rejouable :
+    /// les doutes déjà là restent, rien n'est ajouté deux fois.
+    public static func markDifferences(_ page: OCRPage, reference: String, minSimilarity: Double = 0.5) -> OCRPage {
+        var page = page
+        for (l, text) in align(page, reference: reference, minSimilarity: minSimilarity) where page.lines[l].edited != true {
+            let chars = Array(page.lines[l].text)
+            let kept = chars.indices.filter { !chars[$0].isWhitespace && !ignored.contains(chars[$0]) }
+            let ai = Array(text)
+            var doubt = Set(page.lines[l].doubt ?? [])
+            for (k, j) in match(kept.map { chars[$0] }, ai).enumerated() where j.map({ ai[$0] != chars[kept[k]] }) ?? true {
+                doubt.insert(kept[k])
+            }
+            page.lines[l].doubt = doubt.sorted()
+        }
+        return page
+    }
+
     /// Pour chaque caractère de `a`, l'index du caractère de `b` en face (égal ou remplacé), `nil` si ajouté.
     static func match(_ a: [Character], _ b: [Character]) -> [Int?] {
         if a == b { return Array(b.indices) }
