@@ -145,6 +145,7 @@ struct ReaderSettingsSections: View {
     var body: some View {
         Section("Lecture") {
             Picker("Pages", selection: $settings.layout) {
+                Text("Auto (portrait : simple, paysage : double)").tag(ReaderSettings.PageLayout.auto)
                 Text("Page simple").tag(ReaderSettings.PageLayout.single)
                 Text("Double page").tag(ReaderSettings.PageLayout.double)
             }

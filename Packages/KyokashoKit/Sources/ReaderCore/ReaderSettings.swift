@@ -6,13 +6,14 @@ import Foundation
 /// Réglages du lecteur. Les valeurs globales servent de défaut ; chaque document peut en
 /// remplacer une partie (`ReaderSettingsOverride`).
 public struct ReaderSettings: Codable, Equatable, Sendable {
-    public enum PageLayout: String, Codable, CaseIterable, Sendable { case single, double }
+    /// `auto` : une page en portrait, double page en paysage (résolu par le lecteur).
+    public enum PageLayout: String, Codable, CaseIterable, Sendable { case single, double, auto }
     public enum ScrollMode: String, Codable, CaseIterable, Sendable { case paginated, continuous }
     public enum Direction: String, Codable, CaseIterable, Sendable { case leftToRight, rightToLeft }
     public enum Transition: String, Codable, CaseIterable, Sendable { case slide, none }
     public enum Background: String, Codable, CaseIterable, Sendable { case black, darkGray, gray, white, sepia }
 
-    public var layout: PageLayout = .single
+    public var layout: PageLayout = .auto
     public var scrollMode: ScrollMode = .paginated
     public var direction: Direction = .leftToRight
     /// En double page, la première page est affichée seule (couverture).

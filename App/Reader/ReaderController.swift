@@ -57,8 +57,6 @@ final class ReaderController: NSObject, ObservableObject {
 
     /// Dernier calcul de furigana OCR lancé par page (`showOCR`).
     var furiganaGeneration: [Int: Int] = [:]
-    /// Documents des pages remises à la hauteur commune (`Built.helpers`), gardés tant que le livre est affiché.
-    var pageHelpers: [PDFDocument] = []
     /// Orientation de l'écran du lecteur (`adaptLayout`) ; `nil` tant qu'elle n'est pas connue.
     var portraitMode: Bool?
     /// Préparation des pages teintées voisines (`scheduleTone`).
@@ -194,7 +192,10 @@ final class ReaderController: NSObject, ObservableObject {
     init(document: LibraryDocument, model: AppModel) {
         self.document = document
         self.model = model
-        self.settings = model.settings(for: document)
+        var initial = model.settings(for: document)
+        // « Auto » : double page tant que l'orientation n'est pas connue (`adaptLayout` corrige à l'ouverture).
+        if initial.layout == .auto { initial.layout = .double }
+        self.settings = initial
         self.currentSourcePage = document.lastPageIndex
         self.ink = InkStore(documentId: document.id, model: model)
         super.init()
@@ -235,8 +236,62 @@ final class ReaderController: NSObject, ObservableObject {
         let rotations: [Int: Int]
         let splits: Set<Int>
         let presented: [PresentedPage]
-        /// Documents d'une page des pages remises à la taille commune (gardés en vie avec le document affiché).
+    }
+
+    /// PDF aux pages de même hauteur (`Caches/Equalized/<id>-<taille>-<date>.pdf`) et cadres d'origine des pages
+    /// (`.json`). `nil` : aucune page à changer (le PDF d'origine sert tel quel). Fait une fois par version du
+    /// fichier : ajouter des pages change sa taille et sa date, donc la préparation est refaite une fois.
+    nonisolated static func equalizedDocument(url: URL, documentId: String) -> (pdf: PDFDocument, sourceBoxes: [CGRect])? {
+        let fm = FileManager.default
+        let values = try? url.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey])
+        let stamp = "\(values?.fileSize ?? 0)-\(Int(values?.contentModificationDate?.timeIntervalSince1970 ?? 0))"
+        let folder = fm.urls(for: .cachesDirectory, in: .userDomainMask)[0].appendingPathComponent("Equalized", isDirectory: true)
+        let base = folder.appendingPathComponent("\(documentId)-\(stamp)")
+        let pdfFile = base.appendingPathExtension("pdf"), boxesFile = base.appendingPathExtension("json")
+        if let data = try? Data(contentsOf: boxesFile), let saved = try? JSONDecoder().decode([[CGFloat]].self, from: data) {
+            // Déjà préparé : liste vide = rien à changer dans ce PDF.
+            guard !saved.isEmpty, let pdf = PDFDocument(url: pdfFile), pdf.pageCount == saved.count else { return nil }
+            return (pdf, saved.map { CGRect(x: $0[0], y: $0[1], width: $0[2], height: $0[3]) })
+        }
+        guard let original = PDFDocument(url: url), let common = commonHeight(original) else { return nil }
+        try? fm.createDirectory(at: folder, withIntermediateDirectories: true)
+        // Anciennes versions préparées de ce document : supprimées.
+        for old in (try? fm.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? []
+        where old.lastPathComponent.hasPrefix(documentId + "-") { try? fm.removeItem(at: old) }
+        var boxes: [CGRect] = []
+        var pages: [PDFPage] = []
         var helpers: [PDFDocument] = []
+        var rescaled = false
+        for i in 0..<original.pageCount {
+            guard let page = original.page(at: i) else { return nil }
+            let box = page.bounds(for: .cropBox)
+            boxes.append(box)
+            let height = page.rotation % 180 == 0 ? box.height : box.width
+            if height > 0, abs(common / height - 1) > 0.03, let (scaled, doc) = scaledPage(page, factor: common / height) {
+                pages.append(scaled)
+                helpers.append(doc)
+                rescaled = true
+            } else {
+                pages.append(page)
+            }
+        }
+        guard rescaled else {
+            try? JSONEncoder().encode([[CGFloat]]()).write(to: boxesFile, options: .atomic)
+            return nil
+        }
+        let output = PDFDocument()
+        for (i, page) in pages.enumerated() {
+            guard let copy = page.copy() as? PDFPage else { return nil }
+            output.insert(copy, at: i)
+        }
+        let temporary = folder.appendingPathComponent(UUID().uuidString + ".pdf")
+        guard output.write(to: temporary) else { return nil }
+        try? fm.removeItem(at: pdfFile)
+        guard (try? fm.moveItem(at: temporary, to: pdfFile)) != nil else { return nil }
+        _ = helpers
+        try? JSONEncoder().encode(boxes.map { [$0.minX, $0.minY, $0.width, $0.height] }).write(to: boxesFile, options: .atomic)
+        guard let pdf = PDFDocument(url: pdfFile), pdf.pageCount == boxes.count else { return nil }
+        return (pdf, boxes)
     }
 
     /// Page recréée à `factor` × sa taille (contenu vectoriel, texte intégré gardé), pour que les pages d'un livre
@@ -300,8 +355,12 @@ final class ReaderController: NSObject, ObservableObject {
 
     nonisolated static func build(url: URL, documentId: String, transforms: [Int: PageTransform],
                                           settings: ReaderSettings) -> Built? {
-        guard let pdf = PDFDocument(url: url) else { return nil }
+        // Pages remises à la même hauteur : préparées une fois par version du PDF (cache disque), ensuite lues
+        // directement (plus de « Préparation des pages » à chaque ouverture).
+        let equalized = equalizedDocument(url: url, documentId: documentId)
+        guard let pdf = equalized?.pdf ?? PDFDocument(url: url) else { return nil }
         pdf.delegate = TonedPageProvider.shared
+        let sourceBoxes = equalized?.sourceBoxes
         var boxes: [Int: CGRect] = [:]
         var rotations: [Int: Int] = [:]
         let rtl = settings.direction == .rightToLeft
@@ -313,25 +372,12 @@ final class ReaderController: NSObject, ObservableObject {
         // Pages dans l'ordre final, puis un seul rangement du document (voir plus bas).
         var ordered: [PDFPage] = []
         ordered.reserveCapacity(count)
-        // Pages de même hauteur (doubles pages égales) : une page plus grande ou plus petite que la hauteur la plus
-        // courante (scans de résolutions différentes, PDF ajoutés) est recréée à cette hauteur. Tout ce qui est
-        // placé sur la page suit son cadre (`boxes`) ; les furigana, calculés sur la page d'origine, sont agrandis
-        // au dessin (`TonedPage.sourceBox`).
-        let common = commonHeight(pdf)
-        var helpers: [PDFDocument] = []
-        var rescaled = false
         for index in 0..<count {
-            guard var page = pdf.page(at: index) else { continue }
-            let sourceBox = page.bounds(for: .cropBox)
-            let height = page.rotation % 180 == 0 ? sourceBox.height : sourceBox.width
-            if let common, height > 0, abs(common / height - 1) > 0.03,
-               let (scaled, doc) = scaledPage(page, factor: common / height) {
-                page = scaled
-                helpers.append(doc)
-                rescaled = true
-            }
-            (page as? TonedPage)?.sourceBox = sourceBox
+            guard let page = pdf.page(at: index) else { continue }
             let box = page.bounds(for: .cropBox)
+            // Cadre de la page dans le PDF d'origine (différent si elle a été remise à la hauteur commune).
+            let sourceBox = sourceBoxes.flatMap { index < $0.count ? $0[index] : nil } ?? box
+            (page as? TonedPage)?.sourceBox = sourceBox
             boxes[index] = box
             rotations[index] = page.rotation
             ordered.append(page)
@@ -361,7 +407,7 @@ final class ReaderController: NSObject, ObservableObject {
             }
         }
         var presented = PresentationLayout.pages(pageCount: boxes.count, splitPages: splitPages, rightToLeft: rtl)
-        var reordered = !splitPages.isEmpty || rescaled
+        var reordered = !splitPages.isEmpty
         if rtl && settings.layout == .double {
             // Double page de droite à gauche : on range les pages dans l'ordre visuel nous-mêmes
             // (l'option RTL de PDFKit intervertit les tailles des pages d'une même double page).
@@ -378,7 +424,7 @@ final class ReaderController: NSObject, ObservableObject {
             for i in stride(from: pdf.pageCount - 1, through: 0, by: -1) { pdf.removePage(at: i) }
             for (i, page) in ordered.enumerated() { pdf.insert(page, at: i) }
         }
-        return Built(pdf: pdf, boxes: boxes, rotations: rotations, splits: splitPages, presented: presented, helpers: helpers)
+        return Built(pdf: pdf, boxes: boxes, rotations: rotations, splits: splitPages, presented: presented)
     }
 
     func install(_ built: Built?, source: Int, generation: Int) {
@@ -395,7 +441,6 @@ final class ReaderController: NSObject, ObservableObject {
         splitSources = built.splits
         presented = built.presented
         let pdf = built.pdf
-        pageHelpers = built.helpers
         // Rognages calculés pendant la construction (l'instantané des transformations était plus ancien).
         if settings.autoCrop {
             var pagesBySource: [Int: [PDFPage]] = [:]

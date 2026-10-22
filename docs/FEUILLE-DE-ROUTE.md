@@ -3,7 +3,8 @@
 > Ce fichier + `docs/IA-LOCALE.md` (avant de toucher à l'IA) suffisent. Ne relis pas le code « pour voir » :
 > `grep -rn 'FDR-V3' App Packages` donne les endroits exacts d'une étape. Une session = les retours de l'utilisateur,
 > sinon l'étape suivante du § 7 ; puis commit + push (+ release **si demandée**), puis résumé simple.
-> **État au 22/10/2026 : v1.0.0 publiée (build 32)** (P et E faits, non vérifiés sur l'iPad : `adaptLayout`, `scaledPage` /
+> **État au 22/10/2026 : v1.1.0 publiée (build 33)** (pages égalisées en cache `Caches/Equalized/<id>-<taille>-<date>.pdf`
+> + `.json` des cadres d'origine, `equalizedDocument` ; `PageLayout.auto` par défaut, `resolved`). Avant : v1.0.0 (P et E faits, non vérifiés sur l'iPad : `adaptLayout`, `scaledPage` /
 > `commonHeight`, `TonedPage.sourceBox` ; furigana sans fond). Avant : v0.9.0 (gestes 0.8.9.2 confirmés ✅ iPad ; filtre sur la vue annulé → `ToneCache` :
 > pages teintées préparées planche ±1, `smartDark` ; fenêtre OCR libre ; double page même taille : pas fait, voir V1.0) ; (V1→V8, V10, V11, V14, V7 faits ; reste V9 ; Qwen confirmé sur l'iPad en 0.8.8). L'IA locale (OvisOCR2, analyse, vérification) **marche sur
 > l'iPad** (confirmé par l'utilisateur). Le reste marqué « non vérifié » peut être faux sur l'appareil.

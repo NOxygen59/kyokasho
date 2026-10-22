@@ -186,8 +186,8 @@ extension ReaderController {
         pdfView.backgroundColor = settings.background.uiColor
     }
 
-    /// Par défaut : portrait = une page, paysage = double page (disposition **affichée** seulement, le réglage
-    /// enregistré ne change pas). Appelé par `ReaderScreen` à l'ouverture et à chaque rotation.
+    /// Pages « Auto » (par défaut) : portrait = une page, paysage = double page. « Simple » ou « Double » choisis :
+    /// toujours respectés. Appelé par `ReaderScreen` à l'ouverture et à chaque rotation.
     func adaptLayout(portrait: Bool) {
         guard portrait != portraitMode else { return }
         portraitMode = portrait
@@ -197,10 +197,16 @@ extension ReaderController {
         DispatchQueue.main.async { [weak self] in self?.go(toSource: source) }
     }
 
+    /// « Auto » remplacé par la disposition de l'orientation (le reste du lecteur ne voit que simple / double).
+    func resolved(_ s: ReaderSettings) -> ReaderSettings {
+        var s = s
+        if s.layout == .auto { s.layout = portraitMode == true ? .single : .double }
+        return s
+    }
+
     func update(settings newSettings: ReaderSettings) {
         let old = settings
-        var newSettings = newSettings
-        if let portraitMode { newSettings.layout = portraitMode ? .single : .double }
+        let newSettings = resolved(newSettings)
         settings = newSettings
         let rtlDouble = { (s: ReaderSettings) in s.direction == .rightToLeft && s.layout == .double }
         let needsRebuild = old.direction != newSettings.direction || old.splitWidePages != newSettings.splitWidePages
