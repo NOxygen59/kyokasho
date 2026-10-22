@@ -326,7 +326,11 @@ Rythme choisi le 22/10 au soir : **2 sections de la liste de l'utilisateur par s
   le CSS du thème de `FuriganaTextView.page` ; furigana + dictionnaire au toucher comme le mode ふりがな ;
   `<img src="images/bbox_l_t_r_b.jpg">` → **découpe de la figure** dans le rendu de la page (coordonnées sur 1000),
   affichée à sa place. Balises `FDR-T`.
-- [ ] **U — Traduction hors ligne par Qwen3-VL-4B** : texte seul (pas d'image), Markdown d'OvisOCR2 en entrée,
+- [x] **U — FAIT (22/10, non vérifié iPad)** : `Qwen3VLReader.translate(markdown:glossary:)` (texte seul, structure gardée,
+  glossaire `defaultGlossary` ≈ 50 termes de menuiserie / plafond japonais) ; ✅ Mac Metal 3.0 sur la page 3 du manuel :
+  49 s, 3,75 Go GPU, figures gardées (`testQwenTranslatesPage`). Vue ✨ : sélecteur 日本語 / Français ou bouton
+  « Traduire en français (hors ligne) » ; `Analysis/<id>/fr-<page>.md` (effacé si la mise en page est refaite).
+  Analyse → « Traduire tout le document » (pages déjà mises en page par OvisOCR2). Texte d'origine : : texte seul (pas d'image), Markdown d'OvisOCR2 en entrée,
   consigne « traduire en français en gardant exactement la structure Markdown/HTML, termes du glossaire imposés »,
   sortie affichée comme T (japonais / français côte à côte) ; bouton « Traduire la page (hors ligne) » à côté de
   DeepL, et option « traduire tout le document » dans l'analyse. Garder par page (`Analysis/<id>/fr-<page>.md`).

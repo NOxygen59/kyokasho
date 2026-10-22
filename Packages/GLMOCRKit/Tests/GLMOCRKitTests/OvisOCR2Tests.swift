@@ -103,4 +103,20 @@ final class OvisOCR2Tests: XCTestCase {
             }
         }
     }
+
+    /// Traduction d'une vraie page (Markdown d'OvisOCR2) : `KYOKASHO_TRANSLATE=<fichier .md>`.
+    func testQwenTranslatesPage() async throws {
+        let env = ProcessInfo.processInfo.environment
+        guard let file = env["KYOKASHO_TRANSLATE"], let root = env["KYOKASHO_MODELS"] else { throw XCTSkip("désactivé") }
+        let md = try String(contentsOfFile: file, encoding: .utf8)
+        let reader = Qwen3VLReader(store: ModelStore(root: URL(fileURLWithPath: root)))
+        MLX.GPU.resetPeakMemory()
+        let start = Date()
+        let fr = try await reader.translate(markdown: md)
+        print("TRAD \(String(format: "%.1f", Date().timeIntervalSince(start))) s, pic GPU \(MLX.GPU.peakMemory / 1_048_576) Mo, \(md.count) → \(fr.count) caractères")
+        print(fr)
+        if let dump = env["KYOKASHO_DUMP"] { try? fr.write(toFile: "\(dump)/fr.md", atomically: true, encoding: .utf8) }
+        XCTAssertEqual(AILayout.blocks(fr).filter { if case .figure = $0 { return true }; return false }.count,
+                       AILayout.blocks(md).filter { if case .figure = $0 { return true }; return false }.count, "figures gardées")
+    }
 }

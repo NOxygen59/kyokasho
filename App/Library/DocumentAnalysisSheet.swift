@@ -130,6 +130,17 @@ struct DocumentAnalysisSheet: View {
                 } label: { Label("Appliquer les \(advised.count) choix conseillés", systemImage: "wand.and.stars") }
             }
             Button { service.start(document, model: model) } label: { Label("Relancer l'analyse (pages manquantes)", systemImage: "arrow.clockwise") }
+            if Qwen3VLReader().isAvailable {
+                let t = DocumentAnalysisService.translationCount(document)
+                if t.total > t.done {
+                    Button { service.translateAll(document) } label: {
+                        Label("Traduire tout le document en français (\(t.total - t.done) page(s), hors ligne)", systemImage: "character.bubble")
+                    }
+                } else if t.total > 0 {
+                    Label("Document traduit (\(t.done) pages) : panneau Texte → ✨ → Français", systemImage: "checkmark")
+                        .font(.footnote).foregroundStyle(.secondary)
+                }
+            }
             Button("Oublier cette analyse", role: .destructive) { service.forget(document.id) }
         } header: {
             Text("Fiabilité du texte")

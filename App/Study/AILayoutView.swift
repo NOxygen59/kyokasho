@@ -21,9 +21,14 @@ struct AILayoutView: View {
     @State private var height: CGFloat = 200
     @State private var reading = false
     @State private var error: String?
+    /// Traduction française (Qwen3-VL, hors ligne) de la mise en page, gardée par page.
+    @AppStorage("study.aiLayoutFrench") private var french = false
+    @State private var frenchMarkdown: String?
+    @State private var translating = false
 
     private var source: Int { reader.focusSource }
     private var file: URL { DocumentAnalysisService.rawURL(reader.document.id, ModelSpec.ovisocr2.id, source) }
+    private var frenchFile: URL { DocumentAnalysisService.rawURL(reader.document.id, "fr", source) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -44,6 +49,9 @@ struct AILayoutView: View {
                 }
             }
             if let error { Text(error).font(.caption).foregroundStyle(.red) }
+            if markdown != nil {
+                languageRow
+            }
             if markdown != nil, !html.isEmpty {
                 RubyWebView(html: html, height: $height, onLookup: onLookup)
                     .frame(height: height)
@@ -54,16 +62,68 @@ struct AILayoutView: View {
                 .disabled(reading || !OvisOCR2Reader().isAvailable)
             }
         }
-        .task(id: "\(reader.document.id)|\(source)|\(furigana)|\(tint.rawValue)") { await load() }
+        .task(id: "\(reader.document.id)|\(source)|\(furigana)|\(tint.rawValue)|\(french)") { await load() }
+    }
+
+    /// Japonais / français (si traduit), ou bouton de traduction hors ligne par Qwen3-VL.
+    @ViewBuilder
+    private var languageRow: some View {
+        if translating {
+            HStack(spacing: 10) {
+                ProgressView()
+                Text("Qwen3-VL traduit la page… (1 à 3 min, hors ligne)").font(.footnote).foregroundStyle(Atelier.textSecondary)
+            }
+        } else if frenchMarkdown != nil {
+            HStack {
+                Picker("Langue", selection: $french) {
+                    Text("日本語").tag(false)
+                    Text("Français").tag(true)
+                }
+                .pickerStyle(.segmented)
+                .frame(maxWidth: 220)
+                Spacer()
+                Button { Task { await translate() } } label: { Image(systemName: "arrow.clockwise") }
+                    .accessibilityLabel("Retraduire la page")
+                    .foregroundStyle(Atelier.textTertiary)
+                    .disabled(!Qwen3VLReader().isAvailable)
+            }
+        } else if Qwen3VLReader().isAvailable {
+            Button { Task { await translate() } } label: {
+                Label("Traduire en français (hors ligne)", systemImage: "character.bubble")
+            }
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(Atelier.Tint.ai)
+        }
+    }
+
+    private func translate() async {
+        guard let markdown else { return }
+        translating = true
+        error = nil
+        defer { translating = false }
+        do {
+            let fr = try await Diagnostics.measure("traduction p. \(source)", "traduction") {
+                try await Qwen3VLReader().translate(markdown: markdown)
+            }
+            try? FileManager.default.createDirectory(at: frenchFile.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try fr.write(to: frenchFile, atomically: true, encoding: .utf8)
+            await Qwen3VLReader().unload()
+            french = true
+            await load()
+        } catch {
+            self.error = error.localizedDescription
+        }
     }
 
     private func load() async {
         error = nil
         markdown = try? String(contentsOf: file, encoding: .utf8)
+        frenchMarkdown = try? String(contentsOf: frenchFile, encoding: .utf8)
         html = ""
         guard let markdown else { return }
-        let built = await Self.html(markdown, furigana: furigana, dictionary: dictionary,
-                                    url: reader.fileURL, page: source)
+        let showFrench = french && frenchMarkdown != nil
+        let built = await Self.html(showFrench ? frenchMarkdown! : markdown, furigana: furigana && !showFrench,
+                                    french: showFrench, dictionary: dictionary, url: reader.fileURL, page: source)
         guard !Task.isCancelled else { return }
         html = built
     }
@@ -79,6 +139,8 @@ struct AILayoutView: View {
             }
             try? FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
             try text.write(to: file, atomically: true, encoding: .utf8)
+            // Mise en page refaite : l'ancienne traduction ne correspond plus.
+            try? FileManager.default.removeItem(at: frenchFile)
             await OvisOCR2Reader().unload()
             await load()
         } catch {
@@ -89,9 +151,12 @@ struct AILayoutView: View {
     // MARK: HTML
 
     /// Blocs → HTML. Tout texte passe par `FuriganaTextView.markup` (échappé, mot entier au toucher, furigana).
-    static func html(_ markdown: String, furigana: Bool, dictionary: DictionaryModel, url: URL, page: Int) async -> String {
+    static func html(_ markdown: String, furigana: Bool, french: Bool = false, dictionary: DictionaryModel,
+                     url: URL, page: Int) async -> String {
         let blocks = AILayout.blocks(markdown)
         func text(_ s: String) async -> String {
+            // Français : texte simplement échappé (pas de dictionnaire japonais au toucher).
+            if french { return "<span lang=\"fr\">\(FuriganaTextView.escape(s))</span>" }
             let segments = await dictionary.segment(s)
             let rubies = furigana ? TextFurigana.rubies(s, segments: segments) : []
             return FuriganaTextView.markup(s, rubies: rubies, wordStarts: FuriganaTextView.wordStarts(s, segments: segments))
@@ -116,6 +181,8 @@ struct AILayoutView: View {
         h2,h3,h4{line-height:1.6;margin:.8em 0 .4em}
         </style>
         """
+        // Français : police sans empattement, interligne normal (pas de place à garder pour des furigana).
+        if french { body += "<style>body{font-family:-apple-system,'Helvetica Neue',sans-serif;line-height:1.65}</style>" }
         var figureIndex = 0
         // Figures qui se suivent (chacune avec sa courte légende) : grille de vignettes, comme dans le livre.
         var index = 0

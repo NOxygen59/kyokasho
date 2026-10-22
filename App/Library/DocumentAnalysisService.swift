@@ -175,6 +175,44 @@ final class DocumentAnalysisService: ObservableObject {
         }
     }
 
+    /// Traduit en français (Qwen3-VL, hors ligne) toutes les pages déjà mises en page par OvisOCR2 et pas encore
+    /// traduites ; même écran de progression que l'analyse (reprise possible).
+    func translateAll(_ document: LibraryDocument) {
+        guard progress == nil, Qwen3VLReader().isAvailable else { return }
+        let id = document.id
+        let pages = (0..<document.pageCount).filter {
+            FileManager.default.fileExists(atPath: Self.rawURL(id, ModelSpec.ovisocr2.id, $0).path)
+                && !FileManager.default.fileExists(atPath: Self.rawURL(id, "fr", $0).path)
+        }
+        guard !pages.isEmpty else { return }
+        progress = Progress(documentId: id, phase: "Traduction (Qwen3-VL)", done: 0, total: pages.count, phaseStarted: Date())
+        UIApplication.shared.isIdleTimerDisabled = true
+        task = Task { [weak self] in
+            defer {
+                UIApplication.shared.isIdleTimerDisabled = false
+                self?.progress = nil
+            }
+            for (k, p) in pages.enumerated() {
+                guard !Task.isCancelled else { break }
+                guard let md = try? String(contentsOf: Self.rawURL(id, ModelSpec.ovisocr2.id, p), encoding: .utf8) else { continue }
+                do {
+                    let fr = try await Diagnostics.measure("traduction p. \(p)", "traduction") { try await Qwen3VLReader().translate(markdown: md) }
+                    try? fr.write(to: Self.rawURL(id, "fr", p), atomically: true, encoding: .utf8)
+                } catch {
+                    self?.lastError = "Traduction page \(p + 1) : \(error.localizedDescription)"
+                }
+                self?.step(done: k + 1)
+            }
+            await Qwen3VLReader().unload()
+        }
+    }
+
+    /// Pages traduites / pages mises en page par OvisOCR2.
+    static func translationCount(_ document: LibraryDocument) -> (done: Int, total: Int) {
+        let laid = (0..<document.pageCount).filter { FileManager.default.fileExists(atPath: rawURL(document.id, ModelSpec.ovisocr2.id, $0).path) }
+        return (laid.filter { FileManager.default.fileExists(atPath: rawURL(document.id, "fr", $0).path) }.count, laid.count)
+    }
+
     /// Arrête après la lecture en cours (le modèle n'est libéré qu'une fois la lecture vraiment finie).
     func cancel() {
         guard let task else { return }

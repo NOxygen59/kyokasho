@@ -267,7 +267,6 @@ struct StudyTextTab: View {
                 .padding(.horizontal, 10).padding(.vertical, 6)
                 .background(Atelier.surfaceHigh, in: Capsule())
             }
-            // FDR-U : bouton « Traduire (hors ligne) » par Qwen3-VL à côté.
             Picker("Affichage", selection: Binding(get: { aiLayout ? 2 : (formatted ? 0 : 1) },
                                                    set: { aiLayout = $0 == 2; if $0 < 2 { formatted = $0 == 0 } })) {
                 Text("Mis en forme").tag(0)
@@ -353,7 +352,6 @@ struct StudyTextTab: View {
     }
 
     @ViewBuilder
-    // FDR-U : ajouter la traduction hors ligne par Qwen3-VL-4B (structure gardée, glossaire du domaine imposé) à côté de DeepL.
     private func translationBlock(for text: String) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             AtelierLabel("Traduction", tint: Atelier.Tint.ai)
