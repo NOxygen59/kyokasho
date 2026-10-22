@@ -2,7 +2,7 @@
 
 > Ce fichier suffit. Ne relis pas PLAN.md, ni le code « pour voir ». Une session = les retours de l'utilisateur,
 > sinon **une** étape du § 6 ; puis commit + push (+ release si demandée), puis stop.
-> État au 22/10/2026 : **v0.8.4.2 publiée** (build 20 : IA locale sur iOS 16 — Metal 3.0 + bfloat logiciel aussi en JIT ; mode diagnostic).
+> État au 22/10/2026 : **v0.8.5 publiée** (build 21 : analyse du document entier avec Qwen3-VL-4B, OvisOCR2, GLM-OCR ; vote et fiabilité).
 > sur son iPad et fait ses retours. Tout ce qui est marqué « non vérifié » peut être faux sur l'appareil.
 
 ## 1. Prompt à coller dans le nouveau chat
