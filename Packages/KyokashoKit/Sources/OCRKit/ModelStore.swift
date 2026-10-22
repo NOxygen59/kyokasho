@@ -79,7 +79,7 @@ public extension ModelSpec {
     /// GLM-OCR (Zhipu AI, MIT), version MLX 4 bits : modèle IA qui relit les lignes (lent, précis).
     static let glmocr = ModelSpec(
         id: "glmocr", title: "GLM-OCR (IA, précis et lent)",
-        summary: "Petit modèle IA (0,9 milliard de paramètres) qui relit chaque ligne. Plusieurs secondes par page.",
+        summary: "Petit modèle IA (0,9 milliard de paramètres). Relit les lignes douteuses en fond ; peut aussi lire une page entière (lent : plusieurs secondes par page).",
         license: "MIT (Zhipu AI) — conversion MLX : mlx-community",
         files: ["config.json", "generation_config.json", "model.safetensors.index.json", "preprocessor_config.json",
                 "processor_config.json", "tokenizer.json", "tokenizer_config.json", "chat_template.jinja"]

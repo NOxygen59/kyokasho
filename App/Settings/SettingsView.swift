@@ -9,18 +9,18 @@ import SwiftUI
 struct SettingsView: View {
     @EnvironmentObject private var model: AppModel
     @AppStorage(ResourceMonitor.enabledKey) private var monitorEnabled = false
+    @ObservedObject private var downloads = ModelDownloads.shared
+    @ObservedObject private var morphology = MorphologyService.shared
     @EnvironmentObject private var themes: ThemeManager
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         NavigationStack {
             Form {
-                Section("Apparence") {
+                Section("Apparence et lecture") {
                     NavigationLink { ThemePickerView() } label: {
                         row("paintpalette", "Thème", tint: Atelier.Tint.annotate, detail: themes.theme.name)
                     }
-                }
-                Section("Lecture") {
                     NavigationLink { ReadingSettingsView() } label: {
                         row("book", "Pages et gestes", tint: Atelier.Tint.read)
                     }
@@ -28,22 +28,31 @@ struct SettingsView: View {
                         row("pencil.tip", "Apple Pencil et annotations", tint: Atelier.Tint.annotate)
                     }
                 }
-                Section("Japonais") {
+                Section {
                     NavigationLink { DictionaryManagerView() } label: {
                         row("character.book.closed.ja", "Dictionnaires", tint: Atelier.Tint.japanese)
                     }
                     NavigationLink { OCRSettingsView() } label: {
-                        row("text.viewfinder", "OCR (lecture des scans)", tint: Atelier.Tint.japanese,
+                        row("text.viewfinder", "Lecture des scans (OCR)", tint: Atelier.Tint.japanese,
                             detail: model.readerDefaults.ocrEngine.label)
                     }
                     NavigationLink { Form { TranslationSettingsSection() }.navigationTitle("Traduction") } label: {
                         row("character.bubble", "Traduction (DeepL)", tint: Atelier.Tint.ai)
                     }
+                } header: {
+                    Text("Japonais")
+                } footer: {
+                    Text("Dictionnaires : fiches au toucher. Lecture des scans : quel moteur lit le texte des pages photo, relecture, mise en forme. Traduction : DeepL (en ligne, seulement quand tu le demandes).")
                 }
-                Section("Modèles") {
+                Section {
                     NavigationLink { ModelsView() } label: {
-                        row("shippingbox", "Modèles téléchargés", tint: Atelier.Tint.ai)
+                        row("shippingbox", "Modèles d'IA et outils", tint: Atelier.Tint.ai,
+                            detail: "\(downloads.installed.count + (morphology.state == .ready ? 1 : 0)) installé(s)")
                     }
+                } header: {
+                    Text("Téléchargements")
+                } footer: {
+                    Text("Ce que fait chaque modèle (OCR, furigana, IA, mise en forme, netteté), ce qui est conseillé et où le régler.")
                 }
                 Section("Cartes") {
                     NavigationLink { ReviewSettingsView() } label: {
@@ -301,7 +310,7 @@ struct OCRSettingsView: View {
                 Text("Auto : texte intégré au PDF quand il existe (exact et instantané). Sinon NDLOCR-Lite s'il est installé (livres japonais, vertical), puis PP-OCRv5, puis Apple Vision. Remplaçable par document. Un moteur choisi mais pas téléchargé renvoie une erreur.")
             }
             Section {
-                NavigationLink { ModelsView() } label: { Label("Modèles téléchargés (OCR, netteté)", systemImage: "shippingbox") }
+                NavigationLink { ModelsView() } label: { Label("Modèles d'IA et outils (à quoi sert chacun)", systemImage: "shippingbox") }
             }
             Section {
                 Toggle("Relire les lignes douteuses avec GLM-OCR", isOn: $aiReread)
@@ -357,7 +366,7 @@ struct OCRSettingsView: View {
                 Text("Images + texte de référence : taux d'erreur de caractères et temps de chaque moteur.")
             }
         }
-        .navigationTitle("OCR")
+        .navigationTitle("Lecture des scans (OCR)")
         .onAppear(perform: refresh)
     }
 
@@ -488,9 +497,18 @@ struct TranslationSettingsSection: View {
 struct ModelsView: View {
     var body: some View {
         Form {
+            Section {
+                Text("Rien n'est obligatoire : l'app marche sans aucun modèle. Pour un livre japonais scanné, le duo conseillé est **NDLOCR-Lite** (lire le texte) + **MeCab** (furigana justes). Le reste ajoute des options.")
+                    .font(.footnote)
+            } footer: {
+                Text("Tout reste sur l'iPad (Application Support), hors de l'app. Le téléchargement reprend s'il est coupé ; chaque fichier est vérifié (empreinte SHA-256). Supprimer un modèle ne perd pas les pages déjà lues.")
+            }
+            OCRModelsSection(group: .ocr)
             MorphologySection()
-            OCRModelsSection()
+            OCRModelsSection(group: .ai)
+            OCRModelsSection(group: .layout)
+            OCRModelsSection(group: .sharpen)
         }
-            .navigationTitle("Modèles")
+            .navigationTitle("Modèles d'IA et outils")
     }
 }

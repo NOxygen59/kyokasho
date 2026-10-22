@@ -135,6 +135,8 @@ struct MorphologySection: View {
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
                     Text("MeCab + UniDic-lite").font(.body.bold())
+                    Text("Recommandé").font(.caption2.bold()).padding(.horizontal, 6).padding(.vertical, 2)
+                        .foregroundStyle(Color.black).background(Color.green, in: Capsule())
                     Spacer()
                     if service.state == .ready {
                         Label("Installé", systemImage: "checkmark.circle.fill").font(.caption.bold()).foregroundStyle(.green)
@@ -168,9 +170,9 @@ struct MorphologySection: View {
             }
             .padding(.vertical, 4)
         } header: {
-            Text("Japonais : analyseur")
+            Text("2 · Furigana et découpage des mots")
         } footer: {
-            Text("Téléchargé depuis PyPI (paquet unidic-lite 1.0.8), empreinte SHA-256 vérifiée. Le dictionnaire est lu à la demande : peu de mémoire vive malgré sa taille.")
+            Text("Conseillé. Sert partout où il y a des furigana (page, panneau Texte) et à la relecture de l'OCR. Téléchargé depuis PyPI (unidic-lite 1.0.8), empreinte SHA-256 vérifiée ; lu à la demande, peu de mémoire vive malgré sa taille.")
         }
     }
 }

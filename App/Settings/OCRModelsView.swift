@@ -63,31 +63,32 @@ final class ModelDownloads: ObservableObject {
 }
 
 /// Réglages → OCR → Modèles.
+/// Réglages → Modèles : un groupe par usage (à quoi ça sert, où ça se règle), « Recommandé » ou « Optionnel ».
 struct OCRModelsSection: View {
+    enum Group { case ocr, ai, layout, sharpen }
+
+    let group: Group
     @ObservedObject private var downloads = ModelDownloads.shared
     @State private var deleting: ModelSpec?
 
     var body: some View {
         Section {
-            ForEach(ModelSpec.all) { spec in row(spec) }
+            switch group {
+            case .ocr:
+                row(.ndlocr, badge: "Recommandé")
+                row(.ppocr5, badge: "Optionnel")
+            case .ai:
+                row(.glmocr, badge: "Optionnel")
+                row(.ovisocr2, badge: "Optionnel")
+            case .layout:
+                ForEach(ModelSpec.layoutModels) { spec in row(spec, badge: "Optionnel") }
+            case .sharpen:
+                row(.degan, badge: "Optionnel")
+            }
         } header: {
-            Text("Modèles à télécharger")
+            Text(header)
         } footer: {
-            Text("Les modèles restent sur l'iPad (Application Support), hors de l'app. Le téléchargement reprend s'il est coupé ; chaque fichier est vérifié (empreinte SHA-256). GLM-OCR utilise PP-OCRv5 (ou Apple Vision) pour trouver les lignes, puis relit chacune avec l'IA.")
-        }
-        Section {
-            ForEach(ModelSpec.layoutModels) { spec in row(spec) }
-        } header: {
-            Text("Mise en page (texte mis en forme)")
-        } footer: {
-            Text("Sans modèle, la mise en forme se fait par la géométrie des lignes. Avec un modèle : titres, colonnes, tableaux, légendes repérés sur l'image de la page ; en-têtes et pieds de page écartés. Choix dans le panneau Texte (mode « Mis en forme »).")
-        }
-        Section {
-            row(.degan)
-        } header: {
-            Text("Netteté des scans")
-        } footer: {
-            Text("Après le téléchargement : dans le lecteur, menu de la page → « Netteté des scans ». Seulement les pages scannées, une page à la fois quand elle s'affiche ; le résultat est gardé.")
+            Text(footer)
         }
         .confirmationDialog("Supprimer ce modèle ?", isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }),
                             titleVisibility: .visible) {
@@ -97,10 +98,38 @@ struct OCRModelsSection: View {
         }
     }
 
-    private func row(_ spec: ModelSpec) -> some View {
+    private var header: String {
+        switch group {
+        case .ocr: return "1 · Lire le texte des scans (OCR)"
+        case .ai: return "3 · Relire et vérifier avec l'IA"
+        case .layout: return "4 · Mise en forme du texte extrait"
+        case .sharpen: return "5 · Nettoyer les scans"
+        }
+    }
+
+    private var footer: String {
+        switch group {
+        case .ocr:
+            return "Sans modèle, Apple Vision lit déjà le japonais (moins bien). NDLOCR-Lite est fait pour les livres japonais (colonnes verticales). PP-OCRv5 sert aussi à placer chaque caractère pour le dictionnaire. Choix du moteur : Réglages → Lecture des scans, ou le bouton du moteur dans le panneau Texte."
+        case .ai:
+            return "GLM-OCR relit automatiquement les seules lignes douteuses d'une page (option dans Réglages → Lecture des scans → Relecture). OvisOCR2 sert uniquement à la demande : panneau Texte → menu du moteur → « Vérifier la double page », différences à accepter ou refuser. Un seul de ces deux modèles est chargé à la fois ; tout reste sur l'iPad."
+        case .layout:
+            return "Sans modèle, la mise en forme se fait par la géométrie des lignes. Avec un modèle : titres, colonnes, tableaux, légendes repérés sur l'image ; en-têtes et pieds de page écartés. Choix : panneau Texte, mode « Mis en forme » (bouton Géo / PP / YOLO)."
+        case .sharpen:
+            return "Sans modèle, « Papier blanc » et « Noir et blanc net » marchent déjà. DE-GAN rend les caractères noirs et nets sur les vieux scans (moins bon sur les photos). Dans le lecteur : menu « … » → Affichage → Nettoyage des scans."
+        }
+    }
+
+    private func row(_ spec: ModelSpec, badge: String? = nil) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
                 Text(spec.title).font(.body.bold())
+                if let badge {
+                    Text(badge).font(.caption2.bold())
+                        .padding(.horizontal, 6).padding(.vertical, 2)
+                        .foregroundStyle(badge == "Recommandé" ? Color.black : Color.secondary)
+                        .background(badge == "Recommandé" ? Color.green : Color.secondary.opacity(0.2), in: Capsule())
+                }
                 Spacer()
                 if downloads.installed.contains(spec.id) {
                     Label("Installé", systemImage: "checkmark.circle.fill").labelStyle(.titleAndIcon)

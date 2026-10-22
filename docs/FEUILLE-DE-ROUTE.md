@@ -2,7 +2,7 @@
 
 > Ce fichier suffit. Ne relis pas PLAN.md, ni le code « pour voir ». Une session = les retours de l'utilisateur,
 > sinon **une** étape du § 6 ; puis commit + push (+ release si demandée), puis stop.
-> État au 22/10/2026 : **v0.8.3.1 publiée** (build 17 : fusion de PDF, `App/Library/PDFMergeView.swift`). Reste de la liste 0.8.3 : K (grammaire, attend accord). Rien n'a été testé à l'écran par Claude : l'utilisateur teste
+> État au 22/10/2026 : **v0.8.4 publiée** (build 18 : MeCab, OCR relu, MLX récent sur iOS 16, OvisOCR2, réglages des modèles par usage).
 > sur son iPad et fait ses retours. Tout ce qui est marqué « non vérifié » peut être faux sur l'appareil.
 
 ## 1. Prompt à coller dans le nouveau chat

@@ -23,6 +23,7 @@ Textes des licences : [LICENSES/](LICENSES/) ; attributions : [THIRD_PARTY_NOTIC
 
 | Version | Release | Contenu |
 |---|---|---|
+| **0.8.4** | [v0.8.4](https://github.com/NOxygen59/kyokasho/releases/tag/v0.8.4) | Furigana par MeCab, OCR relu (dictionnaire + GLM-OCR), dictionnaire au mot entier, MLX récent sur iOS 16, OvisOCR2 « Vérifier la double page », réglages des modèles réorganisés |
 | **0.8.3.1** | [v0.8.3.1](https://github.com/NOxygen59/kyokasho/releases/tag/v0.8.3.1) | Fusion de PDF sur l'iPad (ordre au glisser, Fichiers ou bibliothèque) |
 | **0.8.3** | [v0.8.3](https://github.com/NOxygen59/kyokasho/releases/tag/v0.8.3) | Furigana plus lisibles (couleur au choix), recherche dans la page, traduction française des définitions, notes flottantes ancrées, moniteur, mise à jour par TrollStore |
 | **0.8.2** | [v0.8.2](https://github.com/NOxygen59/kyokasho/releases/tag/v0.8.2) | PDF photo : dictionnaire juste (pages tournées), furigana sans débordement, nettoyage des scans sans modèle ; mise en page PP-DocLayout / DocLayout-YOLO |
