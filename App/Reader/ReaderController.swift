@@ -473,8 +473,10 @@ final class ReaderController: NSObject, ObservableObject {
         #endif
         pdfView.pageOverlayViewProvider = overlays ? ink : nil
         pdfView.document = pdf
-        applyDisplaySettings()
+        applyDisplaySettings(refit: true)
         go(toSource: target, animated: false)
+        // La navigation annule les restaurations précédentes : ajuster le nouveau document après elle.
+        pdfView.finishLayout(preserving: nil)
         rebuilding = false
         // Le rognage a besoin des repères de pages : lancé une fois le document installé.
         startAutoCropIfNeeded()
@@ -843,7 +845,6 @@ extension ReaderController: PDFDocumentDelegate {
 
 /// `PDFView` qui garde l'échelle « page entière » à jour quand la taille change (rotation, Split View).
 final class ReaderPDFView: PDFView {
-    private var lastSize: CGSize = .zero
     /// Action « Dictionnaire » du menu de sélection d'iOS (Copier, Rechercher…).
     var onLookupSelection: (() -> Void)?
 
@@ -865,40 +866,115 @@ final class ReaderPDFView: PDFView {
         }
         builder.insertSibling(UIMenu(options: .displayInline, children: [action]), beforeMenu: .standardEdit)
     }
+    static let preserveViewportKey = "reader.preserveViewport"
     private var lastFit: CGFloat = 0
+    private var layoutWork: DispatchWorkItem?
+    private var pendingViewport: ViewportSnapshot?
+    private var layoutGeneration = 0
+    private var requiresFit = false
+
+    struct ViewportSnapshot {
+        let document: PDFDocument
+        let page: PDFPage
+        let point: CGPoint
+        let scale: CGFloat
+        let fitted: Bool
+    }
 
     /// Vrai si la page est affichée « entière » (pas de zoom de l'utilisateur).
     var isAtFit: Bool {
         lastFit == 0 || abs(scaleFactor - lastFit) / lastFit < 0.02
     }
 
-    /// Ajuste la page à la vue. (On n'utilise pas `autoScales` : PDFKit le désactive dès qu'on
-    /// règle le zoom minimum, et ne réajuste alors plus rien quand la taille change.)
     func fitToPage() {
+        cancelPendingViewportRestoration()
         layoutDocumentView()
         let fit = scaleFactorForSizeToFit
-        guard fit > 0 else { return }
+        guard fit.isFinite, fit > 0 else { return }
         minScaleFactor = fit
         maxScaleFactor = max(6, fit * 6)
         scaleFactor = fit
         lastFit = fit
     }
 
-    override func layoutSubviews() {
-        super.layoutSubviews()
-        guard bounds.size != lastSize, bounds.width > 0 else { return }
-        lastSize = bounds.size
-        let wasFit = isAtFit
-        // Après la mise en page de PDFKit : panneau latéral, Split View, rotation.
-        DispatchQueue.main.async { [weak self] in
-            guard let self else { return }
-            if wasFit {
+    /// Au centre du lecteur, dans les coordonnées de la page : ni défilement interne ni vue recréée.
+    func captureViewport() -> ViewportSnapshot? {
+        if requiresFit { return nil }
+        if let pendingViewport, pendingViewport.document === document { return pendingViewport }
+        let center = CGPoint(x: bounds.midX, y: bounds.midY)
+        guard bounds.width > 0, bounds.height > 0, scaleFactor > 0,
+              let document, let page = page(for: center, nearest: true) else { return nil }
+        return ViewportSnapshot(document: document, page: page, point: convert(center, to: page),
+                                scale: scaleFactor, fitted: isAtFit)
+    }
+
+    func resizeViewport(to frame: CGRect) {
+        let viewport = captureViewport()
+        self.frame = frame
+        layoutIfNeeded()
+        finishLayout(preserving: viewport)
+    }
+
+    /// Coalescer les recalages : seul le dernier résultat peut modifier la vue.
+    func finishLayout(preserving viewport: ViewportSnapshot?) {
+        layoutWork?.cancel()
+        layoutGeneration += 1
+        let generation = layoutGeneration
+        pendingViewport = viewport
+        requiresFit = viewport == nil
+        let work = DispatchWorkItem { [weak self] in
+            guard let self, generation == self.layoutGeneration else { return }
+            self.pendingViewport = nil
+            self.requiresFit = false
+            self.layoutWork = nil
+            guard let viewport, viewport.document === self.document,
+                  viewport.document.index(for: viewport.page) != NSNotFound else {
                 self.fitToPage()
+                return
+            }
+            let preserve = UserDefaults.standard.object(forKey: Self.preserveViewportKey) as? Bool ?? true
+            if viewport.fitted {
+                self.fitToPage()
+            } else if preserve {
+                self.restoreViewport(viewport)
             } else {
                 self.minScaleFactor = self.scaleFactorForSizeToFit
             }
         }
+        layoutWork = work
+        DispatchQueue.main.async(execute: work)
     }
+
+    /// Une navigation explicite prend toujours le pas sur un recalage encore en attente.
+    func cancelPendingViewportRestoration() {
+        layoutGeneration += 1
+        layoutWork?.cancel()
+        layoutWork = nil
+        pendingViewport = nil
+        requiresFit = false
+    }
+
+    private func restoreViewport(_ viewport: ViewportSnapshot) {
+        layoutDocumentView()
+        let fit = scaleFactorForSizeToFit
+        guard fit.isFinite, fit > 0, viewport.scale.isFinite, viewport.scale > 0 else { return }
+        // Agrandir la zone disponible ne doit pas forcer un zoom minimum supérieur au zoom choisi.
+        minScaleFactor = min(fit, viewport.scale)
+        maxScaleFactor = max(6, fit * 6, viewport.scale)
+        scaleFactor = viewport.scale
+        layoutDocumentView()
+        // PDFDestination vise le coin supérieur gauche : décaler le point pour conserver le centre.
+        // Les conversions PDFKit prennent aussi en charge les pages pivotées et la double page.
+        let center = convert(CGPoint(x: bounds.midX, y: bounds.midY), to: viewport.page)
+        let corner = convert(CGPoint(x: bounds.minX, y: bounds.minY), to: viewport.page)
+        let destination = PDFDestination(page: viewport.page,
+            at: CGPoint(x: viewport.point.x + corner.x - center.x, y: viewport.point.y + corner.y - center.y))
+        destination.zoom = viewport.scale
+        go(to: destination)
+        lastFit = fit
+        Diagnostics.log("Vue conservée : zoom \(viewport.scale), page \(viewport.document.index(for: viewport.page))", "affichage")
+    }
+
 }
 
 extension ReaderSettings.Background {

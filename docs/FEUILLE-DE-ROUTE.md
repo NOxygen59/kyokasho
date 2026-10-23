@@ -43,6 +43,24 @@ fenêtre OCR à déplacement libre (0.9.0), pages de même taille + cache `Cache
 Double (1.1), export (V8), ajout de pages (V14, données de l'utilisateur : prudence), stockage et cache (V10, V11),
 page par IA et chat (V7), lexique (S).
 
+**Retours traités par Codex le 23/10 (code sur `main`, hors release, à confirmer sur iPad)** :
+- **Réglages** : accueil en six entrées par usage, recherche (accents, casse et plusieurs mots), descriptions
+  courtes, réglages du texte séparés des options OCR avancées ; diagnostic et moniteur regroupés dans l'aide.
+  Réglage de la fenêtre OCR et conservation du zoom dans « Lecture et apparence ». Options existantes conservées ;
+  « Automatique » ajouté au choix de disposition propre à un livre. Effacement des textes OCR : confirmation
+  et mention des corrections manuelles effacées avec eux.
+- **Fenêtre OCR / double page** : zone PDF explicitement dimensionnée et contenue dans sa colonne ; taille finale
+  sans interpolation pendant un changement de mode. `ReaderPDFContainer` capture le point de lecture et le zoom
+  avant de redimensionner la même vue PDF. Le dernier recalage restaure la vue ; une navigation explicite annule
+  l'ancien recalage. Les réglages inchangés n'entraînent plus de réajustement ; dessin et changement de disposition
+  ne forcent plus systématiquement « page entière ». Une planche déjà ajustée reste ajustée à la place disponible.
+  Option désactivable : Réglages → Lecture et apparence → Fenêtre texte OCR → Conserver le zoom et la position.
+- **Vérifié** : nouvelles vues de réglages, conteneur et classe PDF vérifiés par le compilateur avec le SDK iOS,
+  cible iOS 16 (destinations externes inchangées remplacées par des doublures, pas de compilation complète de l'app).
+  Essai autonome PDFKit sur Mac avec PDF synthétique : zoom et point de lecture, tailles successives, disposition
+  simple/double, navigation prioritaire et ajustement initial. Catalogue : 14 destinations accessibles et recherche.
+  Aperçu des composants des réglages rendu sur Mac. Aucun simulateur ni iPad utilisé ; chevauchement réel à confirmer.
+
 **Suite proposée** : § 7 bis (R : « Continuer » dans la bibliothèque ; F codé par Codex, à essayer sur iPad), puis § 8 (B3 furigana
 verticaux, B5 tableaux / texte vertical, B6 performance, B7 GLM-OCR plus rapide, K grammaire), § 11.
 
@@ -62,6 +80,8 @@ s'il y en a, sinon l'étape suivante non cochée (§ 7 bis puis § 8). Pas de si
 - Suppression de ses fichiers : `trash`, jamais `rm`. **Ne jamais supprimer un dépôt GitHub.**
 - Commits en français, message clair (ce qui change et pourquoi). Mention de l'assistant en dernière ligne si l'outil
   l'ajoute (anciens commits : `Co-Authored-By: Claude …`).
+- **Pushs autorisés** : l'utilisateur a autorisé le 23/10 l'envoi sur `main` de `NOxygen59/kyokasho`, ainsi que
+  les futurs pushs de ce projet. Les releases nécessitent toujours sa demande et son numéro de version.
 - **Simulateur interdit** sauf « tu peux tester ». Tests sur l'iPad : c'est l'utilisateur qui les fait (release).
 - Usage perso, jamais distribué. Dépôt **privé** `NOxygen59/kyokasho`, bundle `fr.noxygen59.kyokasho`.
   **iOS 16.0** minimum (iPad Pro 12.9" M1 8 Go, iOS 16.6.1, TrollStore + jailbreak Dopamine). App **paysage**.

@@ -61,9 +61,15 @@ struct ReaderScreen: View {
     var body: some View {
         GeometryReader { geo in
             let landscape = geo.size.width > geo.size.height
-            HStack(spacing: Atelier.gap) {
+            let reservesSide = docked == .web || (docked == .study && landscape)
+            let panelWidth: CGFloat = docked == .web ? 440 : Atelier.panelWidth
+            let inset: CGFloat = reservesSide ? Atelier.gap : 0
+            let documentWidth = max(1, geo.size.width - (reservesSide ? panelWidth + Atelier.gap * 3 : 0))
+            let documentHeight = max(1, geo.size.height - inset * 2)
+            HStack(spacing: reservesSide ? Atelier.gap : 0) {
                 ZStack {
                     PDFViewHost(view: reader.pdfView)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .clipShape(RoundedRectangle(cornerRadius: docked == nil ? 0 : Atelier.radius, style: .continuous))
                     LookupHighlightLayer(rects: reader.lookupHighlight)
                     if chromeVisible {
@@ -112,13 +118,19 @@ struct ReaderScreen: View {
                         Text(error).padding().atelierPanel()
                     }
                 }
+                .frame(width: documentWidth, height: documentHeight)
+                .clipped()
                 .animation(.easeOut(duration: 0.18), value: chromeVisible)
-                if let docked, landscape || docked == .web {
+                if let docked, reservesSide {
                     sidePanel(docked)
                         .transition(.move(edge: .trailing).combined(with: .opacity))
                 }
             }
-            .padding(docked == nil ? 0 : Atelier.gap)
+            .frame(height: documentHeight)
+            .padding(inset)
+            // Une seule taille finale pour PDFKit : aucune interpolation du document avec les fenêtres.
+            .animation(nil, value: studyMode)
+            .animation(nil, value: side)
             // Portrait : une page ; paysage : double page (affichage seulement).
             .onChange(of: landscape) { reader.adaptLayout(portrait: !$0) }
             .onAppear {
@@ -142,8 +154,6 @@ struct ReaderScreen: View {
                     .transition(.opacity)
                 }
             }
-            .animation(.spring(response: 0.38, dampingFraction: 0.88), value: studyMode)
-            .animation(.spring(response: 0.38, dampingFraction: 0.88), value: side)
         }
         .background(Atelier.canvas.ignoresSafeArea())
         .statusBarHidden(!chromeVisible)
@@ -581,9 +591,30 @@ struct OCRStatusDot: View {
 }
 
 struct PDFViewHost: UIViewRepresentable {
-    let view: PDFView
-    func makeUIView(context: Context) -> PDFView { view }
-    func updateUIView(_ uiView: PDFView, context: Context) {}
+    let view: ReaderPDFView
+    func makeUIView(context: Context) -> ReaderPDFContainer { ReaderPDFContainer(pdfView: view) }
+    func updateUIView(_ uiView: ReaderPDFContainer, context: Context) {}
+}
+
+/// Conteneur sans taille intrinsèque de PDF : il respecte la place réservée par SwiftUI.
+/// La vue PDF est conservée et son point de lecture est capturé AVANT de changer ses dimensions.
+final class ReaderPDFContainer: UIView {
+    let pdfView: ReaderPDFView
+
+    init(pdfView: ReaderPDFView) {
+        self.pdfView = pdfView
+        super.init(frame: .zero)
+        clipsToBounds = true
+        addSubview(pdfView)
+    }
+
+    required init?(coder: NSCoder) { fatalError("init(coder:) non pris en charge") }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        guard bounds.width > 0, bounds.height > 0, pdfView.frame != bounds else { return }
+        pdfView.resizeViewport(to: bounds)
+    }
 }
 
 struct HighlightMenu: View {

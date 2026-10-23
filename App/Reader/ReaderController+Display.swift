@@ -13,8 +13,8 @@ import UIKit
 extension ReaderController {
     // MARK: Réglages
 
-    // FDR-1 : modes .singlePage/.twoUp non continus (zoom qui saute) et `fitToPage` relancé à chaque changement de taille (remet le zoom). Voir § 6 étape 1.
-    func applyDisplaySettings() {
+    func applyDisplaySettings(refit: Bool = false) {
+        let viewport = refit ? nil : pdfView.captureViewport()
         let s = settings
         let paginated = s.scrollMode == .paginated
         let double = s.layout == .double
@@ -25,12 +25,14 @@ extension ReaderController {
         if pdfView.isUsingPageViewController != pageController {
             pdfView.usePageViewController(pageController, withViewOptions: [UIPageViewController.OptionsKey.interPageSpacing: 24])
         }
+        let mode: PDFDisplayMode
         switch (double, paginated) {
-        case (false, true): pdfView.displayMode = .singlePage
-        case (false, false): pdfView.displayMode = .singlePageContinuous
-        case (true, true): pdfView.displayMode = .twoUp
-        case (true, false): pdfView.displayMode = .twoUpContinuous
+        case (false, true): mode = .singlePage
+        case (false, false): mode = .singlePageContinuous
+        case (true, true): mode = .twoUp
+        case (true, false): mode = .twoUpContinuous
         }
+        if pdfView.displayMode != mode { pdfView.displayMode = mode }
         pdfView.displayDirection = paginated ? .horizontal : .vertical
         pdfView.displaysAsBook = double && s.firstPageAlone
         pdfView.displaysRTL = rtl && !double
@@ -38,7 +40,7 @@ extension ReaderController {
         pdfView.pageBreakMargins = paginated ? .zero : UIEdgeInsets(top: 6, left: 0, bottom: 6, right: 0)
         pdfView.pageShadowsEnabled = s.background != .black
         applyTone()
-        DispatchQueue.main.async { [pdfView] in pdfView.fitToPage() }
+        pdfView.finishLayout(preserving: viewport)
         // Sans contrôleur de pages, PDFKit ne tourne pas les pages au glisser : on le fait nous-mêmes.
         let manualSwipe = paginated && !pageController && !isDrawing
         swipeLeft.isEnabled = manualSwipe
@@ -191,10 +193,7 @@ extension ReaderController {
     func adaptLayout(portrait: Bool) {
         guard portrait != portraitMode else { return }
         portraitMode = portrait
-        let source = currentSourcePage
         update(settings: model.readerDefaults.applying(document.settingsOverride))
-        // Même page qu'avant la rotation.
-        DispatchQueue.main.async { [weak self] in self?.go(toSource: source) }
     }
 
     /// « Auto » remplacé par la disposition de l'orientation (le reste du lecteur ne voit que simple / double).
@@ -207,6 +206,7 @@ extension ReaderController {
     func update(settings newSettings: ReaderSettings) {
         let old = settings
         let newSettings = resolved(newSettings)
+        guard old != newSettings else { return }
         settings = newSettings
         let rtlDouble = { (s: ReaderSettings) in s.direction == .rightToLeft && s.layout == .double }
         let needsRebuild = old.direction != newSettings.direction || old.splitWidePages != newSettings.splitWidePages

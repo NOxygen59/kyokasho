@@ -14,6 +14,7 @@ extension ReaderController {
     // MARK: Navigation
 
     func go(toPresented index: Int, animated: Bool = true) {
+        pdfView.cancelPendingViewportRestoration()
         guard let pdf, let page = pdf.page(at: max(0, min(index, pdf.pageCount - 1))) else { return }
         pdfView.go(to: page)
         currentIndex = pdf.index(for: page)
@@ -46,6 +47,7 @@ extension ReaderController {
     }
 
     func turn(forward: Bool) {
+        pdfView.cancelPendingViewportRestoration()
         // Défilement continu : une page coupée en bas compte comme visible ; PDFKit tourne bien tout seul.
         guard settings.scrollMode == .paginated else {
             forward ? pdfView.goToNextPage(nil) : pdfView.goToPreviousPage(nil)

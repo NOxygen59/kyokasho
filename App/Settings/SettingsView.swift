@@ -6,103 +6,63 @@ import ONNXOCRKit
 import ReaderCore
 import SwiftUI
 
+/// Accueil centré sur les usages ; la recherche donne accès directement à chaque réglage.
 struct SettingsView: View {
-    @EnvironmentObject private var model: AppModel
-    @AppStorage(ResourceMonitor.enabledKey) private var monitorEnabled = false
-    @ObservedObject private var downloads = ModelDownloads.shared
-    @ObservedObject private var morphology = MorphologyService.shared
-    @EnvironmentObject private var themes: ThemeManager
     @Environment(\.dismiss) private var dismiss
+    @State private var query = ""
+
+    private var matches: [SettingsRoute] {
+        SettingsRoute.allCases.filter { $0.matches(query) }
+    }
 
     var body: some View {
         NavigationStack {
             Form {
-                Section("Apparence et lecture") {
-                    NavigationLink { ThemePickerView() } label: {
-                        row("paintpalette", "Thème", tint: Atelier.Tint.annotate, detail: themes.theme.name)
+                if query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Section {
+                        VStack(alignment: .leading, spacing: 7) {
+                            Text("Ton espace de lecture").font(.title2.weight(.semibold)).foregroundStyle(Atelier.textPrimary)
+                            Text("Personnalise l'app selon ce que tu veux faire. Les réglages d'un livre restent accessibles depuis son menu « … ».")
+                                .font(.subheadline).foregroundStyle(Atelier.textSecondary)
+                        }.padding(.vertical, 8)
+                            .listRowBackground(Atelier.surface)
                     }
-                    NavigationLink { ReadingSettingsView() } label: {
-                        row("book", "Pages et gestes", tint: Atelier.Tint.read)
+                    Section("Personnaliser") {
+                        area(.reading)
+                        area(.japanese)
                     }
-                    NavigationLink { AnnotationSettingsView() } label: {
-                        row("pencil.tip", "Apple Pencil et annotations", tint: Atelier.Tint.annotate)
+                    Section("Apprendre") {
+                        SettingsRouteLink(route: .models)
+                        SettingsRouteLink(route: .cards)
                     }
-                }
-                Section {
-                    NavigationLink { DictionaryManagerView() } label: {
-                        row("character.book.closed.ja", "Dictionnaires", tint: Atelier.Tint.japanese)
+                    Section("Gérer et se faire aider") {
+                        area(.files)
+                        area(.help)
                     }
-                    NavigationLink { DomainLexiconView() } label: {
-                        row("text.book.closed", "Lexique du domaine", tint: Atelier.Tint.japanese,
-                            detail: "\(DomainLexicon.shared.entries.count) termes")
+                } else {
+                    Section("Résultats") {
+                        if matches.isEmpty {
+                            Text("Aucun réglage trouvé. Essaie « zoom », « traduction » ou « stockage ».")
+                                .foregroundStyle(Atelier.textSecondary)
+                        }
+                        ForEach(matches) { route in SettingsRouteLink(route: route) }
                     }
-                    NavigationLink { OCRSettingsView() } label: {
-                        row("text.viewfinder", "Lecture des scans (OCR)", tint: Atelier.Tint.japanese,
-                            detail: model.readerDefaults.ocrEngine.label)
-                    }
-                    NavigationLink { Form { TranslationSettingsSection() }.navigationTitle("Traduction") } label: {
-                        row("character.bubble", "Traduction (DeepL)", tint: Atelier.Tint.ai)
-                    }
-                } header: {
-                    Text("Japonais")
-                } footer: {
-                    Text("Dictionnaires : fiches au toucher. Lecture des scans : quel moteur lit le texte des pages photo, relecture, mise en forme. Traduction : DeepL (en ligne, seulement quand tu le demandes).")
-                }
-                Section {
-                    NavigationLink { ModelsView() } label: {
-                        row("shippingbox", "Modèles d'IA et outils", tint: Atelier.Tint.ai,
-                            detail: "\(downloads.installed.count + (morphology.state == .ready ? 1 : 0)) installé(s)")
-                    }
-                } header: {
-                    Text("Téléchargements")
-                } footer: {
-                    Text("Ce que fait chaque modèle (OCR, furigana, IA, mise en forme, netteté), ce qui est conseillé et où le régler.")
-                }
-                Section("Cartes") {
-                    NavigationLink { ReviewSettingsView() } label: {
-                        row("rectangle.stack", "Révisions et export Anki", tint: Atelier.Tint.japanese)
-                    }
-                }
-                Section {
-                    Toggle(isOn: $monitorEnabled) {
-                        row("gauge.with.dots.needle.33percent", "Moniteur de ressources", tint: Atelier.Tint.read)
-                    }
-                } header: {
-                    Text("Outils")
-                } footer: {
-                    Text("CPU, mémoire et images par seconde de l'app, dans un panneau flottant ouvert depuis le menu « … » du lecteur.")
-                }
-                DiagnosticsSection()
-                Section("Stockage") {
-                    NavigationLink { StorageUsageView() } label: {
-                        row("internaldrive", "Place prise par l'app", tint: Atelier.Tint.cloud)
-                    }
-                }
-                Section("Comptes") {
-                    NavigationLink { DriveAccountView() } label: {
-                        row("externaldrive.badge.icloud", "Google Drive", tint: Atelier.Tint.cloud)
-                    }
-                }
-                Section {
-                    NavigationLink { AboutView() } label: { row("info.circle", "À propos", tint: Atelier.textSecondary) }
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(Atelier.canvas)
+            .searchable(text: $query, prompt: "Chercher un réglage")
             .navigationTitle("Réglages")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("OK") { dismiss() } } }
+            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Terminé") { dismiss() } } }
         }
     }
 
-    private func row(_ icon: String, _ title: String, tint: Color, detail: String? = nil) -> some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon).font(.system(size: 15, weight: .semibold)).foregroundStyle(Color.black.opacity(0.8))
-                .frame(width: 30, height: 30).background(tint, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-            Text(title)
-            if let detail {
-                Spacer()
-                Text(detail).foregroundStyle(.secondary).lineLimit(1)
-            }
+    private func area(_ area: SettingsArea) -> some View {
+        NavigationLink { SettingsAreaView(area: area) } label: {
+            SettingsEntryRow(icon: area.icon, title: area.title, subtitle: area.subtitle, tint: area.tint)
         }
+        .listRowBackground(Atelier.surface)
     }
 }
 
@@ -111,8 +71,25 @@ struct ReadingSettingsView: View {
     @EnvironmentObject private var model: AppModel
 
     var body: some View {
-        Form { ReaderSettingsSections(settings: $model.readerDefaults) }
-            .navigationTitle("Pages et gestes")
+        Form {
+            Section {
+                Text("Ces choix s'appliquent par défaut à tes livres. Un livre peut garder ses propres réglages depuis le menu « … » du lecteur.")
+                    .font(.subheadline).foregroundStyle(Atelier.textSecondary)
+            }
+            ReaderSettingsSections(settings: $model.readerDefaults)
+            Section {
+                NavigationLink("Options avancées") {
+                    Form {
+                        Section {
+                            Stepper("Pages voisines : \(model.readerDefaults.preloadCount)", value: $model.readerDefaults.preloadCount, in: 0...10)
+                        } header: { Text("Précharger les aperçus") } footer: {
+                            Text("Prépare les miniatures voisines. Une valeur plus faible réduit le travail en arrière-plan ; 0 désactive ce préchargement.")
+                        }
+                    }.navigationTitle("Options de lecture")
+                }
+            }
+        }
+        .navigationTitle("Pages et gestes")
     }
 }
 
@@ -143,28 +120,33 @@ struct ReaderSettingsSections: View {
     @Binding var settings: ReaderSettings
 
     var body: some View {
-        Section("Lecture") {
+        Section {
             Picker("Pages", selection: $settings.layout) {
-                Text("Auto (portrait : simple, paysage : double)").tag(ReaderSettings.PageLayout.auto)
+                Text("Automatique selon l'orientation").tag(ReaderSettings.PageLayout.auto)
                 Text("Page simple").tag(ReaderSettings.PageLayout.single)
                 Text("Double page").tag(ReaderSettings.PageLayout.double)
             }
             Picker("Défilement", selection: $settings.scrollMode) {
-                Text("Paginé").tag(ReaderSettings.ScrollMode.paginated)
+                Text("Page par page").tag(ReaderSettings.ScrollMode.paginated)
                 Text("Continu").tag(ReaderSettings.ScrollMode.continuous)
             }
             Picker("Sens de lecture", selection: $settings.direction) {
                 Text("Gauche → droite").tag(ReaderSettings.Direction.leftToRight)
                 Text("Droite → gauche").tag(ReaderSettings.Direction.rightToLeft)
             }
-            Toggle("Première page seule (double page)", isOn: $settings.firstPageAlone)
+            Toggle("Couverture seule avant les doubles pages", isOn: $settings.firstPageAlone)
+                .disabled(settings.layout == .single)
             Picker("Transition", selection: $settings.transition) {
                 Text("Glissement").tag(ReaderSettings.Transition.slide)
                 Text("Aucune").tag(ReaderSettings.Transition.none)
             }
+        } header: {
+            Text("Disposition et navigation")
+        } footer: {
+            Text("Automatique : une page en portrait, deux en paysage. « Droite → gauche » suit l'ordre des livres japonais. La transition par glissement est disponible en page simple, page par page.")
         }
         Section {
-            Picker("Fond", selection: $settings.background) {
+            Picker("Fond autour des pages", selection: $settings.background) {
                 Text("Noir").tag(ReaderSettings.Background.black)
                 Text("Gris foncé").tag(ReaderSettings.Background.darkGray)
                 Text("Gris").tag(ReaderSettings.Background.gray)
@@ -173,11 +155,10 @@ struct ReaderSettingsSections: View {
             }
             Toggle("Rogner les marges blanches", isOn: $settings.autoCrop)
             Toggle("Couper les doubles pages scannées", isOn: $settings.splitWidePages)
-            Stepper("Préchargement : \(settings.preloadCount) page(s)", value: $settings.preloadCount, in: 0...10)
         } header: {
             Text("Pages")
         } footer: {
-            Text("Le glissement n'existe qu'en page simple paginée. Le préchargement prépare les aperçus des pages voisines ; PDFKit gère lui-même le rendu des pages affichées. Pivoter ou couper une seule page : menu ⋯ du lecteur.")
+            Text("Le rognage cache les marges blanches ; la découpe sépare les scans contenant deux pages. Pivoter ou découper une seule page : menu « … » du livre. Le PDF d'origine reste intact.")
         }
         Section {
             Toggle("Double tap pour zoomer", isOn: $settings.doubleTapZoom)
@@ -203,7 +184,7 @@ struct DocumentSettingsSheet: View {
             Form {
                 Section {
                     OptionalPicker("Pages", value: $override.layout, defaultValue: d.layout, options: [
-                        (.single, "Page simple"), (.double, "Double page")])
+                        (.auto, "Automatique selon l'orientation"), (.single, "Page simple"), (.double, "Double page")])
                     OptionalPicker("Défilement", value: $override.scrollMode, defaultValue: d.scrollMode, options: [
                         (.paginated, "Paginé"), (.continuous, "Continu")])
                     OptionalPicker("Sens de lecture", value: $override.direction, defaultValue: d.direction, options: [
@@ -303,40 +284,39 @@ extension OCREngineChoice {
 
 struct OCRSettingsView: View {
     @EnvironmentObject private var model: AppModel
-    @AppStorage("study.layoutEngine") private var layoutEngineRaw = LayoutDetector.Engine.geometry.rawValue
-    @AppStorage(ReaderController.aiRereadKey) private var aiReread = true
-    @State private var cache: (bytes: Int, pages: Int) = (0, 0)
 
     var body: some View {
         Form {
             Section {
-                Picker("Moteur par défaut", selection: $model.readerDefaults.ocrEngine) {
-                    ForEach(OCREngineChoice.allCases, id: \.self) { Text($0.label).tag($0) }
+                Toggle("Lire automatiquement la page affichée", isOn: $model.appSettings.ocrAutoCurrentPage)
+                Toggle("Montrer les zones de texte sur la page", isOn: $model.appSettings.showOCRBoxes)
+            } header: { Text("Reconnaître le texte") } footer: {
+                Text("Pour un PDF scanné, l'OCR transforme l'image en texte japonais. Le mode automatique choisit un outil disponible sur ton iPad ; le traitement reste hors ligne.")
+            }
+            Section {
+                NavigationLink { OCRTextAppearanceSettingsView() } label: {
+                    Label("Police, taille et présentation du texte", systemImage: "textformat.size")
                 }
-                Toggle("OCR automatique de la page lue", isOn: $model.appSettings.ocrAutoCurrentPage)
-                Toggle("Afficher les zones reconnues", isOn: $model.appSettings.showOCRBoxes)
-            } header: {
-                Text("Moteur")
-            } footer: {
-                Text("Auto : texte intégré au PDF quand il existe (exact et instantané). Sinon NDLOCR-Lite s'il est installé (livres japonais, vertical), puis PP-OCRv5, puis Apple Vision. Remplaçable par document. Un moteur choisi mais pas téléchargé renvoie une erreur.")
+                NavigationLink { ModelsView() } label: {
+                    Label("Ajouter des outils de lecture hors ligne", systemImage: "arrow.down.circle")
+                }
             }
             Section {
-                NavigationLink { ModelsView() } label: { Label("Modèles d'IA et outils (à quoi sert chacun)", systemImage: "shippingbox") }
-            }
-            Section {
-                Toggle("Relire les lignes douteuses avec GLM-OCR", isOn: $aiReread)
-            } header: {
-                Text("Relecture")
+                NavigationLink { OCRAdvancedSettingsView() } label: {
+                    Label("Options OCR avancées", systemImage: "slider.horizontal.3")
+                }
             } footer: {
-                Text("Chaque page lue est relue avec ton dictionnaire : les caractères qui se ressemblent (未/末, 土/士, ロ/口…) sont corrigés quand ça forme un vrai mot, le reste est souligné en orange. Si GLM-OCR est installé, seules les lignes encore douteuses lui sont envoyées, en fond (rien ne part en ligne).")
+                Text("Choix du moteur, vérification des caractères, mise en page et textes enregistrés. Tu peux garder les valeurs actuelles pour commencer.")
             }
-            Section {
-                LayoutEnginePicker(selection: $layoutEngineRaw)
-            } header: {
-                Text("Mise en page du texte extrait")
-            } footer: {
-                Text("PP-DocLayout et DocLayout-YOLO repèrent titres, colonnes et tableaux ; « Géométrie » marche sans modèle. Même choix que dans le panneau d'étude.")
-            }
+        }.navigationTitle("Texte des pages")
+    }
+}
+
+struct OCRTextAppearanceSettingsView: View {
+    @EnvironmentObject private var model: AppModel
+
+    var body: some View {
+        Form {
             Section("Lecteur de texte") {
                 Picker("Style", selection: $model.appSettings.textReader.style) {
                     Text("Défilement").tag(TextReaderSettings.Style.scroll)
@@ -359,17 +339,54 @@ struct OCRSettingsView: View {
                 OCRTextView(text: "照明計画を考える。\n空間の印象は光で大きく変わります。", settings: model.appSettings.textReader)
                     .frame(height: 140)
             }
+        }.navigationTitle("Présentation du texte")
+    }
+}
+
+struct OCRAdvancedSettingsView: View {
+    @EnvironmentObject private var model: AppModel
+    @AppStorage("study.layoutEngine") private var layoutEngineRaw = LayoutDetector.Engine.geometry.rawValue
+    @AppStorage(ReaderController.aiRereadKey) private var aiReread = true
+    @State private var confirmClear = false
+    @State private var cacheError: String?
+    @State private var cache: (bytes: Int, pages: Int) = (0, 0)
+
+    var body: some View {
+        Form {
+            Section {
+                Picker("Moteur par défaut", selection: $model.readerDefaults.ocrEngine) {
+                    ForEach(OCREngineChoice.allCases, id: \.self) { Text($0.label).tag($0) }
+                }
+            } header: {
+                Text("Moteur")
+            } footer: {
+                Text("Auto : texte intégré au PDF quand il existe (exact et instantané). Sinon NDLOCR-Lite s'il est installé (livres japonais, vertical), puis PP-OCRv5, puis Apple Vision. Remplaçable par document. Un moteur choisi mais pas téléchargé renvoie une erreur.")
+            }
+            Section {
+                NavigationLink { ModelsView() } label: { Label("Modèles d'IA et outils (à quoi sert chacun)", systemImage: "shippingbox") }
+            }
+            Section {
+                Toggle("Relire les lignes douteuses avec GLM-OCR", isOn: $aiReread)
+            } header: {
+                Text("Relecture")
+            } footer: {
+                Text("Chaque page lue est relue avec ton dictionnaire : les caractères qui se ressemblent (未/末, 土/士, ロ/口…) sont corrigés quand ça forme un vrai mot, le reste est souligné en orange. Si GLM-OCR est installé, seules les lignes encore douteuses lui sont envoyées, en fond (rien ne part en ligne).")
+            }
+            Section {
+                LayoutEnginePicker(selection: $layoutEngineRaw)
+            } header: {
+                Text("Mise en page du texte extrait")
+            } footer: {
+                Text("PP-DocLayout et DocLayout-YOLO repèrent titres, colonnes et tableaux ; « Géométrie » marche sans modèle. Même choix que dans le panneau d'étude.")
+            }
             Section {
                 LabeledContent("Pages en cache", value: "\(cache.pages)")
                 LabeledContent("Taille", value: ByteCountFormatter.string(fromByteCount: Int64(cache.bytes), countStyle: .file))
-                Button("Vider le cache OCR", role: .destructive) {
-                    try? model.database.clearOCRCache()
-                    refresh()
-                }
+                Button("Effacer les textes OCR enregistrés…", role: .destructive) { confirmClear = true }
             } header: {
                 Text("Cache")
             } footer: {
-                Text("Chaque page n'est lue qu'une fois par moteur ; changer de moteur n'efface pas les autres résultats.")
+                Text("Les résultats sont gardés pour éviter de relire les pages. Les effacer supprime aussi les corrections manuelles du texte OCR. Les PDF, notes et cartes sont conservés.")
             }
             Section {
                 NavigationLink("Banc d'essai") { BenchView() }
@@ -377,8 +394,18 @@ struct OCRSettingsView: View {
                 Text("Images + texte de référence : taux d'erreur de caractères et temps de chaque moteur.")
             }
         }
-        .navigationTitle("Lecture des scans (OCR)")
+        .navigationTitle("Options OCR avancées")
         .onAppear(perform: refresh)
+        .confirmationDialog("Effacer les textes OCR et leurs corrections manuelles ?", isPresented: $confirmClear, titleVisibility: .visible) {
+            Button("Effacer les textes OCR", role: .destructive) {
+                do { try model.database.clearOCRCache(); refresh() }
+                catch { cacheError = error.localizedDescription }
+            }
+            Button("Annuler", role: .cancel) {}
+        }
+        .alert("Cache OCR", isPresented: Binding(get: { cacheError != nil }, set: { if !$0 { cacheError = nil } })) {
+            Button("OK") { cacheError = nil }
+        } message: { Text(cacheError ?? "") }
     }
 
     private func refresh() {
