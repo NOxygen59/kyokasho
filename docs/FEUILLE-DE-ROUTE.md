@@ -61,6 +61,14 @@ page par IA et chat (V7), lexique (S).
   simple/double, navigation prioritaire et ajustement initial. Catalogue : 14 destinations accessibles et recherche.
   Aperçu des composants des réglages rendu sur Mac. Aucun simulateur ni iPad utilisé ; chevauchement réel à confirmer.
 
+**Retour après v1.1.1 (23/10)** : l'utilisateur confirme que les changements fonctionnent sur son iPad.
+Il trouve les changements de fenêtre trop brusques. Correction sur `main`, hors release : panneau ancré animé
+sur une couche séparée (sa colonne reste réservée), fenêtre libre/plein écran et pastille animées ; court fondu
+de l'ancien rendu PDF pendant le recalage immédiat, sans interpolation de son zoom. Interrupteur « Animer les
+changements de fenêtre » dans les réglages de la fenêtre OCR ; respect de « Réduire les animations ». À confirmer
+sur iPad pour les transitions. Archive Release de contrôle réussie (SDK iOS, minimum iOS 16),
+sans simulateur ni appareil. La v1.1.1 publiée n'est pas modifiée.
+
 **Suite proposée** : § 7 bis (R : « Continuer » dans la bibliothèque ; F codé par Codex, à essayer sur iPad), puis § 8 (B3 furigana
 verticaux, B5 tableaux / texte vertical, B6 performance, B7 GLM-OCR plus rapide, K grammaire), § 11.
 

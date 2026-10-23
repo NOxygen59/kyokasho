@@ -13,10 +13,22 @@ enum StudyPanelMode: String {
     static let restoreKey = "study.panelRestore"
 }
 
+/// Transitions visuelles des panneaux ; la géométrie du PDF est recalée séparément.
+enum StudyPanelMotion {
+    static let storageKey = "study.animateTransitions"
+
+    static func animation(enabled: Bool, reduceMotion: Bool) -> Animation? {
+        guard enabled else { return nil }
+        return reduceMotion ? .easeOut(duration: 0.14) : .spring(response: 0.32, dampingFraction: 0.92)
+    }
+}
+
 /// Boutons de fenêtre de l'en-tête du panneau (le mode actuel n'a pas de bouton).
 struct StudyWindowButtons: View {
     @AppStorage(StudyPanelMode.storageKey) private var mode = StudyPanelMode.docked
     @AppStorage(StudyPanelMode.restoreKey) private var restore = StudyPanelMode.docked
+    @AppStorage(StudyPanelMotion.storageKey) private var animateTransitions = true
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         HStack(spacing: 14) {
@@ -33,7 +45,7 @@ struct StudyWindowButtons: View {
 
     private func button(_ icon: String, _ label: String, action: @escaping () -> Void) -> some View {
         Button {
-            withAnimation(.spring(response: 0.38, dampingFraction: 0.88)) { action() }
+            withAnimation(StudyPanelMotion.animation(enabled: animateTransitions, reduceMotion: reduceMotion)) { action() }
         } label: {
             Image(systemName: icon).font(.system(size: 14, weight: .semibold)).foregroundStyle(Atelier.textSecondary)
                 .frame(minWidth: 22, minHeight: 22)
@@ -53,6 +65,8 @@ struct DetachedPanel<Content: View>: View {
 
     @AppStorage(StudyPanelMode.storageKey) private var mode = StudyPanelMode.docked
     @AppStorage(StudyPanelMode.restoreKey) private var restore = StudyPanelMode.docked
+    @AppStorage(StudyPanelMotion.storageKey) private var animateTransitions = true
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage("studyPanel.width") private var width = 520.0
     @AppStorage("studyPanel.height") private var height = 640.0
     @AppStorage("studyPanel.x") private var x = 120.0
@@ -81,7 +95,8 @@ struct DetachedPanel<Content: View>: View {
             .opacity(mode == .minimized ? 0 : 1)
             .allowsHitTesting(mode != .minimized)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .overlay { if mode == .minimized { pill } }
+            .overlay { if mode == .minimized { pill.transition(.opacity) } }
+            .animation(StudyPanelMotion.animation(enabled: animateTransitions, reduceMotion: reduceMotion), value: mode)
             .transaction { if move != .zero || resize != .zero { $0.animation = nil } }
     }
 
@@ -122,7 +137,7 @@ struct DetachedPanel<Content: View>: View {
     /// Panneau réduit : pastille en bas à droite, toucher le rouvre comme avant.
     private var pill: some View {
         Button {
-            withAnimation(.spring(response: 0.38, dampingFraction: 0.88)) {
+            withAnimation(StudyPanelMotion.animation(enabled: animateTransitions, reduceMotion: reduceMotion)) {
                 mode = restore == .minimized ? .docked : restore
             }
         } label: {

@@ -210,6 +210,7 @@ struct StudyPanelSettingsView: View {
     @AppStorage(StudyPanelMode.storageKey) private var mode = StudyPanelMode.docked
     @AppStorage(StudyPanelMode.restoreKey) private var restore = StudyPanelMode.docked
     @AppStorage(ReaderPDFView.preserveViewportKey) private var preserveViewport = true
+    @AppStorage(StudyPanelMotion.storageKey) private var animateTransitions = true
 
     var body: some View {
         Form {
@@ -224,9 +225,10 @@ struct StudyPanelSettingsView: View {
                 Text("À droite en paysage, elle dispose de sa propre colonne. En portrait, la fenêtre apparaît par-dessus la page. Tu peux aussi changer sa position depuis les boutons de son en-tête.")
             }
             Section {
+                Toggle("Animer les changements de fenêtre", isOn: $animateTransitions)
                 Toggle("Conserver le zoom et la position du livre", isOn: $preserveViewport)
             } footer: {
-                Text("En changeant la position de la fenêtre ou en la fermant, une page zoomée conserve son grossissement et son point de lecture. Une page affichée entière s'ajuste à la place disponible. Désactive cette option pour retrouver le recalage précédent.")
+                Text("En changeant la position de la fenêtre ou en la fermant, une page zoomée conserve son grossissement et son point de lecture. Une page affichée entière s'ajuste à la place disponible. Désactive cette option pour retrouver le recalage précédent. Les transitions peuvent être coupées séparément et respectent « Réduire les animations » dans les réglages de l'iPad.")
             }
         }
         .navigationTitle("Fenêtre texte OCR")

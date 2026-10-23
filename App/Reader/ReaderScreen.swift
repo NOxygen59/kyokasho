@@ -23,6 +23,8 @@ struct ReaderScreen: View {
     @State private var sheet: Sheet?
     @State private var side: Side? = nil
     @State private var autoOpenedSide = false
+    @AppStorage(StudyPanelMotion.storageKey) private var animateTransitions = true
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var studyTab: StudyPanel.Tab = .text
     @AppStorage(StudyPanelMode.storageKey) private var studyMode = StudyPanelMode.docked
     @AppStorage(StudyPanelMode.restoreKey) private var studyRestore = StudyPanelMode.docked
@@ -56,6 +58,14 @@ struct ReaderScreen: View {
     /// Panneau dans la colonne de droite (navigateur, ou panneau d'étude ancré) : la page lui laisse la place.
     private var docked: Side? {
         side == .study && studyMode != .docked ? nil : side
+    }
+
+    private var panelAnimation: Animation? {
+        StudyPanelMotion.animation(enabled: animateTransitions, reduceMotion: reduceMotion)
+    }
+
+    private var panelTransition: AnyTransition {
+        reduceMotion ? .opacity : .move(edge: .trailing).combined(with: .opacity)
     }
 
     var body: some View {
@@ -121,9 +131,9 @@ struct ReaderScreen: View {
                 .frame(width: documentWidth, height: documentHeight)
                 .clipped()
                 .animation(.easeOut(duration: 0.18), value: chromeVisible)
-                if let docked, reservesSide {
-                    sidePanel(docked)
-                        .transition(.move(edge: .trailing).combined(with: .opacity))
+                if reservesSide {
+                    // Réserver la place sans animer la géométrie du document.
+                    Color.clear.frame(width: panelWidth)
                 }
             }
             .frame(height: documentHeight)
@@ -139,20 +149,32 @@ struct ReaderScreen: View {
                 if landscape, !autoOpenedSide { autoOpenedSide = true; side = .study }
             }
             .overlay(alignment: .trailing) {
-                // Portrait : le panneau d'étude passe par-dessus la page.
-                if docked == .study, !landscape {
-                    sidePanel(.study).padding(Atelier.gap).transition(.move(edge: .trailing))
+                // Les panneaux s'animent dans leur propre couche, après la mise en place du PDF.
+                ZStack(alignment: .trailing) {
+                    if let docked, reservesSide {
+                        sidePanel(docked).transition(panelTransition)
+                    } else if docked == .study, !landscape {
+                        sidePanel(.study).padding(.vertical, Atelier.gap).transition(panelTransition)
+                    }
                 }
+                .frame(width: panelWidth, height: documentHeight)
+                .padding(.trailing, reservesSide ? inset : Atelier.gap)
+                .animation(panelAnimation, value: docked)
+                .animation(panelAnimation, value: reservesSide)
             }
             .overlay {
                 // Panneau d'étude détaché : fenêtre, plein écran ou pastille, par-dessus la page.
-                if side == .study, studyMode != .docked {
-                    DetachedPanel(area: geo.size) {
-                        StudyPanel(reader: reader, tab: $studyTab, openSearch: { sheet = .search },
-                                   close: { self.side = nil }, fixedWidth: false)
+                ZStack {
+                    if side == .study, studyMode != .docked {
+                        DetachedPanel(area: geo.size) {
+                            StudyPanel(reader: reader, tab: $studyTab, openSearch: { sheet = .search },
+                                       close: { self.side = nil }, fixedWidth: false)
+                        }
+                        .transition(.opacity)
                     }
-                    .transition(.opacity)
                 }
+                .animation(panelAnimation, value: side)
+                .animation(panelAnimation, value: studyMode)
             }
         }
         .background(Atelier.canvas.ignoresSafeArea())
@@ -600,6 +622,7 @@ struct PDFViewHost: UIViewRepresentable {
 /// La vue PDF est conservée et son point de lecture est capturé AVANT de changer ses dimensions.
 final class ReaderPDFContainer: UIView {
     let pdfView: ReaderPDFView
+    private var transitionSnapshot: UIView?
 
     init(pdfView: ReaderPDFView) {
         self.pdfView = pdfView
@@ -613,7 +636,31 @@ final class ReaderPDFContainer: UIView {
     override func layoutSubviews() {
         super.layoutSubviews()
         guard bounds.width > 0, bounds.height > 0, pdfView.frame != bounds else { return }
+        transitionSnapshot?.removeFromSuperview()
+        transitionSnapshot = nil
+        let enabled = UserDefaults.standard.object(forKey: StudyPanelMotion.storageKey) as? Bool ?? true
+        let oldSize = pdfView.bounds.size
+        let snapshot = enabled && window != nil && pdfView.document != nil && oldSize.width > 0 && oldSize.height > 0
+            ? pdfView.snapshotView(afterScreenUpdates: false) : nil
         pdfView.resizeViewport(to: bounds)
+        guard let snapshot else { return }
+        snapshot.isUserInteractionEnabled = false
+        snapshot.accessibilityElementsHidden = true
+        snapshot.frame = CGRect(x: bounds.midX - oldSize.width / 2, y: bounds.midY - oldSize.height / 2,
+                                width: oldSize.width, height: oldSize.height)
+        addSubview(snapshot)
+        transitionSnapshot = snapshot
+        // Le recalage du zoom est déjà en file sur le fil principal : démarrer le fondu après lui.
+        DispatchQueue.main.async { [weak self, weak snapshot] in
+            guard let self, let snapshot, self.transitionSnapshot === snapshot else { return }
+            UIView.animate(withDuration: UIAccessibility.isReduceMotionEnabled ? 0.14 : 0.24,
+                           delay: 0, options: [.curveEaseOut, .allowUserInteraction, .beginFromCurrentState]) {
+                snapshot.alpha = 0
+            } completion: { [weak self, weak snapshot] _ in
+                snapshot?.removeFromSuperview()
+                if self?.transitionSnapshot === snapshot { self?.transitionSnapshot = nil }
+            }
+        }
     }
 }
 
