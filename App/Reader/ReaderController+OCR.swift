@@ -143,7 +143,19 @@ extension ReaderController {
     }
 
     func cachedOCR(source: Int) async -> OCRPage? {
+        // Un ancien cache « Texte du PDF » ne doit pas bloquer l'OCR d'une page photo devenue identifiable comme
+        // scan (le PDF du scanner peut contenir une couche OCR cachée).
+        let skipPDFText: Bool
+        if settings.ocrEngine == .auto {
+            let url = fileURL
+            skipPDFText = await Task.detached(priority: .utility) {
+                !PDFTextEngine.hasTextLayer(url: url, pageIndex: source)
+            }.value
+        } else {
+            skipPDFText = false
+        }
         for engine in preferredEngines() {
+            if engine == OCREngineID.pdfText && skipPDFText { continue }
             if let page = await model.ocr.cached(documentId: document.id, pageIndex: source, engine: engine) { return page }
         }
         return nil

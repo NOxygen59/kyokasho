@@ -153,8 +153,77 @@ public struct PDFTextEngine: OCREngine {
     public static func hasTextLayer(url: URL, pageIndex: Int) -> Bool {
         PDFPool.hasTextLayer(url: url, pageIndex: pageIndex) { document in
             guard let s = document.page(at: pageIndex)?.string else { return false }
-            return Self.isEnoughText(s)
+            // Les scanners peuvent ajouter du texte OCR invisible sur une photo de la page. Pour placer les
+            // furigana, il faut alors relire l'image : les boîtes de ce texte PDF ne sont pas fiables.
+            return Self.isEnoughText(s) && !Self.hasPageSizedImage(url: url, pageIndex: pageIndex)
         }
+    }
+
+    /// Une image haute résolution qui couvre presque toute la page signale un PDF issu d'un scanner, même si
+    /// celui-ci a aussi créé une couche de texte recherchable. Les illustrations d'un PDF numérique, plus petites,
+    /// ne changent pas le choix du moteur OCR.
+    private static func hasPageSizedImage(url: URL, pageIndex: Int) -> Bool {
+        (try? PDFPool.withCGDocument(url) { document -> Bool in
+            guard let page = document.page(at: pageIndex + 1),
+                  let table = CGPDFOperatorTableCreate() else { return false }
+            let content = CGPDFContentStreamCreateWithPage(page)
+            defer { CGPDFContentStreamRelease(content); CGPDFOperatorTableRelease(table) }
+            let state = PageImageScan(box: page.getBoxRect(.cropBox))
+            CGPDFOperatorTableSetCallback(table, "q") { _, info in
+                guard let info else { return }
+                let scan = Unmanaged<PageImageScan>.fromOpaque(info).takeUnretainedValue()
+                scan.stack.append(scan.transform)
+            }
+            CGPDFOperatorTableSetCallback(table, "Q") { _, info in
+                guard let info else { return }
+                let scan = Unmanaged<PageImageScan>.fromOpaque(info).takeUnretainedValue()
+                if let saved = scan.stack.popLast() { scan.transform = saved }
+            }
+            CGPDFOperatorTableSetCallback(table, "cm") { scanner, info in
+                guard let info else { return }
+                let scan = Unmanaged<PageImageScan>.fromOpaque(info).takeUnretainedValue()
+                var values = [CGPDFReal](repeating: 0, count: 6)
+                for i in (0..<6).reversed() {
+                    guard CGPDFScannerPopNumber(scanner, &values[i]) else { return }
+                }
+                let matrix = CGAffineTransform(a: values[0], b: values[1], c: values[2], d: values[3],
+                                               tx: values[4], ty: values[5])
+                scan.transform = matrix.concatenating(scan.transform)
+            }
+            CGPDFOperatorTableSetCallback(table, "Do") { scanner, info in
+                guard let info else { return }
+                let scan = Unmanaged<PageImageScan>.fromOpaque(info).takeUnretainedValue()
+                var name: UnsafePointer<CChar>?
+                guard CGPDFScannerPopName(scanner, &name), let name,
+                      let object = CGPDFContentStreamGetResource(CGPDFScannerGetContentStream(scanner), "XObject", name) else { return }
+                var imageStream: CGPDFStreamRef?
+                guard CGPDFObjectGetValue(object, .stream, &imageStream), let imageStream,
+                      let dictionary = CGPDFStreamGetDictionary(imageStream) else { return }
+                var subtype: UnsafePointer<CChar>?
+                guard CGPDFDictionaryGetName(dictionary, "Subtype", &subtype),
+                      let subtype, String(cString: subtype) == "Image" else { return }
+                var width: CGPDFInteger = 0, height: CGPDFInteger = 0
+                guard CGPDFDictionaryGetInteger(dictionary, "Width", &width),
+                      CGPDFDictionaryGetInteger(dictionary, "Height", &height),
+                      width > 0, height > 0, Double(width) * Double(height) >= 800_000,
+                      scan.box.width > 0, scan.box.height > 0 else { return }
+                let drawn = CGRect(x: 0, y: 0, width: 1, height: 1).applying(scan.transform).intersection(scan.box)
+                if !drawn.isNull, drawn.width * drawn.height >= scan.box.width * scan.box.height * 0.72 {
+                    scan.found = true
+                }
+            }
+            let scanner = CGPDFScannerCreate(content, table, Unmanaged.passUnretained(state).toOpaque())
+            defer { CGPDFScannerRelease(scanner) }
+            return CGPDFScannerScan(scanner) && state.found
+        }) ?? false
+    }
+
+    private final class PageImageScan {
+        let box: CGRect
+        var transform = CGAffineTransform.identity
+        var stack: [CGAffineTransform] = []
+        var found = false
+        init(box: CGRect) { self.box = box }
     }
 
     static func isEnoughText(_ s: String) -> Bool {

@@ -82,6 +82,15 @@ chargement, action en cours, attente ou modèle chargé ; leur opacité baisse q
 les montre même lorsque ses barres sont masquées. Toucher ouvre toujours les tâches et leurs boutons d'arrêt.
 Option désactivable dans Réglages → Modèles d'IA et outils. Compilation iOS générique réussie, iPad à confirmer.
 
+**Furigana des nouveaux scans (après v1.1.1, hors release)** : retour utilisateur : les furigana apparaissent
+dans la fenêtre OCR mais pas sur la page d'un PDF rescanné ; couper/rallumer l'option de la page n'aide pas.
+Cause probable dans le code : une couche de texte ajoutée par le scanner (8 caractères suffisent) faisait ignorer
+les boîtes OCR et les lectures OvisOCR2 pour la page. `PDFTextEngine.hasTextLayer` distingue désormais une image
+haute résolution couvrant la page d'un PDF réellement numérique ; le cache « Texte du PDF » ne bloque plus l'OCR
+automatique d'un tel scan. `showOCR` accepte aussi les boîtes d'un moteur choisi explicitement même avec une couche
+texte. Le mode diagnostic note le nombre de lignes OCR, de caractères Ovis et de furigana placés. Compilation iOS
+générique réussie ; à confirmer sur le PDF de l'utilisateur, qui n'est pas disponible sur le Mac.
+
 **Suite proposée** : § 7 bis (R : « Continuer » dans la bibliothèque ; F codé par Codex, à essayer sur iPad), puis § 8 (B3 furigana
 verticaux, B5 tableaux / texte vertical, B6 performance, B7 GLM-OCR plus rapide, K grammaire), § 11.
 

@@ -81,6 +81,9 @@ extension ReaderController {
         realOCRMemo[source] = nil
         ink.setOCR(ocr, source: source)
         guard FuriganaLayer.enabled else { return }
+        // Un moteur OCR explicite fournit les boîtes du scan même si le scanner a ajouté une couche texte PDF.
+        // La couche PDF est traitée séparément par `scheduleFurigana`.
+        guard ocr.engine != OCREngineID.pdfText else { return }
         let key = ScanSharpening.key(documentId: document.id, page: source), url = fileURL
         // Calculs lancés l'un après l'autre pour la même page : seul le dernier est gardé.
         furiganaGeneration[source, default: 0] += 1
@@ -88,13 +91,14 @@ extension ReaderController {
         // Texte d'OvisOCR2 (scan à l'import, vérification, mise en page IA) : lectures d'après lui.
         let aiText = DocumentAnalysisService.rawURL(document.id, ModelSpec.ovisocr2.id, source)
         Task.detached(priority: .utility) { [weak self] in
-            guard !PDFTextEngine.hasTextLayer(url: url, pageIndex: source) else { return }
             let frame: PageFrame? = (try? PDFPool.withDocument(url) { doc -> PageFrame? in
                 doc.page(at: source).map { PageFrame(box: $0.bounds(for: .cropBox), rotation: $0.rotation) }
             }) ?? nil
             guard let frame else { return }
             let reference = try? String(contentsOf: aiText, encoding: .utf8)
             let marks = FuriganaLayer.marks(from: ocr, reference: reference, frame: frame)
+            Diagnostics.log("Furigana p. \(source + 1) : \(ocr.engine), \(ocr.lines.count) lignes OCR, "
+                            + "texte Ovis \(reference?.count ?? 0) caractères, \(marks.count) lectures", "furigana")
             guard await self?.furiganaGeneration[source] == generation else { return }
             FuriganaLayer.set(marks, for: key)
             await self?.pdfView.redrawVisiblePages()
