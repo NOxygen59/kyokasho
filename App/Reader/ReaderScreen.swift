@@ -462,7 +462,7 @@ struct ReaderScreen: View {
             railDivider(vertical)
             ToolButton(icon: "character.ja", label: "Texte de la page", tint: Atelier.Tint.japanese,
                        active: side == .study && studyTab == .text) { openStudy(.text) }
-            ToolButton(icon: "character.book.closed.ja", label: "Mots de la page", tint: Atelier.Tint.japanese,
+            ToolButton(icon: "character.book.closed.ja", label: "Dictionnaire", tint: Atelier.Tint.japanese,
                        active: side == .study && studyTab == .vocab) { openStudy(.vocab) }
             railDivider(vertical)
             ToolButton(icon: "sparkles", label: "Page vers IA", tint: Atelier.Tint.ai) { sheet = .ai }

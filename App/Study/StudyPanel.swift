@@ -9,7 +9,7 @@ import DictionaryKit
 import SwiftUI
 
 /// Panneau d'étude, à droite du lecteur : tout ce qui sert à **comprendre** la page.
-/// Texte (OCR) + traduction, vocabulaire de la page (V3), notes, signets.
+/// Texte (OCR) + traduction, dictionnaire, notes, signets.
 struct StudyPanel: View {
     enum Tab: Hashable { case text, vocab, notes, marks }
 
@@ -24,7 +24,7 @@ struct StudyPanel: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                if reader.shownSources.count > 1 {
+                if tab != .vocab && reader.shownSources.count > 1 {
                     // Double page : une pilule par page affichée, le panneau travaille sur celle choisie.
                     HStack(spacing: 6) {
                         ForEach(reader.shownSources, id: \.self) { source in
@@ -40,6 +40,8 @@ struct StudyPanel: View {
                             .accessibilityLabel("Travailler sur la page \(reader.document.pageLabel(source))")
                         }
                     }
+                } else if tab == .vocab {
+                    AtelierLabel("Dictionnaire", tint: Atelier.Tint.japanese)
                 } else {
                     AtelierLabel("Étude · page \(reader.document.pageLabel(reader.focusSource))", tint: Atelier.textSecondary)
                 }
@@ -53,13 +55,23 @@ struct StudyPanel: View {
                 .padding(.leading, 6)
                 .accessibilityLabel("Fermer le panneau d'étude")
             }
-            PillTabs(items: [(Tab.text, "character.ja", "Texte"), (.vocab, "character.book.closed.ja", "Mots"),
+            PillTabs(items: [(Tab.text, "character.ja", "Texte"), (.vocab, "character.book.closed.ja", "Dico"),
                              (.notes, "text.bubble", "Notes"), (.marks, "bookmark", "Repères")],
                      selection: $tab, tint: tint)
             Group {
                 switch tab {
                 case .text: StudyTextTab(reader: reader)
-                case .vocab: StudyVocabTab(reader: reader)
+                case .vocab:
+                    DictionarySearchView(dictionary: model.dictionary, added: model.review.keys, compact: true) { term in
+                        let sentence = reader.ocrPage?.lines.first { $0.text.contains(term.matchedText) }?.text
+                        return model.review.add(term,
+                                         sentence: sentence,
+                                         source: sentence == nil ? nil :
+                                             "\(reader.document.title) · p. \(reader.document.pageLabel(reader.focusSource))",
+                                         image: nil, documentId: sentence == nil ? nil : reader.document.id,
+                                         page: sentence == nil ? nil : reader.focusSource,
+                                         dictionary: model.dictionary)
+                    }
                 case .notes: StudyNotesTab(reader: reader)
                 case .marks: StudyMarksTab(reader: reader, openSearch: openSearch)
                 }
@@ -451,7 +463,7 @@ struct LayoutEnginePicker: View {
     }
 }
 
-// MARK: - Vocabulaire (V3)
+// MARK: - Texte OCR mis en forme
 
 /// Texte OCR mis en forme : titres, paragraphes, tableaux (`OCRLayout`), calculé une fois par page.
 struct FormattedOCRText: View {
@@ -490,175 +502,6 @@ struct FormattedOCRText: View {
         .task(id: "\(page.hashValue)|\(regions.hashValue)") {
             blocks = regions.isEmpty ? OCRLayout.blocks(page) : OCRLayout.blocks(page, regions: regions)
         }
-    }
-}
-
-struct StudyVocabTab: View {
-    @EnvironmentObject private var dictionary: DictionaryModel
-    @EnvironmentObject private var review: ReviewModel
-    @ObservedObject var reader: ReaderController
-    @StateObject private var popup = PopupHolder()
-    @State private var words: [Word] = []
-    @State private var loading = false
-
-    struct Word: Identifiable, Equatable {
-        let id: String
-        let expression: String
-        let reading: String
-        let gloss: String
-        var count: Int
-        let term: TermResult
-    }
-
-    /// Une seule session de popup par onglet (créée au premier usage).
-    @MainActor final class PopupHolder: ObservableObject {
-        var session: LookupSession?
-        @Published var shown = false
-    }
-
-    /// Kanji de la page, calculés une fois par résultat OCR (dans `reload`), pas à chaque affichage.
-    @State private var kanji: [Character] = []
-
-    private static func kanji(in text: String) -> [Character] {
-        var seen = Set<Character>()
-        return text.filter { c in
-            guard let v = c.unicodeScalars.first?.value, (0x4E00...0x9FFF).contains(v) || (0x3400...0x4DBF).contains(v) else { return false }
-            return seen.insert(c).inserted
-        }.map { $0 }
-    }
-
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 14) {
-                if reader.ocrPage?.lines.isEmpty ?? true {
-                    Text("Lis la page (onglet Texte) pour voir son vocabulaire.").foregroundStyle(Atelier.textSecondary)
-                } else if !dictionary.hasTermDictionaries {
-                    VStack(alignment: .leading, spacing: 6) {
-                        AtelierLabel("Aucun dictionnaire", tint: Atelier.textTertiary)
-                        Text("Importe un dictionnaire Yomitan dans Réglages → Dictionnaires pour voir les mots de la page.")
-                            .font(.footnote).foregroundStyle(Atelier.textSecondary)
-                    }
-                    .padding(12)
-                    .background(Atelier.surfaceHigh.opacity(0.6), in: RoundedRectangle(cornerRadius: Atelier.smallRadius, style: .continuous))
-                } else {
-                    HStack {
-                        AtelierLabel("Mots de la page · \(words.count)", tint: Atelier.Tint.japanese)
-                        if loading { ProgressView().controlSize(.small).tint(Atelier.Tint.japanese) }
-                    }
-                    LazyVStack(alignment: .leading, spacing: 6) {
-                        ForEach(words) { word in
-                            Button { open(word.expression) } label: { row(word) }.buttonStyle(.plain)
-                        }
-                    }
-                }
-                if !kanji.isEmpty {
-                    AtelierLabel("Kanji de la page · \(kanji.count)", tint: Atelier.Tint.japanese)
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 6), spacing: 8) {
-                        ForEach(kanji, id: \.self) { k in
-                            Button { openKanji(String(k)) } label: {
-                                Text(String(k))
-                                    .font(.custom("HiraMinProN-W6", size: 26))
-                                    .frame(maxWidth: .infinity, minHeight: 48)
-                                    .foregroundStyle(Atelier.textPrimary)
-                                    .background(Atelier.surfaceHigh, in: RoundedRectangle(cornerRadius: 9, style: .continuous))
-                            }
-                            .buttonStyle(PressScale())
-                        }
-                    }
-                }
-            }
-        }
-        // Clé légère (pas tout le texte recollé à chaque affichage).
-        .task(id: reader.ocrPage.map { "\($0.engine)#\($0.lines.count)#\($0.lines.first?.text ?? "")#\($0.lines.last?.text ?? "")" }) { await reload() }
-        .sheet(isPresented: $popup.shown) {
-            if let session = popup.session {
-                LookupPopup(session: session, added: review.keys, onAddCard: { add($0) }, close: { popup.shown = false })
-                    .environmentObject(dictionary)
-                    .presentationDetents([.medium, .large])
-                    .preferredColorScheme(.dark)
-            }
-        }
-    }
-
-    private func row(_ word: Word) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 10) {
-            VStack(alignment: .leading, spacing: 1) {
-                if word.reading != word.expression && !word.reading.isEmpty {
-                    Text(word.reading).font(.custom("HiraginoSans-W3", size: 11)).foregroundStyle(Atelier.textTertiary)
-                }
-                Text(word.expression).font(.custom("HiraginoSans-W6", size: 18)).foregroundStyle(Atelier.textPrimary)
-            }
-            .frame(minWidth: 70, alignment: .leading)
-            Text(word.gloss).font(.footnote).foregroundStyle(Atelier.textSecondary).lineLimit(2)
-            Spacer(minLength: 0)
-            if word.count > 1 { Text("×\(word.count)").font(Atelier.mono).foregroundStyle(Atelier.textTertiary) }
-            if review.keys.contains(word.id) {
-                Image(systemName: "checkmark").font(.system(size: 13, weight: .bold)).foregroundStyle(Atelier.Tint.read)
-                    .frame(width: 30, height: 30).accessibilityLabel("Déjà dans tes cartes")
-            } else {
-                Button { _ = add(word.term) } label: {
-                    Image(systemName: "plus").font(.system(size: 13, weight: .bold)).foregroundStyle(Atelier.Tint.japanese)
-                        .frame(width: 30, height: 30)
-                        .background(Atelier.surfaceHigh, in: Circle())
-                }
-                .buttonStyle(PressScale())
-                .accessibilityLabel("Créer une carte")
-            }
-        }
-        .padding(.horizontal, 10).padding(.vertical, 7)
-        .background(Atelier.surfaceHigh.opacity(0.7), in: RoundedRectangle(cornerRadius: 9, style: .continuous))
-        .contentShape(Rectangle())
-    }
-
-    /// Carte depuis l'onglet Mots : phrase = ligne OCR qui contient le mot (pas d'image : pas de position précise).
-    private func add(_ term: TermResult) -> String? {
-        let sentence = reader.ocrPage?.lines.first { $0.text.contains(term.matchedText) }?.text
-        return review.add(term, sentence: sentence,
-                          source: "\(reader.document.title) · p. \(reader.document.pageLabel(reader.focusSource))",
-                          image: nil, documentId: reader.document.id, page: reader.focusSource,
-                          dictionary: dictionary)
-    }
-
-    private func session() -> LookupSession {
-        if let s = popup.session { return s }
-        let s = LookupSession(dictionary: dictionary)
-        popup.session = s
-        return s
-    }
-
-    private func open(_ text: String) {
-        session().start(text)
-        popup.shown = true
-    }
-
-    private func openKanji(_ c: String) {
-        let s = session()
-        s.clear()
-        s.pushKanji(c)
-        popup.shown = true
-    }
-
-    private func reload() async {
-        let text = reader.ocrPage?.text ?? ""
-        kanji = Self.kanji(in: text)
-        guard !text.isEmpty, dictionary.hasTermDictionaries else { words = []; return }
-        loading = true
-        defer { loading = false }
-        let segments = await dictionary.segment(text)
-        guard !Task.isCancelled else { return }
-        var order: [String] = []
-        var map: [String: Word] = [:]
-        for seg in segments {
-            guard let term = seg.term, term.expression.contains(where: { !$0.isWhitespace && !$0.isPunctuation }) else { continue }
-            // Les particules seules (une kana) n'apprennent rien : on les saute.
-            if term.expression.count == 1, term.expression.unicodeScalars.allSatisfy({ (0x3040...0x30FF).contains($0.value) }) { continue }
-            if map[term.id] != nil { map[term.id]!.count += 1; continue }
-            order.append(term.id)
-            map[term.id] = Word(id: term.id, expression: term.expression, reading: term.reading,
-                                gloss: GlossaryText.plain(term.definitions.first?.glossaryJSON ?? ""), count: 1, term: term)
-        }
-        words = order.compactMap { map[$0] }
-        review.loadKeys(order)
     }
 }
 

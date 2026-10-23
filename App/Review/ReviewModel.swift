@@ -48,7 +48,7 @@ final class ReviewModel: ObservableObject {
         counts = (try? store.counts(settings: settings)) ?? ReviewStore.Counts()
     }
 
-    /// Met à jour `keys` pour une liste de mots affichés (onglet Mots).
+    /// Met à jour `keys` pour une liste de mots affichés dans le dictionnaire.
     func loadKeys(_ candidates: [String]) {
         let found = (try? store.existingKeys(candidates)) ?? []
         keys.formUnion(found)

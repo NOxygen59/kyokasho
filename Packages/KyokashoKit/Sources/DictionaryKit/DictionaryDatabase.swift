@@ -85,6 +85,14 @@ public struct TermMetaRow: Hashable, Sendable {
     public let data: String     // JSON
 }
 
+/// Entrée légère pour parcourir les mots sans construire toutes leurs définitions.
+public struct DictionaryWord: Hashable, Sendable, Identifiable {
+    public var id: String { expression + "|" + reading }
+    public let expression: String
+    public let reading: String
+    public let gloss: String
+}
+
 public struct KanjiRow: Hashable, Sendable {
     public let dictionaryId: Int64
     public let character: String
@@ -233,6 +241,38 @@ public final class DictionaryDatabase: @unchecked Sendable {
     }
 
     // MARK: Recherche
+
+    /// Début d'un mot ou d'une lecture. Chaque branche utilise son index SQLite.
+    public func words(startingWith prefix: String, dictionaryIds: Set<Int64>, limit: Int = 60) throws -> [DictionaryWord] {
+        guard !prefix.isEmpty, !dictionaryIds.isEmpty else { return [] }
+        let ids = dictionaryIds.sorted()
+        let marks = Array(repeating: "?", count: ids.count).joined(separator: ",")
+        let boundedLimit = max(1, min(limit, 100))
+        let upper = prefix + "\u{10FFFF}"
+        return try writer.read { db in
+            var result: [DictionaryWord] = []
+            var seen = Set<String>()
+            for column in ["expression", "reading"] {
+                let sql = """
+                    SELECT expression, reading, glossary FROM term
+                    WHERE \(column) >= ? AND \(column) < ? AND dictionaryId IN (\(marks))
+                    ORDER BY \(column), id LIMIT ?
+                    """
+                let arguments = StatementArguments([prefix, upper] + ids.map { String($0) } + [String(boundedLimit)])
+                for row in try Row.fetchAll(db, sql: sql, arguments: arguments) {
+                    let expression: String = row[0]
+                    let reading: String = row[1]
+                    let key = expression + "|" + reading
+                    guard seen.insert(key).inserted else { continue }
+                    let glossary: String = row[2]
+                    result.append(DictionaryWord(expression: expression, reading: reading,
+                                                 gloss: GlossaryText.plain(glossary)))
+                    if result.count >= boundedLimit { return result }
+                }
+            }
+            return result
+        }
+    }
 
     /// Entrées dont l'expression ou la lecture est dans `texts`, dictionnaires actifs seulement.
     public func terms(matching texts: [String], dictionaryIds: Set<Int64>) throws -> [TermRow] {

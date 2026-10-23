@@ -89,8 +89,6 @@ struct LibraryView: View {
                     model.review.add(term, sentence: nil, source: nil, image: nil, documentId: nil, page: nil,
                                      dictionary: model.dictionary)
                 }
-                    .padding(Atelier.gap)
-                    .background(GridBackground())
                     .navigationTitle("Dictionnaire")
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbar { ToolbarItem(placement: .confirmationAction) { Button("OK") { showDictionary = false } } }
@@ -169,7 +167,8 @@ struct LibraryView: View {
                 AtelierLabel("Outils").padding(.bottom, 4)
                 actionRow(icon: "rectangle.stack.badge.play", title: "Révisions", tint: Atelier.Tint.japanese,
                           count: review.counts.total) { showReview = true }
-                actionRow(icon: "character.book.closed.ja", title: "Dictionnaire", tint: Atelier.Tint.japanese) { showDictionary = true }
+                actionRow(icon: "character.book.closed.ja", title: "Dictionnaire", tint: Atelier.Tint.japanese,
+                          count: model.dictionary.notebook.saved.count) { showDictionary = true }
                 actionRow(icon: "doc.on.doc", title: "Fusionner des PDF", tint: Atelier.Tint.cloud) { showMerge = true }
                 actionRow(icon: "gauge.with.dots.needle.33percent", title: "Banc d'essai OCR", tint: Atelier.Tint.japanese) { showBench = true }
                 actionRow(icon: "gearshape", title: "Réglages", tint: Atelier.textSecondary) { showSettings = true }
@@ -250,6 +249,7 @@ struct LibraryView: View {
             .pickerStyle(.segmented).frame(width: 260)
             CapsuleButton(icon: "plus", label: "Importer") { showPicker = true }
             CapsuleButton(icon: "externaldrive.badge.icloud", label: "Google Drive") { showDrive = true }
+            CapsuleButton(icon: "character.book.closed.ja", label: "Dictionnaire") { showDictionary = true }
             CapsuleButton(icon: "gearshape", label: "Réglages") { showSettings = true }
         }
         .padding(10)

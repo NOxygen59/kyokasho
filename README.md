@@ -7,9 +7,9 @@
 
 # Kyōkasho
 
-Lecteur **personnel** de cours et de manuels PDF pour iPad : lecture façon Aidoku, annotations,
-commentaires, page vers IA, Google Drive. OCR japonais (V2, voir [docs/OCR.md](docs/OCR.md)). Prévu ensuite : dictionnaire au
-toucher façon Yomitan (V3), cartes de révision FSRS (V4), moteurs OCR supplémentaires (V5).
+Lecteur **personnel** de cours et de manuels PDF pour iPad : lecture, annotations,
+commentaires, page vers IA, Google Drive et OCR japonais (voir [docs/OCR.md](docs/OCR.md)).
+Dictionnaires Yomitan, fiches de mots et de kanji, et cartes de révision FSRS intégrés.
 Plan complet : [PLAN.md](PLAN.md).
 
 **Usage strictement personnel, jamais distribué.** Aucun PDF, dictionnaire ni donnée tierce dans

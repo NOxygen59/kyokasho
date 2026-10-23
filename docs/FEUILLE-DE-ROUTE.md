@@ -69,6 +69,13 @@ changements de fenêtre » dans les réglages de la fenêtre OCR ; respect de «
 sur iPad pour les transitions. Archive Release de contrôle réussie (SDK iOS, minimum iOS 16),
 sans simulateur ni appareil. La v1.1.1 publiée n'est pas modifiée.
 
+**Dictionnaire partagé (après v1.1.1, hors release)** : l'accueil ouvre un espace Dictionnaire avec recherche
+par début de mot ou de lecture, fiches Yomitan existantes, kanji, mots/kanji enregistrés, historique persistant
+et accès au lexique personnel déjà présent dans l'app.
+Le même espace remplace « Mots de la page » dans la fenêtre OCR et dans la barre du lecteur ; les mots restent
+consultables directement dans le texte HTML. Les dictionnaires se gèrent depuis cet espace. Aucun dictionnaire
+ou modèle tiers ajouté au dépôt. Vérification sur iPad à faire après une future release.
+
 **Suite proposée** : § 7 bis (R : « Continuer » dans la bibliothèque ; F codé par Codex, à essayer sur iPad), puis § 8 (B3 furigana
 verticaux, B5 tableaux / texte vertical, B6 performance, B7 GLM-OCR plus rapide, K grammaire), § 11.
 
@@ -176,7 +183,7 @@ s'il y en a, sinon l'étape suivante non cochée (§ 7 bis puis § 8). Pas de si
 - Relecture IA des lignes douteuses : `ReaderController.rereadDoubtful` (GLM-OCR), option `ocr.aiReread`.
 - Correction à la main : appui long sur une ligne en mode Brut → `correctOCRLine` (`edited` = jamais retouchée).
 
-**Panneau d'étude** (`App/Study/StudyPanel.swift`) — onglets Texte / Mots / Notes / Repères
+**Panneau d'étude** (`App/Study/StudyPanel.swift`) — onglets Texte / Dico / Notes / Repères
 - Texte : recherche (kanji / kana / romaji, `PageTextSearch`), moteur OCR en icône, « Mis en forme » (`OCRLayout`,
   géométrie ou PP-DocLayout / DocLayout-YOLO), « Brut » (doutes soulignés), **✨ Mise en page IA** (`AILayoutView` :
   Markdown d'OvisOCR2 → `AILayout.blocks` → HTML du thème, furigana, dictionnaire, figures découpées en vignettes ;
@@ -185,7 +192,8 @@ s'il y en a, sinon l'étape suivante non cochée (§ 7 bis puis § 8). Pas de si
 - Vérifier la double page (OvisOCR2) : menu du moteur → `VerifySheet`.
 
 **Japonais**
-- Dictionnaires Yomitan (`DictionaryKit`, `YomitanKit`), popup `LookupPopup` (+ traduction FR des définitions
+- Dictionnaires Yomitan (`DictionaryKit`, `YomitanKit`), espace partagé `DictionarySearchView` et popup
+  `LookupPopup` (+ traduction FR des définitions
   anglaises par DeepL dans la fiche, 👍 / 👎 / ✏️ gardés).
 - **MeCab + UniDic-lite** (`MorphologyService`, Réglages → Modèles groupe 2) → `Furigana.analyzer` : lectures selon
   le contexte, page et panneau.

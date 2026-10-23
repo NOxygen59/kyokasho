@@ -26,6 +26,7 @@ final class LookupSession: ObservableObject {
     @Published private(set) var stack: [Page] = [] {
         didSet { stackRevision &+= 1 }
     }
+    private var requestID = UUID()
     /// Change à chaque modification de la pile : sert de clé au HTML déjà construit.
     private var stackRevision = 0
     private struct HTMLKey: Equatable {
@@ -36,8 +37,6 @@ final class LookupSession: ObservableObject {
         var dictionaries: [DictionaryInfo]
     }
     private var htmlCache: (key: HTMLKey, html: String)?
-    /// Toutes les recherches de la session (onglet Historique de la recherche manuelle).
-    @Published private(set) var history: [String] = []
     /// Mot reconnu sur la page (pour surligner le texte touché).
     @Published private(set) var matchedLength = 0
 
@@ -48,47 +47,58 @@ final class LookupSession: ObservableObject {
     var current: Page? { stack.last }
     var canGoBack: Bool { stack.count > 1 }
 
-    func start(_ text: String) {
+    func start(_ text: String, preferredReading: String? = nil) {
         stack = []
-        push(text)
+        push(text, preferredReading: preferredReading)
     }
 
-    func push(_ text: String) {
+    func push(_ text: String, preferredReading: String? = nil) {
         let query = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty else { return }
+        requestID = UUID()
+        let request = requestID
         stack.append(.loading(query))
         let depth = stack.count
         Task {
-            let results = await dictionary.lookup(query)
-            guard stack.count == depth else { return }
+            var results = await dictionary.lookup(query)
+            guard requestID == request, stack.count == depth else { return }
+            if let preferredReading, let index = results.firstIndex(where: {
+                $0.expression == query && $0.reading == preferredReading
+            }), index != 0 {
+                results.insert(results.remove(at: index), at: 0)
+            }
             stack[depth - 1] = .terms(query: query, results: results)
             if depth == 1 { matchedLength = results.first?.matchLength ?? 0 }
             if let first = results.first {
-                history.removeAll { $0 == first.expression }
-                history.insert(first.expression, at: 0)
-                if history.count > 100 { history.removeLast() }
+                dictionary.remember(.init(kind: .word, expression: first.expression, reading: first.reading))
                 if dictionary.profile.autoPlayAudio { await dictionary.playAudio(term: first.expression, reading: first.reading) }
             }
         }
     }
 
     func pushKanji(_ character: String) {
+        requestID = UUID()
+        let request = requestID
         stack.append(.loading(character))
         let depth = stack.count
         Task {
-            if let k = await dictionary.kanji(character), stack.count == depth {
+            if let k = await dictionary.kanji(character), requestID == request, stack.count == depth {
                 stack[depth - 1] = .kanji(k)
-            } else if stack.count == depth {
-                stack[depth - 1] = .terms(query: character, results: await dictionary.lookup(character))
+                dictionary.remember(.init(kind: .kanji, expression: character, reading: ""))
+            } else if requestID == request, stack.count == depth {
+                let results = await dictionary.lookup(character)
+                guard requestID == request, stack.count == depth else { return }
+                stack[depth - 1] = .terms(query: character, results: results)
             }
         }
     }
 
     func back() {
-        if stack.count > 1 { stack.removeLast() }
+        if stack.count > 1 { requestID = UUID(); stack.removeLast() }
     }
 
     func clear() {
+        requestID = UUID()
         stack = []
         matchedLength = 0
     }
@@ -149,6 +159,16 @@ struct LookupPopup: View {
         return DefinitionTranslationHTML.inject(block, into: html)
     }
 
+    private var savedEntry: DictionaryModel.SavedEntry? {
+        switch session.current {
+        case .terms(_, let results)?: return results.first.map {
+            .init(kind: .word, expression: $0.expression, reading: $0.reading)
+        }
+        case .kanji(let kanji)?: return .init(kind: .kanji, expression: kanji.character, reading: "")
+        default: return nil
+        }
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 8) {
@@ -162,6 +182,13 @@ struct LookupPopup: View {
                 Spacer()
                 if session.stack.count > 1 {
                     Text("\(session.stack.count)").font(Atelier.mono).foregroundStyle(Atelier.textTertiary)
+                }
+                if let entry = savedEntry {
+                    Button { dictionaryModel.toggleSaved(entry) } label: {
+                        Image(systemName: dictionaryModel.isSaved(entry) ? "star.fill" : "star")
+                            .foregroundStyle(Atelier.Tint.japanese)
+                    }
+                    .accessibilityLabel(dictionaryModel.isSaved(entry) ? "Retirer des mots enregistrés" : "Enregistrer")
                 }
                 Button(action: close) { Image(systemName: "xmark") }.accessibilityLabel("Fermer")
             }

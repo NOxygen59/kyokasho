@@ -10,6 +10,19 @@ import ReaderCore
 /// Dictionnaires de l'app : base, import en tâche de fond, recherche, profils, audio.
 @MainActor
 final class DictionaryModel: ObservableObject {
+    struct SavedEntry: Codable, Hashable, Identifiable {
+        enum Kind: String, Codable { case word, kanji }
+        var kind: Kind
+        var expression: String
+        var reading: String
+        var id: String { kind.rawValue + "|" + expression + "|" + reading }
+    }
+
+    struct Notebook: Codable, Equatable {
+        var saved: [SavedEntry] = []
+        var recent: [SavedEntry] = []
+    }
+
     let database: DictionaryDatabase?
     let translator: Translator?
     private let appDatabase: AppDatabase
@@ -18,6 +31,12 @@ final class DictionaryModel: ObservableObject {
 
     @Published private(set) var dictionaries: [DictionaryInfo] = []
     @Published private(set) var importState: ImportState?
+    @Published private(set) var notebook: Notebook {
+        didSet {
+            guard notebook != oldValue else { return }
+            try? appDatabase.setStoredValue(notebook, forKey: "dictionary.notebook")
+        }
+    }
     @Published var profiles: DictionaryProfiles {
         didSet {
             guard profiles != oldValue else { return }
@@ -53,6 +72,7 @@ final class DictionaryModel: ObservableObject {
         database = db
         translator = db.map { Translator(database: $0) }
         profiles = (try? appDatabase.storedValue(DictionaryProfiles.self, forKey: "dictionary.profiles")) ?? DictionaryProfiles()
+        notebook = (try? appDatabase.storedValue(Notebook.self, forKey: "dictionary.notebook")) ?? Notebook()
         reload()
     }
 
@@ -129,6 +149,31 @@ final class DictionaryModel: ObservableObject {
         return await Task.detached(priority: .userInitiated) {
             (try? translator.findTerms(text, options: options)) ?? []
         }.value
+    }
+
+    func words(startingWith prefix: String) async -> [DictionaryWord] {
+        guard let database else { return [] }
+        let ids = Set(dictionaries.filter { $0.enabled && $0.termCount > 0
+            && !profile.lookup.excludedDictionaryIds.contains($0.id ?? -1) }.compactMap(\.id))
+        return await Task.detached(priority: .userInitiated) {
+            (try? database.words(startingWith: prefix, dictionaryIds: ids)) ?? []
+        }.value
+    }
+
+    func isSaved(_ entry: SavedEntry) -> Bool { notebook.saved.contains(entry) }
+
+    func toggleSaved(_ entry: SavedEntry) {
+        if let index = notebook.saved.firstIndex(of: entry) {
+            notebook.saved.remove(at: index)
+        } else {
+            notebook.saved.insert(entry, at: 0)
+        }
+    }
+
+    func remember(_ entry: SavedEntry) {
+        notebook.recent.removeAll { $0 == entry }
+        notebook.recent.insert(entry, at: 0)
+        if notebook.recent.count > 80 { notebook.recent.removeLast(notebook.recent.count - 80) }
     }
 
     func kanji(_ character: String) async -> KanjiResult? {

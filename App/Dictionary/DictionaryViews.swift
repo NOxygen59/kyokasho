@@ -5,79 +5,338 @@ import DictionaryKit
 import SwiftUI
 import UniformTypeIdentifiers
 
-// MARK: - Recherche manuelle
+// MARK: - Bibliothèque du dictionnaire
 
-/// Page de recherche du dictionnaire : un champ, les résultats, l'historique.
+/// La même bibliothèque de mots depuis l'accueil et le panneau du lecteur.
 struct DictionarySearchView: View {
+    private enum Shelf: String, CaseIterable {
+        case words = "Mots", kanji = "Kanji", saved = "Enregistrés"
+    }
+
     @EnvironmentObject private var dictionaryModel: DictionaryModel
+    @EnvironmentObject private var review: ReviewModel
+    @ObservedObject private var lexicon = DomainLexicon.shared
     @StateObject private var session: LookupSession
     @State private var query = ""
+    @State private var shelf: Shelf = .words
+    @State private var suggestions: [DictionaryWord] = []
+    @State private var searching = false
+    @State private var showManager = false
+    @State private var showLexicon = false
     @FocusState private var focused: Bool
     var onAddCard: ((TermResult) -> String?)?
     var added: Set<String> = []
+    var compact = false
 
-    init(dictionary: DictionaryModel, added: Set<String> = [], onAddCard: ((TermResult) -> String?)? = nil) {
+    init(dictionary: DictionaryModel, added: Set<String> = [], compact: Bool = false,
+         onAddCard: ((TermResult) -> String?)? = nil) {
         self.added = added
+        self.compact = compact
         _session = StateObject(wrappedValue: LookupSession(dictionary: dictionary))
         self.onAddCard = onAddCard
     }
 
     var body: some View {
-        HStack(alignment: .top, spacing: Atelier.gap) {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(spacing: 8) {
-                    Image(systemName: "magnifyingglass").foregroundStyle(Atelier.Tint.japanese)
-                    TextField("Mot, kana ou forme conjuguée", text: $query)
-                        .focused($focused)
-                        .font(.custom("HiraginoSans-W3", size: 20))
-                        .submitLabel(.search)
-                        .onSubmit { session.start(query) }
-                        .autocorrectionDisabled()
-                        .textInputAutocapitalization(.never)
-                    if !query.isEmpty {
-                        Button { query = ""; session.clear() } label: { Image(systemName: "xmark.circle.fill") }
-                            .foregroundStyle(Atelier.textTertiary)
-                    }
-                }
-                .padding(14)
-                .atelierPanel(radius: 16)
-                if session.current == nil {
-                    historyList
-                } else {
-                    LookupPopup(session: session, added: added, onAddCard: onAddCard, close: { session.clear() })
+        VStack(alignment: .leading, spacing: 12) {
+            if !compact {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Dictionnaire japonais").font(Atelier.display(27)).foregroundStyle(Atelier.textPrimary)
+                    Text("Retrouve un mot, explore ses kanji et garde ceux que tu veux revoir.")
+                        .font(.subheadline).foregroundStyle(Atelier.textSecondary)
                 }
             }
+            searchField
+            HStack(spacing: 7) {
+                ForEach(Shelf.allCases, id: \.self) { item in
+                    Button {
+                        shelf = item
+                        session.clear()
+                    } label: {
+                        Text(item.rawValue)
+                            .font(.system(size: compact ? 12 : 14, weight: .semibold))
+                            .lineLimit(1)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 9)
+                            .foregroundStyle(shelf == item ? Color.black.opacity(0.85) : Atelier.textSecondary)
+                            .background(shelf == item ? Atelier.Tint.japanese : Atelier.surfaceHigh,
+                                        in: Capsule())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            if session.current != nil {
+                LookupPopup(session: session, added: added.union(review.keys), onAddCard: onAddCard,
+                            close: { session.clear() })
+                    .frame(maxHeight: .infinity)
+            } else {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 14) {
+                        switch shelf {
+                        case .words: wordShelf
+                        case .kanji: kanjiShelf
+                        case .saved: savedShelf
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(14)
+                }
+                .atelierPanel()
+            }
         }
-        .padding(Atelier.gap)
-        .background(GridBackground())
-        .navigationTitle("Dictionnaire")
-        .onAppear { focused = true }
+        .padding(compact ? 0 : Atelier.gap)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background {
+            if compact { Atelier.surface } else { GridBackground() }
+        }
+        .task(id: query + "|" + dictionaryModel.dictionaries.map { "\($0.id ?? 0):\($0.enabled)" }.joined()) {
+            let prefix = query.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !prefix.isEmpty else { suggestions = []; searching = false; return }
+            searching = true
+            try? await Task.sleep(nanoseconds: 140_000_000)
+            guard !Task.isCancelled else { return }
+            let found = await dictionaryModel.words(startingWith: prefix)
+            guard !Task.isCancelled else { return }
+            suggestions = found
+            searching = false
+        }
+        .onChange(of: query) { _ in session.clear() }
+        .task(id: session.currentTerms.map(\.id).joined(separator: ";")) {
+            review.loadKeys(session.currentTerms.map(\.id))
+        }
+        .sheet(isPresented: $showManager) {
+            NavigationStack {
+                DictionaryManagerView()
+                    .toolbar { ToolbarItem(placement: .confirmationAction) {
+                        Button("OK") { showManager = false }
+                    } }
+            }
+            .environmentObject(dictionaryModel)
+            .preferredColorScheme(.dark)
+        }
+        .sheet(isPresented: $showLexicon) {
+            NavigationStack {
+                DomainLexiconView()
+                    .toolbar { ToolbarItem(placement: .confirmationAction) {
+                        Button("OK") { showLexicon = false }
+                    } }
+            }
+            .preferredColorScheme(.dark)
+        }
     }
 
-    private var historyList: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            AtelierLabel("Historique", tint: Atelier.Tint.japanese)
-            if session.history.isEmpty {
-                Text(dictionaryModel.hasTermDictionaries
-                     ? "Tape un mot : 食べた, たべる, taberu n'est pas encore accepté (kana ou kanji)."
-                     : "Aucun dictionnaire importé : Réglages → Dictionnaires.")
-                    .foregroundStyle(Atelier.textSecondary)
+    private var searchField: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "magnifyingglass").foregroundStyle(Atelier.Tint.japanese)
+            TextField(shelf == .kanji ? "Chercher un kanji" : "Mot ou lecture en japonais", text: $query)
+                .focused($focused)
+                .font(.custom("HiraginoSans-W3", size: compact ? 15 : 19))
+                .submitLabel(.search)
+                .onSubmit { openQuery() }
+                .autocorrectionDisabled()
+                .textInputAutocapitalization(.never)
+            if searching { ProgressView().controlSize(.small).tint(Atelier.Tint.japanese) }
+            if !query.isEmpty {
+                Button { query = ""; focused = false } label: { Image(systemName: "xmark.circle.fill") }
+                    .foregroundStyle(Atelier.textTertiary)
             }
-            FlowLayout(spacing: 8) {
-                ForEach(session.history, id: \.self) { word in
-                    Button { query = word; session.start(word) } label: {
-                        Text(word).font(.custom("HiraginoSans-W3", size: 17))
-                            .padding(.horizontal, 12).padding(.vertical, 6)
-                            .background(Atelier.surfaceHigh, in: Capsule())
+            Button { focused = false; showManager = true } label: {
+                Image(systemName: "square.stack.3d.up")
+                    .foregroundStyle(Atelier.textSecondary).frame(width: 30, height: 30)
+            }
+            .accessibilityLabel("Gérer les dictionnaires")
+        }
+        .padding(compact ? 11 : 14)
+        .atelierPanel(radius: 16)
+    }
+
+    private var wordShelf: some View {
+        Group {
+            if !dictionaryModel.hasTermDictionaries {
+                emptyState("Aucun dictionnaire de mots",
+                           "Importe un dictionnaire Yomitan dans Réglages → Japonais → Dictionnaires.")
+            } else if !query.isEmpty {
+                AtelierLabel("Mots trouvés · \(suggestions.count)", tint: Atelier.Tint.japanese)
+                if suggestions.isEmpty && !searching {
+                    emptyState("Aucun mot à ce début", "Essaie la forme de base ou une lecture en kana.")
+                }
+                ForEach(suggestions) { word in
+                    wordRow(word.expression, reading: word.reading, gloss: word.gloss)
+                }
+            } else {
+                if !dictionaryModel.notebook.saved.filter({ $0.kind == .word }).isEmpty {
+                    AtelierLabel("Mots enregistrés", tint: Atelier.Tint.japanese)
+                    ForEach(dictionaryModel.notebook.saved.filter { $0.kind == .word }.prefix(8)) { entry in
+                        wordRow(entry.expression, reading: entry.reading)
                     }
-                    .foregroundStyle(Atelier.textPrimary)
+                }
+                AtelierLabel("Récemment consultés", tint: Atelier.Tint.japanese)
+                let recent = dictionaryModel.notebook.recent.filter { $0.kind == .word }
+                if recent.isEmpty {
+                    Text("Cherche un mot pour commencer. Les dernières recherches apparaîtront ici.")
+                        .font(.subheadline).foregroundStyle(Atelier.textSecondary)
+                } else {
+                    ForEach(recent.prefix(25)) { entry in
+                        wordRow(entry.expression, reading: entry.reading)
+                    }
                 }
             }
-            Spacer()
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .atelierPanel()
+    }
+
+    private var kanjiShelf: some View {
+        Group {
+            let characters = Array(Set(query.filter { $0.unicodeScalars.contains {
+                (0x3400...0x9FFF).contains($0.value)
+            } })).sorted()
+            if !characters.isEmpty {
+                AtelierLabel("Kanji saisis", tint: Atelier.Tint.japanese)
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 58))], spacing: 8) {
+                    ForEach(characters, id: \.self) { character in
+                        Button { openKanji(String(character)) } label: {
+                            Text(String(character)).font(.custom("HiraMinProN-W6", size: 28))
+                                .frame(maxWidth: .infinity, minHeight: 56)
+                                .foregroundStyle(Atelier.textPrimary)
+                                .background(Atelier.surfaceHigh, in: RoundedRectangle(cornerRadius: 10))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+            AtelierLabel("Kanji enregistrés", tint: Atelier.Tint.japanese)
+            let saved = dictionaryModel.notebook.saved.filter { $0.kind == .kanji }
+            if saved.isEmpty {
+                Text("Saisis un kanji ou touche-en un dans une fiche pour voir ses lectures et ses sens.")
+                    .font(.subheadline).foregroundStyle(Atelier.textSecondary)
+            } else {
+                FlowLayout(spacing: 8) {
+                    ForEach(saved) { entry in
+                        Button { openKanji(entry.expression) } label: {
+                            Text(entry.expression).font(.custom("HiraMinProN-W6", size: 25))
+                                .padding(10).foregroundStyle(Atelier.textPrimary)
+                                .background(Atelier.surfaceHigh, in: RoundedRectangle(cornerRadius: 10))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
+    }
+
+    private var savedShelf: some View {
+        Group {
+            let saved = dictionaryModel.notebook.saved.filter {
+                query.isEmpty || $0.expression.localizedCaseInsensitiveContains(query)
+                    || $0.reading.localizedCaseInsensitiveContains(query)
+            }
+            AtelierLabel("Ma liste · \(saved.count)", tint: Atelier.Tint.japanese)
+            if saved.isEmpty {
+                emptyState(query.isEmpty ? "Ta liste est vide" : "Aucun élément trouvé",
+                           query.isEmpty ? "Touche l'étoile d'une fiche ou d'un mot pour l'enregistrer ici."
+                                         : "Essaie un autre mot ou une autre lecture.")
+            } else {
+                ForEach(saved) { entry in
+                    if entry.kind == .kanji {
+                        wordRow(entry.expression, reading: "", kind: .kanji)
+                    } else {
+                        wordRow(entry.expression, reading: entry.reading)
+                    }
+                }
+            }
+            AtelierLabel("Lexique personnel · \(lexicon.entries.count)", tint: Atelier.Tint.japanese)
+            Text("Tes termes spécialisés, leurs lectures et leurs sens en français.")
+                .font(.subheadline).foregroundStyle(Atelier.textSecondary)
+            ForEach(lexicon.entries.prefix(compact ? 4 : 8)) { entry in
+                Button { showLexicon = true } label: {
+                    HStack(spacing: 10) {
+                        Text(entry.term).font(.custom("HiraginoSans-W6", size: compact ? 16 : 19))
+                            .foregroundStyle(Atelier.textPrimary)
+                        if !entry.reading.isEmpty {
+                            Text(entry.reading).font(.footnote).foregroundStyle(Atelier.textTertiary)
+                        }
+                        Spacer()
+                        Text(entry.meaning).font(.footnote).lineLimit(1)
+                            .foregroundStyle(Atelier.textSecondary)
+                    }
+                    .padding(10)
+                    .background(Atelier.surfaceHigh.opacity(0.65),
+                                in: RoundedRectangle(cornerRadius: Atelier.smallRadius))
+                }
+                .buttonStyle(.plain)
+            }
+            Button { showLexicon = true } label: {
+                Label("Ouvrir et modifier mon lexique", systemImage: "text.book.closed")
+            }
+            .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.japanese))
+        }
+    }
+
+    private func wordRow(_ expression: String, reading: String, gloss: String = "",
+                         kind: DictionaryModel.SavedEntry.Kind = .word) -> some View {
+        let entry = DictionaryModel.SavedEntry(kind: kind, expression: expression, reading: reading)
+        return HStack(spacing: 8) {
+            Button {
+                if kind == .kanji { openKanji(expression) } else { openWord(expression, reading: reading) }
+            } label: {
+                HStack(alignment: .firstTextBaseline, spacing: 10) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(expression).font(.custom("HiraginoSans-W6", size: compact ? 16 : 19))
+                            .foregroundStyle(Atelier.textPrimary)
+                        if !reading.isEmpty && reading != expression {
+                            Text(reading).font(.footnote).foregroundStyle(Atelier.textTertiary)
+                        }
+                    }
+                    if !gloss.isEmpty && !compact {
+                        Text(gloss).font(.footnote).lineLimit(2).foregroundStyle(Atelier.textSecondary)
+                    }
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right").font(.caption).foregroundStyle(Atelier.textTertiary)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            Button { dictionaryModel.toggleSaved(entry) } label: {
+                Image(systemName: dictionaryModel.isSaved(entry) ? "star.fill" : "star")
+                    .foregroundStyle(Atelier.Tint.japanese).frame(width: 32, height: 32)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(dictionaryModel.isSaved(entry) ? "Retirer de ma liste" : "Enregistrer")
+        }
+        .padding(.horizontal, 10).padding(.vertical, 8)
+        .background(Atelier.surfaceHigh.opacity(0.65),
+                    in: RoundedRectangle(cornerRadius: Atelier.smallRadius))
+    }
+
+    private func emptyState(_ title: String, _ detail: String) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title).font(.headline).foregroundStyle(Atelier.textPrimary)
+            Text(detail).font(.subheadline).foregroundStyle(Atelier.textSecondary)
+        }
+        .padding(14).frame(maxWidth: .infinity, alignment: .leading)
+        .background(Atelier.surfaceHigh.opacity(0.65),
+                    in: RoundedRectangle(cornerRadius: Atelier.smallRadius))
+    }
+
+    private func openWord(_ word: String, reading: String? = nil) {
+        focused = false
+        session.start(word, preferredReading: reading)
+    }
+
+    private func openKanji(_ kanji: String) {
+        focused = false
+        session.clear()
+        session.pushKanji(kanji)
+    }
+
+    private func openQuery() {
+        let text = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return }
+        if shelf == .kanji, let character = text.first(where: {
+            $0.unicodeScalars.contains { (0x3400...0x9FFF).contains($0.value) }
+        }) {
+            openKanji(String(character))
+        } else {
+            openWord(text)
+        }
     }
 }
 
