@@ -132,7 +132,7 @@ contrôle (mémoire `ios16-backport-rules`). Chaque correctif est listé dans `I
 
 ## 5. Tester sur le Mac (autorisé par l'utilisateur le 22/10 pour OvisOCR2 / Qwen3-VL)
 
-Modèles et PDF d'essai **hors dépôt** (scratchpad du chat ; le PDF de l'utilisateur :
+Modèles et PDF d'essai **hors dépôt** (dossier temporaire de travail ; le PDF de l'utilisateur :
 `~/Downloads/INTERIOR COORDINATOR HANDBOOK HAWE.pdf`, 24 p., ne jamais le copier dans le dépôt).
 ```
 cd Packages/GLMOCRKit && swift package update mlx-swift mlx-swift-lm && swift build --build-tests

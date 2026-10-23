@@ -1,31 +1,67 @@
 # Feuille de route Kyōkasho — à lire en entier au début de chaque chat
 
 > Ce fichier + `docs/IA-LOCALE.md` (avant de toucher à l'IA) suffisent. Ne relis pas le code « pour voir » :
-> `grep -rn 'FDR-V3' App Packages` donne les endroits exacts d'une étape. Une session = les retours de l'utilisateur,
-> sinon l'étape suivante du § 7 ; puis commit + push (+ release **si demandée**), puis résumé simple.
-> **État au 22/10/2026 : v1.1.0 publiée (build 33)** (pages égalisées en cache `Caches/Equalized/<id>-<taille>-<date>.pdf`
-> + `.json` des cadres d'origine, `equalizedDocument` ; `PageLayout.auto` par défaut, `resolved`). Avant : v1.0.0 (P et E faits, non vérifiés sur l'iPad : `adaptLayout`, `scaledPage` /
-> `commonHeight`, `TonedPage.sourceBox` ; furigana sans fond). Avant : v0.9.0 (gestes 0.8.9.2 confirmés ✅ iPad ; filtre sur la vue annulé → `ToneCache` :
-> pages teintées préparées planche ±1, `smartDark` ; fenêtre OCR libre ; double page même taille : pas fait, voir V1.0) ; (V1→V8, V10, V11, V14, V7 faits ; reste V9 ; Qwen confirmé sur l'iPad en 0.8.8). L'IA locale (OvisOCR2, analyse, vérification) **marche sur
-> l'iPad** (confirmé par l'utilisateur). Le reste marqué « non vérifié » peut être faux sur l'appareil.
+> `grep -rn 'FDR-' App Packages` donne les endroits exacts d'une étape. Une session = les retours de l'utilisateur,
+> sinon l'étape suivante non cochée (§ 7 bis, puis § 8) ; puis commit + push (+ release **si demandée**), puis résumé simple.
+> **État au 23/10/2026 : v1.1.0 publiée (build 33).** Toutes les étapes V1 → V14 du § 7 sont faites, ainsi que S
+> (lexique), P (portrait / paysage) et E (pages de même taille). Confirmé sur l'iPad : IA locale (OvisOCR2, Qwen3-VL,
+> analyse, vérification), gestes au doigt (0.8.9.2). Le reste marqué « non vérifié » peut être faux sur l'appareil.
+
+## 0. Passation (23/10/2026) : le projet passe de Claude Code à ChatGPT Codex
+
+Tout le code jusqu'à la v1.1.0 a été écrit par Claude (Claude Code). La suite se fait avec **ChatGPT Codex**.
+`AGENTS.md` (racine) renvoie ici. Ce qui suit est ce qu'un nouvel assistant doit savoir avant d'écrire une ligne.
+
+**Où sont les choses**
+- Code : dépôt **privé** `NOxygen59/kyokasho` (branche `main`, tags `vX.Y.Z`, `.tipa` dans les releases GitHub).
+- **Le dossier local a été mis à la corbeille le 23/10** (`~/Projets-iPad/kyokasho` et `~/Projets-iPad/kyokasho-modeles`).
+  Pour travailler : `gh repo clone NOxygen59/kyokasho ~/Projets-iPad/kyokasho` (et `NOxygen59/kyokasho-models` dans
+  `~/Projets-iPad/kyokasho-modeles` seulement pour une release : `latest.json`). Les forks MLX sont encore là :
+  `~/Projets-iPad/mlx-swift`, `~/Projets-iPad/mlx-swift-lm` (branche `ipad-ios16`, poussés).
+- Outils sur le Mac : Xcode (SDK iOS 27.1), `xcodegen`, `gh` (connecté), `trash`. **Pas de système iOS pour le
+  simulateur** (0 image installée ; 8-9 Go à télécharger, seulement avec l'accord de l'utilisateur).
+- Modèles d'IA pour les tests Mac (OvisOCR2, Qwen3-VL-4B) : n'existent plus que dans d'anciens dossiers temporaires
+  (`/private/tmp/claude-501/…/scratchpad/models`), peut-être effacés. Sinon les retélécharger (autorisé pour ces deux-là,
+  dire la taille avant). Tests : `Packages/GLMOCRKit/Tests/GLMOCRKitTests/OvisOCR2Tests.swift` (variables
+  `KYOKASHO_MODELS`, `KYOKASHO_BENCH_PDF`, `KYOKASHO_TRANSLATE`, `KYOKASHO_CHAT`, `MLX_METAL_LANGUAGE_VERSION=30`).
+
+**Leçons de la dernière session (ne pas refaire)**
+- Gestes : un essai « zoom fluide » (modes continus horizontaux de PDFKit + verrou du défilement) a été **jugé
+  catastrophique** et annulé. Ce qui marche (confirmé) : PDFKit en **mode annotation permanent**
+  (`pdfView.isInMarkupMode = true`, comme le mode Pencil), sélection de texte maison à l'appui long
+  (`ReaderController+Navigation.swift`, `handleLongPress`). Ne pas remettre `singleTap.require(toFail: doubleTap)`
+  en question sans test sur l'iPad.
+- Teinte des pages : un filtre `compositingFilter` posé sur toute la vue a donné un **aplat de couleur** sur l'iPad :
+  annulé. Ce qui est en place : teinte peinte page par page (`TonedPage.draw`) + images teintées **préparées pour la
+  planche affichée, la précédente et la suivante** (`ToneCache`, `ReaderController.scheduleTone`), « Sombre
+  intelligent » (`PageTone.smartDark`, CoreImage).
+- Tout changement de gestes / d'affichage sans pouvoir tester : le rendre **désactivable** et le dire.
+
+**À vérifier sur l'iPad (fait à l'aveugle, jamais confirmé)** : teintes préchargées et sombre intelligent (0.9.0),
+fenêtre OCR à déplacement libre (0.9.0), pages de même taille + cache `Caches/Equalized` (1.0 / 1.1), Auto / Simple /
+Double (1.1), export (V8), ajout de pages (V14, données de l'utilisateur : prudence), stockage et cache (V10, V11),
+page par IA et chat (V7), lexique (S).
+
+**Suite proposée** : § 7 bis (F : cartes de la page, R : « Continuer » dans la bibliothèque), puis § 8 (B3 furigana
+verticaux, B5 tableaux / texte vertical, B6 performance, B7 GLM-OCR plus rapide, K grammaire), § 11.
 
 ## 1. Prompt à coller dans le nouveau chat
 
 ```
-Projet Kyōkasho (~/Projets-iPad/kyokasho). Lis docs/FEUILLE-DE-ROUTE.md (et docs/IA-LOCALE.md si l'étape touche
-l'IA) puis `git log -5 --oneline`. Fais mes retours s'il y en a, sinon l'étape suivante non cochée du § 7.
-Économise les tokens (§ 4). Pas de simulateur, pas d'iPad sans ma permission.
+Projet Kyōkasho (dépôt NOxygen59/kyokasho, dans ~/Projets-iPad/kyokasho — le recloner s'il manque). Lis AGENTS.md,
+docs/FEUILLE-DE-ROUTE.md (et docs/IA-LOCALE.md si l'étape touche l'IA) puis `git log -5 --oneline`. Fais mes retours
+s'il y en a, sinon l'étape suivante non cochée (§ 7 bis puis § 8). Pas de simulateur, pas d'iPad sans ma permission.
 ```
 
 ## 2. Règles de l'utilisateur (obligatoires)
 
 - **Vocabulaire** : la « **fenêtre OCR** » = le panneau d'étude (`StudyPanel`, Texte / Mots / Notes / Repères).
-- **Français, court, simple** (l'utilisateur ne code pas) : dire *ce qui change pour lui* et *pourquoi*. Le plugin
-  « caveman » ne remplace **pas** cette règle.
+- **Français, court, simple** (l'utilisateur ne code pas) : dire *ce qui change pour lui* et *pourquoi*.
 - **Jamais** demander ni taper un mot de passe, une clé API ou un jeton.
 - Suppression de ses fichiers : `trash`, jamais `rm`. **Ne jamais supprimer un dépôt GitHub.**
-- Commits en français, finis par `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>` (adapter le modèle).
-- **Simulateur interdit** sauf « tu peux tester ». iPad (ios-mcp, souvent déconnecté) : demander + dire pourquoi.
+- Commits en français, message clair (ce qui change et pourquoi). Mention de l'assistant en dernière ligne si l'outil
+  l'ajoute (anciens commits : `Co-Authored-By: Claude …`).
+- **Simulateur interdit** sauf « tu peux tester ». Tests sur l'iPad : c'est l'utilisateur qui les fait (release).
 - Usage perso, jamais distribué. Dépôt **privé** `NOxygen59/kyokasho`, bundle `fr.noxygen59.kyokasho`.
   **iOS 16.0** minimum (iPad Pro 12.9" M1 8 Go, iOS 16.6.1, TrollStore + jailbreak Dopamine). App **paysage**.
 - **Rétroportage iOS 16** : combler ce qui manque par du code **équivalent**, jamais retirer la fonction ni couper un
@@ -63,10 +99,10 @@ l'IA) puis `git log -5 --oneline`. Fais mes retours s'il y en a, sinon l'étape 
   - tests : `cd Packages/KyokashoKit && swift test 2>&1 | grep -E ': error|error:|with [1-9][0-9]* failure' | head -5`
   - app : `xcodegen generate -q && xcodebuild -project Kyokasho.xcodeproj -scheme Kyokasho -destination 'generic/platform=iOS Simulator' build CODE_SIGNING_ALLOWED=NO 2>&1 | grep -E ' error:|BUILD' | sort -u | head -20`
   - `.tipa` : `./build_ipa.sh 2>&1 | grep -E 'OK|error' | tail -2` → `dist/Kyokasho-<version>.tipa`
-- Visuel : rendu d'essai sur Mac (script Swift dans le scratchpad, `Read` d'un PNG ≤ 900 px). Ex. la mise en page IA
-  a été vérifiée ainsi (WKWebView `takeSnapshot`).
-- Gros chantier : `caveman:cavecrew-investigator` pour localiser, puis **toujours** `caveman:cavecrew-reviewer` sur
-  le diff avant commit (il trouve de vrais bugs à chaque fois ; vérifier ses 🔴 avant de corriger).
+- Visuel : rendu d'essai sur Mac (petit script Swift hors dépôt qui écrit un PNG, puis le regarder). Ex. la mise en
+  page IA et les fonds des thèmes ont été vérifiés ainsi.
+- Gros chantier : **faire relire le diff** (deuxième passe critique, ou un autre agent) avant commit : à chaque fois
+  de vrais bugs ont été trouvés (décalage de données, état bloqué, course entre tâches).
 - **Balises `FDR-…`** : chaque endroit à modifier pour une étape non faite porte `// FDR-<étape> : <quoi>`.
   Étape finie → retirer ses balises (`grep -rn 'FDR-X'` vide) et cocher ici. Étape planifiée → poser ses balises.
 
@@ -80,7 +116,7 @@ l'IA) puis `git log -5 --oneline`. Fais mes retours s'il y en a, sinon l'étape 
    --notes-file docs/releases/vX.Y.Z.md`.
 4. `~/Projets-iPad/kyokasho-modeles/latest.json` (`version`, `build`, `page`, `notes`), commit + push, contrôle :
    `gh api repos/NOxygen59/kyokasho-models/contents/latest.json --jq .content | base64 -d | grep version`.
-5. Envoyer le `.tipa` à l'utilisateur (`SendUserFile`).
+5. Donner à l'utilisateur le lien de la release et le chemin du `.tipa` (il l'installe avec TrollStore).
 
 ## 6. Ce qui existe (fait, et comment)
 
@@ -324,7 +360,7 @@ Comptes (Drive) ; À propos (+ **connexion GitHub** device flow → mise à jour
   vérifier : `BenchView` (banc d'essai OCR), `TextPageSheet`, anciennes options (`LayoutEngineMenu`…), copies
   devenues inutiles. Découper `ReaderController.swift` (2100 l.) en extensions par thème (OCR, notes, IA, gestes,
   dictionnaire) **sans changer le comportement**. Profiler (moniteur) : rendus SwiftUI en trop, `@Published` trop
-  larges. Toujours `cavecrew-reviewer` après. Balises `FDR-V9` (fichiers à regarder).
+  larges. Toujours une relecture du diff après. Balises `FDR-V9` (fichiers à regarder).
 
 ## 7 bis. Idées pour la v1.0 (22/10, à faire dans cet ordre conseillé)
 
@@ -403,7 +439,7 @@ Comptes (Drive) ; À propos (+ **connexion GitHub** device flow → mise à jour
 - MLX / iOS 16 : voir `docs/IA-LOCALE.md` (bfloat, Metal 3.0, `remove_addrspace_t`, `reassociate`, `std::format`,
   libc++ — **jamais** `_LIBCPP_DISABLE_AVAILABILITY`), épingle `Package.resolved` à mettre à jour.
 - Python dans Bash : `"""…"""` suivi d'un `"` casse la chaîne → `'…'`.
-- Le paysage n'a jamais été vérifié par Claude (simulateur sans fenêtre).
+- Le paysage n'a jamais été vérifié par l'assistant (pas de simulateur) : seulement par l'utilisateur sur l'iPad.
 
 ## 11. Idées / plus tard
 
