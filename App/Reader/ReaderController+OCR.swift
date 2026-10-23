@@ -344,7 +344,7 @@ extension ReaderController {
         let key = rereadKey(source) + String(page.hashValue)
         guard !AITaskCenter.shared.isRunning(key) else { return }
         AITaskCenter.shared.cancel(prefix: rereadKey(source))
-        AITaskCenter.shared.run(key, title: "Relecture GLM-OCR p. \(source + 1)") { [weak self] _ in
+        AITaskCenter.shared.run(key, title: "Relecture GLM-OCR p. \(source + 1)", modelId: ModelSpec.glmocr.id, activity: "relecture") { [weak self] _ in
             let read = try await Diagnostics.measure("GLM-OCR relit \(lines.count) ligne(s) p. \(source)", "relecture") {
                 try await engine.reread(page, lines: lines, input: .pdfPage(url: url, index: source))
             }

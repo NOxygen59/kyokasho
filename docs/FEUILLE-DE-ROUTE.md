@@ -76,6 +76,12 @@ Le même espace remplace « Mots de la page » dans la fenêtre OCR et dans la b
 consultables directement dans le texte HTML. Les dictionnaires se gèrent depuis cet espace. Aucun dictionnaire
 ou modèle tiers ajouté au dépôt. Vérification sur iPad à faire après une future release.
 
+**Activité des IA (après v1.1.1, hors release)** : petites pastilles OvisOCR2, GLM-OCR et Qwen3-VL sur l'accueil
+et dans le lecteur, liées aux tâches, à l'analyse des documents et à l'état réel du modèle MLX. Elles affichent
+chargement, action en cours, attente ou modèle chargé ; leur opacité baisse quand l'IA ne travaille plus. Le lecteur
+les montre même lorsque ses barres sont masquées. Toucher ouvre toujours les tâches et leurs boutons d'arrêt.
+Option désactivable dans Réglages → Modèles d'IA et outils. Compilation iOS générique réussie, iPad à confirmer.
+
 **Suite proposée** : § 7 bis (R : « Continuer » dans la bibliothèque ; F codé par Codex, à essayer sur iPad), puis § 8 (B3 furigana
 verticaux, B5 tableaux / texte vertical, B6 performance, B7 GLM-OCR plus rapide, K grammaire), § 11.
 

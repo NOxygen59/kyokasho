@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 NOxygen59
 
+import GLMOCRKit
+import OCRKit
 import SwiftUI
 
 /// Toutes les tâches IA lancées depuis le lecteur (relecture GLM-OCR, vérification et mise en page OvisOCR2,
@@ -17,9 +19,19 @@ final class AITaskCenter: ObservableObject {
         let key: String
         let title: String
         let started = Date()
+        /// Modèle et action affichés dans les pastilles, sans déduire le rôle du titre.
+        let modelId: String?
+        let activity: String?
         var progress: (done: Int, total: Int)?
         /// Journal en direct (« Voir le détail »), 200 lignes au plus.
         var log: [String] = []
+
+        init(key: String, title: String, modelId: String?, activity: String?) {
+            self.key = key
+            self.title = title
+            self.modelId = modelId
+            self.activity = activity
+        }
 
         static func == (a: Job, b: Job) -> Bool {
             a.id == b.id && a.progress?.done == b.progress?.done && a.progress?.total == b.progress?.total
@@ -39,9 +51,10 @@ final class AITaskCenter: ObservableObject {
 
     /// Lance `work` sous `key` (rien si une tâche de même clé tourne déjà). Une erreur levée est gardée dans `errors`.
     @discardableResult
-    func run(_ key: String, title: String, _ work: @escaping @MainActor (_ id: UUID) async throws -> Void) -> Bool {
+    func run(_ key: String, title: String, modelId: String? = nil, activity: String? = nil,
+             _ work: @escaping @MainActor (_ id: UUID) async throws -> Void) -> Bool {
         guard !isRunning(key) else { return false }
-        let job = Job(key: key, title: title)
+        let job = Job(key: key, title: title, modelId: modelId, activity: activity)
         jobs.append(job)
         errors[key] = nil
         tasks[job.id] = Task { [weak self] in
@@ -87,10 +100,50 @@ final class AITaskCenter: ObservableObject {
     func cancelAll() { tasks.values.forEach { $0.cancel() } }
 }
 
-/// Pastille « IA : … » posée sur le lecteur et la bibliothèque. Toucher → liste des tâches ; « Arrêter » demande
+/// Lit l'état MLX pendant que les pastilles sont visibles. Une seule lecture périodique suffit pour le lecteur et
+/// la bibliothèque ; elle s'arrête lorsque les vues disparaissent ou que l'option est désactivée.
+@MainActor
+private final class AIModelBadgeMonitor: ObservableObject {
+    static let shared = AIModelBadgeMonitor()
+
+    @Published private(set) var status: AIModelStatus?
+    private var observers = 0
+    private var polling: Task<Void, Never>?
+
+    func start() {
+        observers += 1
+        guard polling == nil else { return }
+        polling = Task { [weak self] in
+            while !Task.isCancelled {
+                let next = await GLMOCREngine.status()
+                guard let self, !Task.isCancelled else { break }
+                if self.status?.loaded != next.loaded || self.status?.loading != next.loading
+                    || self.status?.inUse != next.inUse {
+                    self.status = next
+                }
+                try? await Task.sleep(nanoseconds: 1_200_000_000)
+            }
+        }
+    }
+
+    func stop() {
+        observers = max(0, observers - 1)
+        guard observers == 0 else { return }
+        polling?.cancel()
+        polling = nil
+        status = nil
+    }
+}
+
+/// Pastilles des modèles MLX, dans le lecteur et la bibliothèque. Toucher ouvre les tâches ; « Arrêter » demande
 /// deux confirmations (une tâche IA coûte des minutes).
 struct AITaskPill: View {
+    static let visibleKey = "ai.showActivityBadges"
+
     @ObservedObject private var center = AITaskCenter.shared
+    @ObservedObject private var analysis = DocumentAnalysisService.shared
+    @ObservedObject private var monitor = AIModelBadgeMonitor.shared
+    @AppStorage(AITaskPill.visibleKey) private var visible = true
     @State private var showList = false
     /// Tâches dont le journal est déplié (« Voir le détail »).
     @State private var expanded: Set<UUID> = []
@@ -101,20 +154,32 @@ struct AITaskPill: View {
     @State private var confirm2 = false
 
     var body: some View {
-        // Alertes et popover sur un conteneur toujours présent : la dernière tâche peut finir pendant la confirmation.
-        ZStack {
-            if let first = center.jobs.first {
-                Button { showList = true } label: {
-                    HStack(spacing: 8) {
-                        ProgressView().controlSize(.small).tint(.white)
-                        Text(label(first)).font(.system(size: 13, weight: .semibold)).lineLimit(1)
+        // Conteneur permanent : la dernière tâche peut finir pendant la confirmation.
+        HStack(spacing: 6) {
+            if visible {
+                ForEach(badges) { badge in
+                    Button { showList = true } label: {
+                        HStack(spacing: 5) {
+                            Circle().fill(badge.active ? Atelier.Tint.ai : Atelier.textSecondary)
+                                .frame(width: 5, height: 5)
+                            Text("\(badge.name) · \(badge.activity)")
+                                .font(.system(size: 11, weight: .medium))
+                                .lineLimit(1)
+                        }
+                        .foregroundStyle(Atelier.textPrimary)
+                        .padding(.horizontal, 9).padding(.vertical, 6)
+                        .atelierPanel(radius: 14)
+                        .opacity(badge.active ? 0.82 : 0.48)
                     }
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 12).padding(.vertical, 7)
-                    .background(Atelier.Tint.ai.opacity(0.9), in: Capsule())
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("\(badge.name), \(badge.activity)")
                 }
-                .accessibilityLabel("Tâches IA en cours")
             }
+        }
+        .onAppear { if visible { monitor.start() } }
+        .onDisappear { if visible { monitor.stop() } }
+        .onChange(of: visible) { enabled in
+            if enabled { monitor.start() } else { monitor.stop() }
         }
         .popover(isPresented: $showList) { list }
         .alert(stopTitle, isPresented: $confirm1) {
@@ -140,16 +205,53 @@ struct AITaskPill: View {
         stopAll ? "Arrêter toutes les tâches IA ?" : "Arrêter « \(stopping?.title ?? "") » ?"
     }
 
-    private func label(_ job: AITaskCenter.Job) -> String {
-        var text = "IA : \(job.title)"
-        if let p = job.progress { text += " (\(p.done)/\(p.total))" }
-        if center.jobs.count > 1 { text += " +\(center.jobs.count - 1)" }
-        return text
+    private struct Badge: Identifiable {
+        let id: String
+        let name: String
+        let activity: String
+        let active: Bool
+    }
+
+    private var badges: [Badge] {
+        [
+            (ModelSpec.ovisocr2, "OvisOCR2"),
+            (ModelSpec.glmocr, "GLM-OCR"),
+            (ModelSpec.qwen3vl4b, "Qwen3-VL")
+        ].compactMap { spec, name in
+            let url = ModelStore.shared.directory(spec)
+            let jobs = center.jobs.filter { $0.modelId == spec.id }
+            let phase = analysis.progress?.phase ?? ""
+            let analysisActivity: String? = switch spec.id {
+            case ModelSpec.ovisocr2.id where phase == "Lecture OvisOCR2": "analyse"
+            case ModelSpec.glmocr.id where phase == "Lecture GLM-OCR": "analyse"
+            case ModelSpec.qwen3vl4b.id where phase == "Lecture Qwen3-VL-4B": "analyse"
+            case ModelSpec.qwen3vl4b.id where phase == "Traduction (Qwen3-VL)": "traduction"
+            default: nil
+            }
+            if monitor.status?.loading == url { return Badge(id: spec.id, name: name, activity: "chargement", active: true) }
+            if monitor.status?.loaded == url, monitor.status?.inUse == true {
+                let activity = jobs.count > 1 ? "\(jobs.count) tâches" : jobs.first?.activity ?? analysisActivity ?? "utilisée"
+                return Badge(id: spec.id, name: name, activity: activity, active: true)
+            }
+            if !jobs.isEmpty || analysisActivity != nil {
+                return Badge(id: spec.id, name: name, activity: "en attente", active: false)
+            }
+            if monitor.status?.loaded == url { return Badge(id: spec.id, name: name, activity: "chargée", active: false) }
+            return nil
+        }
     }
 
     private var list: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Tâches IA en cours").font(.headline)
+            Text("Activité des IA").font(.headline)
+            if center.jobs.isEmpty {
+                Text("Aucune tâche IA en cours.")
+                    .font(.subheadline).foregroundStyle(.secondary)
+            }
+            if let loaded = badges.first(where: { $0.activity == "chargée" }) {
+                Text("\(loaded.name) reste brièvement en mémoire pour une prochaine demande.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             ForEach(center.jobs) { job in
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(spacing: 10) {

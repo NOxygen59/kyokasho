@@ -130,6 +130,11 @@ struct ReaderScreen: View {
                 }
                 .frame(width: documentWidth, height: documentHeight)
                 .clipped()
+                .overlay(alignment: .bottomLeading) {
+                    AITaskPill()
+                        .padding(.leading, Atelier.gap)
+                        .padding(.bottom, chromeVisible && filmstripShown && !reader.isDrawing ? 120 : Atelier.gap)
+                }
                 .animation(.easeOut(duration: 0.18), value: chromeVisible)
                 if reservesSide {
                     // Réserver la place sans animer la géométrie du document.
@@ -235,9 +240,6 @@ struct ReaderScreen: View {
             GeometryReader { area in
                 ZStack(alignment: .topLeading) {
                     FloatingToolbar(area: area.size) { vertical in toolItems(vertical: vertical) }
-                    AITaskPill()
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
-                        .padding(Atelier.gap)
                     if monitorEnabled && monitorShown {
                         ResourceMonitorPanel(area: area.size)
                     }

@@ -533,6 +533,8 @@ struct TranslationSettingsSection: View {
 
 /// Tous les modèles à télécharger (OCR, netteté des scans), avec leurs liens.
 struct ModelsView: View {
+    @AppStorage(AITaskPill.visibleKey) private var showAIBadges = true
+
     var body: some View {
         Form {
             Section {
@@ -540,6 +542,11 @@ struct ModelsView: View {
                     .font(.footnote)
             } footer: {
                 Text("Tout reste sur l'iPad (Application Support), hors de l'app. Le téléchargement reprend s'il est coupé ; chaque fichier est vérifié (empreinte SHA-256). Supprimer un modèle ne perd pas les pages déjà lues.")
+            }
+            Section {
+                Toggle("Afficher l'activité des IA", isOn: $showAIBadges)
+            } footer: {
+                Text("De petites pastilles indiquent ce que fait chaque IA. Elles deviennent plus discrètes quand un modèle reste simplement chargé en mémoire.")
             }
             Section {
                 ForEach([ModelSpec.ovisocr2, .qwen3vl4b, .glmocr, .ndlocr, .ppocr5]) { spec in

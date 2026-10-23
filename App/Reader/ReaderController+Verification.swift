@@ -35,7 +35,7 @@ extension ReaderController {
         verifications = []
         verifyState = .running(done: 0, total: sources.count)
         // Tâche de l'app : continue si on change de page ou ferme le lecteur (le Markdown lu reste gardé).
-        AITaskCenter.shared.run(verifyKey, title: "Vérification OvisOCR2") { [weak self] id in
+        AITaskCenter.shared.run(verifyKey, title: "Vérification OvisOCR2", modelId: ModelSpec.ovisocr2.id, activity: "vérification") { [weak self] id in
             defer { if let self, case .running = self.verifyState { self.verifyState = Task.isCancelled ? .idle : .done } }
             for (k, source) in sources.enumerated() {
                 AITaskCenter.shared.setProgress(id, done: k, total: sources.count)

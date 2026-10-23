@@ -32,7 +32,7 @@ enum DocumentScan {
         let id = document.id
         let pages = (0..<document.pageCount).filter { !FileManager.default.fileExists(atPath: file(id, $0).path) }
         guard !pages.isEmpty else { return }
-        AITaskCenter.shared.run(key(id), title: "Lecture IA de « \(document.title) »") { job in
+        AITaskCenter.shared.run(key(id), title: "Lecture IA de « \(document.title) »", modelId: ModelSpec.ovisocr2.id, activity: "lecture") { job in
             let center = AITaskCenter.shared
             center.log(job, "\(pages.count) page(s) à lire sur \(document.pageCount)")
             // Une lecture de document à la fois (import de plusieurs PDF) : un seul modèle, pas de va-et-vient.

@@ -104,7 +104,7 @@ struct AILayoutView: View {
     private func translate() {
         guard let markdown else { return }
         let source = source, frenchFile = frenchFile, glossary = DomainLexicon.shared.glossary
-        center.run(translateKey, title: "Traduction Qwen3-VL p. \(source + 1)") { _ in
+        center.run(translateKey, title: "Traduction Qwen3-VL p. \(source + 1)", modelId: ModelSpec.qwen3vl4b.id, activity: "traduction") { _ in
             let fr = try await Diagnostics.measure("traduction p. \(source)", "traduction") {
                 try await Qwen3VLReader().translate(markdown: markdown, glossary: glossary)
             }
@@ -132,7 +132,7 @@ struct AILayoutView: View {
     private func read() {
         let budget = reader.ocrPage.map(DocumentAnalysisService.tokenBudget) ?? 2048
         let source = source, file = file, frenchFile = frenchFile, url = reader.fileURL, documentId = reader.document.id
-        center.run(layoutKey, title: "Mise en page IA p. \(source + 1)") { _ in
+        center.run(layoutKey, title: "Mise en page IA p. \(source + 1)", modelId: ModelSpec.ovisocr2.id, activity: "mise en page") { _ in
             let text = try await Diagnostics.measure("mise en page IA p. \(source)", "miseenpage") {
                 try await OvisOCR2Reader().read(.pdfPage(url: url, index: source), maxTokens: budget)
             }
