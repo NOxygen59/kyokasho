@@ -9,7 +9,7 @@ import ReaderCore
 
 /// Furigana dessinés sur la page (option) : au-dessus des kanji en horizontal, à droite en vertical.
 /// Positions : texte intégré du PDF (`characterBounds`) ou boîtes de caractères de l'OCR (scans).
-/// Lectures : `Furigana` (analyseur japonais du système, hors ligne) — parfois fausses sur les noms propres.
+/// Lectures : dictionnaire installé ou `Furigana` (MeCab / analyseur japonais du système).
 enum FuriganaLayer {
     static let storageKey = "reader.furigana"
     static var enabled: Bool { UserDefaults.standard.bool(forKey: storageKey) }
@@ -111,8 +111,9 @@ enum FuriganaLayer {
     // FDR-3 : sauter les kanji qui ont déjà des furigana imprimés (lignes OCR très fines collées à la ligne) et ne pas les compter comme obstacles. Voir § 6 étape 3.
     /// `reference` : Markdown d'OvisOCR2 de la page (texte fiable). Les lignes qu'il recouvre prennent son texte
     /// (lectures justes), posé sur les boîtes de caractères de l'OCR (`OCRReferenceDiff.alignedLines`) ; les
-    /// autres gardent le texte de l'OCR. Chaque lecture couvre son groupe de kanji (`Furigana.rubies`).
-    static func marks(from ocr: OCRPage, reference: String? = nil, frame: PageFrame) -> [Mark] {
+    /// autres gardent le texte de l'OCR. Les lectures peuvent venir du même dictionnaire que le panneau OCR.
+    static func marks(from ocr: OCRPage, reference: String? = nil, frame: PageFrame,
+                      readings: ((String) -> [(range: Range<Int>, reading: String)])? = nil) -> [Mark] {
         let lineRects = ocr.lines.map { frame.pageRect($0.box) }
         var fromAI: [Int: OCRReferenceDiff.AlignedLine] = [:]
         if let reference { for a in OCRReferenceDiff.alignedLines(ocr, reference: reference) { fromAI[a.line] = a } }
@@ -127,7 +128,9 @@ enum FuriganaLayer {
                 text = line.text
                 boxes = line.charBoxes
             }
-            return Furigana.rubies(for: text).compactMap { ruby in
+            guard text.contains(where: Furigana.isKanji) else { return [] }
+            let rubies = readings?(text) ?? Furigana.rubies(for: text).map { (range: $0.range, reading: $0.reading) }
+            return rubies.compactMap { ruby in
                 // Caractère ajouté par l'IA (sans boîte) : la lecture se pose sur ceux du groupe qui en ont une.
                 let rect = boxes[ruby.range].compactMap { $0 }.reduce(CGRect.null) { $0.union(frame.pageRect($1)) }
                 guard !rect.isNull, rect.width > 0, rect.height > 0 else { return nil }
