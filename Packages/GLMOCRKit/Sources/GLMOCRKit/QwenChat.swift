@@ -36,7 +36,7 @@ public final class QwenChat: @unchecked Sendable {
 
     public var isAvailable: Bool { reader.isAvailable }
 
-    public func start(history: [Message]) async throws {
+    public func start(history: [Message], grounded: Bool = false) async throws {
         guard session == nil else { return }
         guard reader.isAvailable else { throw OCRError.modelMissing(ModelSpec.qwen3vl4b.title) }
         if let free = PageVLMReader.availableMemory(), free < reader.base.minimumFreeMemory {
@@ -46,7 +46,7 @@ public final class QwenChat: @unchecked Sendable {
         holding = true
         let past: [Chat.Message] = history.map { $0.role == .user ? .user($0.text) : .assistant($0.text) }
         session = ChatSession(container, instructions: Self.instructions, history: past,
-                              generateParameters: GenerateParameters(maxTokens: 1024, temperature: 0.3))
+                              generateParameters: GenerateParameters(maxTokens: 1024, temperature: grounded ? 0 : 0.3))
     }
 
     /// Aide fiable ajoutée à la question (le modèle de 4 milliards invente souvent les lectures, ex. 天井 « あまね ») :
@@ -72,8 +72,9 @@ public final class QwenChat: @unchecked Sendable {
     }
 
     /// Réponse en morceaux, au fil de l'écriture. Une erreur MLX devient une erreur Swift (pas d'arrêt de l'app).
-    public func stream(_ prompt: String) -> AsyncThrowingStream<String, Error> {
-        let prompt = Self.hints(for: prompt, glossary: glossary, knownReadings: readings).map { prompt + "\n\n" + $0 } ?? prompt
+    public func stream(_ prompt: String, context: String? = nil) -> AsyncThrowingStream<String, Error> {
+        var prompt = Self.hints(for: prompt, glossary: glossary, knownReadings: readings).map { prompt + "\n\n" + $0 } ?? prompt
+        if let context { prompt += "\n\n" + context }
         guard let session else {
             return AsyncThrowingStream { $0.finish(throwing: OCRError.engineFailed("Conversation pas démarrée.")) }
         }

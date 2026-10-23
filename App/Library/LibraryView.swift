@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 NOxygen59
 
+import GLMOCRKit
 import ReaderCore
 import SwiftUI
 
@@ -19,6 +20,7 @@ struct LibraryView: View {
     @State private var analyzing: LibraryDocument?
     @State private var exporting: LibraryDocument?
     @State private var addingPages: LibraryDocument?
+    @State private var chatDocument: LibraryDocument?
     @State private var showDictionary = false
     @State private var renaming: LibraryDocument?
     @EnvironmentObject private var review: ReviewModel
@@ -112,6 +114,10 @@ struct LibraryView: View {
         .onAppear { review.refresh() }
         .sheet(item: $addingPages) { document in
             AddPagesView(document: document).environmentObject(model).preferredColorScheme(.dark)
+        }
+        .sheet(item: $chatDocument) { document in
+            NavigationStack { QwenChatView(document: document) }
+                .environmentObject(model).preferredColorScheme(.dark)
         }
         .sheet(item: $exporting) { document in
             DocumentExportSheet(document: document)
@@ -306,6 +312,14 @@ struct LibraryView: View {
     @ViewBuilder
     private func menu(for document: LibraryDocument) -> some View {
         Button { model.openDocumentId = document.id } label: { Label("Ouvrir", systemImage: "book") }
+        if Qwen3VLReader().isAvailable, DocumentKnowledge.isReady(document) {
+            Button {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { chatDocument = document }
+            } label: { Label("Discuter du livre avec Qwen", systemImage: "bubble.left.and.bubble.right") }
+        } else if Qwen3VLReader().isAvailable {
+            Label("Chat après lecture OvisOCR2 (\(DocumentKnowledge.readCount(document))/\(document.pageCount))",
+                  systemImage: "text.book.closed")
+        }
         Button {
             newTitle = document.title
             renaming = document
