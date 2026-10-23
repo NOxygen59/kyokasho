@@ -1,5 +1,6 @@
 #!/bin/zsh
 # SPDX-License-Identifier: MIT
+# Copyright (c) 2026 NOxygen59
 # Construit dist/Kyokasho-<version>.tipa, installable avec TrollStore (iPad, iOS 16).
 #
 #   ./build_ipa.sh
@@ -18,20 +19,30 @@ OUT="$ROOT/dist/Kyokasho-$VERSION.tipa"
 
 print "==> 1/5 Projet Xcode (XcodeGen)"
 xcodegen generate --quiet
+# Le .xcodeproj est régénéré : reprendre les révisions déjà validées du paquet local.
+PINS="$ROOT/Kyokasho.xcodeproj/project.xcworkspace/xcshareddata/swiftpm"
+mkdir -p "$PINS"
+cp "$ROOT/Packages/GLMOCRKit/Package.resolved" "$PINS/Package.resolved"
 
 print "==> 2/5 Archive Release (sans signature)"
-rm -rf "$ARCHIVE"
-xcodebuild archive \
+mkdir -p "$BUILD"
+[[ ! -e "$ARCHIVE" ]] || trash "$ARCHIVE"
+if ! xcodebuild archive \
   -project Kyokasho.xcodeproj -scheme Kyokasho -configuration Release \
   -destination 'generic/platform=iOS' -archivePath "$ARCHIVE" \
   -derivedDataPath "$BUILD/DerivedData" \
+  -onlyUsePackageVersionsFromResolvedFile \
   CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
-  | grep -E '^(\*\*|.*error:)' || true
+  > "$BUILD/archive.log" 2>&1; then
+  tail -n 80 "$BUILD/archive.log" >&2
+  print -u2 "Compilation échouée. Journal complet : $BUILD/archive.log"
+  exit 1
+fi
 APP="$ARCHIVE/Products/Applications/Kyokasho.app"
 [[ -d "$APP" ]] || { print -u2 "Archive introuvable : la compilation a échoué."; exit 1; }
 
 print "==> 3/5 Dossier Payload"
-rm -rf "$BUILD/Payload"
+[[ ! -e "$BUILD/Payload" ]] || trash "$BUILD/Payload"
 mkdir -p "$BUILD/Payload"
 cp -R "$APP" "$BUILD/Payload/"
 
@@ -42,7 +53,7 @@ ldid -S"$ROOT/packaging/entitlements-trollstore.plist" "$BUILD/Payload/Kyokasho.
 
 print "==> 5/5 Paquet .tipa"
 mkdir -p "$ROOT/dist"
-rm -f "$OUT"
+[[ ! -e "$OUT" ]] || trash "$OUT"
 (cd "$BUILD" && zip -qry "$OUT" Payload)
 print "OK : $OUT ($(du -h "$OUT" | cut -f1))"
 print "Installation : ouvrir ce fichier avec TrollStore sur l'iPad."

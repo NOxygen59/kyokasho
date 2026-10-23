@@ -3,7 +3,7 @@
 > Ce fichier + `docs/IA-LOCALE.md` (avant de toucher à l'IA) suffisent. Ne relis pas le code « pour voir » :
 > `grep -rn 'FDR-' App Packages` donne les endroits exacts d'une étape. Une session = les retours de l'utilisateur,
 > sinon l'étape suivante non cochée (§ 7 bis, puis § 8) ; puis commit + push (+ release **si demandée**), puis résumé simple.
-> **État au 23/10/2026 : v1.1.0 publiée (build 33).** Toutes les étapes V1 → V14 du § 7 sont faites, ainsi que S
+> **État au 23/10/2026 : v1.1.1 publiée (build 34).** Toutes les étapes V1 → V14 du § 7 sont faites, ainsi que S
 > (lexique), P (portrait / paysage) et E (pages de même taille). Confirmé sur l'iPad : IA locale (OvisOCR2, Qwen3-VL,
 > analyse, vérification), gestes au doigt (0.8.9.2). Le reste marqué « non vérifié » peut être faux sur l'appareil.
 
@@ -43,7 +43,7 @@ fenêtre OCR à déplacement libre (0.9.0), pages de même taille + cache `Cache
 Double (1.1), export (V8), ajout de pages (V14, données de l'utilisateur : prudence), stockage et cache (V10, V11),
 page par IA et chat (V7), lexique (S).
 
-**Retours traités par Codex le 23/10 (code sur `main`, hors release, à confirmer sur iPad)** :
+**Retours traités par Codex le 23/10 (inclus dans la v1.1.1, à confirmer sur iPad)** :
 - **Réglages** : accueil en six entrées par usage, recherche (accents, casse et plusieurs mots), descriptions
   courtes, réglages du texte séparés des options OCR avancées ; diagnostic et moniteur regroupés dans l'aide.
   Réglage de la fenêtre OCR et conservation du zoom dans « Lecture et apparence ». Options existantes conservées ;

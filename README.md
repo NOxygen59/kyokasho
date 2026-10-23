@@ -1,9 +1,9 @@
 > [!WARNING]
-> **Projet personnel « vibecodé ».** Tout le code de ce dépôt a été écrit par **Claude** (Anthropic, via Claude Code), à la demande spécifique de [@NOxygen59](https://github.com/NOxygen59), pour **son appareil précis** :
+> **Projet personnel « vibecodé ».** Le code initial a été écrit par **Claude** (Anthropic, via Claude Code), puis **ChatGPT Codex** a rejoint le développement, à la demande de [@NOxygen59](https://github.com/NOxygen59), pour **son appareil précis** :
 >
 > **iPad Pro 12,9" 5ᵉ génération (puce M1) — 512 Go de stockage, 8 Go de RAM — iOS 16.6.1, jailbreak Dopamine (rootless) + TrollStore.**
 >
-> Rien n'est testé ni prévu pour un autre appareil. Pas de support, pas de feuille de route : c'est un dépôt d'archive personnel, publié pour pouvoir reprendre le travail plus tard (modifications, mises à jour).
+> Rien n'est testé ni prévu pour un autre appareil. Dépôt privé de travail personnel, sans distribution publique ni support pour d'autres appareils.
 
 # Kyōkasho
 
@@ -23,6 +23,7 @@ Textes des licences : [LICENSES/](LICENSES/) ; attributions : [THIRD_PARTY_NOTIC
 
 | Version | Release | Contenu |
 |---|---|---|
+| **1.1.1** | [v1.1.1](https://github.com/NOxygen59/kyokasho/releases/tag/v1.1.1) | Thèmes affinés, réglages simplifiés, fenêtre OCR et conservation du zoom, cartes de la page |
 | **1.1.0** | [v1.1.0](https://github.com/NOxygen59/kyokasho/releases/tag/v1.1.0) | Pages préparées une seule fois (cache), choix Auto / Simple / Double |
 | **1.0.0** | [v1.0.0](https://github.com/NOxygen59/kyokasho/releases/tag/v1.0.0) | Pages de même taille, portrait / paysage automatique, furigana sans fond |
 | **0.9.0** | [v0.9.0](https://github.com/NOxygen59/kyokasho/releases/tag/v0.9.0) | Teintes préchargées, sombre intelligent, fenêtre OCR plus libre |
