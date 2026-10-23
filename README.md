@@ -23,6 +23,7 @@ Textes des licences : [LICENSES/](LICENSES/) ; attributions : [THIRD_PARTY_NOTIC
 
 | Version | Release | Contenu |
 |---|---|---|
+| **1.2.1** | [v1.2.1](https://github.com/NOxygen59/kyokasho/releases/tag/v1.2.1) | Chat Qwen sur les pages lues par OvisOCR2, références aux pages du manuel |
 | **1.2** | [v1.2](https://github.com/NOxygen59/kyokasho/releases/tag/v1.2) | Transitions de la fenêtre OCR, dictionnaire partagé, activité des IA, furigana des scans |
 | **1.1.1** | [v1.1.1](https://github.com/NOxygen59/kyokasho/releases/tag/v1.1.1) | Thèmes affinés, réglages simplifiés, fenêtre OCR et conservation du zoom, cartes de la page |
 | **1.1.0** | [v1.1.0](https://github.com/NOxygen59/kyokasho/releases/tag/v1.1.0) | Pages préparées une seule fois (cache), choix Auto / Simple / Double |
