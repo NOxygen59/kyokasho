@@ -12,10 +12,10 @@ enum Atelier {
     static var canvas: Color { Theme.current.canvas }               // fond
     static var surface: Color { Theme.current.surface }             // panneaux
     static var surfaceHigh: Color { Theme.current.surfaceHigh }     // éléments posés sur un panneau
-    static let hairline = Color.white.opacity(0.08)
-    static var textPrimary: Color { Theme.current.ink.opacity(0.94) }
-    static var textSecondary: Color { Theme.current.ink.opacity(0.56) }
-    static var textTertiary: Color { Theme.current.ink.opacity(0.34) }
+    static var hairline: Color { Theme.current.separator }
+    static var textPrimary: Color { Theme.current.ink.opacity(0.96) }
+    static var textSecondary: Color { Theme.current.secondaryInk }
+    static var textTertiary: Color { Theme.current.tertiaryInk }
 
     /// Une couleur par fonction.
     enum Tint {
@@ -57,7 +57,7 @@ struct AtelierPanel: ViewModifier {
             .background {
                 RoundedRectangle(cornerRadius: radius, style: .continuous)
                     .fill(Atelier.surface.opacity(0.97))
-                    .shadow(color: .black.opacity(0.45), radius: 18, y: 8)
+                    .shadow(color: .black.opacity(0.28), radius: 16, y: 7)
             }
             .overlay {
                 RoundedRectangle(cornerRadius: radius, style: .continuous).strokeBorder(Atelier.hairline, lineWidth: 1)

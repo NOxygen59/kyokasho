@@ -7,12 +7,19 @@ import SwiftUI
 /// très peu opaques, sans image ni animation (batterie) ; le hasard est fixé (même dessin à chaque affichage).
 struct ThemeBackdrop: View {
     let theme: Theme
+    @AppStorage("appearance.themePatterns") private var patternsEnabled = true
 
     var body: some View {
         Canvas { context, size in
             context.fill(Path(CGRect(origin: .zero, size: size)), with: .color(theme.canvas))
+            guard patternsEnabled else { return }
+            // Lueur périphérique légère : le centre reste calme sous les documents.
+            let rect = Path(CGRect(origin: .zero, size: size))
+            let light = CGPoint(x: size.width * 0.95, y: 0)
+            context.fill(rect, with: .radialGradient(Gradient(colors: [theme.read.opacity(0.065), .clear]),
+                         center: light, startRadius: 0, endRadius: max(size.width, size.height) * 0.9))
             switch theme.backdrop {
-            case .grid: Self.grid(&context, size, color: .white, minor: 0.035, major: 0.06)
+            case .grid: Self.grid(&context, size, color: theme.read, minor: 0.035, major: 0.075, spacing: 32)
             case .washi: Self.washi(&context, size, theme)
             case .blueprint: Self.blueprint(&context, size, theme)
             case .floorplan: Self.floorplan(&context, size, theme)
@@ -21,7 +28,8 @@ struct ThemeBackdrop: View {
             case .sakura: Self.sakura(&context, size, theme)
             }
         }
-        .drawingGroup()
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
     }
 
     // MARK: Motifs
@@ -51,7 +59,7 @@ struct ThemeBackdrop: View {
                    with: .radialGradient(Gradient(colors: [t.ink.opacity(0.035), .clear]), center: center,
                                          startRadius: 0, endRadius: r))
         }
-        let count = Int(size.width * size.height / 900)
+        let count = min(1800, Int(size.width * size.height / 650))
         var fibers = Path(), long = Path()
         for i in 0..<count {
             let start = CGPoint(x: CGFloat(rng.next(0, 1)) * size.width, y: CGFloat(rng.next(0, 1)) * size.height)
@@ -66,14 +74,14 @@ struct ThemeBackdrop: View {
             p.addQuadCurve(to: end, control: bend)
             if isLong { long.addPath(p) } else { fibers.addPath(p) }
         }
-        c.stroke(fibers, with: .color(t.ink.opacity(0.045)), lineWidth: 0.6)
-        c.stroke(long, with: .color(t.ink.opacity(0.06)), lineWidth: 0.8)
+        c.stroke(fibers, with: .color(t.ink.opacity(0.055)), lineWidth: 0.6)
+        c.stroke(long, with: .color(t.ink.opacity(0.075)), lineWidth: 0.8)
     }
 
     /// Plan bleu d'architecte : grille dans la couleur de lecture, cotes le long des bords, repères de trame.
     static func blueprint(_ c: inout GraphicsContext, _ size: CGSize, _ t: Theme) {
-        grid(&c, size, color: t.read, minor: 0.06, major: 0.11, spacing: 24)
-        let ink = t.read.opacity(0.28)
+        grid(&c, size, color: t.read, minor: 0.035, major: 0.085, spacing: 24)
+        let ink = t.read.opacity(0.24)
         var cotes = Path()
         // Cotes horizontales en haut, verticales à gauche : trait, petites barres obliques aux extrémités.
         let y = 36.0, x = 36.0
@@ -102,11 +110,20 @@ struct ThemeBackdrop: View {
 
     /// Plan d'intérieur discret : murs, cloisons, portes (arc d'ouverture), fenêtres, en bas à droite.
     static func floorplan(_ c: inout GraphicsContext, _ size: CGSize, _ t: Theme) {
-        grid(&c, size, color: .white, minor: 0.02, major: 0.035)
+        grid(&c, size, color: t.read, minor: 0.018, major: 0.04, spacing: 32)
         let w = min(size.width * 0.62, 900), h = w * 0.62
         let o = CGPoint(x: size.width - w - size.width * 0.04, y: size.height - h - size.height * 0.05)
         func pt(_ x: CGFloat, _ y: CGFloat) -> CGPoint { CGPoint(x: o.x + x * w, y: o.y + y * h) }
-        let wall = t.ink.opacity(0.10), detail = t.read.opacity(0.16)
+        // Matières vues en plan : aplat de chêne, lames espacées, pièces ouvertes.
+        c.fill(Path(CGRect(origin: pt(0, 0), size: CGSize(width: w * 0.42, height: h * 0.55))),
+               with: .color(t.read.opacity(0.045)))
+        var boards = Path()
+        for i in 1..<10 {
+            let x = CGFloat(i) * 0.042
+            boards.move(to: pt(x, 0)); boards.addLine(to: pt(x, 0.55))
+        }
+        c.stroke(boards, with: .color(t.read.opacity(0.07)), lineWidth: 0.5)
+        let wall = t.ink.opacity(0.11), detail = t.read.opacity(0.20)
         var walls = Path()
         walls.addRect(CGRect(origin: o, size: CGSize(width: w, height: h)))
         // Cloisons (avec les vides des portes).
@@ -142,11 +159,11 @@ struct ThemeBackdrop: View {
     static func dusk(_ c: inout GraphicsContext, _ size: CGSize, _ t: Theme) {
         let rect = CGRect(origin: .zero, size: size)
         c.fill(Path(rect), with: .linearGradient(
-            Gradient(stops: [.init(color: .clear, location: 0), .init(color: t.ai.opacity(0.08), location: 0.55),
-                             .init(color: t.read.opacity(0.18), location: 1)]),
+            Gradient(stops: [.init(color: .clear, location: 0), .init(color: t.ai.opacity(0.05), location: 0.55),
+                             .init(color: t.read.opacity(0.12), location: 1)]),
             startPoint: .zero, endPoint: CGPoint(x: 0, y: size.height)))
         let sun = CGPoint(x: size.width * 0.72, y: size.height * 0.92)
-        c.fill(Path(rect), with: .radialGradient(Gradient(colors: [t.annotate.opacity(0.16), .clear]), center: sun,
+        c.fill(Path(rect), with: .radialGradient(Gradient(colors: [t.annotate.opacity(0.12), .clear]), center: sun,
                                                  startRadius: 0, endRadius: max(size.width, size.height) * 0.45))
         // Horizon lointain : deux lignes de collines très douces.
         for (k, alpha) in [(0.8, 0.05), (0.88, 0.07)] {
@@ -171,15 +188,21 @@ struct ThemeBackdrop: View {
             stroke.addCurve(to: CGPoint(x: size.width + 20, y: y + CGFloat(rng.next(-60, 60))),
                             control1: CGPoint(x: size.width * 0.3, y: y + CGFloat(rng.next(-120, 120))),
                             control2: CGPoint(x: size.width * 0.7, y: y + CGFloat(rng.next(-120, 120))))
-            c.stroke(stroke, with: .color(t.read.opacity(0.05)), style: StrokeStyle(lineWidth: CGFloat(rng.next(18, 46)), lineCap: .round))
-            c.stroke(stroke, with: .color(t.read.opacity(0.12)), lineWidth: 0.6)
+            c.stroke(stroke, with: .color(t.read.opacity(0.035)), style: StrokeStyle(lineWidth: CGFloat(rng.next(10, 26)), lineCap: .round))
+            c.stroke(stroke, with: .color(t.read.opacity(0.085)), lineWidth: 0.6)
         }
-        c.stroke(Path(CGRect(origin: .zero, size: size).insetBy(dx: 10, dy: 10)), with: .color(t.read.opacity(0.22)), lineWidth: 0.6)
-        c.stroke(Path(CGRect(origin: .zero, size: size).insetBy(dx: 14, dy: 14)), with: .color(t.read.opacity(0.1)), lineWidth: 0.4)
+        c.stroke(Path(CGRect(origin: .zero, size: size).insetBy(dx: 24, dy: 24)), with: .color(t.read.opacity(0.16)), lineWidth: 0.6)
+        c.stroke(Path(CGRect(origin: .zero, size: size).insetBy(dx: 29, dy: 29)), with: .color(t.read.opacity(0.1)), lineWidth: 0.4)
     }
 
     /// Sakura : quelques pétales posés, plus nombreux vers le coin haut droit.
     static func sakura(_ c: inout GraphicsContext, _ size: CGSize, _ t: Theme) {
+        var branch = Path()
+        branch.move(to: CGPoint(x: size.width * 1.02, y: size.height * 0.02))
+        branch.addCurve(to: CGPoint(x: size.width * 0.65, y: size.height * 0.34),
+                        control1: CGPoint(x: size.width * 0.86, y: size.height * 0.11),
+                        control2: CGPoint(x: size.width * 0.89, y: size.height * 0.25))
+        c.stroke(branch, with: .color(t.japanese.opacity(0.11)), style: StrokeStyle(lineWidth: 1.2, lineCap: .round))
         var rng = Seeded(11)
         let count = max(18, Int(size.width * size.height / 14000))
         for _ in 0..<count {
@@ -188,12 +211,16 @@ struct ThemeBackdrop: View {
             let p = CGPoint(x: size.width * CGFloat(1 - u * u), y: size.height * CGFloat(v * v))
             let s = CGFloat(rng.next(5, 12))
             var petal = Path()
-            petal.move(to: CGPoint(x: 0, y: -s))
-            petal.addQuadCurve(to: CGPoint(x: 0, y: s), control: CGPoint(x: s * 1.1, y: 0))
-            petal.addQuadCurve(to: CGPoint(x: 0, y: -s), control: CGPoint(x: -s * 1.1, y: 0))
+            petal.move(to: CGPoint(x: 0, y: -s * 0.65))
+            petal.addLine(to: CGPoint(x: s * 0.28, y: -s))
+            petal.addCurve(to: CGPoint(x: 0, y: s), control1: CGPoint(x: s * 1.1, y: -s * 0.4),
+                          control2: CGPoint(x: s * 0.8, y: s * 0.5))
+            petal.addCurve(to: CGPoint(x: -s * 0.28, y: -s), control1: CGPoint(x: -s * 0.8, y: s * 0.5),
+                          control2: CGPoint(x: -s * 1.1, y: -s * 0.4))
+            petal.closeSubpath()
             let placed = petal.applying(CGAffineTransform(rotationAngle: CGFloat(rng.next(0, .pi * 2)))
                 .concatenating(CGAffineTransform(translationX: p.x, y: p.y)))
-            c.fill(placed, with: .color(t.japanese.opacity(rng.next(0.06, 0.16))))
+            c.fill(placed, with: .color(t.japanese.opacity(rng.next(0.07, 0.18))))
         }
     }
 }

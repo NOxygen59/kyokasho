@@ -246,6 +246,14 @@ Comptes (Drive) ; À propos (+ **connexion GitHub** device flow → mise à jour
 - Balises `FDR-V1`.
 
 ### [x] V6 — Thèmes (fonds personnalisés, innover)
+- **Retouche Codex (23/10, demande de l'utilisateur)** : les 11 thèmes existants conservent leurs noms et
+  identifiants. Palettes plus douces, surfaces mieux séparées, textes secondaires et accents éclaircis ; traits,
+  fibres de papier, plan d'intérieur et pétales affinés. Sélecteur avec motifs visibles, exemple de panneau et
+  description de chaque ambiance ; interrupteur « Motifs de fond » persistant. Couleurs partagées reprises par
+  le dictionnaire et les cartes via les palettes existantes. Aucune image ni dépendance ajoutée.
+  Vérifié sur Mac : compilation des trois fichiers de design dans un rendu SwiftUI autonome (seul le pont
+  couleur UIKit est adapté à AppKit), planche des 11 palettes/fonds, contrôle des contrastes sur `surfaceHigh`
+  (accents ≥ 5,08:1 ; texte tertiaire composé ≥ 4,52:1). Compilation complète de l'app et essai iPad non faits.
 - **Fait (22/10, non vérifié sur iPad)** : `App/Design/ThemeBackdrop.swift` (fonds tracés en `Canvas`, hasard fixé
   `Seeded`) ; 6 thèmes : Washi, Architecte (plan bleu, cotes), Intérieur (plan d'appartement), Lumière du soir,
   Encre et or, Sakura (`Theme.backdrop`). `GridBackground` = fond du thème. Cartes du choix de thème = vrai fond.
