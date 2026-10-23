@@ -9,7 +9,8 @@
 
 ## 0. Passation (23/10/2026) : le projet passe de Claude Code à ChatGPT Codex
 
-Tout le code jusqu'à la v1.1.0 a été écrit par Claude (Claude Code). La suite se fait avec **ChatGPT Codex**.
+Tout le code jusqu'à la v1.1.0 a été écrit par Claude (Claude Code). **NOxygen59 pilote le projet** ; Claude participe
+au cadrage et à la feuille de route ; **ChatGPT Codex contribue au développement, aux corrections et à la revue du code**.
 `AGENTS.md` (racine) renvoie ici. Ce qui suit est ce qu'un nouvel assistant doit savoir avant d'écrire une ligne.
 
 **Où sont les choses**
@@ -42,7 +43,7 @@ fenêtre OCR à déplacement libre (0.9.0), pages de même taille + cache `Cache
 Double (1.1), export (V8), ajout de pages (V14, données de l'utilisateur : prudence), stockage et cache (V10, V11),
 page par IA et chat (V7), lexique (S).
 
-**Suite proposée** : § 7 bis (F : cartes de la page, R : « Continuer » dans la bibliothèque), puis § 8 (B3 furigana
+**Suite proposée** : § 7 bis (R : « Continuer » dans la bibliothèque ; F codé par Codex, à essayer sur iPad), puis § 8 (B3 furigana
 verticaux, B5 tableaux / texte vertical, B6 performance, B7 GLM-OCR plus rapide, K grammaire), § 11.
 
 ## 1. Prompt à coller dans le nouveau chat
@@ -371,8 +372,12 @@ Comptes (Drive) ; À propos (+ **connexion GitHub** device flow → mise à jour
 - [x] **E — Double page de même taille** (1.0.0 : pages recréées à la hauteur commune à la construction ; annotations
   d'avant sur une page agrandie = décalées ; export annoté de ces pages pas adapté) : option « Égaliser les pages » ; agrandir seulement l'**affichage** de la plus
   petite (jamais ses coordonnées : notes, encre, surlignages, OCR sont en repère de page). À tester sur l'iPad.
-- [ ] **F — Cartes de la page** : « Créer des cartes de cette page » = termes du lexique trouvés dans le texte de la
-  page (lecture + sens) → cartes Anki du document.
+- [x] **F — Cartes de la page** (Codex, 23/10, non vérifié sur iPad) : menu « Cette page » → aperçu
+  des termes du lexique trouvés ; lecture et sens modifiables et obligatoires avant ajout. Texte OvisOCR2 déjà
+  gardé, sinon OCR en cache ou lecture OCR. Page de travail figée à l'ouverture (double page). Ajout atomique
+  hors du fil principal, doublons ignorés, lien livre/page conservé, export Anki existant. Lectures manquantes : suggestion
+  locale MeCab / analyseur système à vérifier ; champ vide si la lecture reste incomplète.
+  Vérifié : syntaxe Swift et diff ; compilation complète et essai iPad non faits.
 - [ ] **R — Reprendre** : bandeau « Continuer : <livre>, p. X » en haut de la bibliothèque + progression (pages lues,
   pages lues par l'IA).
 

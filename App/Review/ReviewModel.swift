@@ -85,6 +85,25 @@ final class ReviewModel: ObservableObject {
         return nil
     }
 
+    /// Le lot reste dans Kyōkasho, exportable en Anki depuis le document.
+    /// Une seule transaction hors du fil principal, puis un seul rafraîchissement.
+    func addPageCards(_ fields: [[String: String]], documentId: String, page: Int) async throws -> Int {
+        guard let deckId = defaultDeckId, let templateId = defaultTemplate?.id else {
+            throw NSError(domain: "Kyokasho.Cartes", code: 1,
+                          userInfo: [NSLocalizedDescriptionKey: "Choisis un paquet et un modèle dans les réglages des cartes."])
+        }
+        let cards = fields.map { fields in
+            StudyCard(deckId: deckId, templateId: templateId,
+                      key: StudyCard.key(expression: fields["Mot"] ?? "", reading: fields["Lecture"] ?? ""),
+                      fields: fields, tags: ["kyokasho", "lexique"], sourceDocumentId: documentId, sourcePage: page)
+        }
+        let store = store
+        let added = try await Task.detached(priority: .userInitiated) { try store.addMissing(cards) }.value
+        keys.formUnion(cards.map(\.key))
+        refresh()
+        return added
+    }
+
     /// Ajoute une carte. `imageData` (JPEG) et `audio` vont dans les médias selon les réglages.
     @discardableResult
     func addCard(term: TermResult, sentence: String?, source: String?, imageData: Data?, audio: (Data, String)?,

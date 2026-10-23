@@ -155,6 +155,20 @@ public final class ReviewStore: @unchecked Sendable {
         }
     }
 
+    /// Ajout groupé atomique : une erreur ne laisse pas une page à moitié ajoutée.
+    /// Vérification dans la transaction, y compris les répétitions dans le lot.
+    public func addMissing(_ cards: [StudyCard]) throws -> Int {
+        try writer.write { db in
+            var added = 0
+            for var card in cards {
+                guard try StudyCard.filter(Column("key") == card.key).fetchOne(db) == nil else { continue }
+                try card.insert(db)
+                added += 1
+            }
+            return added
+        }
+    }
+
     public func update(_ card: StudyCard) throws {
         try writer.write { db in
             var c = card

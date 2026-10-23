@@ -39,7 +39,7 @@ struct ReaderScreen: View {
     @ObservedObject private var keyboard = HardwareKeyboard.shared
 
     enum Sheet: String, Identifiable {
-        case search, ai, settings
+        case search, ai, settings, pageCards
         var id: String { rawValue }
     }
 
@@ -168,6 +168,7 @@ struct ReaderScreen: View {
                 case .search: SearchSheet(reader: reader, close: { self.sheet = nil })
                 case .ai: AIPageSheet(reader: reader, openWeb: { self.sheet = nil; side = .web })
                 case .settings: DocumentSettingsSheet(reader: reader)
+                case .pageCards: PageCardsView(reader: reader)
                 }
             }
             .environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review)
@@ -324,6 +325,9 @@ struct ReaderScreen: View {
                     Label("Affichage", systemImage: "eye")
                 }
                 Menu {
+                    Button { sheet = .pageCards } label: {
+                        Label("Créer des cartes de cette page", systemImage: "rectangle.stack.badge.plus")
+                    }
                     Button { reader.rotateCurrentPage() } label: { Label("Pivoter la page", systemImage: "rotate.right") }
                     Button { reader.toggleSplitCurrentPage() } label: {
                         Label(reader.isCurrentPageSplit ? "Ne plus couper la page" : "Couper la page en deux",

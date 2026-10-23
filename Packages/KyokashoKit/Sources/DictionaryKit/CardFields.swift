@@ -36,6 +36,14 @@ public enum CardFields {
         return f
     }
 
+    /// Carte du lexique : les champs suivent le même format que ceux du dictionnaire.
+    public static func lexicon(expression: String, reading: String, meaning: String,
+                               sentence: String, source: String) -> [String: String] {
+        ["Mot": expression, "Lecture": reading, "Furigana": furigana(expression, reading),
+         "Sens": "<ol><li>" + escape(meaning) + "</li></ol>",
+         "Phrase": bold(expression, in: sentence), "Source": escape(source)]
+    }
+
     /// Format furigana d'Anki : `食[た]べる`, une espace avant chaque segment qui a une lecture.
     public static func furigana(_ expression: String, _ reading: String) -> String {
         var out = ""
