@@ -133,6 +133,7 @@ struct StudyTextTab: View {
             VStack(alignment: .leading, spacing: 14) {
                 if reader.ocrPage != nil { PageSearchField(query: $query) }
                 engineRow
+                verificationRow
                 switch (reader.ocrPage, reader.ocrState) {
                 case (_, .running):
                     HStack(spacing: 10) { ProgressView().tint(Atelier.Tint.japanese); Text("Lecture de la page…") }
@@ -229,6 +230,37 @@ struct StudyTextTab: View {
         }
         .sheet(isPresented: $showVerify) { VerifySheet(reader: reader).preferredColorScheme(.dark) }
         .sheet(isPresented: $showCompare) { CompareEnginesView(reader: reader).environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review) }
+    }
+
+    @ViewBuilder
+    private var verificationRow: some View {
+        if OvisOCR2Reader().isAvailable {
+            let current = reader.verifications.filter { reader.shownSources.contains($0.source) }
+            let count = current.reduce(0) { $0 + $1.suggestions.count }
+            HStack(spacing: 10) {
+                Button {
+                    if !aiTasks.isRunning(reader.verifyKey) &&
+                        (reader.verifyState != .done || current.count != reader.shownSources.count) {
+                        reader.verifyShownPages()
+                    }
+                    showVerify = true
+                } label: {
+                    Label(count > 0 ? "Corrections IA (\(count))" : "Corrections IA",
+                          systemImage: "checkmark.seal")
+                }
+                Button {
+                    reader.verifyShownPages(force: true)
+                    showVerify = true
+                } label: {
+                    Label("Rescanner", systemImage: "arrow.clockwise")
+                }
+                .disabled(aiTasks.isRunning(reader.verifyKey))
+            }
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(Atelier.Tint.ai)
+            Text("Comparer au texte OCR de la page · accepter les corrections dans la vérification.")
+                .font(.caption2).foregroundStyle(Atelier.textTertiary)
+        }
     }
 
     /// Zones de mise en page de la page de travail (modèle choisi, gardées en mémoire par page).

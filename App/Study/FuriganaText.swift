@@ -72,6 +72,12 @@ struct FuriganaTextView: View {
     /// Unités de texte : titres, paragraphes, cellules (mis en forme) ou lignes (brut).
     private var units: [(tag: String, text: String, row: Int?)] {
         guard formatted else { return page.lines.map { ("p", $0.text, nil) } }
+        if Self.isVertical(page) {
+            // Une colonne par ligne OCR ; le mode mis en forme suit l'ordre japonais, de droite à gauche.
+            return page.lines.sorted { a, b in
+                abs(a.box.x - b.box.x) > 0.01 ? a.box.x > b.box.x : a.box.y < b.box.y
+            }.map { ("p", $0.text, nil) }
+        }
         return formattedUnits
     }
 
@@ -116,7 +122,7 @@ struct FuriganaTextView: View {
         if openRow != nil { body += "</tr></table>" }
         // Construction remplacée entre-temps (autre page, autre affichage) : on n'écrase pas la nouvelle.
         guard !Task.isCancelled else { return }
-        html = Self.page(body)
+        html = Self.page(body, vertical: Self.isVertical(page))
     }
 
     /// Pour chaque caractère, début du mot du dictionnaire qui le contient (segments de `Translator.segment`) :
@@ -163,19 +169,26 @@ struct FuriganaTextView: View {
             .replacingOccurrences(of: ">", with: "&gt;").replacingOccurrences(of: "\"", with: "&quot;")
     }
 
-    // FDR-3 : page surtout verticale → `writing-mode: vertical-rl`. Voir § 6 étape 3.
-    static func page(_ body: String) -> String {
+    static func isVertical(_ page: OCRPage) -> Bool {
+        let vertical = page.lines.filter(\.vertical).reduce(0) { $0 + $1.text.count }
+        let horizontal = page.lines.filter { !$0.vertical }.reduce(0) { $0 + $1.text.count }
+        return vertical > horizontal && vertical > 0
+    }
+
+    static func page(_ body: String, vertical: Bool = false) -> String {
         let text = UIColor(Atelier.textPrimary).hexString, accent = UIColor(Atelier.Tint.japanese).hexString
         let line = UIColor(Atelier.hairline).hexString
         return """
         <!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=5,user-scalable=yes">
         <style>
         html,body{margin:0;background:transparent;color:\(text);font:17px/2.1 "Hiragino Mincho ProN",serif;-webkit-user-select:none}
+        body.vertical{writing-mode:vertical-rl;text-orientation:mixed;height:460px;max-width:100%;overflow-x:auto;overflow-y:hidden}
+        body.vertical ruby{ruby-position:over}
         p,h2,h3,td{margin:0 0 .6em} h2{font-size:1.35em} h3{font-size:1.15em}
         table{border-collapse:collapse;margin:.4em 0 .8em} td{border:1px solid \(line);padding:2px 8px}
         rt{font-size:.5em;color:\(FuriganaLayer.Tint.current.panelHex)} span[data-q]{cursor:pointer} span.hit{background:\(accent)55;border-radius:3px}
         span.doubt{text-decoration:underline solid #ff9f0a;background:#ff9f0a2e}
-        </style></head><body>\(body)
+        </style></head><body\(vertical ? " class=\"vertical\"" : "")>\(body)
         <script>
         function size(){window.webkit.messageHandlers.kyokasho.postMessage({type:'height',value:document.body.scrollHeight})}
         window.onload=size; new ResizeObserver(size).observe(document.body);

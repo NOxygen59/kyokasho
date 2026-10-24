@@ -123,7 +123,8 @@ struct AILayoutView: View {
         guard let markdown else { return }
         let showFrench = french && frenchMarkdown != nil
         let built = await Self.html(showFrench ? frenchMarkdown! : markdown, furigana: furigana && !showFrench,
-                                    french: showFrench, dictionary: dictionary, url: reader.fileURL, page: source)
+                                    french: showFrench, vertical: !showFrench && reader.ocrPage.map(FuriganaTextView.isVertical) == true,
+                                    dictionary: dictionary, url: reader.fileURL, page: source)
         guard !Task.isCancelled else { return }
         html = built
     }
@@ -148,7 +149,7 @@ struct AILayoutView: View {
     // MARK: HTML
 
     /// Blocs → HTML. Tout texte passe par `FuriganaTextView.markup` (échappé, mot entier au toucher, furigana).
-    static func html(_ markdown: String, furigana: Bool, french: Bool = false, dictionary: DictionaryModel,
+    static func html(_ markdown: String, furigana: Bool, french: Bool = false, vertical: Bool = false, dictionary: DictionaryModel,
                      url: URL, page: Int) async -> String {
         let blocks = AILayout.blocks(markdown)
         func text(_ s: String) async -> String {
@@ -237,7 +238,7 @@ struct AILayoutView: View {
                 break  // traitées plus haut (grille)
             }
         }
-        return FuriganaTextView.page(body)
+        return FuriganaTextView.page(body, vertical: vertical)
     }
 
     /// Découpe d'une figure (coordonnées sur 1000) → image JPEG en `data:` (≤ 900 px de large).

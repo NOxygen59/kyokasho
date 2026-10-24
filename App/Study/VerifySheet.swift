@@ -63,7 +63,15 @@ struct VerifySheet: View {
             }
             .navigationTitle("Vérification (OvisOCR2)")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("OK") { dismiss() } } }
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Button { reader.verifyShownPages(force: true) } label: {
+                        Label("Relire avec OvisOCR2", systemImage: "arrow.clockwise")
+                    }
+                    .disabled(AITaskCenter.shared.isRunning(reader.verifyKey))
+                }
+                ToolbarItem(placement: .confirmationAction) { Button("OK") { dismiss() } }
+            }
             .alert("Arrêter la vérification ?", isPresented: $confirmStop) {
                 Button("Continuer", role: .cancel) {}
                 Button("Arrêter", role: .destructive) {

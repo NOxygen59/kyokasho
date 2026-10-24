@@ -26,11 +26,12 @@ extension ReaderController {
 
     var verifyKey: String { "verify|\(document.id)" }
 
-    /// Relit les pages affichées (double page : les deux) avec OvisOCR2 et propose les lignes qui diffèrent.
+    /// Compare les pages affichées ; un rescan forcé relit seulement la page choisie dans le panneau.
     /// Rien n'est changé sans accord ; le modèle est libéré à la fin.
-    func verifyShownPages() {
+    func verifyShownPages(force: Bool = false) {
         guard OvisOCR2Reader().isAvailable, !AITaskCenter.shared.isRunning(verifyKey) else { return }
-        let sources = shownSources, url = fileURL, service = model.ocr, documentId = document.id
+        let sources = force ? [focusSource] : shownSources
+        let url = fileURL, service = model.ocr, documentId = document.id
         let focused = focusSource, focusedPage = ocrPage, engines = preferredEngines()
         verifications = []
         verifyState = .running(done: 0, total: sources.count)
@@ -56,7 +57,7 @@ extension ReaderController {
                         let markdown: String
                         // Page déjà lue par OvisOCR2 (scan à l'ouverture, mise en page IA, analyse) : même modèle,
                         // même page, température 0 → même texte ; réutilisé au lieu de ≈ 20 à 40 s de lecture.
-                        if let known = try? String(contentsOf: file, encoding: .utf8), !known.isEmpty {
+                        if !force, let known = try? String(contentsOf: file, encoding: .utf8), !known.isEmpty {
                             markdown = known
                             Diagnostics.log("OvisOCR2 page \(source) : déjà lue (\(markdown.count) caractères)", "verif")
                         } else {
@@ -68,8 +69,9 @@ extension ReaderController {
                             try Task.checkCancellation()
                             Diagnostics.log("OvisOCR2 page \(source) : \(markdown.count) caractères lus", "verif")
                             // Gardé : sert aussi à la vue « Mise en page IA » du panneau Texte.
-                            try? FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
-                            try? markdown.write(to: file, atomically: true, encoding: .utf8)
+                            try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
+                            try markdown.write(to: file, atomically: true, encoding: .utf8)
+                            if force { DocumentAnalysisService.shared.invalidatePage(source, documentId: documentId) }
                             NotificationCenter.default.post(name: .aiPageRead,
                                                             object: DocumentScan.PageRead(documentId: documentId, page: source))
                         }

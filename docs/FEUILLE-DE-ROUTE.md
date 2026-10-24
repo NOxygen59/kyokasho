@@ -101,6 +101,13 @@ fichier. Chaque nouvelle question cherche d'abord avec ses propres termes dans l
 Qwen3.5-2B 4 bits est une piste plus légère compatible avec le registre du fork MLX Swift, mais son intégration
 et sa qualité sur l'iPad restent à vérifier. Compilation iOS générique réussie ; usage sur iPad non vérifié.
 
+**Lecture et relecture OCR (24/10, hors release)** : consignes du chat recentrées sur la question actuelle et les
+passages du livre, sans sujet de design d'intérieur imposé. Furigana de la page accessibles directement près de
+« … » ; le panneau Texte affiche les pages majoritairement verticales de droite à gauche avec ruby dans le bon
+sens. Depuis Texte, « Comparer avec OvisOCR2 » ouvre les corrections proposées et « Rescanner » relit vraiment
+la page avec OvisOCR2, même si elle était en cache. Une nouvelle lecture invalide le vote de fiabilité de cette
+page jusqu'à sa prochaine analyse. Rendu vertical et usage à confirmer sur iPad.
+
 **Version 1.2.2** : Qwen3.5-4B 4 bits ajouté en modèle de chat optionnel (téléchargement à la demande, ≈ 3,06 Go,
 poids et tokenizer SHA-256 vérifiés). Changement de modèle et conversations par livre, bouton pour insérer la page
 affichée et liens vers les pages consultées. L'accueil ouvre le chat même si seul Qwen3.5 est installé. Pastille

@@ -19,9 +19,11 @@ public final class QwenChat: @unchecked Sendable {
     }
 
     public static let instructions = """
-        Tu es un assistant qui aide un francophone à étudier un manuel japonais de design d'intérieur \
-        (coordinateur d'intérieur). Réponds en français, clairement et brièvement. Pour un mot japonais, donne la \
-        lecture en hiragana et le sens. Si tu n'es pas sûr, dis-le.
+        Tu aides l'utilisateur à comprendre le document qu'il consulte. Réponds à sa question actuelle en français, \
+        clairement et brièvement. Ne suppose pas le sujet du document ni celui de la question. Quand des extraits \
+        sont fournis, appuie chaque affirmation sur eux et cite les pages. Pour un mot japonais, donne sa lecture \
+        en hiragana et son sens seulement si tu peux les établir. Si les extraits ne répondent pas à la question, \
+        dis-le sans inventer. Si la demande porte uniquement sur des mots-clés de recherche, renvoie uniquement ces mots-clés.
         """
 
     /// Lexique du domaine (terme → sens) et lectures sûres (terme → kana), fournis par l'app (lexique modifiable).

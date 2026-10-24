@@ -325,6 +325,11 @@ struct ReaderScreen: View {
             CapsuleButton(icon: "magnifyingglass", label: "Rechercher") { sheet = .search }
             CapsuleButton(icon: reader.isCurrentPageBookmarked ? "bookmark.fill" : "bookmark", label: "Signet",
                           active: reader.isCurrentPageBookmarked) { reader.toggleBookmark() }
+            CapsuleButton(icon: "character.ja", label: furigana ? "Masquer les furigana de la page" : "Afficher les furigana de la page",
+                          active: furigana, tint: Atelier.Tint.japanese) {
+                furigana.toggle()
+                reader.setFurigana(furigana)
+            }
             Menu {
                 // Rangé par thème : affichage (pour tous les livres), cette page, ce document.
                 Menu {
@@ -334,9 +339,6 @@ struct ReaderScreen: View {
                         Label("Fond de page", systemImage: "circle.lefthalf.filled")
                     }
                     .pickerStyle(.menu)
-                    Toggle(isOn: Binding(get: { furigana }, set: { furigana = $0; reader.setFurigana($0) })) {
-                        Label("Furigana sur les kanji", systemImage: "character.ja")
-                    }
                     Picker(selection: Binding(get: { furiganaTint }, set: { furiganaTint = $0; reader.setFuriganaTint($0) })) {
                         ForEach(FuriganaLayer.Tint.allCases) { Text($0.title).tag($0) }
                     } label: {

@@ -77,6 +77,11 @@ final class DocumentAnalysisService: ObservableObject {
         }
     }
 
+    /// Une nouvelle lecture brute rend le vote précédent de cette page périmé.
+    func invalidatePage(_ source: Int, documentId: String) {
+        update(documentId) { $0.pages[source] = nil }
+    }
+
     func forget(_ id: String) {
         cache[id] = nil
         try? FileManager.default.removeItem(at: Self.folder.appendingPathComponent("\(id).json"))
