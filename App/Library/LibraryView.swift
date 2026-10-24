@@ -13,7 +13,7 @@ struct LibraryView: View {
 
     @EnvironmentObject private var model: AppModel
     @State private var filter: Filter = .all
-    @State private var showPicker = false
+    @State private var showImportOptions = false
     @State private var showSettings = false
     @State private var showDrive = false
     @State private var showBench = false
@@ -71,8 +71,9 @@ struct LibraryView: View {
                 ImportBanner(progress: progress).padding(.bottom, 28)
             }
         }
-        .sheet(isPresented: $showPicker) {
-            DocumentPicker { urls in model.importFiles(urls) }.ignoresSafeArea()
+        .sheet(isPresented: $showImportOptions) {
+            ImportOptionsView { urls, language in model.importFiles(urls, language: language) }
+                .preferredColorScheme(.dark)
         }
         .sheet(item: $analyzing) { document in
             DocumentAnalysisSheet(document: document).environmentObject(model).preferredColorScheme(.dark)
@@ -167,7 +168,7 @@ struct LibraryView: View {
             }
             VStack(alignment: .leading, spacing: 4) {
                 AtelierLabel("Importer").padding(.bottom, 4)
-                actionRow(icon: "folder", title: "Fichiers", tint: Atelier.Tint.cloud) { showPicker = true }
+                actionRow(icon: "folder", title: "Fichiers", tint: Atelier.Tint.cloud) { showImportOptions = true }
                 actionRow(icon: "externaldrive.badge.icloud", title: "Google Drive", tint: Atelier.Tint.cloud) { showDrive = true }
             }
             VStack(alignment: .leading, spacing: 4) {
@@ -254,7 +255,7 @@ struct LibraryView: View {
                 Text("Drive").tag(Filter.drive)
             }
             .pickerStyle(.segmented).frame(width: 260)
-            CapsuleButton(icon: "plus", label: "Importer") { showPicker = true }
+            CapsuleButton(icon: "plus", label: "Importer") { showImportOptions = true }
             CapsuleButton(icon: "externaldrive.badge.icloud", label: "Google Drive") { showDrive = true }
             CapsuleButton(icon: "character.book.closed.ja", label: "Dictionnaire") { showDictionary = true }
             CapsuleButton(icon: "gearshape", label: "Réglages") { showSettings = true }
@@ -281,7 +282,7 @@ struct LibraryView: View {
                 .padding(.horizontal, 14).padding(.vertical, 10)
                 .frame(width: 280)
                 .atelierPanel(radius: 22)
-                Button { showPicker = true } label: { Label("Importer", systemImage: "plus") }
+                Button { showImportOptions = true } label: { Label("Importer", systemImage: "plus") }
                     .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.cloud))
             }
             if filtered.isEmpty {
@@ -359,7 +360,7 @@ struct LibraryView: View {
             Text("Importe un cours ou un manuel en PDF, depuis Fichiers ou Google Drive.")
                 .foregroundStyle(Atelier.textSecondary)
             HStack(spacing: 12) {
-                Button { showPicker = true } label: { Label("Fichiers", systemImage: "folder") }
+                Button { showImportOptions = true } label: { Label("Fichiers", systemImage: "folder") }
                     .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.cloud))
                 Button { showDrive = true } label: { Label("Google Drive", systemImage: "externaldrive.badge.icloud") }
                     .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.read))

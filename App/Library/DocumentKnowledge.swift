@@ -32,14 +32,14 @@ enum DocumentKnowledge {
         let cited = explicitPages(question, document: document)
         if !cited.isEmpty {
             return cited.sorted().prefix(limit).compactMap { page in
-                guard let content = try? String(contentsOf: DocumentAnalysisService.rawURL(document.id, ModelSpec.ovisocr2.id, page), encoding: .utf8),
+                guard let content = DocumentAITextStore.read(documentId: document.id, reader: ModelSpec.ovisocr2.id, page: page),
                       !content.isEmpty else { return nil }
                 return Passage(page: page, text: String(content.prefix(3500)), score: 100)
             }
         }
         var matches: [Passage] = []
         for page in 0..<document.pageCount {
-            guard let content = try? String(contentsOf: DocumentAnalysisService.rawURL(document.id, ModelSpec.ovisocr2.id, page), encoding: .utf8) else { continue }
+            guard let content = DocumentAITextStore.read(documentId: document.id, reader: ModelSpec.ovisocr2.id, page: page) else { continue }
             let blocks = content.components(separatedBy: "\n\n")
             for block in blocks {
                 let clean = block.trimmingCharacters(in: .whitespacesAndNewlines)

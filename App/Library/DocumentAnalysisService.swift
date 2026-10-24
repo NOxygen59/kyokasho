@@ -36,10 +36,10 @@ final class DocumentAnalysisService: ObservableObject {
     @Published private(set) var correctionsDone: Int?
 
     nonisolated static var folder: URL {
-        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("Analysis", isDirectory: true)
+        DocumentAITextStore.folder
     }
     nonisolated static func rawURL(_ id: String, _ reader: String, _ page: Int) -> URL {
-        folder.appendingPathComponent(id, isDirectory: true).appendingPathComponent("\(reader)-\(page).md")
+        DocumentAITextStore.url(documentId: id, reader: reader, page: page)
     }
 
     func report(for id: String) -> DocumentAnalysis? {
@@ -147,8 +147,7 @@ final class DocumentAnalysisService: ObservableObject {
                             let text = try await Diagnostics.measure("\(reader) p. \(p) (≤ \(budget) jetons)", "analyse") {
                                 try await Self.read(reader, url: url, page: p, maxTokens: budget, service: service, documentId: id)
                             }
-                            try? FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
-                            try? text.write(to: file, atomically: true, encoding: .utf8)
+                            try? DocumentAITextStore.write(text, documentId: id, reader: reader, page: p)
                         } catch {
                             errors[p] = "\(Self.name(reader)) : \(error.localizedDescription)"
                         }
@@ -165,7 +164,7 @@ final class DocumentAnalysisService: ObservableObject {
                 var page: DocumentAnalysis.Page
                 if let b = base[p], b.engine != OCREngineID.pdfText {
                     let readings = readers.reduce(into: [String: String]()) { r, reader in
-                        r[reader] = try? String(contentsOf: Self.rawURL(id, reader, p), encoding: .utf8)
+                        r[reader] = DocumentAITextStore.read(documentId: id, reader: reader, page: p)
                     }
                     page = await Task.detached {
                         await DocumentAnalysis.vote(source: p, base: b, readings: readings) { candidates in
@@ -212,10 +211,10 @@ final class DocumentAnalysisService: ObservableObject {
             }
             for (k, p) in pages.enumerated() {
                 guard !Task.isCancelled else { break }
-                guard let md = try? String(contentsOf: Self.rawURL(id, ModelSpec.ovisocr2.id, p), encoding: .utf8) else { continue }
+                guard let md = DocumentAITextStore.read(documentId: id, reader: ModelSpec.ovisocr2.id, page: p) else { continue }
                 do {
                     let fr = try await Diagnostics.measure("traduction p. \(p)", "traduction") { try await Qwen3VLReader().translate(markdown: md, glossary: DomainLexicon.shared.glossary) }
-                    try? fr.write(to: Self.rawURL(id, "fr", p), atomically: true, encoding: .utf8)
+                    try? DocumentAITextStore.write(fr, documentId: id, reader: "fr", page: p)
                 } catch {
                     self?.lastError = "Traduction page \(p + 1) : \(error.localizedDescription)"
                 }
@@ -271,8 +270,12 @@ final class DocumentAnalysisService: ObservableObject {
 
     private static func read(_ reader: String, url: URL, page: Int, maxTokens: Int, service: OCRService, documentId: String) async throws -> String {
         switch reader {
-        case ModelSpec.ovisocr2.id: return try await OvisOCR2Reader().read(.pdfPage(url: url, index: page), maxTokens: maxTokens)
-        case ModelSpec.qwen3vl4b.id: return try await Qwen3VLReader().read(.pdfPage(url: url, index: page), maxTokens: maxTokens)
+        case ModelSpec.ovisocr2.id:
+            return try await OvisOCR2Reader(language: OCRTargetLanguage.forDocument(documentId))
+                .read(.pdfPage(url: url, index: page), maxTokens: maxTokens)
+        case ModelSpec.qwen3vl4b.id:
+            return try await Qwen3VLReader(language: OCRTargetLanguage.forDocument(documentId))
+                .read(.pdfPage(url: url, index: page), maxTokens: maxTokens)
         default:
             let glm = try await service.page(documentId: documentId, url: url, pageIndex: page, engine: OCREngineID.glmocr)
             return glm.lines.map(\.text).joined(separator: "\n")
@@ -352,7 +355,7 @@ final class DocumentAnalysisService: ObservableObject {
             for source in 0..<document.pageCount {
                 guard !Task.isCancelled, let self else { return }
                 defer { self.step(done: source + 1) }
-                guard let reference = try? String(contentsOf: Self.rawURL(id, ModelSpec.ovisocr2.id, source), encoding: .utf8),
+                guard let reference = DocumentAITextStore.read(documentId: id, reader: ModelSpec.ovisocr2.id, page: source),
                       !reference.isEmpty else { continue }
                 let preferred = await Task.detached { OCRService.resolve(choice, url: url, pageIndex: source) }.value
                 let engines = [preferred, OCREngineID.vision, OCREngineID.ndlocr, OCREngineID.ppocr5]

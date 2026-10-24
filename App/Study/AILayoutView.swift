@@ -31,8 +31,6 @@ struct AILayoutView: View {
     @State private var frenchMarkdown: String?
 
     private var source: Int { reader.focusSource }
-    private var file: URL { DocumentAnalysisService.rawURL(reader.document.id, ModelSpec.ovisocr2.id, source) }
-    private var frenchFile: URL { DocumentAnalysisService.rawURL(reader.document.id, "fr", source) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -103,22 +101,21 @@ struct AILayoutView: View {
     /// Traduction de la page (fichier gardé), même si on change de page entre-temps.
     private func translate() {
         guard let markdown else { return }
-        let source = source, frenchFile = frenchFile, glossary = DomainLexicon.shared.glossary
+        let source = source, documentId = reader.document.id, glossary = DomainLexicon.shared.glossary
         center.run(translateKey, title: "Traduction Qwen3-VL p. \(source + 1)", modelId: ModelSpec.qwen3vl4b.id, activity: "traduction") { _ in
             let fr = try await Diagnostics.measure("traduction p. \(source)", "traduction") {
                 try await Qwen3VLReader().translate(markdown: markdown, glossary: glossary)
             }
             // Arrêtée : la génération rend un texte partiel, jamais gardé.
             try Task.checkCancellation()
-            try? FileManager.default.createDirectory(at: frenchFile.deletingLastPathComponent(), withIntermediateDirectories: true)
-            try fr.write(to: frenchFile, atomically: true, encoding: .utf8)
+            try DocumentAITextStore.write(fr, documentId: documentId, reader: "fr", page: source)
             UserDefaults.standard.set(true, forKey: "study.aiLayoutFrench")
         }
     }
 
     private func load() async {
-        markdown = try? String(contentsOf: file, encoding: .utf8)
-        frenchMarkdown = try? String(contentsOf: frenchFile, encoding: .utf8)
+        markdown = DocumentAITextStore.read(documentId: reader.document.id, reader: ModelSpec.ovisocr2.id, page: source)
+        frenchMarkdown = DocumentAITextStore.read(documentId: reader.document.id, reader: "fr", page: source)
         html = ""
         guard let markdown else { return }
         let showFrench = french && frenchMarkdown != nil
@@ -132,17 +129,16 @@ struct AILayoutView: View {
     /// Mise en page de la page par OvisOCR2 (fichier gardé), même si on change de page entre-temps.
     private func read() {
         let budget = reader.ocrPage.map(DocumentAnalysisService.tokenBudget) ?? 2048
-        let source = source, file = file, frenchFile = frenchFile, url = reader.fileURL, documentId = reader.document.id
+        let source = source, url = reader.fileURL, documentId = reader.document.id
         center.run(layoutKey, title: "Mise en page IA p. \(source + 1)", modelId: ModelSpec.ovisocr2.id, activity: "mise en page") { _ in
             let text = try await Diagnostics.measure("mise en page IA p. \(source)", "miseenpage") {
-                try await OvisOCR2Reader().read(.pdfPage(url: url, index: source), maxTokens: budget)
+                try await OvisOCR2Reader(language: OCRTargetLanguage.forDocument(documentId))
+                    .read(.pdfPage(url: url, index: source), maxTokens: budget)
             }
             try Task.checkCancellation()
-            try? FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
-            try text.write(to: file, atomically: true, encoding: .utf8)
+            try DocumentAITextStore.write(text, documentId: documentId, reader: ModelSpec.ovisocr2.id, page: source)
+            DocumentAnalysisService.shared.invalidatePage(source, documentId: documentId)
             NotificationCenter.default.post(name: .aiPageRead, object: DocumentScan.PageRead(documentId: documentId, page: source))
-            // Mise en page refaite : l'ancienne traduction ne correspond plus.
-            try? FileManager.default.removeItem(at: frenchFile)
         }
     }
 

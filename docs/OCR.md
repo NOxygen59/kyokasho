@@ -1,4 +1,4 @@
-# OCR (V2)
+# OCR
 
 ## Moteurs
 
@@ -6,10 +6,19 @@
 |---|---|---|
 | **Texte du PDF** (`pdfText`) | PDF numérique (texte intégré) : exact, instantané | exactes (PDFKit `characterBounds`) |
 | **Apple Vision** (`vision`) | pages scannées / images | voir ci-dessous |
-| **Auto** | texte du PDF si la page en a (≥ 8 caractères), sinon Vision | — |
+| **NDLOCR** (`ndlocr`) | scan japonais, si le modèle est installé | mesurées avec PP-OCRv5 si disponible |
+| **PP-OCRv5** (`ppocr5`) | repli après NDLOCR, si installé | estimées ou mesurées |
+| **GLM-OCR** (`glmocr`) | choix manuel ou comparaison de l'analyse | selon le résultat du moteur |
+| **Auto** | texte du PDF si la page en a ; sinon NDLOCR → PP-OCRv5 → Vision | selon le moteur choisi |
 
 Le choix se fait dans *Réglages → OCR* et peut être remplacé par document (*⋯ → Réglages du
 document*). Le moteur utilisé s'affiche dans la barre du bas du lecteur.
+
+La lecture de la page entière par OvisOCR2 est distincte de cet OCR avec positions. Elle produit du Markdown
+pour le panneau, les furigana, l'analyse et le chat. La langue de cette lecture est choisie avant l'import depuis
+Fichiers ou dans l'écran d'analyse du document : **Japonais** par défaut, ou **Automatique** pour les documents
+mixtes. Le réglage guide le modèle ; les nombres, lettres latines et formules sont conservés. Voir
+[`ARCHITECTURE-LECTURE.md`](ARCHITECTURE-LECTURE.md) pour les liens entre composants.
 
 ## Stratégie pour toucher un caractère précis (Vision)
 

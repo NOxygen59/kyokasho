@@ -56,7 +56,7 @@ public actor OCRService {
         guard let record = try? database.ocrResult(documentId: documentId, pageIndex: pageIndex, engine: engine) else { return nil }
         guard let page = try? decoder.decode(OCRPage.self, from: record.json),
               page.version >= OCRPage.currentVersion else { return nil }
-        return page
+        return OCRTargetLanguage.forDocument(documentId) == .japanese ? JapaneseOCRText.normalize(page) : page
     }
 
     /// Résultat de la page (cache, sinon calcul + mise en cache).
@@ -66,10 +66,13 @@ public actor OCRService {
         if let existing = running[key] { return try await existing.value }
         guard let implementation = Self.engine(engine) else { throw OCRError.pageUnavailable }
         let process = postProcess
+        let japanese = OCRTargetLanguage.forDocument(documentId) == .japanese
         // Relecture dans la même tâche : un second appel pour la même page reçoit le résultat déjà relu.
         let task = Task.detached(priority: .userInitiated) {
             var result = try await implementation.recognize(.pdfPage(url: url, index: pageIndex))
+            if japanese { result = JapaneseOCRText.normalize(result) }
             if result.engine != OCREngineID.pdfText, let process { result = await process(result) }
+            if japanese { result = JapaneseOCRText.normalize(result) }
             return result
         }
         running[key] = task
@@ -83,8 +86,9 @@ public actor OCRService {
 
     /// Remplace le résultat en cache (relecture par l'IA, correction à la main).
     public func store(_ page: OCRPage, documentId: String, pageIndex: Int) throws {
-        try database.save(OCRResultRecord(documentId: documentId, pageIndex: pageIndex, engine: page.engine,
-                                          json: try encoder.encode(page), durationMs: page.durationMs))
+        let normalized = OCRTargetLanguage.forDocument(documentId) == .japanese ? JapaneseOCRText.normalize(page) : page
+        try database.save(OCRResultRecord(documentId: documentId, pageIndex: pageIndex, engine: normalized.engine,
+                                          json: try encoder.encode(normalized), durationMs: normalized.durationMs))
     }
 
     /// Pages (source) dont le texte OCR contient `query`, avec un extrait autour.
@@ -93,6 +97,7 @@ public actor OCRService {
     public func search(_ query: String, documentId: String, engines: [String]) -> [(page: Int, context: String)] {
         let needle = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !needle.isEmpty, let records = try? database.ocrResults(documentId: documentId) else { return [] }
+        let japanese = OCRTargetLanguage.forDocument(documentId) == .japanese
         var bestByPage: [Int: OCRPage] = [:]
         for record in records {
             guard let rank = engines.firstIndex(of: record.engine),
@@ -100,7 +105,7 @@ public actor OCRService {
                   page.version >= OCRPage.currentVersion else { continue }
             if let current = bestByPage[record.pageIndex], let currentRank = engines.firstIndex(of: current.engine),
                currentRank <= rank { continue }
-            bestByPage[record.pageIndex] = page
+            bestByPage[record.pageIndex] = japanese ? JapaneseOCRText.normalize(page) : page
         }
         var results: [(Int, String)] = []
         for (pageIndex, page) in bestByPage.sorted(by: { $0.key < $1.key }) {

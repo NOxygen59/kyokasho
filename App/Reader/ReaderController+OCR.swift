@@ -111,7 +111,7 @@ extension ReaderController {
         case .ndlocr: return [OCREngineID.ndlocr]
         case .ppocr5: return [OCREngineID.ppocr5]
         case .glmocr: return [OCREngineID.glmocr]
-        case .auto: return [OCREngineID.pdfText, OCREngineID.glmocr, OCREngineID.ndlocr, OCREngineID.ppocr5, OCREngineID.vision]
+        case .auto: return [OCREngineID.pdfText, OCREngineID.ndlocr, OCREngineID.ppocr5, OCREngineID.vision]
         }
     }
 
@@ -308,12 +308,11 @@ extension ReaderController {
         guard let page = ocrPage, page.engine != OCREngineID.pdfText else { return }
         let source = focusSource, documentId = document.id, service = model.ocr
         let process = AppModel.proofreader(model.dictionary)
-        let aiFile = DocumentScan.file(documentId, source)
         Task { [weak self] in
             var read = page.proofread == true ? page : await process(page)
             // Pas de dictionnaire : la page reste « non relue » (réessayée plus tard), le contrôle par l'IA a lieu.
             let proofreadFailed = read.proofread != true
-            if let reference = try? String(contentsOf: aiFile, encoding: .utf8) {
+            if let reference = DocumentAITextStore.read(documentId: documentId, reader: ModelSpec.ovisocr2.id, page: source) {
                 read = OCRReferenceDiff.markDifferences(read, reference: reference)
             }
             guard let self, self.ocrPage == page else { return }

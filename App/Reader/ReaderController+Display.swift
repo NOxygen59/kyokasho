@@ -89,7 +89,7 @@ extension ReaderController {
         furiganaGeneration[source, default: 0] += 1
         let generation = furiganaGeneration[source, default: 0]
         // Texte d'OvisOCR2 (scan à l'import, vérification, mise en page IA) : lectures d'après lui.
-        let aiText = DocumentAnalysisService.rawURL(document.id, ModelSpec.ovisocr2.id, source)
+        let documentId = document.id
         let translator = model.dictionary.translator
         let lookupOptions = model.dictionary.profile.lookup
         Task.detached(priority: .utility) { [weak self] in
@@ -97,7 +97,7 @@ extension ReaderController {
                 doc.page(at: source).map { PageFrame(box: $0.bounds(for: .cropBox), rotation: $0.rotation) }
             }) ?? nil
             guard let frame else { return }
-            let reference = try? String(contentsOf: aiText, encoding: .utf8)
+            let reference = DocumentAITextStore.read(documentId: documentId, reader: ModelSpec.ovisocr2.id, page: source)
             // Même choix de lectures que dans le panneau OCR : MeCab si présent, sinon le dictionnaire.
             // Une page scannée sans couche texte doit bénéficier des mots déjà reconnus dans le panneau.
             let marks = FuriganaLayer.marks(from: ocr, reference: reference, frame: frame) { text in

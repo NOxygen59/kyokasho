@@ -141,7 +141,8 @@ final class AppModel: ObservableObject {
     }
 
     /// Chaque document importé est ensuite lu par l'IA (`DocumentScan`, pages pas encore lues).
-    func importFiles(_ urls: [URL], cleanUp: Bool = true, openWhenSingle: Bool = true) {
+    func importFiles(_ urls: [URL], cleanUp: Bool = true, openWhenSingle: Bool = true,
+                     language: OCRTargetLanguage = .japanese) {
         guard !urls.isEmpty else { return }
         importProgress = ImportProgress(done: 0, total: urls.count, currentName: urls[0].lastPathComponent)
         let importer = importer
@@ -156,6 +157,7 @@ final class AppModel: ObservableObject {
                 let scoped = url.startAccessingSecurityScopedResource()
                 do {
                     let result = try importer.importFile(at: url, displayName: url.lastPathComponent)
+                    if result.isNew { OCRTargetLanguage.set(language, forDocument: result.document.id) }
                     lastImported = result.document.id
                     imported.append(result.document)
                 } catch {
@@ -206,6 +208,7 @@ final class AppModel: ObservableObject {
                 try importer.delete(documentId: document.id)
                 thumbnails.removeAll(for: document.id)
                 ScanSharpening.removeCache(documentId: document.id)
+                OCRTargetLanguage.forget(document.id)
                 Task { @MainActor in self.deletingIds.remove(document.id) }
             } catch {
                 Task { @MainActor in

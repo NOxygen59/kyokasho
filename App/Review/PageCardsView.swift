@@ -79,9 +79,9 @@ struct PageCardsView: View {
     private func load() async {
         defer { loading = false }
         let lexicon = DomainLexicon.shared.entries
-        let file = DocumentAnalysisService.rawURL(document.id, ModelSpec.ovisocr2.id, page)
+        let documentId = document.id
         let cachedText = await Task.detached(priority: .utility) {
-            try? String(contentsOf: file, encoding: .utf8)
+            DocumentAITextStore.read(documentId: documentId, reader: ModelSpec.ovisocr2.id, page: page)
         }.value
         do {
             if let cachedText, !cachedText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {

@@ -67,8 +67,11 @@ public struct PageVLMReader: Sendable {
 public struct OvisOCR2Reader: Sendable {
     let base: PageVLMReader
 
-    public init(store: ModelStore = .shared) {
-        base = PageVLMReader(spec: .ovisocr2, prompt: Self.prompt, context: ["enable_thinking": false],
+    public init(store: ModelStore = .shared, language: OCRTargetLanguage = .japanese) {
+        let instruction = language == .japanese
+            ? " The document language is Japanese. For Japanese words, use Japanese orthography (for example 図表, not 图表). Preserve Latin letters, numbers, mathematical symbols, formulas, and any genuinely non-Japanese text exactly as printed."
+            : ""
+        base = PageVLMReader(spec: .ovisocr2, prompt: Self.prompt + instruction, context: ["enable_thinking": false],
                              longSide: 1600, minimumFreeMemory: 1_800 * 1_048_576, store: store)
     }
 
@@ -87,8 +90,8 @@ public struct OvisOCR2Reader: Sendable {
 public struct Qwen3VLReader: Sendable {
     let base: PageVLMReader
 
-    public init(store: ModelStore = .shared) {
-        base = PageVLMReader(spec: .qwen3vl4b, prompt: Self.prompt, context: nil,
+    public init(store: ModelStore = .shared, language: OCRTargetLanguage = .japanese) {
+        base = PageVLMReader(spec: .qwen3vl4b, prompt: language == .japanese ? Self.prompt : Self.automaticPrompt, context: nil,
                              longSide: 1400, minimumFreeMemory: 3_800 * 1_048_576, store: store)
     }
 
@@ -98,6 +101,12 @@ public struct Qwen3VLReader: Sendable {
     This is a page of a Japanese textbook about architecture and interior design (interior coordinator). \
     Transcribe ALL the Japanese text on the page exactly as printed, in natural reading order (vertical text: \
     right-to-left columns). Keep technical terms exactly (e.g. 天井, 照明器具, 建具, 野縁, 吊り木). \
+    Output plain Markdown only: headings with #, tables as HTML. Do not translate, explain, summarize or correct.
+    """
+
+    static let automaticPrompt = """
+    Transcribe all readable text on this page exactly as printed, in natural reading order.
+    Preserve each language's writing system, all numbers, technical symbols and formulas.
     Output plain Markdown only: headings with #, tables as HTML. Do not translate, explain, summarize or correct.
     """
 

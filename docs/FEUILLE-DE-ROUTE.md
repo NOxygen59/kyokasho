@@ -221,6 +221,11 @@ s'il y en a, sinon l'étape suivante non cochée (§ 7 bis puis § 8). Pas de si
 - Page vers IA (`AIPageSheet`, double page : p. X / p. Y / les deux).
 
 **OCR** (`OCRKit`, `ONNXOCRKit`, `GLMOCRKit`)
+- Langue de lecture IA par document : Japonais (défaut) ou Automatique, choisie avant l'import depuis Fichiers et
+  visible avant l'analyse complète. OvisOCR2 garde chiffres, lettres latines et formules ; la confusion observée
+  `图` → `図` est corrigée à la lecture des anciens caches et lors des nouvelles lectures, sans modifier le Markdown
+  brut ni les lignes retouchées à la main. Le chemin des lectures IA est centralisé dans `DocumentAITextStore` ; voir
+  `docs/ARCHITECTURE-LECTURE.md`. Rendu sur iPad à confirmer après une future release.
 - `OCRService` (actor) : cache SQLite par page et moteur (`OCRPage.currentVersion` = 5) ; `resolve` (auto : texte PDF
   sinon NDLOCR → PP-OCRv5 → Vision) ; **post-traitement** `OCRProofreader` (dictionnaire, confusions 未/末…) →
   `OCRLine.doubt` ; `store` (corrections).
