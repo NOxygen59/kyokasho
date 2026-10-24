@@ -14,9 +14,6 @@ struct AIModelDetailView: View {
     @State private var status: AIModelStatus?
     @State private var diskSize: Int64?
     @State private var journal: [String] = []
-    @AppStorage(DocumentScan.autoKey) private var autoScan = true
-    @AppStorage(ReaderController.aiRereadKey) private var aiReread = true
-    @AppStorage(DocumentAnalysisService.useQwenKey) private var useQwen = false
 
     /// Modèles MLX (chargés en mémoire du GPU) ; les autres (ONNX) s'ouvrent à la demande.
     private var isMLX: Bool { [ModelSpec.glmocr.id, ModelSpec.ovisocr2.id, ModelSpec.qwen3vl4b.id,
@@ -74,7 +71,7 @@ struct AIModelDetailView: View {
                         .font(.footnote).foregroundStyle(.secondary)
                 }
             }
-            settings
+            usageLocation
             if spec.id == ModelSpec.qwen3vl4b.id || spec.id == ModelSpec.qwen35chat4b.id {
                 Section {
                     NavigationLink { QwenChatView(preferredModel: spec) } label: { Label("Discuter avec l'IA", systemImage: "bubble.left.and.bubble.right") }
@@ -100,24 +97,23 @@ struct AIModelDetailView: View {
     }
 
     @ViewBuilder
-    private var settings: some View {
+    private var usageLocation: some View {
         switch spec.id {
         case ModelSpec.ovisocr2.id:
             Section {
-                Toggle("Lire chaque document à l'import et à l'ouverture", isOn: $autoScan)
-            } header: { Text("Réglages") } footer: {
-                Text("Pages pas encore lues seulement (≈ 30 s par page). Ce texte sert aux furigana, aux caractères douteux, à la mise en page IA et à la vérification.")
+                NavigationLink("Lecture automatique des documents") { OCRSettingsView() }
+            } header: { Text("Utilisation") } footer: {
+                Text("La langue se choisit à l'import ou dans les réglages du livre.")
             }
         case ModelSpec.glmocr.id:
             Section {
-                Toggle("Relire les lignes douteuses automatiquement", isOn: $aiReread)
-            } header: { Text("Réglages") }
+                NavigationLink("Relecture des caractères douteux") { OCRAdvancedSettingsView() }
+            } header: { Text("Utilisation") }
         case ModelSpec.qwen3vl4b.id:
             Section {
-                Toggle("Ajouter à l'analyse du document entier", isOn: $useQwen)
-            } header: { Text("Réglages") } footer: {
-                Text("Une lecture de plus par page (plus lent, vote plus sûr). La traduction française l'utilise toujours.")
-            }
+                Text("Ajoute ce modèle depuis l'écran « Analyser le document entier » du livre. La traduction française l'utilise toujours.")
+                    .font(.footnote).foregroundStyle(.secondary)
+            } header: { Text("Utilisation") }
         default:
             EmptyView()
         }

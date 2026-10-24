@@ -14,7 +14,6 @@ struct DocumentAnalysisSheet: View {
     @Environment(\.dismiss) private var dismiss
     @AppStorage(DocumentAnalysisService.useQwenKey) private var useQwen = false
     @State private var confirmOvisAll = false
-    @State private var targetLanguage: OCRTargetLanguage = .japanese
 
     private var running: DocumentAnalysisService.Progress? {
         service.progress?.documentId == document.id ? service.progress : nil
@@ -46,19 +45,12 @@ struct DocumentAnalysisSheet: View {
             } message: {
                 Text("Seules les pages déjà lues par OvisOCR2 sont utilisées. Les lignes corrigées à la main et celles qui ressemblent à des formules sont conservées. La comparaison reste automatique : vérifie ensuite les passages importants sur la page originale.")
             }
-            .onAppear { targetLanguage = OCRTargetLanguage.forDocument(document.id) }
-            .onChange(of: targetLanguage) { value in OCRTargetLanguage.set(value, forDocument: document.id) }
         }
     }
 
     private var languageSection: some View {
         Section {
-            Picker("Langue ciblée", selection: $targetLanguage) {
-                ForEach(OCRTargetLanguage.allCases, id: \.self) { choice in
-                    Text(choice.title).tag(choice)
-                }
-            }
-            .disabled(AITaskCenter.shared.isRunning(DocumentScan.key(document.id)))
+            DocumentLanguagePicker(documentId: document.id)
         } footer: {
             Text("Appliquée aux prochaines lectures IA et aux pages relues. Les pages déjà enregistrées sont conservées ; pour les relire, utilise « Relire cette page » dans le lecteur.")
         }

@@ -257,6 +257,13 @@ s'il y en a, sinon l'étape suivante non cochée (§ 7 bis puis § 8). Pas de si
 **IA locale** : voir `docs/IA-LOCALE.md` (forks MLX iOS 16, lecteurs, mesures, tests).
 
 **Réglages** (`App/Settings`) : Apparence et lecture ; Japonais (dictionnaires, lecture des scans, DeepL) ;
+la langue ciblée du scan est aussi accessible dans « Ce document ». La lecture automatique OvisOCR2 est dans
+« Texte des pages » ; les fiches de modèles renvoient vers le réglage de leur usage. « Effacer le cache OCR »
+annonce clairement que les lectures OvisOCR2 restent enregistrées ; le compteur compte les résultats par moteur.
+L'import Drive propose la langue avant une nouvelle importation, lance le même scan de fond que Fichiers et garde
+la langue du livre lors d'une mise à jour.
+Vider le cache OCR remet aussi les votes de fiabilité à refaire, car ils dépendaient de ces résultats ; l'option
+est indisponible pendant une analyse en cours.
 **Modèles d'IA et outils** rangés par usage (`ModelsView` : 1 lire, 2 furigana, 3 relire / vérifier / traduire,
 4 mise en forme, 5 nettoyage ; « Recommandé » / « Optionnel ») ; Cartes ; Outils (moniteur, **diagnostic**) ;
 Comptes (Drive) ; À propos (+ **connexion GitHub** device flow → mise à jour par TrollStore `UpdateInstaller`).

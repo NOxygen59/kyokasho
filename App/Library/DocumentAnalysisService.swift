@@ -83,6 +83,15 @@ final class DocumentAnalysisService: ObservableObject {
         update(documentId) { $0.pages[source] = nil }
     }
 
+    /// Les votes reposent sur les résultats OCR : vider ce cache rend tous les votes précédents périmés.
+    /// Les lectures OvisOCR2 et les traductions restent enregistrées.
+    func invalidateReports(for documentIds: [String]) {
+        correctionsDone = nil
+        for id in documentIds where report(for: id) != nil {
+            update(id) { $0.pages.removeAll() }
+        }
+    }
+
     func forget(_ id: String) {
         cache[id] = nil
         try? FileManager.default.removeItem(at: Self.folder.appendingPathComponent("\(id).json"))

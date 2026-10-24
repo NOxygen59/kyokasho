@@ -214,8 +214,17 @@ struct DocumentSettingsSheet: View {
                                    options: OCREngineChoice.allCases.map { ($0, $0.label) })
                 }
                 Section {
-                    Button("Tout remettre par défaut", role: .destructive) { override = ReaderSettingsOverride() }
+                    Button("Revenir aux réglages généraux", role: .destructive) { override = ReaderSettingsOverride() }
                         .disabled(override.isEmpty)
+                } footer: {
+                    Text("Réinitialise les choix de lecture et le moteur OCR propres à ce livre.")
+                }
+                Section {
+                    DocumentLanguagePicker(documentId: reader.document.id)
+                } header: {
+                    Text("Langue du document")
+                } footer: {
+                    Text("Guide les prochaines lectures OvisOCR2 et corrige les confusions d'écriture connues. Les pages déjà enregistrées ne sont pas rescannées ; rouvre le livre pour actualiser leur affichage.")
                 }
             }
             .navigationTitle("Ce document")
@@ -286,14 +295,20 @@ extension OCREngineChoice {
 
 struct OCRSettingsView: View {
     @EnvironmentObject private var model: AppModel
+    @AppStorage(DocumentScan.autoKey) private var autoScan = true
 
     var body: some View {
         Form {
             Section {
-                Toggle("Lire automatiquement la page affichée", isOn: $model.appSettings.ocrAutoCurrentPage)
+                Toggle("Précharger le texte de la page affichée", isOn: $model.appSettings.ocrAutoCurrentPage)
                 Toggle("Montrer les zones de texte sur la page", isOn: $model.appSettings.showOCRBoxes)
             } header: { Text("Reconnaître le texte") } footer: {
-                Text("Pour un PDF scanné, l'OCR transforme l'image en texte japonais. Le mode automatique choisit un outil disponible sur ton iPad ; le traitement reste hors ligne.")
+                Text("L'OCR avec positions sert à sélectionner les mots sur la page. Les furigana peuvent aussi déclencher cette lecture, même si le préchargement est désactivé. Le traitement reste hors ligne.")
+            }
+            Section {
+                Toggle("Lire les nouvelles pages avec OvisOCR2", isOn: $autoScan)
+            } header: { Text("Lecture IA du document") } footer: {
+                Text("À l'import et à l'ouverture, OvisOCR2 lit les pages non encore enregistrées, si le modèle est installé. Ce texte sert au panneau, aux furigana et au chat ; les pages déjà lues ne sont pas relancées.")
             }
             Section {
                 NavigationLink { OCRTextAppearanceSettingsView() } label: {
@@ -347,11 +362,12 @@ struct OCRTextAppearanceSettingsView: View {
 
 struct OCRAdvancedSettingsView: View {
     @EnvironmentObject private var model: AppModel
+    @ObservedObject private var analysis = DocumentAnalysisService.shared
     @AppStorage("study.layoutEngine") private var layoutEngineRaw = LayoutDetector.Engine.geometry.rawValue
     @AppStorage(ReaderController.aiRereadKey) private var aiReread = true
     @State private var confirmClear = false
     @State private var cacheError: String?
-    @State private var cache: (bytes: Int, pages: Int) = (0, 0)
+    @State private var cache: (bytes: Int, results: Int) = (0, 0)
 
     var body: some View {
         Form {
@@ -363,9 +379,6 @@ struct OCRAdvancedSettingsView: View {
                 Text("Moteur")
             } footer: {
                 Text("Auto : texte intégré au PDF quand il existe (exact et instantané). Sinon NDLOCR-Lite s'il est installé (livres japonais, vertical), puis PP-OCRv5, puis Apple Vision. Remplaçable par document. Un moteur choisi mais pas téléchargé renvoie une erreur.")
-            }
-            Section {
-                NavigationLink { ModelsView() } label: { Label("Modèles d'IA et outils (à quoi sert chacun)", systemImage: "shippingbox") }
             }
             Section {
                 Toggle("Relire les lignes douteuses avec GLM-OCR", isOn: $aiReread)
@@ -382,13 +395,14 @@ struct OCRAdvancedSettingsView: View {
                 Text("PP-DocLayout et DocLayout-YOLO repèrent titres, colonnes et tableaux ; « Géométrie » marche sans modèle. Même choix que dans le panneau d'étude.")
             }
             Section {
-                LabeledContent("Pages en cache", value: "\(cache.pages)")
+                LabeledContent("Résultats OCR en cache", value: "\(cache.results)")
                 LabeledContent("Taille", value: ByteCountFormatter.string(fromByteCount: Int64(cache.bytes), countStyle: .file))
-                Button("Effacer les textes OCR enregistrés…", role: .destructive) { confirmClear = true }
+                Button("Effacer le cache OCR avec positions…", role: .destructive) { confirmClear = true }
+                    .disabled(analysis.progress != nil)
             } header: {
                 Text("Cache")
             } footer: {
-                Text("Les résultats sont gardés pour éviter de relire les pages. Les effacer supprime aussi les corrections manuelles du texte OCR. Les PDF, notes et cartes sont conservés.")
+                Text("Efface les résultats des moteurs OCR et leurs corrections manuelles ; la fiabilité du document devra être recalculée. Les lectures OvisOCR2, leurs traductions, les PDF, notes et cartes restent conservés.")
             }
             Section {
                 NavigationLink("Banc d'essai") { BenchView() }
@@ -398,9 +412,14 @@ struct OCRAdvancedSettingsView: View {
         }
         .navigationTitle("Options OCR avancées")
         .onAppear(perform: refresh)
-        .confirmationDialog("Effacer les textes OCR et leurs corrections manuelles ?", isPresented: $confirmClear, titleVisibility: .visible) {
-            Button("Effacer les textes OCR", role: .destructive) {
-                do { try model.database.clearOCRCache(); refresh() }
+        .confirmationDialog("Effacer le cache OCR et remettre les analyses à refaire ?", isPresented: $confirmClear, titleVisibility: .visible) {
+            Button("Effacer ce cache OCR", role: .destructive) {
+                guard analysis.progress == nil else { return }
+                do {
+                    try model.database.clearOCRCache()
+                    analysis.invalidateReports(for: model.documents.map(\.id))
+                    refresh()
+                }
                 catch { cacheError = error.localizedDescription }
             }
             Button("Annuler", role: .cancel) {}

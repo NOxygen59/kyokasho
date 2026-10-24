@@ -96,7 +96,7 @@ enum SettingsRoute: String, Identifiable, CaseIterable {
         case .pencil: return "stylet doigt dessin encre notes"
         case .dictionaries: return "Yomitan vocabulaire kanji fiches"
         case .lexicon: return "glossaire domaine mots personnels"
-        case .ocr: return "OCR moteur scans Vision NDLOCR PP-OCR cache police interligne furigana"
+        case .ocr: return "OCR moteur scans Vision NDLOCR PP-OCR Ovis lecture IA automatique cache police interligne furigana"
         case .translation: return "DeepL français traduction internet"
         case .models: return "IA locale modèles OvisOCR Qwen GLM MeCab UniDic téléchargement chat furigana nettoyage netteté"
         case .cards: return "Anki révisions cartes FSRS export"

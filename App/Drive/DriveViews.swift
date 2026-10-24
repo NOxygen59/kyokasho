@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 NOxygen59
 
+import OCRKit
 import ReaderCore
 import SwiftUI
 
@@ -61,6 +62,8 @@ struct DriveFolderView: View {
     @State private var loading = true
     @State private var error: String?
     @State private var downloading: [String: Double] = [:]
+    @State private var pendingImport: GoogleDrive.File?
+    @State private var importLanguage: OCRTargetLanguage = .japanese
 
     private var title: String {
         switch location {
@@ -81,7 +84,14 @@ struct DriveFolderView: View {
                         Label(file.name, systemImage: "folder.fill")
                     }
                 } else {
-                    Button { download(file) } label: { row(file) }
+                    Button {
+                        if model.documents.contains(where: { $0.driveFileId == file.id }) {
+                            download(file)
+                        } else {
+                            importLanguage = .japanese
+                            pendingImport = file
+                        }
+                    } label: { row(file) }
                         .buttonStyle(.plain)
                         .disabled(downloading[file.id] != nil)
                 }
@@ -90,6 +100,31 @@ struct DriveFolderView: View {
         .navigationTitle(title)
         .refreshable { await load() }
         .task { await load() }
+        .sheet(item: $pendingImport) { file in
+            NavigationStack {
+                Form {
+                    Section {
+                        Picker("Langue du document", selection: $importLanguage) {
+                            ForEach(OCRTargetLanguage.allCases, id: \.self) { choice in
+                                Text(choice.title).tag(choice)
+                            }
+                        }
+                    } footer: {
+                        Text("Ce choix guide la lecture IA lancée après l'import. Les chiffres et formules restent tels qu'ils figurent sur la page.")
+                    }
+                    Section {
+                        Button("Importer « \(file.name) »") {
+                            let language = importLanguage
+                            pendingImport = nil
+                            download(file, language: language)
+                        }
+                    }
+                }
+                .navigationTitle("Importer depuis Drive")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Annuler") { pendingImport = nil } } }
+            }
+        }
     }
 
     @ViewBuilder
@@ -126,14 +161,14 @@ struct DriveFolderView: View {
         loading = false
     }
 
-    private func download(_ file: GoogleDrive.File) {
+    private func download(_ file: GoogleDrive.File, language: OCRTargetLanguage? = nil) {
         downloading[file.id] = 0
         Task {
             do {
                 let url = try await GoogleDrive.shared.download(file) { value in
                     Task { @MainActor in downloading[file.id] = value }
                 }
-                try await model.importFromDrive(url: url, file: file)
+                try await model.importFromDrive(url: url, file: file, language: language)
             } catch {
                 self.error = error.localizedDescription
             }
@@ -302,19 +337,25 @@ struct DriveAccountView: View {
 // MARK: - Import et mises à jour
 
 extension AppModel {
-    func importFromDrive(url: URL, file: GoogleDrive.File) async throws {
+    func importFromDrive(url: URL, file: GoogleDrive.File, language: OCRTargetLanguage? = nil) async throws {
         let importer = importer
         let existing = documents.first { $0.driveFileId == file.id }
-        let id: String = try await Task.detached(priority: .userInitiated) {
+        let targetLanguage = language ?? existing.map { OCRTargetLanguage.forDocument($0.id) } ?? .japanese
+        let result: (document: LibraryDocument, isNew: Bool) = try await Task.detached(priority: .userInitiated) {
             defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
             if let existing {
-                return try importer.replace(documentId: existing.id, withFileAt: url, driveRevision: file.revision).id
+                let updated = try importer.replace(documentId: existing.id, withFileAt: url, driveRevision: file.revision)
+                return (updated, false)
             }
-            return try importer.importFile(at: url, displayName: url.lastPathComponent,
-                                           driveFileId: file.id, driveRevision: file.revision).document.id
+            let imported = try importer.importFile(at: url, displayName: url.lastPathComponent,
+                                                   driveFileId: file.id, driveRevision: file.revision)
+            return (imported.document, imported.isNew)
         }.value
-        thumbnails.removeAll(for: existing?.id ?? id)
-        _ = id
+        let document = result.document
+        if result.isNew || existing != nil { OCRTargetLanguage.set(targetLanguage, forDocument: document.id) }
+        if let existing, existing.id != document.id { OCRTargetLanguage.forget(existing.id) }
+        thumbnails.removeAll(for: existing?.id ?? document.id)
+        DocumentScan.start(document, url: storage.url(for: document.id), ocr: ocr)
     }
 
     /// Compare chaque document importé de Drive avec sa version en ligne, télécharge ceux qui ont changé.

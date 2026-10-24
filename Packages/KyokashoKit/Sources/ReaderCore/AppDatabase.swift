@@ -404,8 +404,8 @@ extension AppDatabase {
         try writer.write { db in try record.save(db) }
     }
 
-    /// Taille du cache OCR (octets) et nombre de pages.
-    public func ocrCacheStats() throws -> (bytes: Int, pages: Int) {
+    /// Taille du cache OCR (octets) et nombre de résultats (une page peut avoir plusieurs moteurs).
+    public func ocrCacheStats() throws -> (bytes: Int, results: Int) {
         try writer.read { db in
             let row = try Row.fetchOne(db, sql: "SELECT COALESCE(SUM(LENGTH(json)), 0) AS b, COUNT(*) AS n FROM ocrResult")
             return (row?["b"] ?? 0, row?["n"] ?? 0)
