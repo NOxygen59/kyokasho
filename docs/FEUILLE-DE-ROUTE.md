@@ -1,5 +1,10 @@
 # Feuille de route Kyōkasho — à lire en entier au début de chaque chat
 
+> **Reprise documentaire du 25/10/2026 :** voir [l'index](INDEX.md), [l'audit v1.3](AUDIT-V1.3.md)
+> et [le plan de reprise proposé](GOUVERNANCE-ET-REPRISE.md). Les statuts historiques ci-dessous sont conservés ;
+> une case cochée n'est pas une preuve de recette iPad. GitHub indique le dépôt comme public à cette date,
+> malgré les mentions historiques de dépôt privé. Aucune nouvelle release n'est créée par cette documentation.
+
 > Ce fichier + `docs/IA-LOCALE.md` (avant de toucher à l'IA) suffisent. Ne relis pas le code « pour voir » :
 > `grep -rn 'FDR-' App Packages` donne les endroits exacts d'une étape. Une session = les retours de l'utilisateur,
 > sinon l'étape suivante non cochée (§ 7 bis, puis § 8) ; puis commit + push (+ release **si demandée**), puis résumé simple.

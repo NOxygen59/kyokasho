@@ -172,7 +172,7 @@ final class ServiceTests: XCTestCase {
         let cached = await service.cached(documentId: "d", pageIndex: 0, engine: OCREngineID.pdfText)
         XCTAssertEqual(cached, first)
         XCTAssertEqual(try db.ocrEngines(documentId: "d", pageIndex: 0), [OCREngineID.pdfText])
-        XCTAssertEqual(try db.ocrCacheStats().pages, 1)
+        XCTAssertEqual(try db.ocrCacheStats().results, 1)
         // Un autre moteur ne remplace pas le premier.
         _ = try await service.page(documentId: "d", url: url, pageIndex: 0, engine: OCREngineID.vision)
         XCTAssertEqual(Set(try db.ocrEngines(documentId: "d", pageIndex: 0)), [OCREngineID.pdfText, OCREngineID.vision])
@@ -182,7 +182,7 @@ final class ServiceTests: XCTestCase {
         let stale = await service.cached(documentId: "d", pageIndex: 0, engine: "old")
         XCTAssertNil(stale)
         try db.clearOCRCache(documentId: "d")
-        XCTAssertEqual(try db.ocrCacheStats().pages, 0)
+        XCTAssertEqual(try db.ocrCacheStats().results, 0)
     }
 
     func testSearchInOCRText() async throws {

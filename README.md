@@ -13,6 +13,14 @@ Dictionnaires Yomitan, fiches de mots et de kanji, et cartes de révision FSRS i
 Plan complet : [PLAN.md](PLAN.md).
 Parcours du développement : [histoire du projet et sources](docs/HISTOIRE-DU-DEVELOPPEMENT.md).
 
+**Documentation de reprise v1.3 :** [index des guides](docs/INDEX.md) ·
+[guide utilisateur](docs/GUIDE-UTILISATEUR.md) · [architecture](docs/GUIDE-DEVELOPPEUR.md) ·
+[tests et recette iPad](docs/TESTS.md) · [contribution](CONTRIBUTING.md).
+
+**Écart de visibilité constaté le 25/10/2026 :** GitHub indique actuellement ce dépôt comme public.
+Les mentions historiques de dépôt privé ci-dessous décrivent son contexte et l'intention initiale ;
+voir [l'audit de reprise](docs/AUDIT-V1.3.md). Aucune visibilité n'a été modifiée par cet audit.
+
 **Usage strictement personnel, jamais distribué.** Aucun PDF, dictionnaire ni donnée tierce dans
 ce dépôt (`*.pdf` est ignoré par Git).
 
