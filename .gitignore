@@ -20,3 +20,6 @@ xcuserdata/
 /App/Config/Secrets.plist
 
 .DS_Store
+
+# Outils Python locaux
+__pycache__/

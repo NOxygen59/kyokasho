@@ -59,6 +59,7 @@ let package = Package(
         // Code original (MIT) : découpage en mots et lectures (MeCab + dictionnaire UniDic téléchargé à part).
         .target(name: "MorphologyKit", dependencies: ["MeCabC"]),
         .testTarget(name: "ReaderCoreTests", dependencies: ["ReaderCore"]),
+        .testTarget(name: "BackupIntegrationTests", dependencies: ["ReaderCore", "ReviewKit"]),
         .testTarget(name: "YomitanKitTests", dependencies: ["YomitanKit"]),
         .testTarget(name: "DictionaryKitTests", dependencies: ["DictionaryKit"]),
         .testTarget(name: "OCRKitTests", dependencies: ["OCRKit"]),
