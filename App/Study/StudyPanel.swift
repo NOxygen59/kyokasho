@@ -11,7 +11,7 @@ import SwiftUI
 /// Panneau d'étude, à droite du lecteur : tout ce qui sert à **comprendre** la page.
 /// Texte (OCR) + traduction, dictionnaire, notes, signets.
 struct StudyPanel: View {
-    enum Tab: Hashable { case text, vocab, notes, marks }
+    enum Tab: Hashable { case text, vocab, notes, marks, chat }
 
     @EnvironmentObject private var model: AppModel
     @ObservedObject var reader: ReaderController
@@ -24,7 +24,7 @@ struct StudyPanel: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
-                if tab != .vocab && reader.shownSources.count > 1 {
+                if tab != .vocab && tab != .chat && reader.shownSources.count > 1 {
                     // Double page : une pilule par page affichée, le panneau travaille sur celle choisie.
                     HStack(spacing: 6) {
                         ForEach(reader.shownSources, id: \.self) { source in
@@ -40,8 +40,8 @@ struct StudyPanel: View {
                             .accessibilityLabel("Travailler sur la page \(reader.document.pageLabel(source))")
                         }
                     }
-                } else if tab == .vocab {
-                    AtelierLabel("Dictionnaire", tint: Atelier.Tint.japanese)
+                } else if tab == .vocab || tab == .chat {
+                    AtelierLabel(tab == .chat ? "Chat du livre" : "Dictionnaire", tint: tab == .chat ? Atelier.Tint.ai : Atelier.Tint.japanese)
                 } else {
                     AtelierLabel("Étude · page \(reader.document.pageLabel(reader.focusSource))", tint: Atelier.textSecondary)
                 }
@@ -56,7 +56,8 @@ struct StudyPanel: View {
                 .accessibilityLabel("Fermer le panneau d'étude")
             }
             PillTabs(items: [(Tab.text, "character.ja", "Texte"), (.vocab, "character.book.closed.ja", "Dico"),
-                             (.notes, "text.bubble", "Notes"), (.marks, "bookmark", "Repères")],
+                             (.notes, "text.bubble", "Notes"), (.marks, "bookmark", "Repères"),
+                             (.chat, "bubble.left.and.bubble.right", "Chat")],
                      selection: $tab, tint: tint)
             Group {
                 switch tab {
@@ -74,6 +75,7 @@ struct StudyPanel: View {
                     }
                 case .notes: StudyNotesTab(reader: reader)
                 case .marks: StudyMarksTab(reader: reader, openSearch: openSearch)
+                case .chat: QwenChatView(document: reader.document, embedded: true)
                 }
             }
             .frame(maxHeight: .infinity, alignment: .top)
@@ -89,6 +91,7 @@ struct StudyPanel: View {
         case .text, .vocab: return Atelier.Tint.japanese
         case .notes: return Atelier.Tint.annotate
         case .marks: return Atelier.Tint.read
+        case .chat: return Atelier.Tint.ai
         }
     }
 }

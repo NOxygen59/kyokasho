@@ -132,22 +132,37 @@ struct AIModelDetailView: View {
 /// Conversation avec Qwen3-VL-4B. Pour un livre, seules ses pages déjà lues par Ovis sont consultées.
 struct QwenChatView: View {
     var document: LibraryDocument? = nil
+    var embedded = false
+    private struct Conversation: Codable, Identifiable {
+        var id = UUID()
+        var title: String
+        var modelID = ModelSpec.qwen3vl4b.id
+        var messages: [QwenChat.Message] = []
+    }
     @Environment(\.dismiss) private var dismiss
     @State private var chat = QwenChat()
     @State private var messages: [QwenChat.Message] = []
+    @State private var conversations: [Conversation] = []
+    @State private var selectedConversation: UUID?
+    @State private var selectedModelID = ModelSpec.qwen3vl4b.id
     @State private var draft = ""
     @State private var loading = true
     @State private var ready = false
     @State private var answering: Task<Void, Never>?
     @State private var error: String?
+    @State private var storageError = false
 
     private var file: URL {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("Kyokasho/Chats/qwen\(document.map { "-" + $0.id } ?? "").json")
     }
+    private var bookFile: URL? {
+        document.map { file.deletingLastPathComponent().appendingPathComponent("book-\($0.id).json") }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
+            if document != nil { conversationBar }
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 12) {
@@ -186,23 +201,27 @@ struct QwenChatView: View {
             }
             .padding()
         }
-        .navigationTitle(document.map { "Discuter · " + $0.title } ?? "Qwen3-VL")
+        .navigationTitle(embedded ? "" : document.map { "Discuter · " + $0.title } ?? "Qwen3-VL")
         .toolbar {
-            if document != nil {
+            if document != nil && !embedded {
                 ToolbarItem(placement: .cancellationAction) { Button("Fermer") { dismiss() } }
             }
-            ToolbarItem(placement: .primaryAction) {
-                Button {
-                    answering?.cancel()
-                    messages = []
-                    save()
-                    Task { await chat.reset() }
-                } label: { Label("Nouvelle conversation", systemImage: "square.and.pencil") }
-                .disabled(loading)
+            if document == nil {
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        answering?.cancel()
+                        messages = []
+                        save()
+                        Task { await chat.reset() }
+                    } label: { Label("Nouvelle conversation", systemImage: "square.and.pencil") }
+                    .disabled(loading)
+                }
             }
         }
         .task {
-            messages = (try? JSONDecoder().decode([QwenChat.Message].self, from: Data(contentsOf: file))) ?? []
+            if document != nil { loadConversations() }
+            else { messages = (try? JSONDecoder().decode([QwenChat.Message].self, from: Data(contentsOf: file))) ?? [] }
+            if storageError { loading = false; return }
             if let document, !DocumentKnowledge.isReady(document) {
                 error = "Attends la fin de la lecture OvisOCR2 : \(DocumentKnowledge.readCount(document))/\(document.pageCount) pages."
                 loading = false
@@ -224,9 +243,94 @@ struct QwenChatView: View {
         // Écran quitté : réponse arrêtée, modèle déchargé.
         .onDisappear {
             answering?.cancel()
+            save()
             let chat = chat
             Task { await chat.stop() }
         }
+    }
+
+    private var conversationBar: some View {
+        HStack(spacing: 8) {
+            Menu {
+                ForEach(conversations) { conversation in
+                    Button {
+                        switchConversation(to: conversation.id)
+                    } label: {
+                        if conversation.id == selectedConversation {
+                            Label(conversation.title, systemImage: "checkmark")
+                        } else { Text(conversation.title) }
+                    }
+                }
+            } label: {
+                Label(conversations.first(where: { $0.id == selectedConversation })?.title ?? "Conversation", systemImage: "bubble.left")
+                    .lineLimit(1)
+            }
+            .disabled(answering != nil || storageError)
+            Spacer(minLength: 0)
+            Picker(selection: $selectedModelID) {
+                Text("Qwen3-VL 4B").tag(ModelSpec.qwen3vl4b.id)
+            } label: {
+                Label("Modèle", systemImage: "cpu")
+            }
+            .pickerStyle(.menu)
+            .onChange(of: selectedModelID) { id in
+                guard let index = conversations.firstIndex(where: { $0.id == selectedConversation }) else { return }
+                conversations[index].modelID = id
+                saveConversations()
+            }
+            .accessibilityLabel("Modèle de discussion : Qwen3-VL 4B")
+            Button { newConversation() } label: {
+                Image(systemName: "square.and.pencil")
+            }
+            .disabled(answering != nil || storageError)
+            .accessibilityLabel("Nouveau chat")
+        }
+        .font(.caption)
+        .padding(.horizontal, 12).padding(.vertical, 8)
+    }
+
+    private func loadConversations() {
+        guard let bookFile else { return }
+        if let data = try? Data(contentsOf: bookFile) {
+            guard let stored = try? JSONDecoder().decode([Conversation].self, from: data), !stored.isEmpty else {
+                error = "Impossible de lire les conversations enregistrées. Elles n'ont pas été modifiées."
+                storageError = true
+                return
+            }
+            conversations = stored
+        }
+        if conversations.isEmpty {
+            let old = (try? JSONDecoder().decode([QwenChat.Message].self, from: Data(contentsOf: file))) ?? []
+            conversations = [Conversation(title: old.first(where: { $0.role == .user })
+                .map { String($0.text.prefix(42)) } ?? "Nouveau chat", messages: old)]
+            saveConversations()
+        }
+        selectedConversation = conversations[0].id
+        selectedModelID = conversations[0].modelID
+        messages = conversations[0].messages
+    }
+
+    private func switchConversation(to id: UUID) {
+        guard id != selectedConversation else { return }
+        save()
+        selectedConversation = id
+        let selected = conversations.first(where: { $0.id == id })
+        selectedModelID = selected?.modelID ?? ModelSpec.qwen3vl4b.id
+        messages = selected?.messages ?? []
+        error = nil
+        Task { await chat.reset() }
+    }
+
+    private func newConversation() {
+        save()
+        let conversation = Conversation(title: "Nouveau chat")
+        conversations.insert(conversation, at: 0)
+        selectedConversation = conversation.id
+        selectedModelID = conversation.modelID
+        messages = []
+        error = nil
+        saveConversations()
+        Task { await chat.reset() }
     }
 
     private func bubble(_ m: QwenChat.Message) -> some View {
@@ -249,27 +353,31 @@ struct QwenChatView: View {
         error = nil
         messages.append(.init(role: .user, text: prompt))
         messages.append(.init(role: .assistant, text: ""))
+        save()
         let index = messages.count - 1
         answering = Task {
             let start = Date()
             do {
                 if let document {
                     await chat.reset()
-                    let previous = messages.dropLast(2).filter { $0.role == .user }.suffix(2)
-                        .map(\.text).joined(separator: " ; ")
-                    let searchQuestion = previous.isEmpty ? prompt : previous + " ; " + prompt
+                    // Une nouvelle question cherche dans le livre par ses propres termes. Seule une vraie
+                    // relance peut utiliser le dernier échange pour lever une référence comme « ça ».
+                    let previous = Array(messages.dropLast(2).suffix(2))
+                    let followUp = Self.isFollowUp(prompt)
                     var passages = await Task.detached(priority: .userInitiated) {
-                        DocumentKnowledge.passages(for: document, question: searchQuestion, japaneseTerms: "")
+                        DocumentKnowledge.passages(for: document, question: prompt, japaneseTerms: "")
                     }.value
                     if (passages.first?.score ?? 0) < 2 {
                         var terms = ""
-                        for try await chunk in chat.stream("Donne uniquement 3 à 8 mots-clés japonais pour retrouver dans un manuel la réponse à : \(searchQuestion). Aucun commentaire.") {
+                        let lastExchange = followUp ? previous.map { $0.text }.joined(separator: "\n").prefix(500) : ""
+                        let lookup = "Question actuelle : \(prompt)\n\(lastExchange.isEmpty ? "" : "Dernier échange pour résoudre les pronoms seulement : \(lastExchange)\n")Donne uniquement 3 à 8 mots-clés japonais pour retrouver la réponse dans le manuel. Aucun commentaire."
+                        for try await chunk in chat.stream(lookup) {
                             terms += chunk
                         }
                         await chat.reset()
                         let searchTerms = String(terms.prefix(120))
                         passages = await Task.detached(priority: .userInitiated) {
-                            DocumentKnowledge.passages(for: document, question: searchQuestion, japaneseTerms: searchTerms)
+                            DocumentKnowledge.passages(for: document, question: prompt, japaneseTerms: searchTerms)
                         }.value
                     }
                     if passages.isEmpty {
@@ -290,7 +398,8 @@ struct QwenChatView: View {
                             Si une information manque ou si une lecture semble incertaine, dis-le explicitement. \
                             N'invente ni référence, ni règle, ni lecture japonaise.\n\nExtraits :\n\(sources)
                             """
-                        let question = previous.isEmpty ? prompt : "Questions précédentes (contexte, pas une source) : \(previous)\nQuestion actuelle : \(prompt)"
+                        let dialogue = followUp ? previous.map { ($0.role == .user ? "Utilisateur : " : "Assistant : ") + $0.text }.joined(separator: "\n").prefix(800) : ""
+                        let question = dialogue.isEmpty ? prompt : "Dernier échange (contexte, pas une source) :\n\(dialogue)\nQuestion actuelle : \(prompt)"
                         for try await chunk in chat.stream(question, context: context) { messages[index].text += chunk }
                         messages[index].text += "\n\nPages consultées : " + passages.map { "p. \(document.pageLabel($0.page))" }.joined(separator: ", ")
                     }
@@ -310,7 +419,28 @@ struct QwenChatView: View {
     }
 
     private func save() {
+        if document != nil {
+            guard let index = conversations.firstIndex(where: { $0.id == selectedConversation }) else { return }
+            conversations[index].messages = messages
+            if conversations[index].title == "Nouveau chat", let first = messages.first(where: { $0.role == .user }) {
+                conversations[index].title = String(first.text.prefix(42))
+            }
+            saveConversations()
+            return
+        }
         try? FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
         try? JSONEncoder().encode(messages).write(to: file, options: .atomic)
+    }
+
+    private func saveConversations() {
+        guard let bookFile else { return }
+        try? FileManager.default.createDirectory(at: bookFile.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try? JSONEncoder().encode(conversations).write(to: bookFile, options: .atomic)
+    }
+
+    private static func isFollowUp(_ question: String) -> Bool {
+        let lower = question.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        return ["et ", "ça ", "cela ", "ce point", "cette partie", "il ", "elle ", "ils ", "elles ",
+                "pourquoi ?", "comment ça", "et pour", "qu'en est-il"].contains { lower.hasPrefix($0) }
     }
 }
