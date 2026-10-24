@@ -3,7 +3,7 @@
 > Ce fichier + `docs/IA-LOCALE.md` (avant de toucher à l'IA) suffisent. Ne relis pas le code « pour voir » :
 > `grep -rn 'FDR-' App Packages` donne les endroits exacts d'une étape. Une session = les retours de l'utilisateur,
 > sinon l'étape suivante non cochée (§ 7 bis, puis § 8) ; puis commit + push (+ release **si demandée**), puis résumé simple.
-> **État au 24/10/2026 : v1.2.3 publiée (build 38).** Toutes les étapes V1 → V14 du § 7 sont faites, ainsi que S
+> **État au 24/10/2026 : v1.2.4 publiée (build 39).** Toutes les étapes V1 → V14 du § 7 sont faites, ainsi que S
 > (lexique), P (portrait / paysage) et E (pages de même taille). Confirmé sur l'iPad : IA locale (OvisOCR2, Qwen3-VL,
 > analyse, vérification), gestes au doigt (0.8.9.2). Le reste marqué « non vérifié » peut être faux sur l'appareil.
 
@@ -108,7 +108,7 @@ sens. Depuis Texte, « Corrections IA » ouvre les corrections proposées et « 
 la page avec OvisOCR2, même si elle était en cache. Une nouvelle lecture invalide le vote de fiabilité de cette
 page jusqu'à sa prochaine analyse. Rendu vertical et usage à confirmer sur iPad.
 
-**Retours après v1.2.3 (24/10, hors release)** : une question « p. 6 » cible désormais uniquement la page 6
+**Retours après v1.2.3 (24/10, inclus dans la v1.2.4)** : une question « p. 6 » cible désormais uniquement la page 6
 et indique clairement si sa lecture Ovis manque ; les formules LaTeX d'Ovis sont affichées comme des formules
 lisibles dans le panneau, tout en gardant le Markdown original. L'analyse propose d'accepter sur tout le document
 les différences déjà lues par Ovis, en sautant les lignes retouchées à la main et les formules ; aucun nouveau scan.
