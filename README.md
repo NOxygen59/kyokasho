@@ -11,6 +11,7 @@ Lecteur **personnel** de cours et de manuels PDF pour iPad : lecture, annotation
 commentaires, page vers IA, Google Drive et OCR japonais (voir [docs/OCR.md](docs/OCR.md)).
 Dictionnaires Yomitan, fiches de mots et de kanji, et cartes de révision FSRS intégrés.
 Plan complet : [PLAN.md](PLAN.md).
+Parcours du développement : [histoire du projet et sources](docs/HISTOIRE-DU-DEVELOPPEMENT.md).
 
 **Usage strictement personnel, jamais distribué.** Aucun PDF, dictionnaire ni donnée tierce dans
 ce dépôt (`*.pdf` est ignoré par Git).
