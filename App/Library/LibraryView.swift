@@ -2,6 +2,7 @@
 // Copyright (c) 2026 NOxygen59
 
 import GLMOCRKit
+import OCRKit
 import ReaderCore
 import SwiftUI
 
@@ -312,11 +313,12 @@ struct LibraryView: View {
     @ViewBuilder
     private func menu(for document: LibraryDocument) -> some View {
         Button { model.openDocumentId = document.id } label: { Label("Ouvrir", systemImage: "book") }
-        if Qwen3VLReader().isAvailable, DocumentKnowledge.isReady(document) {
+        if (Qwen3VLReader().isAvailable || ModelStore.shared.isInstalled(.qwen35chat4b)),
+           DocumentKnowledge.isReady(document) {
             Button {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { chatDocument = document }
-            } label: { Label("Discuter du livre avec Qwen", systemImage: "bubble.left.and.bubble.right") }
-        } else if Qwen3VLReader().isAvailable {
+            } label: { Label("Discuter du livre", systemImage: "bubble.left.and.bubble.right") }
+        } else if Qwen3VLReader().isAvailable || ModelStore.shared.isInstalled(.qwen35chat4b) {
             Label("Chat après lecture OvisOCR2 (\(DocumentKnowledge.readCount(document))/\(document.pageCount))",
                   systemImage: "text.book.closed")
         }

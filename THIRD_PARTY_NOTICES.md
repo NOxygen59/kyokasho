@@ -78,3 +78,6 @@ Copyright (C) 2024-2026 Yomitan Authors, (C) 2020-2022 Yomichan Authors. https:/
   swift-huggingface, swift-collections, swift-crypto, yyjson : Apache-2.0 / MIT).
 - **OvisOCR2** (ATH-MaaS, Apache-2.0), conversion MLX 8 bits par tokimoa (Apache-2.0). **Pas dans le dépôt ni
   dans l'app** : téléchargé à la demande depuis Hugging Face (`tokimoa/ovisocr2-mlx-8bit`, SHA-256 vérifié).
+- **Qwen3.5-4B** (Alibaba Qwen, Apache-2.0), conversion MLX 4 bits par mlx-community. **Pas dans le dépôt ni
+  dans l'app** : téléchargé à la demande depuis Hugging Face (`mlx-community/Qwen3.5-4B-4bit`, commit
+  `0e7ffd5c629ef7719d4cbc04069232580bfa9d9c` ; poids et tokenizer vérifiés par SHA-256).

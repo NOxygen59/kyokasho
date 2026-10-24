@@ -38,7 +38,8 @@ enum StorageUsage {
 
         add("Documents (PDF)", "Tes PDF importés", [app.appendingPathComponent("Documents", isDirectory: true)])
         // Un élément par modèle d'IA installé (les petits ensemble).
-        let titles = Dictionary(uniqueKeysWithValues: [ModelSpec.ndlocr, .ppocr5, .glmocr, .ovisocr2, .qwen3vl4b].map { ($0.id, $0.title) })
+        let titles = Dictionary(uniqueKeysWithValues: [ModelSpec.ndlocr, .ppocr5, .glmocr, .ovisocr2, .qwen3vl4b,
+                                                       .qwen35chat4b].map { ($0.id, $0.title) })
         var small: [URL] = []
         for folder in (try? fm.contentsOfDirectory(at: models, includingPropertiesForKeys: nil)) ?? [] {
             if folder.lastPathComponent == "unidic" { continue }

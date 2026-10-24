@@ -28,25 +28,33 @@ public final class QwenChat: @unchecked Sendable {
     public var glossary: [(String, String)] = Qwen3VLReader.defaultGlossary
     public var readings: [String: String] = [:]
 
-    private let reader: Qwen3VLReader
+    private let store: ModelStore
+    private let model: ModelSpec
     private var session: ChatSession?
     private var holding = false
 
-    public init(store: ModelStore = .shared) { reader = Qwen3VLReader(store: store) }
+    public init(store: ModelStore = .shared, model: ModelSpec = .qwen3vl4b) {
+        self.store = store
+        self.model = model
+    }
 
-    public var isAvailable: Bool { reader.isAvailable }
+    public var isAvailable: Bool { store.isInstalled(model) }
 
     public func start(history: [Message], grounded: Bool = false) async throws {
         guard session == nil else { return }
-        guard reader.isAvailable else { throw OCRError.modelMissing(ModelSpec.qwen3vl4b.title) }
-        if let free = PageVLMReader.availableMemory(), free < reader.base.minimumFreeMemory {
-            throw OCRError.engineFailed("Pas assez de mémoire libre pour Qwen3-VL (\(free / 1_048_576) Mo libres). Ferme les autres apps et réessaie.")
+        guard model.id == ModelSpec.qwen3vl4b.id || model.id == ModelSpec.qwen35chat4b.id else {
+            throw OCRError.engineFailed("Ce modèle ne sait pas discuter.")
         }
-        let container = try await GLMModel.shared.acquire(directory: reader.base.store.directory(reader.base.spec), extraEOSTokens: [])
+        guard isAvailable else { throw OCRError.modelMissing(model.title) }
+        if let free = PageVLMReader.availableMemory(), free < 3_800 * 1_048_576 {
+            throw OCRError.engineFailed("Pas assez de mémoire libre pour \(model.title) (\(free / 1_048_576) Mo libres). Ferme les autres apps et réessaie.")
+        }
+        let container = try await GLMModel.shared.acquire(directory: store.directory(model), extraEOSTokens: [])
         holding = true
         let past: [Chat.Message] = history.map { $0.role == .user ? .user($0.text) : .assistant($0.text) }
         session = ChatSession(container, instructions: Self.instructions, history: past,
-                              generateParameters: GenerateParameters(maxTokens: 1024, temperature: grounded ? 0 : 0.3))
+                              generateParameters: GenerateParameters(maxTokens: 1024, temperature: grounded ? 0 : 0.3),
+                              additionalContext: model.id == ModelSpec.qwen35chat4b.id ? ["enable_thinking": false] : nil)
     }
 
     /// Aide fiable ajoutée à la question (le modèle de 4 milliards invente souvent les lectures, ex. 天井 « あまね ») :
@@ -105,6 +113,6 @@ public final class QwenChat: @unchecked Sendable {
         guard holding else { return }
         holding = false
         await GLMModel.shared.release()
-        await GLMModel.shared.unload(directory: reader.base.store.directory(reader.base.spec))
+        await GLMModel.shared.unload(directory: store.directory(model))
     }
 }

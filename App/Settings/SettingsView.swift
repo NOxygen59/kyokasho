@@ -455,6 +455,7 @@ struct AboutView: View {
                 credit("MLX / mlx-swift-lm (fork iOS 16)", "Apple · NOxygen59", "MIT", "https://github.com/NOxygen59/mlx-swift-lm")
                 credit("swift-transformers (tokenizers)", "Hugging Face", "Apache-2.0", "https://github.com/huggingface/swift-transformers")
                 credit("OvisOCR2 (modèle téléchargé)", "ATH-MaaS · conversion MLX tokimoa", "Apache-2.0", "https://huggingface.co/ATH-MaaS/OvisOCR2")
+                credit("Qwen3.5-4B (chat, modèle téléchargé)", "Alibaba Qwen · conversion mlx-community", "Apache-2.0", "https://huggingface.co/Qwen/Qwen3.5-4B")
             }
             Section("Analyseur japonais") {
                 credit("MeCab", "Taku Kudo · NTT", "BSD", "https://github.com/taku910/mecab")
@@ -549,13 +550,13 @@ struct ModelsView: View {
                 Text("De petites pastilles indiquent ce que fait chaque IA. Elles deviennent plus discrètes quand un modèle reste simplement chargé en mémoire.")
             }
             Section {
-                ForEach([ModelSpec.ovisocr2, .qwen3vl4b, .glmocr, .ndlocr, .ppocr5]) { spec in
+                ForEach([ModelSpec.ovisocr2, .qwen3vl4b, .qwen35chat4b, .glmocr, .ndlocr, .ppocr5]) { spec in
                     NavigationLink { AIModelDetailView(spec: spec) } label: { Text(spec.title) }
                 }
             } header: {
                 Text("Chaque IA")
             } footer: {
-                Text("État, mémoire, « Décharger », réglages propres et dernières tâches. Qwen3-VL : conversation.")
+                Text("État, mémoire, « Décharger », réglages propres et dernières tâches. Qwen3-VL et Qwen3.5 : conversation.")
             }
             OCRModelsSection(group: .ocr)
             MorphologySection()

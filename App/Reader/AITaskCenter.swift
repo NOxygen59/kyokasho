@@ -216,7 +216,8 @@ struct AITaskPill: View {
         [
             (ModelSpec.ovisocr2, "OvisOCR2"),
             (ModelSpec.glmocr, "GLM-OCR"),
-            (ModelSpec.qwen3vl4b, "Qwen3-VL")
+            (ModelSpec.qwen3vl4b, "Qwen3-VL"),
+            (ModelSpec.qwen35chat4b, "Qwen3.5")
         ].compactMap { spec, name in
             let url = ModelStore.shared.directory(spec)
             let jobs = center.jobs.filter { $0.modelId == spec.id }
@@ -230,7 +231,9 @@ struct AITaskPill: View {
             }
             if monitor.status?.loading == url { return Badge(id: spec.id, name: name, activity: "chargement", active: true) }
             if monitor.status?.loaded == url, monitor.status?.inUse == true {
-                let activity = jobs.count > 1 ? "\(jobs.count) tâches" : jobs.first?.activity ?? analysisActivity ?? "utilisée"
+                let chatActive = spec.id == ModelSpec.qwen3vl4b.id || spec.id == ModelSpec.qwen35chat4b.id
+                let activity = jobs.count > 1 ? "\(jobs.count) tâches" : jobs.first?.activity ?? analysisActivity
+                    ?? (chatActive ? "chat" : "utilisée")
                 return Badge(id: spec.id, name: name, activity: activity, active: true)
             }
             if !jobs.isEmpty || analysisActivity != nil {

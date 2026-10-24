@@ -118,6 +118,7 @@ contrôle (mémoire `ios16-backport-rules`). Chaque correctif est listé dans `I
 | **OvisOCR2** (Qwen3.5, 0,9 B, 8 bits) | `ModelSpec.ovisocr2`, `OvisOCR2Reader` (consigne officielle de la carte HF, `enable_thinking: false`, 1600 px) | 1 Go | **lecteur principal** : page → Markdown | ≈ 22 s/page, pic GPU 2,1 Go, texte excellent |
 | **GLM-OCR** (0,9 B, 4 bits) | `ModelSpec.glmocr`, `GLMOCREngine` (ligne par ligne, détection PP-OCRv5) | 1,2 Go | relecture des lignes douteuses, 2e voix de l'analyse | ≈ 1 s/ligne |
 | **Qwen3-VL-4B** (4 bits) | `ModelSpec.qwen3vl4b`, `Qwen3VLReader` | 3,1 Go | **traduction** FR (`translate`, texte seul, glossaire) ; lecture optionnelle (moins bonne : 襖 → 桜) | lecture 37 s, 4 Go ; traduction 49 s/page, 3,75 Go |
+| **Qwen3.5-4B** (4 bits) | `ModelSpec.qwen35chat4b`, `QwenChat` (MLX `qwen3_5`) | 3,06 Go | chat optionnel sur les passages OvisOCR2 ; chargement exclusif avec les autres IA | Compilation iOS 16 vérifiée ; vitesse, mémoire et qualité sur iPad non mesurées |
 
 ## 4. Où l'IA sert dans l'app
 

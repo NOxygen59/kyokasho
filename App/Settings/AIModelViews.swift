@@ -19,7 +19,8 @@ struct AIModelDetailView: View {
     @AppStorage(DocumentAnalysisService.useQwenKey) private var useQwen = false
 
     /// Modèles MLX (chargés en mémoire du GPU) ; les autres (ONNX) s'ouvrent à la demande.
-    private var isMLX: Bool { [ModelSpec.glmocr.id, ModelSpec.ovisocr2.id, ModelSpec.qwen3vl4b.id].contains(spec.id) }
+    private var isMLX: Bool { [ModelSpec.glmocr.id, ModelSpec.ovisocr2.id, ModelSpec.qwen3vl4b.id,
+                               ModelSpec.qwen35chat4b.id].contains(spec.id) }
     private var directory: URL { ModelStore.shared.directory(spec) }
     private var installed: Bool { downloads.installed.contains(spec.id) }
     private var isLoaded: Bool { status?.loaded == directory }
@@ -29,6 +30,7 @@ struct AIModelDetailView: View {
         switch spec.id {
         case ModelSpec.ovisocr2.id: return ["scan", "verif", "miseenpage", "analyse"]
         case ModelSpec.qwen3vl4b.id: return ["traduction", "chat", "analyse"]
+        case ModelSpec.qwen35chat4b.id: return ["chat"]
         case ModelSpec.glmocr.id: return ["relecture", "analyse"]
         default: return ["ocr"]
         }
@@ -73,12 +75,12 @@ struct AIModelDetailView: View {
                 }
             }
             settings
-            if spec.id == ModelSpec.qwen3vl4b.id {
+            if spec.id == ModelSpec.qwen3vl4b.id || spec.id == ModelSpec.qwen35chat4b.id {
                 Section {
-                    NavigationLink { QwenChatView() } label: { Label("Discuter avec Qwen3-VL", systemImage: "bubble.left.and.bubble.right") }
+                    NavigationLink { QwenChatView(preferredModel: spec) } label: { Label("Discuter avec l'IA", systemImage: "bubble.left.and.bubble.right") }
                         .disabled(!installed)
                 } footer: {
-                    Text("Le modèle se charge à l'ouverture de la conversation et se décharge en la quittant (≈ 3,5 Go).")
+                    Text("Choisis le modèle dans le chat. Il se charge à l'ouverture et se décharge en quittant la conversation.")
                 }
             }
             Section("Dernières tâches") {
@@ -133,6 +135,9 @@ struct AIModelDetailView: View {
 struct QwenChatView: View {
     var document: LibraryDocument? = nil
     var embedded = false
+    var focusPage: String? = nil
+    var preferredModel: ModelSpec = .qwen3vl4b
+    var openPage: ((Int) -> Void)? = nil
     private struct Conversation: Codable, Identifiable {
         var id = UUID()
         var title: String
@@ -140,6 +145,7 @@ struct QwenChatView: View {
         var messages: [QwenChat.Message] = []
     }
     @Environment(\.dismiss) private var dismiss
+    @ObservedObject private var downloads = ModelDownloads.shared
     @State private var chat = QwenChat()
     @State private var messages: [QwenChat.Message] = []
     @State private var conversations: [Conversation] = []
@@ -149,6 +155,7 @@ struct QwenChatView: View {
     @State private var loading = true
     @State private var ready = false
     @State private var answering: Task<Void, Never>?
+    @State private var modelSwitch: Task<Void, Never>?
     @State private var error: String?
     @State private var storageError = false
 
@@ -158,6 +165,9 @@ struct QwenChatView: View {
     }
     private var bookFile: URL? {
         document.map { file.deletingLastPathComponent().appendingPathComponent("book-\($0.id).json") }
+    }
+    private var selectedSpec: ModelSpec {
+        selectedModelID == ModelSpec.qwen35chat4b.id ? .qwen35chat4b : .qwen3vl4b
     }
 
     var body: some View {
@@ -201,7 +211,7 @@ struct QwenChatView: View {
             }
             .padding()
         }
-        .navigationTitle(embedded ? "" : document.map { "Discuter · " + $0.title } ?? "Qwen3-VL")
+        .navigationTitle(embedded ? "" : document.map { "Discuter · " + $0.title } ?? "Chat IA")
         .toolbar {
             if document != nil && !embedded {
                 ToolbarItem(placement: .cancellationAction) { Button("Fermer") { dismiss() } }
@@ -220,29 +230,22 @@ struct QwenChatView: View {
         }
         .task {
             if document != nil { loadConversations() }
-            else { messages = (try? JSONDecoder().decode([QwenChat.Message].self, from: Data(contentsOf: file))) ?? [] }
+            else {
+                selectedModelID = preferredModel.id
+                messages = (try? JSONDecoder().decode([QwenChat.Message].self, from: Data(contentsOf: file))) ?? []
+            }
             if storageError { loading = false; return }
             if let document, !DocumentKnowledge.isReady(document) {
                 error = "Attends la fin de la lecture OvisOCR2 : \(DocumentKnowledge.readCount(document))/\(document.pageCount) pages."
                 loading = false
                 return
             }
-            // Lexique du domaine : sens et lectures sûres ajoutés aux questions.
-            chat.glossary = DomainLexicon.shared.glossary
-            chat.readings = DomainLexicon.shared.readings
-            do {
-                try await Diagnostics.measure("chargement de Qwen3-VL (chat)", "chat") {
-                    try await chat.start(history: document == nil ? messages : [], grounded: document != nil)
-                }
-                ready = true
-            } catch {
-                self.error = error.localizedDescription
-            }
-            loading = false
+            await startSelectedModel()
         }
         // Écran quitté : réponse arrêtée, modèle déchargé.
         .onDisappear {
             answering?.cancel()
+            modelSwitch?.cancel()
             save()
             let chat = chat
             Task { await chat.stop() }
@@ -250,6 +253,7 @@ struct QwenChatView: View {
     }
 
     private var conversationBar: some View {
+        VStack(alignment: .leading, spacing: 5) {
         HStack(spacing: 8) {
             Menu {
                 ForEach(conversations) { conversation in
@@ -265,28 +269,56 @@ struct QwenChatView: View {
                 Label(conversations.first(where: { $0.id == selectedConversation })?.title ?? "Conversation", systemImage: "bubble.left")
                     .lineLimit(1)
             }
-            .disabled(answering != nil || storageError)
+            .disabled(answering != nil || loading || storageError)
             Spacer(minLength: 0)
-            Picker(selection: $selectedModelID) {
-                Text("Qwen3-VL 4B").tag(ModelSpec.qwen3vl4b.id)
+            Menu {
+                modelOption(.qwen3vl4b, title: "Qwen3-VL 4B")
+                modelOption(.qwen35chat4b, title: "Qwen3.5 4B")
             } label: {
-                Label("Modèle", systemImage: "cpu")
+                Label(selectedSpec.id == ModelSpec.qwen35chat4b.id ? "Qwen3.5" : "Qwen3-VL", systemImage: "cpu")
+                    .lineLimit(1)
             }
-            .pickerStyle(.menu)
-            .onChange(of: selectedModelID) { id in
-                guard let index = conversations.firstIndex(where: { $0.id == selectedConversation }) else { return }
-                conversations[index].modelID = id
-                saveConversations()
+            .disabled(answering != nil || loading || storageError)
+            if let progress = downloads.progress[ModelSpec.qwen35chat4b.id] {
+                ProgressView(value: progress).frame(width: 30)
             }
-            .accessibilityLabel("Modèle de discussion : Qwen3-VL 4B")
             Button { newConversation() } label: {
                 Image(systemName: "square.and.pencil")
             }
-            .disabled(answering != nil || storageError)
+            .disabled(answering != nil || loading || storageError)
             .accessibilityLabel("Nouveau chat")
         }
         .font(.caption)
         .padding(.horizontal, 12).padding(.vertical, 8)
+        if let focusPage {
+            Button {
+                let reference = "p. \(focusPage)"
+                if !draft.contains(reference) { draft = draft.isEmpty ? reference + " : " : reference + " : " + draft }
+            } label: { Label("Insérer p. \(focusPage)", systemImage: "text.insert").font(.caption2) }
+                .buttonStyle(.plain)
+                .foregroundStyle(Atelier.Tint.ai)
+                .padding(.horizontal, 12)
+        }
+        if let error = downloads.errors[ModelSpec.qwen35chat4b.id] {
+            Text("Téléchargement : \(error)").font(.caption2).foregroundStyle(.red)
+                .padding(.horizontal, 12)
+        }
+        }
+    }
+
+    @ViewBuilder
+    private func modelOption(_ spec: ModelSpec, title: String) -> some View {
+        if downloads.installed.contains(spec.id) {
+            Button { selectModel(spec) } label: {
+                Label(title, systemImage: spec.id == selectedModelID ? "checkmark" : "cpu")
+            }
+        } else if downloads.progress[spec.id] != nil {
+            Text("Téléchargement de \(title)…")
+        } else {
+            Button { downloads.start(spec) } label: {
+                Label("Télécharger \(title) (\(StorageUsage.format(spec.totalSize)))", systemImage: "arrow.down.circle")
+            }
+        }
     }
 
     private func loadConversations() {
@@ -301,8 +333,10 @@ struct QwenChatView: View {
         }
         if conversations.isEmpty {
             let old = (try? JSONDecoder().decode([QwenChat.Message].self, from: Data(contentsOf: file))) ?? []
+            let initialModel = downloads.installed.contains(ModelSpec.qwen3vl4b.id)
+                ? ModelSpec.qwen3vl4b.id : ModelSpec.qwen35chat4b.id
             conversations = [Conversation(title: old.first(where: { $0.role == .user })
-                .map { String($0.text.prefix(42)) } ?? "Nouveau chat", messages: old)]
+                .map { String($0.text.prefix(42)) } ?? "Nouveau chat", modelID: initialModel, messages: old)]
             saveConversations()
         }
         selectedConversation = conversations[0].id
@@ -310,23 +344,79 @@ struct QwenChatView: View {
         messages = conversations[0].messages
     }
 
+    private func startSelectedModel() async {
+        loading = true
+        ready = false
+        error = nil
+        let spec = selectedSpec
+        guard downloads.installed.contains(spec.id) else {
+            error = "Télécharge \(spec.title) depuis le menu Modèle pour discuter."
+            loading = false
+            return
+        }
+        let selectedChat = QwenChat(model: spec)
+        selectedChat.glossary = DomainLexicon.shared.glossary
+        selectedChat.readings = DomainLexicon.shared.readings
+        chat = selectedChat
+        do {
+            try await Diagnostics.measure("chargement de \(spec.title) (chat)", "chat") {
+                try await selectedChat.start(history: document == nil ? messages : [], grounded: document != nil)
+            }
+            if Task.isCancelled {
+                await selectedChat.stop()
+                return
+            }
+            ready = true
+        } catch {
+            self.error = error.localizedDescription
+        }
+        loading = false
+    }
+
+    private func selectModel(_ spec: ModelSpec) {
+        guard selectedModelID != spec.id, downloads.installed.contains(spec.id), !loading, answering == nil else { return }
+        let oldChat = chat
+        selectedModelID = spec.id
+        if let index = conversations.firstIndex(where: { $0.id == selectedConversation }) {
+            conversations[index].modelID = spec.id
+            saveConversations()
+        }
+        ready = false
+        loading = true
+        modelSwitch = Task {
+            await oldChat.stop()
+            guard !Task.isCancelled else { return }
+            await startSelectedModel()
+        }
+    }
+
     private func switchConversation(to id: UUID) {
         guard id != selectedConversation else { return }
         save()
+        let previousModelID = selectedModelID
         selectedConversation = id
         let selected = conversations.first(where: { $0.id == id })
         selectedModelID = selected?.modelID ?? ModelSpec.qwen3vl4b.id
         messages = selected?.messages ?? []
         error = nil
-        Task { await chat.reset() }
+        if previousModelID == selectedModelID { Task { await chat.reset() } }
+        else {
+            let oldChat = chat
+            ready = false
+            loading = true
+            modelSwitch = Task {
+                await oldChat.stop()
+                guard !Task.isCancelled else { return }
+                await startSelectedModel()
+            }
+        }
     }
 
     private func newConversation() {
         save()
-        let conversation = Conversation(title: "Nouveau chat")
+        let conversation = Conversation(title: "Nouveau chat", modelID: selectedModelID)
         conversations.insert(conversation, at: 0)
         selectedConversation = conversation.id
-        selectedModelID = conversation.modelID
         messages = []
         error = nil
         saveConversations()
@@ -337,12 +427,34 @@ struct QwenChatView: View {
         let mine = m.role == .user
         return HStack {
             if mine { Spacer(minLength: 60) }
-            Text(m.text.isEmpty ? "…" : m.text)
-                .textSelection(.enabled)
+            VStack(alignment: .leading, spacing: 8) {
+                Text(m.text.isEmpty ? "…" : m.text).textSelection(.enabled)
+                if !mine, let openPage, let document {
+                    let pages = citedPages(in: m.text, document: document)
+                    if !pages.isEmpty {
+                        HStack(spacing: 6) {
+                            ForEach(pages, id: \.self) { page in
+                                Button("p. \(document.pageLabel(page))") { openPage(page) }
+                                    .font(.caption.weight(.semibold))
+                                    .buttonStyle(.bordered)
+                            }
+                        }
+                    }
+                }
+            }
                 .padding(.horizontal, 12).padding(.vertical, 8)
                 .background(mine ? Atelier.Tint.ai.opacity(0.25) : Atelier.surfaceHigh,
                             in: RoundedRectangle(cornerRadius: 14, style: .continuous))
             if !mine { Spacer(minLength: 60) }
+        }
+    }
+
+    private func citedPages(in answer: String, document: LibraryDocument) -> [Int] {
+        guard let range = answer.range(of: "Pages consultées : ", options: .backwards) else { return [] }
+        return answer[range.upperBound...].split(separator: ",").compactMap { part in
+            let label = part.trimmingCharacters(in: .whitespacesAndNewlines)
+                .replacingOccurrences(of: "p. ", with: "")
+            return (0..<document.pageCount).first { document.pageLabel($0) == label }
         }
     }
 

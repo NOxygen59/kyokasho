@@ -30,6 +30,7 @@ public struct ModelSpec: Identifiable, Sendable, Equatable {
         case "glmocr": return URL(string: "https://huggingface.co/zai-org/GLM-OCR")
         case "ovisocr2": return URL(string: "https://huggingface.co/ATH-MaaS/OvisOCR2")
         case "qwen3vl4b": return URL(string: "https://huggingface.co/Qwen/Qwen3-VL-4B-Instruct")
+        case "qwen35chat4b": return URL(string: "https://huggingface.co/Qwen/Qwen3.5-4B")
         case "degan": return URL(string: "https://github.com/dali92002/DE-GAN")
         case "ppdoclayout": return URL(string: "https://github.com/PaddlePaddle/PaddleOCR")
         case "doclayoutyolo": return URL(string: "https://github.com/opendatalab/DocLayout-YOLO")
@@ -118,7 +119,21 @@ public extension ModelSpec {
                File(name: "model.safetensors", url: qwen("model.safetensors"), size: 3_093_767_283,
                     sha256: "90eeb02604181dbcccd0a30a1f550a4a8928ca7dcbee4aee1449239306cfdfca")])
 
-    static let all: [ModelSpec] = [.ndlocr, .ppocr5, .glmocr, .ovisocr2, .qwen3vl4b]
+    /// Qwen3.5-4B : modèle de conversation optionnel. Les pages restent lues par OvisOCR2 ;
+    /// aucun poids n'est inclus dans l'app. Conversion MLX 4 bits épinglée et vérifiée.
+    static let qwen35chat4b = ModelSpec(
+        id: "qwen35chat4b", title: "Qwen3.5-4B (chat du livre)",
+        summary: "Modèle de conversation pour discuter des pages lues par OvisOCR2. Environ 3,1 Go à télécharger ; un seul modèle IA est chargé à la fois.",
+        license: "Apache-2.0 (Alibaba Qwen) — conversion MLX 4 bits : mlx-community",
+        files: ["chat_template.jinja", "config.json", "model.safetensors.index.json", "preprocessor_config.json",
+                "processor_config.json", "tokenizer_config.json", "video_preprocessor_config.json", "vocab.json"]
+            .map { File(name: $0, url: qwen35($0), size: 0, sha256: nil) }
+            + [File(name: "tokenizer.json", url: qwen35("tokenizer.json"), size: 19_989_343,
+                    sha256: "87a7830d63fcf43bf241c3c5242e96e62dd3fdc29224ca26fed8ea333db72de4"),
+               File(name: "model.safetensors", url: qwen35("model.safetensors"), size: 3_034_300_695,
+                    sha256: "5fb9acd0246866381cf8c5c354c6db1019f6498eec4ccb4f5edcc71ffeacb2db")])
+
+    static let all: [ModelSpec] = [.ndlocr, .ppocr5, .glmocr, .ovisocr2, .qwen3vl4b, .qwen35chat4b]
 
     /// PP-DocLayout v3 (PaddleOCR / PP-Structure, Apache-2.0), version ONNX de RapidLayout :
     /// zones de la page (titre, texte, tableau, légende…) **et ordre de lecture**.
@@ -156,6 +171,10 @@ public extension ModelSpec {
 
     private static func qwen(_ name: String) -> URL {
         URL(string: "https://huggingface.co/mlx-community/Qwen3-VL-4B-Instruct-4bit/resolve/2fd8dacbdb8f1e54b8c005f081ec5bf79c56376b/" + name)!
+    }
+
+    private static func qwen35(_ name: String) -> URL {
+        URL(string: "https://huggingface.co/mlx-community/Qwen3.5-4B-4bit/resolve/0e7ffd5c629ef7719d4cbc04069232580bfa9d9c/" + name)!
     }
 
     private static func ovis(_ name: String) -> URL {

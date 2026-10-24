@@ -3,7 +3,7 @@
 > Ce fichier + `docs/IA-LOCALE.md` (avant de toucher à l'IA) suffisent. Ne relis pas le code « pour voir » :
 > `grep -rn 'FDR-' App Packages` donne les endroits exacts d'une étape. Une session = les retours de l'utilisateur,
 > sinon l'étape suivante non cochée (§ 7 bis, puis § 8) ; puis commit + push (+ release **si demandée**), puis résumé simple.
-> **État au 24/10/2026 : v1.2.1 publiée (build 36).** Toutes les étapes V1 → V14 du § 7 sont faites, ainsi que S
+> **État au 24/10/2026 : v1.2.2 publiée (build 37).** Toutes les étapes V1 → V14 du § 7 sont faites, ainsi que S
 > (lexique), P (portrait / paysage) et E (pages de même taille). Confirmé sur l'iPad : IA locale (OvisOCR2, Qwen3-VL,
 > analyse, vérification), gestes au doigt (0.8.9.2). Le reste marqué « non vérifié » peut être faux sur l'appareil.
 
@@ -16,7 +16,7 @@ au cadrage et à la feuille de route ; **ChatGPT Codex contribue au développeme
 **Où sont les choses**
 - Code : dépôt **privé** `NOxygen59/kyokasho` (branche `main`, tags `vX.Y.Z`, `.tipa` dans les releases GitHub).
 - **Le dépôt local est de nouveau présent** dans `~/Projets-iPad/kyokasho`. Le dépôt `NOxygen59/kyokasho-models`
-  est dans `~/Projets-iPad/kyokasho-modeles` pour les releases (`latest.json`). Les forks MLX sont encore là :
+  n'est pas cloné localement ; `latest.json` peut être mis à jour avec le connecteur GitHub. Les forks MLX sont encore là :
   `~/Projets-iPad/mlx-swift`, `~/Projets-iPad/mlx-swift-lm` (branche `ipad-ios16`, poussés).
 - Outils sur le Mac : Xcode (SDK iOS 27.1), `xcodegen`, `gh` (connecté), `trash`. **Pas de système iOS pour le
   simulateur** (0 image installée ; 8-9 Go à télécharger, seulement avec l'accord de l'utilisateur).
@@ -100,6 +100,12 @@ fichier. Chaque nouvelle question cherche d'abord avec ses propres termes dans l
 échange aide à résoudre une relance explicite. Sélecteur de modèle présent avec Qwen3-VL 4B seul pour l'instant.
 Qwen3.5-2B 4 bits est une piste plus légère compatible avec le registre du fork MLX Swift, mais son intégration
 et sa qualité sur l'iPad restent à vérifier. Compilation iOS générique réussie ; usage sur iPad non vérifié.
+
+**Version 1.2.2** : Qwen3.5-4B 4 bits ajouté en modèle de chat optionnel (téléchargement à la demande, ≈ 3,06 Go,
+poids et tokenizer SHA-256 vérifiés). Changement de modèle et conversations par livre, bouton pour insérer la page
+affichée et liens vers les pages consultées. L'accueil ouvre le chat même si seul Qwen3.5 est installé. Pastille
+d'activité et place de stockage renseignées. Le moteur compile pour iOS 16 ; chargement et qualité du modèle
+sur l'iPad non vérifiés, car ses poids n'ont pas été téléchargés sur le Mac.
 
 ## 1. Prompt à coller dans le nouveau chat
 
