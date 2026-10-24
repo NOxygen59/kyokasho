@@ -33,6 +33,7 @@ final class DocumentAnalysisService: ObservableObject {
     /// Cache de lecture, **pas** publié : `report(for:)` peut être appelé pendant l'affichage.
     private var cache: [String: DocumentAnalysis] = [:]
     private var task: Task<Void, Never>?
+    @Published private(set) var correctionsDone: Int?
 
     nonisolated static var folder: URL {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("Analysis", isDirectory: true)
@@ -330,6 +331,67 @@ final class DocumentAnalysisService: ObservableObject {
                 }
             }
         }
+    }
+
+    /// Accepte les différences déjà lues par Ovis sur tout le livre, sans lancer de nouvelle IA.
+    /// Les corrections manuelles et les lignes mathématiques restent intactes.
+    func applyOvisToDocument(_ document: LibraryDocument, model: AppModel) {
+        guard progress == nil else { return }
+        let id = document.id
+        let url = model.storage.url(for: id)
+        let choice = model.settings(for: document).ocrEngine
+        let ocr = model.ocr
+        correctionsDone = nil
+        lastError = nil
+        progress = Progress(documentId: id, phase: "Corrections OvisOCR2", done: 0,
+                            total: document.pageCount, phaseStarted: Date())
+        Diagnostics.log("Corrections OvisOCR2 : début de \(document.pageCount) pages", "analyse")
+        task = Task { [weak self] in
+            defer { self?.progress = nil }
+            var total = 0
+            for source in 0..<document.pageCount {
+                guard !Task.isCancelled, let self else { return }
+                defer { self.step(done: source + 1) }
+                guard let reference = try? String(contentsOf: Self.rawURL(id, ModelSpec.ovisocr2.id, source), encoding: .utf8),
+                      !reference.isEmpty else { continue }
+                let preferred = await Task.detached { OCRService.resolve(choice, url: url, pageIndex: source) }.value
+                let engines = [preferred, OCREngineID.vision, OCREngineID.ndlocr, OCREngineID.ppocr5]
+                var cachedPage: OCRPage?
+                // Le choix de moteur peut avoir changé depuis l'import : chercher un cache existant.
+                for engine in engines where cachedPage == nil {
+                    cachedPage = await ocr.cached(documentId: id, pageIndex: source, engine: engine)
+                }
+                guard var page = cachedPage else { continue }
+                let snapshot = page
+                let suggestions = await Task.detached(priority: .userInitiated) {
+                    OCRReferenceDiff.suggestions(snapshot, reference: reference)
+                }.value
+                var changed = 0
+                for suggestion in suggestions where page.lines.indices.contains(suggestion.line) {
+                    let line = page.lines[suggestion.line]
+                    guard line.edited != true,
+                          !Self.looksMathematical(line.text), !Self.looksMathematical(suggestion.proposed) else { continue }
+                    page.lines[suggestion.line] = ReaderController.corrected(line, text: suggestion.proposed)
+                    changed += 1
+                }
+                guard changed > 0 else { continue }
+                do {
+                    try await ocr.store(page, documentId: id, pageIndex: source)
+                    total += changed
+                    self.invalidatePage(source, documentId: id)
+                } catch {
+                    self.lastError = "Page \(document.pageLabel(source)) : \(error.localizedDescription)"
+                    Diagnostics.error(error.localizedDescription, "corrections OvisOCR2 p. \(document.pageLabel(source))")
+                }
+            }
+            self?.correctionsDone = total
+            Diagnostics.log("Corrections OvisOCR2 : \(total) lignes enregistrées", "analyse")
+        }
+    }
+
+    private static func looksMathematical(_ text: String) -> Bool {
+        text.contains(where: { "=∝√∑∫±≤≥≈^_{}\\".contains($0) })
+            || text.contains("\\frac") || text.contains("\\sqrt")
     }
 
     func dismiss(source: Int, line: Int, documentId: String) {

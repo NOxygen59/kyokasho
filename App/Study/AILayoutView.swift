@@ -155,9 +155,18 @@ struct AILayoutView: View {
         func text(_ s: String) async -> String {
             // Français : texte simplement échappé (pas de dictionnaire japonais au toucher).
             if french { return "<span lang=\"fr\">\(FuriganaTextView.escape(s))</span>" }
-            let segments = await dictionary.segment(s)
-            let rubies = furigana ? TextFurigana.rubies(s, segments: segments) : []
-            return FuriganaTextView.markup(s, rubies: rubies, wordStarts: FuriganaTextView.wordStarts(s, segments: segments))
+            var result = ""
+            for part in FormulaMarkup.parts(s) {
+                switch part {
+                case .formula(let source): result += FormulaMarkup.html(source)
+                case .prose(let prose):
+                    let segments = await dictionary.segment(prose)
+                    let rubies = furigana ? TextFurigana.rubies(prose, segments: segments) : []
+                    result += FuriganaTextView.markup(prose, rubies: rubies,
+                                                     wordStarts: FuriganaTextView.wordStarts(prose, segments: segments))
+                }
+            }
+            return result
         }
         // Figures : une seule image de la page, découpée hors du fil principal.
         let boxes = blocks.compactMap { b -> (Int, Int, Int, Int)? in
@@ -177,6 +186,12 @@ struct AILayoutView: View {
         p.figtitle{text-align:center;font-size:.8em;opacity:.8;margin-top:-.2em}
         th{font-weight:700;opacity:.9} ul{margin:0 0 .6em;padding-left:1.3em} li{margin:.15em 0}
         h2,h3,h4{line-height:1.6;margin:.8em 0 .4em}
+        .formula{display:inline-block;white-space:nowrap;font-family:'Times New Roman',serif;
+                 background:rgba(255,255,255,.06);padding:0 .12em;border-radius:.15em}
+        .formula sup,.formula sub{font-size:.72em;line-height:0}
+        .formula .frac{display:inline-flex;vertical-align:middle;flex-direction:column;text-align:center;font-size:.86em}
+        .formula .frac>span:first-child{border-bottom:1px solid;padding:0 .15em}
+        .formula .radicand{border-top:1px solid;padding:0 .12em}
         </style>
         """
         // Français : police sans empattement, interligne normal (pas de place à garder pour des furigana).
@@ -256,5 +271,92 @@ struct AILayoutView: View {
             UIImage(cgImage: crop).draw(in: CGRect(origin: .zero, size: size))
         }
         return "data:image/jpeg;base64," + jpeg.base64EncodedString()
+    }
+}
+
+/// Présentation locale des formules OvisOCR2. Le Markdown d'origine reste inchangé pour la copie
+/// et la comparaison avec la page ; seules les commandes reconnues deviennent des symboles.
+private enum FormulaMarkup {
+    enum Part { case prose(String), formula(String) }
+
+    static func parts(_ text: String) -> [Part] {
+        var result: [Part] = []
+        var cursor = text.startIndex
+        while cursor < text.endIndex, let open = text[cursor...].firstIndex(of: "$") {
+            if open > cursor { result.append(.prose(String(text[cursor..<open]))) }
+            let next = text.index(after: open)
+            let doubled = next < text.endIndex && text[next] == "$"
+            let bodyStart = doubled ? text.index(after: next) : next
+            let delimiter = doubled ? "$$" : "$"
+            guard let close = text[bodyStart...].range(of: delimiter) else {
+                result.append(.prose(String(text[open...])))
+                return result
+            }
+            result.append(.formula(String(text[bodyStart..<close.lowerBound])))
+            cursor = close.upperBound
+        }
+        if cursor < text.endIndex { result.append(.prose(String(text[cursor...]))) }
+        return result
+    }
+
+    static func html(_ latex: String) -> String {
+        var parser = Parser(Array(latex))
+        return "<span class=\"formula\" aria-label=\"formule OCR à vérifier sur la page\">" + parser.render() + "</span>"
+    }
+
+    private struct Parser {
+        let chars: [Character]
+        var index = 0
+
+        init(_ chars: [Character]) { self.chars = chars }
+
+        mutating func group() -> String {
+            guard index < chars.count else { return "" }
+            if chars[index] == "{" {
+                index += 1
+                return render(untilBrace: true)
+            }
+            let char = chars[index]
+            index += 1
+            return FuriganaTextView.escape(String(char))
+        }
+
+        mutating func render(untilBrace: Bool = false) -> String {
+            var out = ""
+            while index < chars.count {
+                let char = chars[index]
+                index += 1
+                if char == "}" && untilBrace { break }
+                if char == "\\" {
+                    let start = index
+                    while index < chars.count && chars[index].isLetter { index += 1 }
+                    let command = String(chars[start..<index])
+                    switch command {
+                    case "frac":
+                        let top = group(), bottom = group()
+                        out += "<span class=\"frac\"><span>\(top)</span><span>\(bottom)</span></span>"
+                    case "sqrt": out += "√<span class=\"radicand\">\(group())</span>"
+                    case "alpha": out += "α"
+                    case "beta": out += "β"
+                    case "gamma": out += "γ"
+                    case "pi": out += "π"
+                    case "propto": out += "∝"
+                    case "cdot", "times": out += command == "cdot" ? "·" : "×"
+                    case "leq": out += "≤"
+                    case "geq": out += "≥"
+                    case "mathrm", "text": out += group()
+                    default: out += FuriganaTextView.escape("\\" + command)
+                    }
+                } else if char == "_" || char == "^" {
+                    let tag = char == "_" ? "sub" : "sup"
+                    out += "<\(tag)>\(group())</\(tag)>"
+                } else if char == "{" {
+                    out += render(untilBrace: true)
+                } else {
+                    out += FuriganaTextView.escape(String(char))
+                }
+            }
+            return out
+        }
     }
 }

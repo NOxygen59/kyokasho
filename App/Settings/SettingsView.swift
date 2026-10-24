@@ -118,6 +118,7 @@ struct AnnotationSettingsView: View {
 /// Sections communes : réglages globaux du lecteur (valeurs par défaut).
 struct ReaderSettingsSections: View {
     @Binding var settings: ReaderSettings
+    @AppStorage("reader.trackpadScrollPassThrough") private var trackpadScrollPassThrough = true
 
     var body: some View {
         Section {
@@ -163,10 +164,11 @@ struct ReaderSettingsSections: View {
         Section {
             Toggle("Double tap pour zoomer", isOn: $settings.doubleTapZoom)
             Toggle("Masquer les barres en tournant les pages", isOn: $settings.hideBarsOnScroll)
+            Toggle("Laisser le trackpad déplacer la page", isOn: $trackpadScrollPassThrough)
         } header: {
             Text("Gestes")
         } footer: {
-            Text("Tourner les pages : glisser au doigt, ou avec un clavier / une souris, les flèches sur les bords et les touches ← →. Un tap montre ou cache les barres.")
+            Text("Le trackpad déplace la page avec deux doigts ; le glissement au doigt tourne les pages. Désactive cette option si les gestes du lecteur te convenaient mieux. Un tap montre ou cache les barres.")
         }
     }
 }

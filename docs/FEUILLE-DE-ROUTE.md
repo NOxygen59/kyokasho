@@ -108,6 +108,16 @@ sens. Depuis Texte, « Corrections IA » ouvre les corrections proposées et « 
 la page avec OvisOCR2, même si elle était en cache. Une nouvelle lecture invalide le vote de fiabilité de cette
 page jusqu'à sa prochaine analyse. Rendu vertical et usage à confirmer sur iPad.
 
+**Retours après v1.2.3 (24/10, hors release)** : une question « p. 6 » cible désormais uniquement la page 6
+et indique clairement si sa lecture Ovis manque ; les formules LaTeX d'Ovis sont affichées comme des formules
+lisibles dans le panneau, tout en gardant le Markdown original. L'analyse propose d'accepter sur tout le document
+les différences déjà lues par Ovis, en sautant les lignes retouchées à la main et les formules ; aucun nouveau scan.
+Le panneau OCR ancré occupe sa propre colonne pour éviter le chevauchement lors d'une navigation par la pellicule.
+L'orientation des furigana sur les légendes verticales tient compte des boîtes de caractères ; les kanji isolés
+empilés sans contexte sont ignorés. Le geste de changement de page au doigt ne doit plus capter le trackpad,
+avec une option de retour dans les réglages. À confirmer sur l'iPad, sans simulateur ni appareil utilisé ici.
+Compilation iOS générique réussie ; aucun essai de geste sur appareil.
+
 **Version 1.2.2** : Qwen3.5-4B 4 bits ajouté en modèle de chat optionnel (téléchargement à la demande, ≈ 3,06 Go,
 poids et tokenizer SHA-256 vérifiés). Changement de modèle et conversations par livre, bouton pour insérer la page
 affichée et liens vers les pages consultées. L'accueil ouvre le chat même si seul Qwen3.5 est installé. Pastille

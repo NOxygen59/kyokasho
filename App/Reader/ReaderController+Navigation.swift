@@ -188,6 +188,11 @@ extension ReaderController {
             swipe.delegate = self
             swipe.cancelsTouchesInView = false
             swipe.delaysTouchesEnded = false
+            // Le défilement à deux doigts du trackpad appartient au UIScrollView de PDFKit.
+            // Le geste maison ne sert qu'au balayage tactile d'un doigt pour tourner la page.
+            if UserDefaults.standard.object(forKey: "reader.trackpadScrollPassThrough") as? Bool ?? true {
+                swipe.allowedTouchTypes = [NSNumber(value: UITouch.TouchType.direct.rawValue)]
+            }
             if attach { pdfView.addGestureRecognizer(swipe) }
         }
     }

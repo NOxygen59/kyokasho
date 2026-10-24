@@ -476,10 +476,11 @@ struct QwenChatView: View {
                     // relance peut utiliser le dernier échange pour lever une référence comme « ça ».
                     let previous = Array(messages.dropLast(2).suffix(2))
                     let followUp = Self.isFollowUp(prompt)
+                    let requestedPages = DocumentKnowledge.explicitPages(prompt, document: document)
                     var passages = await Task.detached(priority: .userInitiated) {
                         DocumentKnowledge.passages(for: document, question: prompt, japaneseTerms: "")
                     }.value
-                    if (passages.first?.score ?? 0) < 2 {
+                    if requestedPages.isEmpty && (passages.first?.score ?? 0) < 2 {
                         var terms = ""
                         let lastExchange = followUp ? previous.map { $0.text }.joined(separator: "\n").prefix(500) : ""
                         let lookup = "Question actuelle : \(prompt)\n\(lastExchange.isEmpty ? "" : "Dernier échange pour résoudre les pronoms seulement : \(lastExchange)\n")Donne uniquement 3 à 8 mots-clés japonais pour retrouver la réponse dans le manuel. Aucun commentaire."
@@ -493,7 +494,9 @@ struct QwenChatView: View {
                         }.value
                     }
                     if passages.isEmpty {
-                        messages[index].text = "Je n'ai trouvé aucun passage pertinent dans les pages lues de ce livre. Essaie un terme japonais ou indique un numéro de page."
+                        messages[index].text = requestedPages.isEmpty
+                            ? "Je n'ai trouvé aucun passage pertinent dans les pages lues de ce livre. Essaie un terme japonais ou indique un numéro de page."
+                            : "La page demandée n'a pas encore de lecture OvisOCR2 disponible. Relance sa lecture dans l'onglet Texte, puis réessaie."
                     } else {
                         let report = DocumentAnalysisService.shared.report(for: document.id)
                         let sources = passages.map { passage in

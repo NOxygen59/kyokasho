@@ -30,13 +30,16 @@ enum DocumentKnowledge {
                          limit: Int = 4) -> [Passage] {
         let terms = searchTerms(question + " " + japaneseTerms)
         let cited = explicitPages(question, document: document)
+        if !cited.isEmpty {
+            return cited.sorted().prefix(limit).compactMap { page in
+                guard let content = try? String(contentsOf: DocumentAnalysisService.rawURL(document.id, ModelSpec.ovisocr2.id, page), encoding: .utf8),
+                      !content.isEmpty else { return nil }
+                return Passage(page: page, text: String(content.prefix(3500)), score: 100)
+            }
+        }
         var matches: [Passage] = []
         for page in 0..<document.pageCount {
             guard let content = try? String(contentsOf: DocumentAnalysisService.rawURL(document.id, ModelSpec.ovisocr2.id, page), encoding: .utf8) else { continue }
-            if cited.contains(page) {
-                matches.append(Passage(page: page, text: String(content.prefix(1500)), score: 100))
-                continue
-            }
             let blocks = content.components(separatedBy: "\n\n")
             for block in blocks {
                 let clean = block.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -68,13 +71,13 @@ enum DocumentKnowledge {
             .sorted { $0.count > $1.count }
     }
 
-    private static func explicitPages(_ question: String, document: LibraryDocument) -> Set<Int> {
-        guard let expression = try? NSRegularExpression(pattern: #"(?i)(?:p\.|pages?\s+)(\d+)"#) else { return [] }
+    static func explicitPages(_ question: String, document: LibraryDocument) -> Set<Int> {
+        guard let expression = try? NSRegularExpression(pattern: #"(?i)\b(?:p\.?\s*|pages?\s+)(\d+|[ivxlcdm]+)\b"#) else { return [] }
         let range = NSRange(question.startIndex..<question.endIndex, in: question)
         return Set(expression.matches(in: question, range: range).compactMap { match in
-            guard let numberRange = Range(match.range(at: 1), in: question),
-                  let number = Int(question[numberRange]) else { return nil }
-            return (0..<document.pageCount).first { document.pageLabel($0) == String(number) }
+            guard let numberRange = Range(match.range(at: 1), in: question) else { return nil }
+            let label = String(question[numberRange])
+            return (0..<document.pageCount).first { document.pageLabel($0).caseInsensitiveCompare(label) == .orderedSame }
         })
     }
 }

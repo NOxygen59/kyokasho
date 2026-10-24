@@ -29,6 +29,7 @@ struct ReaderScreen: View {
     @AppStorage(StudyPanelMode.storageKey) private var studyMode = StudyPanelMode.docked
     @AppStorage(StudyPanelMode.restoreKey) private var studyRestore = StudyPanelMode.docked
     @AppStorage("reader.filmstripShown") private var filmstripShown = true
+    @AppStorage("reader.trackpadScrollPassThrough") private var trackpadScrollPassThrough = true
     @AppStorage("pencil.lookupOption") private var pencilOption = false
     @AppStorage(PageTone.storageKey) private var pageTone = PageTone.normal
     @State private var scanCleaning = ScanSharpening.method
@@ -137,8 +138,12 @@ struct ReaderScreen: View {
                 }
                 .animation(.easeOut(duration: 0.18), value: chromeVisible)
                 if reservesSide {
-                    // Réserver la place sans animer la géométrie du document.
-                    Color.clear.frame(width: panelWidth)
+                    // Le panneau possède réellement sa colonne : PDFKit ne peut pas le recouvrir
+                    // lors d'une navigation par la pellicule ou d'un changement de mise en page.
+                    if let docked {
+                        sidePanel(docked).frame(width: panelWidth, height: documentHeight)
+                            .transition(panelTransition)
+                    }
                 }
             }
             .frame(height: documentHeight)
@@ -154,18 +159,15 @@ struct ReaderScreen: View {
                 if landscape, !autoOpenedSide { autoOpenedSide = true; side = .study }
             }
             .overlay(alignment: .trailing) {
-                // Les panneaux s'animent dans leur propre couche, après la mise en place du PDF.
-                ZStack(alignment: .trailing) {
-                    if let docked, reservesSide {
-                        sidePanel(docked).transition(panelTransition)
-                    } else if docked == .study, !landscape {
-                        sidePanel(.study).padding(.vertical, Atelier.gap).transition(panelTransition)
-                    }
+                // En portrait seulement, le panneau reste flottant sur la page.
+                if docked == .study, !landscape {
+                    sidePanel(.study)
+                        .padding(.vertical, Atelier.gap)
+                        .frame(width: panelWidth, height: documentHeight)
+                        .padding(.trailing, Atelier.gap)
+                        .transition(panelTransition)
+                        .animation(panelAnimation, value: docked)
                 }
-                .frame(width: panelWidth, height: documentHeight)
-                .padding(.trailing, reservesSide ? inset : Atelier.gap)
-                .animation(panelAnimation, value: docked)
-                .animation(panelAnimation, value: reservesSide)
             }
             .overlay {
                 // Panneau d'étude détaché : fenêtre, plein écran ou pastille, par-dessus la page.
@@ -199,6 +201,14 @@ struct ReaderScreen: View {
             reader.update(settings: defaults.applying(reader.document.settingsOverride))
         }
         .onReceive(model.$appSettings.map(\.showOCRBoxes).removeDuplicates()) { showOCRBoxes = $0 }
+        .onChange(of: trackpadScrollPassThrough) { enabled in
+            for swipe in [reader.swipeLeft, reader.swipeRight] {
+                swipe?.allowedTouchTypes = enabled
+                    ? [NSNumber(value: UITouch.TouchType.direct.rawValue)]
+                    : [NSNumber(value: UITouch.TouchType.direct.rawValue),
+                       NSNumber(value: UITouch.TouchType.indirectPointer.rawValue)]
+            }
+        }
         .sheet(item: $sheet) { sheet in
             Group {
                 switch sheet {

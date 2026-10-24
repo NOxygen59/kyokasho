@@ -13,6 +13,7 @@ struct DocumentAnalysisSheet: View {
     @ObservedObject private var service = DocumentAnalysisService.shared
     @Environment(\.dismiss) private var dismiss
     @AppStorage(DocumentAnalysisService.useQwenKey) private var useQwen = false
+    @State private var confirmOvisAll = false
 
     private var running: DocumentAnalysisService.Progress? {
         service.progress?.documentId == document.id ? service.progress : nil
@@ -32,11 +33,35 @@ struct DocumentAnalysisSheet: View {
                 } else {
                     startSection
                 }
+                ovisCorrectionsSection
                 if let error = service.lastError { Section { Text(error).foregroundStyle(.red).font(.footnote) } }
             }
             .navigationTitle("Analyse · \(document.title)")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("OK") { dismiss() } } }
+            .confirmationDialog("Accepter les corrections OvisOCR2 ?", isPresented: $confirmOvisAll) {
+                Button("Corriger tout le document") { service.applyOvisToDocument(document, model: model) }
+            } message: {
+                Text("Seules les pages déjà lues par OvisOCR2 sont utilisées. Les lignes corrigées à la main et celles qui ressemblent à des formules sont conservées. La comparaison reste automatique : vérifie ensuite les passages importants sur la page originale.")
+            }
+        }
+    }
+
+    private var ovisCorrectionsSection: some View {
+        let read = DocumentKnowledge.readCount(document)
+        return Section {
+            Button { confirmOvisAll = true } label: {
+                Label("Accepter les corrections Ovis pour tout le document", systemImage: "text.badge.checkmark")
+            }
+            .disabled(read == 0 || service.progress != nil)
+            if let done = service.correctionsDone {
+                Text("\(done) ligne(s) corrigée(s). Rouvre le lecteur pour voir le texte actualisé.")
+                    .font(.footnote).foregroundStyle(.secondary)
+            }
+        } header: {
+            Text("Corrections du texte")
+        } footer: {
+            Text("\(read) page(s) sur \(document.pageCount) déjà lues par OvisOCR2. Utilise uniquement ces lectures enregistrées ; aucun nouveau scan n'est lancé. Les formules et tes retouches manuelles sont exclues.")
         }
     }
 

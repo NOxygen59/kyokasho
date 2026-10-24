@@ -129,19 +129,33 @@ enum FuriganaLayer {
                 boxes = line.charBoxes
             }
             guard text.contains(where: Furigana.isKanji) else { return [] }
+            let lineRect = lineRects[l]
+            let measured = line.measuredCharBoxes && boxes.compactMap { $0 }.count >= 2
+            let placed = boxes.compactMap { $0 }.map { frame.pageRect($0) }
+            let stacked = measured && abs(placed.last!.midY - placed.first!.midY) >
+                abs(placed.last!.midX - placed.first!.midX) * 1.5
+            let vertical = line.vertical || stacked || (text.count >= 2 && lineRect.height > lineRect.width * 1.45)
+            // Des caractères isolés empilés dans une légende verticale ne forment pas des mots :
+            // le dictionnaire peut leur attribuer des lectures de prénom sans rapport.
+            let verticalNeighbour = lineRects.enumerated().contains { index, other in
+                guard index != l, ocr.lines[index].text.count == 1 else { return false }
+                let closeX = abs(other.midX - lineRect.midX) < max(other.width, lineRect.width) * 0.65
+                let gap = max(0, max(other.minY - lineRect.maxY, lineRect.minY - other.maxY))
+                return closeX && gap < max(other.height, lineRect.height) * 1.7
+            }
+            if text.count == 1 && (lineRect.height > lineRect.width * 1.35 || verticalNeighbour) { return [] }
             let rubies = readings?(text) ?? Furigana.rubies(for: text).map { (range: $0.range, reading: $0.reading) }
             return rubies.compactMap { ruby in
                 // Caractère ajouté par l'IA (sans boîte) : la lecture se pose sur ceux du groupe qui en ont une.
                 let rect = boxes[ruby.range].compactMap { $0 }.reduce(CGRect.null) { $0.union(frame.pageRect($1)) }
                 guard !rect.isNull, rect.width > 0, rect.height > 0 else { return nil }
                 // La place se mesure depuis la ligne entière (pas seulement le mot).
-                let lineRect = lineRects[l]
-                let wordInLine = line.vertical
+                let wordInLine = vertical
                     ? CGRect(x: lineRect.minX, y: rect.minY, width: lineRect.width, height: rect.height)
                     : CGRect(x: rect.minX, y: lineRect.minY, width: rect.width, height: lineRect.height)
                 let others = lineRects.enumerated().filter { $0.offset != l }.map(\.element)
-                return Mark(rect: rect, reading: ruby.reading, vertical: line.vertical,
-                            maxSize: room(for: wordInLine, vertical: line.vertical, among: others) * 0.85)
+                return Mark(rect: rect, reading: ruby.reading, vertical: vertical,
+                            maxSize: room(for: wordInLine, vertical: vertical, among: others) * 0.85)
             }
         }
     }
