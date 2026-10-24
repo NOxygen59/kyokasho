@@ -3,7 +3,7 @@
 > Ce fichier + `docs/IA-LOCALE.md` (avant de toucher à l'IA) suffisent. Ne relis pas le code « pour voir » :
 > `grep -rn 'FDR-' App Packages` donne les endroits exacts d'une étape. Une session = les retours de l'utilisateur,
 > sinon l'étape suivante non cochée (§ 7 bis, puis § 8) ; puis commit + push (+ release **si demandée**), puis résumé simple.
-> **État au 24/10/2026 : v1.2.2 publiée (build 37).** Toutes les étapes V1 → V14 du § 7 sont faites, ainsi que S
+> **État au 24/10/2026 : v1.2.3 publiée (build 38).** Toutes les étapes V1 → V14 du § 7 sont faites, ainsi que S
 > (lexique), P (portrait / paysage) et E (pages de même taille). Confirmé sur l'iPad : IA locale (OvisOCR2, Qwen3-VL,
 > analyse, vérification), gestes au doigt (0.8.9.2). Le reste marqué « non vérifié » peut être faux sur l'appareil.
 
@@ -101,10 +101,10 @@ fichier. Chaque nouvelle question cherche d'abord avec ses propres termes dans l
 Qwen3.5-2B 4 bits est une piste plus légère compatible avec le registre du fork MLX Swift, mais son intégration
 et sa qualité sur l'iPad restent à vérifier. Compilation iOS générique réussie ; usage sur iPad non vérifié.
 
-**Lecture et relecture OCR (24/10, hors release)** : consignes du chat recentrées sur la question actuelle et les
+**Lecture et relecture OCR (24/10, incluse dans la v1.2.3)** : consignes du chat recentrées sur la question actuelle et les
 passages du livre, sans sujet de design d'intérieur imposé. Furigana de la page accessibles directement près de
 « … » ; le panneau Texte affiche les pages majoritairement verticales de droite à gauche avec ruby dans le bon
-sens. Depuis Texte, « Comparer avec OvisOCR2 » ouvre les corrections proposées et « Rescanner » relit vraiment
+sens. Depuis Texte, « Corrections IA » ouvre les corrections proposées et « Rescanner » relit vraiment
 la page avec OvisOCR2, même si elle était en cache. Une nouvelle lecture invalide le vote de fiabilité de cette
 page jusqu'à sa prochaine analyse. Rendu vertical et usage à confirmer sur iPad.
 
