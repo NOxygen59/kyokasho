@@ -13,6 +13,7 @@ import SwiftUI
 @MainActor
 final class AppModel: ObservableObject {
     let database: AppDatabase
+    let persistentStorageAvailable: Bool
     let storage: DocumentStorage
     let importer: DocumentImporter
     let thumbnails: ThumbnailCache
@@ -44,6 +45,7 @@ final class AppModel: ObservableObject {
 
     @Published var importProgress: ImportProgress?
     @Published var lastError: String?
+    @Published var storageRecoveryError: String?
     /// Document à ouvrir (bibliothèque → lecteur).
     @Published var openDocumentId: String? {
         didSet {
@@ -74,9 +76,11 @@ final class AppModel: ObservableObject {
         let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
         do {
             database = try AppDatabase.open(at: support.appendingPathComponent("kyokasho.sqlite"))
+            persistentStorageAvailable = true
         } catch {
             // Dernier recours : l'app reste utilisable (sans persistance) plutôt que de planter.
             database = try! AppDatabase.inMemory()
+            persistentStorageAvailable = false
             lastError = "Base de données inaccessible : \(error.localizedDescription)"
         }
         storage = DocumentStorage(root: support.appendingPathComponent("Documents", isDirectory: true))
@@ -143,6 +147,7 @@ final class AppModel: ObservableObject {
     /// Chaque document importé est ensuite lu par l'IA (`DocumentScan`, pages pas encore lues).
     func importFiles(_ urls: [URL], cleanUp: Bool = true, openWhenSingle: Bool = true,
                      language: OCRTargetLanguage = .japanese) {
+        guard storageRecoveryError == nil else { return }
         guard !urls.isEmpty else { return }
         importProgress = ImportProgress(done: 0, total: urls.count, currentName: urls[0].lastPathComponent)
         let importer = importer

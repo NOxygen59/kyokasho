@@ -15,6 +15,26 @@ public final class ReviewStore: @unchecked Sendable {
                            arguments: [offset, documentId])
         }
     }
+    /// Instantané sans limite de pagination ; seuls les liens vers les pages sont capturés.
+    public func sourcePages(documentId: String) throws -> [Int64: Int] {
+        try writer.read { db in
+            let rows = try Row.fetchAll(db, sql: "SELECT id, sourcePage FROM card WHERE sourceDocumentId = ? AND sourcePage IS NOT NULL", arguments: [documentId])
+            return Dictionary(uniqueKeysWithValues: rows.map { ($0["id"] as Int64, $0["sourcePage"] as Int) })
+        }
+    }
+
+    /// Installe des valeurs finales : une reprise ne touche ni la planification FSRS ni l'historique.
+    public func setSourcePages(documentId: String, pages: [Int64: Int]) throws {
+        try writer.write { db in
+            for (id, page) in pages {
+                try db.execute(sql: "UPDATE card SET sourcePage = ? WHERE id = ? AND sourceDocumentId = ?", arguments: [page, id, documentId])
+                guard db.changesCount == 1 else {
+                    throw NSError(domain: "Kyokasho.PageShift", code: 3, userInfo: [NSLocalizedDescriptionKey: "Carte absente ou associée à un autre document."])
+                }
+            }
+        }
+    }
+
     /// Images et sons des cartes (noms de fichiers plats, comme le dossier média d'Anki).
     public let mediaRoot: URL
 

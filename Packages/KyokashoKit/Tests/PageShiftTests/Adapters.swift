@@ -9,6 +9,7 @@ import ReviewKit
 // Seule la composition UI est doublée. Le lien PageShift.swift compile le fichier produit exact,
 // avec les vrais AppDatabase, ReviewStore, DocumentStorage, PDFKit et DocumentAnalysis.
 @MainActor final class AppModel {
+    var persistentStorageAvailable = true
     let database: AppDatabase
     let storage: DocumentStorage
     let review: ReviewModel
@@ -23,6 +24,7 @@ import ReviewKit
     }
 }
 @MainActor final class ReviewModel {
+    var persistentStorageAvailable = true
     let store: ReviewStore
     init(store: ReviewStore) { self.store = store }
 }
@@ -48,3 +50,7 @@ enum ScanSharpening {
 enum FuriganaLayer { static func clearMemory() {} }
 enum ToneCache { static func clear() {} }
 enum Diagnostics { static func error(_ message: String, _ area: String = "app") {} }
+@MainActor final class LayoutRegionsCache {
+    static let shared = LayoutRegionsCache()
+    func clear() {}
+}
