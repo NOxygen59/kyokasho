@@ -5,7 +5,7 @@
 
 ## Périmètre
 
-Ce lot ajoute un outil développeur Python sans dépendance tierce, `tools/backup_container.py`, et des tests. Il ne modifie pas l'app ni son interface, n'extrait pas le conteneur d'un appareil, ne s'exécute pas sur l'iPad et ne touche pas à la bibliothèque de NOxygen59. Les tests emploient exclusivement des conteneurs synthétiques temporaires.
+Ce lot ajoute un outil développeur Python sans dépendance tierce, `tools/backup_container.py`, et des tests. Il ne modifie pas le comportement de l'app ni son interface, n'extrait pas le conteneur d'un appareil, ne s'exécute pas sur l'iPad et ne touche pas à la bibliothèque de NOxygen59. Les tests emploient exclusivement des conteneurs synthétiques temporaires.
 
 Il prend en entrée une **copie exportée du conteneur, app arrêtée**, contenant `Documents/` et `Library/`. Les bases essentielles attendues sont `Library/Application Support/Kyokasho/kyokasho.sqlite` et `Library/Application Support/Kyokasho/Review/review.sqlite`. Une méthode réelle d'export/import du conteneur TrollStore sur iOS 16.6.1 reste à qualifier avec NOxygen59 ; aucun accès automatique n'est ajouté.
 
@@ -57,7 +57,7 @@ swift test --package-path Packages/KyokashoKit --disable-automatic-resolution --
 
 Un test Swift supplémentaire utilise les **véritables AppDatabase et ReviewStore**, avec leurs migrations réelles : PDF synthétique, notes ancrées et dessin, encre, surlignage, repère, résultat OCR retouché, carte FSRS, historique, média, lectures IA, conversations, lexique et préférences synthétiques. Les pools sont fermés avant copie. Après sauvegarde et restauration, les vraies bases sont rouvertes, contenus/positions/état FSRS vérifiés, puis une nouvelle note est écrite et retrouvée après une nouvelle ouverture.
 
-La première comparaison du test a révélé un artefact de précision des dates du fixture (Date natif contre représentation SQLite), pas une perte de sauvegarde ; le fixture emploie désormais une date de référence exacte. Aucun changement des formats applicatifs n'en découle. Les deux assertions de test OCR obsolètes sont alignées sur `results`, comme dans #1, pour compiler la suite sans changer l'app.
+La première comparaison du test a révélé un artefact de précision des dates du fixture (Date natif contre représentation SQLite), pas une perte de sauvegarde ; le fixture emploie désormais une date de référence exacte. Aucun changement des formats applicatifs n'en découle. Le runner Swift 6.1.2 exige aussi deux conversions explicites `CGFloat` → `Double` dans un tuple d'OCRModels, implicitement acceptées par Swift 6.4. L'ajustement conserve les mêmes valeurs et le même algorithme, sans nouvelle API ni dépendance. Les deux assertions de test OCR obsolètes sont alignées sur `results`, comme dans #1, pour compiler la suite sans changer l'app.
 
 ## Limites et prochaines validations
 

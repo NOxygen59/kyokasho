@@ -112,7 +112,7 @@ public struct OCRPage: Codable, Hashable, Sendable {
             // Marge : au moins `tolerance`, et jusqu'à 60 % de l'épaisseur de la ligne.
             guard distance <= max(tolerance, thickness * 0.6) else { continue }
             if let b = best, distance > b.distance + 1e-6 || (abs(distance - b.distance) <= 1e-6 && thickness >= b.thickness) { continue }
-            best = (l, distance, thickness)
+            best = (l, Double(distance), Double(thickness))
         }
         guard let l = best?.line else { return nil }
         let line = lines[l]
