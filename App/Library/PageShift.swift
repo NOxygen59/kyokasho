@@ -23,10 +23,8 @@ enum PageShift {
         var stage: String
     }
 
-    private static var support: URL {
-        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Kyokasho", isDirectory: true)
-    }
+    static var support: URL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        .appendingPathComponent("Kyokasho", isDirectory: true)
     private static var marker: URL { support.appendingPathComponent("page-shift.json") }
     private static func staged(_ id: String) -> URL { support.appendingPathComponent("page-shift-\(id).pdf") }
 
