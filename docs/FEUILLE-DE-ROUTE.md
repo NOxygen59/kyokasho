@@ -3,7 +3,7 @@
 > Ce fichier + `docs/IA-LOCALE.md` (avant de toucher à l'IA) suffisent. Ne relis pas le code « pour voir » :
 > `grep -rn 'FDR-' App Packages` donne les endroits exacts d'une étape. Une session = les retours de l'utilisateur,
 > sinon l'étape suivante non cochée (§ 7 bis, puis § 8) ; puis commit + push (+ release **si demandée**), puis résumé simple.
-> **État au 24/10/2026 : v1.2.4 publiée (build 39).** Toutes les étapes V1 → V14 du § 7 sont faites, ainsi que S
+> **État au 24/10/2026 : v1.3 publiée (build 40).** Toutes les étapes V1 → V14 du § 7 sont faites, ainsi que S
 > (lexique), P (portrait / paysage) et E (pages de même taille). Confirmé sur l'iPad : IA locale (OvisOCR2, Qwen3-VL,
 > analyse, vérification), gestes au doigt (0.8.9.2). Le reste marqué « non vérifié » peut être faux sur l'appareil.
 

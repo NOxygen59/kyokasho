@@ -23,6 +23,7 @@ Textes des licences : [LICENSES/](LICENSES/) ; attributions : [THIRD_PARTY_NOTIC
 
 | Version | Release | Contenu |
 |---|---|---|
+| **1.3** | [v1.3](https://github.com/NOxygen59/kyokasho/releases/tag/v1.3) | OCR japonais mieux normalisé, langue du document choisie à l'import, réglages OCR réorganisés |
 | **1.2.4** | [v1.2.4](https://github.com/NOxygen59/kyokasho/releases/tag/v1.2.4) | Chat sur la page demandée, corrections OCR du livre entier, formules lisibles, fenêtre OCR et trackpad améliorés |
 | **1.2.3** | [v1.2.3](https://github.com/NOxygen59/kyokasho/releases/tag/v1.2.3) | Chat recentré sur les questions, texte vertical avec furigana, bascule rapide et relecture OCR accessible |
 | **1.2.2** | [v1.2.2](https://github.com/NOxygen59/kyokasho/releases/tag/v1.2.2) | Chat dans le lecteur, conversations par livre, pages ouvrables et choix Qwen3-VL / Qwen3.5 |
