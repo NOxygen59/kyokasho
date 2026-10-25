@@ -11,6 +11,8 @@ Ce lot ajoute un contrôle documentaire léger : `.github/workflows/documentatio
 
 ## Pipeline recommandé, à qualifier par étapes
 
+**Politique « Zéro dépense »** ([CI-ROADMAP.md](CI-ROADMAP.md)) : tant que l'absence de facturation n'est pas garantie par une protection vérifiée par NOxygen59, les preuves se font en local ([procédure](TESTS.md#procédure-locale-standard-avant-une-pr)). Aucune automatisation nouvelle, aucun artefact, aucun cache. Les garde-fous ci-dessous décrivent une cible future et suspendue.
+
 | Étape | Déclenchement conseillé | Preuve et critère |
 |---|---|---|
 | Liens et diff | PR/documentation | Aucun lien local invalide, `git diff --check` propre |
