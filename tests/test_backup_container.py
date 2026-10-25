@@ -100,6 +100,35 @@ class BackupTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             storage.verify(archive)
 
+    def test_ordinary_files_with_sqlite_suffixes_survive_restore(self):
+        base = self.source / "Documents/notes"
+        base.parent.mkdir(parents=True, exist_ok=True)
+        base.write_text("texte personnel, pas une base SQLite")
+        names = ["Documents/notes" + suffix for suffix in ("-wal", "-shm", "-journal")]
+        for name in names:
+            (self.source / name).write_text("donnée persistante : " + name)
+        archive = self.create()
+        manifest = storage.verify(archive)
+        restored = storage.restore(archive, self.root / "restauration")
+        for name in names:
+            self.assertIn(name, manifest["files"])
+            self.assertNotIn(name, manifest["omitted"])
+            self.assertEqual((restored / name).read_bytes(), (self.source / name).read_bytes())
+
+    def test_real_wal_and_shared_memory_are_folded_into_sqlite_backup(self):
+        database = storage.PERSISTENT_DATABASES[0]
+        self.assertTrue((self.source / (database + "-wal")).exists())
+        self.assertTrue((self.source / (database + "-shm")).exists())
+        archive = self.create()
+        manifest = storage.verify(archive)
+        restored = storage.restore(archive, self.root / "restauration")
+        for suffix in ("-wal", "-shm"):
+            self.assertNotIn(database + suffix, manifest["files"])
+            self.assertFalse((restored / (database + suffix)).exists())
+        with sqlite3.connect(restored / database) as connection:
+            self.assertEqual(connection.execute("SELECT note FROM sample").fetchone()[0],
+                             "図 : note et OCR retouché")
+
     def test_existing_destination_is_never_overwritten(self):
         archive = self.create()
         target = self.root / "occupied"

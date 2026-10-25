@@ -61,6 +61,14 @@ La première comparaison du test a révélé un artefact de précision des dates
 
 ## Limites et prochaines validations
 
+### Complément de revue indépendante — 25 octobre 2026
+
+Une reproduction synthétique a montré que des fichiers ordinaires `notes-wal`, `notes-shm` et `notes-journal` étaient omis silencieusement dès qu'un fichier `notes` existait, même si celui-ci était un simple texte. L'inventaire ne traite désormais un fichier comme annexe SQLite que si son fichier principal est une base SQLite et si l'annexe porte la signature attendue du journal WAL, du fichier partagé ou du journal de rollback. Les autres fichiers entrent dans l'inventaire et sont vérifiés/restaurés comme tout contenu persistant. Des tests contrôlent les trois noms ordinaires ainsi que l'incorporation des vrais fichiers WAL et SHM dans la copie SQLite autonome.
+
+Une annexe suspecte près d'une vraie base reste soumise aux contrôles d'intégrité SQLite : cette correction ne transforme pas une archive incohérente en restauration sûre. La condition `--source-stopped` reste obligatoire ; elle n'est pas vérifiable automatiquement par cet outil.
+
+Sur la branche corrigée : 16 tests Python exécutés sans échec, dont les deux nouvelles régressions ; le test Swift de restauration avec les vraies bases et leur réouverture passe également. Les essais restent synthétiques et Mac/Linux ; aucun conteneur personnel ou iPad n'a été utilisé.
+
 L'essai valide le cycle de données synthétiques sur Mac, pas une réinstallation sur l'iPad. Le rendu des annotations, l'ouverture des modèles, la réauthentification des comptes et les permissions de conteneur après import restent à vérifier. Les fichiers de préférences d'essai servent à prouver leur conservation octet pour octet ; ils ne valident pas tous les comportements UserDefaults d'iOS.
 
 Avant une fonction de sauvegarde dans l'app : mécanisme de mise au repos de toutes les écritures, inventaire partagé des données, écran explicitant les exclusions, tests d'interruption supplémentaires et recette iPad autorisée sur une copie. Le présent outil constitue une preuve et un point de départ révisable, pas une promesse de restauration universelle TrollStore.

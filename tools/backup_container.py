@@ -47,6 +47,23 @@ def is_sqlite(path):
         return stream.read(16) == b"SQLite format 3\x00"
 
 
+def is_sqlite_auxiliary(path):
+    signatures = {
+        "-wal": (bytes.fromhex("377f0682"), bytes.fromhex("377f0683")),
+        "-shm": (bytes.fromhex("18e22d00"), bytes.fromhex("002de218")),
+        "-journal": (bytes.fromhex("d9d505f920a163d7"),),
+    }
+    for suffix, prefixes in signatures.items():
+        if path.name.endswith(suffix):
+            database = path.with_name(path.name[:-len(suffix)])
+            if not database.is_file() or not is_sqlite(database):
+                return False
+            with path.open("rb") as stream:
+                header = stream.read(max(map(len, prefixes)))
+            return any(header.startswith(prefix) for prefix in prefixes)
+    return False
+
+
 def check_database(path):
     connection = readonly(path)
     try:
@@ -90,9 +107,8 @@ def inventory(root, omit_models=False, snapshot=False):
             if path.is_symlink() or not path.is_file():
                 raise ValueError("Fichier non régulier : " + relative)
             # Les journaux SQLite sont incorporés par sqlite3_backup, jamais copiés isolément.
-            if not snapshot and name.endswith(("-wal", "-shm", "-journal")):
-                if Path(str(path).rsplit("-", 1)[0]).is_file():
-                    continue
+            if not snapshot and is_sqlite_auxiliary(path):
+                continue
             stat = path.stat()
             files[relative] = (stat.st_size, stat.st_mtime_ns)
     return files, sorted(omitted)
