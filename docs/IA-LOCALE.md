@@ -27,7 +27,7 @@ for p in d['pins']:
     if p['identity']=='mlx-swift-lm': p['state']['revision']=os.environ['B']
 json.dump(d,open(os.environ['F'],'w'),indent=2)
 EOF
-rm -rf build/ipa/DerivedData/SourcePackages/checkouts/mlx-swift*   # sinon build_ipa.sh garde l'ancien checkout
+trash build/ipa/DerivedData/SourcePackages/checkouts/mlx-swift*   # après accord pour la mise à jour
 ```
 Contrôle dans le binaire : `unzip` du `.tipa` puis `strings Payload/Kyokasho.app/Kyokasho | grep -c '<texte du correctif>'`.
 
@@ -133,10 +133,13 @@ contrôle (mémoire `ios16-backport-rules`). Chaque correctif est listé dans `I
 
 ## 5. Tester sur le Mac (autorisé par l'utilisateur le 22/10 pour OvisOCR2 / Qwen3-VL)
 
+Pour reproduire un test, garder les révisions de `Package.resolved`. Une mise à jour des forks est une
+intervention distincte, justifiée et validée ; elle ne fait pas partie de cette commande de test.
+
 Modèles et PDF d'essai **hors dépôt** (dossier temporaire de travail ; le PDF de l'utilisateur :
 `~/Downloads/INTERIOR COORDINATOR HANDBOOK HAWE.pdf`, 24 p., ne jamais le copier dans le dépôt).
 ```
-cd Packages/GLMOCRKit && swift package update mlx-swift mlx-swift-lm && swift build --build-tests
+cd Packages/GLMOCRKit && swift build --build-tests --disable-automatic-resolution
 MLX_METAL_LANGUAGE_VERSION=30 KYOKASHO_MODELS=<dossier contenant ovisocr2/ qwen3vl4b/> \
   KYOKASHO_SAMPLE_PDF="$HOME/Downloads/INTERIOR COORDINATOR HANDBOOK HAWE.pdf" KYOKASHO_SAMPLE_PAGES=1,2 \
   swift test --skip-build --filter testRealSample          # + KYOKASHO_ONLY=OVIS|QWEN, KYOKASHO_DUMP=<dossier>
