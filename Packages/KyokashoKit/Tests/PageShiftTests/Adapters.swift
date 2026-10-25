@@ -11,6 +11,7 @@ import ReviewKit
 @MainActor final class AppModel {
     var persistentStorageAvailable = true
     let database: AppDatabase
+    let ocr: OCRService
     let storage: DocumentStorage
     let review: ReviewModel
     var storageRecoveryError: String?
@@ -19,6 +20,7 @@ import ReviewKit
     let thumbnails = ThumbnailCache()
     init(root: URL) throws {
         database = try .open(at: root.appendingPathComponent("kyokasho.sqlite"))
+        ocr = OCRService(database: database)
         storage = DocumentStorage(root: root.appendingPathComponent("Documents"))
         review = ReviewModel(store: try .open(directory: root.appendingPathComponent("Review")))
     }
@@ -30,6 +32,8 @@ import ReviewKit
 }
 @MainActor final class DocumentAnalysisService {
     static let shared = DocumentAnalysisService()
+    struct Progress { var documentId: String }
+    var progress: Progress?
     nonisolated(unsafe) static var folder = FileManager.default.temporaryDirectory
     func shiftReport(_ id: String, by offset: Int) {
         let url = Self.folder.appendingPathComponent(id + ".json")
@@ -41,6 +45,11 @@ import ReviewKit
         try? JSONEncoder().encode(report).write(to: url, options: .atomic)
     }
     func reloadAfterPageShift(_ id: String) {}
+}
+@MainActor final class AITaskCenter {
+    static let shared = AITaskCenter()
+    struct Job { var key: String }
+    var jobs: [Job] = []
 }
 final class ThumbnailCache { func removeAll(for id: String) {} }
 enum ScanSharpening {

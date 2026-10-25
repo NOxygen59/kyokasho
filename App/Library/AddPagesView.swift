@@ -153,7 +153,7 @@ struct AddPagesView: View {
             return
         }
         do {
-            let warnings = try PageShift.apply(model, document: document, merged: merged, offset: offset, newCount: pageCount)
+            let warnings = try await PageShift.apply(model, document: document, merged: merged, offset: offset, newCount: pageCount)
             if !warnings.isEmpty { error = warnings.joined(separator: "\n") }
         } catch {
             self.error = "L'ajout a été interrompu : \(error.localizedDescription). Une reprise peut être nécessaire avant de continuer."

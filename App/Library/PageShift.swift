@@ -34,7 +34,13 @@ enum PageShift {
     /// Injection de panne uniquement dans le harnais ; nil dans l'app.
     static var checkpoint: ((String) throws -> Void)?
     private static let fm = FileManager.default
+    private static var applyingDocuments: Set<String> = []
     private static var marker: URL { support.appendingPathComponent("page-shift.json") }
+    static var pendingDocumentId: String? {
+        guard let data = try? Data(contentsOf: marker),
+              let pending = try? JSONDecoder().decode(Pending.self, from: data) else { return nil }
+        return pending.documentId
+    }
     private static func fail(_ text: String) -> NSError {
         NSError(domain: "Kyokasho.PageShift", code: 1, userInfo: [NSLocalizedDescriptionKey: text])
     }
@@ -54,7 +60,42 @@ enum PageShift {
         try hit("journal.after")
     }
 
-    static func apply(_ model: AppModel, document: LibraryDocument, merged: URL, offset: Int, newCount: Int) throws -> [String] {
+    static func apply(_ model: AppModel, document: LibraryDocument, merged: URL, offset: Int, newCount: Int) async throws -> [String] {
+        guard applyingDocuments.insert(document.id).inserted else {
+            throw fail("Un ajout de pages de ce document est déjà en cours.")
+        }
+        defer { applyingDocuments.remove(document.id) }
+        await model.ocr.beginPageMutation(documentId: document.id)
+        var ownsPendingJournal = false
+        do {
+            try Task.checkCancellation()
+            let current = model.storage.url(for: document.id)
+            // PDFPool prend un verrou pendant le rendu : l'attendre hors du MainActor, avant la mutation.
+            await Task.detached { PDFPool.release(current) }.value
+            try Task.checkCancellation()
+            guard !AITaskCenter.shared.jobs.contains(where: { $0.key.contains(document.id) }),
+                  DocumentAnalysisService.shared.progress?.documentId != document.id else {
+                throw fail("Une lecture IA a commencé pendant l'attente : réessayer après sa fin.")
+            }
+            guard !fm.fileExists(atPath: marker.path) else {
+                throw fail("Un ajout précédent doit être repris avant de modifier les documents.")
+            }
+            ownsPendingJournal = true
+            let result = try applyAfterReadersStop(model, document: document, merged: merged,
+                                                    offset: offset, newCount: newCount)
+            await model.ocr.endPageMutation(documentId: document.id)
+            return result
+        } catch {
+            // Un journal durable en erreur garde le document fermé jusqu'à la reprise.
+            if !ownsPendingJournal || !fm.fileExists(atPath: marker.path) {
+                await model.ocr.endPageMutation(documentId: document.id)
+            }
+            throw error
+        }
+    }
+
+    private static func applyAfterReadersStop(_ model: AppModel, document: LibraryDocument,
+                                              merged: URL, offset: Int, newCount: Int) throws -> [String] {
         guard model.persistentStorageAvailable, model.review.persistentStorageAvailable else {
             throw fail("Bases persistantes indisponibles : aucun ajout de pages effectué.")
         }
@@ -179,7 +220,6 @@ enum PageShift {
         FuriganaLayer.clearMemory()
         LayoutRegionsCache.shared.clear()
         ToneCache.clear()
-        PDFPool.release(current)
         try hit("complete.before")
         try fm.removeItem(at: marker) // Échec = journal conservé ; tout est rejouable.
         // Ne pas jeter ici les originaux : une suppression automatique sera étudiée après recette/restauration.

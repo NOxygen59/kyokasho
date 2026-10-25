@@ -61,6 +61,16 @@ Le répertoire de compilation est séparé, et l'ASan couvre uniquement les chem
 
 ## Limites avant intégration
 
+### Complément de revue indépendante — 25 octobre 2026
+
+Un test utilisant le vrai `OCRService` a reproduit une écriture tardive sur la page 0 après insertion de deux pages avant le livre : l'appelant annulé n'arrêtait pas le moteur détaché, et le résultat était enregistré avec l'ancien index. L'ajout attend désormais les OCR déjà démarrés du document, interdit les nouveaux calculs et écritures durant le changement, puis vérifie à nouveau cet état juste avant la sauvegarde d'un résultat. Une erreur avant journal rouvre l'OCR ; si un journal durable reste en attente, la reprise doit réussir avant de le rouvrir. Les tâches IA suivies par l'interface sont revérifiées après cette attente.
+
+`PDFPool.release` attend un verrou partagé avec les rendus. Cet appel a été déplacé hors du fil principal et avant la mutation des fichiers, dans le même intervalle où les nouveaux OCR sont interdits. Un compteur de génération rejette aussi les réponses de l'ancien PDF qui seraient reprises par l'acteur OCR après la fin du déplacement. Un test retient le verrou deux secondes et vérifie que le fil de l'interface continue à répondre. Les tests supplémentaires couvrent le résultat tardif, la concurrence, les écritures manuelles, l'annulation, l'erreur préalable et la reprise. Les journaux des nouvelles exécutions sont conservés hors du dépôt, dans le rapport de revue.
+
+Cette correction ferme le chemin `OCRService` exercé par les tests. Les autres écritures différées de l'application, les grands PDF sur iPad, la coupure d'alimentation et les réparations d'anciens journaux ambigus restent à qualifier sur une copie.
+
+Sur cette branche corrigée : 20 tests PageShift passent, dont cinq nouvelles régressions ; la suite KyokashoKit compte 162 tests, 7 ignorés et aucun échec. Les 20 tests PageShift passent également sous ASan Mac après la dernière modification du service OCR. Ces preuves ne comprennent pas un essai sur iPad.
+
 La résistance à une coupure d'alimentation ou à une corruption physique du stockage n'est pas démontrée par SIGKILL. Les écritures atomiques ne constituent pas à elles seules une garantie de durabilité matérielle. Les erreurs pendant la fusion avant le commit ne doivent toucher que les temporaires : un PDF fusionné incomplet est refusé par l'orchestrateur, mais tous les chemins UIKit de sélection/partage ne sont pas automatisés ici.
 
 La nouvelle interface de reprise et les grandes bibliothèques restent à essayer sur iPad : espace disque nécessaire, temps des copies/hachages, présentation du blocage et réessai. Le protocole privilégie les données ; il peut conserver des copies importantes et effectue encore ces opérations synchrones comme l'orchestrateur précédent. Toute optimisation devra préserver les tests d'interruption. Aucune promesse de fonctionnement iPad n'est faite.

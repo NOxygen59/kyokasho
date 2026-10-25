@@ -12,7 +12,13 @@ import Darwin
 
 @MainActor
 final class PageShiftRecoveryTests: XCTestCase {
-    func withFixture(_ test: (AppModel, LibraryDocument, URL) throws -> Void) throws {
+    func assertThrowsAsync<T>(_ operation: () async throws -> T, _ message: String = "",
+                              file: StaticString = #filePath, line: UInt = #line) async {
+        do { _ = try await operation(); XCTFail(message, file: file, line: line) }
+        catch { }
+    }
+
+    func withFixture(_ test: (AppModel, LibraryDocument, URL) async throws -> Void) async throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("page-shift-test-" + UUID().uuidString)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         let saved = PageShift.support
@@ -29,7 +35,7 @@ final class PageShiftRecoveryTests: XCTestCase {
         try FileManager.default.createDirectory(at: model.storage.root, withIntermediateDirectories: true)
         try writePDF(model.storage.url(for: doc.id), pages: 4)
         try FileManager.default.createDirectory(at: DocumentAnalysisService.folder.appendingPathComponent(doc.id), withIntermediateDirectories: true)
-        try test(model, doc, root)
+        try await test(model, doc, root)
     }
 
     func writePDF(_ url: URL, pages: Int) throws {
@@ -51,7 +57,7 @@ final class PageShiftRecoveryTests: XCTestCase {
     }
 
     func testLegacyCardsStageDoesNotDiscardAmbiguousRecovery() async throws {
-        try withFixture { model, _, root in
+        try await withFixture { model, _, root in
             try marker(root, stage: "cards")
             PageShift.reconcile(model)
             XCTAssertTrue(FileManager.default.fileExists(atPath: root.appendingPathComponent("page-shift.json").path),
@@ -61,7 +67,7 @@ final class PageShiftRecoveryTests: XCTestCase {
     }
 
     func testLegacyReportStageDoesNotSilentlyAcceptUnshiftedReport() async throws {
-        try withFixture { model, doc, root in
+        try await withFixture { model, doc, root in
             var report = DocumentAnalysis(documentId: doc.id)
             report.pages[0] = .init(source: 0, baseEngine: "test")
             let url = DocumentAnalysisService.folder.appendingPathComponent(doc.id + ".json")
@@ -75,7 +81,7 @@ final class PageShiftRecoveryTests: XCTestCase {
     }
 
     func testLegacyFilesStageDoesNotShiftAlreadyInstalledFilesAgain() async throws {
-        try withFixture { model, doc, root in
+        try await withFixture { model, doc, root in
             let folder = DocumentAnalysisService.folder.appendingPathComponent(doc.id)
             let original = folder.appendingPathComponent("ovisocr2-2.md")
             try Data("page originale 0".utf8).write(to: original)
@@ -157,12 +163,12 @@ final class PageShiftRecoveryTests: XCTestCase {
         let points = ["journal.after", "database.before", "database.after", "pdf.before", "pdf.after",
                       "report.before", "report.after", "files.backup", "files.installed", "cards.before", "cards.after", "complete.before"]
         for point in points {
-            try withFixture { model, doc, root in
+            try await withFixture { model, doc, root in
                 let card = try seed(model, doc)
                 let merged = root.appendingPathComponent("input.pdf")
                 try writePDF(merged, pages: 4)
                 PageShift.checkpoint = { if $0 == point { throw PowerLoss.simulated } }
-                XCTAssertThrowsError(try PageShift.apply(model, document: doc, merged: merged, offset: 2, newCount: 4), point)
+                await assertThrowsAsync({ try await PageShift.apply(model, document: doc, merged: merged, offset: 2, newCount: 4 ) }, point)
                 XCTAssertTrue(FileManager.default.fileExists(atPath: root.appendingPathComponent("page-shift.json").path), point)
                 // Première reprise interrompue au même point, puis nouvelle instance de bases.
                 let restarted = try AppModel(root: root)
@@ -181,13 +187,13 @@ final class PageShiftRecoveryTests: XCTestCase {
     }
 
     func testInitialJournalWriteFailureLeavesAllOriginalsUnchanged() async throws {
-        try withFixture { model, doc, root in
+        try await withFixture { model, doc, root in
             let card = try seed(model, doc)
             let beforePDF = try DocumentImporter.sha256(of: model.storage.url(for: doc.id))
             let merged = root.appendingPathComponent("input.pdf")
             try writePDF(merged, pages: 4)
             PageShift.checkpoint = { if $0 == "journal.before" { throw PowerLoss.simulated } }
-            XCTAssertThrowsError(try PageShift.apply(model, document: doc, merged: merged, offset: 2, newCount: 4))
+            await assertThrowsAsync({ try await PageShift.apply(model, document: doc, merged: merged, offset: 2, newCount: 4 ) })
             XCTAssertFalse(FileManager.default.fileExists(atPath: root.appendingPathComponent("page-shift.json").path))
             XCTAssertEqual(try DocumentImporter.sha256(of: model.storage.url(for: doc.id)), beforePDF)
             XCTAssertEqual(try model.database.document(id: doc.id)?.pageCount, 2)
@@ -197,33 +203,33 @@ final class PageShiftRecoveryTests: XCTestCase {
     }
 
     func testAppendWithoutOffsetPreservesAllSourcePages() async throws {
-        try withFixture { model, doc, root in
+        try await withFixture { model, doc, root in
             let card = try seed(model, doc)
             let merged = root.appendingPathComponent("input.pdf")
             try writePDF(merged, pages: 4)
-            _ = try PageShift.apply(model, document: doc, merged: merged, offset: 0, newCount: 4)
+            _ = try await PageShift.apply(model, document: doc, merged: merged, offset: 0, newCount: 4)
             try verify(model, doc, card, offset: 0)
         }
     }
 
     func testCorruptJournalIsPreservedAndBlocksFurtherModification() async throws {
-        try withFixture { model, doc, root in
+        try await withFixture { model, doc, root in
             let file = root.appendingPathComponent("page-shift.json")
             try Data("{truncated".utf8).write(to: file)
             PageShift.reconcile(model)
             XCTAssertNotNil(model.storageRecoveryError)
             XCTAssertEqual(try String(contentsOf: file), "{truncated")
-            XCTAssertThrowsError(try PageShift.apply(model, document: doc, merged: root, offset: 2, newCount: 4))
+            await assertThrowsAsync({ try await PageShift.apply(model, document: doc, merged: root, offset: 2, newCount: 4 ) })
         }
     }
 
     func testMissingPreparedPDFRetainsJournalAndDoesNotApplyDatabaseTwice() async throws {
-        try withFixture { model, doc, root in
+        try await withFixture { model, doc, root in
             _ = try seed(model, doc)
             let merged = root.appendingPathComponent("input.pdf")
             try writePDF(merged, pages: 4)
             PageShift.checkpoint = { if $0 == "database.after" { throw PowerLoss.simulated } }
-            XCTAssertThrowsError(try PageShift.apply(model, document: doc, merged: merged, offset: 2, newCount: 4))
+            await assertThrowsAsync({ try await PageShift.apply(model, document: doc, merged: merged, offset: 2, newCount: 4 ) })
             PageShift.checkpoint = nil
             let pending = try JSONDecoder().decode(PageShift.Pending.self, from: Data(contentsOf: root.appendingPathComponent("page-shift.json")))
             try FileManager.default.removeItem(at: root.appendingPathComponent("PageShift/\(pending.transaction!)/merged.pdf"))
@@ -236,18 +242,18 @@ final class PageShiftRecoveryTests: XCTestCase {
 
 
     func testSQLiteCardWriteFailureCanBeRetriedWithoutChangingFSRS() async throws {
-        try withFixture { model, doc, root in
+        try await withFixture { model, doc, root in
             let card = try seed(model, doc)
-            try model.review.store.writer.write { db in
+            try await model.review.store.writer.write { db in
                 try db.execute(sql: "CREATE TRIGGER fail_shift BEFORE UPDATE OF sourcePage ON card BEGIN SELECT RAISE(ABORT, 'disque simulé'); END")
             }
             let merged = root.appendingPathComponent("input.pdf")
             try writePDF(merged, pages: 4)
-            XCTAssertThrowsError(try PageShift.apply(model, document: doc, merged: merged, offset: 2, newCount: 4))
+            await assertThrowsAsync({ try await PageShift.apply(model, document: doc, merged: merged, offset: 2, newCount: 4 ) })
             XCTAssertNotNil(model.storageRecoveryError)
             XCTAssertTrue(FileManager.default.fileExists(atPath: root.appendingPathComponent("page-shift.json").path))
             XCTAssertEqual(try model.review.store.card(id: card.id!), card)
-            try model.review.store.writer.write { try $0.execute(sql: "DROP TRIGGER fail_shift") }
+            try await model.review.store.writer.write { try $0.execute(sql: "DROP TRIGGER fail_shift") }
             for _ in 0..<3 { PageShift.reconcile(model) }
             XCTAssertNil(model.storageRecoveryError)
             try verify(model, doc, card)
@@ -255,30 +261,30 @@ final class PageShiftRecoveryTests: XCTestCase {
     }
 
     func testSQLiteFailureRollsBackEveryAnnotationTableBeforeRetry() async throws {
-        try withFixture { model, doc, root in
+        try await withFixture { model, doc, root in
             let card = try seed(model, doc)
-            try model.database.writer.write { db in
+            try await model.database.writer.write { db in
                 try db.execute(sql: "CREATE TRIGGER fail_shift BEFORE UPDATE ON inkDrawing BEGIN SELECT RAISE(ABORT, 'disque simulé'); END")
             }
             let merged = root.appendingPathComponent("input.pdf")
             try writePDF(merged, pages: 4)
-            XCTAssertThrowsError(try PageShift.apply(model, document: doc, merged: merged, offset: 2, newCount: 4))
+            await assertThrowsAsync({ try await PageShift.apply(model, document: doc, merged: merged, offset: 2, newCount: 4 ) })
             XCTAssertEqual(try model.database.highlights(documentId: doc.id).first?.pageIndex, 0)
             XCTAssertEqual(try model.database.document(id: doc.id)?.pageCount, 2)
             XCTAssertEqual(PDFDocument(url: model.storage.url(for: doc.id))?.pageCount, 2)
-            try model.database.writer.write { try $0.execute(sql: "DROP TRIGGER fail_shift") }
+            try await model.database.writer.write { try $0.execute(sql: "DROP TRIGGER fail_shift") }
             PageShift.reconcile(model)
             try verify(model, doc, card)
         }
     }
 
     func testPersistentStorageFallbackCannotCommitOrDiscardJournal() async throws {
-        try withFixture { model, doc, root in
+        try await withFixture { model, doc, root in
             _ = try seed(model, doc)
             let merged = root.appendingPathComponent("input.pdf")
             try writePDF(merged, pages: 4)
             model.review.persistentStorageAvailable = false
-            XCTAssertThrowsError(try PageShift.apply(model, document: doc, merged: merged, offset: 2, newCount: 4))
+            await assertThrowsAsync({ try await PageShift.apply(model, document: doc, merged: merged, offset: 2, newCount: 4 ) })
             XCTAssertEqual(try model.database.document(id: doc.id)?.pageCount, 2)
             try marker(root, stage: "db")
             PageShift.reconcile(model)
@@ -288,7 +294,7 @@ final class PageShiftRecoveryTests: XCTestCase {
     }
 
     func testLegacyRollbackWithOldPDFIsSafeAndIdempotent() async throws {
-        try withFixture { model, doc, root in
+        try await withFixture { model, doc, root in
             _ = try seed(model, doc)
             try model.database.shiftPages(documentId: doc.id, by: 2, pageCount: 4, fileSize: 9)
             try marker(root, stage: "pdf")
@@ -302,7 +308,7 @@ final class PageShiftRecoveryTests: XCTestCase {
 
 
     func testFilesystemReportWriteErrorPreservesIntentUntilStorageIsWritable() async throws {
-        try withFixture { model, doc, root in
+        try await withFixture { model, doc, root in
             let card = try seed(model, doc)
             let report = DocumentAnalysisService.folder.appendingPathComponent(doc.id + ".json")
             let merged = root.appendingPathComponent("input.pdf")
@@ -313,7 +319,7 @@ final class PageShiftRecoveryTests: XCTestCase {
                     try FileManager.default.createDirectory(at: report, withIntermediateDirectories: true)
                 }
             }
-            XCTAssertThrowsError(try PageShift.apply(model, document: doc, merged: merged, offset: 2, newCount: 4))
+            await assertThrowsAsync({ try await PageShift.apply(model, document: doc, merged: merged, offset: 2, newCount: 4 ) })
             PageShift.checkpoint = nil
             for _ in 0..<3 { PageShift.reconcile(model) }
             XCTAssertNotNil(model.storageRecoveryError)
@@ -325,13 +331,13 @@ final class PageShiftRecoveryTests: XCTestCase {
     }
 
     func testIncompleteMergeNeverChangesSourcePDFOrAnnotations() async throws {
-        try withFixture { model, doc, root in
+        try await withFixture { model, doc, root in
             let card = try seed(model, doc)
             let pdf = model.storage.url(for: doc.id)
             let original = try DocumentImporter.sha256(of: pdf)
             let merged = root.appendingPathComponent("incomplete.pdf")
             try writePDF(merged, pages: 3)
-            XCTAssertThrowsError(try PageShift.apply(model, document: doc, merged: merged, offset: 2, newCount: 4))
+            await assertThrowsAsync({ try await PageShift.apply(model, document: doc, merged: merged, offset: 2, newCount: 4 ) })
             XCTAssertEqual(try DocumentImporter.sha256(of: pdf), original)
             XCTAssertEqual(try model.database.bookmarks(documentId: doc.id).first?.pageIndex, 0)
             XCTAssertEqual(try model.review.store.card(id: card.id!), card)
@@ -349,7 +355,7 @@ final class PageShiftRecoveryTests: XCTestCase {
             let model = try AppModel(root: root)
             let document = try XCTUnwrap(model.database.document(id: "test-document"))
             PageShift.checkpoint = { if $0 == point { Darwin.kill(Darwin.getpid(), SIGKILL) } }
-            _ = try PageShift.apply(model, document: document, merged: root.appendingPathComponent("input.pdf"), offset: 2, newCount: 4)
+            _ = try await PageShift.apply(model, document: document, merged: root.appendingPathComponent("input.pdf"), offset: 2, newCount: 4)
             XCTFail("Le processus aurait dû être tué au point demandé.")
             return
         }
@@ -363,7 +369,7 @@ final class PageShiftRecoveryTests: XCTestCase {
         let executable = String(decoding: location.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
             .trimmingCharacters(in: .whitespacesAndNewlines)
         for point in ["database.after", "pdf.after", "files.backup", "cards.after"] {
-            try withFixture { model, doc, root in
+            try await withFixture { model, doc, root in
                 let card = try seed(model, doc)
                 try writePDF(root.appendingPathComponent("input.pdf"), pages: 4)
                 let process = Process()
