@@ -53,8 +53,8 @@ Claude et Codex sont les deux seuls agents de développement. Ils se succèdent 
 ### Règles
 
 1. **Lire l'état GitHub avant toute mission** : SHA de `main`, PR ouvertes, Issues, derniers contrôles, puis [le plan directeur](PLAN-DIRECTEUR.md). Une PR ou une branche d'un autre agent encore ouverte est un travail en cours, pas un brouillon abandonné.
-2. **Une tâche, une branche, un agent responsable.** Branche `claude/<sujet>` ou `codex/<sujet>` ; l'agent responsable est indiqué en tête de PR. L'autre agent ne pousse pas sur cette branche, sauf demande écrite dans la PR par l'agent responsable ou par NOxygen59.
-3. **Tâche définie avant de coder** : une Issue (gabarit « Tâche ») ou, pour un petit lot, le début de la PR. On y trouve l'identifiant du chantier du plan directeur, l'objectif, le périmètre exclu, le critère d'acceptation et l'autorisation de NOxygen59 (citée, avec sa date).
+2. **Une tâche, une branche, un agent responsable.** Branche `claude/<sujet>` ou `codex/<sujet>` ; l'agent responsable est indiqué en tête de PR. L'autre agent ne pousse pas sur cette branche, sauf dans deux cas : l'agent responsable le demande par écrit dans la PR, ou NOxygen59 le demande explicitement, où qu'il le fasse (PR, Issue ou chat avec l'agent). L'agent qui intervient cite alors cette demande et sa date dans la PR avant de pousser, pour que la passation reste sur GitHub.
+3. **Tâche définie avant de coder** : une Issue (gabarit « Tâche ») ou, pour un petit lot, le début de la PR. On y trouve l'identifiant du chantier du plan directeur, l'objectif, le périmètre exclu, le critère d'acceptation et l'autorisation de NOxygen59 (citée, avec sa date et son origine : chat, Issue ou PR).
 4. **Passation écrite** : chaque PR suit le [gabarit](../.github/pull_request_template.md). Elle contient un résumé simple pour NOxygen59, les changements techniques, les preuves, les limites et une passation à l'agent suivant. Les messages de commit disent le pourquoi en français. Une décision durable (stockage, forks, compatibilité, CI) est consignée dans le guide du domaine, pas seulement dans la PR.
 5. **Revue indépendante par l'autre agent** lorsque le risque le justifie. Elle est obligatoire pour :
    - les données persistantes, les migrations, PageShift et la sauvegarde ;
@@ -68,7 +68,12 @@ Claude et Codex sont les deux seuls agents de développement. Ils se succèdent 
 6. **Justifier les changements techniques importants** : problème démontré, alternatives écartées, preuve avant et après (test, mesure, journal borné), conséquences et retour arrière.
 7. **Désaccord explicite, sans modifications concurrentes.** Le relecteur écrit une section « Désaccord » dans la PR : position, preuves, risque. L'auteur répond par écrit. Sans accord, la PR reste ouverte et NOxygen59 tranche. Aucun des deux agents n'ouvre de branche concurrente sur les mêmes fichiers en attendant. Une contre-proposition se fait dans une PR distincte annoncée dans la discussion.
 8. **Clore proprement** : mettre à jour [le plan directeur](PLAN-DIRECTEUR.md) (ligne du chantier, preuves, point de reprise) et les guides touchés dans la même PR ; déclarer ce qui n'a pas été vérifié.
-9. **Autorisations de NOxygen59** obligatoires pour toute fusion, release, changement de version, de dépendance ou de fork, changement de réglage GitHub (visibilité, protection, Actions, facturation), essai sur appareil ou changement majeur d'architecture. Un commentaire d'agent n'est pas une autorisation.
+9. **Autorisations de NOxygen59** obligatoires pour toute fusion, release, changement de version, de dépendance ou de fork, changement de réglage GitHub (visibilité, protection, Actions, facturation), activation d'une automatisation, essai sur appareil ou changement majeur d'architecture.
+   - Une autorisation explicite de NOxygen59 est **valable où qu'il la donne**, y compris dans son chat avec un agent. Elle couvre seulement ce qu'elle nomme. L'agent la consigne dans la PR ou l'Issue (citation courte et date) ; il n'en invente ni n'en élargit jamais la portée.
+   - Les autorisations déjà données restent valables dans leur périmètre.
+   - Un commentaire ou un avis d'agent n'est **jamais** une autorisation.
+10. **Signer les commentaires.** Les agents publient avec le compte GitHub de NOxygen59. Chaque commentaire, revue ou description de PR d'un agent commence donc par **[Claude]** ou **[Codex]**, pour distinguer ce qu'écrit NOxygen59 de ce qu'écrit un agent.
+11. **Zéro dépense.** Aucun agent n'active, n'ajoute ni ne lance d'automatisation GitHub Actions, d'artefact, de cache, de runner payant ou de service payant hors des conditions de la politique « Zéro dépense » de [CI-ROADMAP.md](CI-ROADMAP.md). Les preuves se font en local par défaut.
 
 ### Phrases types pour NOxygen59
 

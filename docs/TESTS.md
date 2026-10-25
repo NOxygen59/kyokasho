@@ -51,6 +51,38 @@ swift test --package-path Packages/GLMOCRKit \
 
 Ce sont des chemins à adapter, pas des assets fournis. `KYOKASHO_SAMPLE_PAGES` utilise des numéros de page destinés à cet essai ; `KYOKASHO_BENCH_PAGE` est un index dans le test de profil. Lire le test avant de comparer des résultats. Metal 3.0 sur Mac laisse subsister des écarts avec le compilateur de l'iPad.
 
+### Procédure locale standard avant une PR
+
+C'est la voie de preuve par défaut tant que GitHub Actions n'a pas de protection contre la facturation vérifiée (voir la politique « Zéro dépense » de [CI-ROADMAP.md](CI-ROADMAP.md)). Elle se lance à la main, sur le Mac de NOxygen59, dans un clone séparé, sur le SHA exact de la PR.
+
+```sh
+set -o pipefail
+SHA=<sha-de-la-pr>
+cd ~/Projets-iPad/kyokasho-preuves      # clone dédié, jamais le clone de travail
+git fetch origin && git checkout --detach "$SHA"
+git status --porcelain                   # doit être vide
+mkdir -p ~/kyokasho-journaux/"$SHA"      # journaux hors dépôt
+J=~/kyokasho-journaux/"$SHA"
+sw_vers; uname -m; xcodebuild -version; swift --version
+
+# 1. Documentation (toujours)
+python3 scripts/check_documentation.py 2>&1 | tee "$J/doc.log"
+# 2. Outil de sauvegarde (toujours)
+python3 -m unittest discover -s tests -v 2>&1 | tee "$J/python.log"
+# 3. Suite Swift (dès qu'un fichier Swift ou un manifeste change)
+swift test --package-path Packages/KyokashoKit \
+  --disable-automatic-resolution 2>&1 | tee "$J/swift.log"
+# 4. Résolutions figées (après chaque commande Swift)
+git diff --exit-code -- Packages/KyokashoKit/Package.resolved Packages/GLMOCRKit/Package.resolved
+```
+
+Selon le lot, on ajoute :
+- la compilation iOS générique décrite dans [CI-ROADMAP.md](CI-ROADMAP.md) (« Compilation iOS générique sans installation ») si `App/`, `project.yml` ou les forks changent ;
+- ASan (`--sanitize address`) pour du code C/C++, de la mémoire ou de la concurrence ;
+- les essais MLX/ONNX réels ci-dessus, seulement s'ils sont autorisés et que les assets sont présents.
+
+Relever le code de sortie de chaque commande. Avec `tee`, `set -o pipefail` le conserve. Résumer ensuite le tout dans la **fiche de preuve locale** de [CI-ROADMAP.md](CI-ROADMAP.md), en commentaire de la PR. Les journaux restent dans `~/kyokasho-journaux/`, hors du dépôt, et ne sont jamais publiés en entier.
+
 ## Couverture à ajouter par risque
 
 1. **Préservation des données** : injection de panne à chaque étape PageShift, journal non inscriptible, espace disque insuffisant, redémarrage répété, sources avant/après. Vérifier PDF, tables, rapports, Markdown, cartes et absence de double décalage.

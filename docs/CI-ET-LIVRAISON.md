@@ -11,7 +11,7 @@ Ce lot ajoute un contrôle documentaire léger : `.github/workflows/documentatio
 
 ## Pipeline recommandé, à qualifier par étapes
 
-La répartition à coût nul (GitHub gratuit, Mac de NOxygen59 hors runner, iPad) et le découpage des prochaines PR CI sont tenus dans [CI-ROADMAP.md](CI-ROADMAP.md).
+**Politique « Zéro dépense »** ([CI-ROADMAP.md](CI-ROADMAP.md)) : tant que l'absence de facturation n'est pas garantie par une protection vérifiée par NOxygen59, les preuves se font en local ([procédure](TESTS.md#procédure-locale-standard-avant-une-pr)). Aucune automatisation nouvelle, aucun artefact, aucun cache. Les garde-fous ci-dessous décrivent une cible future et suspendue.
 
 | Étape | Déclenchement conseillé | Preuve et critère |
 |---|---|---|

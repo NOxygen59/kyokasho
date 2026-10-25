@@ -16,7 +16,7 @@ Ce dossier organise la reprise du projet à partir de **v1.3, build 40**. L'audi
 | Comprendre ce qui est conservé, exporté ou effacé | [Données et sauvegardes](DONNEES-ET-SAUVEGARDES.md) |
 | Vérifier une modification | [Stratégie de tests et recette iPad](TESTS.md) |
 | Automatiser progressivement les contrôles | [CI et livraison](CI-ET-LIVRAISON.md) |
-| Préparer la future CI par phases, à coût nul | [Plan d'automatisation CI](CI-ROADMAP.md) |
+| Zéro dépense GitHub, tests locaux et future CI | [Plan d'automatisation CI](CI-ROADMAP.md) |
 | Décrire un bug, lire un journal ou symboliser un crash | [Débogage](DEBOGAGE.md) |
 | Chercher une corruption ou une fuite mémoire | [Mémoire, ASan, C++ et Swift](MEMOIRE-ET-SANITIZERS.md) |
 | Contribuer sans casser les usages et documenter le code | [Contribution](../CONTRIBUTING.md) |

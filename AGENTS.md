@@ -28,8 +28,12 @@ dictionnaires, cartes de révision. Usage personnel, jamais distribué, install�
 Les deux agents ne partagent pas leurs conversations : tout passe par GitHub. Protocole complet :
 [`docs/GOUVERNANCE-ET-REPRISE.md`](docs/GOUVERNANCE-ET-REPRISE.md), section « Collaboration entre agents ». En bref :
 
-- Une tâche, une branche `claude/<sujet>` ou `codex/<sujet>`, un agent responsable. Ne jamais pousser sur la branche
-  de l'autre agent sans demande écrite dans sa PR.
+- Une tâche, une branche `claude/<sujet>` ou `codex/<sujet>`, un agent responsable. Ne pas pousser sur la branche de
+  l'autre agent, sauf demande écrite de cet agent dans sa PR, ou demande explicite de NOxygen59, même faite dans un chat.
+  Citer alors cette demande (texte court et date) dans la PR avant de pousser.
+- Une autorisation explicite de NOxygen59 vaut où qu'il la donne, chat compris, et seulement pour ce qu'elle nomme ;
+  la consigner dans la PR ou l'Issue. Un avis d'agent n'est jamais une autorisation.
+- Les agents écrivent avec le compte de NOxygen59 : commencer chaque commentaire ou revue par **[Claude]** ou **[Codex]**.
 - Le contexte est écrit dans l'Issue, la PR (gabarit [`.github/pull_request_template.md`](.github/pull_request_template.md)),
   les commits et les guides, jamais seulement dans le chat.
 - Revue croisée obligatoire pour les données, la concurrence, la mémoire, le C/C++, les dépendances et forks, la CI
@@ -63,6 +67,10 @@ Pas de paraphrase ligne à ligne : expliquer le pourquoi.
 Détail au § 2 de la feuille de route.
 
 - Répondre à l'utilisateur **en français, court et simple** : il ne code pas ; dire ce qui change pour lui et pourquoi.
+- **Zéro dépense, sans risque de facturation** : aucun runner payant, artefact, cache, service ou API payant, ni
+  nouvelle automatisation GitHub Actions sans protection vérifiée par NOxygen59 et son autorisation explicite (politique
+  « Zéro dépense » de [`docs/CI-ROADMAP.md`](docs/CI-ROADMAP.md)). Preuves par défaut : tests locaux sur le Mac
+  ([`docs/TESTS.md`](docs/TESTS.md), procédure locale), résumés dans la PR.
 - Jamais de mot de passe, clé ou jeton demandé ou tapé. Supprimer ses fichiers : `trash`, jamais `rm`. Ne jamais
   supprimer un dépôt GitHub.
 - **iOS 16.0 minimum** : ce qui manque à iOS 16 est comblé par du code équivalent, jamais en retirant la fonction ou
