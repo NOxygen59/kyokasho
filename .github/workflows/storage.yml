@@ -1,0 +1,29 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 NOxygen59
+name: Stockage Mac
+on:
+  pull_request:
+    paths:
+      - 'App/Library/PageShift.swift'
+      - 'Packages/KyokashoKit/**'
+      - '.github/workflows/storage.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  tests:
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Environnement
+        run: |
+          xcodebuild -version
+          swift --version
+      - name: Tests Mac avec résolutions figées
+        run: swift test --package-path Packages/KyokashoKit --disable-automatic-resolution
+      - name: Vérifier que les dépendances restent figées
+        if: always()
+        run: git diff --exit-code -- Packages/KyokashoKit/Package.resolved Packages/GLMOCRKit/Package.resolved

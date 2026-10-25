@@ -5,6 +5,7 @@
 # Xcode / SwiftPM
 /Kyokasho.xcodeproj/
 .build/
+.build-asan/
 .swiftpm/
 DerivedData/
 *.xcuserstate
@@ -20,3 +21,6 @@ xcuserdata/
 /App/Config/Secrets.plist
 
 .DS_Store
+
+# Outils Python locaux
+__pycache__/

@@ -59,12 +59,15 @@ let package = Package(
         // Code original (MIT) : découpage en mots et lectures (MeCab + dictionnaire UniDic téléchargé à part).
         .target(name: "MorphologyKit", dependencies: ["MeCabC"]),
         .testTarget(name: "ReaderCoreTests", dependencies: ["ReaderCore"]),
+        // Compile le vrai orchestrateur App via un lien, avec des adaptateurs Mac sans interface.
+        .testTarget(name: "PageShiftTests", dependencies: ["ReaderCore", "OCRKit", "ReviewKit"]),
         .testTarget(name: "YomitanKitTests", dependencies: ["YomitanKit"]),
         .testTarget(name: "DictionaryKitTests", dependencies: ["DictionaryKit"]),
         .testTarget(name: "OCRKitTests", dependencies: ["OCRKit"]),
         .testTarget(name: "ReviewKitTests", dependencies: ["ReviewKit"]),
         .testTarget(name: "ONNXOCRKitTests", dependencies: ["ONNXOCRKit"]),
         .testTarget(name: "MorphologyKitTests", dependencies: ["MorphologyKit"]),
+        .testTarget(name: "BackupIntegrationTests", dependencies: ["ReaderCore", "ReviewKit"]),
     ],
     cxxLanguageStandard: .cxx14
 )

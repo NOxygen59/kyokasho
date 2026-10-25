@@ -1,0 +1,33 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 NOxygen59
+name: Sauvegarde synthétique
+on:
+  pull_request:
+    paths:
+      - 'tools/backup_container.py'
+      - 'tests/test_backup_container.py'
+      - 'Packages/KyokashoKit/**'
+      - '.github/workflows/backup.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  outil:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - run: python3 -m unittest discover -s tests -v
+  bases-reelles:
+    runs-on: macos-15
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - run: swift --version
+      - run: swift test --package-path Packages/KyokashoKit --disable-automatic-resolution --filter BackupRoundTripTests
+      - if: always()
+        run: git diff --exit-code -- Packages/KyokashoKit/Package.resolved Packages/GLMOCRKit/Package.resolved
