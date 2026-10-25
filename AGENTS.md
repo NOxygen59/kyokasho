@@ -1,26 +1,60 @@
-# Kyōkasho — instructions pour l'assistant de code (Codex)
+# Kyōkasho — instructions pour les agents de code (Codex, Claude ou autre)
 
 Lecteur iPad de manuels japonais (PDF scannés) pour un francophone : OCR, IA locale (MLX sur iOS 16), furigana,
 dictionnaires, cartes de révision. Usage personnel, jamais distribué, installé avec TrollStore sur **un** iPad Pro
-12,9" M1 (8 Go) sous **iOS 16.6.1**.
+12,9" M1 (8 Go) sous **iOS 16.6.1**. NOxygen59 possède le produit et décide ; il ne code pas.
 
-**Avant toute chose, lis `docs/FEUILLE-DE-ROUTE.md` en entier** (§ 0 = passation et état réel ; § 2 = règles
-obligatoires ; § 7 bis / § 8 = suite). Avant de toucher à l'IA ou à MLX : `docs/IA-LOCALE.md`.
+## Démarrer une mission (obligatoire, dans cet ordre)
 
-Règles essentielles (détail au § 2 de la feuille de route) :
+1. **Relever l'état réel sur GitHub** (`NOxygen59/kyokasho`) : SHA de `main`, PR ouvertes et récentes, Issues,
+   résultats des contrôles GitHub Actions. Ne jamais déduire l'état actuel d'un document ou d'un ancien chat.
+2. **Lire [`docs/PLAN-DIRECTEUR.md`](docs/PLAN-DIRECTEUR.md)** : point d'entrée du pilotage, registre des chantiers,
+   preuves et point de reprise. Signaler tout écart entre ce plan et GitHub, sans le résoudre arbitrairement.
+3. **Lire les règles existantes** : [`docs/FEUILLE-DE-ROUTE.md`](docs/FEUILLE-DE-ROUTE.md) § 0 (passation) et § 2
+   (règles obligatoires de l'utilisateur), puis [`docs/GOUVERNANCE-ET-REPRISE.md`](docs/GOUVERNANCE-ET-REPRISE.md).
+4. **Lire seulement les documents techniques du domaine touché**, via [`docs/INDEX.md`](docs/INDEX.md) : par exemple
+   [`docs/IA-LOCALE.md`](docs/IA-LOCALE.md) avant de toucher à l'IA ou à MLX, [`docs/TESTS.md`](docs/TESTS.md) pour
+   vérifier, [`docs/CI-ROADMAP.md`](docs/CI-ROADMAP.md) avant de toucher à la CI.
+5. **Identifier une seule prochaine tâche autorisée** : celle que NOxygen59 demande, ou celle que le plan directeur propose
+   et que NOxygen59 valide. Ne jamais inventer de travail terminé ; une intention, une checklist ou un rapport d'agent
+   n'est pas une preuve.
+6. **Avant de coder**, écrire objectif, périmètre, invariants, tests et **critère d'acceptation** ; à la fin, fournir
+   les preuves (commandes, SHA, résultats réussis / échoués / ignorés) et dire ce qui n'a **pas** été vérifié.
+7. **Mettre à jour `docs/PLAN-DIRECTEUR.md`** dans la même PR dès qu'un chantier évolue (statut, preuve, point de
+   reprise).
+
+## Trois preuves à ne jamais confondre
+
+- **Tests ou compilation sur Mac** (local ou GitHub Actions) : la logique et le code Swift compilent et passent.
+- **Compilation iOS générique** (`generic/platform=iOS`, cible 16.0) : l'app se construit pour iOS ; rien n'est lancé.
+- **Validation réelle sur l'iPad** (iOS 16.6.1, TrollStore) : seul NOxygen59 la fait et la rapporte, par build et
+  scénario. Aucune des deux premières ne la remplace, en particulier pour Metal/MLX, la mémoire, PDFKit, les gestes,
+  la sauvegarde/restauration et TrollStore.
+
+## Règles essentielles
+
+Détail au § 2 de la feuille de route.
+
 - Répondre à l'utilisateur **en français, court et simple** : il ne code pas ; dire ce qui change pour lui et pourquoi.
 - Jamais de mot de passe, clé ou jeton demandé ou tapé. Supprimer ses fichiers : `trash`, jamais `rm`. Ne jamais
   supprimer un dépôt GitHub.
 - **iOS 16.0 minimum** : ce qui manque à iOS 16 est comblé par du code équivalent, jamais en retirant la fonction ou
   en coupant un contrôle du compilateur (forks MLX `NOxygen59/mlx-swift`, `NOxygen59/mlx-swift-lm`, branche
-  `ipad-ios16` ; mettre à jour l'épingle de `Package.resolved` après chaque push d'un fork).
+  `ipad-ios16` ; mettre à jour l'épingle de `Package.resolved` après chaque push d'un fork). Pas de mise à jour
+  opportuniste des dépendances (`swift package update` interdit pour « faire passer » un contrôle).
+- **Données de l'utilisateur** : PDF, notes, encre, repères, corrections OCR, cartes FSRS et lectures IA sont à
+  préserver. Toute opération risquée se teste sur une copie ou une bibliothèque jetable, jamais sur la seule
+  bibliothèque réelle.
 - Pas de simulateur ni d'appareil sans la permission de l'utilisateur ; les tests sur l'iPad, c'est lui (release).
-- Release seulement quand il la demande ; il donne le numéro. Procédure : § 5 de la feuille de route.
-- Jamais de PDF, dictionnaire, modèle ou donnée tierce dans le dépôt. En-tête de chaque fichier :
-  `// SPDX-License-Identifier: MIT` + `// Copyright (c) 2026 NOxygen59`.
-- Commits en français.
+- Release seulement quand il la demande ; il donne le numéro. Procédure : § 5 de la feuille de route. Pas de
+  changement de version, de fusion de PR ni de changement de visibilité du dépôt sans son accord explicite.
+- Jamais de PDF, dictionnaire, modèle ou donnée tierce dans le dépôt (le dépôt peut être public). En-tête de chaque
+  fichier : `// SPDX-License-Identifier: MIT` + `// Copyright (c) 2026 NOxygen59`.
+- Travailler sur une branche et une PR dédiées, petites. Commits en français.
 
-Construire (Mac, Xcode, `xcodegen`) :
+## Construire (Mac, Xcode, `xcodegen`)
+
 - App : `xcodegen generate -q && xcodebuild -project Kyokasho.xcodeproj -scheme Kyokasho -destination 'generic/platform=iOS Simulator' build CODE_SIGNING_ALLOWED=NO`
 - Tests : `cd Packages/KyokashoKit && swift test`
+- Contrôle documentaire (léger) : `python3 scripts/check_documentation.py`
 - `.tipa` : `./build_ipa.sh` → `dist/Kyokasho-<version>.tipa`
