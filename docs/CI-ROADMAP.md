@@ -11,7 +11,7 @@ Audit réalisé le **25 octobre 2026** sur le commit local combiné `edd09b29df7
 
 **Vérification lors de la publication (25 octobre 2026, `main` à `ee07c55`)** : l'arbre de fichiers du commit audité `edd09b2` est identique à celui de `main` au commit `c2b1b29` (fusion de la PR #3) ; `main` n'a reçu depuis que le plan directeur (PR #4). Les trois workflows décrits ci-dessous sont identiques, octet pour octet, à ceux de `main`. Le reste du document est publié tel que rédigé par Codex ; les tarifs, labels de runners et versions Xcode cités n'ont **pas** été revérifiés lors de cette publication.
 
-**La politique [Zéro dépense](#zéro-dépense--politique-obligatoire) prime sur tout ce document** : en attendant une protection vérifiée, les preuves se font en local et aucune automatisation nouvelle n'est activée.
+**La politique [Zéro dépense](#zéro-dépense--politique-obligatoire) prime sur tout ce document.** GitHub Actions est **désactivé** depuis le 25/10/2026 (décision CI-0) : les tests s'exécutent localement et se documentent dans les PR.
 
 Contraintes permanentes : iOS 16.0 minimum, aucune installation sur l'iPad, aucune donnée ou modèle utilisateur dans GitHub, aucune mise à jour opportuniste des dépendances ou des forks MLX, aucune création de release. Un succès Mac ne confirme jamais le comportement sur l'iPad iOS 16.6.1.
 
@@ -204,19 +204,14 @@ Même avec cette protection, restent **interdits** :
 
 Seule une nouvelle décision écrite de NOxygen59 peut lever une de ces interdictions.
 
-### État actuel et proposition
+### État actuel : GitHub Actions désactivé (décision CI-0)
 
-- Relevé via l'API le 25/10 :
-  - Actions est activé sur le dépôt, toutes actions autorisées ;
-  - jeton en lecture seule ; approbation des PR externes : `first_time_contributors` ;
-  - rétention de 90 jours ; aucun cache, aucun artefact, aucun runner auto-hébergé.
-- Les trois workflows existants (`documentation.yml`, `storage.yml`, `backup.yml`) n'envoient ni artefact ni cache. Ils tournent sur `ubuntu-latest` et `macos-15`, runners standards, à chaque PR concernée et pour `documentation.yml` à chaque push sur `main`. Ils créent toutefois des journaux de runs, dont le statut de facturation n'est pas documenté.
-- **Proposition, décision de NOxygen59** : **désactiver GitHub Actions** sur le dépôt (*Settings → Actions → General → Disable actions*) tant que la protection n'est pas vérifiée. Les fichiers de workflow restent versionnés : rien n'est perdu et ils pourront être réactivés. Les agents ne modifient pas ce réglage eux-mêmes.
-- **Tant qu'Actions reste activé sans protection vérifiée** :
-  - aucun nouveau workflow, aucun nouveau déclencheur ;
-  - aucun lancement manuel (`workflow_dispatch`) par un agent ;
-  - les preuves de référence sont les tests locaux résumés dans la PR.
-- **Voie par défaut des preuves** : tests locaux sur le Mac de NOxygen59, selon la [procédure locale de TESTS.md](TESTS.md#procédure-locale-standard-avant-une-pr), résumés par une fiche dans la PR (voir plus bas).
+- **25/10/2026 : décision CI-0 appliquée.** À la demande explicite de NOxygen59 (chat : « ferme le github action stp, désactive le »), puis validée par lui, GitHub Actions est **désactivé** sur le dépôt. Appel `PUT /repos/NOxygen59/kyokasho/actions/permissions` avec `enabled=false` ; l'API renvoie `{"enabled":false}`. Aucun run n'était en cours.
+- Conséquence : **plus aucun workflow ne s'exécute sur GitHub**, ni sur les PR, ni sur `main`, ni en lancement manuel. Aucune dépense Actions n'est donc possible.
+- Les trois fichiers de workflow (`documentation.yml`, `storage.yml`, `backup.yml`) restent versionnés, sans artefact ni cache. Ils décrivent des contrôles réutilisables, **inactifs**.
+- Avant la désactivation, relevé via l'API : jeton en lecture seule ; approbation des PR externes `first_time_contributors` ; rétention de 90 jours ; aucun cache, aucun artefact, aucun runner auto-hébergé.
+- **Tests désormais exécutés localement** sur le Mac de NOxygen59, selon la [procédure locale de TESTS.md](TESTS.md#procédure-locale-standard-avant-une-pr), et **documentés dans chaque PR** par une fiche de preuve (voir plus bas). Un contrôle GitHub vert ne peut plus servir de preuve ; les anciens runs restent des preuves historiques datées.
+- **Réactivation** : seul NOxygen59 décide et l'applique. Il faut les conditions de la « Protection vérifiée » ci-dessus, puis une autorisation explicite pour chaque workflow. Aucun agent ne réactive Actions.
 
 ## Tests locaux sur le Mac de NOxygen59 (voie par défaut)
 
@@ -260,7 +255,7 @@ La fiche prouve un résultat sur Mac à un SHA donné. Elle **ne remplace pas** 
 | Niveau | Où | Statut | Contenu |
 |---|---|---|---|
 | 1 — local, par défaut | Mac de NOxygen59, clone séparé | **Actif** : manuel, avant chaque PR de code | Contrôle documentaire, 16 tests Python, suite `KyokashoKit`, `Package.resolved` inchangés, compilation iOS générique si `App/` ou le projet change, ASan et MLX/ONNX selon le lot |
-| 2 — GitHub Actions | `ubuntu-latest` / `macos-15` standards | **Suspendu** jusqu'à protection vérifiée et autorisation par workflow | Les mêmes contrôles légers et Swift, sans artefact ni cache |
+| 2 — GitHub Actions | `ubuntu-latest` / `macos-15` standards | **Désactivé** (CI-0, 25/10/2026) ; réactivation par NOxygen59 seulement, après protection vérifiée et autorisation par workflow | Les mêmes contrôles légers et Swift, sans artefact ni cache |
 | 3 — réel | iPad de NOxygen59 | Manuel, build de test demandée par NOxygen59 | Recette selon [TESTS.md](TESTS.md) |
 
 ## Découpage des prochaines améliorations
@@ -269,7 +264,7 @@ Ordre proposé. Aucune ligne n'autorise un travail : chaque lot demande l'accord
 
 | Lot | Contenu | Prérequis |
 |---|---|---|
-| CI-0 | Décision de NOxygen59 : désactiver Actions, ou fournir le constat de protection | Aucun ; **décision de NOxygen59, réglage qu'il applique lui-même** |
+| CI-0 | Désactiver GitHub Actions tant que la protection n'est pas vérifiée | **Fait le 25/10/2026** à la demande de NOxygen59 |
 | CI-G | Script local, en lecture seule et sans réseau, qui exécute la procédure de [TESTS.md](TESTS.md#procédure-locale-standard-avant-une-pr) sur un SHA et produit la fiche de preuve sans données personnelles | Accord de NOxygen59 ; aucun service GitHub |
 | CI-A | Photographie de l'état (versions locales, durées, liste des tests ignorés). Documentation seulement | Accord de NOxygen59 |
 | CI-B | Fiabiliser les workflows existants : diff complet, `concurrency`, Xcode épinglé, `uname -m` | Protection vérifiée + autorisation |

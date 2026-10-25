@@ -70,7 +70,8 @@ Détail au § 2 de la feuille de route.
 - **Zéro dépense, sans risque de facturation** : aucun runner payant, artefact, cache, service ou API payant, ni
   nouvelle automatisation GitHub Actions sans protection vérifiée par NOxygen59 et son autorisation explicite (politique
   « Zéro dépense » de [`docs/CI-ROADMAP.md`](docs/CI-ROADMAP.md)). Preuves par défaut : tests locaux sur le Mac
-  ([`docs/TESTS.md`](docs/TESTS.md), procédure locale), résumés dans la PR.
+  ([`docs/TESTS.md`](docs/TESTS.md), procédure locale), résumés dans la PR. **GitHub Actions est désactivé depuis le
+  25/10/2026** (décision CI-0) : aucun contrôle GitHub ne tourne ; ne jamais le réactiver ni lancer de workflow.
 - Jamais de mot de passe, clé ou jeton demandé ou tapé. Supprimer ses fichiers : `trash`, jamais `rm`. Ne jamais
   supprimer un dépôt GitHub.
 - **iOS 16.0 minimum** : ce qui manque à iOS 16 est comblé par du code équivalent, jamais en retirant la fonction ou
