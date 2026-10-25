@@ -154,7 +154,7 @@ Base de travail : `f83aec8c61d88f1e6c119376590899c9c1ce2876`, worktree dédié `
 | `python3 -m unittest discover -s tests -v` | Exécution locale sur cette base ; conteneurs temporaires synthétiques | 16 réussis, 0 échec, 0 ignoré, code 0 |
 | Inventaire des cibles et méthodes Swift | Lecture des sources au SHA ci-dessus | 9 cibles / 163 méthodes ; dont 20 PageShift et 1 restauration |
 | Correspondance recette / interface | Lecture de AddPagesView, StudyPanel, ReaderController et guides | Ajout par blocs avant/après ; refus de lecture IA active distinct de l'attente OCR |
-| `python3 -I scripts/check_documentation.py` et `git diff --check` | Contrôles locaux après édition | Résultats exacts consignés dans la PR QA-02 |
+| `python3 -I scripts/check_documentation.py` et `git diff --check` | Contrôles locaux après édition | 139 liens, 0 erreur ; diff sans erreur, codes 0 ; [PR #7](https://github.com/NOxygen59/kyokasho/pull/7) |
 
 Les 20 tests PageShift (également sous ASan) et le test de restauration Swift ont des preuves historiques dans les PR [#2](https://github.com/NOxygen59/kyokasho/pull/2) et [#3](https://github.com/NOxygen59/kyokasho/pull/3). **Swift/ASan ne sont pas relancés pour ce lot documentaire** ; leurs résultats antérieurs ne sont pas des résultats du présent checkout. Les 7 tests sans modèles ONNX/UniDic restaient ignorés dans la suite historique. Aucun téléchargement d'asset ni lecture de bibliothèque personnelle.
 
