@@ -19,6 +19,7 @@ Ce dossier organise la reprise du projet à partir de **v1.3, build 40**. L'audi
 | Chercher une corruption ou une fuite mémoire | [Mémoire, ASan, C++ et Swift](MEMOIRE-ET-SANITIZERS.md) |
 | Contribuer sans casser les usages | [Contribution](../CONTRIBUTING.md) |
 | Décider et suivre les chantiers | [Gouvernance et reprise](GOUVERNANCE-ET-REPRISE.md) |
+| Suivre la professionnalisation et reprendre le pilotage | [Plan directeur](PLAN-DIRECTEUR.md) |
 | Vérifier le périmètre de la PR #1 | [Relecture finale](REVUE-PR1.md) |
 
 ## Sources conservées
