@@ -331,8 +331,16 @@ extension AppDatabase {
     /// de page avance de `offset` (OCR, surlignages, dessins, repères, notes, transformations, position de lecture,
     /// page 1), puis nombre de pages et taille du PDF. Une seule transaction : tout ou rien. `offset` négatif =
     /// retour en arrière (opération interrompue). Les cartes sont dans `review.sqlite` : `ReviewStore.shiftSourcePages`.
-    public func shiftPages(documentId: String, by offset: Int, pageCount: Int, fileSize: Int64) throws {
+    public func shiftPages(documentId: String, by offset: Int, pageCount: Int, fileSize: Int64,
+                           expectedPageCount: Int? = nil) throws {
         try writer.write { db in
+            if let expectedPageCount {
+                let current = try LibraryDocument.fetchOne(db, key: documentId)?.pageCount
+                if current == pageCount { return } // Effet déjà commis, journal encore présent.
+                guard current == expectedPageCount else {
+                    throw NSError(domain: "Kyokasho.PageShift", code: 2, userInfo: [NSLocalizedDescriptionKey: "Nombre de pages inattendu en base."])
+                }
+            }
             if offset != 0 {
                 // En deux temps (valeurs négatives puis positives) : jamais deux lignes sur la même clé.
                 for table in ["ocrResult", "highlight", "inkDrawing", "bookmark", "pageComment", "pageTransform"] {

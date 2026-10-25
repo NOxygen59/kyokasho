@@ -56,17 +56,41 @@ struct KyokashoApp: App {
 struct RootView: View {
     @EnvironmentObject private var model: AppModel
     @Environment(\.scenePhase) private var scenePhase
+    @State private var retryingStorage = false
 
     var body: some View {
-        NavigationStack {
-            LibraryView()
-                .safeAreaInset(edge: .top, spacing: 0) { UpdateBanner() }
+        Group {
+            if let error = model.storageRecoveryError {
+                VStack(spacing: 20) {
+                    Text("Reprise des données nécessaire").font(.title2)
+                    Text(error)
+                    Button("Réessayer la reprise") {
+                        guard !retryingStorage else { return }
+                        retryingStorage = true
+                        Task {
+                            defer { retryingStorage = false }
+                            let id = PageShift.pendingDocumentId
+                            PageShift.reconcile(model)
+                            if model.storageRecoveryError == nil, let id {
+                                model.storageRecoveryError = "Finalisation de la reprise…"
+                                await model.ocr.endPageMutation(documentId: id)
+                                model.storageRecoveryError = nil
+                            }
+                        }
+                    }.disabled(retryingStorage)
+                }.padding()
+            } else {
+                NavigationStack {
+                    LibraryView()
+                        .safeAreaInset(edge: .top, spacing: 0) { UpdateBanner() }
+                }
+            }
         }
         // Tâches IA lancées dans le lecteur et toujours en cours.
         .overlay(alignment: .bottomLeading) { AITaskPill().padding(Atelier.gap) }
         .task { AppUpdate.shared.checkAtLaunch(); MorphologyService.shared.loadIfInstalled() }
         .fullScreenCover(item: Binding(
-            get: { model.openDocumentId.flatMap { id in model.documents.first { $0.id == id } } },
+            get: { model.storageRecoveryError == nil ? model.openDocumentId.flatMap { id in model.documents.first { $0.id == id } } : nil },
             set: { model.openDocumentId = $0?.id }
         )) { document in
             ReaderScreen(document: document, model: model)

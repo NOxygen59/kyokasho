@@ -78,6 +78,12 @@ final class DocumentAnalysisService: ObservableObject {
         }
     }
 
+    /// Le protocole PageShift installe un rapport final sur disque : oublier uniquement son cache.
+    func reloadAfterPageShift(_ id: String) {
+        cache[id] = nil
+        revision += 1
+    }
+
     /// Une nouvelle lecture brute rend le vote précédent de cette page périmé.
     func invalidatePage(_ source: Int, documentId: String) {
         update(documentId) { $0.pages[source] = nil }

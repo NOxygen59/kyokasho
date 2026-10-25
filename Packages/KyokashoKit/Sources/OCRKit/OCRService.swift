@@ -20,6 +20,9 @@ public actor OCRService {
 
     private let database: AppDatabase
     private var running: [String: Task<OCRPage, Error>] = [:]
+    /// Un changement de pagination interdit les lectures et écritures sur les anciens index.
+    private var documentsBeingReplaced: [String: Int] = [:]
+    private var documentGeneration: [String: UInt64] = [:]
     /// Relecture appliquée à chaque nouveau résultat avant sa mise en cache (dictionnaire, posée par l'app).
     private var postProcess: (@Sendable (OCRPage) async -> OCRPage)?
 
@@ -61,9 +64,17 @@ public actor OCRService {
 
     /// Résultat de la page (cache, sinon calcul + mise en cache).
     public func page(documentId: String, url: URL, pageIndex: Int, engine: String, force: Bool = false) async throws -> OCRPage {
+        guard documentsBeingReplaced[documentId] == nil else { throw CancellationError() }
+        let generation = documentGeneration[documentId, default: 0]
         if !force, let hit = cached(documentId: documentId, pageIndex: pageIndex, engine: engine) { return hit }
         let key = "\(documentId)#\(pageIndex)#\(engine)"
-        if let existing = running[key] { return try await existing.value }
+        if let existing = running[key] {
+            let result = try await existing.value
+            guard documentsBeingReplaced[documentId] == nil,
+                  documentGeneration[documentId, default: 0] == generation,
+                  !Task.isCancelled else { throw CancellationError() }
+            return result
+        }
         guard let implementation = Self.engine(engine) else { throw OCRError.pageUnavailable }
         let process = postProcess
         let japanese = OCRTargetLanguage.forDocument(documentId) == .japanese
@@ -78,6 +89,10 @@ public actor OCRService {
         running[key] = task
         defer { running[key] = nil }
         let result = try await task.value
+        // La tâche détachée peut terminer même si son appelant a été annulé pendant PageShift.
+        guard documentsBeingReplaced[documentId] == nil,
+              documentGeneration[documentId, default: 0] == generation,
+              !Task.isCancelled else { throw CancellationError() }
         let json = try encoder.encode(result)
         try database.save(OCRResultRecord(documentId: documentId, pageIndex: pageIndex, engine: engine,
                                           json: json, durationMs: result.durationMs))
@@ -86,6 +101,7 @@ public actor OCRService {
 
     /// Remplace le résultat en cache (relecture par l'IA, correction à la main).
     public func store(_ page: OCRPage, documentId: String, pageIndex: Int) throws {
+        guard documentsBeingReplaced[documentId] == nil else { throw CancellationError() }
         let normalized = OCRTargetLanguage.forDocument(documentId) == .japanese ? JapaneseOCRText.normalize(page) : page
         try database.save(OCRResultRecord(documentId: documentId, pageIndex: pageIndex, engine: normalized.engine,
                                           json: try encoder.encode(normalized), durationMs: normalized.durationMs))
@@ -121,6 +137,22 @@ public actor OCRService {
     /// Annule les OCR en cours d'un document (page quittée, lecteur fermé).
     public func cancelAll(documentId: String) {
         for (key, task) in running where key.hasPrefix(documentId + "#") { task.cancel() }
+    }
+
+    /// Ferme l'entrée puis attend les moteurs déjà démarrés. Un moteur ignorant l'annulation ne
+    /// peut plus enregistrer son résultat, car `page` contrôle encore l'état avant l'écriture.
+    public func beginPageMutation(documentId: String) async {
+        documentsBeingReplaced[documentId, default: 0] += 1
+        documentGeneration[documentId, default: 0] &+= 1
+        let tasks = running.filter { $0.key.hasPrefix(documentId + "#") }.map(\.value)
+        tasks.forEach { $0.cancel() }
+        for task in tasks { _ = await task.result }
+    }
+
+    public func endPageMutation(documentId: String) {
+        guard let count = documentsBeingReplaced[documentId] else { return }
+        if count == 1 { documentsBeingReplaced[documentId] = nil }
+        else { documentsBeingReplaced[documentId] = count - 1 }
     }
 }
 

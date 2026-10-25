@@ -146,11 +146,17 @@ struct AddPagesView: View {
             error = "L'ajout a échoué (un des PDF n'a pas pu être lu). Le document n'a pas changé."
             return
         }
+        // La fusion a suspendu le MainActor : une tâche IA a pu démarrer entre-temps.
+        guard !AITaskCenter.shared.jobs.contains(where: { $0.key.contains(id) }),
+              DocumentAnalysisService.shared.progress?.documentId != id else {
+            error = "Une lecture IA a démarré pendant la fusion : attends sa fin, puis réessaie. Le document n'a pas changé."
+            return
+        }
         do {
-            let warnings = try PageShift.apply(model, document: document, merged: merged, offset: offset, newCount: pageCount)
+            let warnings = try await PageShift.apply(model, document: document, merged: merged, offset: offset, newCount: pageCount)
             if !warnings.isEmpty { error = warnings.joined(separator: "\n") }
         } catch {
-            self.error = "L'ajout a échoué : \(error.localizedDescription). Le document n'a pas changé."
+            self.error = "L'ajout a été interrompu : \(error.localizedDescription). Une reprise peut être nécessaire avant de continuer."
             return
         }
         // Caches par numéro de page : refaits à la demande.

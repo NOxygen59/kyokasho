@@ -11,6 +11,7 @@ import UIKit
 @MainActor
 final class ReviewModel: ObservableObject {
     let store: ReviewStore
+    let persistentStorageAvailable: Bool
     private let appDatabase: AppDatabase
 
     @Published private(set) var counts = ReviewStore.Counts()
@@ -35,8 +36,10 @@ final class ReviewModel: ObservableObject {
         // Dernier recours : base en mémoire plutôt que de planter.
         if let opened = try? ReviewStore.open(directory: directory) {
             store = opened
+            persistentStorageAvailable = true
         } else {
             store = try! ReviewStore.inMemory()
+            persistentStorageAvailable = false
         }
         settings = (try? appDatabase.storedValue(ReviewSettings.self, forKey: "review.settings")) ?? ReviewSettings()
         refresh()
