@@ -5,7 +5,7 @@
 
 > **Point d'entrée de pilotage pour les humains et agents IA.** Ce fichier suit la transformation *technique* du projet, pas le backlog de fonctionnalités. Il n'est **pas** une autorisation d'implémenter, fusionner, publier ou modifier les données. Lire [AGENTS.md](../AGENTS.md) avant toute action.
 >
-> **Dernier instantané vérifié : 25 octobre 2026, après intégration.** Les PR [#1](https://github.com/NOxygen59/kyokasho/pull/1), [#2](https://github.com/NOxygen59/kyokasho/pull/2) et [#3](https://github.com/NOxygen59/kyokasho/pull/3) sont **fusionnées dans `main`**, dans cet ordre, avec l'accord explicite du propriétaire ; la PR [#4](https://github.com/NOxygen59/kyokasho/pull/4) apporte ce plan. Ne pas considérer cet instantané comme actuel sans interroger GitHub.
+> **Dernier instantané vérifié : 25 octobre 2026.** `main` à `ee07c5553a3aec6625067f01dd3985cbf7023408`. Les PR [#1](https://github.com/NOxygen59/kyokasho/pull/1) à [#4](https://github.com/NOxygen59/kyokasho/pull/4) sont **fusionnées**, dans l'ordre, avec l'accord explicite du propriétaire. Aucune autre PR ouverte et aucune Issue au relevé, hormis la [PR #5](https://github.com/NOxygen59/kyokasho/pull/5), qui contient cette version du plan (GOV-03, non fusionnée). Ne pas considérer cet instantané comme actuel sans interroger GitHub.
 
 ## 1. Utilisation par un nouvel agent (obligatoire)
 
@@ -36,11 +36,12 @@
 | ID | Chantier | Situation au relevé | Preuve / source | Prochaine condition de clôture |
 |---|---|---|---|---|
 | GOV-01 | Documentation, architecture, contribution, tests | **Fusionné** le 25/10 (commit de fusion `92a0315`) ; contrôle `Documentation` réussi sur `main` | [PR #1](https://github.com/NOxygen59/kyokasho/pull/1) ; [INDEX.md](INDEX.md) | Clos pour l'intégration ; tenir les guides à jour à chaque PR |
-| GOV-02 | Plan directeur de professionnalisation (ce fichier) | PR #4 mise à jour après les fusions #1→#3 | [PR #4](https://github.com/NOxygen59/kyokasho/pull/4) | Contrôle `Documentation` vert, fusion validée par le propriétaire, puis mise à jour à chaque PR de professionnalisation |
+| GOV-02 | Plan directeur de professionnalisation (ce fichier) | **Fusionné** le 25/10 (`ee07c55`) ; contrôle `Documentation` réussi sur `main` | [PR #4](https://github.com/NOxygen59/kyokasho/pull/4) | Clos pour l'intégration ; mise à jour obligatoire à chaque PR qui fait évoluer un chantier (règle de [AGENTS.md](../AGENTS.md)) |
+| GOV-03 | Consolidation : instructions des agents, publication du plan CI, contrôle des documents obligatoires | **PR ouverte, non fusionnée** : `AGENTS.md` commence par l'état GitHub et ce plan ; `docs/CI-ROADMAP.md` publié ; `scripts/check_documentation.py` vérifie aussi les documents et renvois obligatoires | [PR #5](https://github.com/NOxygen59/kyokasho/pull/5) (branche `docs/gouvernance-ci-roadmap`) | Contrôle `Documentation` vert puis fusion validée par le propriétaire |
 | DATA-01 | Reprise idempotente d'ajout de pages / PageShift | **Fusionné** le 25/10 (`a016091`) ; `Stockage Mac` réussi sur `main` après #1+#2 et après #1+#2+#3 ; **non essayé sur iPad** | [PR #2](https://github.com/NOxygen59/kyokasho/pull/2) ; [PHASE2-STOCKAGE.md](PHASE2-STOCKAGE.md) ; runs `40152364389`, `40152582505` | Recette iPad sur copie : OCR concurrent, annotations, gros PDF |
 | DATA-02 | Sauvegarde et restauration hors ligne | **Fusionné** le 25/10 (`c2b1b29`) ; `Sauvegarde synthétique` réussi sur `main` ; **restauration TrollStore/iPad non démontrée** | [PR #3](https://github.com/NOxygen59/kyokasho/pull/3) ; [PHASE2-SAUVEGARDE.md](PHASE2-SAUVEGARDE.md) ; run `40152580509` | Qualifier extraction/restauration sur iPad avec une bibliothèque jetable avant tout usage réel |
 | QA-01 | Tests de logique et stockage | Sur `main` (`c2b1b29`), GitHub Actions macOS : `Stockage Mac` et `Sauvegarde synthétique` réussis. Le bilan chiffré (156 Swift réussis, 7 ignorés, 16 Python, 20 PageShift sous ASan) reste un **rapport Codex sur assemblage local** | Runs ci-dessus ; rapports des PR #2/#3 | Relever les nombres de tests depuis les journaux des runs `main`, avec versions d'outils et liste des tests ignorés |
-| CI-01 | Automatisation complète macOS Apple Silicon | Trois workflows sur `main` : `documentation.yml` (PR + push `main`), `storage.yml` et `backup.yml` (PR + lancement manuel, **pas de déclenchement sur push `main`**). Pas de compilation iOS ni de MLX en CI. `docs/CI-ROADMAP.md` **toujours absent** du dépôt | `.github/workflows/` ; [CI-ET-LIVRAISON.md](CI-ET-LIVRAISON.md) | Publier et revoir le plan CI ; ajouter les jobs par petites PR, contrôler coûts, accès et protections |
+| CI-01 | Automatisation complète macOS Apple Silicon | Trois workflows sur `main` : `documentation.yml` (PR + push `main`), `storage.yml` et `backup.yml` (PR + lancement manuel, **pas de déclenchement sur push `main`**). Pas de compilation iOS, d'ASan ni de MLX en CI. **Plan CI publié** avec GOV-03 ([CI-ROADMAP.md](CI-ROADMAP.md), rédigé par Codex, workflows revérifiés identiques à `main`) ; **aucune phase mise en œuvre** | `.github/workflows/` ; [CI-ROADMAP.md](CI-ROADMAP.md) ; [CI-ET-LIVRAISON.md](CI-ET-LIVRAISON.md) | Phase 0 puis phase 1 du plan CI, par petites PR ; revérifier tarifs, runners et Xcode le jour de la mise en œuvre ; contrôler coûts, accès et protections |
 | QA-02 | Recette iPad par version | **À faire** pour les changements de stockage et de sauvegarde ; statut de v1.3 partiellement confirmé seulement. Aucune nouvelle build ni release depuis v1.3 | [TESTS.md](TESTS.md) ; historique du projet | Résultats datés par build et scénario, sur documents jetables, sans conclure « tout validé » |
 | DATA-03 | Géométrie annotations/export après égalisation | Risque identifié, **non clos** | [AUDIT-V1.3.md](AUDIT-V1.3.md) ; [GOUVERNANCE-ET-REPRISE.md](GOUVERNANCE-ET-REPRISE.md) | Tests pages tournées et tailles mixtes + validation iPad |
 | QA-03 | Contrats OCR, japonais, chat et citations de pages | Tests existants, couverture supplémentaire proposée | [TESTS.md](TESTS.md), [ARCHITECTURE-LECTURE.md](ARCHITECTURE-LECTURE.md) | Tests ciblés des corrections manuelles, langues, invalidations et requêtes « p. 6 » |
@@ -57,7 +58,7 @@ Les chantiers n'ont **pas** d'avancement en pourcentage : cela produirait une pr
 
 1. ~~**Intégration documentaire et corrections de données** : fusion #1 → #2 → #3.~~ **Fait le 25/10**, avec revérification de `main` après chaque fusion (voir § 5).
 2. **Preuves sur appareil et récupération** : construire une build de test (avec l'accord du propriétaire, sans release implicite), puis tester sur une bibliothèque jetable l'ajout de pages, OCR concurrent, annotations et gros PDF ; ne pas essayer une restauration incertaine sur le seul conteneur réel.
-3. **CI** : publier le plan `CI-ROADMAP.md` (toujours absent), puis qualifier runner/Swift/Xcode, tests, compilation iOS, ASan ; envisager le déclenchement de `storage.yml`/`backup.yml` sur `main` ; séparer MLX réel et actions non fiables.
+3. **CI** : plan publié ([CI-ROADMAP.md](CI-ROADMAP.md), avec GOV-03). Suivre ses phases dans l'ordre : 0 (photographier l'état), 1 (fiabiliser les contrôles existants, dont le diff complet de `documentation.yml` et le déclenchement sur `main`), 2 (compilation iOS générique), 3 (ASan), 4 (MLX sans poids), 5 (contrôles obligatoires). Peut avancer en parallèle de l'étape 2, car ces travaux ne touchent pas l'app.
 4. **Données / OCR / performances** : traiter les risques démontrés (DATA-03 en premier) et enrichir les tests avant de remanier les modules.
 5. **Maintenabilité** : refactorisation mesurée et limitée ; aucune réécriture générale par défaut.
 6. **Diagnostic guidé** : étudier après stabilisation du stockage et des tests automatiques, sans upload brut automatique de journaux.
@@ -74,7 +75,9 @@ Les décisions SEC-01 (visibilité, protection de `main`) peuvent être prises �
 - **Résultats rapportés par Codex (25/10, assemblage local)** : 156 tests Swift réussis, 7 ignorés ; 16 Python ; 20 PageShift sous ASan ; compilation générique iOS déclarée réussie, minimum iOS 16. Ces nombres restent des **résultats de rapport**, non revérifiés dans les journaux des runs `main`.
 - **Non effectué** : aucun essai sur iPad ; MLX/Metal non qualifiés pour ce lot ; restauration TrollStore non prouvée ; LSan non disponible sur la toolchain employée ; compilation iOS non exécutée en CI ; 7 essais ignorés faute de modèles ONNX/UniDic.
 - **Écueils documentés** : un OCR commencé avant changement de pagination peut écrire sur la mauvaise page ; un fichier ordinaire suffixé `-wal` n'est pas forcément une annexe SQLite. Les PR #2/#3 apportent des correctifs et tests dédiés ; ne jamais les réintroduire.
-- **À ne pas confondre** : `docs/CI-ROADMAP.md` sur la machine de Codex n'est ni accessible depuis un nouveau chat ni versionné tant qu'il n'est pas commité et poussé. Le fichier racine `PLAN.md` est le plan historique du produit (V1→V5), pas ce plan directeur.
+- **Plan CI** : `docs/CI-ROADMAP.md` provient d'un fichier local non suivi de Codex (audit du 25/10 sur `edd09b2`, arbre identique à `c2b1b29`). Sa partie workflows a été revérifiée contre `main` ; ses tarifs, labels de runners, versions Xcode/XcodeGen et sources externes **ne l'ont pas été**.
+- **Contrôle documentaire** : `scripts/check_documentation.py` vérifie les liens locaux et, depuis GOV-03, la présence des documents de pilotage et leurs renvois. Sur un push groupant plusieurs commits, `git diff --check HEAD^ HEAD` ne couvre que le dernier (CI-ROADMAP, phase 1). Les en-têtes SPDX des Markdown ne sont pas contrôlés : plusieurs documents historiques n'en ont pas.
+- **À ne pas confondre** : le fichier racine `PLAN.md` est le plan historique du produit (V1→V5), pas ce plan directeur.
 
 ## 6. Mode opératoire : une tâche du début à la fin
 
@@ -97,15 +100,19 @@ Les décisions SEC-01 (visibilité, protection de `main`) peuvent être prises �
 - [HISTOIRE-DU-DEVELOPPEMENT.md](HISTOIRE-DU-DEVELOPPEMENT.md) : chronologie et décisions passées.
 - [GOUVERNANCE-ET-REPRISE.md](GOUVERNANCE-ET-REPRISE.md) : règles ; [TESTS.md](TESTS.md), [CI-ET-LIVRAISON.md](CI-ET-LIVRAISON.md), [MEMOIRE-ET-SANITIZERS.md](MEMOIRE-ET-SANITIZERS.md), [DONNEES-ET-SAUVEGARDES.md](DONNEES-ET-SAUVEGARDES.md) : procédures.
 - [PHASE2-STOCKAGE.md](PHASE2-STOCKAGE.md), [PHASE2-SAUVEGARDE.md](PHASE2-SAUVEGARDE.md), [PHASE2-NETTOYAGE.md](PHASE2-NETTOYAGE.md) : lots de la phase 2.
-- **Local seulement au dernier rapport** : `docs/CI-ROADMAP.md`. Le publier avant de le citer comme source versionnée.
+- [CI-ROADMAP.md](CI-ROADMAP.md) : plan d'automatisation CI à mettre en œuvre par phases ; [CI-ET-LIVRAISON.md](CI-ET-LIVRAISON.md) décrit l'existant et la livraison.
 
 **Résolution des contradictions** : rapporter les deux sources et leur date, vérifier le code/les runs et demander une décision si nécessaire. Ne pas effacer l'historique ni mettre à jour silencieusement les anciennes notes.
 
 ## 8. Point de reprise pour le prochain chat
 
-**Dernier fait vérifié ici (25/10) :** PR #1, #2 et #3 fusionnées (`92a0315`, `a016091`, `c2b1b29`) ; contrôles `Documentation`, `Stockage Mac` et `Sauvegarde synthétique` réussis sur `main` à `c2b1b29`. Dépôt public, `main` non protégée. Aucune Issue ouverte. Aucune build, aucun essai iPad, aucune release depuis v1.3.
+**Dernier fait vérifié ici (25/10) :** `main` à `ee07c55` ; PR #1 à #4 fusionnées (`92a0315`, `a016091`, `c2b1b29`, `ee07c55`) ; contrôles `Documentation`, `Stockage Mac` et `Sauvegarde synthétique` réussis sur `main`. Aucune Issue. Dépôt public, `main` non protégée. Aucune build, aucun essai iPad, aucune release depuis v1.3. La PR #5 (GOV-03, gouvernance et plan CI) attend la décision du propriétaire.
 
-**Prochaine action conditionnelle :** préparer la recette iPad de DATA-01/DATA-02 (QA-02) : liste de scénarios sur bibliothèque jetable, puis build de test **uniquement sur demande du propriétaire**. En parallèle, le propriétaire peut trancher SEC-01. Si l'état de GitHub diffère, **replanifier à partir des preuves actuelles**, pas de cette phrase historique.
+**Validations encore ouvertes (aucune effectuée) :** recette iPad de DATA-01 (ajout de pages, OCR concurrent, annotations, gros PDF) et de DATA-02 (extraction/restauration TrollStore) ; MLX/Metal sur iPad pour ce lot ; DATA-03 (géométrie des annotations) ; LSan et campagne mémoire (PERF-01).
+
+**Décisions du propriétaire encore ouvertes :** visibilité du dépôt et protection de `main` (SEC-01) ; autorisation d'une build de test pour la recette iPad ; démarrage de la phase 0/1 du plan CI.
+
+**Prochaine priorité :** QA-02 — préparer la recette iPad de DATA-01 et DATA-02 : scénarios datés sur bibliothèque jetable dans [TESTS.md](TESTS.md), puis build de test **uniquement sur demande du propriétaire**, et résultats rapportés par NOxygen59. Ce sont les seuls changements de comportement de l'app depuis v1.3, et ils touchent les données. Si l'état de GitHub diffère, **replanifier à partir des preuves actuelles**, pas de cette phrase historique.
 
 **Question standard de reprise :** « Lis `AGENTS.md` et `docs/PLAN-DIRECTEUR.md` dans `NOxygen59/kyokasho`, compare avec GitHub actuellement, puis indique en français l'état vérifié, les blocages et une seule prochaine action ; ne code ni ne fusionne sans ma demande. »
 
