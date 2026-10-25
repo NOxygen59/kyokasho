@@ -67,6 +67,7 @@ let package = Package(
         .testTarget(name: "ReviewKitTests", dependencies: ["ReviewKit"]),
         .testTarget(name: "ONNXOCRKitTests", dependencies: ["ONNXOCRKit"]),
         .testTarget(name: "MorphologyKitTests", dependencies: ["MorphologyKit"]),
+        .testTarget(name: "BackupIntegrationTests", dependencies: ["ReaderCore", "ReviewKit"]),
     ],
     cxxLanguageStandard: .cxx14
 )
