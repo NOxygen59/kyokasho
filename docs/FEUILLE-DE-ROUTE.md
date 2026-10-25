@@ -168,8 +168,10 @@ s'il y en a, sinon l'étape suivante non cochée (§ 7 bis puis § 8). Pas de si
 
 ## 3. Déboguer avec l'utilisateur
 
-- **Mode diagnostic** (Réglages → Outils → Diagnostic, `App/Settings/Diagnostics.swift`) : il active, refait le
-  geste, « Partager le journal » (ou Fichiers → Kyōkasho → Diagnostics/journal.txt). Erreurs toujours notées, MLX
+- **Mode diagnostic** (Réglages → Aide et informations → Aide au diagnostic → Mode diagnostic, `App/Settings/Diagnostics.swift`) : il active, refait le
+  geste ; l’activation ne produit pas forcément de changement visuel dans le lecteur. Consulter « Voir le journal »,
+  puis recopier seulement un extrait sans données personnelles pour GitHub. « Partager le journal » envoie le fichier complet
+  (aussi dans Fichiers → Kyōkasho → Diagnostics/journal.txt), sans filtrage automatique. Erreurs toujours notées, MLX
   compris (avant l'arrêt). Ajouter `Diagnostics.log / measure / error` sur tout nouveau chemin lourd.
 - Rapport `.ips` : `dwarfdump --uuid build/ipa/Kyokasho.xcarchive/dSYMs/Kyokasho.app.dSYM` doit = `slice_uuid`, puis
   `atos -arch arm64 -o <dSYM>/Contents/Resources/DWARF/Kyokasho -l <base> <adresses>` (base = `usedImages` Kyokasho).
@@ -476,7 +478,7 @@ Comptes (Drive) ; À propos (+ **connexion GitHub** device flow → mise à jour
   = réglage sauf portrait (taille de la vue dans `ReaderScreen` / `ReaderPDFView.layoutSubviews`, puis
   `applyDisplaySettings`), garder la page courante. Option dans Affichage pour couper.
 - [x] **E — Double page de même taille** (1.0.0 : pages recréées à la hauteur commune à la construction ; annotations
-  d'avant sur une page agrandie = décalées ; export annoté de ces pages pas adapté) : option « Égaliser les pages » ; agrandir seulement l'**affichage** de la plus
+  d'avant sur une page agrandie = décalées ; export annoté de ces pages pas adapté). **Rectification documentaire QA-02 (25/10/2026)** : l’égalisation est automatique, aucun interrupteur n’existe. L’intention historique était d’agrandir seulement l’**affichage** de la plus
   petite (jamais ses coordonnées : notes, encre, surlignages, OCR sont en repère de page). À tester sur l'iPad.
 - [x] **F — Cartes de la page** (Codex, 23/10, non vérifié sur iPad) : menu « Cette page » → aperçu
   des termes du lexique trouvés ; lecture et sens modifiables et obligatoires avant ajout. Texte OvisOCR2 déjà

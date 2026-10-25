@@ -5,9 +5,9 @@
 
 ## Recueillir un signal utile
 
-Le mode diagnostic de l'app est utilisable quel que soit l'assistant qui aide à analyser le problème. Il n'est pas réservé à Claude. `App/Settings/Diagnostics.swift` définit le journal ; les réglages regroupent diagnostic et moniteur dans l'aide/outillage.
+Le mode diagnostic de l'app est utilisable quel que soit l'assistant qui aide à analyser le problème. Il n'est pas réservé à Claude. `App/Settings/Diagnostics.swift` définit le journal ; le chemin est **Réglages → Aide et informations → Aide au diagnostic → Mode diagnostic**. La recherche « diagnostic » dans les réglages mène aussi à cet écran. L’activation enrichit le journal sans ajouter d’indicateur au lecteur : elle ne produit pas forcément de changement visuel. Les erreurs sont toujours notées, même si le mode est désactivé.
 
-Activer le diagnostic, reproduire le problème une fois, puis « Partager le journal » ; le fichier est aussi dans `Documents/Diagnostics/journal.txt` du conteneur. Relever version/build, iOS, livre/page, moteur/modèle, langue, orientation et périphérique. Vérifier le contenu avant de le publier : un journal ou une capture peut révéler des chemins, textes ou titres personnels.
+Activer le diagnostic, reproduire le problème une fois, puis « Voir le journal » sur le même écran. « Partager le journal » transmet le fichier complet et ne le nettoie pas : pour GitHub, recopier manuellement seulement un extrait relu et expurgé ; le fichier est aussi dans `Documents/Diagnostics/journal.txt` du conteneur. Relever version/build, iOS, livre/page, moteur/modèle, langue, orientation et périphérique. Vérifier le contenu avant de le publier : un journal ou une capture peut révéler des chemins, textes ou titres personnels.
 
 Un bon rapport contient : étapes exactes, attendu, observé, fréquence, dernière version où cela fonctionnait, opération en cours et premier message d'erreur. Une capture aide au rendu ; le journal aide aux tâches et à Metal ; le `.ips` aide au crash. N'envoyer ni clé ni mot de passe. Utiliser un exemple synthétique dès que possible.
 

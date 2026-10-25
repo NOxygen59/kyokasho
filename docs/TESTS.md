@@ -9,7 +9,9 @@
 
 ## Tests existants
 
-`Packages/KyokashoKit/Package.swift` déclare sept cibles, réparties dans 17 fichiers comportant 142 déclarations `func test` à la base auditée. Ce décompte statique ne mesure ni la couverture ni les tests réellement exécutés. GLMOCRKit déclare une cible supplémentaire avec deux fichiers d'essais de modèles. `project.yml` ne déclare pas de cible XCTest de l'app ni de tests UI.
+Au SHA `f83aec8c61d88f1e6c119376590899c9c1ce2876` (25/10/2026), `Packages/KyokashoKit/Package.swift` déclare **neuf cibles de tests**, avec **163 déclarations `func test` dans 20 fichiers**. Ce relevé des sources n'est pas une nouvelle exécution. Les sept cibles / 142 tests du registre historique en bas de page décrivent la base avant les PR #2/#3. GLMOCRKit garde sa cible séparée de tests de modèles. `project.yml` ne déclare pas de cible XCTest de l'app ni de tests UI.
+
+**Campagne en préparation : [QA-02 — recette iPad PageShift et sauvegarde](RECETTE-IPAD-QA-02.md).** Elle détaille le corpus synthétique à fabriquer, les gestes, les attentes, les conditions d'arrêt, les autorisations et les fiches GitHub. Aucun essai iPad ni build n'est effectué par cette préparation.
 
 | Cible | Exemples de comportements contrôlés | Limite |
 |---|---|---|
@@ -20,6 +22,8 @@
 | ReviewKitTests | FSRS, stockage, modèles et export Anki | Import dans une app Anki réelle à vérifier séparément |
 | ONNXOCRKitTests | Alignement et essais de moteurs | Modèles réels requis pour plusieurs scénarios |
 | MorphologyKitTests | CSV et lectures MeCab/extraction UniDic | Dictionnaire/archive requis pour les essais réels |
+| PageShiftTests | 20 tests : reprise à 12 frontières, SIGKILL, journal ambigu/corrompu, erreurs SQL/fichiers, décalage unique ; cinq tests dédiés OCR tardif/concurrence/annulation/reprise/réactivité | Adaptateurs Mac pour l'interface ; ni parcours UIKit ni coupure matérielle |
+| BackupIntegrationTests | 1 test : vraies bases AppDatabase/ReviewStore, sauvegarde/restauration et réouverture en écriture | Conteneur synthétique Mac ; ni extraction ni réinstallation TrollStore |
 | GLMOCRKitTests | Lecture Ovis/GLM/Qwen, vrais échantillons, traduction, chat, profil | Poids et corpus externes ; tests opt-in, pas une suite légère systématique |
 
 ## Exécution Mac reproductible
@@ -85,7 +89,7 @@ Relever le code de sortie de chaque commande. Avec `tee`, `set -o pipefail` le c
 
 ## Couverture à ajouter par risque
 
-1. **Préservation des données** : injection de panne à chaque étape PageShift, journal non inscriptible, espace disque insuffisant, redémarrage répété, sources avant/après. Vérifier PDF, tables, rapports, Markdown, cartes et absence de double décalage.
+1. **Préservation des données** : les PR #2/#3 couvrent désormais plusieurs injections de panne, reprises répétées et la restauration synthétique (table ci-dessus). Restent à qualifier les parcours UIKit, l’espace réellement disponible, les copies volumineuses et le conteneur TrollStore ; ne pas présenter les tests Mac comme une validation iPad. Voir les limites de [PageShift](PHASE2-STOCKAGE.md) et de [sauvegarde](PHASE2-SAUVEGARDE.md).
 2. **Contrats v1.3** : langue Japonais/Auto, `图`/`図`, nombres/latin/formules intacts, lignes `edited` intactes, brut IA inchangé, suppression de traduction périmée et invalidation de vote.
 3. **Chat** : « p. 6 » et numérotation romaine, page absente/hors limites, aucune lecture disponible, relance versus nouvelle question, isolation des conversations et modèles. Sortie attendue sur sélection des passages, sans dépendre d'un texte exact produit par un LLM.
 4. **Géométrie** : pages tournées et de tailles différentes, coordonnées des annotations, double page et export ; vérifier les repères plutôt que seulement une capture d'écran.
@@ -97,12 +101,12 @@ Pour l'OCR réel, garder hors dépôt un corpus daté avec vérité terrain relu
 
 ## Recette iPad à remplir par NOxygen59
 
-Préparer une copie sans valeur des données et noter version/build, iOS, modèle installé, mode diagnostic et espace libre. Pour chaque ligne : réussi/échoué/non essayé, date, observation, journal ou capture. « Non essayé » reste visible dans les notes de release.
+Pour PageShift et la sauvegarde (I03/I08/I09/I11/I12), suivre d’abord [QA-02](RECETTE-IPAD-QA-02.md), qui permet le niveau A sur l’installation existante avec les précautions A0 et le risque de perte accepté par NOxygen59 le 25/10/2026 ; le niveau B reste bloqué jusqu’à qualification et accords distincts. La grille suivante reste le catalogue général, pas une autorisation de tout essayer. Préparer uniquement des données synthétiques et noter version/build affichés, SHA source externe et SHA-256 du `.tipa`, iOS, modèle installé, mode diagnostic et espace libre. Pour chaque ligne : réussi/échoué/non essayé, date, observation, journal ou capture. « Non essayé » reste visible dans les notes de release.
 
 | ID | Scénario | Résultat attendu |
 |---|---|---|
 | I01 | Import Fichiers puis Drive, Japonais et Auto | Livre ouvrable, langue conservée et traitement de fond cohérent |
-| I02 | Simple/Double/Auto, rotation, zoom, doigt/Pencil/trackpad | Page/position cohérentes ; pas de panneau recouvrant le PDF |
+| I02 | « Page simple » / « Double page » / « Automatique selon l'orientation », rotation, zoom, doigt/Pencil/trackpad | Page/position cohérentes ; pas de panneau recouvrant le PDF |
 | I03 | Dessin, surlignage, note, repère ; fermeture/réouverture | Données conservées sur la bonne page |
 | I04 | PDF texte et scan image ; furigana page/panneau | Texte exploitable, lectures et emplacements vérifiés visuellement |
 | I05 | Relecture Ovis, correction manuelle, acceptation globale | Retouche protégée, vote actualisable, traduction périmée retirée |
@@ -139,3 +143,30 @@ Les cinq essais de modèles ONNX (DE-GAN, mise en page, NDLOCR, PP-OCR horizonta
 Contrôles documentaires : 49 liens locaux examinés sans erreur ; diff sans erreur d'espacement ; YAML du workflow lisible ; vérificateur essayé sur un lien valide, un exemple dans un bloc de code et un lien cassé volontairement (rejeté). Les deux `Package.resolved` restent identiques à la base. L'exécution distante du workflow, après ouverture de la PR, doit être distinguée de ces contrôles locaux.
 
 App iOS complète : non recompilée par ce lot. GLMOCRKit avec poids : non exécuté. Recette iPad : non exécutée. ASan/LSan de l'app : non exécutés. Aucun statut historique n'est promu au rang de nouvelle validation.
+
+
+## QA-02 — vérifications de préparation du 25 octobre 2026
+
+Base de travail : `f83aec8c61d88f1e6c119376590899c9c1ce2876`, worktree dédié `codex/qa02-recette-ipad`. Mac local, macOS 27.0.1 (26A434), Python 3.13.13. La PR ne modifie que des documents Markdown.
+
+| Contrôle | Nature de la preuve | Résultat |
+|---|---|---|
+| `python3 -m unittest discover -s tests -v` | Exécution locale sur cette base ; conteneurs temporaires synthétiques | 16 réussis, 0 échec, 0 ignoré, code 0 |
+| Inventaire des cibles et méthodes Swift | Lecture des sources au SHA ci-dessus | 9 cibles / 163 méthodes ; dont 20 PageShift et 1 restauration |
+| Correspondance recette / interface | Lecture de AddPagesView, StudyPanel, ReaderController et guides | Ajout par blocs avant/après ; refus de lecture IA active distinct de l'attente OCR |
+| `python3 -I scripts/check_documentation.py` et `git diff --check` | Contrôles locaux après édition | 139 liens, 0 erreur ; diff sans erreur, codes 0 ; [PR #7](https://github.com/NOxygen59/kyokasho/pull/7) |
+
+Les 20 tests PageShift (également sous ASan) et le test de restauration Swift ont des preuves historiques dans les PR [#2](https://github.com/NOxygen59/kyokasho/pull/2) et [#3](https://github.com/NOxygen59/kyokasho/pull/3). **Swift/ASan ne sont pas relancés pour ce lot documentaire** ; leurs résultats antérieurs ne sont pas des résultats du présent checkout. Les 7 tests sans modèles ONNX/UniDic restaient ignorés dans la suite historique. Aucun téléchargement d'asset ni lecture de bibliothèque personnelle.
+
+Non exécutés : build iOS, simulateur, appareil, MLX/Metal, LSan, extraction/restauration TrollStore, scénario manuel QA-02. GitHub Actions désactivé : réglage `enabled: false` relu le 25/10 avant publication ; aucun workflow utilisé ou lancé. Les risques et le tableau de résultats vierge sont dans la [recette QA-02](RECETTE-IPAD-QA-02.md).
+
+
+### Correction documentaire après revue indépendante
+
+La [revue de Claude](https://github.com/NOxygen59/kyokasho/pull/7#issuecomment-6397411518) a été validée par NOxygen59 le 25/10/2026. Le niveau A admet désormais l'installation existante avec risque de perte accepté et PDF synthétiques `QA02-…`, sans exiger une seconde app. L'accord ne couvre pas B : extraction/restauration TrollStore restent bloquées jusqu'à qualification et autorisations distinctes.
+
+La recette compare « Page simple » et « Double page » ; l'égalisation des hauteurs est automatique, sans interrupteur. Elle donne le chemin exact de « Lire les nouvelles pages avec OvisOCR2 » et explique son arrêt temporaire pour éviter les lectures déclenchées après import/ouverture/ajout. Le parcours d'export comprend « Tout le document », « Exporter » puis « Partager <nom du fichier> ».
+
+Diagnostic facultatif : **Réglages → Aide et informations → Aide au diagnostic → Mode diagnostic**. Son activation enrichit le journal sans nouvel indicateur dans le lecteur ; les erreurs sont toujours notées. Sur l'installation existante, le journal peut inclure des données personnelles antérieures : aucun partage brut.
+
+La future build sera identifiée extérieurement par le SHA source et le SHA-256 du `.tipa`, associés au fichier effectivement sélectionné lors de l'installation. L'écran affiche seulement version/build ; `1.3 (40)` ne distingue pas la release historique d'une nouvelle compilation. Aucun changement de numéros sans autorisation. Contrôles de cette révision : liens documentaires et diff local, résultats exacts dans la réponse de Codex sur la PR #7. Les résultats Python du premier lot restent historiques et ne sont pas présentés comme relancés.
