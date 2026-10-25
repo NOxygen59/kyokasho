@@ -46,9 +46,41 @@ Un nom présent une seule fois est un indice, pas une preuve : SwiftUI, délégu
 
 Les commentaires couvrent invariants, pièges de plateforme et contrats d'API. Les lignes évidentes ne demandent pas de paraphrase. Une décision désormais fausse doit être corrigée avec le code ; préserver les crédits tiers. DocC/Doxygen peuvent aider à naviguer les API quand leurs commentaires sont fiables, mais ne remplacent ni guide d'architecture ni stratégie de tests.
 
+## Collaboration entre agents (Claude et Codex)
+
+Claude et Codex sont les deux seuls agents de développement. Ils se succèdent sans partager leurs conversations : **tout le contexte utile passe par GitHub** (Issues, PR, commits, documents versionnés). Ce qui n'est écrit que dans un chat est perdu pour l'autre agent. NOxygen59 reste seul décideur.
+
+### Règles
+
+1. **Lire l'état GitHub avant toute mission** : SHA de `main`, PR ouvertes, Issues, derniers contrôles, puis [le plan directeur](PLAN-DIRECTEUR.md). Une PR ou une branche d'un autre agent encore ouverte est un travail en cours, pas un brouillon abandonné.
+2. **Une tâche, une branche, un agent responsable.** Branche `claude/<sujet>` ou `codex/<sujet>` ; l'agent responsable est indiqué en tête de PR. L'autre agent ne pousse pas sur cette branche, sauf demande écrite dans la PR par l'agent responsable ou par NOxygen59.
+3. **Tâche définie avant de coder** : une Issue (gabarit « Tâche ») ou, pour un petit lot, le début de la PR. On y trouve l'identifiant du chantier du plan directeur, l'objectif, le périmètre exclu, le critère d'acceptation et l'autorisation de NOxygen59 (citée, avec sa date).
+4. **Passation écrite** : chaque PR suit le [gabarit](../.github/pull_request_template.md). Elle contient un résumé simple pour NOxygen59, les changements techniques, les preuves, les limites et une passation à l'agent suivant. Les messages de commit disent le pourquoi en français. Une décision durable (stockage, forks, compatibilité, CI) est consignée dans le guide du domaine, pas seulement dans la PR.
+5. **Revue indépendante par l'autre agent** lorsque le risque le justifie. Elle est obligatoire pour :
+   - les données persistantes, les migrations, PageShift et la sauvegarde ;
+   - la concurrence ou l'annulation ;
+   - le code C/C++ ou la mémoire ;
+   - les forks MLX, les dépendances ou `Package.resolved` ;
+   - les workflows, les permissions ou la sécurité ;
+   - toute suppression de code.
+
+   Le relecteur commente la PR (revue GitHub ou commentaire) avec ses constats et ses preuves. Il ne réécrit pas le travail. Pour une simple modification de document, une relecture par l'agent auteur suffit.
+6. **Justifier les changements techniques importants** : problème démontré, alternatives écartées, preuve avant et après (test, mesure, journal borné), conséquences et retour arrière.
+7. **Désaccord explicite, sans modifications concurrentes.** Le relecteur écrit une section « Désaccord » dans la PR : position, preuves, risque. L'auteur répond par écrit. Sans accord, la PR reste ouverte et NOxygen59 tranche. Aucun des deux agents n'ouvre de branche concurrente sur les mêmes fichiers en attendant. Une contre-proposition se fait dans une PR distincte annoncée dans la discussion.
+8. **Clore proprement** : mettre à jour [le plan directeur](PLAN-DIRECTEUR.md) (ligne du chantier, preuves, point de reprise) et les guides touchés dans la même PR ; déclarer ce qui n'a pas été vérifié.
+9. **Autorisations de NOxygen59** obligatoires pour toute fusion, release, changement de version, de dépendance ou de fork, changement de réglage GitHub (visibilité, protection, Actions, facturation), essai sur appareil ou changement majeur d'architecture. Un commentaire d'agent n'est pas une autorisation.
+
+### Phrases types pour NOxygen59
+
+Une ligne suffit à lancer l'agent suivant ; le reste est sur GitHub :
+
+- « Lis `AGENTS.md`, vérifie GitHub, puis traite l'Issue #N. Ne fusionne pas. »
+- « Fais la revue indépendante de la PR #N selon `docs/GOUVERNANCE-ET-REPRISE.md`. Ne pousse rien sur sa branche. »
+- « Réponds à la revue de la PR #N et corrige ce qui est justifié. »
+
 ## Définition d'un travail terminé
 
-Le comportement demandé est présent ; le diff reste limité ; les données et iOS 16 sont préservés ; les contrôles adaptés ont un résultat et un environnement ; les documents du domaine sont à jour ; les tests ignorés et la recette iPad manquante sont visibles ; aucune release n'est fabriquée sans demande. Un travail peut être intégré avec une limite connue explicitement acceptée, mais ne devient pas pour autant « confirmé sur iPad ».
+Le comportement demandé est présent ; le diff reste limité ; le code significatif est documenté selon [CONTRIBUTING.md](../CONTRIBUTING.md) ; la PR contient sa passation ; les données et iOS 16 sont préservés ; les contrôles adaptés ont un résultat et un environnement ; les documents du domaine sont à jour ; les tests ignorés et la recette iPad manquante sont visibles ; aucune release n'est fabriquée sans demande. Un travail peut être intégré avec une limite connue explicitement acceptée, mais ne devient pas pour autant « confirmé sur iPad ».
 
 ## Indicateurs utiles
 

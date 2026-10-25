@@ -13,12 +13,15 @@ from urllib.parse import unquote, urlsplit
 # Documents de pilotage qui doivent exister, et texte que chacun doit citer pour
 # qu'un nouvel agent retrouve le point d'entrée sans connaître les anciens chats.
 REQUIRED = {
-    "AGENTS.md": ["docs/PLAN-DIRECTEUR.md", "docs/FEUILLE-DE-ROUTE.md", "docs/INDEX.md"],
+    "AGENTS.md": ["docs/PLAN-DIRECTEUR.md", "docs/FEUILLE-DE-ROUTE.md", "docs/INDEX.md", "docs/GOUVERNANCE-ET-REPRISE.md", "CONTRIBUTING.md"],
+    "CLAUDE.md": ["@AGENTS.md"],
+    "CONTRIBUTING.md": [".github/pull_request_template.md"],
+    ".github/pull_request_template.md": ["## Résumé pour NOxygen59", "## Preuves", "## Limites et non vérifié", "## Passation à l'agent suivant"],
     "docs/PLAN-DIRECTEUR.md": ["../AGENTS.md", "FEUILLE-DE-ROUTE.md", "CI-ROADMAP.md", "## 8. Point de reprise"],
     "docs/INDEX.md": ["PLAN-DIRECTEUR.md", "CI-ROADMAP.md", "../AGENTS.md"],
     "docs/FEUILLE-DE-ROUTE.md": [],
-    "docs/GOUVERNANCE-ET-REPRISE.md": [],
-    "docs/CI-ROADMAP.md": [],
+    "docs/GOUVERNANCE-ET-REPRISE.md": ["## Collaboration entre agents (Claude et Codex)"],
+    "docs/CI-ROADMAP.md": ["## Fonctionnement à coût nul"],
 }
 
 

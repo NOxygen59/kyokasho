@@ -11,6 +11,8 @@ Ce lot ajoute un contrôle documentaire léger : `.github/workflows/documentatio
 
 ## Pipeline recommandé, à qualifier par étapes
 
+La répartition à coût nul (GitHub gratuit, Mac de NOxygen59 hors runner, iPad) et le découpage des prochaines PR CI sont tenus dans [CI-ROADMAP.md](CI-ROADMAP.md).
+
 | Étape | Déclenchement conseillé | Preuve et critère |
 |---|---|---|
 | Liens et diff | PR/documentation | Aucun lien local invalide, `git diff --check` propre |

@@ -16,10 +16,11 @@ Ce dossier organise la reprise du projet à partir de **v1.3, build 40**. L'audi
 | Comprendre ce qui est conservé, exporté ou effacé | [Données et sauvegardes](DONNEES-ET-SAUVEGARDES.md) |
 | Vérifier une modification | [Stratégie de tests et recette iPad](TESTS.md) |
 | Automatiser progressivement les contrôles | [CI et livraison](CI-ET-LIVRAISON.md) |
-| Préparer la future CI par phases | [Plan d'automatisation CI](CI-ROADMAP.md) |
+| Préparer la future CI par phases, à coût nul | [Plan d'automatisation CI](CI-ROADMAP.md) |
 | Décrire un bug, lire un journal ou symboliser un crash | [Débogage](DEBOGAGE.md) |
 | Chercher une corruption ou une fuite mémoire | [Mémoire, ASan, C++ et Swift](MEMOIRE-ET-SANITIZERS.md) |
-| Contribuer sans casser les usages | [Contribution](../CONTRIBUTING.md) |
+| Contribuer sans casser les usages et documenter le code | [Contribution](../CONTRIBUTING.md) |
+| Travailler à deux agents (Claude et Codex) | [Collaboration entre agents](GOUVERNANCE-ET-REPRISE.md#collaboration-entre-agents-claude-et-codex) |
 | Décider et suivre les chantiers | [Gouvernance et reprise](GOUVERNANCE-ET-REPRISE.md) |
 | Vérifier le périmètre de la PR #1 | [Relecture finale](REVUE-PR1.md) |
 

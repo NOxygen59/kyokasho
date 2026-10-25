@@ -23,6 +23,33 @@ dictionnaires, cartes de révision. Usage personnel, jamais distribué, install�
 7. **Mettre à jour `docs/PLAN-DIRECTEUR.md`** dans la même PR dès qu'un chantier évolue (statut, preuve, point de
    reprise).
 
+## Travailler à deux agents (Claude et Codex)
+
+Les deux agents ne partagent pas leurs conversations : tout passe par GitHub. Protocole complet :
+[`docs/GOUVERNANCE-ET-REPRISE.md`](docs/GOUVERNANCE-ET-REPRISE.md), section « Collaboration entre agents ». En bref :
+
+- Une tâche, une branche `claude/<sujet>` ou `codex/<sujet>`, un agent responsable. Ne jamais pousser sur la branche
+  de l'autre agent sans demande écrite dans sa PR.
+- Le contexte est écrit dans l'Issue, la PR (gabarit [`.github/pull_request_template.md`](.github/pull_request_template.md)),
+  les commits et les guides, jamais seulement dans le chat.
+- Revue croisée obligatoire pour les données, la concurrence, la mémoire, le C/C++, les dépendances et forks, la CI
+  et la sécurité, et pour toute suppression de code. Un désaccord s'écrit dans la PR ; NOxygen59 tranche. Pas de branche
+  concurrente sur les mêmes fichiers.
+- Chaque PR finit par un résumé simple pour NOxygen59 et une passation technique pour l'agent suivant.
+
+## Documenter le code
+
+Tout code significatif créé ou modifié est documenté selon [`CONTRIBUTING.md`](CONTRIBUTING.md) :
+
+- des noms explicites ;
+- DocC (`///`) pour les interfaces importantes ;
+- des commentaires sur les invariants, la concurrence, la mémoire, la persistance et les choix non évidents ;
+- le style Doxygen pour le C/C++ exposé ;
+- un test de régression pour chaque correction ;
+- la mise à jour du guide technique si un contrat ou une architecture change.
+
+Pas de paraphrase ligne à ligne : expliquer le pourquoi.
+
 ## Trois preuves à ne jamais confondre
 
 - **Tests ou compilation sur Mac** (local ou GitHub Actions) : la logique et le code Swift compilent et passent.

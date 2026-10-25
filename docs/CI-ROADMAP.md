@@ -140,11 +140,117 @@ Ajouter `concurrency` par PR pour annuler les anciens commits, sauf pour une cam
 
 Le dépôt public bénéficie actuellement de minutes gratuites sur les runners GitHub standard. Ce point doit être revérifié si le dépôt devient privé. La tarification publiée au 25 octobre 2026 est de **0,062 USD par minute** pour un runner macOS standard hors quota, chaque job étant arrondi à la minute supérieure.
 
-Le runner macOS arm64 plus grand (`macos-15-xlarge`, M2 Pro, 5 cœurs CPU, accélération GPU et 14 Go de RAM) coûte **0,102 USD par minute**, reste facturé pour un dépôt public et n'est disponible que dans les offres d'organisation éligibles. Il ne doit pas devenir la valeur par défaut sans mesure montrant que le runner standard est insuffisant.
+Pour mémoire seulement, car il est **exclu** par la section « Fonctionnement à coût nul » : le runner macOS arm64 plus grand (`macos-15-xlarge`, M2 Pro, 5 cœurs CPU, accélération GPU et 14 Go de RAM) coûte **0,102 USD par minute**, reste facturé pour un dépôt public et n'est disponible que dans les offres d'organisation éligibles. Il ne doit pas devenir la valeur par défaut sans mesure montrant que le runner standard est insuffisant.
 
 Les artefacts et caches peuvent également être facturés au-delà des quotas. Au tarif publié, le stockage partagé des artefacts vaut 0,25 USD/Go/mois et le cache Actions 0,07 USD/Go/mois. Fixer une rétention courte, ne publier les journaux lourds qu'en cas d'échec et ne jamais mettre les modèles MLX/ONNX en cache Actions.
 
 Commencer sans cache de compilation. Mesurer trois exécutions à froid. Si le téléchargement SwiftPM domine, introduire un cache limité aux téléchargements, avec une clé incluant macOS, arm64, version Xcode et hachage des deux `Package.resolved`. Ne pas partager un cache d'artefacts compilés entre branches non fiables.
+
+## Fonctionnement à coût nul
+
+Objectif fixé par NOxygen59 : **aucune dépense réelle**. Les règles ci-dessous ont été relevées dans la documentation officielle de GitHub le **25 octobre 2026**. Elles sont à revérifier à chaque lot CI, car les pages évoluent.
+
+### Ce que disent les sources officielles
+
+- [Facturation Actions](https://docs.github.com/en/billing/concepts/product-billing/github-actions) :
+  - l'usage est gratuit pour les dépôts publics sur les runners standards hébergés par GitHub, et pour les runners auto-hébergés ;
+  - les runners plus grands (*larger runners*) sont **toujours facturés**, même pour un dépôt public ;
+  - pour un dépôt privé, le quota gratuit de minutes, d'artefacts et de cache dépend du plan (artefacts : 500 Mo sur le plan Free ; cache : 10 Go par dépôt) ;
+  - sans moyen de paiement enregistré, l'usage est **bloqué** une fois le quota épuisé.
+- [Runners hébergés](https://docs.github.com/en/actions/reference/runners/github-hosted-runners), pour un dépôt public :
+  - `macos-15` : arm64 M1, 3 cœurs, 7 Go de RAM, 14 Go de disque ;
+  - Ubuntu standard : 4 cœurs, 16 Go de RAM, 14 Go de disque ;
+  - `macos-latest` pointe désormais vers macOS 26 : ne pas l'utiliser.
+- [Image `macos-15` arm64](https://github.com/actions/runner-images/blob/main/images/macos/macos-15-arm64-Readme.md), version `20260907.0337.1` : Xcode 16.4 par défaut, avec 16.0 à 16.3 et 26.x installés. XcodeGen n'est pas préinstallé.
+- [Rétention](https://docs.github.com/en/organizations/managing-organization-settings/configuring-the-retention-period-for-github-actions-artifacts-and-logs-in-your-organization) : 90 jours par défaut ; de 1 à 90 jours pour un dépôt public.
+- [Sécurité](https://docs.github.com/en/actions/reference/security/secure-use) :
+  - un runner auto-hébergé « ne devrait presque jamais » servir un dépôt public, car n'importe qui peut y proposer une PR ;
+  - éviter `pull_request_target` ;
+  - épingler les actions par SHA ;
+  - jeton `GITHUB_TOKEN` en lecture seule par défaut.
+
+**Non vérifié** : la page de facturation ne précise pas de quota de stockage d'artefacts ou de cache propre aux dépôts **publics**. Il faut donc rester prudent : pas d'artefacts volumineux, et des caches mesurés.
+
+### Réglages actuels du dépôt (relevés via l'API GitHub le 25/10)
+
+- Dépôt public, propriété d'un compte personnel.
+- Actions activées, toutes les actions autorisées.
+- `sha_pinning_required: false`.
+- Jeton par défaut en lecture (`default_workflow_permissions: read`), sans droit d'approuver des PR.
+- Approbation des workflows de PR externes : `first_time_contributors`.
+- Rétention : 90 jours (maximum 90).
+- Aucun runner auto-hébergé.
+- Aucun cache, aucun artefact.
+
+### Règles de coût pour tous les futurs workflows
+
+1. Runners autorisés : `ubuntu-24.04` (ou `ubuntu-latest` pour les contrôles sans compilation) et `macos-15`, épinglé. **Jamais** de label `-large`, `-xlarge` ni de runner plus grand, même « pour essayer ».
+2. Ne rien ajouter qui soit facturé automatiquement : pas d'API d'IA, pas de service tiers payant, pas d'action qui appelle un service externe avec une clé.
+3. Artefacts : uniquement en cas d'échec, avec des journaux bornés et compressés, `retention-days: 3` à `7`. Jamais de `.tipa`, d'archive, de DerivedData, de modèle ou de PDF.
+4. Caches : aucun au début. Ensuite, seulement le téléchargement SwiftPM, avec une clé liée aux deux `Package.resolved`, et après mesure. Jamais de modèle en cache.
+5. Durée maîtrisée : `timeout-minutes` sur chaque job, `concurrency` avec annulation des runs de PR devenus obsolètes, et des filtres `paths` pour ne lancer les jobs macOS que lorsque le code concerné change.
+6. Si le dépôt redevient **privé**, les minutes macOS sont décomptées du quota. Il faut alors réévaluer cette section **avant** de fusionner tout nouveau job macOS. Sans moyen de paiement, l'usage est bloqué au lieu d'être facturé.
+7. Aucune activation de facturation, aucun moyen de paiement, aucun budget et aucun achat sans le consentement explicite de NOxygen59.
+
+## Tests lourds sur le Mac de NOxygen59, hors runner
+
+Le MacBook Pro M2 Pro de NOxygen59 sert aux preuves que les runners gratuits ne peuvent pas apporter : MLX/Metal, modèles ONNX et UniDic réels, benchmarks, ASan sur une grosse suite. Il **n'est pas** connecté comme runner GitHub, ni permanent ni éphémère. Le dépôt est public, et GitHub déconseille ce montage.
+
+### Protocole
+
+1. **Déclenchement humain uniquement.** NOxygen59, ou un agent avec son accord donné dans le chat, lance la commande. Aucun workflow GitHub ne déclenche quoi que ce soit sur le Mac.
+2. **Code de confiance seulement** : un SHA précis d'une branche du dépôt `NOxygen59/kyokasho`, déjà lu (PR d'un agent du projet). Jamais une PR externe ou un fork sans relecture préalable.
+3. **Environnement séparé** :
+   - un clone dédié au chemin fixe `~/Projets-iPad/kyokasho-preuves`, distinct du clone de travail et de la bibliothèque de l'app ;
+   - checkout en *detached HEAD* sur le SHA testé ;
+   - aucun secret dans l'environnement ;
+   - modèles et dictionnaires dans un dossier hors dépôt, passé par les variables `KYOKASHO_*` ;
+   - corpus synthétique ou documents autorisés uniquement.
+4. **Résultats gardés localement** : les journaux complets restent sur le Mac.
+5. **Publication sous forme de fiche de preuve** : un commentaire sur la PR concernée. Elle ne contient ni PDF, ni extrait de page, ni prompt privé, ni chemin révélant les données personnelles, ni poids de modèle.
+
+### Fiche de preuve locale (à coller dans la PR)
+
+```text
+Fiche de preuve locale — Kyōkasho
+SHA testé        : <40 caractères>
+Date             : AAAA-MM-JJ
+Machine          : MacBook Pro M2 Pro, macOS <version>, arm64
+Outils           : Xcode <version>, Swift <version>
+Commande         : <commande exacte, chemins personnels remplacés par $MODELS, $CORPUS>
+Assets           : <nom du modèle + SHA-256 du fichier, jamais le fichier>
+Corpus           : synthétique / autorisé (<description courte>)
+Résultat         : <n> réussis, <n> échoués, <n> ignorés ; code de sortie <n>
+Mesures          : <durées, pic mémoire ; froid / chaud>
+Journal          : conservé localement (<n> lignes), extrait borné ci-dessous si utile
+Non couvert      : iPad iOS 16.6.1, Metal 3.0 de l'iPad, TrollStore
+```
+
+La fiche prouve un résultat sur Mac à un SHA donné. Elle **ne remplace pas** la recette iPad.
+
+## Répartition des contrôles
+
+| Niveau | Où | Déclenchement | Contenu |
+|---|---|---|---|
+| 1 — léger | GitHub, Ubuntu standard (gratuit, dépôt public) | Automatique : PR et push sur `main` | Liens et documents obligatoires, diff complet, 16 tests Python de sauvegarde, validité des `Package.resolved`, recherche de fichiers interdits (PDF, poids, secrets) |
+| 2 — Mac standard | GitHub, `macos-15` (gratuit, dépôt public) | Automatique sur les PR de code (`paths`) et push sur `main` ; ASan manuel puis hebdomadaire | Suite `KyokashoKit` (dont `PageShiftTests`, `BackupRoundTripTests`), compilation iOS générique sans signature, ASan CPU, compilation de `GLMOCRKit` sans poids |
+| 3 — lourd | Mac de NOxygen59, clone séparé | Manuel, sur SHA approuvé | Inférence MLX/Metal, ONNX/UniDic réels, benchmarks mémoire et durée, ASan élargi si `macos-15` ne suffit pas ; fiche de preuve dans la PR |
+| 4 — réel | iPad de NOxygen59 | Manuel, build de test demandée par NOxygen59 | Recette selon [TESTS.md](TESTS.md) |
+
+## Découpage des prochaines PR CI
+
+Chaque PR est petite, n'utilise que des runners gratuits, et ne devient obligatoire qu'après plusieurs runs stables. Ordre proposé :
+
+| PR | Contenu | Phase | Dépense |
+|---|---|---|---|
+| CI-A | Photographie de l'état (phase 0) : versions réelles du runner, durées des jobs, liste des ignorés. Documentation seulement | 0 | Aucune |
+| CI-B | Fiabiliser l'existant : diff complet dans `documentation.yml`, `concurrency`, `DEVELOPER_DIR` Xcode 16.4 et `uname -m` dans les jobs Mac, déclenchement de `storage.yml`/`backup.yml` sur push `main` | 1 | Minutes gratuites |
+| CI-C | `quality.yml` sur Ubuntu : tests Python, contrôle des `Package.resolved`, recherche de fichiers interdits ; suppression du doublon Mac démontré | 1 | Minutes gratuites |
+| CI-D | Compilation iOS générique sur `macos-15`, XcodeGen à version figée et provenance vérifiée, aucun artefact | 2 | Minutes gratuites |
+| CI-E | ASan en `workflow_dispatch` avec un test témoin, sans planification au début | 3 | Minutes gratuites |
+| CI-F | Compilation de `GLMOCRKit` sans poids et contrôle des révisions des forks | 4 | Minutes gratuites |
+| CI-G | Outil local qui produit la fiche de preuve (lecture seule, sans réseau, sans données personnelles), plus sa documentation | 3–4 | Aucune |
+| CI-H | Contrôles obligatoires et protection de `main` | 5 | Aucune ; **décision de NOxygen59** |
 
 ## Risques de sécurité
 
@@ -170,7 +276,7 @@ Les vérifications suivantes restent à faire sur l'iPad par NOxygen59, avec une
 - sauvegarde/restauration du conteneur réel, application arrêtée, sans toucher à l'unique bibliothèque ;
 - installation TrollStore, entitlements, signature et `.tipa`, qui restent hors de la CI proposée.
 
-## Plan d'implémentation pour un futur agent Codex
+## Plan d'implémentation pour le futur agent (Claude ou Codex)
 
 ### Phase 0 — photographier l'état
 
