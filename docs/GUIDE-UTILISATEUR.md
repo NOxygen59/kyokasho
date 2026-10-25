@@ -24,9 +24,9 @@ Le bandeau « Continuer » reste une idée de la feuille de route : ce guide ne 
 
 ## 3. Lire et annoter
 
-Choisir Auto, Simple ou Double dans les options d'affichage. Le mode Auto adapte la présentation à la place et à l'orientation ; les réglages du document peuvent remplacer les réglages généraux. Utiliser les boutons de page et la pellicule pour naviguer. Le sens de lecture et les zones de toucher influencent le changement de page.
+Dans le lecteur, « … » → « Pagination et réglages de ce document » → « Pages », choisir « Automatique selon l'orientation », « Page simple » ou « Double page ». Le mode Auto adapte la présentation à la place et à l'orientation ; les réglages du document peuvent remplacer les réglages généraux. Utiliser les boutons de page et la pellicule pour naviguer. Le sens de lecture et les zones de toucher influencent le changement de page.
 
-Le lecteur propose zoom, thèmes, fonds de page et égalisation de la taille des pages. Si un rendu gêne la lecture, revenir à un affichage simple et comparer. Les gestes ont déjà subi un retour arrière après un essai jugé mauvais sur iPad ; signaler précisément doigt/Pencil/trackpad, orientation et niveau de zoom lors d'un problème.
+Le lecteur propose zoom, thèmes et fonds de page. Les hauteurs des pages sont égalisées automatiquement lorsqu’elles diffèrent ; aucun interrupteur ne désactive cette égalisation. Si un rendu gêne la lecture, comparer « Page simple » et « Double page » ; ce changement ne supprime pas l’égalisation. Les gestes ont déjà subi un retour arrière après un essai jugé mauvais sur iPad ; signaler précisément doigt/Pencil/trackpad, orientation et niveau de zoom lors d'un problème.
 
 Les annotations comprennent surlignages, dessins Pencil et notes flottantes ancrées. Faire une note d'essai, fermer puis rouvrir le livre pour vérifier sa conservation. Sur un ancien document aux pages de tailles différentes, contrôler l'alignement avant d'utiliser un export annoté : un risque est consigné dans la feuille de route.
 
@@ -49,7 +49,7 @@ En mode OCR Auto, le service préfère la couche texte PDF disponible, puis NDLO
 
 Installer MeCab/UniDic pour l'analyse japonaise et importer ses dictionnaires Yomitan dans l'espace Dictionnaire. Activer les furigana sur la page via le bouton dédié ou les options d'affichage ; le panneau texte propose aussi ses lectures. Les deux affichages ne prouvent pas que chaque lecture est juste. Un mauvais mot peut venir du scan, de l'alignement ou de l'analyse japonaise.
 
-La lecture automatique OvisOCR2 est réglable dans « Texte des pages ». Elle réutilise les pages déjà lues. Changer la langue du livre ne relit pas les anciennes pages automatiquement ; utiliser « Rescanner »/la relecture de la page pour obtenir une nouvelle sortie avec la consigne courante. La normalisation japonaise v1.3 corrige notamment `图` en `図`, sans convertir arbitrairement tous les caractères ni effacer les chiffres et formules.
+La lecture automatique OvisOCR2 se règle dans Réglages → Japonais et traduction → Reconnaître le texte des pages → section « Lecture IA du document » → « Lire les nouvelles pages avec OvisOCR2 ». Le titre de cet écran est « Texte des pages ». Elle réutilise les pages déjà lues. Changer la langue du livre ne relit pas les anciennes pages automatiquement ; utiliser « Rescanner »/la relecture de la page pour obtenir une nouvelle sortie avec la consigne courante. La normalisation japonaise v1.3 corrige notamment `图` en `図`, sans convertir arbitrairement tous les caractères ni effacer les chiffres et formules.
 
 ## 6. Corriger et analyser
 
@@ -85,9 +85,9 @@ Les modèles se déchargent selon l'activité, mais une mémoire élevée ne pro
 
 ## 10. Exporter et demander de l'aide
 
-« Exporter… » propose PDF original, PDF annoté, Markdown, PNG et cartes selon le parcours. Choisir quelques pages, exporter dans Fichiers, puis ouvrir le résultat dans une autre app. Vérifier texte japonais, ordre, annotations et notes. Les exports ne sont pas interchangeables avec une sauvegarde intégrale.
+Bibliothèque → appui long sur le livre → « Exporter… » propose « PDF d'origine », « PDF annoté », « Texte (Markdown) », « Images PNG (zip) » et « Cartes Anki (.apkg) ». Pour un PDF annoté : choisir « PDF annoté », régler les pages ou toucher « Tout le document », puis « Exporter ». Après préparation, toucher « Partager <nom du fichier> », enregistrer dans Fichiers via la feuille de partage iOS et ouvrir le résultat dans une autre app. Vérifier texte japonais, ordre, annotations et notes. Les exports ne sont pas interchangeables avec une sauvegarde intégrale.
 
-Pour signaler un problème : version/build, étapes, résultat attendu, résultat observé, page, modèle, orientation et périphérique utilisé. Activer le mode diagnostic, reproduire une fois, partager le journal après avoir vérifié son contenu personnel. Un rapport iOS `.ips` est utile pour un plantage. Ne jamais fournir mot de passe ou jeton ; un petit PDF synthétique reproduisant le problème est préférable à un manuel personnel complet.
+Pour signaler un problème : version/build, étapes, résultat attendu, résultat observé, page, modèle, orientation et périphérique utilisé. Le chemin est Réglages → Aide et informations → Aide au diagnostic → Mode diagnostic. L’activation enrichit le journal sans ajouter d’indicateur dans le lecteur : aucun changement visuel n’est nécessairement perceptible. Les erreurs restent notées même désactivé. Reproduire une fois, consulter « Voir le journal », puis ne partager qu’un extrait relu et expurgé des données personnelles. Un rapport iOS `.ips` est utile pour un plantage. Ne jamais fournir mot de passe ou jeton ; un petit PDF synthétique reproduisant le problème est préférable à un manuel personnel complet.
 
 ## Glossaire
 

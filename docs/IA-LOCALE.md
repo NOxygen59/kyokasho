@@ -79,7 +79,9 @@ contrôle (mémoire `ios16-backport-rules`). Chaque correctif est listé dans `I
   (`grep -rhoE '#pragma …'`, `grep -ohE 'metal::[a-zA-Z_]+'`, comparer à ce que Metal 3.0 connaît) → test Mac
   `MLX_METAL_LANGUAGE_VERSION=30` → épingle → `.tipa`.
 - Le Mac ne reproduit pas tout (son compilateur Metal est plus récent) : le **journal de diagnostic de l'iPad** fait
-  foi (Réglages → Outils → Diagnostic → Partager le journal ; les erreurs MLX y sont notées même en cas d'arrêt).
+  foi (Réglages → Aide et informations → Aide au diagnostic → Mode diagnostic ; l’activation n’ajoute pas d’indicateur au lecteur).
+  « Voir le journal » et « Partager le journal » sont sur le même écran ; le partage transmet le fichier entier, sans filtrage.
+  Ne publier qu’un extrait relu et expurgé. Les erreurs MLX sont notées même sans mode diagnostic et en cas d’arrêt.
 - Erreurs MLX dans l'app : jamais d'arrêt. `Diagnostics.start()` pose un gestionnaire global qui **note puis**
   `fatalError` (dernier recours) ; les lectures sont dans `withError { }` (`PageVLMReader.read`, `GLMModel.read`,
   `Qwen3VLReader.translate`) → erreur de page affichée.

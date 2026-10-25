@@ -101,12 +101,12 @@ Pour l'OCR réel, garder hors dépôt un corpus daté avec vérité terrain relu
 
 ## Recette iPad à remplir par NOxygen59
 
-Pour PageShift et la sauvegarde (I03/I08/I09/I11/I12), suivre d’abord [QA-02](RECETTE-IPAD-QA-02.md), qui impose un conteneur jetable réellement isolé et distingue les opérations de restauration. La grille suivante reste le catalogue général, pas une autorisation de tout essayer. Préparer uniquement des données synthétiques et noter version/build et SHA, iOS, modèle installé, mode diagnostic et espace libre. Pour chaque ligne : réussi/échoué/non essayé, date, observation, journal ou capture. « Non essayé » reste visible dans les notes de release.
+Pour PageShift et la sauvegarde (I03/I08/I09/I11/I12), suivre d’abord [QA-02](RECETTE-IPAD-QA-02.md), qui permet le niveau A sur l’installation existante avec les précautions A0 et le risque de perte accepté par NOxygen59 le 25/10/2026 ; le niveau B reste bloqué jusqu’à qualification et accords distincts. La grille suivante reste le catalogue général, pas une autorisation de tout essayer. Préparer uniquement des données synthétiques et noter version/build affichés, SHA source externe et SHA-256 du `.tipa`, iOS, modèle installé, mode diagnostic et espace libre. Pour chaque ligne : réussi/échoué/non essayé, date, observation, journal ou capture. « Non essayé » reste visible dans les notes de release.
 
 | ID | Scénario | Résultat attendu |
 |---|---|---|
 | I01 | Import Fichiers puis Drive, Japonais et Auto | Livre ouvrable, langue conservée et traitement de fond cohérent |
-| I02 | Simple/Double/Auto, rotation, zoom, doigt/Pencil/trackpad | Page/position cohérentes ; pas de panneau recouvrant le PDF |
+| I02 | « Page simple » / « Double page » / « Automatique selon l'orientation », rotation, zoom, doigt/Pencil/trackpad | Page/position cohérentes ; pas de panneau recouvrant le PDF |
 | I03 | Dessin, surlignage, note, repère ; fermeture/réouverture | Données conservées sur la bonne page |
 | I04 | PDF texte et scan image ; furigana page/panneau | Texte exploitable, lectures et emplacements vérifiés visuellement |
 | I05 | Relecture Ovis, correction manuelle, acceptation globale | Retouche protégée, vote actualisable, traduction périmée retirée |
@@ -159,3 +159,14 @@ Base de travail : `f83aec8c61d88f1e6c119376590899c9c1ce2876`, worktree dédié `
 Les 20 tests PageShift (également sous ASan) et le test de restauration Swift ont des preuves historiques dans les PR [#2](https://github.com/NOxygen59/kyokasho/pull/2) et [#3](https://github.com/NOxygen59/kyokasho/pull/3). **Swift/ASan ne sont pas relancés pour ce lot documentaire** ; leurs résultats antérieurs ne sont pas des résultats du présent checkout. Les 7 tests sans modèles ONNX/UniDic restaient ignorés dans la suite historique. Aucun téléchargement d'asset ni lecture de bibliothèque personnelle.
 
 Non exécutés : build iOS, simulateur, appareil, MLX/Metal, LSan, extraction/restauration TrollStore, scénario manuel QA-02. GitHub Actions désactivé : réglage `enabled: false` relu le 25/10 avant publication ; aucun workflow utilisé ou lancé. Les risques et le tableau de résultats vierge sont dans la [recette QA-02](RECETTE-IPAD-QA-02.md).
+
+
+### Correction documentaire après revue indépendante
+
+La [revue de Claude](https://github.com/NOxygen59/kyokasho/pull/7#issuecomment-6397411518) a été validée par NOxygen59 le 25/10/2026. Le niveau A admet désormais l'installation existante avec risque de perte accepté et PDF synthétiques `QA02-…`, sans exiger une seconde app. L'accord ne couvre pas B : extraction/restauration TrollStore restent bloquées jusqu'à qualification et autorisations distinctes.
+
+La recette compare « Page simple » et « Double page » ; l'égalisation des hauteurs est automatique, sans interrupteur. Elle donne le chemin exact de « Lire les nouvelles pages avec OvisOCR2 » et explique son arrêt temporaire pour éviter les lectures déclenchées après import/ouverture/ajout. Le parcours d'export comprend « Tout le document », « Exporter » puis « Partager <nom du fichier> ».
+
+Diagnostic facultatif : **Réglages → Aide et informations → Aide au diagnostic → Mode diagnostic**. Son activation enrichit le journal sans nouvel indicateur dans le lecteur ; les erreurs sont toujours notées. Sur l'installation existante, le journal peut inclure des données personnelles antérieures : aucun partage brut.
+
+La future build sera identifiée extérieurement par le SHA source et le SHA-256 du `.tipa`, associés au fichier effectivement sélectionné lors de l'installation. L'écran affiche seulement version/build ; `1.3 (40)` ne distingue pas la release historique d'une nouvelle compilation. Aucun changement de numéros sans autorisation. Contrôles de cette révision : liens documentaires et diff local, résultats exacts dans la réponse de Codex sur la PR #7. Les résultats Python du premier lot restent historiques et ne sont pas présentés comme relancés.
