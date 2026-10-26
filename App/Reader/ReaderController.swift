@@ -186,6 +186,8 @@ final class ReaderController: NSObject, ObservableObject {
     var observers: [NSObjectProtocol] = []
     /// Fin d'une tâche IA (peut-être lancée par un lecteur précédent) : la page affichée est relue du cache.
     var aiFinished: AnyCancellable?
+    /// Seul le dernier rechargement demandé peut publier après une attente du cache.
+    var ocrReloadRevision: UInt64 = 0
     var savePositionWork: DispatchWorkItem?
     var cropTask: Task<Void, Never>?
     var ocrTask: Task<Void, Never>?

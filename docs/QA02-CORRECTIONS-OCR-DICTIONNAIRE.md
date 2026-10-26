@@ -18,7 +18,8 @@ Invariants : corrections manuelles conservées, pas de migration ni changement d
 Son `ocrPage` reste donc périmé après cette voie de correction. Le test de notification échoue sur la
 base (expiration de l'attente) puis passe après ajout d'un événement post-enregistrement.
 Le lecteur filtre document/page/moteur et réutilise sa relecture existante, qui vérifie encore l'état
-au retour de l'attente. Aucun texte OCR n'est transporté par l'événement. Pas d'événement sur échec SQL.
+au retour de l'attente. Un compteur de requêtes empêche un ancien rechargement de publier
+après une notification plus récente (deux corrections rapides). Aucun texte OCR n'est transporté par l'événement. Pas d'événement sur échec SQL.
 
 Le chemin « Vérifier » appelait déjà `showOCR` après enregistrement et `corrected` pose `edited=true`,
 `doubt=[]`. Nous ne changeons pas cette règle et ne masquons pas les autres lignes peu sûres.
