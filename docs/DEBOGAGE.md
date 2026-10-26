@@ -59,3 +59,12 @@ Pour un incident de données, arrêter les opérations qui modifient la ressourc
 ## Clôturer
 
 Une correction est terminée lorsque le cas réduit échoue avant, réussit après, que les comportements proches sont préservés et que le statut iPad est explicitement renseigné. Conserver dans la PR le symptôme, la cause prouvée, la correction, les tests et les limites ; l'historique de chat seul ne suffit pas à la prochaine reprise.
+
+## Mesurer le retard de défilement OCR (QA02)
+
+Mode diagnostic : `ocr-scroll` distingue événements HTML passifs (wheel/touch/scroll), délai du
+pont JavaScript→Swift, offset natif WebKit et position du conteneur web dans la fenêtre SwiftUI.
+Traces limitées à deux événements par seconde et par catégorie. Le délai du pont n'est pas la
+latence visuelle ; la vidéo/observation iPad reste nécessaire. Aucun geste n'est intercepté ou
+réacheminé par cette instrumentation. `ocr-panel` décrit le rectangle au relâchement du panneau.
+Voir les [preuves et limites du panneau](QA02-CORRECTIONS-PANNEAU.md).

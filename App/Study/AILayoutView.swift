@@ -57,6 +57,7 @@ struct AILayoutView: View {
             if markdown != nil, !html.isEmpty {
                 RubyWebView(html: html, height: $height, onLookup: onLookup)
                     .frame(height: height)
+                    .modifier(OCRScrollDiagnostics())
                 Button { read() } label: {
                     Label("Refaire la mise en page", systemImage: "arrow.clockwise").font(.caption)
                 }
