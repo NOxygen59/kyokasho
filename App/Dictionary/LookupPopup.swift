@@ -57,6 +57,7 @@ final class LookupSession: ObservableObject {
         guard !query.isEmpty else { return }
         requestID = UUID()
         let request = requestID
+        Diagnostics.log("Recherche dictionnaire démarrée", "lookup")
         stack.append(.loading(query))
         let depth = stack.count
         Task {
@@ -67,6 +68,7 @@ final class LookupSession: ObservableObject {
             }), index != 0 {
                 results.insert(results.remove(at: index), at: 0)
             }
+            Diagnostics.log("Recherche dictionnaire terminée : \(results.count) résultats", "lookup")
             stack[depth - 1] = .terms(query: query, results: results)
             if depth == 1 { matchedLength = results.first?.matchLength ?? 0 }
             if let first = results.first {

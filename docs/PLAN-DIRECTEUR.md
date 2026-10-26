@@ -111,6 +111,24 @@ Les décisions SEC-01 (visibilité, protection de `main`) peuvent être prises �
 
 ## 8. Point de reprise pour le prochain chat
 
+### Reprise QA02 du 26 octobre — lot OCR/dictionnaire
+
+État GitHub relu avant le travail : `main` `431f1c6`, #1–#7 fusionnées, aucune Issue,
+Actions désactivé. La PR #7 n'est plus à fusionner. Les observations de NOxygen59 concernent l'iPad,
+QA02 1.3 build 40 ; elles ne closent pas les recettes de données ou de mémoire.
+Autorisation du chat du 26/10 : trois lots dans l'ordre, corrections et PR distinctes,
+sans fusion, candidate, versions, dépendances/forks, données personnelles ou workflows.
+
+- Lot diagnostics : [PR #8](https://github.com/NOxygen59/kyokasho/pull/8), non fusionnée ; iPad non essayé.
+- **QA02-OCR, O03/O07** : `codex/qa02-ocr-dictionnaire`, base indépendante `431f1c6`.
+  O03 : notification après enregistrement et rafraîchissement ciblé du lecteur. O07 : instrumentation
+  uniquement, cause non établie. O02 : indice sans lien causal démontré.
+  [Preuves et fiche iPad](QA02-CORRECTIONS-OCR-DICTIONNAIRE.md). Revue croisée et validation iPad à faire.
+- Prochain lot autorisé : panneau O01/O05 ; les confirmations iPad manquantes ne bloquent pas ce travail.
+
+L'instantané du 25 octobre ci-dessous est conservé comme historique.
+
+
 **Dernier fait vérifié ici (25/10) :** PR #1 à #5 fusionnées (`92a0315`, `a016091`, `c2b1b29`, `ee07c55`, `f76d9f6`), PR #6 (GOV-04) fusionnée sur autorisation de NOxygen59, commit `f83aec8c61d88f1e6c119376590899c9c1ce2876` vérifié lors de QA-02. Les derniers contrôles GitHub réussis datent d'avant la désactivation. **GitHub Actions est désactivé** (CI-0) : les preuves se font désormais en local et se documentent dans les PR. Aucune Issue. Dépôt public, `main` non protégée. Aucune build, aucun essai iPad, aucune release depuis v1.3.
 
 **Validations encore ouvertes (aucune effectuée) :** recette iPad de DATA-01 (ajout de pages, OCR concurrent, annotations, gros PDF) et de DATA-02 (extraction/restauration TrollStore) ; MLX/Metal sur iPad pour ce lot ; DATA-03 (géométrie des annotations) ; LSan et campagne mémoire (PERF-01).
