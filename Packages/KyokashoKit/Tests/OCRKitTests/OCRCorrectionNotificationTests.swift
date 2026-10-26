@@ -33,9 +33,11 @@ final class OCRCorrectionNotificationTests: XCTestCase {
         let id = UUID().uuidString
         var accepted = OCRLine(text: "末来", box: NormBox(x: 0, y: 0, w: 1, h: 0.1), charBoxes: [],
                                measuredCharBoxes: false, vertical: false, confidence: 0.2)
-        // Format réellement écrit par ReaderController.corrected ; aucune migration.
-        accepted.edited = true
-        accepted.doubt = []
+        accepted.doubt = [0, 1]
+        // Même opération que les choix de l'analyse, y compris conserver le texte sans le modifier.
+        accepted = accepted.acceptingCorrection(accepted.text)
+        XCTAssertEqual(accepted.edited, true)
+        XCTAssertEqual(accepted.doubt, [])
         var residual = accepted
         residual.edited = nil
         residual.doubt = [0]
@@ -56,6 +58,21 @@ final class OCRCorrectionNotificationTests: XCTestCase {
         XCTAssertFalse(OCRReferenceDiff.suggestions(compared, reference: "未来未来").contains { $0.line == 0 })
         let other = await reopened.cached(documentId: UUID().uuidString, pageIndex: 0, engine: page.engine)
         XCTAssertNil(other, "aucune correction propagée à un autre document")
+    }
+
+    func testChangedCorrectionUpdatesGeometryAndProtectsChosenText() {
+        let box = NormBox(x: 0, y: 0, w: 1, h: 0.1)
+        var original = OCRLine(text: "未来", box: box, charBoxes: CharacterLayout.proportional("未来", in: box, vertical: false),
+                               measuredCharBoxes: true, vertical: false, confidence: 0.3)
+        original.doubt = [0]
+        let sameLength = original.acceptingCorrection("末来")
+        XCTAssertEqual(sameLength.charBoxes, original.charBoxes)
+        XCTAssertTrue(sameLength.measuredCharBoxes)
+        let longer = original.acceptingCorrection("未来の土地")
+        XCTAssertEqual(longer.charBoxes.count, longer.text.count)
+        XCTAssertFalse(longer.measuredCharBoxes)
+        XCTAssertEqual(longer.edited, true)
+        XCTAssertEqual(longer.doubt, [])
     }
 
     func testFailedStoreDoesNotNotify() async throws {

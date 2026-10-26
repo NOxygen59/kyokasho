@@ -37,3 +37,6 @@ sans texte. Le lecteur ne recharge que son document, sa page de travail et son m
 Cela inclut les corrections depuis l'analyse, qui ne passent pas par `AITaskCenter.finished`.
 Le cache des débuts de mots est invalidé quand le résultat affiché change. Le stockage et le
 marquage `edited` restent inchangés. [Preuves et limites](QA02-CORRECTIONS-OCR-DICTIONNAIRE.md).
+
+« Garder tel quel » dans l'analyse accepte désormais explicitement le texte de base dans le cache OCR
+avant de clôturer le désaccord, selon les mêmes contrôles que choisir une autre variante.

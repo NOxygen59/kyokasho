@@ -134,15 +134,7 @@ extension ReaderController {
     }
 
     static func corrected(_ line: OCRLine, text: String) -> OCRLine {
-        var line = line
-        if text.count != line.charBoxes.count {
-            line.charBoxes = CharacterLayout.proportional(text, in: line.box, vertical: line.vertical)
-            line.measuredCharBoxes = false
-        }
-        line.text = text
-        line.edited = true
-        line.doubt = []
-        return line
+        line.acceptingCorrection(text)
     }
 
     /// Correction à la main d'une ligne (gardée : la relecture automatique n'y touche plus).

@@ -412,12 +412,10 @@ final class DocumentAnalysisService: ObservableObject {
             || text.contains("\\frac") || text.contains("\\sqrt")
     }
 
-    func dismiss(source: Int, line: Int, documentId: String) {
-        update(documentId) { r in
-            guard let i = r.pages[source]?.disagreements.firstIndex(where: { $0.line == line && !$0.settled }) else { return }
-            r.pages[source]?.disagreements[i].settled = true
-            // Tu as tranché : la ligne compte comme sûre.
-            r.pages[source]?.confirmed += 1
-        }
+    /// « Garder tel quel » est une acceptation explicite du texte de base, pas seulement du rapport.
+    /// La clôture reste conditionnée à l'enregistrement réussi et au texte inchangé depuis l'analyse.
+    func dismiss(source: Int, line: Int, documentId: String, service: OCRService) async {
+        guard let vote = report(for: documentId)?.pages[source]?.disagreements.first(where: { $0.line == line && !$0.settled }) else { return }
+        await apply([(source: source, line: line, text: vote.base)], documentId: documentId, service: service)
     }
 }

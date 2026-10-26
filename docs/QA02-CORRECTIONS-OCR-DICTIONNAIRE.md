@@ -25,8 +25,13 @@ Le chemin « Vérifier » appelait déjà `showOCR` après enregistrement et `co
 `doubt=[]`. Nous ne changeons pas cette règle et ne masquons pas les autres lignes peu sûres.
 Le test de réouverture SQLite conserve une ligne acceptée de faible confiance, la soumet au dictionnaire
 et à une référence différente : elle reste intacte ; la ligne non acceptée reste signalée.
-Cela n'établit pas quel chemin exact NOxygen59 avait utilisé : une alerte persistante après réouverture
-réelle ou uniquement dans « Vérifier » demande encore un exemple synthétique précis.
+Le retour original précise l'analyse depuis l'accueil. Un second défaut est établi : « Garder tel quel »
+clôturait seulement le rapport, sans poser `edited` ni vider les doutes dans le cache OCR. Ce bouton passe
+maintenant par `apply` avec le texte de base : même vérification anti-écrasement et même condition de succès
+SQL que les autres choix. L'opération d'acceptation existante est extraite dans `OCRLine.acceptingCorrection`
+pour tester réellement le code partagé (texte identique, modifié, géométrie et réouverture).
+Il reste à relever le choix exact effectué sur iPad et le moteur affiché si l'alerte persiste ; le changement
+de moteur peut afficher un autre cache. Aucun désaccord résiduel n'est effacé globalement.
 
 ## O07 et O02 — limites et instrumentation
 
@@ -45,9 +50,9 @@ O02 (miniatures) reste un indice ; aucun changement du sélecteur de pages.
 Mac arm64, macOS 27.0.1 / Xcode 27.1 / Swift 6.4 :
 
 - Suite KyokashoKit complète après notification : réussie, 7 ignorés faute d'assets externes.
-- Trois tests `OCRCorrectionNotificationTests` : réussis (notification après persistance et portée,
+- Quatre tests `OCRCorrectionNotificationTests` : réussis (notification après persistance et portée,
   absence sur échec, réouverture SQLite / ligne acceptée / doute résiduel / autre document).
-- AddressSanitizer ciblé : les trois tests réussis, sans erreur détectée.
+- AddressSanitizer ciblé : les quatre tests réussis, sans erreur détectée.
 - Compilation Debug générique iOS sans signature : réussie.
 - Tests Python : 16 réussis ; documentation : 141 liens, zéro erreur ; diff propre et résolutions inchangées.
 

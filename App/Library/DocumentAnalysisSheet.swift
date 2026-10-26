@@ -216,7 +216,9 @@ struct DocumentAnalysisSheet: View {
             ForEach(vote.readings.sorted(by: { $0.key < $1.key }), id: \.key) { engine, text in
                 choice(Self.name(engine), text, source: source, line: vote.line, advised: vote.advised == text)
             }
-            Button("Garder tel quel") { service.dismiss(source: source, line: vote.line, documentId: document.id) }
+            Button("Garder tel quel") {
+                Task { await service.dismiss(source: source, line: vote.line, documentId: document.id, service: model.ocr) }
+            }
                 .font(.caption)
         }
         .padding(.vertical, 4)
