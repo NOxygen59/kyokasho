@@ -145,6 +145,7 @@ struct AITaskPill: View {
     @ObservedObject private var monitor = AIModelBadgeMonitor.shared
     @AppStorage(AITaskPill.visibleKey) private var visible = true
     @State private var showList = false
+    @State private var showJournal = false
     /// Tâches dont le journal est déplié (« Voir le détail »).
     @State private var expanded: Set<UUID> = []
     /// Tâche à arrêter (`nil` + `stopAll` = toutes) : 1re puis 2e confirmation.
@@ -247,6 +248,10 @@ struct AITaskPill: View {
     private var list: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Activité des IA").font(.headline)
+            Button("Voir le journal de diagnostic") { showJournal = true }
+                .font(.subheadline)
+            Text("Le détail ci-dessous concerne les tâches en cours. Le journal conserve les événements enregistrés.")
+                .font(.caption).foregroundStyle(.secondary)
             if center.jobs.isEmpty {
                 Text("Aucune tâche IA en cours.")
                     .font(.subheadline).foregroundStyle(.secondary)
@@ -296,6 +301,8 @@ struct AITaskPill: View {
         }
         .padding(16)
         .frame(minWidth: 360)
+        .sheet(isPresented: $showJournal) { DiagnosticLogView() }
+        .onAppear { Diagnostics.log("Ouverture des tâches : \(center.jobs.count) en cours", "ui") }
     }
 
     private func detail(_ job: AITaskCenter.Job) -> String {
