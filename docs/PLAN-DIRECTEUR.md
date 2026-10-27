@@ -132,7 +132,28 @@ sans fusion, candidate, versions, dépendances/forks, données personnelles ou w
   [Preuves et fiche iPad](QA02-CORRECTIONS-OCR-DICTIONNAIRE.md). Revue croisée et validation iPad à faire.
 - Prochain lot autorisé : panneau O01/O05 ; les confirmations iPad manquantes ne bloquent pas ce travail.
 
-L'instantané du 25 octobre ci-dessous est conservé comme historique.
+Revue du 27/10 : [Claude sur #8](https://github.com/NOxygen59/kyokasho/pull/8#issuecomment-6432038430) favorable. Commentaire du chemin diagnostic corrigé ; gros journaux hors périmètre. Vérifications documentaire et diff uniquement, aucun comportement changé. #8–#10 restent ouvertes, main `431f1c6`, Actions désactivé ; de nouvelles Issues existent depuis le relevé historique, hors de cette reprise.
+
+
+### Reprise QA02 du 26 octobre 2026 — prioritaire sur l'instantané historique ci-dessous
+
+GitHub relu : `main` = `431f1c6ea6eeecbe72d76aa00778ea8cc9e7a34f`, PR #1–#7 fusionnées,
+aucune PR ouverte ni Issue avant ce travail ; Actions `enabled: false`. Les derniers contrôles
+réussis sont antérieurs à la désactivation et ne valident pas les corrections présentes.
+NOxygen59 rapporte des observations sur iPad avec QA02 1.3 build 40, source `431f1c6` ; elles ne
+closent pas les recettes DATA-01/DATA-02/DATA-03/PERF-01. La PR #7 n'est donc plus à fusionner.
+
+Autorisation (chat du 26/10) : investiguer, corriger, ouvrir trois PR distinctes, sans fusion,
+sans candidate/installation ni modification de versions, dépendances/forks, données personnelles ou Actions.
+Ordre : O10/P04, O03/O07, O01/O05. O02 reste un indice, pas une cause prouvée.
+
+- **QA02-DIAG, O10/P04** : correction sur `codex/qa02-diagnostics`, non intégrée, iPad non essayé.
+  [Preuves et recette](QA02-CORRECTIONS-DIAGNOSTICS.md). Lecture portée par la feuille,
+  lecture UTF-8 tolérant une rotation, actualisation manuelle, accès au journal depuis les pastilles.
+  Revue croisée à faire avant intégration (ordre des écritures/lecture et remplacement de code).
+- Prochain lot autorisé : O03/O07 ; une confirmation iPad manquante ne bloque pas l'investigation suivante.
+
+### Historique conservé du 25 octobre
 
 
 **Dernier fait vérifié ici (25/10) :** PR #1 à #5 fusionnées (`92a0315`, `a016091`, `c2b1b29`, `ee07c55`, `f76d9f6`), PR #6 (GOV-04) fusionnée sur autorisation de NOxygen59, commit `f83aec8c61d88f1e6c119376590899c9c1ce2876` vérifié lors de QA-02. Les derniers contrôles GitHub réussis datent d'avant la désactivation. **GitHub Actions est désactivé** (CI-0) : les preuves se font désormais en local et se documentent dans les PR. Aucune Issue. Dépôt public, `main` non protégée. Aucune build, aucun essai iPad, aucune release depuis v1.3.
