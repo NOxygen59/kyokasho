@@ -63,7 +63,7 @@ extension ReaderController {
     /// doigts. Ailleurs, les réglages relevés de PDFKit sont rétablis.
     func tuneDoublePageGestures(double: Bool, paginated: Bool, pageController: Bool) {
         guard !pageController, let scroll = pdfInnerScrollView else { return }
-        // Réglage mesuré en double page paginée (le cas observé par NOxygen59) ; le reste garde le comportement de PDFKit.
+        // Réglage mesuré en double page paginée (le cas observé par l’utilisateur) ; le reste garde le comportement de PDFKit.
         let tuned = double && paginated
         scroll.isDirectionalLockEnabled = !tuned
         scroll.panGestureRecognizer.maximumNumberOfTouches = tuned ? 1 : 2
