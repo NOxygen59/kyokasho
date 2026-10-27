@@ -17,6 +17,7 @@ enum StudyPanelMode: String {
 /// Transitions visuelles des panneaux ; la géométrie du PDF est recalée séparément.
 enum StudyPanelMotion {
     static let storageKey = "study.animateTransitions"
+    static let stableGesturesKey = "study.stablePanelGestures"
 
     static func animation(enabled: Bool, reduceMotion: Bool) -> Animation? {
         guard enabled else { return nil }
@@ -73,7 +74,7 @@ struct DetachedPanel<Content: View>: View {
     @AppStorage("studyPanel.x") private var x = 120.0
     @AppStorage("studyPanel.y") private var y = 80.0
     /// Retour au comportement antérieur possible pendant la qualification iPad.
-    @AppStorage("study.stablePanelGestures") private var stableGestures = true
+    @AppStorage(StudyPanelMotion.stableGesturesKey) private var stableGestures = true
     @GestureState private var move: CGSize = .zero
     @GestureState private var resize: CGSize = .zero
 

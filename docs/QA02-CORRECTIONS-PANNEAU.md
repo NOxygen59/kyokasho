@@ -72,3 +72,9 @@ pour les changements d'interaction et le cycle de vie de l'observateur avant int
    texte et données synthétiques conservés entre modes.
 
 Tous ces essais sont non essayés. Retour arrière : option désactivée pour O05 ou abandon de cette PR.
+
+## Revue Claude — 27 octobre 2026
+
+Clé du repli centralisée dans `StudyPanelMotion.stableGesturesKey`. Interrupteur conservé jusqu’au test iPad. Le script et l’observation native ne sont installés que diagnostic actif ; désactiver retire les écouteurs du document courant, le script des navigations suivantes et l’observation KVO. Le pont dictionnaire reste disponible. Installation idempotente et nettoyage après navigation pour couvrir la désactivation pendant un chargement.
+
+Test synthétique : `node scripts/test_ocr_scroll_diagnostics.cjs` exécute le script Swift réel dans un DOM simulé : installation, absence de doublons, limitation des événements, retrait et réactivation. Ce test ne valide pas WebKit/UIKit sur iPad.

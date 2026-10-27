@@ -111,6 +111,8 @@ Les décisions SEC-01 (visibilité, protection de `main`) peuvent être prises �
 
 ## 8. Point de reprise pour le prochain chat
 
+Revue Claude du 27 octobre : PR #10 centralise la clé du repli et conditionne l’installation du script/KVO au diagnostic. Test JS synthétique ajouté ; interrupteur conservé en attente iPad.
+
 ### Reprise QA02 du 26 octobre — panneau OCR
 
 GitHub vérifié au démarrage : `main` `431f1c6`, #1–#7 fusionnées, aucune Issue,

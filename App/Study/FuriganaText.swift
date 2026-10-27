@@ -215,9 +215,6 @@ struct RubyWebView: UIViewRepresentable {
     func makeUIView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
         config.websiteDataStore = .nonPersistent()
-        // Observateurs passifs : aucun preventDefault ni changement du routage des gestes.
-        config.userContentController.addUserScript(WKUserScript(source: Self.scrollDiagnosticScript,
-                                                               injectionTime: .atDocumentEnd, forMainFrameOnly: true))
         config.userContentController.add(context.coordinator, name: "kyokasho")
         context.coordinator.controller = config.userContentController
         let view = WKWebView(frame: .zero, configuration: config)
@@ -238,9 +235,7 @@ struct RubyWebView: UIViewRepresentable {
         scroll.minimumZoomScale = 1
         scroll.maximumZoomScale = 5
         scroll.contentInsetAdjustmentBehavior = .never
-        context.coordinator.offsetObservation = scroll.observe(\.contentOffset, options: [.new]) { [weak coordinator = context.coordinator] scroll, _ in
-            coordinator?.traceNativeScroll(scroll)
-        }
+        context.coordinator.setDiagnostics(view, enabled: diagnosticsEnabled)
         return view
     }
 
@@ -258,25 +253,30 @@ struct RubyWebView: UIViewRepresentable {
     static func dismantleUIView(_ view: WKWebView, coordinator: Coordinator) {
         // Le contrôleur gardé à la création (pas une copie) : le gestionnaire est bien retiré.
         coordinator.controller?.removeScriptMessageHandler(forName: "kyokasho")
-        coordinator.offsetObservation?.invalidate()
-        coordinator.offsetObservation = nil
+        coordinator.setDiagnostics(view, enabled: false)
         view.navigationDelegate = nil
     }
 
     /// Événements horodatés et bornés, sans contenu du document. L'écart JS→natif mesure aussi le pont.
     private static let scrollDiagnosticScript = """
-    window.__kyokashoScrollDiagnostic = false;
     (function() {
-      var last = {};
+      if (window.__kyokashoRemoveScrollDiagnostic) return;
+      var last = {}, listeners = {};
       ['wheel','touchstart','touchmove','scroll'].forEach(function(kind) {
-        document.addEventListener(kind, function() {
-          if (!window.__kyokashoScrollDiagnostic) return;
+        listeners[kind] = function() {
           var now = Date.now();
           if (now - (last[kind] || 0) < 500) return;
           last[kind] = now;
           window.webkit.messageHandlers.kyokasho.postMessage({type:'scrollDiagnostic',kind:kind,time:now});
-        }, {capture:true,passive:true});
+        };
+        document.addEventListener(kind, listeners[kind], {capture:true,passive:true});
       });
+      window.__kyokashoRemoveScrollDiagnostic = function() {
+        Object.keys(listeners).forEach(function(kind) {
+          document.removeEventListener(kind, listeners[kind], true);
+        });
+        delete window.__kyokashoRemoveScrollDiagnostic;
+      };
     })();
     """
 
@@ -289,18 +289,43 @@ struct RubyWebView: UIViewRepresentable {
         private var lastNativeScroll = Date.distantPast
 
         func setDiagnostics(_ view: WKWebView, enabled: Bool) {
+            guard diagnosticsEnabled != enabled else { return }
             diagnosticsEnabled = enabled
-            view.evaluateJavaScript("window.__kyokashoScrollDiagnostic = \(enabled ? "true" : "false");", completionHandler: nil)
+            if enabled {
+                controller?.addUserScript(WKUserScript(source: RubyWebView.scrollDiagnosticScript,
+                                                       injectionTime: .atDocumentEnd, forMainFrameOnly: true))
+                offsetObservation = view.scrollView.observe(\.contentOffset, options: [.new]) { [weak self] scroll, _ in
+                    self?.traceNativeScroll(scroll)
+                }
+                lastNativeScroll = .distantPast
+                view.evaluateJavaScript(RubyWebView.scrollDiagnosticScript, completionHandler: nil)
+            } else {
+                // Ce contrôleur ne possède que le script de diagnostic ; le pont lookup reste installé.
+                controller?.removeAllUserScripts()
+                offsetObservation?.invalidate()
+                offsetObservation = nil
+                removeScrollListeners(view)
+            }
+        }
+
+        private func removeScrollListeners(_ view: WKWebView) {
+            view.evaluateJavaScript("window.__kyokashoRemoveScrollDiagnostic?.();", completionHandler: nil)
         }
 
         func traceNativeScroll(_ scroll: UIScrollView) {
-            guard Diagnostics.enabled, Date().timeIntervalSince(lastNativeScroll) >= 0.5 else { return }
+            guard diagnosticsEnabled, Date().timeIntervalSince(lastNativeScroll) >= 0.5 else { return }
             lastNativeScroll = Date()
             Diagnostics.log("Défilement natif web : x=\(Int(scroll.contentOffset.x)), y=\(Int(scroll.contentOffset.y)), zoom=\(scroll.zoomScale)", "ocr-scroll")
         }
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-            setDiagnostics(webView, enabled: Diagnostics.enabled)
+            setDiagnostics(webView, enabled: parent.diagnosticsEnabled)
+            if diagnosticsEnabled {
+                webView.evaluateJavaScript(RubyWebView.scrollDiagnosticScript, completionHandler: nil)
+            } else {
+                // Retire aussi une injection déjà programmée avant une désactivation pendant le chargement.
+                removeScrollListeners(webView)
+            }
             Diagnostics.log("HTML OCR prêt", "ocr-scroll")
         }
 

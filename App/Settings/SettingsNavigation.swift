@@ -211,7 +211,7 @@ struct StudyPanelSettingsView: View {
     @AppStorage(StudyPanelMode.restoreKey) private var restore = StudyPanelMode.docked
     @AppStorage(ReaderPDFView.preserveViewportKey) private var preserveViewport = true
     @AppStorage(StudyPanelMotion.storageKey) private var animateTransitions = true
-    @AppStorage("study.stablePanelGestures") private var stablePanelGestures = true
+    @AppStorage(StudyPanelMotion.stableGesturesKey) private var stablePanelGestures = true
 
     var body: some View {
         Form {
