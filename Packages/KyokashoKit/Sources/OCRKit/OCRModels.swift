@@ -52,6 +52,20 @@ public struct OCRLine: Codable, Hashable, Sendable {
     /// Ligne corrigée à la main (jamais retouchée ensuite par la relecture automatique).
     public var edited: Bool?
 
+    /// Choix explicite de l'utilisateur, y compris « Garder tel quel » : persiste l'acceptation.
+    /// Les positions mesurées restent utilisables si la longueur ne change pas.
+    public func acceptingCorrection(_ text: String) -> OCRLine {
+        var line = self
+        if text.count != line.charBoxes.count {
+            line.charBoxes = CharacterLayout.proportional(text, in: line.box, vertical: line.vertical)
+            line.measuredCharBoxes = false
+        }
+        line.text = text
+        line.edited = true
+        line.doubt = []
+        return line
+    }
+
     public init(text: String, box: NormBox, charBoxes: [NormBox], measuredCharBoxes: Bool, vertical: Bool, confidence: Double) {
         self.text = text
         self.box = box

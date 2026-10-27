@@ -28,3 +28,15 @@ Le PDF importé reste la source visuelle. Les textes calculés et les correction
 - Une langue ciblée ne peut pas garantir une transcription exacte. Les formules et les numéros de figures demandent encore une vérification visuelle ; aucune correction automatique de chiffres n'est appliquée.
 - La lecture déjà enregistrée n'est pas relancée quand la langue change. « Relire cette page » dans le lecteur permet une nouvelle lecture avec le réglage courant.
 - La correction `图` → `図` est volontairement limitée à la confusion confirmée par la page fournie ; les autres caractères suspects ne sont pas remplacés par conjecture.
+
+## Corrections et lecteur déjà ouvert (QA02)
+
+Après un `OCRService.store` réussi, `cacheUpdated` annonce document, page source et moteur,
+sans texte. Le lecteur ne recharge que son document, sa page de travail et son moteur ; il vérifie
+à nouveau page et état après l'attente. Une écriture échouée ne déclenche pas de faux succès.
+Cela inclut les corrections depuis l'analyse, qui ne passent pas par `AITaskCenter.finished`.
+Le cache des débuts de mots est invalidé quand le résultat affiché change. Le stockage et le
+marquage `edited` restent inchangés. [Preuves et limites](QA02-CORRECTIONS-OCR-DICTIONNAIRE.md).
+
+« Garder tel quel » dans l'analyse accepte désormais explicitement le texte de base dans le cache OCR
+avant de clôturer le désaccord, selon les mêmes contrôles que choisir une autre variante.

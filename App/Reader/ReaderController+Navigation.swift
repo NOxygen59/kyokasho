@@ -213,6 +213,7 @@ extension ReaderController {
     }
 
     @objc func handleHover(_ gesture: UIHoverGestureRecognizer) {
+        traceLookup("Événement survol état=\(gesture.state.rawValue)")
         guard hoverLookup, !isDrawing, gesture.state == .began || gesture.state == .changed else {
             hoverTask?.cancel()
             return
@@ -220,6 +221,7 @@ extension ReaderController {
         let point = gesture.location(in: pdfView)
         // Toujours sur le mot affiché : rien à refaire.
         if lookupHighlight.contains(where: { $0.insetBy(dx: -2, dy: -2).contains(point) }) {
+            traceLookup("Survol : mot déjà surligné")
             hoverTask?.cancel()
             return
         }

@@ -33,6 +33,7 @@ struct LookupWebView: UIViewRepresentable {
             config.setURLSchemeHandler(MediaSchemeHandler(root: mediaRoot), forURLScheme: GlossaryRenderer.mediaScheme)
         }
         let view = WKWebView(frame: .zero, configuration: config)
+        Diagnostics.log("Création web dictionnaire", "lookup-web")
         view.isOpaque = false
         view.backgroundColor = .clear
         view.scrollView.backgroundColor = .clear
@@ -51,12 +52,14 @@ struct LookupWebView: UIViewRepresentable {
     }
 
     static func dismantleUIView(_ view: WKWebView, coordinator: Coordinator) {
+        Diagnostics.log("Destruction web dictionnaire", "lookup-web")
         view.configuration.userContentController.removeScriptMessageHandler(forName: "kyokasho")
     }
 
     final class Coordinator: NSObject, WKScriptMessageHandler, WKNavigationDelegate {
         var onMessage: (LookupMessage) -> Void
         var lastHTML = ""
+        private var lastMessageDiagnostic = Date.distantPast
 
         init(onMessage: @escaping (LookupMessage) -> Void) {
             self.onMessage = onMessage
@@ -64,6 +67,10 @@ struct LookupWebView: UIViewRepresentable {
 
         func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
             guard let body = message.body as? [String: Any], let type = body["type"] as? String else { return }
+            if Date().timeIntervalSince(lastMessageDiagnostic) >= 1 {
+                lastMessageDiagnostic = Date()
+                Diagnostics.log("Message web reçu", "lookup-web")
+            }
             switch type {
             case "lookup": if let text = body["text"] as? String { onMessage(.lookup(text)) }
             case "kanji": if let c = body["character"] as? String { onMessage(.kanji(c)) }
@@ -72,6 +79,22 @@ struct LookupWebView: UIViewRepresentable {
             case "fr": if let a = body["action"] as? String { onMessage(.french(a)) }
             default: break
             }
+        }
+
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            Diagnostics.log("Navigation terminée", "lookup-web")
+        }
+
+        func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+            Diagnostics.log("Échec navigation code=\((error as NSError).code)", "lookup-web")
+        }
+
+        func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+            Diagnostics.log("Échec navigation provisoire code=\((error as NSError).code)", "lookup-web")
+        }
+
+        func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+            Diagnostics.log("Processus web terminé", "lookup-web")
         }
 
         func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction,

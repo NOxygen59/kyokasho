@@ -3,6 +3,7 @@
 
 import Foundation
 import MLX
+import ReaderCore
 import SwiftUI
 import UIKit
 
@@ -51,6 +52,11 @@ enum Diagnostics {
             }
         }
         if sync { queue.sync(execute: work) } else { queue.async(execute: work) }
+    }
+
+    /// Attend les écritures déjà en file avant de lire ; aucun changement du fichier exporté.
+    static func snapshot() -> String {
+        queue.sync { DiagnosticLogSnapshot.read(from: file) }
     }
 
     /// Au lancement : en-tête (version, appareil, mémoire) et gestionnaire d'erreurs MLX global, qui note le
@@ -112,16 +118,15 @@ enum Diagnostics {
     }
 }
 
-/// Réglages → Outils → Diagnostic.
+/// Réglages → Aide et informations → Aide au diagnostic.
 struct DiagnosticsSection: View {
     @AppStorage(Diagnostics.enabledKey) private var enabled = false
-    @State private var text = ""
     @State private var showLog = false
 
     var body: some View {
         Section {
             Toggle("Mode diagnostic", isOn: $enabled)
-            Button { text = (try? String(contentsOf: Diagnostics.file)) ?? "Journal vide."; showLog = true } label: {
+            Button { showLog = true } label: {
                 Label("Voir le journal", systemImage: "doc.text.magnifyingglass")
             }
             ShareLink(item: Diagnostics.file) { Label("Partager le journal", systemImage: "square.and.arrow.up") }
@@ -131,13 +136,32 @@ struct DiagnosticsSection: View {
         } footer: {
             Text("Note dans un journal ce que fait l'app (chargement des modèles, durées, mémoire, erreurs) pour aider à corriger un bug. Les erreurs sont toujours notées. Le journal reste sur l'iPad (app Fichiers → Kyōkasho → Diagnostics) ; partage-le quand on te le demande. Rien ne part tout seul.")
         }
-        .sheet(isPresented: $showLog) {
-            NavigationStack {
-                ScrollView { Text(text).font(.system(size: 11, design: .monospaced)).textSelection(.enabled).padding() }
-                    .navigationTitle("Journal")
-                    .navigationBarTitleDisplayMode(.inline)
-                    .toolbar { ToolbarItem(placement: .confirmationAction) { Button("OK") { showLog = false } } }
+        .sheet(isPresented: $showLog) { DiagnosticLogView() }
+    }
+}
+
+/// La feuille possède son état : la première lecture se fait après sa présentation, pas dans le parent.
+/// Instantané explicite, sans suivi périodique ni changement de la position de lecture.
+struct DiagnosticLogView: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var text = "Chargement du journal…"
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                Text(text).font(.system(size: 11, design: .monospaced))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .textSelection(.enabled).padding()
             }
+            .navigationTitle("Journal")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Actualiser") { text = Diagnostics.snapshot() }
+                }
+                ToolbarItem(placement: .confirmationAction) { Button("OK") { dismiss() } }
+            }
+            .onAppear { text = Diagnostics.snapshot() }
         }
     }
 }

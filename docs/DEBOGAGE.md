@@ -68,3 +68,11 @@ Traces limitées à deux événements par seconde et par catégorie. Le délai d
 latence visuelle ; la vidéo/observation iPad reste nécessaire. Aucun geste n'est intercepté ou
 réacheminé par cette instrumentation. `ocr-panel` décrit le rectangle au relâchement du panneau.
 Voir les [preuves et limites du panneau](QA02-CORRECTIONS-PANNEAU.md).
+
+## Consultation après correction QA02 (non validée sur iPad)
+
+« Voir le journal » lit un instantané après ouverture. « Actualiser » relit les écritures déjà
+en file ; il n'y a pas de suivi continu. Journal absent, vide et erreur de lecture sont distincts.
+Une rotation coupant un caractère UTF-8 laisse le reste lisible ; l'export brut reste inchangé.
+Les pastilles IA proposent aussi ce journal. Leur « Voir le détail » reste réservé aux tâches
+actives : absence de tâche ne signifie pas absence de journal. Voir les [preuves](QA02-CORRECTIONS-DIAGNOSTICS.md).
