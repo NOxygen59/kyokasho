@@ -324,7 +324,10 @@ struct AILayoutLanguageBar: View {
     private var translating: Bool { center.isRunning(translateKey) }
 
     var body: some View {
-        Group {
+        // Jamais vide : une vue vide (`Group` sans contenu) n'exécute pas son `.task`, et la barre ne se chargeait
+        // jamais (recette 1.3.2 (53), point 4). Le `Color.clear` de hauteur nulle porte le chargement.
+        VStack(alignment: .leading, spacing: 0) {
+            Color.clear.frame(height: 0)
             if markdown != nil { languageRow }
         }
         .task(id: "\(reader.document.id)|\(source)|\(center.finished)") {
@@ -362,7 +365,7 @@ struct AILayoutLanguageBar: View {
             .font(.footnote.weight(.semibold))
             .foregroundStyle(Atelier.Tint.ai)
         } else {
-            // Recette 1.3.2 (53) : sans Qwen3-VL ni traduction gardée, la barre était vide et semblait disparue.
+            // Sans Qwen3-VL ni traduction gardée : un message plutôt qu'une barre vide.
             Label("Traduction hors ligne : télécharge Qwen3-VL dans Réglages → Modèles d'IA et outils.",
                   systemImage: "character.bubble")
                 .font(.caption)
