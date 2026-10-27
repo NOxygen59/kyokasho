@@ -57,12 +57,24 @@ enum TextFurigana {
     }
 }
 
+/// Événement de la vue web du texte OCR vers la bulle du dictionnaire (Issue #13).
+enum PanelLookupEvent {
+    /// Mot touché/cliqué (`hover == false`) ou survolé avec Maj (`hover == true`). `wordRect` en coordonnées
+    /// de la fenêtre (comme `.global` en SwiftUI).
+    case open(text: String, wordRect: CGRect, hover: Bool)
+    /// Le pointeur a quitté le mot survolé avec Maj (ou Maj n'est plus tenue pendant le mouvement).
+    case hoverEnd
+    /// Toucher ou clic hors d'un mot dans le texte.
+    case tapOutside
+}
+
 /// Texte extrait avec furigana ; un appui sur un caractère ouvre le dictionnaire à partir de là.
 struct FuriganaTextView: View {
     let page: OCRPage
     let formatted: Bool
     var regions: [OCRLayout.Region] = []
-    var onLookup: (String) -> Void
+    var hoverReset = 0
+    var onLookup: (PanelLookupEvent) -> Void
     @EnvironmentObject private var dictionary: DictionaryModel
     @State private var html = ""
     @AppStorage(FuriganaLayer.Tint.storageKey) private var tint = FuriganaLayer.Tint.red
@@ -96,7 +108,7 @@ struct FuriganaTextView: View {
     }
 
     var body: some View {
-        RubyWebView(html: html, height: $height, onLookup: onLookup)
+        RubyWebView(html: html, height: $height, hoverReset: hoverReset, onLookup: onLookup)
             .frame(height: height)
             .modifier(OCRScrollDiagnostics())
             .task(id: "\(page.hashValue)|\(formatted)|\(regions.hashValue)|\(tint.rawValue)|\(morphology.state == .ready)") { await build() }
@@ -193,11 +205,7 @@ struct FuriganaTextView: View {
         <script>
         function size(){window.webkit.messageHandlers.kyokasho.postMessage({type:'height',value:document.body.scrollHeight})}
         window.onload=size; new ResizeObserver(size).observe(document.body);
-        document.addEventListener('click',function(e){
-          var s=e.target.closest('span[data-q]'); if(!s){return}
-          document.querySelectorAll('span.hit').forEach(function(x){x.classList.remove('hit')}); s.classList.add('hit');
-          window.webkit.messageHandlers.kyokasho.postMessage({type:'lookup',text:s.dataset.q});
-        });
+        \(RubyWebView.lookupEventsScript)
         </script></body></html>
         """
     }
@@ -207,7 +215,9 @@ struct FuriganaTextView: View {
 struct RubyWebView: UIViewRepresentable {
     let html: String
     @Binding var height: CGFloat
-    var onLookup: (String) -> Void
+    /// Change quand la bulle se ferme : l'état de survol JavaScript est alors remis à zéro.
+    var hoverReset = 0
+    var onLookup: (PanelLookupEvent) -> Void
     @AppStorage(Diagnostics.enabledKey) private var diagnosticsEnabled = false
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
@@ -244,6 +254,10 @@ struct RubyWebView: UIViewRepresentable {
         if context.coordinator.diagnosticsEnabled != diagnosticsEnabled {
             context.coordinator.setDiagnostics(view, enabled: diagnosticsEnabled)
         }
+        if context.coordinator.lastHoverReset != hoverReset {
+            context.coordinator.lastHoverReset = hoverReset
+            view.evaluateJavaScript("window.__kyokashoResetHover&&window.__kyokashoResetHover()", completionHandler: nil)
+        }
         guard context.coordinator.lastHTML != html else { return }
         context.coordinator.lastHTML = html
         Diagnostics.log("Chargement HTML OCR : \(html.utf8.count) octets", "ocr-scroll")
@@ -256,6 +270,31 @@ struct RubyWebView: UIViewRepresentable {
         coordinator.setDiagnostics(view, enabled: false)
         view.navigationDelegate = nil
     }
+
+    /// Événements du dictionnaire dans le texte OCR (Issue #13), testés par `scripts/test_ocr_lookup_events.cjs`.
+    /// Clic ou toucher explicite (un défilement ne produit pas de « click ») ; hors d'un mot, `tapOutside`.
+    /// Souris seulement : survol avec Maj tenue, sans bouton appuyé. `window.__kyokashoResetHover()` est appelé
+    /// par Swift quand la bulle se ferme (Maj relâchée, pointeur sorti) : sans cela, `hovered` restait sur le mot
+    /// et le même mot ne rouvrait plus la bulle (revue de Codex sur #57).
+    static let lookupEventsScript = """
+    function post(m){window.webkit.messageHandlers.kyokasho.postMessage(m)}
+    function hit(s){document.querySelectorAll('span.hit').forEach(function(x){x.classList.remove('hit')}); if(s){s.classList.add('hit')}}
+    function open(s,hover){var r=s.getBoundingClientRect(); hit(s);
+      post({type:'lookup',text:s.dataset.q,hover:hover,rect:{x:r.left,y:r.top,w:r.width,h:r.height}})}
+    document.addEventListener('click',function(e){
+      var s=e.target.closest('span[data-q]'); if(!s){hit(null); post({type:'tapOutside'}); return}
+      open(s,false);
+    });
+    var hovered=null;
+    function endHover(){if(hovered){hovered=null; hit(null); post({type:'hoverEnd'})}}
+    window.__kyokashoResetHover=function(){hovered=null; hit(null)};
+    document.addEventListener('mousemove',function(e){
+      if(e.buttons){return}
+      var s=e.target.closest?e.target.closest('span[data-q]'):null;
+      if(e.shiftKey&&s){if(s!==hovered){hovered=s; open(s,true)}} else {endHover()}
+    },{passive:true});
+    document.addEventListener('mouseleave',endHover);
+    """
 
     /// Événements horodatés et bornés, sans contenu du document. L'écart JS→natif mesure aussi le pont.
     private static let scrollDiagnosticScript = """
@@ -283,6 +322,7 @@ struct RubyWebView: UIViewRepresentable {
     final class Coordinator: NSObject, WKScriptMessageHandler, WKNavigationDelegate {
         var parent: RubyWebView
         var lastHTML = ""
+        var lastHoverReset = 0
         weak var controller: WKUserContentController?
         var offsetObservation: NSKeyValueObservation?
         var diagnosticsEnabled = false
@@ -347,7 +387,19 @@ struct RubyWebView: UIViewRepresentable {
             case "height":
                 if let value = body["value"] as? Double, abs(CGFloat(value) - parent.height) > 1 { parent.height = CGFloat(value) }
             case "lookup":
-                if let text = body["text"] as? String, !text.isEmpty { parent.onLookup(text) }
+                guard let text = body["text"] as? String, !text.isEmpty else { return }
+                // Rectangle CSS du mot → points de la vue web (zoom du pincement) → coordonnées de la fenêtre.
+                var wordRect = CGRect.zero
+                if let r = body["rect"] as? [String: Double], let web = message.webView {
+                    let z = web.scrollView.zoomScale
+                    let local = CGRect(x: (r["x"] ?? 0) * z, y: (r["y"] ?? 0) * z, width: (r["w"] ?? 0) * z, height: (r["h"] ?? 0) * z)
+                    wordRect = web.convert(local, to: nil)
+                }
+                parent.onLookup(.open(text: text, wordRect: wordRect, hover: body["hover"] as? Bool ?? false))
+            case "hoverEnd":
+                parent.onLookup(.hoverEnd)
+            case "tapOutside":
+                parent.onLookup(.tapOutside)
             default: break
             }
         }

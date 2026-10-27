@@ -13,7 +13,8 @@ import UIKit
 struct AILayoutView: View {
     @ObservedObject var reader: ReaderController
     let furigana: Bool
-    var onLookup: (String) -> Void
+    var hoverReset = 0
+    var onLookup: (PanelLookupEvent) -> Void
     @EnvironmentObject private var dictionary: DictionaryModel
     @AppStorage(FuriganaLayer.Tint.storageKey) private var tint = FuriganaLayer.Tint.red
     @State private var markdown: String?
@@ -55,7 +56,7 @@ struct AILayoutView: View {
                 languageRow
             }
             if markdown != nil, !html.isEmpty {
-                RubyWebView(html: html, height: $height, onLookup: onLookup)
+                RubyWebView(html: html, height: $height, hoverReset: hoverReset, onLookup: onLookup)
                     .frame(height: height)
                     .modifier(OCRScrollDiagnostics())
                 Button { read() } label: {
