@@ -168,4 +168,10 @@ Build **non publiée**, construite depuis le commit local `bfd4312` (= `main` `2
 |---|---|---|---|---|---|---|---|---|---|
 | RET-049 | — | 2026-10-28 | Ergonomie (animation) | Animer l’apparition et la disparition de la vue de sélection des pages, qui apparaît actuellement sans transition ; préserver la page, le défilement des miniatures et la stabilité du PDF, avec Réduire les animations et iOS 16.6.1 | — | proposé, à cadrer | [#79](https://github.com/NOxygen59/kyokasho/issues/79) | — | retour direct de NOxygen59 ; aucun code ni essai |
 
-Prochain identifiant libre : **RET-050**.
+### Bug du 28/10/2026 — navigation au clavier
+
+| ID | Alias | Date | Type | Retour (résumé) | Build | État | Issue | PR | Preuve |
+|---|---|---|---|---|---|---|---|---|---|
+| RET-050 | — | 2026-10-28 | Bug (navigation clavier) | Les flèches gauche et droite ciblent désormais les champs de saisie au lieu de changer de page lorsque l’utilisateur ne cherche pas à modifier un champ | à confirmer | rapporté, à reproduire | [#81](https://github.com/NOxygen59/kyokasho/issues/81) | — | retour direct de NOxygen59 ; lié à la demande de navigation clavier [#18](https://github.com/NOxygen59/kyokasho/issues/18) |
+
+Prochain identifiant libre : **RET-051**.
