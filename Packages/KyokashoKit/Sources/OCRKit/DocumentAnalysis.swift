@@ -56,6 +56,10 @@ public struct DocumentAnalysis: Codable, Sendable {
         return checked > 0 ? Double(confirmed) / Double(checked) : 1
     }
 
+    /// Fiabilité en pourcentage, arrondie au dixième (87,3), pour l'affichage. Toujours un `Double` :
+    /// un entier formaté avec `%.1f` s'affichait « 0,0 % » (RET-044, Issue #65).
+    public var reliabilityPercent: Double { (reliability * 1000).rounded() / 10 }
+
     public var openDisagreements: Int { pages.values.reduce(0) { $0 + $1.disagreements.filter { !$0.settled }.count } }
     /// Pages en erreur, et pages qu'aucun autre modèle n'a pu comparer (rien de confirmé ni d'infirmé).
     public var errorPages: Int { pages.values.filter { $0.error != nil }.count }

@@ -143,7 +143,7 @@ struct DocumentAnalysisSheet: View {
         let advised = open.filter { $0.1.advised != nil && $0.1.advised != $0.1.baseKey }
         Section {
             HStack {
-                Text("\(Int((report.reliability * 1000).rounded()) / 10, specifier: "%.1f") %")
+                Text("\(report.reliabilityPercent, specifier: "%.1f") %")
                     .font(.system(size: 34, weight: .bold, design: .rounded))
                     .foregroundStyle(report.reliability > 0.97 ? .green : report.reliability > 0.9 ? .orange : .red)
                 VStack(alignment: .leading) {

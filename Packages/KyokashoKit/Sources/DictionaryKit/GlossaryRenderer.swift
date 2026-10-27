@@ -276,6 +276,27 @@ public struct GlossaryRenderer: Sendable {
             """
     }
 
+    /// Affichage compact de la bulle de la fenêtre OCR (RET-047, #71) : mot plus petit, et ni accents, ni fréquences,
+    /// ni IPA, ni noms de dictionnaires, ni étiquettes, pour voir les définitions sans faire défiler. `html` en tête
+    /// de sélecteur : ces règles passent aussi devant le style du bloc de traduction, ajouté plus loin dans la page.
+    public static let compactCSS = """
+        html body{padding:8px 12px 48px}
+        html article.term{padding:6px 0 10px}
+        html .headword{font-size:1.3em;line-height:1.35}
+        html .btn{width:28px;height:28px;font-size:13px}
+        html .freqs,html .pitches,html .ipa,html .dict-title,html .tags{display:none}
+        html section.dict{margin-top:4px}
+        html .fr-tr{margin:4px 0;padding:5px 8px;font-size:14px}
+        """
+
+    /// Ajoute `compactCSS` à une page déjà rendue (fin du `<head>`).
+    public static func compact(_ html: String) -> String {
+        guard let head = html.range(of: "</head>") else { return html }
+        var out = html
+        out.insert(contentsOf: "<style>\(compactCSS)</style>", at: head.lowerBound)
+        return out
+    }
+
     /// Préfixe chaque sélecteur du CSS d'un dictionnaire pour qu'il ne touche que ses définitions.
     static func scopeCSS(_ css: String, dictionary: String) -> String {
         let prefix = "[data-dictionary=\"\(dictionary.replacingOccurrences(of: "\"", with: "\\\""))\"]"

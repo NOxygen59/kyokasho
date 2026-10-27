@@ -330,7 +330,7 @@ struct StudyTextTab: View {
                                      source: "\(reader.document.title) · p. \(reader.document.pageLabel(reader.focusSource))",
                                      image: nil, documentId: reader.document.id, page: reader.focusSource,
                                      dictionary: model.dictionary)
-                }, close: { closeBubble() })
+                }, compact: true, close: { closeBubble() })
                 .environmentObject(model.dictionary)
                 .overlay(alignment: .bottomTrailing) {
                     Button {
