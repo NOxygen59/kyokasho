@@ -40,4 +40,4 @@ Ce dossier organise la reprise du projet à partir de **v1.3, build 40**. L'audi
 
 **Implémenté** signifie visible dans le code ; **livré** signifie inclus dans une release identifiée ; **compilé** exige un résultat de compilation associé à un commit et une plateforme ; **testé sur Mac** exige un scénario exécuté ; **confirmé sur iPad** exige un retour explicite pour une version et un scénario. Aucun de ces statuts ne remplace les autres. Un test ignoré n'est pas réussi.
 
-Les nouvelles pages décrivent l'existant et les recommandations séparément. Les instructions `AGENTS.md` et les décisions explicites de NOxygen59 restent prioritaires. Mettre à jour le document du domaine avec chaque changement ; garder l'historique historique et consigner les nouvelles preuves dans [TESTS.md](TESTS.md).
+Les nouvelles pages décrivent l'existant et les recommandations séparément. Les instructions `AGENTS.md` et les décisions explicites de l’utilisateur restent prioritaires. Mettre à jour le document du domaine avec chaque changement ; garder l'historique historique et consigner les nouvelles preuves dans [TESTS.md](TESTS.md).
