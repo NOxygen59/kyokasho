@@ -24,9 +24,12 @@ final class PageShiftRecoveryTests: XCTestCase {
         let saved = PageShift.support
         PageShift.support = root
         DocumentAnalysisService.folder = root.appendingPathComponent("Analysis")
+        let savedDrafts = NoteDraftStore.shared
+        NoteDraftStore.shared = NoteDraftStore(folder: root.appendingPathComponent("NoteDrafts"))
         defer {
             PageShift.checkpoint = nil
             PageShift.support = saved
+            NoteDraftStore.shared = savedDrafts
             try? FileManager.default.removeItem(at: root)
         }
         let model = try AppModel(root: root)
@@ -114,6 +117,10 @@ final class PageShiftRecoveryTests: XCTestCase {
         report.pages[0] = .init(source: 0, baseEngine: "test")
         report.pages[1] = .init(source: 1, baseEngine: "test")
         try JSONEncoder().encode(report).write(to: DocumentAnalysisService.folder.appendingPathComponent(doc.id + ".json"))
+        // Brouillons non ajoutés (RET-008) : ils suivent leur page ; ceux d'un autre livre ne bougent pas.
+        try NoteDraftStore.shared.setDraft("brouillon 0", documentId: doc.id, page: 0)
+        try NoteDraftStore.shared.setDraft("brouillon 1", documentId: doc.id, page: 1)
+        try NoteDraftStore.shared.setDraft("brouillon autre", documentId: "other", page: 0)
         var card = StudyCard(deckId: try XCTUnwrap(model.review.store.decks().first?.id),
                              templateId: try XCTUnwrap(model.review.store.templates().first?.id),
                              key: "図|ず", fields: ["Expression": "図"], sourceDocumentId: doc.id, sourcePage: 0, now: Date(timeIntervalSince1970: 1000))
@@ -157,11 +164,13 @@ final class PageShiftRecoveryTests: XCTestCase {
         XCTAssertEqual(try model.review.store.card(id: card.id!), expectedCard)
         XCTAssertEqual(try model.review.store.history(cardId: card.id!).count, 1)
         XCTAssertEqual(try model.database.bookmarks(documentId: "other").first?.pageIndex, 0)
+        XCTAssertEqual(NoteDraftStore.shared.drafts(documentId: doc.id), [offset: "brouillon 0", 1 + offset: "brouillon 1"])
+        XCTAssertEqual(NoteDraftStore.shared.drafts(documentId: "other"), [0: "brouillon autre"])
     }
 
     func testInterruptionsAtEveryCommitBoundaryAndRepeatedReopens() async throws {
         let points = ["journal.after", "database.before", "database.after", "pdf.before", "pdf.after",
-                      "report.before", "report.after", "files.backup", "files.installed", "cards.before", "cards.after", "complete.before"]
+                      "report.before", "report.after", "drafts.before", "drafts.after", "files.backup", "files.installed", "cards.before", "cards.after", "complete.before"]
         for point in points {
             try await withFixture { model, doc, root in
                 let card = try seed(model, doc)
@@ -199,6 +208,34 @@ final class PageShiftRecoveryTests: XCTestCase {
             XCTAssertEqual(try model.database.document(id: doc.id)?.pageCount, 2)
             XCTAssertEqual(try model.database.bookmarks(documentId: doc.id).first?.pageIndex, 0)
             XCTAssertEqual(try model.review.store.card(id: card.id!), card)
+        }
+    }
+
+    func testUnreadableDraftFileNeitherBlocksTheAdditionNorIsOverwritten() async throws {
+        try await withFixture { model, doc, root in
+            let card = try seed(model, doc)
+            try NoteDraftStore.shared.removeAll(documentId: doc.id)
+            let file = NoteDraftStore.shared.url(documentId: doc.id)
+            try Data("illisible".utf8).write(to: file)
+            let merged = root.appendingPathComponent("input.pdf")
+            try writePDF(merged, pages: 4)
+            _ = try await PageShift.apply(model, document: doc, merged: merged, offset: 2, newCount: 4)
+            XCTAssertEqual(try Data(contentsOf: file), Data("illisible".utf8))
+            XCTAssertEqual(try model.database.bookmarks(documentId: doc.id).first?.pageIndex, 2)
+            _ = card
+        }
+    }
+
+    func testDraftOutsideTheDocumentStopsTheAdditionBeforeAnyChange() async throws {
+        try await withFixture { model, doc, root in
+            try seed(model, doc)
+            try NoteDraftStore.shared.setDraft("page fantôme", documentId: doc.id, page: 7)
+            let merged = root.appendingPathComponent("input.pdf")
+            try writePDF(merged, pages: 4)
+            await assertThrowsAsync({ try await PageShift.apply(model, document: doc, merged: merged, offset: 2, newCount: 4) })
+            XCTAssertFalse(FileManager.default.fileExists(atPath: root.appendingPathComponent("page-shift.json").path))
+            XCTAssertEqual(try model.database.document(id: doc.id)?.pageCount, 2)
+            XCTAssertEqual(NoteDraftStore.shared.draft(documentId: doc.id, page: 7), "page fantôme")
         }
     }
 
@@ -352,6 +389,8 @@ final class PageShiftRecoveryTests: XCTestCase {
             let root = URL(fileURLWithPath: rootPath)
             PageShift.support = root
             DocumentAnalysisService.folder = root.appendingPathComponent("Analysis")
+            // Même dossier que `withFixture` : jamais l'Application Support réel du Mac.
+            NoteDraftStore.shared = NoteDraftStore(folder: root.appendingPathComponent("NoteDrafts"))
             let model = try AppModel(root: root)
             let document = try XCTUnwrap(model.database.document(id: "test-document"))
             PageShift.checkpoint = { if $0 == point { Darwin.kill(Darwin.getpid(), SIGKILL) } }
