@@ -56,7 +56,7 @@ Avec une toolchain LLVM dont le runtime ASan intègre LSan pour la cible, `ASAN_
 
 Xcode expose ASan dans les diagnostics de schéma ; sa documentation décrit l'activation via `-enableAddressSanitizer YES`. Voir [diagnostic des erreurs mémoire](https://developer.apple.com/documentation/xcode/diagnosing-memory-thread-and-crash-issues-early). Exécuter une app instrumentée exige un runtime compatible et un mode de lancement adapté ; le paquet habituel pseudo-signé par ldid ne constitue pas une preuve de compatibilité ASan.
 
-La procédure TrollStore + iOS 16.6.1 n'a pas été qualifiée ici. Ne pas intégrer automatiquement ASan au `.tipa` normal, changer les entitlements pour le forcer ou prétendre que LSan fonctionne sur iOS. Commencer sur Mac ; un essai appareil nécessite l'accord de NOxygen59, un petit binaire témoin, la vérification des runtimes/symboles et une copie de données de test. Aucun simulateur n'est requis ni autorisé implicitement.
+La procédure TrollStore + iOS 16.6.1 n'a pas été qualifiée ici. Ne pas intégrer automatiquement ASan au `.tipa` normal, changer les entitlements pour le forcer ou prétendre que LSan fonctionne sur iOS. Commencer sur Mac ; un essai appareil nécessite l'accord de l’utilisateur, un petit binaire témoin, la vérification des runtimes/symboles et une copie de données de test. Aucun simulateur n'est requis ni autorisé implicitement.
 
 ## Swift, GPU et répétitions
 
