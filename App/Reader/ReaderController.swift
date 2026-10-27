@@ -97,7 +97,10 @@ final class ReaderController: NSObject, ObservableObject {
 
     /// Survol au curseur (trackpad / souris) : le popup du dictionnaire suit le pointeur.
     @Published var hoverLookup = UserDefaults.standard.object(forKey: "reader.hoverLookup") as? Bool ?? true {
-        didSet { UserDefaults.standard.set(hoverLookup, forKey: "reader.hoverLookup") }
+        didSet {
+            UserDefaults.standard.set(hoverLookup, forKey: "reader.hoverLookup")
+            Diagnostics.log("Survol activé=\(hoverLookup)", "lookup")
+        }
     }
     /// La page a du texte (intégré ou OCR) : l'option de survol a un sens.
     var pageHasText: Bool { ocrPage != nil || pageHasPDFText }
@@ -130,6 +133,14 @@ final class ReaderController: NSObject, ObservableObject {
         }
     }
     var hoverTask: Task<Void, Never>?
+    private var lookupDiagnosticTimes: [String: Date] = [:]
+
+    /// Trace bornée du trajet du pointeur, sans texte, titre ou identifiant du document.
+    func traceLookup(_ stage: String) {
+        guard Diagnostics.enabled, Date().timeIntervalSince(lookupDiagnosticTimes[stage] ?? .distantPast) >= 1 else { return }
+        lookupDiagnosticTimes[stage] = Date()
+        Diagnostics.log("\(stage) ; page=\(focusSource + 1) ; actif=\(hoverLookup) ; dessin=\(isDrawing) ; fermé=\(closed)", "lookup")
+    }
 
     /// Contexte du mot cherché, pour fabriquer une carte : phrase, ligne dans la page.
     struct LookupContext {
@@ -175,6 +186,8 @@ final class ReaderController: NSObject, ObservableObject {
     var observers: [NSObjectProtocol] = []
     /// Fin d'une tâche IA (peut-être lancée par un lecteur précédent) : la page affichée est relue du cache.
     var aiFinished: AnyCancellable?
+    /// Seul le dernier rechargement demandé peut publier après une attente du cache.
+    var ocrReloadRevision: UInt64 = 0
     var savePositionWork: DispatchWorkItem?
     var cropTask: Task<Void, Never>?
     var ocrTask: Task<Void, Never>?
@@ -493,6 +506,7 @@ final class ReaderController: NSObject, ObservableObject {
     /// `fromHover` : survol au curseur → jamais d'OCR lancé (trop lent), et rien ne se ferme
     /// quand le pointeur passe sur un blanc (pour pouvoir aller jusqu'au popup).
     func lookup(at point: CGPoint, fromHover: Bool = false) async {
+        traceLookup("Recherche lancée ; survol=\(fromHover)")
         guard let pdf, let page = pdfView.page(for: point, nearest: false) else { return }
         let index = pdf.index(for: page)
         guard presented.indices.contains(index) else { return }
@@ -581,6 +595,7 @@ final class ReaderController: NSObject, ObservableObject {
         var ocr = realOCR ?? (source == focusSource ? ocrPage : nil)
         if ocr == nil { ocr = await cachedOCR(source: source) }
         if ocr == nil, fromHover {
+            traceLookup("Cache OCR absent : lecture demandée")
             // Survol d'une page jamais lue : on lance l'OCR en fond, le survol marchera dès qu'il a fini.
             ensureOCR([source])
             return
@@ -602,6 +617,7 @@ final class ReaderController: NSObject, ObservableObject {
         let shownWidth = frame.rotation % 180 == 0 ? box.width : box.height
         let tolerance = Double(margin / max(shownWidth * pdfView.scaleFactor, 1))
         guard let hit = ocr.character(at: normalized, tolerance: tolerance) else {
+            traceLookup("Aucun caractère OCR sous le pointeur")
             if !fromHover { lookupHighlight = [] }
             return
         }
@@ -675,6 +691,7 @@ final class ReaderController: NSObject, ObservableObject {
         if rects.count > 1, !rects[0].isEmpty, !rects[1].isEmpty {
             vertical = abs(rects[1].midX - rects[0].midX) < rects[0].width * 0.5 && rects[1].midY > rects[0].midY
         }
+        traceLookup("Présentation du dictionnaire")
         lookupRequest = LookupRequest(text: text, anchor: anchor, wordRect: first, vertical: vertical)
     }
 
@@ -745,6 +762,7 @@ final class ReaderController: NSObject, ObservableObject {
     }
 
     func endLookup() {
+        traceLookup("Fermeture du dictionnaire")
         lookupRequest = nil
         lookupHighlight = []
         lookupCharacterRects = []
@@ -770,6 +788,18 @@ final class ReaderController: NSObject, ObservableObject {
                 guard let self else { return }
                 let text = self.pdfView.currentSelection?.string ?? ""
                 self.hasSelection = !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            }
+        })
+        // Corrections depuis l'analyse : elles ne passent pas par AITaskCenter.finished.
+        observers.append(center.addObserver(forName: OCRService.cacheUpdated, object: nil, queue: .main) { [weak self] note in
+            guard let id = note.userInfo?["documentId"] as? String,
+                  let source = note.userInfo?["pageIndex"] as? Int,
+                  let engine = note.userInfo?["engine"] as? String else { return }
+            MainActor.assumeIsolated {
+                guard let self, !self.closed, id == self.document.id, source == self.focusSource,
+                      engine == self.ocrPage?.engine else { return }
+                Diagnostics.log("Cache OCR enregistré : rafraîchissement p. \(source + 1)", "ocr-ui")
+                self.reloadOCRAfterAITask()
             }
         })
         aiFinished = AITaskCenter.shared.$finished.dropFirst().sink { [weak self] _ in

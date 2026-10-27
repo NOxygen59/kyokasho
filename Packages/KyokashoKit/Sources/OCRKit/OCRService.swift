@@ -7,6 +7,10 @@ import ReaderCore
 /// Point d'entrée de l'OCR : choisit le moteur, lit le cache, lance un seul OCR à la fois par
 /// page/moteur (pas de doublon), enregistre le résultat. Tout se passe hors du fil principal.
 public actor OCRService {
+    /// Émis uniquement après un `store` réussi. userInfo : documentId, pageIndex, engine.
+    /// L'observateur UI doit rejoindre le fil principal et relire le cache, jamais réécrire le résultat.
+    public nonisolated static let cacheUpdated = Notification.Name("kyokasho.ocrCacheUpdated")
+
     /// Moteurs connus. L'app ajoute ceux qui ont besoin d'un modèle (ONNX, IA) avec `register`.
     public nonisolated static var engines: [any OCREngine] { registry.withLock { $0 } }
     private nonisolated static let registry = LockedValue<[any OCREngine]>([PDFTextEngine(), VisionOCREngine()])
@@ -105,6 +109,8 @@ public actor OCRService {
         let normalized = OCRTargetLanguage.forDocument(documentId) == .japanese ? JapaneseOCRText.normalize(page) : page
         try database.save(OCRResultRecord(documentId: documentId, pageIndex: pageIndex, engine: normalized.engine,
                                           json: try encoder.encode(normalized), durationMs: normalized.durationMs))
+        NotificationCenter.default.post(name: Self.cacheUpdated, object: nil,
+                                        userInfo: ["documentId": documentId, "pageIndex": pageIndex, "engine": normalized.engine])
     }
 
     /// Pages (source) dont le texte OCR contient `query`, avec un extrait autour.

@@ -111,6 +111,27 @@ Les décisions SEC-01 (visibilité, protection de `main`) peuvent être prises �
 
 ## 8. Point de reprise pour le prochain chat
 
+Reprise du 27/10 après revue #9 : cas cache absent et texte modifié expliqués à l'utilisateur,
+désaccord conservé ouvert et données intactes. Tests sur les méthodes réelles apply/dismiss ;
+[preuves](QA02-CORRECTIONS-OCR-DICTIONNAIRE.md). Réserve de Claude traitée, nouvelle validation à obtenir.
+main reste `431f1c6`, #8–#10 ouvertes, Actions désactivé ; nouvelles Issues hors périmètre.
+
+
+### Reprise QA02 du 26 octobre — lot OCR/dictionnaire
+
+État GitHub relu avant le travail : `main` `431f1c6`, #1–#7 fusionnées, aucune Issue,
+Actions désactivé. La PR #7 n'est plus à fusionner. Les observations de NOxygen59 concernent l'iPad,
+QA02 1.3 build 40 ; elles ne closent pas les recettes de données ou de mémoire.
+Autorisation du chat du 26/10 : trois lots dans l'ordre, corrections et PR distinctes,
+sans fusion, candidate, versions, dépendances/forks, données personnelles ou workflows.
+
+- Lot diagnostics : [PR #8](https://github.com/NOxygen59/kyokasho/pull/8), non fusionnée ; iPad non essayé.
+- **QA02-OCR, O03/O07** : `codex/qa02-ocr-dictionnaire`, base indépendante `431f1c6`.
+  O03 : notification après enregistrement et rafraîchissement ciblé du lecteur. O07 : instrumentation
+  uniquement, cause non établie. O02 : indice sans lien causal démontré.
+  [Preuves et fiche iPad](QA02-CORRECTIONS-OCR-DICTIONNAIRE.md). Revue croisée et validation iPad à faire.
+- Prochain lot autorisé : panneau O01/O05 ; les confirmations iPad manquantes ne bloquent pas ce travail.
+
 Revue du 27/10 : [Claude sur #8](https://github.com/NOxygen59/kyokasho/pull/8#issuecomment-6432038430) favorable. Commentaire du chemin diagnostic corrigé ; gros journaux hors périmètre. Vérifications documentaire et diff uniquement, aucun comportement changé. #8–#10 restent ouvertes, main `431f1c6`, Actions désactivé ; de nouvelles Issues existent depuis le relevé historique, hors de cette reprise.
 
 

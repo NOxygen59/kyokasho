@@ -60,7 +60,9 @@ final class DocumentAnalysisService: ObservableObject {
     }
 
     /// Relit le rapport enregistré, le modifie et le réenregistre (jamais une copie périmée).
-    private func update(_ id: String, _ change: (inout DocumentAnalysis) -> Void) {
+    func setCorrectionError(_ message: String?) { lastError = message }
+
+    func update(_ id: String, _ change: (inout DocumentAnalysis) -> Void) {
         guard var r = report(for: id) else { return }
         change(&r)
         save(r)
@@ -320,37 +322,6 @@ final class DocumentAnalysisService: ObservableObject {
         return winners.count == 1 ? winners[0].0 : nil
     }
 
-    /// Applique des choix dans le résultat OCR du document : seulement sur une ligne pas encore réglée et dont
-    /// le texte n'a pas changé depuis l'analyse ; marquée réglée **après** l'enregistrement réussi.
-    func apply(_ choices: [(source: Int, line: Int, text: String)], documentId: String, service: OCRService) async {
-        guard let report = report(for: documentId) else { return }
-        for source in Set(choices.map(\.source)).sorted() {
-            guard let info = report.pages[source],
-                  var page = await service.cached(documentId: documentId, pageIndex: source, engine: info.baseEngine) else { continue }
-            var done: [Int] = []
-            for c in choices where c.source == source && page.lines.indices.contains(c.line) {
-                guard let vote = info.disagreements.first(where: { $0.line == c.line }), !vote.settled,
-                      page.lines[c.line].text == vote.base else { continue }
-                page.lines[c.line] = ReaderController.corrected(page.lines[c.line], text: c.text)
-                done.append(c.line)
-            }
-            guard !done.isEmpty else { continue }
-            do {
-                try await service.store(page, documentId: documentId, pageIndex: source)
-            } catch {
-                lastError = "Page \(source + 1) non enregistrée : \(error.localizedDescription)"
-                continue
-            }
-            update(documentId) { r in
-                for line in done {
-                    guard let i = r.pages[source]?.disagreements.firstIndex(where: { $0.line == line && !$0.settled }) else { continue }
-                    r.pages[source]?.disagreements[i].settled = true
-                    r.pages[source]?.confirmed += 1
-                }
-            }
-        }
-    }
-
     /// Accepte les différences déjà lues par Ovis sur tout le livre, sans lancer de nouvelle IA.
     /// Les corrections manuelles et les lignes mathématiques restent intactes.
     func applyOvisToDocument(_ document: LibraryDocument, model: AppModel) {
@@ -412,12 +383,4 @@ final class DocumentAnalysisService: ObservableObject {
             || text.contains("\\frac") || text.contains("\\sqrt")
     }
 
-    func dismiss(source: Int, line: Int, documentId: String) {
-        update(documentId) { r in
-            guard let i = r.pages[source]?.disagreements.firstIndex(where: { $0.line == line && !$0.settled }) else { return }
-            r.pages[source]?.disagreements[i].settled = true
-            // Tu as tranché : la ligne compte comme sûre.
-            r.pages[source]?.confirmed += 1
-        }
-    }
 }

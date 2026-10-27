@@ -333,12 +333,16 @@ extension ReaderController {
     /// Résultat écrit en cache par une tâche IA pour la page affichée (même moteur) : affiché.
     func reloadOCRAfterAITask() {
         guard !closed, let shown = ocrPage else { return }
+        ocrReloadRevision &+= 1
+        let revision = ocrReloadRevision
         let source = focusSource, documentId = document.id, service = model.ocr
         Task { [weak self] in
             guard let cached = await service.cached(documentId: documentId, pageIndex: source, engine: shown.engine),
-                  cached != shown, let self, !self.closed, self.focusSource == source, self.ocrPage == shown else { return }
+                  cached != shown, let self, !self.closed, self.ocrReloadRevision == revision, self.focusSource == source, self.ocrPage == shown else { return }
             self.showOCR(cached, source: source)
             self.ocrPage = cached
+            self.wordStartMemo.removeAll()
+            Diagnostics.log("Cache OCR affiché : p. \(source + 1), lignes à revoir=\(OCRProofreader.doubtful(cached).count)", "ocr-ui")
         }
     }
 
