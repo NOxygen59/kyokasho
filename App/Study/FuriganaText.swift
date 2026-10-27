@@ -270,6 +270,7 @@ struct RubyWebView: UIViewRepresentable {
             return
         }
         context.coordinator.lastHTML = html
+        context.coordinator.switchGeneration.advance()
         context.coordinator.loaded = false
         context.coordinator.shownLanguage = nil
         Diagnostics.log("Chargement HTML OCR : \(html.utf8.count) octets", "ocr-scroll")
@@ -343,6 +344,9 @@ struct RubyWebView: UIViewRepresentable {
         /// Page chargée (`didFinish`) et langue affichée d'une page à deux langues.
         var loaded = false
         var shownLanguage: Bool?
+        /// Avancée à chaque nouvelle page HTML (donc à chaque changement de page) et à chaque bascule : un rappel
+        /// JavaScript ou un décalage différé d'une bascule plus ancienne est ignoré (revue de Codex, #78).
+        var switchGeneration = LatestGeneration()
         private var contentSizeObservation: NSKeyValueObservation?
         var diagnosticsEnabled = false
         private var lastNativeScroll = Date.distantPast
@@ -415,6 +419,7 @@ struct RubyWebView: UIViewRepresentable {
         /// une fois la nouvelle hauteur appliquée (iOS 16 : pas d'API SwiftUI de position, d'où le `UIScrollView`).
         func switchLanguage(_ web: WKWebView, french: Bool, keepPosition: Bool) {
             shownLanguage = french
+            let token = switchGeneration.advance()
             let outer = keepPosition ? Self.enclosingScrollView(of: web) : nil
             let zoom = web.scrollView.zoomScale
             var cssTop: CGFloat = 0
@@ -424,15 +429,15 @@ struct RubyWebView: UIViewRepresentable {
             }
             let js = "window.__kyokashoSwitchLanguage&&window.__kyokashoSwitchLanguage(\(french),\(Double(max(cssTop, 0))))"
             web.evaluateJavaScript(js) { [weak self, weak web, weak outer] result, _ in
-                guard let self, let web, let values = result as? [String: Any],
+                guard let self, self.switchGeneration.isCurrent(token), let web, let values = result as? [String: Any],
                       let newY = values["y"] as? Double, let newHeight = values["h"] as? Double else { return }
                 if newHeight > 0 { self.cssHeight = CGFloat(newHeight) }
                 self.fitHeight(web)
                 guard let outer, cssTop > 0 else { return }
                 let delta = (CGFloat(newY) - cssTop) * zoom
                 // Laisser SwiftUI appliquer la nouvelle hauteur avant de borner le décalage.
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak outer] in
-                    guard let outer else { return }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self, weak outer] in
+                    guard let self, self.switchGeneration.isCurrent(token), let outer else { return }
                     outer.superview?.layoutIfNeeded()
                     let inset = outer.adjustedContentInset
                     let maxY = max(-inset.top, outer.contentSize.height - outer.bounds.height + inset.bottom)

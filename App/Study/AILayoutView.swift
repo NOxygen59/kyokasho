@@ -77,7 +77,9 @@ struct AILayoutView: View {
         html = ""
         guard let markdown else { return }
         let vertical = reader.ocrPage.map(FuriganaTextView.isVertical) == true
-        let built: String
+        // Valeurs construites localement, publiées ensemble après le contrôle d'annulation : une tâche annulée
+        // (changement de page pendant la construction) ne touche ni `combined` ni `html` (revue de Codex, #78).
+        let built: String, bothLanguages: Bool
         if let frenchMarkdown, !vertical {
             // Les deux langues dans la même page ; `RubyWebView` affiche celle de `french` dès le chargement.
             let japanese = await Self.body(markdown, furigana: furigana, dictionary: dictionary, url: reader.fileURL, page: source)
@@ -85,15 +87,16 @@ struct AILayoutView: View {
                                              url: reader.fileURL, page: source)
             built = FuriganaTextView.page("<div id=\"langs\" class=\"\(french ? "fr" : "ja")\"><div id=\"ja\">\(japanese)</div>"
                                           + "<div id=\"fr\">\(translated)</div></div><script>\(Self.languageSwitchScript)</script>")
-            combined = true
+            bothLanguages = true
         } else {
             let showFrench = french && frenchMarkdown != nil
             built = await Self.html(showFrench ? frenchMarkdown! : markdown, furigana: furigana && !showFrench,
                                     french: showFrench, vertical: !showFrench && vertical,
                                     dictionary: dictionary, url: reader.fileURL, page: source)
-            combined = false
+            bothLanguages = false
         }
         guard !Task.isCancelled else { return }
+        combined = bothLanguages
         html = built
     }
 
