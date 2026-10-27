@@ -47,7 +47,7 @@ Les tests sans asset doivent rester signalés comme ignorés. Un `XCTSkip` faute
 
 ## Architecture CI cible
 
-> **Cible future, suspendue** : rien de cette section ne s'active sans les prérequis de la politique « Zéro dépense ». Les mentions de journaux conservés, de rétention et de cache y sont exclues tant qu'une nouvelle décision écrite de NOxygen59 ne les autorise pas.
+> **Cible future, suspendue** : rien de cette section ne s'active sans les prérequis de la politique « Zéro dépense ». Les mentions de journaux conservés, de rétention et de cache y sont exclues tant qu'une nouvelle décision écrite de l’utilisateur ne les autorise pas.
 
 ### 1. Contrôles rapides sur Ubuntu
 
@@ -154,7 +154,7 @@ Commencer sans cache de compilation. Mesurer trois exécutions à froid. Si le t
 
 ## Zéro dépense : politique obligatoire
 
-**Exigence non négociable de NOxygen59 (25/10/2026)** : aucune dépense et **aucun risque de facturation** GitHub Actions. Un système « gratuit jusqu'à un quota, une durée ou un seuil » n'est **pas** acceptable s'il peut devenir payant en cas de dépassement. Le but n'est pas de réduire les coûts : c'est zéro dépense, sans aucun dépassement facturable possible. Cette section **prime sur toutes les autres** de ce document. Les mentions de cache, d'artefact, de rétention ou de tarif dans les autres sections décrivent des options **suspendues**.
+**Exigence non négociable de l’utilisateur (25/10/2026)** : aucune dépense et **aucun risque de facturation** GitHub Actions. Un système « gratuit jusqu'à un quota, une durée ou un seuil » n'est **pas** acceptable s'il peut devenir payant en cas de dépassement. Le but n'est pas de réduire les coûts : c'est zéro dépense, sans aucun dépassement facturable possible. Cette section **prime sur toutes les autres** de ce document. Les mentions de cache, d'artefact, de rétention ou de tarif dans les autres sections décrivent des options **suspendues**.
 
 ### Ce que disent les sources officielles (relevé du 25/10/2026, à revérifier)
 
@@ -181,18 +181,18 @@ Commencer sans cache de compilation. Mesurer trois exécutions à froid. Si le t
 - Une **alerte** de budget : elle prévient, elle n'arrête rien.
 - Une **rétention courte** : elle réduit la durée de stockage, elle ne plafonne pas la dépense.
 - Des journaux « bornés », des filtres `paths` ou des délais (`timeout-minutes`) : ils réduisent l'usage sans rien garantir.
-- La parole d'un agent : seul NOxygen59 peut constater l'état de facturation de son compte.
+- La parole d'un agent : seul l’utilisateur peut constater l'état de facturation de son compte.
 
 ### Protection vérifiée (condition d'activation)
 
 Une automatisation GitHub Actions ne peut être activée ou étendue que si **les deux** conditions suivantes sont remplies :
 
-1. **Constat écrit par NOxygen59**, daté, dans l'Issue ou la PR concernée, sans donnée personnelle. Il établit, après vérification dans *Settings → Billing and licensing* du compte, qu'au moins une de ces deux situations est vraie :
+1. **Constat écrit par l’utilisateur**, daté, dans l'Issue ou la PR concernée, sans donnée personnelle. Il établit, après vérification dans *Settings → Billing and licensing* du compte, qu'au moins une de ces deux situations est vraie :
    - **aucun moyen de paiement** n'est enregistré ;
    - un budget Actions à **0 $** est actif avec l'option « *Stop usage when budget limit is reached* » cochée.
 
-   NOxygen59 décide lui-même si ce constat lui suffit : la documentation officielle ne garantit pas explicitement l'absence de frais dans tous les cas.
-2. **Autorisation explicite de NOxygen59** pour le workflow précis : nom, déclencheurs, runner. Elle n'est valable que pour lui.
+   L’utilisateur décide lui-même si ce constat lui suffit : la documentation officielle ne garantit pas explicitement l'absence de frais dans tous les cas.
+2. **Autorisation explicite de l’utilisateur** pour le workflow précis : nom, déclencheurs, runner. Elle n'est valable que pour lui.
 
 Même avec cette protection, restent **interdits** :
 - les runners plus grands ou payants ;
@@ -200,26 +200,26 @@ Même avec cette protection, restent **interdits** :
 - les caches (`actions/cache`, option `cache:` des actions `setup-*`) ;
 - GitHub Packages, LFS et Codespaces ;
 - les API ou services payants, d'IA ou non ;
-- tout runner auto-hébergé sur le Mac de NOxygen59.
+- tout runner auto-hébergé sur le Mac de l’utilisateur.
 
-Seule une nouvelle décision écrite de NOxygen59 peut lever une de ces interdictions.
+Seule une nouvelle décision écrite de l’utilisateur peut lever une de ces interdictions.
 
 ### État actuel : GitHub Actions désactivé (décision CI-0)
 
-- **25/10/2026 : décision CI-0 appliquée.** À la demande explicite de NOxygen59 (chat : « ferme le github action stp, désactive le »), puis validée par lui, GitHub Actions est **désactivé** sur le dépôt. Appel `PUT /repos/NOxygen59/kyokasho/actions/permissions` avec `enabled=false` ; l'API renvoie `{"enabled":false}`. Aucun run n'était en cours.
+- **25/10/2026 : décision CI-0 appliquée.** À la demande explicite de l’utilisateur (chat : « ferme le github action stp, désactive le »), puis validée par lui, GitHub Actions est **désactivé** sur le dépôt. Appel `PUT /repos/NOxygen59/kyokasho/actions/permissions` avec `enabled=false` ; l'API renvoie `{"enabled":false}`. Aucun run n'était en cours.
 - Conséquence : **plus aucun workflow ne s'exécute sur GitHub**, ni sur les PR, ni sur `main`, ni en lancement manuel. Aucune dépense Actions n'est donc possible.
 - Les trois fichiers de workflow (`documentation.yml`, `storage.yml`, `backup.yml`) restent versionnés, sans artefact ni cache. Ils décrivent des contrôles réutilisables, **inactifs**.
 - Avant la désactivation, relevé via l'API : jeton en lecture seule ; approbation des PR externes `first_time_contributors` ; rétention de 90 jours ; aucun cache, aucun artefact, aucun runner auto-hébergé.
-- **Tests désormais exécutés localement** sur le Mac de NOxygen59, selon la [procédure locale de TESTS.md](TESTS.md#procédure-locale-standard-avant-une-pr), et **documentés dans chaque PR** par une fiche de preuve (voir plus bas). Un contrôle GitHub vert ne peut plus servir de preuve ; les anciens runs restent des preuves historiques datées.
-- **Réactivation** : seul NOxygen59 décide et l'applique. Il faut les conditions de la « Protection vérifiée » ci-dessus, puis une autorisation explicite pour chaque workflow. Aucun agent ne réactive Actions.
+- **Tests désormais exécutés localement** sur le Mac de l’utilisateur, selon la [procédure locale de TESTS.md](TESTS.md#procédure-locale-standard-avant-une-pr), et **documentés dans chaque PR** par une fiche de preuve (voir plus bas). Un contrôle GitHub vert ne peut plus servir de preuve ; les anciens runs restent des preuves historiques datées.
+- **Réactivation** : seul l’utilisateur décide et l'applique. Il faut les conditions de la « Protection vérifiée » ci-dessus, puis une autorisation explicite pour chaque workflow. Aucun agent ne réactive Actions.
 
-## Tests locaux sur le Mac de NOxygen59 (voie par défaut)
+## Tests locaux sur le Mac de l’utilisateur (voie par défaut)
 
-Le MacBook Pro M2 Pro de NOxygen59 porte toutes les preuves : tests Swift, compilation iOS générique, ASan, MLX/Metal, ONNX et UniDic réels, benchmarks. Il **n'est pas** et ne doit pas devenir un runner GitHub, ni permanent ni éphémère.
+Le MacBook Pro M2 Pro de l’utilisateur porte toutes les preuves : tests Swift, compilation iOS générique, ASan, MLX/Metal, ONNX et UniDic réels, benchmarks. Il **n'est pas** et ne doit pas devenir un runner GitHub, ni permanent ni éphémère.
 
 ### Protocole
 
-1. **Déclenchement humain uniquement.** NOxygen59, ou un agent avec son accord explicite, lance la commande. Rien sur GitHub ne déclenche quoi que ce soit sur le Mac.
+1. **Déclenchement humain uniquement.** l’utilisateur, ou un agent avec son accord explicite, lance la commande. Rien sur GitHub ne déclenche quoi que ce soit sur le Mac.
 2. **Code de confiance seulement** : un SHA précis d'une branche du dépôt `NOxygen59/kyokasho`, déjà lu. Jamais une PR externe ou un fork sans relecture.
 3. **Environnement séparé** :
    - un clone dédié `~/Projets-iPad/kyokasho-preuves`, distinct du clone de travail et de la bibliothèque de l'app ;
@@ -254,25 +254,25 @@ La fiche prouve un résultat sur Mac à un SHA donné. Elle **ne remplace pas** 
 
 | Niveau | Où | Statut | Contenu |
 |---|---|---|---|
-| 1 — local, par défaut | Mac de NOxygen59, clone séparé | **Actif** : manuel, avant chaque PR de code | Contrôle documentaire, 16 tests Python, suite `KyokashoKit`, `Package.resolved` inchangés, compilation iOS générique si `App/` ou le projet change, ASan et MLX/ONNX selon le lot |
-| 2 — GitHub Actions | `ubuntu-latest` / `macos-15` standards | **Désactivé** (CI-0, 25/10/2026) ; réactivation par NOxygen59 seulement, après protection vérifiée et autorisation par workflow | Les mêmes contrôles légers et Swift, sans artefact ni cache |
-| 3 — réel | iPad de NOxygen59 | Manuel, build de test demandée par NOxygen59 | Recette selon [TESTS.md](TESTS.md) |
+| 1 — local, par défaut | Mac de l’utilisateur, clone séparé | **Actif** : manuel, avant chaque PR de code | Contrôle documentaire, 16 tests Python, suite `KyokashoKit`, `Package.resolved` inchangés, compilation iOS générique si `App/` ou le projet change, ASan et MLX/ONNX selon le lot |
+| 2 — GitHub Actions | `ubuntu-latest` / `macos-15` standards | **Désactivé** (CI-0, 25/10/2026) ; réactivation par l’utilisateur seulement, après protection vérifiée et autorisation par workflow | Les mêmes contrôles légers et Swift, sans artefact ni cache |
+| 3 — réel | iPad de l’utilisateur | Manuel, build de test demandée par l’utilisateur | Recette selon [TESTS.md](TESTS.md) |
 
 ## Découpage des prochaines améliorations
 
-Ordre proposé. Aucune ligne n'autorise un travail : chaque lot demande l'accord de NOxygen59.
+Ordre proposé. Aucune ligne n'autorise un travail : chaque lot demande l'accord de l’utilisateur.
 
 | Lot | Contenu | Prérequis |
 |---|---|---|
-| CI-0 | Désactiver GitHub Actions tant que la protection n'est pas vérifiée | **Fait le 25/10/2026** à la demande de NOxygen59 |
-| CI-G | Script local, en lecture seule et sans réseau, qui exécute la procédure de [TESTS.md](TESTS.md#procédure-locale-standard-avant-une-pr) sur un SHA et produit la fiche de preuve sans données personnelles | Accord de NOxygen59 ; aucun service GitHub |
-| CI-A | Photographie de l'état (versions locales, durées, liste des tests ignorés). Documentation seulement | Accord de NOxygen59 |
+| CI-0 | Désactiver GitHub Actions tant que la protection n'est pas vérifiée | **Fait le 25/10/2026** à la demande de l’utilisateur |
+| CI-G | Script local, en lecture seule et sans réseau, qui exécute la procédure de [TESTS.md](TESTS.md#procédure-locale-standard-avant-une-pr) sur un SHA et produit la fiche de preuve sans données personnelles | Accord de l’utilisateur ; aucun service GitHub |
+| CI-A | Photographie de l'état (versions locales, durées, liste des tests ignorés). Documentation seulement | Accord de l’utilisateur |
 | CI-B | Fiabiliser les workflows existants : diff complet, `concurrency`, Xcode épinglé, `uname -m` | Protection vérifiée + autorisation |
 | CI-C | `quality.yml` Ubuntu : tests Python, `Package.resolved`, fichiers interdits | Protection vérifiée + autorisation |
 | CI-D | Compilation iOS générique sur `macos-15`, XcodeGen figé | Protection vérifiée + autorisation |
 | CI-E | ASan en `workflow_dispatch` avec test témoin | Protection vérifiée + autorisation |
 | CI-F | Compilation de `GLMOCRKit` sans poids | Protection vérifiée + autorisation |
-| CI-H | Contrôles obligatoires et protection de `main` | Décision de NOxygen59 |
+| CI-H | Contrôles obligatoires et protection de `main` | Décision de l’utilisateur |
 
 CI-B à CI-F se préparent comme du code relu en PR. Leurs workflows ne doivent **ni être fusionnés ni être lancés** tant que leurs prérequis ne sont pas remplis.
 
@@ -289,7 +289,7 @@ CI-B à CI-F se préparent comme du code relu en PR. Leurs workflows ne doivent 
 
 ## Ce que la CI ne peut pas confirmer
 
-Les vérifications suivantes restent à faire sur l'iPad par NOxygen59, avec une copie sans valeur des données quand une opération est destructive :
+Les vérifications suivantes restent à faire sur l'iPad par l’utilisateur, avec une copie sans valeur des données quand une opération est destructive :
 
 - lancement et fonctionnement sous iOS 16.6.1 ;
 - compilation JIT des kernels Metal 3.0 des forks MLX ;
@@ -302,7 +302,7 @@ Les vérifications suivantes restent à faire sur l'iPad par NOxygen59, avec une
 
 ## Plan d'implémentation pour le futur agent (Claude ou Codex)
 
-> Chaque phase exige d'abord les prérequis du lot correspondant (« Découpage des prochaines améliorations »). Hors phase 0, rien ne s'exécute sur GitHub sans protection vérifiée et autorisation de NOxygen59.
+> Chaque phase exige d'abord les prérequis du lot correspondant (« Découpage des prochaines améliorations »). Hors phase 0, rien ne s'exécute sur GitHub sans protection vérifiée et autorisation de l’utilisateur.
 
 ### Phase 0 — photographier l'état
 
