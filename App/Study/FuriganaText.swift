@@ -217,6 +217,9 @@ struct RubyWebView: UIViewRepresentable {
     @Binding var height: CGFloat
     /// Change quand la bulle se ferme : l'état de survol JavaScript est alors remis à zéro.
     var hoverReset = 0
+    /// Page à deux langues (mise en page IA traduite) : `true` = français. `nil` : page d'une seule langue.
+    /// Un changement bascule sans recharger et garde la position de lecture (`Coordinator.switchLanguage`).
+    var language: Bool? = nil
     var onLookup: (PanelLookupEvent) -> Void
     @AppStorage(Diagnostics.enabledKey) private var diagnosticsEnabled = false
 
@@ -260,8 +263,15 @@ struct RubyWebView: UIViewRepresentable {
             context.coordinator.lastHoverReset = hoverReset
             view.evaluateJavaScript("window.__kyokashoResetHover&&window.__kyokashoResetHover()", completionHandler: nil)
         }
-        guard context.coordinator.lastHTML != html else { return }
+        if context.coordinator.lastHTML == html {
+            if let language, context.coordinator.loaded, context.coordinator.shownLanguage != language {
+                context.coordinator.switchLanguage(view, french: language, keepPosition: true)
+            }
+            return
+        }
         context.coordinator.lastHTML = html
+        context.coordinator.loaded = false
+        context.coordinator.shownLanguage = nil
         Diagnostics.log("Chargement HTML OCR : \(html.utf8.count) octets", "ocr-scroll")
         view.loadHTMLString(html, baseURL: nil)
     }
@@ -330,6 +340,9 @@ struct RubyWebView: UIViewRepresentable {
         var offsetObservation: NSKeyValueObservation?
         /// Hauteur du contenu en pixels CSS (`document.body.scrollHeight`), avant zoom.
         var cssHeight: CGFloat = 0
+        /// Page chargée (`didFinish`) et langue affichée d'une page à deux langues.
+        var loaded = false
+        var shownLanguage: Bool?
         private var contentSizeObservation: NSKeyValueObservation?
         var diagnosticsEnabled = false
         private var lastNativeScroll = Date.distantPast
@@ -396,6 +409,49 @@ struct RubyWebView: UIViewRepresentable {
             }
         }
 
+        /// Bascule 日本語 / Français dans la page (`AILayoutView.languageSwitchScript`), sans recharger. Avec
+        /// `keepPosition`, le haut de la zone visible du panneau est converti en pixels CSS de la page, le script
+        /// renvoie la position équivalente dans l'autre langue, et le défilement du panneau est décalé d'autant
+        /// une fois la nouvelle hauteur appliquée (iOS 16 : pas d'API SwiftUI de position, d'où le `UIScrollView`).
+        func switchLanguage(_ web: WKWebView, french: Bool, keepPosition: Bool) {
+            shownLanguage = french
+            let outer = keepPosition ? Self.enclosingScrollView(of: web) : nil
+            let zoom = web.scrollView.zoomScale
+            var cssTop: CGFloat = 0
+            if let outer {
+                let visibleTop = CGPoint(x: 0, y: outer.contentOffset.y + outer.adjustedContentInset.top)
+                cssTop = outer.convert(visibleTop, to: web).y / max(zoom, 0.01)
+            }
+            let js = "window.__kyokashoSwitchLanguage&&window.__kyokashoSwitchLanguage(\(french),\(Double(max(cssTop, 0))))"
+            web.evaluateJavaScript(js) { [weak self, weak web, weak outer] result, _ in
+                guard let self, let web, let values = result as? [String: Any],
+                      let newY = values["y"] as? Double, let newHeight = values["h"] as? Double else { return }
+                if newHeight > 0 { self.cssHeight = CGFloat(newHeight) }
+                self.fitHeight(web)
+                guard let outer, cssTop > 0 else { return }
+                let delta = (CGFloat(newY) - cssTop) * zoom
+                // Laisser SwiftUI appliquer la nouvelle hauteur avant de borner le décalage.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak outer] in
+                    guard let outer else { return }
+                    outer.superview?.layoutIfNeeded()
+                    let inset = outer.adjustedContentInset
+                    let maxY = max(-inset.top, outer.contentSize.height - outer.bounds.height + inset.bottom)
+                    let y = min(max(outer.contentOffset.y + delta, -inset.top), maxY)
+                    outer.setContentOffset(CGPoint(x: outer.contentOffset.x, y: y), animated: false)
+                }
+            }
+        }
+
+        /// Défilement du panneau qui contient la vue web (premier `UIScrollView` parent).
+        static func enclosingScrollView(of web: WKWebView) -> UIScrollView? {
+            var view = web.superview
+            while let current = view {
+                if let scroll = current as? UIScrollView { return scroll }
+                view = current.superview
+            }
+            return nil
+        }
+
         private func removeScrollListeners(_ view: WKWebView) {
             view.evaluateJavaScript("window.__kyokashoRemoveScrollDiagnostic?.();", completionHandler: nil)
         }
@@ -407,6 +463,9 @@ struct RubyWebView: UIViewRepresentable {
         }
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            loaded = true
+            // Page à deux langues : afficher la langue demandée entre-temps, sans chercher à garder une position.
+            if let language = parent.language { switchLanguage(webView, french: language, keepPosition: false) }
             setDiagnostics(webView, enabled: parent.diagnosticsEnabled)
             if diagnosticsEnabled {
                 webView.evaluateJavaScript(RubyWebView.scrollDiagnosticScript, completionHandler: nil)

@@ -29,6 +29,8 @@ struct AILayoutView: View {
     /// Traduction française (Qwen3-VL, hors ligne) de la mise en page, gardée par page.
     @AppStorage("study.aiLayoutFrench") private var french = false
     @State private var frenchMarkdown: String?
+    /// Page construite avec les deux langues (`#langs`) : la bascule passe par `RubyWebView.language`.
+    @State private var combined = false
 
     private var source: Int { reader.focusSource }
 
@@ -52,7 +54,8 @@ struct AILayoutView: View {
             }
             if let error { Text(error).font(.caption).foregroundStyle(.red) }
             if markdown != nil, !html.isEmpty {
-                RubyWebView(html: html, height: $height, hoverReset: hoverReset, onLookup: onLookup)
+                RubyWebView(html: html, height: $height, hoverReset: hoverReset,
+                            language: combined ? french : nil, onLookup: onLookup)
                     .frame(height: height)
                     .modifier(OCRScrollDiagnostics())
                 Button { read() } label: {
@@ -62,7 +65,10 @@ struct AILayoutView: View {
                 .disabled(reading || !OvisOCR2Reader().isAvailable)
             }
         }
-        .task(id: "\(reader.document.id)|\(source)|\(furigana)|\(tint.rawValue)|\(french)|\(center.finished)") { await load() }
+        .task(id: "\(reader.document.id)|\(source)|\(furigana)|\(tint.rawValue)|\(center.finished)") { await load() }
+        // Japonais et français dans la même page : la vue web bascule sans recharger et garde la position de
+        // lecture (recette 1.3.2 (55)). Sinon (pas de traduction, texte vertical) : reconstruction comme avant.
+        .onChange(of: french) { _ in if !combined { Task { await load() } } }
     }
 
     private func load() async {
@@ -70,13 +76,53 @@ struct AILayoutView: View {
         frenchMarkdown = DocumentAITextStore.read(documentId: reader.document.id, reader: "fr", page: source)
         html = ""
         guard let markdown else { return }
-        let showFrench = french && frenchMarkdown != nil
-        let built = await Self.html(showFrench ? frenchMarkdown! : markdown, furigana: furigana && !showFrench,
-                                    french: showFrench, vertical: !showFrench && reader.ocrPage.map(FuriganaTextView.isVertical) == true,
+        let vertical = reader.ocrPage.map(FuriganaTextView.isVertical) == true
+        let built: String
+        if let frenchMarkdown, !vertical {
+            // Les deux langues dans la même page ; `RubyWebView` affiche celle de `french` dès le chargement.
+            let japanese = await Self.body(markdown, furigana: furigana, dictionary: dictionary, url: reader.fileURL, page: source)
+            let translated = await Self.body(frenchMarkdown, furigana: false, french: true, dictionary: dictionary,
+                                             url: reader.fileURL, page: source)
+            built = FuriganaTextView.page("<div id=\"langs\" class=\"\(french ? "fr" : "ja")\"><div id=\"ja\">\(japanese)</div>"
+                                          + "<div id=\"fr\">\(translated)</div></div><script>\(Self.languageSwitchScript)</script>")
+            combined = true
+        } else {
+            let showFrench = french && frenchMarkdown != nil
+            built = await Self.html(showFrench ? frenchMarkdown! : markdown, furigana: furigana && !showFrench,
+                                    french: showFrench, vertical: !showFrench && vertical,
                                     dictionary: dictionary, url: reader.fileURL, page: source)
+            combined = false
+        }
         guard !Task.isCancelled else { return }
         html = built
     }
+
+    /// Bascule 日本語 / Français sans recharger, appelée par `RubyWebView` avec `y` = haut de la zone visible du
+    /// panneau en pixels CSS de la page (0 ou moins : rien à garder). Le bloc lu en haut (`data-b`, indice du bloc
+    /// Markdown) est retrouvé dans l'autre langue, à la même fraction de sa hauteur ; si les deux traductions n'ont
+    /// pas le même nombre de blocs, position proportionnelle. Renvoie le nouvel `y` et la nouvelle hauteur.
+    /// Testé par `scripts/test_ai_language_switch.cjs`.
+    static let languageSwitchScript = """
+    window.__kyokashoSwitchLanguage=function(fr,y){
+      var langs=document.getElementById('langs'); if(!langs){return null}
+      var from=document.getElementById(fr?'ja':'fr'), to=document.getElementById(fr?'fr':'ja');
+      if(langs.className===(fr?'fr':'ja')){return {y:y,h:document.body.scrollHeight}}
+      var oldH=document.body.scrollHeight, anchor=null, frac=0, scrollY=window.scrollY||0;
+      var a=from.querySelectorAll('[data-b]'), b=null;
+      if(y>0){for(var i=0;i<a.length;i++){var r=a[i].getBoundingClientRect(), top=r.top+scrollY;
+        if(top+r.height>y){anchor=a[i]; frac=r.height>0?Math.max(0,Math.min(1,(y-top)/r.height)):0; break}}}
+      langs.className=fr?'fr':'ja';
+      var newH=document.body.scrollHeight, newY=y;
+      if(y>0){
+        b=to.querySelectorAll('[data-b]'); var target=null;
+        if(anchor&&b.length===a.length){var k=+anchor.dataset.b;
+          for(var j=0;j<b.length;j++){if(+b[j].dataset.b<=k){target=b[j]}}}
+        if(target){var r2=target.getBoundingClientRect(); newY=r2.top+scrollY+frac*r2.height}
+        else if(oldH>0){newY=y/oldH*newH}
+      }
+      return {y:newY,h:newH};
+    };
+    """
 
     /// Mise en page de la page par OvisOCR2 (fichier gardé), même si on change de page entre-temps.
     private func read() {
@@ -96,8 +142,16 @@ struct AILayoutView: View {
 
     // MARK: HTML
 
-    /// Blocs → HTML. Tout texte passe par `FuriganaTextView.markup` (échappé, mot entier au toucher, furigana).
+    /// Page complète d'une seule langue.
     static func html(_ markdown: String, furigana: Bool, french: Bool = false, vertical: Bool = false, dictionary: DictionaryModel,
+                     url: URL, page: Int) async -> String {
+        FuriganaTextView.page(await body(markdown, furigana: furigana, french: french, dictionary: dictionary, url: url, page: page),
+                              vertical: vertical)
+    }
+
+    /// Blocs → HTML. Tout texte passe par `FuriganaTextView.markup` (échappé, mot entier au toucher, furigana).
+    /// Chaque élément de premier niveau porte `data-b` (indice du bloc Markdown) : repère commun aux deux langues.
+    static func body(_ markdown: String, furigana: Bool, french: Bool = false, dictionary: DictionaryModel,
                      url: URL, page: Int) async -> String {
         let blocks = AILayout.blocks(markdown)
         func text(_ s: String) async -> String {
@@ -142,15 +196,17 @@ struct AILayoutView: View {
         .formula .radicand{border-top:1px solid;padding:0 .12em}
         </style>
         """
-        // Français : police sans empattement, interligne normal (pas de place à garder pour des furigana).
-        if french { body += "<style>body{font-family:-apple-system,'Helvetica Neue',sans-serif;line-height:1.65}</style>" }
+        // Français : police sans empattement, interligne normal (pas de place à garder pour des furigana). Limité au
+        // bloc `.fr-text` : la page qui contient les deux langues garde le style japonais pour `#ja`.
+        if french { body += "<style>.fr-text{font-family:-apple-system,'Helvetica Neue',sans-serif;line-height:1.65}</style><div class=\"fr-text\">" }
+        body += "<style>#langs.ja #fr,#langs.fr #ja{display:none}</style>"
         var figureIndex = 0
         // Figures qui se suivent (chacune avec sa courte légende) : grille de vignettes, comme dans le livre.
         var index = 0
         while index < blocks.count {
             let block = blocks[index]
             if case .figure = block {
-                body += "<div class=\"figs\">"
+                body += "<div class=\"figs\" data-b=\"\(index)\">"
                 while index < blocks.count, case .figure = blocks[index] {
                     var caption = ""
                     if index + 1 < blocks.count, case .paragraph(let c) = blocks[index + 1], c.count <= 24 {
@@ -172,21 +228,22 @@ struct AILayoutView: View {
                 body += "</div>"
                 continue
             }
+            let b = " data-b=\"\(index)\""
             index += 1
             switch block {
             case .heading(let level, let s):
                 let tag = "h\(min(max(level, 2), 4))"
-                body += "<\(tag)>\(await text(s))</\(tag)>"
+                body += "<\(tag)\(b)>\(await text(s))</\(tag)>"
             case .paragraph(let s):
                 // « 図表6-120 … » : titre de figure, centré en petit comme dans le livre.
                 let isFigureTitle = s.hasPrefix("図表") || s.hasPrefix("図 ") || s.hasPrefix("表 ")
-                body += isFigureTitle ? "<p class=\"figtitle\">\(await text(s))</p>" : "<p>\(await text(s))</p>"
+                body += isFigureTitle ? "<p class=\"figtitle\"\(b)>\(await text(s))</p>" : "<p\(b)>\(await text(s))</p>"
             case .list(let items):
-                body += "<ul>"
+                body += "<ul\(b)>"
                 for item in items { body += "<li>\(await text(item))</li>" }
                 body += "</ul>"
             case .table(let rows):
-                body += "<table>"
+                body += "<table\(b)>"
                 for row in rows {
                     body += "<tr>"
                     for cell in row {
@@ -201,7 +258,8 @@ struct AILayoutView: View {
                 break  // traitées plus haut (grille)
             }
         }
-        return FuriganaTextView.page(body, vertical: vertical)
+        if french { body += "</div>" }
+        return body
     }
 
     /// Découpe d'une figure (coordonnées sur 1000) → image JPEG en `data:` (≤ 900 px de large).
