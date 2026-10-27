@@ -3,13 +3,13 @@
 
 # Contribuer à Kyōkasho
 
-Le projet sert d'abord l'iPad et les usages de NOxygen59. Professionnaliser signifie rendre les changements compréhensibles, vérifiables et réversibles ; cela n'impose pas une architecture d'entreprise ou une réécriture.
+Le projet sert d'abord l'iPad et les usages de l’utilisateur. Professionnaliser signifie rendre les changements compréhensibles, vérifiables et réversibles ; cela n'impose pas une architecture d'entreprise ou une réécriture.
 
 ## Avant de modifier
 
 Lire [AGENTS.md](AGENTS.md), vérifier l'état GitHub, lire [le plan directeur](docs/PLAN-DIRECTEUR.md), [la feuille de route](docs/FEUILLE-DE-ROUTE.md), puis le guide du domaine dans [l'index](docs/INDEX.md). Entre agents, suivre la [collaboration Claude / Codex](docs/GOUVERNANCE-ET-REPRISE.md#collaboration-entre-agents-claude-et-codex). Avant MLX : [IA locale](docs/IA-LOCALE.md). Identifier un comportement attendu, le scénario qui démontre le problème et les données à préserver. Inspecter les changements déjà présents ; ne pas les écraser.
 
-Pour un changement significatif, ouvrir une branche et une PR explicite. Le lot de reprise utilise cette voie pour rendre la documentation relisible avant intégration ; cela ne révoque pas les autorisations antérieures d'envoi sur `main`. Les releases restent demandées et numérotées par NOxygen59.
+Pour un changement significatif, ouvrir une branche et une PR explicite. Le lot de reprise utilise cette voie pour rendre la documentation relisible avant intégration ; cela ne révoque pas les autorisations antérieures d'envoi sur `main`. Les releases restent demandées et numérotées par l’utilisateur.
 
 ## Une intervention, un objectif
 
@@ -42,7 +42,7 @@ Ne pas reformater tout un composant tiers pendant une correction locale. Garder 
 
 ## Données et compatibilité
 
-Aucun PDF personnel, poids, dictionnaire ou donnée tierce dans Git. Les exemples sont synthétiques et générés hors des sources versionnées. Ne jamais ajouter un journal brut contenant des informations personnelles ou des identifiants. Les secrets restent dans leur mécanisme local/trousseau ; on ne demande pas à NOxygen59 de les coller dans un chat ou une PR.
+Aucun PDF personnel, poids, dictionnaire ou donnée tierce dans Git. Les exemples sont synthétiques et générés hors des sources versionnées. Ne jamais ajouter un journal brut contenant des informations personnelles ou des identifiants. Les secrets restent dans leur mécanisme local/trousseau ; on ne demande pas à l’utilisateur de les coller dans un chat ou une PR.
 
 Une migration de base s'ajoute sans réécrire les migrations livrées. Un effacement ou un changement de cache doit décrire exactement les données touchées, surtout les OCR retouchés. Le retour arrière d'un commit ne répare pas automatiquement une donnée migrée.
 
@@ -52,7 +52,7 @@ Respecter iOS 16.0 minimum et les forks MLX validés. Les permissions de fichier
 
 Le [gabarit de PR](.github/pull_request_template.md) s'applique automatiquement. Chaque PR contient :
 
-- un **résumé simple en français pour NOxygen59** : ce qui change pour lui, pourquoi, et ce qu'il doit décider ou essayer ;
+- un **résumé simple en français pour l’utilisateur** : ce qui change pour lui, pourquoi, et ce qu'il doit décider ou essayer ;
 - l'agent responsable, le chantier du plan directeur et l'Issue liée ;
 - les changements techniques et les décisions nécessaires au lecteur ;
 - les preuves : commandes réellement exécutées, SHA, plateforme, réussites, échecs et tests ignorés, avec la référence du run ou de la fiche locale ;
