@@ -101,7 +101,7 @@ Cette commande compile pour l'appareil sans l'installer, sans exécuter l'app et
 
 KyokashoKit dépend notamment de GRDB (plage `from: 7.11.1`), ZIPFoundation (`from: 0.9.20`), ONNX Runtime (exact `1.24.2`) et swift-fsrs (révision). GLMOCRKit dépend du fork mlx-swift-lm par branche et de swift-transformers exact `1.3.5`. Les `Package.resolved` portent les révisions effectives : une branche n'est pas une épingle immuable sans ces fichiers.
 
-Pour mettre à jour : lot dédié, état initial des deux résolutions, examen des changelogs/correctifs iOS 16, tests ciblés, compilation générique, puis essai réel demandé à NOxygen59. Ne pas lancer `swift package update` au début d'une simple vérification. Les anciennes instructions de `IA-LOCALE.md` qui mettent à jour les packages sont des procédures de maintenance, pas la voie d'une reproduction figée.
+Pour mettre à jour : lot dédié, état initial des deux résolutions, examen des changelogs/correctifs iOS 16, tests ciblés, compilation générique, puis essai réel demandé à l’utilisateur. Ne pas lancer `swift package update` au début d'une simple vérification. Les anciennes instructions de `IA-LOCALE.md` qui mettent à jour les packages sont des procédures de maintenance, pas la voie d'une reproduction figée.
 
 Le code original est MIT ; cela ne remplace pas les licences des composants portés, modèles ou dictionnaires. Consulter `THIRD_PARTY_NOTICES.md`, `LICENSES/` et les crédits de l'app. La séparation d'un module GPL ne suffit pas, à elle seule, à conclure aux conditions d'une éventuelle redistribution ; tout changement de distribution demande une revue spécifique.
 
