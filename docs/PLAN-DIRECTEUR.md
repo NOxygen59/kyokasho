@@ -134,9 +134,9 @@ Une anomalie critique démontrée peut modifier cet ordre, avec justification en
 **État de référence du 27/10/2026, après la recette 1.3.2 :**
 
 - `main` : `738dceb7fd09ccfcb1b9feb454c1d695d2658d9d` avant la fusion de cette mise à jour (#62) ; relever le SHA courant sur GitHub.
-- Registre central : [RETOURS-IPAD.md](RETOURS-IPAD.md), RET-001 à RET-043 ; prochain identifiant libre RET-044.
+- Registre central : [RETOURS-IPAD.md](RETOURS-IPAD.md), RET-001 à RET-044 ; prochain identifiant libre RET-045.
 - Candidate locale 1.3.2 (42), non publiée : source `bfd4312`, `.tipa` SHA-256 `8276afe1fe819acdc423a76241016115eaa111987c96f01c565a0385885f8f6e`. RET-010/011/012 confirmés iPad ; #13, #14, #15 fermées.
-- Ouverts : RET-041 (#60) et RET-042 (#61), non résolus ; RET-043 (#63, navigation PDF en mode lecture), investigation proposée sans correctif.
+- Ouverts : RET-041 (#60) et RET-042 (#61), non résolus ; RET-043 (#63, navigation PDF en mode lecture), investigation en cours (candidates de diagnostic locales) ; RET-044 (#65, fiabilité affichée 0,0 %) corrigé sur Mac.
 - Actions désactivé ; aucune release ; dépendances/forks MLX inchangés ; aucune donnée personnelle manipulée.
 
 **Une seule séquence recommandée :** fixer avec NOxygen59 les priorités du registre (dont #60 et #61), puis un lot à la fois : Issue cadrée, PR, preuves Mac, candidate locale, recette iPad. Les validations DATA-01, DATA-02, DATA-03 et PERF-01 demeurent ouvertes et passent avant une refactorisation importante.
