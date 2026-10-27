@@ -14,7 +14,7 @@
 
 ## 0. Passation (23/10/2026) : le projet passe de Claude Code à ChatGPT Codex
 
-Tout le code jusqu'à la v1.1.0 a été écrit par Claude (Claude Code). **NOxygen59 pilote le projet** ; Claude participe
+Tout le code jusqu'à la v1.1.0 a été écrit par Claude (Claude Code). **l’utilisateur pilote le projet** ; Claude participe
 au cadrage et à la feuille de route ; **ChatGPT Codex contribue au développement, aux corrections et à la revue du code**.
 `AGENTS.md` (racine) renvoie ici. Ce qui suit est ce qu'un nouvel assistant doit savoir avant d'écrire une ligne.
 
