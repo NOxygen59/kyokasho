@@ -29,7 +29,7 @@
 - Pas de simulateur, installation appareil, modification de version, release ou fusion implicite.
 - Le dépôt est **public** au relevé du 25/10 (alors que [la feuille de route](FEUILLE-DE-ROUTE.md) § 0 le dit « privé ») ; la décision de visibilité appartient au propriétaire. Ne jamais publier des PDF, secrets, logs bruts ou jeux d'essai privés.
 
-## 3. État actuel au 27 octobre 2026
+## État actuel au 27 octobre 2026
 
 | Niveau | Éléments |
 |---|---|
@@ -40,7 +40,7 @@
 
 Le registre iPad porte le détail par retour. Cette vue indique seulement le niveau de maturité et ne remplace ni les Issues ni les preuves.
 
-## 4. Registre des chantiers de professionnalisation
+## 3. Registre des chantiers de professionnalisation
 
 **Code de statut de cette table :** « fusionné » n'est **pas** « testé iPad » ; « à valider iPad » n'est **pas** « testé iPad ». Les tâches nouvelles ne sont que **proposées**, jamais automatiquement autorisées.
 
@@ -66,7 +66,7 @@ Le registre iPad porte le détail par retour. Cette vue indique seulement le niv
 
 Les chantiers n'ont **pas** d'avancement en pourcentage : cela produirait une précision trompeuse. L'ordre n'est pas une promesse de calendrier.
 
-## 5. Dépendances et ordre suggéré
+## 4. Dépendances et ordre suggéré
 
 1. **Stabiliser le lot déjà ouvert** : relire #31, #32 et #57 ; ne fusionner que sur accord de NOxygen59 et après résolution des remarques. Construire ensuite une candidate locale identifiée par son SHA source et le SHA-256 du `.tipa`.
 2. **Recette iPad courte du lot** : palette Pencil au changement de double page (#31), modes indépendants par document et après relance (#32), bulle Yomitan tactile/souris/Maj dans les modes du panneau (#57). Consigner chaque résultat dans [RETOURS-IPAD.md](RETOURS-IPAD.md).
@@ -78,7 +78,7 @@ Les chantiers n'ont **pas** d'avancement en pourcentage : cela produirait une pr
 
 Une anomalie critique démontrée peut modifier cet ordre, avec justification enregistrée. Les chantiers n'ont pas de pourcentage d'avancement : intégration, tests Mac, compilation iOS et validation iPad restent des axes séparés.
 
-## 6. Registre des validations et limites
+## 5. Registre des validations et limites
 
 - **État GitHub du 27/10** : `main` `5a50bed7a8833a6c62ca3574664741fb5ebf3340` ; PR #56 fusionnée (registre complet), PR #31/#32/#57 ouvertes en brouillon et fusionnables au relevé. Aucun de ces trois correctifs n'est confirmé sur iPad.
 - **Build locale 1.3.1 (41), recette NOxygen59 du 27/10** : candidate non publiée, source locale `e3232d5` (`main` `ec51cb8` + version/build), SHA-256 `c5b31ced0e89ee30cac80c0ff55cd3f21e4dcef712469b9a61397e6946bf9016`. Installation/version/données observées OK ; RET-008 et RET-009 confirmés ; RET-011 partiel ; RET-012 précisé vers un stockage par document.
@@ -101,7 +101,7 @@ Une anomalie critique démontrée peut modifier cet ordre, avec justification en
 - **Contrôle documentaire** : `scripts/check_documentation.py` vérifie les liens locaux et, depuis GOV-03, la présence des documents de pilotage et leurs renvois. Sur un push groupant plusieurs commits, `git diff --check HEAD^ HEAD` ne couvre que le dernier (CI-ROADMAP, phase 1). Les en-têtes SPDX des Markdown ne sont pas contrôlés : plusieurs documents historiques n'en ont pas.
 - **À ne pas confondre** : le fichier racine `PLAN.md` est le plan historique du produit (V1→V5), pas ce plan directeur.
 
-## 7. Mode opératoire : une tâche du début à la fin
+## 6. Mode opératoire : une tâche du début à la fin
 
 1. **Cadre** : identifiant du chantier, bug/objectif, bénéfice, périmètre, propriétaire de la décision.
 2. **Contrat** : invariants, données touchées, contraintes iOS 16 et modèles, tests requis, non-objectifs.
@@ -114,7 +114,7 @@ Une anomalie critique démontrée peut modifier cet ordre, avec justification en
 
 **Définition de terminé** : implémentation + vérifications exigées + documentation + revue + intégration, *et* validation sur iPad si le critère la demande. Ne jamais clore implicitement une preuve manquante.
 
-## 8. Répertoire documentaire — sans double emploi
+## 7. Répertoire documentaire — sans double emploi
 
 - **Ce fichier** : suivi du programme de professionnalisation.
 - [INDEX.md](INDEX.md) : navigation dans la documentation.
@@ -127,7 +127,7 @@ Une anomalie critique démontrée peut modifier cet ordre, avec justification en
 
 **Résolution des contradictions** : rapporter les deux sources et leur date, vérifier le code/les runs et demander une décision si nécessaire. Ne pas effacer l'historique ni mettre à jour silencieusement les anciennes notes.
 
-## 9. Point de reprise pour le prochain chat
+## 8. Point de reprise pour le prochain chat
 
 **État de référence du 27/10/2026 :**
 
