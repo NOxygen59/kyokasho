@@ -162,4 +162,10 @@ Build **non publiée**, construite depuis le commit local `bfd4312` (= `main` `2
 |---|---|---|---|---|---|---|---|---|---|
 | RET-048 | — | 2026-10-27 | Bug (données, PageShift) | Un rapport d'analyse dont une page est hors du document est décalé sans contrôle ; l'ajout de pages devrait s'arrêter comme pour les brouillons et les lectures IA | `main` `8b89b93`, tests Mac | compilé iOS | [#74](https://github.com/NOxygen59/kyokasho/issues/74) | [#77](https://github.com/NOxygen59/kyokasho/pull/77) (tests : [#75](https://github.com/NOxygen59/kyokasho/pull/75), fusionnée) | garde de plage `116431e` ; `testS7…` démarqué (pages 7, 2, −1), échoue sans la garde ; 39 PageShift + ASan + 218 KyokashoKit verts ; build iOS générique réussie ; pas d'essai iPad |
 
-Prochain identifiant libre : **RET-049**.
+### Proposition du 28/10/2026 — animation du sélecteur de pages
+
+| ID | Alias | Date | Type | Retour (résumé) | Build | État | Issue | PR | Preuve |
+|---|---|---|---|---|---|---|---|---|---|
+| RET-049 | — | 2026-10-28 | Ergonomie (animation) | Animer l’apparition et la disparition de la vue de sélection des pages, qui apparaît actuellement sans transition ; préserver la page, le défilement des miniatures et la stabilité du PDF, avec Réduire les animations et iOS 16.6.1 | — | proposé, à cadrer | [#79](https://github.com/NOxygen59/kyokasho/issues/79) | — | retour direct de NOxygen59 ; aucun code ni essai |
+
+Prochain identifiant libre : **RET-050**.
