@@ -7,6 +7,7 @@ Ce registre suit chaque retour de NOxygen59 en usage réel, du signalement à la
 
 ## Règles
 
+- **Source de vérité** : depuis le 27/10/2026, ce registre et les Issues GitHub font foi pour l'état des retours. Les documents de feedback locaux (dont celui du 26/10) restent des sources historiques ; on ne les met plus à jour.
 - **Identifiant stable** `RET-NNN`. Il ne change jamais et ne se réutilise pas, même pour un retour abandonné. Les identifiants de la série du 26/10 donnés par Codex (`O01`, `P04`…) sont conservés comme alias.
 - **Une ligne par retour.** Le détail (mots de NOxygen59, questions, discussion) vit dans l'Issue.
 - **État** : une seule valeur, la plus avancée réellement prouvée :
