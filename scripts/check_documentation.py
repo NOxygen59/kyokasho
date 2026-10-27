@@ -16,7 +16,7 @@ REQUIRED = {
     "AGENTS.md": ["docs/PLAN-DIRECTEUR.md", "docs/FEUILLE-DE-ROUTE.md", "docs/INDEX.md", "docs/GOUVERNANCE-ET-REPRISE.md", "CONTRIBUTING.md", "Zéro dépense"],
     "CLAUDE.md": ["@AGENTS.md"],
     "CONTRIBUTING.md": [".github/pull_request_template.md"],
-    ".github/pull_request_template.md": ["## Résumé pour NOxygen59", "## Preuves", "## Limites et non vérifié", "## Passation à l'agent suivant"],
+    ".github/pull_request_template.md": ["## Résumé pour l’utilisateur", "## Preuves", "## Limites et non vérifié", "## Passation à l'agent suivant"],
     "docs/PLAN-DIRECTEUR.md": ["../AGENTS.md", "FEUILLE-DE-ROUTE.md", "CI-ROADMAP.md", "## 8. Point de reprise"],
     "docs/INDEX.md": ["PLAN-DIRECTEUR.md", "CI-ROADMAP.md", "../AGENTS.md"],
     "docs/FEUILLE-DE-ROUTE.md": [],
