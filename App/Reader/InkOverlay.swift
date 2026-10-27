@@ -106,11 +106,18 @@ final class InkStore: NSObject, PDFPageOverlayViewProvider {
     }
 
     /// Affiche ou masque la palette d'outils (après que PDFKit a recréé les surcouches).
+    ///
+    /// La palette d'iPadOS n'est visible que tant que **son** répondeur est le premier répondeur.
+    /// Elle était autrefois rattachée à la seule première surcouche : toucher une autre page ou la vue PDF
+    /// la faisait disparaître, et « Annuler » visait l'historique d'une autre page (RET-011, Issue #14).
+    /// Chaque toile en mode dessin est donc enregistrée (`InkPageView.setEditing`), ainsi que la vue PDF,
+    /// qui devient premier répondeur quand on touche la page hors d'un trait.
     func showToolPicker(_ on: Bool) {
         let canvases = liveViews.allObjects.compactMap(\.existingCanvas)
+        if let pdfView = controller?.pdfView { toolPicker.setVisible(on, forFirstResponder: pdfView) }
         if on, let first = canvases.first {
-            toolPicker.setVisible(true, forFirstResponder: first)
-            first.becomeFirstResponder()
+            for canvas in canvases { toolPicker.setVisible(true, forFirstResponder: canvas) }
+            if !canvases.contains(where: \.isFirstResponder) { first.becomeFirstResponder() }
         } else {
             for canvas in canvases {
                 toolPicker.setVisible(false, forFirstResponder: canvas)
@@ -143,7 +150,10 @@ final class InkStore: NSObject, PDFPageOverlayViewProvider {
     nonisolated func pdfView(_ pdfView: PDFView, willEndDisplayingOverlayView overlayView: UIView, for page: PDFPage) {
         MainActor.assumeIsolated {
             guard let overlay = overlayView as? InkPageView else { return }
-            if let canvas = overlay.existingCanvas { toolPicker.removeObserver(canvas) }
+            if let canvas = overlay.existingCanvas {
+                toolPicker.setVisible(false, forFirstResponder: canvas)
+                toolPicker.removeObserver(canvas)
+            }
             liveViews.remove(overlay)
             if !dirty.isEmpty { flush() }
         }
@@ -274,9 +284,18 @@ final class InkPageView: UIView, PKCanvasViewDelegate {
         if on {
             toolPicker.addObserver(canvas)
             canvas.tool = toolPicker.selectedTool
+            // Aussi pour les pages qui apparaissent pendant le dessin (défilement, page suivante).
+            toolPicker.setVisible(true, forFirstResponder: canvas)
         } else {
+            toolPicker.setVisible(false, forFirstResponder: canvas)
             toolPicker.removeObserver(canvas)
         }
+    }
+
+    /// La page où l'on dessine devient premier répondeur : la palette reste affichée et
+    /// « Annuler » / « Rétablir » agissent sur l'historique de **cette** page.
+    func canvasViewDidBeginUsingTool(_ canvasView: PKCanvasView) {
+        if !canvasView.isFirstResponder { canvasView.becomeFirstResponder() }
     }
 
     // Laisse passer les touches vers PDFKit hors mode dessin.
