@@ -78,8 +78,20 @@ final class ReaderController: NSObject, ObservableObject {
     var flushScheduled = false
 
     // MARK: Dictionnaire au toucher
+    /// Modes d'outil gardés d'un livre à l'autre et après redémarrage, comme le survol (RET-012, Issue #15).
+    /// Réglages globaux : ils valent pour tous les livres.
+    enum ModeMemory {
+        static let lookupKey = "reader.lookupMode"
+        static let pencilLookupKey = "reader.pencilLookup"
+        static let drawingKey = "reader.drawing"
+    }
+
     /// Outil « dictionnaire » actif : un tap sur un caractère cherche le mot.
-    @Published var lookupMode = false
+    @Published var lookupMode = UserDefaults.standard.bool(forKey: ModeMemory.lookupKey) {
+        didSet { UserDefaults.standard.set(lookupMode, forKey: ModeMemory.lookupKey) }
+    }
+    /// Mode dessin à rétablir une fois le document installé (les surcouches PencilKit doivent exister).
+    var pendingDrawingRestore = UserDefaults.standard.bool(forKey: ModeMemory.drawingKey)
     /// Demande de recherche (texte à partir du caractère touché, point d'ancrage dans la vue).
     @Published var lookupRequest: LookupRequest?
     /// Rectangles (repère de la vue PDF) du texte touché puis du mot reconnu.
@@ -124,13 +136,21 @@ final class ReaderController: NSObject, ObservableObject {
     var hover: UIHoverGestureRecognizer!
     var pencilTap: UITapGestureRecognizer!
     /// Le Pencil cherche le mot touché dans le dictionnaire (au lieu de dessiner ou d'afficher les barres).
-    @Published var pencilLookup = false {
+    /// Rétabli seulement si l'option des réglages qui affiche son bouton est encore active.
+    @Published var pencilLookup = UserDefaults.standard.bool(forKey: "pencil.lookupOption")
+        && UserDefaults.standard.bool(forKey: ModeMemory.pencilLookupKey) {
         didSet {
-            // Le doigt et la souris gardent le tap normal ; le Pencil passe par `pencilTap`.
-            let all: [UITouch.TouchType] = pencilLookup ? [.direct, .indirect, .indirectPointer] : [.direct, .indirect, .indirectPointer, .pencil]
-            singleTap?.allowedTouchTypes = all.map { NSNumber(value: $0.rawValue) }
-            pencilTap?.isEnabled = pencilLookup
+            UserDefaults.standard.set(pencilLookup, forKey: ModeMemory.pencilLookupKey)
+            applyPencilLookupGestures()
         }
+    }
+
+    /// Le doigt et la souris gardent le tap normal ; le Pencil passe par `pencilTap`.
+    /// Aussi appelé après `configureGestures`, car `didSet` ne s'exécute pas pour la valeur initiale.
+    func applyPencilLookupGestures() {
+        let all: [UITouch.TouchType] = pencilLookup ? [.direct, .indirect, .indirectPointer] : [.direct, .indirect, .indirectPointer, .pencil]
+        singleTap?.allowedTouchTypes = all.map { NSNumber(value: $0.rawValue) }
+        pencilTap?.isEnabled = pencilLookup
     }
     var hoverTask: Task<Void, Never>?
     private var lookupDiagnosticTimes: [String: Date] = [:]
@@ -494,6 +514,10 @@ final class ReaderController: NSObject, ObservableObject {
         // Le rognage a besoin des repères de pages : lancé une fois le document installé.
         startAutoCropIfNeeded()
         schedulePageSettled()
+        if pendingDrawingRestore {
+            pendingDrawingRestore = false
+            setDrawing(true)
+        }
     }
 
     func markOpened() {
