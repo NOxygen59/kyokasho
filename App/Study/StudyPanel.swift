@@ -119,10 +119,16 @@ struct StudyTextTab: View {
     @State private var layoutError: String?
     /// Session réutilisée pendant toute la vie du panneau (les résultats restent en mémoire entre deux mots).
     @State private var lookup: LookupSession?
-    /// Session affichée : la feuille reçoit **cette valeur** (`sheet(item:)`), pas une capture de `lookup`.
-    /// Avec `sheet(isPresented:)`, le contenu lisait encore `lookup == nil` au premier toucher après
-    /// l'ouverture du livre, et la feuille s'ouvrait vide (RET-009, Issue #12).
+    /// Vue agrandie (« Agrandir » dans la bulle) : la feuille reçoit **cette valeur** (`sheet(item:)`), pas une
+    /// capture de `lookup`. Avec `sheet(isPresented:)`, le contenu lisait encore `lookup == nil` au premier
+    /// toucher après l'ouverture du livre, et la feuille s'ouvrait vide (RET-009, Issue #12).
     @State private var presentedLookup: LookupSession?
+    /// Bulle de contexte ancrée au mot (Issue #13), à la place de la feuille plein écran.
+    @State private var bubble: PanelBubble?
+    /// Pointeur (souris, trackpad) au-dessus de la bulle : elle ne se ferme pas tant qu'il y reste.
+    @State private var pointerInBubble = false
+    @ObservedObject private var shift = ShiftKey.shared
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var translating = false
     @State private var translateError: String?
     @State private var showCompare = false
@@ -154,19 +160,9 @@ struct StudyTextTab: View {
                     }
                     doubtRow(page)
                     if aiLayout {
-                        AILayoutView(reader: reader, furigana: furigana) { text in
-                            let session = lookup ?? LookupSession(dictionary: model.dictionary)
-                            lookup = session
-                            session.start(text)
-                            presentedLookup = session
-                        }
+                        AILayoutView(reader: reader, furigana: furigana) { handleLookup($0) }
                     } else if furigana {
-                        FuriganaTextView(page: page, formatted: formatted, regions: regions) { text in
-                            let session = lookup ?? LookupSession(dictionary: model.dictionary)
-                            lookup = session
-                            session.start(text)
-                            presentedLookup = session
-                        }
+                        FuriganaTextView(page: page, formatted: formatted, regions: regions) { handleLookup($0) }
                     } else if formatted {
                         FormattedOCRText(page: page, regions: regions)
                     } else {
@@ -208,6 +204,12 @@ struct StudyTextTab: View {
             translateError = nil
         }
         .task(id: "\(reader.focusSource)|\(layoutEngineRaw)|\(formatted)|\(reader.ocrPage != nil)") { await loadRegions() }
+        .overlay(alignment: .topLeading) { bubbleOverlay }
+        .onChange(of: shift.pressed) { pressed in
+            // Bulle ouverte au survol avec Maj : relâcher Maj la ferme (Issue #13).
+            if !pressed, bubble?.hover == true { closeBubble() }
+        }
+        .onChange(of: reader.focusSource) { _ in closeBubble() }
         .sheet(item: $presentedLookup, onDismiss: { lookup?.clear() }) { lookup in
             // Fenêtre compacte du dictionnaire (mot touché dans le texte à furigana).
             LookupPopup(session: lookup, added: model.review.keys, onAddCard: { term in
@@ -266,6 +268,89 @@ struct StudyTextTab: View {
     }
 
     /// Zones de mise en page de la page de travail (modèle choisi, gardées en mémoire par page).
+    // MARK: Bulle de contexte du dictionnaire (Issue #13)
+
+    struct PanelBubble: Identifiable {
+        let id = UUID()
+        let session: LookupSession
+        /// Mot en coordonnées de la fenêtre (`.global`).
+        let wordRect: CGRect
+        /// Ouverte au survol avec Maj (fermée en quittant le mot ou en relâchant Maj) ou par un toucher/clic.
+        let hover: Bool
+    }
+
+    private var bubbleAnimation: Animation { reduceMotion ? .easeOut(duration: 0.12) : .spring(response: 0.18, dampingFraction: 0.9) }
+
+    private func handleLookup(_ event: PanelLookupEvent) {
+        switch event {
+        case .open(let text, let wordRect, let hover):
+            let session = lookup ?? LookupSession(dictionary: model.dictionary)
+            lookup = session
+            // Même mot déjà ouvert au survol : rien à refaire (évite de relancer la recherche à chaque mouvement).
+            if let bubble, bubble.hover, hover, bubble.wordRect == wordRect { return }
+            session.start(text)
+            pointerInBubble = false
+            withAnimation(bubbleAnimation) { bubble = PanelBubble(session: session, wordRect: wordRect, hover: hover) }
+        case .hoverEnd:
+            guard bubble?.hover == true else { return }
+            // Laisser le temps au pointeur d'entrer dans la bulle (elle est collée au mot).
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                if bubble?.hover == true, !pointerInBubble { closeBubble() }
+            }
+        case .tapOutside:
+            closeBubble()
+        }
+    }
+
+    /// Ferme la bulle ; `keepSession` quand la vue agrandie reprend la même session.
+    private func closeBubble(keepSession: Bool = false) {
+        guard bubble != nil else { return }
+        withAnimation(bubbleAnimation) { bubble = nil }
+        pointerInBubble = false
+        if !keepSession {
+            // Après l'animation de sortie, pour ne pas vider la bulle pendant qu'elle disparaît.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { if bubble == nil, presentedLookup == nil { lookup?.clear() } }
+        }
+    }
+
+    @ViewBuilder private var bubbleOverlay: some View {
+        GeometryReader { area in
+            if let bubble {
+                let origin = area.frame(in: .global).origin
+                let word = bubble.wordRect.offsetBy(dx: -origin.x, dy: -origin.y)
+                let frame = ContextBubbleLayout.frame(word: word, in: area.size)
+                // La bulle « sort » du mot : ancre de l'animation sur le mot, en haut ou en bas selon le placement.
+                let anchor = UnitPoint(x: frame.width > 0 ? min(max((word.midX - frame.minX) / frame.width, 0), 1) : 0.5,
+                                       y: frame.minY >= word.maxY ? 0 : 1)
+                LookupPopup(session: bubble.session, added: model.review.keys, onAddCard: { term in
+                    model.review.add(term, sentence: reader.ocrPage?.lines.first { $0.text.contains(term.matchedText) }?.text,
+                                     source: "\(reader.document.title) · p. \(reader.document.pageLabel(reader.focusSource))",
+                                     image: nil, documentId: reader.document.id, page: reader.focusSource,
+                                     dictionary: model.dictionary)
+                }, close: { closeBubble() })
+                .environmentObject(model.dictionary)
+                .overlay(alignment: .bottomTrailing) {
+                    Button {
+                        let session = bubble.session
+                        closeBubble(keepSession: true)
+                        presentedLookup = session
+                    } label: {
+                        Label("Agrandir", systemImage: "arrow.up.left.and.arrow.down.right").font(.caption.weight(.semibold))
+                    }
+                    .buttonStyle(.borderedProminent).tint(Atelier.Tint.japanese).controlSize(.small)
+                    .padding(8)
+                }
+                .frame(width: frame.width, height: frame.height)
+                .onHover { inside in
+                    if inside { pointerInBubble = true } else if pointerInBubble { closeBubble() }
+                }
+                .offset(x: frame.minX, y: frame.minY)
+                .transition(reduceMotion ? .opacity : .scale(scale: 0.85, anchor: anchor).combined(with: .opacity))
+                .id(bubble.id)
+            }
+        }
+    }
+
     private func loadRegions() async {
         layoutError = nil
         let engine = LayoutDetector.Engine(rawValue: layoutEngineRaw) ?? .geometry

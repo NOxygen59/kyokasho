@@ -13,7 +13,7 @@ import UIKit
 struct AILayoutView: View {
     @ObservedObject var reader: ReaderController
     let furigana: Bool
-    var onLookup: (String) -> Void
+    var onLookup: (PanelLookupEvent) -> Void
     @EnvironmentObject private var dictionary: DictionaryModel
     @AppStorage(FuriganaLayer.Tint.storageKey) private var tint = FuriganaLayer.Tint.red
     @State private var markdown: String?
