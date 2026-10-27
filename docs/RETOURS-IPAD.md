@@ -51,11 +51,11 @@ Source : message de NOxygen59 du 27/10/2026. Build observée : QA02 « 1.3 (40) 
 
 | ID | Prio | Date | Type | Retour (résumé) | Build | État | Issue | PR | Preuve |
 |---|---|---|---|---|---|---|---|---|---|
-| RET-008 | 1 | 2026-10-27 | Bug | Brouillon de note perdu en quittant la saisie | à confirmer | compilé iOS | [#11](https://github.com/NOxygen59/kyokasho/issues/11) | [#27](https://github.com/NOxygen59/kyokasho/pull/27) | tests Mac (165 réussis) + iOS générique, `cfdfa0e` |
-| RET-009 | 2 | 2026-10-27 | Bug | Carte Yomitan (fenêtre OCR) vide au premier clic, OK au second | à confirmer | compilé iOS | [#12](https://github.com/NOxygen59/kyokasho/issues/12) | [#28](https://github.com/NOxygen59/kyokasho/pull/28) | iOS générique, `3fa37fc` |
-| RET-010 | 2 | 2026-10-27 | Ergonomie | Carte Yomitan trop envahissante dans la fenêtre OCR | à confirmer | rapporté | [#13](https://github.com/NOxygen59/kyokasho/issues/13) | — | — |
-| RET-011 | 3 | 2026-10-27 | Bug | La « boule » (palette d'outils PencilKit) disparaît en touchant la page ; gomme et annulation inaccessibles | à confirmer | compilé iOS | [#14](https://github.com/NOxygen59/kyokasho/issues/14) | [#29](https://github.com/NOxygen59/kyokasho/pull/29) | iOS générique, `e1347e2` |
-| RET-012 | 3 | 2026-10-27 | Ergonomie | Modes d'un document perdus à chaque fermeture | à confirmer | compilé iOS | [#15](https://github.com/NOxygen59/kyokasho/issues/15) | [#30](https://github.com/NOxygen59/kyokasho/pull/30) | iOS générique, `4ad1c91` |
+| RET-008 | 1 | 2026-10-27 | Bug | Brouillon de note perdu en quittant la saisie | 1.3.1 (41) locale, `e3232d5` | confirmé iPad | [#11](https://github.com/NOxygen59/kyokasho/issues/11) (fermée) | [#27](https://github.com/NOxygen59/kyokasho/pull/27) | tests Mac (165 réussis) + iOS générique, `cfdfa0e` ; recette NOxygen59 27/10 OK |
+| RET-009 | 2 | 2026-10-27 | Bug | Carte Yomitan (fenêtre OCR) vide au premier clic, OK au second | 1.3.1 (41) locale, `e3232d5` | confirmé iPad | [#12](https://github.com/NOxygen59/kyokasho/issues/12) (fermée) | [#28](https://github.com/NOxygen59/kyokasho/pull/28) | iOS générique, `3fa37fc` ; recette NOxygen59 27/10 OK |
+| RET-010 | 2 | 2026-10-27 | Ergonomie | Carte Yomitan trop envahissante : NOxygen59 veut une fenêtre de contexte, pas une feuille plein écran (précisé à la recette 1.3.1) | à confirmer | rapporté | [#13](https://github.com/NOxygen59/kyokasho/issues/13) | — | — |
+| RET-011 | 3 | 2026-10-27 | Bug | La « boule » (palette d'outils PencilKit) disparaît en touchant la page ; gomme et annulation inaccessibles | 1.3.1 (41) locale, `e3232d5` | compilé iOS | [#14](https://github.com/NOxygen59/kyokasho/issues/14) | [#29](https://github.com/NOxygen59/kyokasho/pull/29) (fusionnée), [#31](https://github.com/NOxygen59/kyokasho/pull/31) | iOS générique, `e1347e2` ; recette 1.3.1 partielle (palette perdue au changement de double page), complément #31 compilé iOS `1cfe119` |
+| RET-012 | 3 | 2026-10-27 | Ergonomie | Modes d'un document perdus à chaque fermeture | 1.3.1 (41) locale, `e3232d5` | compilé iOS | [#15](https://github.com/NOxygen59/kyokasho/issues/15) | [#30](https://github.com/NOxygen59/kyokasho/pull/30) (fusionnée), [#32](https://github.com/NOxygen59/kyokasho/pull/32) | iOS générique, `4ad1c91` ; recette 1.3.1 : marche, mais NOxygen59 veut des modes par document → #32, tests Mac + iOS `de0a889` |
 | RET-013 | 5 | 2026-10-27 | Fonction | Onglets de documents en haut de l'écran | — | rapporté | [#16](https://github.com/NOxygen59/kyokasho/issues/16) | — | — |
 | RET-014 | 5 | 2026-10-27 | Ergonomie | Choix de langue inaccessible après défilement | à confirmer | rapporté | [#17](https://github.com/NOxygen59/kyokasho/issues/17) | — | — |
 | RET-015 | 5 | 2026-10-27 | Fonction | Changer de page avec les flèches du clavier | — | rapporté | [#18](https://github.com/NOxygen59/kyokasho/issues/18) | — | — |
@@ -65,5 +65,9 @@ Source : message de NOxygen59 du 27/10/2026. Build observée : QA02 « 1.3 (40) 
 | RET-019 | 5 | 2026-10-27 | Fonction | Date et heure des notes, groupées par jour | — | rapporté | [#22](https://github.com/NOxygen59/kyokasho/issues/22) | — | — |
 | RET-020 | 5 | 2026-10-26 | Fonction | Surligner directement les zones OCR détectées (accès facile, portable sur Mac) | — | rapporté | [#23](https://github.com/NOxygen59/kyokasho/issues/23) | — | — |
 | RET-021 | 5 | 2026-10-26 | Fonction | Survol Yomitan seulement pendant l'appui sur Maj | — | rapporté | [#24](https://github.com/NOxygen59/kyokasho/issues/24) | — | — |
+
+### Recette du 27/10/2026 — build de test 1.3.1 (41)
+
+Build **non publiée**, construite depuis le commit local `e3232d5` (= `main` `ec51cb8` + passage à 1.3.1 / build 41), `.tipa` SHA-256 `c5b31ced0e89ee30cac80c0ff55cd3f21e4dcef712469b9a61397e6946bf9016`, iPad Pro M1, iOS 16.6.1. Résultats de NOxygen59 : 0 (installation, version, données) OK ; RET-008 OK ; RET-009 OK ; RET-011 partiel ; RET-012 fonctionne mais à rendre propre à chaque document.
 
 Prochain identifiant libre : **RET-022**.
