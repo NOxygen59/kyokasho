@@ -2,7 +2,7 @@
 
 <!-- Agent : commencer la description par [Claude] ou [Codex]. -->
 
-## Résumé pour NOxygen59
+## Résumé pour l’utilisateur
 
 <!-- En français simple, 3 à 6 lignes : ce qui change pour lui, pourquoi, ce qu'il doit décider ou essayer sur l'iPad. -->
 
@@ -11,7 +11,7 @@
 - **Agent responsable** : Claude / Codex
 - **Chantier du plan directeur** : <!-- ex. DATA-03 -->
 - **Issue liée** : <!-- #N, ou « aucune (petit lot) » -->
-- **Autorisation de NOxygen59** : <!-- citation courte, date et origine (chat, Issue, PR) -->
+- **Autorisation de l’utilisateur** : <!-- citation courte, date et origine (chat, Issue, PR) -->
 - **Revue croisée requise** : oui / non <!-- oui pour données, concurrence, mémoire, C/C++, dépendances/forks, CI/sécurité, suppression de code -->
 
 ## Changements techniques
