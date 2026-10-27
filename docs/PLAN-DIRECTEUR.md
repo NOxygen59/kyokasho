@@ -131,15 +131,15 @@ Une anomalie critique démontrée peut modifier cet ordre, avec justification en
 
 ## 8. Point de reprise pour le prochain chat
 
-**État de référence du 27/10/2026, après la recette 1.3.2 :**
+**État de référence du 27/10/2026, après la recette 1.3.2 et le lot RET-043 à RET-047 :**
 
-- `main` : `738dceb7fd09ccfcb1b9feb454c1d695d2658d9d` avant la fusion de cette mise à jour (#62) ; relever le SHA courant sur GitHub.
-- Registre central : [RETOURS-IPAD.md](RETOURS-IPAD.md), RET-001 à RET-046 ; prochain identifiant libre RET-047.
-- Candidate locale 1.3.2 (42), non publiée : source `bfd4312`, `.tipa` SHA-256 `8276afe1fe819acdc423a76241016115eaa111987c96f01c565a0385885f8f6e`. RET-010/011/012 confirmés iPad ; #13, #14, #15 fermées.
-- Ouverts : RET-041 (#60) et RET-042 (#61), non résolus ; RET-043 (#63, navigation PDF en double page) : cause mesurée par candidates de diagnostic, correctif PR #68 ; RET-044 (#65, fiabilité 0,0 %) : correctif PR #66 ; tous deux **confirmés iPad** avec la candidate locale 1.3.2 (50), PR non fusionnées. Nouveaux : RET-045 (#67, journal lent) et RET-046 (#69, animation de fermeture de la fenêtre OCR).
+- `main` : `6dac083` après les fusions du 27/10 (#66, #68, #70, #72), avant la fusion de cette clôture (#64) ; relever le SHA courant sur GitHub.
+- Registre central : [RETOURS-IPAD.md](RETOURS-IPAD.md), RET-001 à RET-047 ; prochain identifiant libre RET-048.
+- Lot du 27/10 clos : #66 (RET-044), #68 (RET-043), #70 (RET-046) et #72 (RET-047) fusionnées sur autorisation de NOxygen59 ; `main` = `6dac083`, identique à la candidate locale 1.3.2 (52) (non publiée) hors numéro de version. #63, #65, #69, #71 fermées, confirmées iPad.
+- Ouverts : RET-041 (#60), RET-042 (#61) et RET-045 (#67, journal lent, suivi séparément), non résolus.
 - Actions désactivé ; aucune release ; dépendances/forks MLX inchangés ; aucune donnée personnelle manipulée.
 
-**Une seule séquence recommandée :** fixer avec NOxygen59 les priorités du registre (dont #60 et #61), puis un lot à la fois : Issue cadrée, PR, preuves Mac, candidate locale, recette iPad. Les validations DATA-01, DATA-02, DATA-03 et PERF-01 demeurent ouvertes et passent avant une refactorisation importante.
+**Une seule séquence recommandée :** pas de nouvelle fonctionnalité d'interface ; reprendre la professionnalisation par le cadrage des tests de sécurité de PageShift et de reprise après interruption, d'abord en tests automatisés sur données synthétiques, sans correctif ni manipulation de la bibliothèque personnelle. Les validations DATA-01, DATA-02, DATA-03 et PERF-01 demeurent ouvertes et passent avant une refactorisation importante.
 
 **Question standard de reprise :** « Lis `AGENTS.md`, `docs/PLAN-DIRECTEUR.md` et `docs/RETOURS-IPAD.md`, compare avec GitHub actuellement, puis indique l'état vérifié, les blocages et une seule prochaine action ; ne fusionne ni ne publie sans mon accord. »
 
