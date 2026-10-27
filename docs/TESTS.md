@@ -5,7 +5,7 @@
 
 ## Objectif
 
-Éviter les pertes de données, préserver la lecture et rendre les corrections démontrables. Les tests Mac contrôlent les modules ; la compilation iOS contrôle les API et le linkage ; la recette de NOxygen59 contrôle l'app réelle sur iOS 16.6.1. Ces preuves sont complémentaires. Aucun simulateur ou appareil n'est lancé sans son accord.
+Éviter les pertes de données, préserver la lecture et rendre les corrections démontrables. Les tests Mac contrôlent les modules ; la compilation iOS contrôle les API et le linkage ; la recette de l’utilisateur contrôle l'app réelle sur iOS 16.6.1. Ces preuves sont complémentaires. Aucun simulateur ou appareil n'est lancé sans son accord.
 
 ## Tests existants
 
@@ -57,7 +57,7 @@ Ce sont des chemins à adapter, pas des assets fournis. `KYOKASHO_SAMPLE_PAGES` 
 
 ### Procédure locale standard avant une PR
 
-C'est la voie de preuve par défaut tant que GitHub Actions n'a pas de protection contre la facturation vérifiée (voir la politique « Zéro dépense » de [CI-ROADMAP.md](CI-ROADMAP.md)). Elle se lance à la main, sur le Mac de NOxygen59, dans un clone séparé, sur le SHA exact de la PR.
+C'est la voie de preuve par défaut tant que GitHub Actions n'a pas de protection contre la facturation vérifiée (voir la politique « Zéro dépense » de [CI-ROADMAP.md](CI-ROADMAP.md)). Elle se lance à la main, sur le Mac de l’utilisateur, dans un clone séparé, sur le SHA exact de la PR.
 
 ```sh
 set -o pipefail
@@ -99,9 +99,9 @@ Ajouter un test de régression ciblé avant chaque correction fonctionnelle. Uti
 
 Pour l'OCR réel, garder hors dépôt un corpus daté avec vérité terrain relue humainement : horizontal, vertical, petits caractères, tableaux, formules, pages tournées et scans dégradés. Mesurer CER, erreurs numériques et qualité de placement séparément ; un bon CER ne garantit pas une formule juste. Mesurer temps à froid/à chaud et pics mémoire par modèle. Fixer les seuils après une première mesure de référence, pas des pourcentages arbitraires.
 
-## Recette iPad à remplir par NOxygen59
+## Recette iPad à remplir par l’utilisateur
 
-Pour PageShift et la sauvegarde (I03/I08/I09/I11/I12), suivre d’abord [QA-02](RECETTE-IPAD-QA-02.md), qui permet le niveau A sur l’installation existante avec les précautions A0 et le risque de perte accepté par NOxygen59 le 25/10/2026 ; le niveau B reste bloqué jusqu’à qualification et accords distincts. La grille suivante reste le catalogue général, pas une autorisation de tout essayer. Préparer uniquement des données synthétiques et noter version/build affichés, SHA source externe et SHA-256 du `.tipa`, iOS, modèle installé, mode diagnostic et espace libre. Pour chaque ligne : réussi/échoué/non essayé, date, observation, journal ou capture. « Non essayé » reste visible dans les notes de release.
+Pour PageShift et la sauvegarde (I03/I08/I09/I11/I12), suivre d’abord [QA-02](RECETTE-IPAD-QA-02.md), qui permet le niveau A sur l’installation existante avec les précautions A0 et le risque de perte accepté par l’utilisateur le 25/10/2026 ; le niveau B reste bloqué jusqu’à qualification et accords distincts. La grille suivante reste le catalogue général, pas une autorisation de tout essayer. Préparer uniquement des données synthétiques et noter version/build affichés, SHA source externe et SHA-256 du `.tipa`, iOS, modèle installé, mode diagnostic et espace libre. Pour chaque ligne : réussi/échoué/non essayé, date, observation, journal ou capture. « Non essayé » reste visible dans les notes de release.
 
 | ID | Scénario | Résultat attendu |
 |---|---|---|
@@ -202,7 +202,7 @@ Non exécutés : build iOS, simulateur, appareil, MLX/Metal, LSan, extraction/re
 
 ### Correction documentaire après revue indépendante
 
-La [revue de Claude](https://github.com/NOxygen59/kyokasho/pull/7#issuecomment-6397411518) a été validée par NOxygen59 le 25/10/2026. Le niveau A admet désormais l'installation existante avec risque de perte accepté et PDF synthétiques `QA02-…`, sans exiger une seconde app. L'accord ne couvre pas B : extraction/restauration TrollStore restent bloquées jusqu'à qualification et autorisations distinctes.
+La [revue de Claude](https://github.com/NOxygen59/kyokasho/pull/7#issuecomment-6397411518) a été validée par l’utilisateur le 25/10/2026. Le niveau A admet désormais l'installation existante avec risque de perte accepté et PDF synthétiques `QA02-…`, sans exiger une seconde app. L'accord ne couvre pas B : extraction/restauration TrollStore restent bloquées jusqu'à qualification et autorisations distinctes.
 
 La recette compare « Page simple » et « Double page » ; l'égalisation des hauteurs est automatique, sans interrupteur. Elle donne le chemin exact de « Lire les nouvelles pages avec OvisOCR2 » et explique son arrêt temporaire pour éviter les lectures déclenchées après import/ouverture/ajout. Le parcours d'export comprend « Tout le document », « Exporter » puis « Partager <nom du fichier> ».
 
