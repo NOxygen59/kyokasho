@@ -22,7 +22,7 @@ Au SHA `f83aec8c61d88f1e6c119376590899c9c1ce2876` (25/10/2026), `Packages/Kyokas
 | ReviewKitTests | FSRS, stockage, modèles et export Anki | Import dans une app Anki réelle à vérifier séparément |
 | ONNXOCRKitTests | Alignement et essais de moteurs | Modèles réels requis pour plusieurs scénarios |
 | MorphologyKitTests | CSV et lectures MeCab/extraction UniDic | Dictionnaire/archive requis pour les essais réels |
-| PageShiftTests | 20 tests : reprise à 12 frontières, SIGKILL, journal ambigu/corrompu, erreurs SQL/fichiers, décalage unique ; cinq tests dédiés OCR tardif/concurrence/annulation/reprise/réactivité | Adaptateurs Mac pour l'interface ; ni parcours UIKit ni coupure matérielle |
+| PageShiftTests | 39 tests (27/10/2026) : reprise à 14 frontières, matrice de double interruption 14 × 13, décalages 0/1/2, SIGKILL à 9 frontières, journal ambigu/corrompu/modifié (S1, S2, S5), lien symbolique, PDF tiers, ajouts concurrents, erreurs SQL/fichiers, décalage unique ; cinq tests OCR tardif/concurrence/annulation/reprise/réactivité ; 1 défaut connu (RET-048) | Adaptateurs Mac pour l'interface ; ni parcours UIKit ni coupure matérielle |
 | BackupIntegrationTests | 1 test : vraies bases AppDatabase/ReviewStore, sauvegarde/restauration et réouverture en écriture | Conteneur synthétique Mac ; ni extraction ni réinstallation TrollStore |
 | GLMOCRKitTests | Lecture Ovis/GLM/Qwen, vrais échantillons, traduction, chat, profil | Poids et corpus externes ; tests opt-in, pas une suite légère systématique |
 
@@ -89,7 +89,7 @@ Relever le code de sortie de chaque commande. Avec `tee`, `set -o pipefail` le c
 
 ## Couverture à ajouter par risque
 
-1. **Préservation des données** : les PR #2/#3 couvrent désormais plusieurs injections de panne, reprises répétées et la restauration synthétique (table ci-dessus). Restent à qualifier les parcours UIKit, l’espace réellement disponible, les copies volumineuses et le conteneur TrollStore ; ne pas présenter les tests Mac comme une validation iPad. Voir les limites de [PageShift](PHASE2-STOCKAGE.md) et de [sauvegarde](PHASE2-SAUVEGARDE.md).
+1. **Préservation des données** : les PR #2/#3 couvrent plusieurs injections de panne, reprises répétées et la restauration synthétique ; le cadrage [#73](https://github.com/NOxygen59/kyokasho/issues/73) ajoute la sécurité du journal et la double interruption (section « PageShift — sécurité et reprise » ci-dessous). Restent à qualifier les parcours UIKit, l’espace réellement disponible, les copies volumineuses et le conteneur TrollStore ; ne pas présenter les tests Mac comme une validation iPad. Voir les limites de [PageShift](PHASE2-STOCKAGE.md) et de [sauvegarde](PHASE2-SAUVEGARDE.md).
 2. **Contrats v1.3** : langue Japonais/Auto, `图`/`図`, nombres/latin/formules intacts, lignes `edited` intactes, brut IA inchangé, suppression de traduction périmée et invalidation de vote.
 3. **Chat** : « p. 6 » et numérotation romaine, page absente/hors limites, aucune lecture disponible, relance versus nouvelle question, isolation des conversations et modèles. Sortie attendue sur sélection des passages, sans dépendre d'un texte exact produit par un LLM.
 4. **Géométrie** : pages tournées et de tailles différentes, coordonnées des annotations, double page et export ; vérifier les repères plutôt que seulement une capture d'écran.
@@ -144,6 +144,44 @@ Contrôles documentaires : 49 liens locaux examinés sans erreur ; diff sans err
 
 App iOS complète : non recompilée par ce lot. GLMOCRKit avec poids : non exécuté. Recette iPad : non exécutée. ASan/LSan de l'app : non exécutés. Aucun statut historique n'est promu au rang de nouvelle validation.
 
+
+## PageShift — sécurité et reprise (27 octobre 2026, cadrage #73)
+
+Base : `main` `8b957dd`. Fichier `Packages/KyokashoKit/Tests/PageShiftTests/PageShiftSafetyTests.swift`, extension de `PageShiftRecoveryTests` (même harnais `withFixture` : dossier temporaire, `PageShift.support` redirigé, aucune bibliothèque réelle).
+
+| Code | Test | Ce qui est vérifié |
+|---|---|---|
+| S1 | `testS1TamperedJournalDocumentIdIsRefusedWithoutWriting`, `testS1HostileDocumentIdIsRefusedBeforeAnyCopy` | `documentId` = `../…`, `a/b`, `..`, `.`, vide : blocage, journal et fichiers inchangés (inventaire SHA-256), puis reprise normale avec le journal authentique |
+| S2 | `testS2TamperedJournalTransactionIsRefusedWithoutWriting` | `transaction` = `../../…`, `abc`, absente ; leurre d'espace de travail authentique hors du conteneur, intact |
+| S3 | `testS3SymlinkInAIReadingsStopsTheAdditionAndLeavesTargetIntact` | lien symbolique dans les lectures IA : refus, cible hors conteneur intacte |
+| S4 | `testS4OutOfRangeAIReadingStopsTheAddition`, `testS4UnusualAIReadingNamesShiftOnlyTheTrailingPageNumber` | `x-9.md` refusé ; `a-b-1.md` → `a-b-3.md`, `x--1.md` → `x--3.md` (le tiret n'est pas un signe), `notes.md` et `data.json` copiés tels quels |
+| S5 | `testS5TamperedCardPagesInJournalAreRefused` | pages de cartes hors plage dans le journal : blocage, FSRS intact |
+| S6 | `testS6ThirdPDFBeforeRecoveryIsNeverOverwritten` | troisième PDF avant la reprise : jamais écrasé, base non décalée |
+| S7 | `testS7ReportPageOutsideTheDocumentStopsTheAddition` | **défaut connu RET-048** ([#74](https://github.com/NOxygen59/kyokasho/issues/74)) : un rapport portant une page hors du document est décalé sans contrôle ; test marqué `XCTExpectFailure` (strict), limité par `issueMatcher` à la seule assertion du défaut |
+| R1 | `testR1DoubleInterruptionMatrix` | interruption au point a, reprise interrompue au point b, puis reprise libre : 182 couples (14 × 13 ; `journal.after` n'est jamais traversé par la reprise), chaque seconde interruption prouvée atteinte et laissant le journal (≈ 7 s) |
+| R2 | `testR2BareDocumentInterruptedAtEveryBoundary` | document sans rapport, brouillons ni lectures IA, 14 frontières |
+| R3 | `testR3EveryOffsetInterruptedAtEveryBoundary` | décalages 0, 1, 2 × 14 frontières |
+| R4 | `testR4ConcurrentAdditionsOnTheSameDocumentApplyOnce` | deux ajouts simultanés : un seul aboutit, l'autre refusé avec l'erreur exacte « déjà en cours », un seul décalage ; stable 10/10 |
+| R5 | `testR5PendingJournalOfOneDocumentBlocksAnotherUntilRecovered` | journal du livre A en attente : B refusé, puis accepté après la reprise de A |
+| R6 | `testR6OrphanWorkspaceBeforeJournalIsNeitherReusedNorBlocking` | copie de travail orpheline : ni bloquante, ni réutilisée, ni modifiée |
+| R7 | `testR7LeftoverPDFInstallFileIsReplacedOnRecovery` | fichier `.page-shift-<UUID>.pdf` resté : remplacé, PDF final = `newHash` |
+| R8 | `testR8AbruptProcessDeathAtRemainingBoundaries` | SIGKILL à `journal.after`, `report.after`, `drafts.after`, `cards.before`, `complete.before` (les 4 autres frontières sont déjà dans `testAbruptProcessDeathAfterCommittedEffects`) |
+
+**Résultats sur ce Mac (macOS 27.0, Swift de Xcode), code non modifié, après la revue de Codex :**
+
+- `swift test --filter PageShiftTests` : 39 tests, 0 échec (S7 en échec attendu), 14,2 s.
+- `swift test --scratch-path .build-asan --sanitize address --filter PageShiftTests` : 39 tests, 0 échec, aucun rapport ASan, 23,8 s.
+- `swift test` (suite complète `KyokashoKit`) : 218 tests exécutés, 7 ignorés (modèles ONNX/UniDic absents), 0 échec.
+
+**Puissance des tests (mutations temporaires de `PageShift.swift`, annulées) :**
+- Contrôle du lien symbolique retiré : S3 échoue.
+- Contrôle UUID de `transaction` retiré : S2 échoue.
+- Contrôle de plage de `cardPages` retiré : S5 échoue.
+- Garde de concurrence `applyingDocuments` retiré : R4 échoue.
+- Panne étrangère ajoutée au scénario S7 : S7 échoue (elle n'est pas absorbée par l'échec attendu).
+- `safeName` neutralisé : S1 **reste vert**, car un second rempart arrête l'opération avant toute écriture (empreinte du PDF ou document absent de la base). S1 vérifie donc le résultat (rien n'est écrit), pas ce contrôle précis.
+
+Non couvert : parcours UIKit, espace disque réel, gros PDF, conteneur TrollStore, iPad.
 
 ## QA-02 — vérifications de préparation du 25 octobre 2026
 
