@@ -72,3 +72,15 @@ Revue croisée requise pour les notifications et la concurrence avant intégrati
 4. Noter séparément l'état des miniatures avant/après, sans conclure qu'il s'agit du même défaut.
 
 État de tous ces essais : non essayés. Retour arrière : abandonner la PR ; aucune migration à inverser.
+
+## Revue de Claude — 27 octobre 2026
+
+[Réserve #1](https://github.com/NOxygen59/kyokasho/pull/9#issuecomment-6432038769) traitée :
+cache absent → message « Texte OCR … indisponible », inviter à relire puis réanalyser ;
+ligne modifiée/absente → message « le texte a changé », conserver sa version et réanalyser.
+Le désaccord reste ouvert, sans faux succès ni modification du cache. `lastError` est déjà affiché
+par la feuille d'analyse. Le parcours valide enregistre toujours l'acceptation avant de clôturer.
+Les méthodes apply/dismiss ont été déplacées seules dans une extension liée aux tests Mac : vraie
+orchestration, vrai OCRService/SQLite, adaptateur du rapport en mémoire, aucune UI/IA simulée comme preuve iPad.
+Trois tests : les deux cas signalés échouent avant correction, le parcours normal passe ; résultats
+après correction et SHA consignés dans la réponse de revue. Nouvelle validation de Claude demandée.

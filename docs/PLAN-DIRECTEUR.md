@@ -111,6 +111,12 @@ Les décisions SEC-01 (visibilité, protection de `main`) peuvent être prises �
 
 ## 8. Point de reprise pour le prochain chat
 
+Reprise du 27/10 après revue #9 : cas cache absent et texte modifié expliqués à l'utilisateur,
+désaccord conservé ouvert et données intactes. Tests sur les méthodes réelles apply/dismiss ;
+[preuves](QA02-CORRECTIONS-OCR-DICTIONNAIRE.md). Réserve de Claude traitée, nouvelle validation à obtenir.
+main reste `431f1c6`, #8–#10 ouvertes, Actions désactivé ; nouvelles Issues hors périmètre.
+
+
 ### Reprise QA02 du 26 octobre — lot OCR/dictionnaire
 
 État GitHub relu avant le travail : `main` `431f1c6`, #1–#7 fusionnées, aucune Issue,
