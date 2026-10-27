@@ -111,6 +111,25 @@ Les décisions SEC-01 (visibilité, protection de `main`) peuvent être prises �
 
 ## 8. Point de reprise pour le prochain chat
 
+Revue Claude du 27 octobre : PR #10 centralise la clé du repli et conditionne l’installation du script/KVO au diagnostic. Test JS synthétique ajouté ; interrupteur conservé en attente iPad.
+
+### Reprise QA02 du 26 octobre — panneau OCR
+
+GitHub vérifié au démarrage : `main` `431f1c6`, #1–#7 fusionnées, aucune Issue,
+Actions désactivé. Les observations de NOxygen59 sont faites sur iPad avec QA02 1.3 build 40.
+Elles ne closent pas les recettes de données/mémoire ; l'état historique ci-dessous est dépassé
+pour la PR #7. Autorisation du chat : corriger les trois lots et ouvrir des PR séparées,
+sans fusion, candidate, installation, versions, dépendances/forks, données personnelles ni workflows.
+
+- Diagnostics : [PR #8](https://github.com/NOxygen59/kyokasho/pull/8), non fusionnée, iPad non essayé.
+- OCR/dictionnaire : [PR #9](https://github.com/NOxygen59/kyokasho/pull/9), non fusionnée ; O07 instrumenté, pas résolu.
+- **QA02-PANNEAU, O01/O05** : `codex/qa02-panneau-ocr`, base indépendante `431f1c6`.
+  O05 : calcul commun depuis le rectangle visible, translation unique ; option de retour disponible.
+  O01 : instrumentation passive uniquement, délai non reproduit. [Preuves et fiche iPad](QA02-CORRECTIONS-PANNEAU.md).
+  Tests Mac et compilation iOS générique réussis ; aucun essai iPad. Revue croisée à faire.
+- Prochain point de reprise : revue des trois PR et résultats de la fiche iPad, après autorisation
+  distincte d'une future candidate. Aucun travail de build distribuable n'est autorisé ici.
+
 Reprise du 27/10 après revue #9 : cas cache absent et texte modifié expliqués à l'utilisateur,
 désaccord conservé ouvert et données intactes. Tests sur les méthodes réelles apply/dismiss ;
 [preuves](QA02-CORRECTIONS-OCR-DICTIONNAIRE.md). Réserve de Claude traitée, nouvelle validation à obtenir.

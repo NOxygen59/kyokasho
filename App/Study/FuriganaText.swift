@@ -98,6 +98,7 @@ struct FuriganaTextView: View {
     var body: some View {
         RubyWebView(html: html, height: $height, onLookup: onLookup)
             .frame(height: height)
+            .modifier(OCRScrollDiagnostics())
             .task(id: "\(page.hashValue)|\(formatted)|\(regions.hashValue)|\(tint.rawValue)|\(morphology.state == .ready)") { await build() }
     }
 
@@ -207,6 +208,7 @@ struct RubyWebView: UIViewRepresentable {
     let html: String
     @Binding var height: CGFloat
     var onLookup: (String) -> Void
+    @AppStorage(Diagnostics.enabledKey) private var diagnosticsEnabled = false
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
 
@@ -218,6 +220,8 @@ struct RubyWebView: UIViewRepresentable {
         let view = WKWebView(frame: .zero, configuration: config)
         view.isOpaque = false
         view.backgroundColor = .clear
+        view.navigationDelegate = context.coordinator
+        Diagnostics.log("Création du texte web OCR", "ocr-scroll")
         // Se déplacer dans le texte (tableaux larges, texte zoomé) : glisser à l'horizontale ou, zoomé, partout.
         // Pas zoomé, la hauteur suit le contenu : un glisser vertical fait défiler la fenêtre OCR, pas le texte.
         let scroll = view.scrollView
@@ -231,36 +235,147 @@ struct RubyWebView: UIViewRepresentable {
         scroll.minimumZoomScale = 1
         scroll.maximumZoomScale = 5
         scroll.contentInsetAdjustmentBehavior = .never
+        context.coordinator.setDiagnostics(view, enabled: diagnosticsEnabled)
         return view
     }
 
     func updateUIView(_ view: WKWebView, context: Context) {
         context.coordinator.parent = self
+        if context.coordinator.diagnosticsEnabled != diagnosticsEnabled {
+            context.coordinator.setDiagnostics(view, enabled: diagnosticsEnabled)
+        }
         guard context.coordinator.lastHTML != html else { return }
         context.coordinator.lastHTML = html
+        Diagnostics.log("Chargement HTML OCR : \(html.utf8.count) octets", "ocr-scroll")
         view.loadHTMLString(html, baseURL: nil)
     }
 
     static func dismantleUIView(_ view: WKWebView, coordinator: Coordinator) {
         // Le contrôleur gardé à la création (pas une copie) : le gestionnaire est bien retiré.
         coordinator.controller?.removeScriptMessageHandler(forName: "kyokasho")
+        coordinator.setDiagnostics(view, enabled: false)
+        view.navigationDelegate = nil
     }
 
-    final class Coordinator: NSObject, WKScriptMessageHandler {
+    /// Événements horodatés et bornés, sans contenu du document. L'écart JS→natif mesure aussi le pont.
+    private static let scrollDiagnosticScript = """
+    (function() {
+      if (window.__kyokashoRemoveScrollDiagnostic) return;
+      var last = {}, listeners = {};
+      ['wheel','touchstart','touchmove','scroll'].forEach(function(kind) {
+        listeners[kind] = function() {
+          var now = Date.now();
+          if (now - (last[kind] || 0) < 500) return;
+          last[kind] = now;
+          window.webkit.messageHandlers.kyokasho.postMessage({type:'scrollDiagnostic',kind:kind,time:now});
+        };
+        document.addEventListener(kind, listeners[kind], {capture:true,passive:true});
+      });
+      window.__kyokashoRemoveScrollDiagnostic = function() {
+        Object.keys(listeners).forEach(function(kind) {
+          document.removeEventListener(kind, listeners[kind], true);
+        });
+        delete window.__kyokashoRemoveScrollDiagnostic;
+      };
+    })();
+    """
+
+    final class Coordinator: NSObject, WKScriptMessageHandler, WKNavigationDelegate {
         var parent: RubyWebView
         var lastHTML = ""
         weak var controller: WKUserContentController?
+        var offsetObservation: NSKeyValueObservation?
+        var diagnosticsEnabled = false
+        private var lastNativeScroll = Date.distantPast
+
+        func setDiagnostics(_ view: WKWebView, enabled: Bool) {
+            guard diagnosticsEnabled != enabled else { return }
+            diagnosticsEnabled = enabled
+            if enabled {
+                controller?.addUserScript(WKUserScript(source: RubyWebView.scrollDiagnosticScript,
+                                                       injectionTime: .atDocumentEnd, forMainFrameOnly: true))
+                offsetObservation = view.scrollView.observe(\.contentOffset, options: [.new]) { [weak self] scroll, _ in
+                    self?.traceNativeScroll(scroll)
+                }
+                lastNativeScroll = .distantPast
+                view.evaluateJavaScript(RubyWebView.scrollDiagnosticScript, completionHandler: nil)
+            } else {
+                // Ce contrôleur ne possède que le script de diagnostic ; le pont lookup reste installé.
+                controller?.removeAllUserScripts()
+                offsetObservation?.invalidate()
+                offsetObservation = nil
+                removeScrollListeners(view)
+            }
+        }
+
+        private func removeScrollListeners(_ view: WKWebView) {
+            view.evaluateJavaScript("window.__kyokashoRemoveScrollDiagnostic?.();", completionHandler: nil)
+        }
+
+        func traceNativeScroll(_ scroll: UIScrollView) {
+            guard diagnosticsEnabled, Date().timeIntervalSince(lastNativeScroll) >= 0.5 else { return }
+            lastNativeScroll = Date()
+            Diagnostics.log("Défilement natif web : x=\(Int(scroll.contentOffset.x)), y=\(Int(scroll.contentOffset.y)), zoom=\(scroll.zoomScale)", "ocr-scroll")
+        }
+
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            setDiagnostics(webView, enabled: parent.diagnosticsEnabled)
+            if diagnosticsEnabled {
+                webView.evaluateJavaScript(RubyWebView.scrollDiagnosticScript, completionHandler: nil)
+            } else {
+                // Retire aussi une injection déjà programmée avant une désactivation pendant le chargement.
+                removeScrollListeners(webView)
+            }
+            Diagnostics.log("HTML OCR prêt", "ocr-scroll")
+        }
+
+        func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+            Diagnostics.log("Processus HTML OCR terminé", "ocr-scroll")
+        }
+
         init(_ parent: RubyWebView) { self.parent = parent }
 
         func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
             guard let body = message.body as? [String: Any], let type = body["type"] as? String else { return }
             switch type {
+            case "scrollDiagnostic":
+                guard Diagnostics.enabled, let kind = body["kind"] as? String,
+                      ["wheel", "touchstart", "touchmove", "scroll"].contains(kind),
+                      let time = body["time"] as? Double, time.isFinite else { return }
+                let delay = Date().timeIntervalSince1970 * 1000 - time
+                Diagnostics.log("Événement HTML \(kind), délai pont=\(Int(delay)) ms", "ocr-scroll")
             case "height":
                 if let value = body["value"] as? Double, abs(CGFloat(value) - parent.height) > 1 { parent.height = CGFloat(value) }
             case "lookup":
                 if let text = body["text"] as? String, !text.isEmpty { parent.onLookup(text) }
             default: break
             }
+        }
+    }
+}
+
+/// Position du contenu web dans la fenêtre : distingue le déplacement du conteneur SwiftUI du scroll HTML.
+private struct OCRScrollPositionKey: PreferenceKey {
+    static var defaultValue: CGFloat { 0 }
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
+}
+
+struct OCRScrollDiagnostics: ViewModifier {
+    @AppStorage(Diagnostics.enabledKey) private var enabled = false
+    @State private var lastEvent = Date.distantPast
+
+    func body(content: Content) -> some View {
+        content.background {
+            if enabled {
+                GeometryReader { proxy in
+                    Color.clear.preference(key: OCRScrollPositionKey.self, value: proxy.frame(in: .global).minY)
+                }
+            }
+        }
+        .onPreferenceChange(OCRScrollPositionKey.self) { y in
+            guard enabled, Date().timeIntervalSince(lastEvent) >= 0.5 else { return }
+            lastEvent = Date()
+            Diagnostics.log("Position conteneur OCR : y=\(Int(y))", "ocr-scroll")
         }
     }
 }

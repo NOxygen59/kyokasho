@@ -2,6 +2,7 @@
 // Copyright (c) 2026 NOxygen59
 
 import SwiftUI
+import ReaderCore
 
 /// Où est le panneau d'étude : collé à droite (d'origine), fenêtre libre, plein écran ou réduit en pastille.
 /// Gardé entre les ouvertures (`@AppStorage(StudyPanelMode.storageKey)`).
@@ -16,6 +17,7 @@ enum StudyPanelMode: String {
 /// Transitions visuelles des panneaux ; la géométrie du PDF est recalée séparément.
 enum StudyPanelMotion {
     static let storageKey = "study.animateTransitions"
+    static let stableGesturesKey = "study.stablePanelGestures"
 
     static func animation(enabled: Bool, reduceMotion: Bool) -> Animation? {
         guard enabled else { return nil }
@@ -71,6 +73,8 @@ struct DetachedPanel<Content: View>: View {
     @AppStorage("studyPanel.height") private var height = 640.0
     @AppStorage("studyPanel.x") private var x = 120.0
     @AppStorage("studyPanel.y") private var y = 80.0
+    /// Retour au comportement antérieur possible pendant la qualification iPad.
+    @AppStorage(StudyPanelMotion.stableGesturesKey) private var stableGestures = true
     @GestureState private var move: CGSize = .zero
     @GestureState private var resize: CGSize = .zero
 
@@ -82,14 +86,18 @@ struct DetachedPanel<Content: View>: View {
         let full = mode == .full, floating = mode != .full && mode != .minimized
         let gap = Atelier.gap
         // Taille et position affichées (toujours dans la zone, même si elle a rétréci depuis : rotation, Split View).
-        let w = full ? max(0, area.width - 2 * gap) : min(max(Self.minSize.width, width + resize.width), area.width)
-        let h = full ? max(0, area.height - 2 * gap) : min(max(Self.minSize.height, height + resize.height), area.height)
-        let left = full ? gap : min(max(0, x + move.width), max(0, area.width - w))
-        let top = full ? gap : min(max(0, y + move.height), max(0, area.height - h))
+        let stored = CGRect(x: x, y: y, width: width, height: height)
+        let base = FloatingPanelGeometry.constrained(stored, area: area, minimum: Self.minSize)
+        let resized = FloatingPanelGeometry.resized(base, by: resize, area: area, minimum: Self.minSize)
+        let preview = FloatingPanelGeometry.moved(resized, by: move, area: area, minimum: Self.minSize)
+        let w = full ? max(0, area.width - 2 * gap) : (stableGestures ? preview.width : min(max(Self.minSize.width, width + resize.width), area.width))
+        let h = full ? max(0, area.height - 2 * gap) : (stableGestures ? preview.height : min(max(Self.minSize.height, height + resize.height), area.height))
+        let left = full ? gap : (stableGestures ? preview.minX : min(max(0, x + move.width), max(0, area.width - w)))
+        let top = full ? gap : (stableGestures ? preview.minY : min(max(0, y + move.height), max(0, area.height - h)))
         return content()
             .frame(width: w, height: h)
-            .overlay(alignment: .top) { if floating { grip(left: left, top: top, w: w, h: h) } }
-            .overlay(alignment: .bottomTrailing) { if floating { resizeHandle(w: w, h: h) } }
+            .overlay(alignment: .top) { if floating { grip(base: base, left: left, top: top, w: w, h: h) } }
+            .overlay(alignment: .bottomTrailing) { if floating { resizeHandle(base: base, w: w, h: h) } }
             .shadow(color: .black.opacity(floating ? 0.5 : 0), radius: 20, y: 8)
             .offset(x: left, y: top)
             .opacity(mode == .minimized ? 0 : 1)
@@ -101,7 +109,7 @@ struct DetachedPanel<Content: View>: View {
     }
 
     /// Poignée du haut : glisser déplace la fenêtre (à partir de la position affichée).
-    private func grip(left: CGFloat, top: CGFloat, w: CGFloat, h: CGFloat) -> some View {
+    private func grip(base: CGRect, left: CGFloat, top: CGFloat, w: CGFloat, h: CGFloat) -> some View {
         Capsule().fill(Atelier.textTertiary.opacity(0.6))
             .frame(width: 44, height: 5)
             .frame(width: 120, height: 16)
@@ -109,6 +117,10 @@ struct DetachedPanel<Content: View>: View {
             .gesture(DragGesture(minimumDistance: 2, coordinateSpace: .global)
                 .updating($move) { v, s, _ in s = v.translation }
                 .onEnded { v in
+                    if stableGestures {
+                        commit(FloatingPanelGeometry.moved(base, by: v.translation, area: area, minimum: Self.minSize))
+                        return
+                    }
                     x = min(max(0, left + v.translation.width), max(0, area.width - w))
                     y = min(max(0, top + v.translation.height), max(0, area.height - h))
                 })
@@ -116,7 +128,7 @@ struct DetachedPanel<Content: View>: View {
     }
 
     /// Coin de redimensionnement, à moitié hors du panneau (ne cache pas son contenu).
-    private func resizeHandle(w: CGFloat, h: CGFloat) -> some View {
+    private func resizeHandle(base: CGRect, w: CGFloat, h: CGFloat) -> some View {
         Image(systemName: "arrow.down.right.and.arrow.up.left")
             .rotationEffect(.degrees(90))
             .font(.system(size: 11, weight: .bold))
@@ -128,10 +140,24 @@ struct DetachedPanel<Content: View>: View {
             .gesture(DragGesture(minimumDistance: 1, coordinateSpace: .global)
                 .updating($resize) { v, s, _ in s = v.translation }
                 .onEnded { v in
+                    if stableGestures {
+                        commit(FloatingPanelGeometry.resized(base, by: v.translation, area: area, minimum: Self.minSize))
+                        return
+                    }
                     width = min(max(Self.minSize.width, w + v.translation.width), area.width)
                     height = min(max(Self.minSize.height, h + v.translation.height), area.height)
                 })
             .accessibilityLabel("Redimensionner le panneau")
+    }
+
+    /// Persiste exactement le rectangle aperçu, sans réutiliser une translation déjà appliquée.
+    private func commit(_ rect: CGRect) {
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            x = rect.minX; y = rect.minY; width = rect.width; height = rect.height
+        }
+        Diagnostics.log("Panneau : geste terminé ; x=\(Int(rect.minX)), y=\(Int(rect.minY)), largeur=\(Int(rect.width)), hauteur=\(Int(rect.height))", "ocr-panel")
     }
 
     /// Panneau réduit : pastille en bas à droite, toucher le rouvre comme avant.
