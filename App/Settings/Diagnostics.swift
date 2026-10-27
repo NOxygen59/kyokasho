@@ -118,7 +118,7 @@ enum Diagnostics {
     }
 }
 
-/// Réglages → Outils → Diagnostic.
+/// Réglages → Aide et informations → Aide au diagnostic.
 struct DiagnosticsSection: View {
     @AppStorage(Diagnostics.enabledKey) private var enabled = false
     @State private var showLog = false

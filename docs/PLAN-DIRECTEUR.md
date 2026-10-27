@@ -111,6 +111,9 @@ Les décisions SEC-01 (visibilité, protection de `main`) peuvent être prises �
 
 ## 8. Point de reprise pour le prochain chat
 
+Revue du 27/10 : [Claude sur #8](https://github.com/NOxygen59/kyokasho/pull/8#issuecomment-6432038430) favorable. Commentaire du chemin diagnostic corrigé ; gros journaux hors périmètre. Vérifications documentaire et diff uniquement, aucun comportement changé. #8–#10 restent ouvertes, main `431f1c6`, Actions désactivé ; de nouvelles Issues existent depuis le relevé historique, hors de cette reprise.
+
+
 ### Reprise QA02 du 26 octobre 2026 — prioritaire sur l'instantané historique ci-dessous
 
 GitHub relu : `main` = `431f1c6ea6eeecbe72d76aa00778ea8cc9e7a34f`, PR #1–#7 fusionnées,
