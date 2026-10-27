@@ -27,7 +27,7 @@ Une case cochée de la feuille de route signifie souvent « codé ». Ne pas la 
 
 | Priorité | Constat étayé | Action recommandée et preuve de clôture |
 |---|---|---|
-| P0 — décision | `gh repo view` renvoie `isPrivate: false` le 25/10 ; README, AGENTS et histoire parlent de dépôt privé | Faire décider la visibilité par NOxygen59 ; inventorier les artefacts effectivement accessibles. Ne pas changer les permissions automatiquement. Aucun secret exposé n'est affirmé par cet audit |
+| P0 — décision | `gh repo view` renvoie `isPrivate: false` le 25/10 ; README, AGENTS et histoire parlent de dépôt privé | Faire décider la visibilité par l’utilisateur ; inventorier les artefacts effectivement accessibles. Ne pas changer les permissions automatiquement. Aucun secret exposé n'est affirmé par cet audit |
 | P1 — données | `App/Library/PageShift.swift` journalise plusieurs étapes, mais `try? save` peut masquer un échec de journal ; étape `cards` effacée à la reprise pour éviter un double décalage | Tests d'interruption et d'erreur disque avant modification. Vérifier correspondance PDF/base/rapports/Markdown/cartes à chaque étape |
 | P1 — données | Le journal marque `report` avant `shiftReport` ; la reprise à `report` poursuit vers les fichiers | Une interruption dans cette fenêtre peut laisser le rapport non décalé ; reproduire sur copie puis rendre l'étape idempotente |
 | P1 — annotations | La feuille de route signale des coordonnées d'anciennes annotations décalées par l'égalisation, et un export annoté non adapté | Recette avec pages de tailles différentes et notes antérieures ; test des transformations avant refactorisation |
