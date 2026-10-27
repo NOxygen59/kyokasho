@@ -78,20 +78,15 @@ final class ReaderController: NSObject, ObservableObject {
     var flushScheduled = false
 
     // MARK: Dictionnaire au toucher
-    /// Modes d'outil gardés d'un livre à l'autre et après redémarrage, comme le survol (RET-012, Issue #15).
-    /// Réglages globaux : ils valent pour tous les livres.
-    enum ModeMemory {
-        static let lookupKey = "reader.lookupMode"
-        static let pencilLookupKey = "reader.pencilLookup"
-        static let drawingKey = "reader.drawing"
-    }
+    /// Modes d'outil gardés **pour ce document** (écriture, 辞, Pencil), relus à l'ouverture (Issue #15).
+    let toolModes = ReaderToolModeStore()
 
     /// Outil « dictionnaire » actif : un tap sur un caractère cherche le mot.
-    @Published var lookupMode = UserDefaults.standard.bool(forKey: ModeMemory.lookupKey) {
-        didSet { UserDefaults.standard.set(lookupMode, forKey: ModeMemory.lookupKey) }
+    @Published var lookupMode = false {
+        didSet { toolModes.update(documentId: document.id) { [lookupMode] in $0.lookup = lookupMode } }
     }
     /// Mode dessin à rétablir une fois le document installé (les surcouches PencilKit doivent exister).
-    var pendingDrawingRestore = UserDefaults.standard.bool(forKey: ModeMemory.drawingKey)
+    var pendingDrawingRestore = false
     /// Demande de recherche (texte à partir du caractère touché, point d'ancrage dans la vue).
     @Published var lookupRequest: LookupRequest?
     /// Rectangles (repère de la vue PDF) du texte touché puis du mot reconnu.
@@ -137,10 +132,9 @@ final class ReaderController: NSObject, ObservableObject {
     var pencilTap: UITapGestureRecognizer!
     /// Le Pencil cherche le mot touché dans le dictionnaire (au lieu de dessiner ou d'afficher les barres).
     /// Rétabli seulement si l'option des réglages qui affiche son bouton est encore active.
-    @Published var pencilLookup = UserDefaults.standard.bool(forKey: "pencil.lookupOption")
-        && UserDefaults.standard.bool(forKey: ModeMemory.pencilLookupKey) {
+    @Published var pencilLookup = false {
         didSet {
-            UserDefaults.standard.set(pencilLookup, forKey: ModeMemory.pencilLookupKey)
+            toolModes.update(documentId: document.id) { [pencilLookup] in $0.pencilLookup = pencilLookup }
             applyPencilLookupGestures()
         }
     }
@@ -232,6 +226,13 @@ final class ReaderController: NSObject, ObservableObject {
         self.currentSourcePage = document.lastPageIndex
         self.ink = InkStore(documentId: document.id, model: model)
         super.init()
+        // Modes de ce livre. On n'affecte que les modes actifs (les `didSet` réécrivent alors la même valeur) :
+        // si l'option Pencil des réglages est coupée, le choix enregistré du livre est gardé, pas effacé.
+        // Les gestes du Pencil sont appliqués par `configureGestures` juste après.
+        let saved = toolModes.modes(documentId: document.id)
+        if saved.lookup { lookupMode = true }
+        if saved.pencilLookup, UserDefaults.standard.bool(forKey: "pencil.lookupOption") { pencilLookup = true }
+        pendingDrawingRestore = saved.drawing
         ink.controller = self
         configureGestures()
         pdfView.onLookupSelection = { [weak self] in self?.lookupSelection() }

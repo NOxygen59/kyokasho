@@ -343,7 +343,7 @@ extension ReaderController {
 
     func setDrawing(_ on: Bool) {
         isDrawing = on
-        UserDefaults.standard.set(on, forKey: ModeMemory.drawingKey)
+        toolModes.update(documentId: document.id) { $0.drawing = on }
         // Toujours en mode annotation (voir `configureGestures`), dessin ou non.
         pdfView.isInMarkupMode = true
         if on {
