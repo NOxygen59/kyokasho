@@ -214,6 +214,7 @@ final class AppModel: ObservableObject {
                 thumbnails.removeAll(for: document.id)
                 ScanSharpening.removeCache(documentId: document.id)
                 OCRTargetLanguage.forget(document.id)
+                try? NoteDraftStore.shared.removeAll(documentId: document.id)
                 Task { @MainActor in self.deletingIds.remove(document.id) }
             } catch {
                 Task { @MainActor in

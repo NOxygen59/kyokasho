@@ -26,6 +26,8 @@ enum PageShift {
         var newHash: String?
         var cardPages: [Int64: Int]?
         var hasReport: Bool?
+        /// Brouillons de notes préparés (RET-008). `nil` dans les journaux écrits avant leur ajout : rien à installer.
+        var hasDrafts: Bool? = nil
     }
 
     // Racine injectable par les tests Mac ; en production, le conteneur reste celui de l'app.
@@ -142,6 +144,18 @@ enum PageShift {
                 try JSONEncoder().encode(value).write(to: work.appendingPathComponent("report.json"), options: .atomic)
                 p.hasReport = true
             }
+            // Brouillons de notes : même schéma que le rapport, valeur finale préparée puis installée.
+            // Un fichier illisible n'est pas un brouillon lisible : il reste en place, sans bloquer l'ajout.
+            let draftsFile = NoteDraftStore.shared.url(documentId: document.id)
+            if let bytes = try? Data(contentsOf: draftsFile), let drafts = try? NoteDraftStore.decode(bytes) {
+                guard drafts.keys.allSatisfy({ $0 >= 0 && $0 < document.pageCount }) else {
+                    throw fail("Un brouillon de note porte une page inattendue : ajout arrêté sans modification.")
+                }
+                try bytes.write(to: work.appendingPathComponent("original-drafts.json"), options: .atomic)
+                try NoteDraftStore.encode(NoteDraftStore.shifted(drafts, by: offset))
+                    .write(to: work.appendingPathComponent("drafts.json"), options: .atomic)
+                p.hasDrafts = true
+            }
             try save(p) // Dernière étape avant toute mutation des données actives.
             try complete(p, model: model)
             model.storageRecoveryError = nil
@@ -209,6 +223,14 @@ enum PageShift {
                 .write(to: DocumentAnalysisService.folder.appendingPathComponent(p.documentId + ".json"), options: .atomic)
         }
         try hit("report.after")
+        try hit("drafts.before")
+        if p.hasDrafts == true {
+            // Valeur finale préparée : la réécrire à chaque reprise ne décale jamais deux fois.
+            let live = NoteDraftStore.shared.url(documentId: p.documentId)
+            try fm.createDirectory(at: live.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try Data(contentsOf: work.appendingPathComponent("drafts.json")).write(to: live, options: .atomic)
+        }
+        try hit("drafts.after")
         try installFiles(p, work: work)
         try hit("cards.before")
         try model.review.store.setSourcePages(documentId: p.documentId, pages: cardPages)

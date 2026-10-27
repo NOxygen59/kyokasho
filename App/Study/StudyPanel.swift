@@ -546,10 +546,17 @@ struct FormattedOCRText: View {
 
 struct StudyNotesTab: View {
     @ObservedObject var reader: ReaderController
+    /// Texte affiché ; sa source de vérité est `NoteDraftStore` (un brouillon par page source, RET-008).
+    /// Cet onglet est recréé à chaque changement de mode et à chaque ouverture du livre : rien ne doit
+    /// vivre seulement dans ce `@State`.
     @State private var draft = ""
+    /// Page à laquelle appartient `draft`. Toujours mise à jour **avant** `draft`, pour qu'une
+    /// modification ne soit jamais enregistrée sur la page qu'on vient de quitter.
+    @State private var draftPage: Int?
     @FocusState private var focused: Bool
 
     private var page: Int { reader.focusSource }
+    private let drafts = NoteDraftStore.shared
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -559,6 +566,7 @@ struct StudyNotesTab: View {
                 }
                 TextEditor(text: $draft)
                     .focused($focused)
+                    .onChange(of: draft) { saveDraft($0) }
                     .scrollContentBackground(.hidden)
                     .frame(minHeight: 90, maxHeight: 140)
                     .foregroundStyle(Atelier.textPrimary)
@@ -594,6 +602,25 @@ struct StudyNotesTab: View {
                     }
                 }
             }
+        }
+        .onAppear { loadDraft(page) }
+        .onChange(of: page) { loadDraft($0) }
+    }
+
+    /// Affiche le brouillon de `page`. Celui de la page quittée est déjà sur disque (écrit à chaque frappe).
+    private func loadDraft(_ page: Int) {
+        guard draftPage != page else { return }
+        draftPage = page
+        draft = drafts.draft(documentId: reader.document.id, page: page)
+    }
+
+    /// Écrit à chaque modification (fichier atomique, quelques octets) : survit à un arrêt brutal de l'app.
+    private func saveDraft(_ text: String) {
+        guard let draftPage else { return }
+        do {
+            try drafts.setDraft(text, documentId: reader.document.id, page: draftPage)
+        } catch {
+            Diagnostics.error("Brouillon de note non enregistré : \(error.localizedDescription)", "notes")
         }
     }
 
@@ -631,7 +658,7 @@ struct StudyNotesTab: View {
         let body = draft.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !body.isEmpty else { return }
         reader.saveNote(PageComment(documentId: reader.document.id, pageIndex: page, body: body))
-        draft = ""
+        draft = "" // `onChange` efface aussi le brouillon enregistré de cette page.
         focused = false
     }
 }
