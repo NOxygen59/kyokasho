@@ -135,10 +135,11 @@ extension PageShiftRecoveryTests {
                 // Leurre : copie authentique de l'espace de travail là où mènerait la transaction détournée, pour
                 // que seul le contrôle de l'UUID (et non l'absence des copies) puisse arrêter la reprise.
                 let escaped = root.deletingLastPathComponent().appendingPathComponent(escape)
+                // Nettoyage enregistré avant la copie : même une copie partielle qui lève une erreur est retirée.
+                defer { try? FileManager.default.removeItem(at: escaped) }
                 if bad?.hasPrefix("../") == true {
                     try FileManager.default.copyItem(at: root.appendingPathComponent("PageShift/" + p.transaction!), to: escaped)
                 }
-                defer { try? FileManager.default.removeItem(at: escaped) }
                 let escapedBefore = try inventory(escaped)
                 p.transaction = bad
                 try writeJournal(p, root)
@@ -252,8 +253,13 @@ extension PageShiftRecoveryTests {
     /// l'ajout doit s'arrêter avant toute mutation.
     /// Défaut connu RET-048 (#74) : aujourd'hui le rapport est décalé sans contrôle et l'ajout aboutit. Marquage
     /// strict : quand le défaut sera corrigé, ce test échouera tant que `XCTExpectFailure` n'est pas retiré.
+    /// Seule l'assertion du défaut est attendue en échec (`issueMatcher`) : une panne de préparation, d'E/S ou toute
+    /// autre assertion reste un échec réel.
     func testS7ReportPageOutsideTheDocumentStopsTheAddition() async throws {
-        XCTExpectFailure("Défaut connu RET-048 : https://github.com/NOxygen59/kyokasho/issues/74")
+        let defect = "RET-048 : l'ajout aurait dû s'arrêter"
+        let options = XCTExpectedFailure.Options()
+        options.issueMatcher = { $0.compactDescription.contains(defect) }
+        XCTExpectFailure("Défaut connu RET-048 : https://github.com/NOxygen59/kyokasho/issues/74", options: options)
         try await withFixture { model, doc, root in
             let card = try seed(model, doc)
             let url = DocumentAnalysisService.folder.appendingPathComponent(doc.id + ".json")
@@ -263,8 +269,12 @@ extension PageShiftRecoveryTests {
             try bytes.write(to: url)
             let merged = root.appendingPathComponent("input.pdf")
             try writePDF(merged, pages: 4)
-            await assertThrowsAsync({ try await PageShift.apply(model, document: doc, merged: merged, offset: 2, newCount: 4) },
-                                    "Rapport avec une page 7 sur 2 : l'ajout aurait dû s'arrêter")
+            var stopped = false
+            do { _ = try await PageShift.apply(model, document: doc, merged: merged, offset: 2, newCount: 4) } catch { stopped = true }
+            XCTAssertTrue(stopped, "\(defect) (rapport avec une page 7 sur un document de 2 pages)")
+            // Conséquences vérifiées seulement quand l'ajout s'arrête (après le correctif) : aujourd'hui elles
+            // découlent du même défaut et ne doivent pas être confondues avec une autre panne.
+            guard stopped else { return }
             XCTAssertFalse(FileManager.default.fileExists(atPath: root.appendingPathComponent(journalName).path))
             XCTAssertEqual(try Data(contentsOf: url), bytes)
             try assertUnshifted(model, doc, card)
@@ -273,18 +283,25 @@ extension PageShiftRecoveryTests {
 
     // MARK: Reprise (R) — après reprise, `verify` passe : rien de perdu, rien de décalé deux fois.
 
-    /// R1 — interruption au point a, reprise interrompue au point b, puis reprise libre : 14 × 14 couples.
+    /// R1 — interruption au point a, reprise interrompue au point b, puis reprise libre : 14 × 13 = 182 couples.
+    /// `journal.after` n'existe que dans `apply` (écriture du journal) : la reprise ne le traverse jamais, il est donc
+    /// exclu de l'axe b. Chaque couple prouve que la seconde interruption a eu lieu et a laissé le journal.
     func testR1DoubleInterruptionMatrix() async throws {
+        final class Reached { var hit = false }
         for a in Self.boundaries {
-            for b in Self.boundaries {
+            for b in Self.boundaries where b != "journal.after" {
                 try await withFixture { model, doc, root in
                     let card = try seed(model, doc)
                     try await interruptedApply(model, doc, root, at: a)
                     XCTAssertTrue(FileManager.default.fileExists(atPath: root.appendingPathComponent(journalName).path), "\(a)")
                     let restarted = try AppModel(root: root)
-                    PageShift.checkpoint = { if $0 == b { throw PowerLoss.simulated } }
+                    let reached = Reached()
+                    PageShift.checkpoint = { if $0 == b { reached.hit = true; throw PowerLoss.simulated } }
                     PageShift.reconcile(restarted)
                     PageShift.checkpoint = nil
+                    XCTAssertTrue(reached.hit, "\(a) puis \(b) : seconde interruption non atteinte")
+                    XCTAssertNotNil(restarted.storageRecoveryError, "\(a) puis \(b)")
+                    XCTAssertTrue(FileManager.default.fileExists(atPath: root.appendingPathComponent(journalName).path), "\(a) puis \(b)")
                     let again = try AppModel(root: root)
                     for _ in 0..<2 { PageShift.reconcile(again) }
                     XCTAssertNil(again.storageRecoveryError, "\(a) puis \(b)")
@@ -336,16 +353,20 @@ extension PageShiftRecoveryTests {
         }
     }
 
-    /// R4 — deux ajouts simultanés sur le même document : un seul aboutit, un seul décalage.
+    /// R4 — deux ajouts simultanés sur le même document : un seul aboutit, l'autre est refusé par le garde de
+    /// concurrence (`applyingDocuments`, « déjà en cours ») et non par un autre contrôle ; un seul décalage.
+    /// Ordre : le premier ajout insère le document puis se suspend (`beginPageMutation`, autre acteur) avant toute
+    /// mutation ; le second démarre pendant cette suspension. Une autre erreur ferait échouer le test, pas le valider.
     func testR4ConcurrentAdditionsOnTheSameDocumentApplyOnce() async throws {
         try await withFixture { model, doc, root in
             let card = try seed(model, doc)
             let merged = root.appendingPathComponent("input.pdf")
             try writePDF(merged, pages: 4)
-            async let first: Bool = { do { _ = try await PageShift.apply(model, document: doc, merged: merged, offset: 2, newCount: 4); return true } catch { return false } }()
-            async let second: Bool = { do { _ = try await PageShift.apply(model, document: doc, merged: merged, offset: 2, newCount: 4); return true } catch { return false } }()
-            let results = await [first, second]
-            XCTAssertEqual(results.filter { $0 }.count, 1, "\(results)")
+            async let first: String? = { do { _ = try await PageShift.apply(model, document: doc, merged: merged, offset: 2, newCount: 4); return nil } catch { return error.localizedDescription } }()
+            async let second: String? = { do { _ = try await PageShift.apply(model, document: doc, merged: merged, offset: 2, newCount: 4); return nil } catch { return error.localizedDescription } }()
+            let errors = await [first, second]
+            XCTAssertEqual(errors.filter { $0 == nil }.count, 1, "\(errors)")
+            XCTAssertEqual(errors.compactMap { $0 }, ["Un ajout de pages de ce document est déjà en cours."], "\(errors)")
             XCTAssertFalse(FileManager.default.fileExists(atPath: root.appendingPathComponent(journalName).path))
             try verify(model, doc, card)
         }

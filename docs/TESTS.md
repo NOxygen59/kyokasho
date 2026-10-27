@@ -22,7 +22,7 @@ Au SHA `f83aec8c61d88f1e6c119376590899c9c1ce2876` (25/10/2026), `Packages/Kyokas
 | ReviewKitTests | FSRS, stockage, modèles et export Anki | Import dans une app Anki réelle à vérifier séparément |
 | ONNXOCRKitTests | Alignement et essais de moteurs | Modèles réels requis pour plusieurs scénarios |
 | MorphologyKitTests | CSV et lectures MeCab/extraction UniDic | Dictionnaire/archive requis pour les essais réels |
-| PageShiftTests | 39 tests (27/10/2026) : reprise à 14 frontières, matrice de double interruption 14 × 14, décalages 0/1/2, SIGKILL à 9 frontières, journal ambigu/corrompu/modifié (S1, S2, S5), lien symbolique, PDF tiers, ajouts concurrents, erreurs SQL/fichiers, décalage unique ; cinq tests OCR tardif/concurrence/annulation/reprise/réactivité ; 1 défaut connu (RET-048) | Adaptateurs Mac pour l'interface ; ni parcours UIKit ni coupure matérielle |
+| PageShiftTests | 39 tests (27/10/2026) : reprise à 14 frontières, matrice de double interruption 14 × 13, décalages 0/1/2, SIGKILL à 9 frontières, journal ambigu/corrompu/modifié (S1, S2, S5), lien symbolique, PDF tiers, ajouts concurrents, erreurs SQL/fichiers, décalage unique ; cinq tests OCR tardif/concurrence/annulation/reprise/réactivité ; 1 défaut connu (RET-048) | Adaptateurs Mac pour l'interface ; ni parcours UIKit ni coupure matérielle |
 | BackupIntegrationTests | 1 test : vraies bases AppDatabase/ReviewStore, sauvegarde/restauration et réouverture en écriture | Conteneur synthétique Mac ; ni extraction ni réinstallation TrollStore |
 | GLMOCRKitTests | Lecture Ovis/GLM/Qwen, vrais échantillons, traduction, chat, profil | Poids et corpus externes ; tests opt-in, pas une suite légère systématique |
 
@@ -157,26 +157,28 @@ Base : `main` `8b957dd`. Fichier `Packages/KyokashoKit/Tests/PageShiftTests/Page
 | S4 | `testS4OutOfRangeAIReadingStopsTheAddition`, `testS4UnusualAIReadingNamesShiftOnlyTheTrailingPageNumber` | `x-9.md` refusé ; `a-b-1.md` → `a-b-3.md`, `x--1.md` → `x--3.md` (le tiret n'est pas un signe), `notes.md` et `data.json` copiés tels quels |
 | S5 | `testS5TamperedCardPagesInJournalAreRefused` | pages de cartes hors plage dans le journal : blocage, FSRS intact |
 | S6 | `testS6ThirdPDFBeforeRecoveryIsNeverOverwritten` | troisième PDF avant la reprise : jamais écrasé, base non décalée |
-| S7 | `testS7ReportPageOutsideTheDocumentStopsTheAddition` | **défaut connu RET-048** ([#74](https://github.com/NOxygen59/kyokasho/issues/74)) : un rapport portant une page hors du document est décalé sans contrôle ; test marqué `XCTExpectFailure` (strict) |
-| R1 | `testR1DoubleInterruptionMatrix` | interruption au point a, reprise interrompue au point b, puis reprise libre : 196 couples (≈ 8 s) |
+| S7 | `testS7ReportPageOutsideTheDocumentStopsTheAddition` | **défaut connu RET-048** ([#74](https://github.com/NOxygen59/kyokasho/issues/74)) : un rapport portant une page hors du document est décalé sans contrôle ; test marqué `XCTExpectFailure` (strict), limité par `issueMatcher` à la seule assertion du défaut |
+| R1 | `testR1DoubleInterruptionMatrix` | interruption au point a, reprise interrompue au point b, puis reprise libre : 182 couples (14 × 13 ; `journal.after` n'est jamais traversé par la reprise), chaque seconde interruption prouvée atteinte et laissant le journal (≈ 7 s) |
 | R2 | `testR2BareDocumentInterruptedAtEveryBoundary` | document sans rapport, brouillons ni lectures IA, 14 frontières |
 | R3 | `testR3EveryOffsetInterruptedAtEveryBoundary` | décalages 0, 1, 2 × 14 frontières |
-| R4 | `testR4ConcurrentAdditionsOnTheSameDocumentApplyOnce` | deux ajouts simultanés : un seul aboutit, un seul décalage |
+| R4 | `testR4ConcurrentAdditionsOnTheSameDocumentApplyOnce` | deux ajouts simultanés : un seul aboutit, l'autre refusé avec l'erreur exacte « déjà en cours », un seul décalage ; stable 10/10 |
 | R5 | `testR5PendingJournalOfOneDocumentBlocksAnotherUntilRecovered` | journal du livre A en attente : B refusé, puis accepté après la reprise de A |
 | R6 | `testR6OrphanWorkspaceBeforeJournalIsNeitherReusedNorBlocking` | copie de travail orpheline : ni bloquante, ni réutilisée, ni modifiée |
 | R7 | `testR7LeftoverPDFInstallFileIsReplacedOnRecovery` | fichier `.page-shift-<UUID>.pdf` resté : remplacé, PDF final = `newHash` |
 | R8 | `testR8AbruptProcessDeathAtRemainingBoundaries` | SIGKILL à `journal.after`, `report.after`, `drafts.after`, `cards.before`, `complete.before` (les 4 autres frontières sont déjà dans `testAbruptProcessDeathAfterCommittedEffects`) |
 
-**Résultats sur ce Mac (macOS 27.0, Swift de Xcode), code non modifié :**
+**Résultats sur ce Mac (macOS 27.0, Swift de Xcode), code non modifié, après la revue de Codex :**
 
-- `swift test --filter PageShiftTests` : 39 tests, 0 échec (S7 en échec attendu), 14,6 s.
-- `swift test --scratch-path .build-asan --sanitize address --filter PageShiftTests` : 39 tests, 0 échec, aucun rapport ASan, 25,0 s.
+- `swift test --filter PageShiftTests` : 39 tests, 0 échec (S7 en échec attendu), 14,2 s.
+- `swift test --scratch-path .build-asan --sanitize address --filter PageShiftTests` : 39 tests, 0 échec, aucun rapport ASan, 23,8 s.
 - `swift test` (suite complète `KyokashoKit`) : 218 tests exécutés, 7 ignorés (modèles ONNX/UniDic absents), 0 échec.
 
 **Puissance des tests (mutations temporaires de `PageShift.swift`, annulées) :**
 - Contrôle du lien symbolique retiré : S3 échoue.
 - Contrôle UUID de `transaction` retiré : S2 échoue.
 - Contrôle de plage de `cardPages` retiré : S5 échoue.
+- Garde de concurrence `applyingDocuments` retiré : R4 échoue.
+- Panne étrangère ajoutée au scénario S7 : S7 échoue (elle n'est pas absorbée par l'échec attendu).
 - `safeName` neutralisé : S1 **reste vert**, car un second rempart arrête l'opération avant toute écriture (empreinte du PDF ou document absent de la base). S1 vérifie donc le résultat (rien n'est écrit), pas ce contrôle précis.
 
 Non couvert : parcours UIKit, espace disque réel, gros PDF, conteneur TrollStore, iPad.
