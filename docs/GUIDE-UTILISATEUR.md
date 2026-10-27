@@ -7,7 +7,7 @@ Kyōkasho sert à lire des manuels PDF japonais, les annoter, comprendre leur te
 
 ## 1. Installer et commencer
 
-1. Utiliser le `.tipa` d'une release choisie par NOxygen59 sur [GitHub](https://github.com/NOxygen59/kyokasho/releases). Ouvrir le fichier avec TrollStore puis installer. Cette procédure ne décrit pas l'installation de TrollStore ou du jailbreak.
+1. Utiliser le `.tipa` d'une release choisie par l’utilisateur sur [GitHub](https://github.com/NOxygen59/kyokasho/releases). Ouvrir le fichier avec TrollStore puis installer. Cette procédure ne décrit pas l'installation de TrollStore ou du jailbreak.
 2. Avant une mise à jour importante, exporter les documents et données utiles ; un export PDF ne sauvegarde pas toute l'app. Voir [sauvegardes](DONNEES-ET-SAUVEGARDES.md).
 3. Ouvrir Kyōkasho, importer un petit PDF d'essai depuis Fichiers. Choisir la langue avant l'import : Japonais pour un manuel japonais, Automatique pour un document mixte que l'on ne veut pas normaliser comme du japonais.
 4. Ouvrir le document. Commencer par la lecture et les annotations, puis installer les outils japonais et modèles nécessaires depuis les Réglages. Tous les gros modèles ne sont pas requis pour lire un PDF.
