@@ -59,3 +59,11 @@ Pour un incident de données, arrêter les opérations qui modifient la ressourc
 ## Clôturer
 
 Une correction est terminée lorsque le cas réduit échoue avant, réussit après, que les comportements proches sont préservés et que le statut iPad est explicitement renseigné. Conserver dans la PR le symptôme, la cause prouvée, la correction, les tests et les limites ; l'historique de chat seul ne suffit pas à la prochaine reprise.
+
+## Consultation après correction QA02 (non validée sur iPad)
+
+« Voir le journal » lit un instantané après ouverture. « Actualiser » relit les écritures déjà
+en file ; il n'y a pas de suivi continu. Journal absent, vide et erreur de lecture sont distincts.
+Une rotation coupant un caractère UTF-8 laisse le reste lisible ; l'export brut reste inchangé.
+Les pastilles IA proposent aussi ce journal. Leur « Voir le détail » reste réservé aux tâches
+actives : absence de tâche ne signifie pas absence de journal. Voir les [preuves](QA02-CORRECTIONS-DIAGNOSTICS.md).
