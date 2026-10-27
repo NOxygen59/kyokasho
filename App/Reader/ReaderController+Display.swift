@@ -33,6 +33,7 @@ extension ReaderController {
         case (true, false): mode = .twoUpContinuous
         }
         if pdfView.displayMode != mode { pdfView.displayMode = mode }
+        tuneDoublePageGestures(double: double, paginated: paginated, pageController: pageController)
         pdfView.displayDirection = paginated ? .horizontal : .vertical
         pdfView.displaysAsBook = double && s.firstPageAlone
         pdfView.displaysRTL = rtl && !double
@@ -50,6 +51,22 @@ extension ReaderController {
         if s.doubleTapZoom {
             singleTap.require(toFail: doubleTap)
         }
+    }
+
+    /// Double page : déplacement libre et zoom au toucher fiables (RET-043, Issue #63).
+    ///
+    /// Sans contrôleur de pages, PDFKit met les deux pages dans un seul `PDFScrollView`, réglé par défaut avec
+    /// `isDirectionalLockEnabled = true` (déplacement bloqué sur l'axe du début du geste) et un pan qui accepte
+    /// deux doigts : deux doigts posés devenaient un déplacement et le pincement ne démarrait pas. Mesuré sur
+    /// iPad avec les candidates de diagnostic 2d à 2g (journaux `[gestes-2e]`) : verrou coupé et pan limité à
+    /// un doigt, le pincement démarre à chaque geste à deux doigts, et il fait déjà suivre la page sous les
+    /// doigts. Ailleurs, les réglages relevés de PDFKit sont rétablis.
+    func tuneDoublePageGestures(double: Bool, paginated: Bool, pageController: Bool) {
+        guard !pageController, let scroll = pdfInnerScrollView else { return }
+        // Réglage mesuré en double page paginée (le cas observé par NOxygen59) ; le reste garde le comportement de PDFKit.
+        let tuned = double && paginated
+        scroll.isDirectionalLockEnabled = !tuned
+        scroll.panGestureRecognizer.maximumNumberOfTouches = tuned ? 1 : 2
     }
 
     /// Applique de nouveaux réglages (globaux ou du document). Reconstruit si la structure change.
