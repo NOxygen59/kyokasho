@@ -34,6 +34,10 @@ Les copies `Application Support/Kyokasho/PageShift/<UUID>/` sont conservées apr
 
 Les brouillons de notes pas encore ajoutées sont stockés par page source dans `Application Support/Kyokasho/NoteDrafts/<documentId>.json` (`NoteDraftStore`, ReaderCore), écrits à chaque frappe. PageShift les traite comme le rapport d'analyse : la valeur finale décalée est préparée dans le workspace (`drafts.json`, avec la copie `original-drafts.json`), signalée par `hasDrafts` dans le journal, puis réinstallée telle quelle à chaque reprise (étapes `drafts.before` / `drafts.after`). Un journal antérieur sans `hasDrafts` n'installe rien. Un fichier de brouillons illisible reste en place sans bloquer l'ajout ; un brouillon sur une page hors du document arrête l'ajout avant toute modification.
 
+### Pages hors du document (RET-048, Issue #74, 27/10/2026)
+
+Avant le journal, chaque donnée par page doit viser une page du document d'origine (`0 ..< pageCount`) : pages des cartes, clés des brouillons, numéros des lectures IA (`*-N.md`) et, depuis RET-048, clés du rapport d'analyse. Une seule page hors bornes arrête l'ajout sans aucune modification, au lieu de décaler en silence une donnée déjà incohérente. Régression : `testS7ReportPageOutsideTheDocumentStopsTheAddition`.
+
 ## Compatibilité avec les opérations déjà interrompues
 
 Le décodage reconnaît les anciens champs. Si le PDF est encore ancien et le compte de base permet une annulation certaine, l'ancien décalage SQL est annulé une fois. Pour les étapes `report`, `files`, `cards`, un PDF déjà nouveau ou un journal corrompu, l'ancien format ne contient pas assez d'information pour deviner l'état antérieur : journal et copies restent conservés, avec blocage explicite et réparation sur copie à préparer. Aucun ancien fichier n'est supprimé pour masquer l'incertitude.

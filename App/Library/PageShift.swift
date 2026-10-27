@@ -135,6 +135,11 @@ enum PageShift {
                 let bytes = try Data(contentsOf: report)
                 var value = try JSONDecoder().decode(DocumentAnalysis.self, from: bytes)
                 guard value.documentId == document.id else { throw fail("Rapport associé à un autre document.") }
+                // RET-048 (#74) : comme les brouillons et les lectures IA, une page hors du document arrête l'ajout
+                // avant le journal ; un rapport déjà incohérent ne doit pas être décalé en silence.
+                guard value.pages.keys.allSatisfy({ $0 >= 0 && $0 < document.pageCount }) else {
+                    throw fail("Le rapport d'analyse porte une page inattendue : ajout arrêté sans modification.")
+                }
                 value.pages = Dictionary(uniqueKeysWithValues: value.pages.map { index, page in
                     var shifted = page
                     shifted.source = index + offset

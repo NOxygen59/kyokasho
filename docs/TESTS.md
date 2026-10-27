@@ -22,7 +22,7 @@ Au SHA `f83aec8c61d88f1e6c119376590899c9c1ce2876` (25/10/2026), `Packages/Kyokas
 | ReviewKitTests | FSRS, stockage, modèles et export Anki | Import dans une app Anki réelle à vérifier séparément |
 | ONNXOCRKitTests | Alignement et essais de moteurs | Modèles réels requis pour plusieurs scénarios |
 | MorphologyKitTests | CSV et lectures MeCab/extraction UniDic | Dictionnaire/archive requis pour les essais réels |
-| PageShiftTests | 39 tests (27/10/2026) : reprise à 14 frontières, matrice de double interruption 14 × 13, décalages 0/1/2, SIGKILL à 9 frontières, journal ambigu/corrompu/modifié (S1, S2, S5), lien symbolique, PDF tiers, ajouts concurrents, erreurs SQL/fichiers, décalage unique ; cinq tests OCR tardif/concurrence/annulation/reprise/réactivité ; 1 défaut connu (RET-048) | Adaptateurs Mac pour l'interface ; ni parcours UIKit ni coupure matérielle |
+| PageShiftTests | 39 tests (27/10/2026) : reprise à 14 frontières, matrice de double interruption 14 × 13, décalages 0/1/2, SIGKILL à 9 frontières, journal ambigu/corrompu/modifié (S1, S2, S5), lien symbolique, PDF tiers, ajouts concurrents, erreurs SQL/fichiers, décalage unique ; cinq tests OCR tardif/concurrence/annulation/reprise/réactivité ; RET-048 corrigé (#74), S7 sert de test de régression | Adaptateurs Mac pour l'interface ; ni parcours UIKit ni coupure matérielle |
 | BackupIntegrationTests | 1 test : vraies bases AppDatabase/ReviewStore, sauvegarde/restauration et réouverture en écriture | Conteneur synthétique Mac ; ni extraction ni réinstallation TrollStore |
 | GLMOCRKitTests | Lecture Ovis/GLM/Qwen, vrais échantillons, traduction, chat, profil | Poids et corpus externes ; tests opt-in, pas une suite légère systématique |
 
@@ -157,7 +157,7 @@ Base : `main` `8b957dd`. Fichier `Packages/KyokashoKit/Tests/PageShiftTests/Page
 | S4 | `testS4OutOfRangeAIReadingStopsTheAddition`, `testS4UnusualAIReadingNamesShiftOnlyTheTrailingPageNumber` | `x-9.md` refusé ; `a-b-1.md` → `a-b-3.md`, `x--1.md` → `x--3.md` (le tiret n'est pas un signe), `notes.md` et `data.json` copiés tels quels |
 | S5 | `testS5TamperedCardPagesInJournalAreRefused` | pages de cartes hors plage dans le journal : blocage, FSRS intact |
 | S6 | `testS6ThirdPDFBeforeRecoveryIsNeverOverwritten` | troisième PDF avant la reprise : jamais écrasé, base non décalée |
-| S7 | `testS7ReportPageOutsideTheDocumentStopsTheAddition` | **défaut connu RET-048** ([#74](https://github.com/NOxygen59/kyokasho/issues/74)) : un rapport portant une page hors du document est décalé sans contrôle ; test marqué `XCTExpectFailure` (strict), limité par `issueMatcher` à la seule assertion du défaut |
+| S7 | `testS7ReportPageOutsideTheDocumentStopsTheAddition` | rapport portant une page 7, 2 ou −1 sur un document de 2 pages : ajout arrêté avant le journal, rapport, base, PDF et cartes intacts. Test de régression de **RET-048** ([#74](https://github.com/NOxygen59/kyokasho/issues/74)), corrigé le 27/10 ; marqué `XCTExpectFailure` jusqu'au correctif |
 | R1 | `testR1DoubleInterruptionMatrix` | interruption au point a, reprise interrompue au point b, puis reprise libre : 182 couples (14 × 13 ; `journal.after` n'est jamais traversé par la reprise), chaque seconde interruption prouvée atteinte et laissant le journal (≈ 7 s) |
 | R2 | `testR2BareDocumentInterruptedAtEveryBoundary` | document sans rapport, brouillons ni lectures IA, 14 frontières |
 | R3 | `testR3EveryOffsetInterruptedAtEveryBoundary` | décalages 0, 1, 2 × 14 frontières |
@@ -170,6 +170,7 @@ Base : `main` `8b957dd`. Fichier `Packages/KyokashoKit/Tests/PageShiftTests/Page
 **Résultats sur ce Mac (macOS 27.0, Swift de Xcode), code non modifié, après la revue de Codex :**
 
 - `swift test --filter PageShiftTests` : 39 tests, 0 échec (S7 en échec attendu), 14,2 s.
+- Après le correctif de RET-048 (garde de plage du rapport) : 39 tests, 0 échec, **aucun échec attendu**, 13,7 s ; ASan 39 tests, 0 échec, 22,9 s ; suite complète 218 tests, 7 ignorés, 0 échec. Garde retirée temporairement : S7 échoue.
 - `swift test --scratch-path .build-asan --sanitize address --filter PageShiftTests` : 39 tests, 0 échec, aucun rapport ASan, 23,8 s.
 - `swift test` (suite complète `KyokashoKit`) : 218 tests exécutés, 7 ignorés (modèles ONNX/UniDic absents), 0 échec.
 
