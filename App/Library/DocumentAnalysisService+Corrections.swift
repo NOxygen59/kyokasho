@@ -9,25 +9,25 @@ extension DocumentAnalysisService {
     /// Applique des choix dans le résultat OCR du document : seulement sur une ligne pas encore réglée et dont
     /// le texte n'a pas changé depuis l'analyse ; marquée réglée **après** l'enregistrement réussi.
     func apply(_ choices: [(source: Int, line: Int, text: String)], documentId: String, service: OCRService) async {
-        lastError = nil
+        setCorrectionError(nil)
         guard let report = report(for: documentId) else {
-            lastError = "Analyse indisponible. Relance l’analyse avant de choisir."
+            setCorrectionError("Analyse indisponible. Relance l’analyse avant de choisir.")
             return
         }
         for source in Set(choices.map(\.source)).sorted() {
             guard let info = report.pages[source] else {
-                lastError = "Page \(source + 1) absente de l’analyse. Relance l’analyse avant de choisir."
+                setCorrectionError("Page \(source + 1) absente de l’analyse. Relance l’analyse avant de choisir.")
                 continue
             }
             guard var page = await service.cached(documentId: documentId, pageIndex: source, engine: info.baseEngine) else {
-                lastError = "Texte OCR de la page \(source + 1) indisponible. Relis la page puis relance l’analyse. Aucun choix n’a été enregistré pour cette page."
+                setCorrectionError("Texte OCR de la page \(source + 1) indisponible. Relis la page puis relance l’analyse. Aucun choix n’a été enregistré pour cette page.")
                 continue
             }
             var done: [Int] = []
             for c in choices where c.source == source {
                 guard let vote = info.disagreements.first(where: { $0.line == c.line }), !vote.settled else { continue }
                 guard page.lines.indices.contains(c.line), page.lines[c.line].text == vote.base else {
-                    lastError = "Page \(source + 1), ligne \(c.line + 1) : le texte a changé depuis l’analyse. Ta version est conservée ; relance l’analyse avant de choisir."
+                    setCorrectionError("Page \(source + 1), ligne \(c.line + 1) : le texte a changé depuis l’analyse. Ta version est conservée ; relance l’analyse avant de choisir.")
                     continue
                 }
                 page.lines[c.line] = page.lines[c.line].acceptingCorrection(c.text)
@@ -37,7 +37,7 @@ extension DocumentAnalysisService {
             do {
                 try await service.store(page, documentId: documentId, pageIndex: source)
             } catch {
-                lastError = "Page \(source + 1) non enregistrée : \(error.localizedDescription)"
+                setCorrectionError("Page \(source + 1) non enregistrée : \(error.localizedDescription)")
                 continue
             }
             update(documentId) { r in

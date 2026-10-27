@@ -14,6 +14,8 @@ final class DocumentAnalysisService {
     var reportWrites = 0
     init(_ report: DocumentAnalysis) { reportValue = report }
     func report(for id: String) -> DocumentAnalysis? { reportValue.documentId == id ? reportValue : nil }
+    func setCorrectionError(_ message: String?) { lastError = message }
+
     func update(_ id: String, _ change: (inout DocumentAnalysis) -> Void) {
         guard reportValue.documentId == id else { return }
         change(&reportValue)

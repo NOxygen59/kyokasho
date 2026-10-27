@@ -60,6 +60,8 @@ final class DocumentAnalysisService: ObservableObject {
     }
 
     /// Relit le rapport enregistré, le modifie et le réenregistre (jamais une copie périmée).
+    func setCorrectionError(_ message: String?) { lastError = message }
+
     func update(_ id: String, _ change: (inout DocumentAnalysis) -> Void) {
         guard var r = report(for: id) else { return }
         change(&r)
