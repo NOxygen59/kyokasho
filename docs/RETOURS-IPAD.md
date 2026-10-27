@@ -156,4 +156,10 @@ Build **non publiée**, construite depuis le commit local `bfd4312` (= `main` `2
 
 `main` après le lot : `6dac083`, identique à la candidate 1.3.2 (52) hors numéro de version (`project.yml`).
 
-Prochain identifiant libre : **RET-048**.
+### Défaut trouvé par les tests PageShift du 27/10/2026 (cadrage #73, PR #75)
+
+| ID | Alias | Date | Type | Retour (résumé) | Build | État | Issue | PR | Preuve |
+|---|---|---|---|---|---|---|---|---|---|
+| RET-048 | — | 2026-10-27 | Bug (données, PageShift) | Un rapport d'analyse dont une page est hors du document est décalé sans contrôle ; l'ajout de pages devrait s'arrêter comme pour les brouillons et les lectures IA | `main` `8b89b93`, tests Mac | reproduit | [#74](https://github.com/NOxygen59/kyokasho/issues/74) | — (tests : [#75](https://github.com/NOxygen59/kyokasho/pull/75), fusionnée) | `testS7ReportPageOutsideTheDocumentStopsTheAddition`, marqué `XCTExpectFailure` strict ; non corrigé |
+
+Prochain identifiant libre : **RET-049**.
