@@ -215,6 +215,7 @@ final class AppModel: ObservableObject {
                 ScanSharpening.removeCache(documentId: document.id)
                 OCRTargetLanguage.forget(document.id)
                 try? NoteDraftStore.shared.removeAll(documentId: document.id)
+                ReaderToolModeStore().forget(documentId: document.id)
                 Task { @MainActor in self.deletingIds.remove(document.id) }
             } catch {
                 Task { @MainActor in
