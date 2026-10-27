@@ -171,6 +171,7 @@ extension ReaderController {
         pencilTap.cancelsTouchesInView = false
         pencilTap.delegate = self
         pencilTap.isEnabled = false
+        applyPencilLookupGestures()
         hover = UIHoverGestureRecognizer(target: self, action: #selector(handleHover(_:)))
         hover.delegate = self
         if attach {
@@ -340,6 +341,7 @@ extension ReaderController {
 
     func setDrawing(_ on: Bool) {
         isDrawing = on
+        UserDefaults.standard.set(on, forKey: ModeMemory.drawingKey)
         // Toujours en mode annotation (voir `configureGestures`), dessin ou non.
         pdfView.isInMarkupMode = true
         if on {
