@@ -144,4 +144,10 @@ Build **non publiée**, construite depuis le commit local `bfd4312` (= `main` `2
 | RET-041 | — | 2026-10-27 | Bug (affichage) | L'interface en haut à gauche clignote à chaque changement de page | 1.3.2 (42) locale, `bfd4312` | rapporté | [#60](https://github.com/NOxygen59/kyokasho/issues/60) | — | — |
 | RET-042 | — | 2026-10-27 | Ergonomie | Survol avec Maj peu fiable quand le curseur bouge vite ; s'inspirer de Yomitan (GPL-3.0, licence à respecter) | 1.3.2 (42) locale, `bfd4312` | rapporté | [#61](https://github.com/NOxygen59/kyokasho/issues/61) | — | — |
 
-Prochain identifiant libre : **RET-043**.
+### Retour du 27/10/2026 — navigation PDF (après la recette 1.3.2)
+
+| ID | Alias | Date | Type | Retour (résumé) | Build | État | Issue | PR | Preuve |
+|---|---|---|---|---|---|---|---|---|---|
+| RET-043 | — | 2026-10-27 | Bug (navigation) | Pincement difficile et déplacement en diagonale bloqué en mode lecture, naturels en mode écriture ; deux hypothèses à tester (balayages gauche/droite, appui long qui coupe le défilement de PDFKit) | 1.3.2 (42) locale, `bfd4312` | rapporté | [#63](https://github.com/NOxygen59/kyokasho/issues/63) | — | lecture du code seulement |
+
+Prochain identifiant libre : **RET-044**.
