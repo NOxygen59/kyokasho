@@ -26,6 +26,6 @@ labels: []
 
 ## Autorisation et responsable
 
-- **Autorisation de NOxygen59** : <!-- citation et date, ou « à obtenir » -->
+- **Autorisation de l’utilisateur** : <!-- citation et date, ou « à obtenir » -->
 - **Agent responsable** : Claude / Codex
 - **Revue croisée requise** : oui / non
