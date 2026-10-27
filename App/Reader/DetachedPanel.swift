@@ -23,6 +23,9 @@ enum StudyPanelMotion {
         guard enabled else { return nil }
         return reduceMotion ? .easeOut(duration: 0.14) : .spring(response: 0.32, dampingFraction: 0.92)
     }
+
+    /// Durée visible de `animation` : attente avant la libération de la colonne de droite (iOS 16, Issue #69).
+    static func duration(reduceMotion: Bool) -> Double { reduceMotion ? 0.14 : 0.36 }
 }
 
 /// Boutons de fenêtre de l'en-tête du panneau (le mode actuel n'a pas de bouton).
