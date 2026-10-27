@@ -34,6 +34,10 @@ final class ShiftKey: ObservableObject {
         observers.append(NotificationCenter.default.addObserver(forName: .GCKeyboardDidConnect, object: nil, queue: .main) { _ in
             MainActor.assumeIsolated { self.attach() }
         })
+        // Clavier débranché pendant l'appui : sans cela `pressed` resterait vrai (revue de Codex sur #57).
+        observers.append(NotificationCenter.default.addObserver(forName: .GCKeyboardDidDisconnect, object: nil, queue: .main) { _ in
+            MainActor.assumeIsolated { self.refresh() }
+        })
         attach()
     }
 

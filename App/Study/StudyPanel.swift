@@ -127,6 +127,8 @@ struct StudyTextTab: View {
     @State private var bubble: PanelBubble?
     /// Pointeur (souris, trackpad) au-dessus de la bulle : elle ne se ferme pas tant qu'il y reste.
     @State private var pointerInBubble = false
+    /// Incrémenté à chaque fermeture : la vue web oublie le mot survolé (sinon il ne rouvrirait pas).
+    @State private var hoverReset = 0
     @ObservedObject private var shift = ShiftKey.shared
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var translating = false
@@ -160,9 +162,9 @@ struct StudyTextTab: View {
                     }
                     doubtRow(page)
                     if aiLayout {
-                        AILayoutView(reader: reader, furigana: furigana) { handleLookup($0) }
+                        AILayoutView(reader: reader, furigana: furigana, hoverReset: hoverReset) { handleLookup($0) }
                     } else if furigana {
-                        FuriganaTextView(page: page, formatted: formatted, regions: regions) { handleLookup($0) }
+                        FuriganaTextView(page: page, formatted: formatted, regions: regions, hoverReset: hoverReset) { handleLookup($0) }
                     } else if formatted {
                         FormattedOCRText(page: page, regions: regions)
                     } else {
@@ -307,6 +309,7 @@ struct StudyTextTab: View {
         guard bubble != nil else { return }
         withAnimation(bubbleAnimation) { bubble = nil }
         pointerInBubble = false
+        hoverReset &+= 1
         if !keepSession {
             // Après l'animation de sortie, pour ne pas vider la bulle pendant qu'elle disparaît.
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { if bubble == nil, presentedLookup == nil { lookup?.clear() } }
