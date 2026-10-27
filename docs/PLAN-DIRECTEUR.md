@@ -137,11 +137,11 @@ Une anomalie critique démontrée peut modifier cet ordre, avec justification en
 - Registre central : [RETOURS-IPAD.md](RETOURS-IPAD.md), RET-001 à RET-048 ; prochain identifiant libre RET-049.
 - Lot du 27/10 clos : #66 (RET-044), #68 (RET-043), #70 (RET-046) et #72 (RET-047) fusionnées sur autorisation de NOxygen59 ; `main` = `6dac083`, identique à la candidate locale 1.3.2 (52) (non publiée) hors numéro de version. #63, #65, #69, #71 fermées, confirmées iPad.
 - Ouverts : RET-041 (#60), RET-042 (#61) et RET-045 (#67, journal lent, suivi séparément), non résolus. RET-048 (#74) : corrigé et testé sur Mac, ASan réussi, compilé iOS, non testé iPad ; PR #77 fusionnée (`1767ce0`), Issue fermée sur preuve Mac.
-- En cours : RET-014 (#17, barre de langue fixe) et RET-007 (#34, un seul défilement vertical dans le panneau Texte), PR #78, candidate locale 1.3.2 (53) en recette iPad. #18 et #24 restent ouvertes (critères non démontrés, preuves commentées).
+- RET-014 (#17, barre de langue fixe et bascule sans rechargement) et RET-007 (#34, un seul défilement vertical dans le panneau Texte) : **confirmés iPad** sur les candidates locales 1.3.2 (53) à (56), non publiées ; PR #78 en attente de la revue de Codex et de l'accord de NOxygen59. Remarque de recette à préciser : la bulle Yomitan semble se rafraîchir à chaque mouvement de souris. #18 et #24 restent ouvertes (critères non démontrés, preuves commentées).
 - Tests PageShift (cadrage #73) : PR #75 fusionnée (`8b89b93`) ; S1 à S7 et R1 à R8 sur données synthétiques, dont 182 doubles interruptions ; suite complète `KyokashoKit` 218 tests, 7 ignorés, 0 échec ; aucun code de l'app modifié.
 - Actions désactivé ; aucune release ; dépendances/forks MLX inchangés ; aucune donnée personnelle manipulée.
 
-**Une seule séquence recommandée :** recette iPad de la candidate 1.3.2 (53) et revue Codex de la PR #78 (#17, #34) ; ensuite DATA-02 (sauvegarde et restauration sur une bibliothèque entièrement synthétique), sur accord de NOxygen59. Une seule Issue et une seule PR à la fois ; aucune manipulation de la bibliothèque personnelle.
+**Une seule séquence recommandée :** revue de Codex puis décision de NOxygen59 sur la PR #78 (#17, #34) ; ensuite DATA-02 (sauvegarde et restauration sur une bibliothèque entièrement synthétique), sur accord de NOxygen59. Une seule Issue et une seule PR à la fois ; aucune manipulation de la bibliothèque personnelle.
 
 **Question standard de reprise :** « Lis `AGENTS.md`, `docs/PLAN-DIRECTEUR.md` et `docs/RETOURS-IPAD.md`, compare avec GitHub actuellement, puis indique l'état vérifié, les blocages et une seule prochaine action ; ne fusionne ni ne publie sans mon accord. »
 
