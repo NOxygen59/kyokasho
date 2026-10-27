@@ -5,7 +5,7 @@
 
 > **Point d'entrée de pilotage pour les humains et agents IA.** Ce fichier suit la transformation *technique* du projet, pas le backlog de fonctionnalités. Il n'est **pas** une autorisation d'implémenter, fusionner, publier ou modifier les données. Lire [AGENTS.md](../AGENTS.md) avant toute action.
 >
-> **Dernier instantané vérifié : 27 octobre 2026.** `main` à `5a50bed7a8833a6c62ca3574664741fb5ebf3340` après fusion de la PR #56. Le [registre des retours iPad](RETOURS-IPAD.md) contient **RET-001 à RET-040** et fait foi pour le suivi détaillé. Trois PR de correction sont ouvertes en brouillon, toutes basées sur ce `main` : [#31](https://github.com/NOxygen59/kyokasho/pull/31), [#32](https://github.com/NOxygen59/kyokasho/pull/32) et [#57](https://github.com/NOxygen59/kyokasho/pull/57). Elles sont compilées pour iOS générique mais **non essayées sur l'iPad**. La build locale 1.3.1 (41), non publiée, a permis de confirmer RET-008 et RET-009 sur l'iPad ; RET-011 reste partiel et RET-012 demande le comportement par document préparé dans #32. **GitHub Actions reste désactivé** selon la décision CI-0 ; aucun workflow n'a été lancé pour cette mise à jour. Ne pas considérer cet instantané comme actuel sans interroger GitHub.
+> **Dernier instantané vérifié : 27 octobre 2026.** `main` à `5a50bed7a8833a6c62ca3574664741fb5ebf3340`. Les PR #8 à #10, #25, #27 à #30, #33 et #56 sont fusionnées. Le [registre des retours iPad](RETOURS-IPAD.md) contient **RET-001 à RET-040** et fait foi pour le suivi détaillé. Trois PR de correction sont ouvertes en brouillon, toutes basées sur ce `main` : [#31](https://github.com/NOxygen59/kyokasho/pull/31), [#32](https://github.com/NOxygen59/kyokasho/pull/32) et [#57](https://github.com/NOxygen59/kyokasho/pull/57). Elles sont compilées pour iOS générique mais **non essayées sur l'iPad**. La build locale 1.3.1 (41), non publiée, a permis de confirmer RET-008 et RET-009 sur l'iPad ; RET-011 reste partiel et RET-012 demande le comportement par document préparé dans #32. **GitHub Actions reste désactivé** selon la décision CI-0 ; aucun workflow n'a été lancé pour cette mise à jour. Ne pas considérer cet instantané comme actuel sans interroger GitHub.
 
 ## 1. Utilisation par un nouvel agent (obligatoire)
 
@@ -29,7 +29,18 @@
 - Pas de simulateur, installation appareil, modification de version, release ou fusion implicite.
 - Le dépôt est **public** au relevé du 25/10 (alors que [la feuille de route](FEUILLE-DE-ROUTE.md) § 0 le dit « privé ») ; la décision de visibilité appartient au propriétaire. Ne jamais publier des PDF, secrets, logs bruts ou jeux d'essai privés.
 
-## 3. Registre des chantiers de professionnalisation
+## 3. État actuel au 27 octobre 2026
+
+| Niveau | Éléments |
+|---|---|
+| **Terminé et confirmé** | Socle documentaire et gouvernance fusionnés ; PR #8 à #10, #25, #27 à #30, #33 et #56 fusionnées ; RET-008 et RET-009 confirmés sur l'iPad avec la build locale 1.3.1 (41) |
+| **En validation** | PR #31, #32 et #57 compilées ensemble mais non essayées sur iPad ; RET-001, RET-002, RET-003 et RET-006 intégrés dans la build 1.3.1 mais non couverts par sa recette |
+| **Ouvert** | Retours marqués « rapporté » dans [RETOURS-IPAD.md](RETOURS-IPAD.md), ainsi que DATA-01, DATA-02, DATA-03, QA-03, PERF-01, MAINT-01 et SEC-01 selon leurs preuves manquantes |
+| **Conception seulement** | RET-034 (suppression de pages), RET-036 (cloud), RET-040 et PORT-01 (version Mac), DIAG-01 ; aucune implémentation autorisée par ce classement |
+
+Le registre iPad porte le détail par retour. Cette vue indique seulement le niveau de maturité et ne remplace ni les Issues ni les preuves.
+
+## 4. Registre des chantiers de professionnalisation
 
 **Code de statut de cette table :** « fusionné » n'est **pas** « testé iPad » ; « à valider iPad » n'est **pas** « testé iPad ». Les tâches nouvelles ne sont que **proposées**, jamais automatiquement autorisées.
 
@@ -41,7 +52,7 @@
 | GOV-04 | Protocole Claude / Codex, documentation du code, gabarits de PR et d'Issue, politique « Zéro dépense » | **Fusionné le 25/10/2026** (`f83aec8`), vérifié lors de QA-02 ; revue de Codex reçue (2 remarques, traitées) : protocole dans [GOUVERNANCE-ET-REPRISE.md](GOUVERNANCE-ET-REPRISE.md#collaboration-entre-agents-claude-et-codex) (autorisations de NOxygen59 valables dans un chat et consignées, commentaires signés [Claude]/[Codex]), règles de documentation dans [CONTRIBUTING.md](../CONTRIBUTING.md), `CLAUDE.md` qui importe `AGENTS.md`, gabarits `.github/`, politique « Zéro dépense » et tests locaux dans [CI-ROADMAP.md](CI-ROADMAP.md) et [TESTS.md](TESTS.md#procédure-locale-standard-avant-une-pr) | [PR #6](https://github.com/NOxygen59/kyokasho/pull/6) (branche `claude/collaboration-agents-ci-gratuite`) | Intégration close ; QA-02 reprend le gabarit de PR et fournit la preuve locale |
 | DATA-01 | Reprise idempotente d'ajout de pages / PageShift | **Fusionné** le 25/10 (`a016091`) ; `Stockage Mac` réussi sur `main` après #1+#2 et après #1+#2+#3 ; **non essayé sur iPad** | [PR #2](https://github.com/NOxygen59/kyokasho/pull/2) ; [PHASE2-STOCKAGE.md](PHASE2-STOCKAGE.md) ; runs `40152364389`, `40152582505` | Recette iPad sur copie : OCR concurrent, annotations, gros PDF |
 | DATA-02 | Sauvegarde et restauration hors ligne | **Fusionné** le 25/10 (`c2b1b29`) ; `Sauvegarde synthétique` réussi sur `main` ; **restauration TrollStore/iPad non démontrée** | [PR #3](https://github.com/NOxygen59/kyokasho/pull/3) ; [PHASE2-SAUVEGARDE.md](PHASE2-SAUVEGARDE.md) ; run `40152580509` | Qualifier extraction/restauration sur iPad avec une bibliothèque jetable avant tout usage réel |
-| QA-01 | Tests de logique et stockage | Socle de stockage fusionné et testé sur Mac ; les PR récentes documentent leurs preuves locales séparément. Dernière preuve déclarée : #57, 184 tests Swift réussis, 7 ignorés et compilation iOS générique réussie. **Ce résultat ne valide ni l'iPad, ni MLX/Metal.** | PR #2/#3 ; [TESTS.md](TESTS.md) ; preuves des PR #31/#32/#57 | Maintenir les tests ciblés par correction ; relever explicitement les ignorés et réserver les scénarios matériels à l'iPad réel |
+| QA-01 | Tests de logique et stockage | Socle de stockage fusionné et testé sur Mac ; les PR récentes documentent leurs preuves locales séparément. Preuve déclarée sur l'assemblage local des trois PR #31 → #32 → #57 (`aeb8d01`) : 188 tests Swift réussis, 7 ignorés, 16 Python, documentation sans erreur et compilation iOS générique réussie. **Ce résultat ne valide ni l'iPad, ni MLX/Metal.** | PR #2/#3 ; [TESTS.md](TESTS.md) ; preuves des PR #31/#32/#57 | Maintenir les tests ciblés par correction ; relever explicitement les ignorés et réserver les scénarios matériels à l'iPad réel |
 | CI-01 | Automatisation CI | **GitHub Actions désactivé le 25/10/2026** (décision CI-0 de NOxygen59, vérifiée via l'API : `enabled: false`). Les trois workflows (`documentation.yml`, `storage.yml`, `backup.yml`) restent versionnés mais inactifs. Politique « Zéro dépense » (GOV-04). **Tests exécutés localement** sur le Mac de NOxygen59 et documentés dans chaque PR par une fiche de preuve | [CI-ROADMAP.md](CI-ROADMAP.md) ; [TESTS.md](TESTS.md#procédure-locale-standard-avant-une-pr) | CI-G (script local de fiche de preuve) sur accord ; réactivation d'Actions seulement par NOxygen59, après protection vérifiée et autorisation par workflow |
 | QA-02 | Recette iPad par version | Recette fusionnée avec la [PR #7](https://github.com/NOxygen59/kyokasho/pull/7) (`431f1c6`). Le registre couvre désormais **RET-001 à RET-040**. Build locale **1.3.1 (41)**, non publiée : RET-008 et RET-009 **confirmés iPad** ; RET-011 partiel ; RET-012 fonctionnel mais besoin précisé « par document ». PR #31, #32 et #57 compilées iOS, **non essayées sur iPad**. DATA-01/DATA-02/DATA-03/PERF-01 restent sans validation appareil complète. | [RETOURS-IPAD.md](RETOURS-IPAD.md) ; [RECETTE-IPAD-QA-02.md](RECETTE-IPAD-QA-02.md) ; PR [#31](https://github.com/NOxygen59/kyokasho/pull/31), [#32](https://github.com/NOxygen59/kyokasho/pull/32), [#57](https://github.com/NOxygen59/kyokasho/pull/57) | Relecture des trois PR, intégration uniquement sur accord, nouvelle candidate locale identifiée par SHA, puis recette iPad ciblée ; ne fermer les Issues qu'après résultat consigné |
 | DATA-03 | Géométrie annotations/export après égalisation | Risque identifié, **non clos** | [AUDIT-V1.3.md](AUDIT-V1.3.md) ; [GOUVERNANCE-ET-REPRISE.md](GOUVERNANCE-ET-REPRISE.md) | Tests pages tournées et tailles mixtes + validation iPad |
@@ -55,7 +66,7 @@
 
 Les chantiers n'ont **pas** d'avancement en pourcentage : cela produirait une précision trompeuse. L'ordre n'est pas une promesse de calendrier.
 
-## 4. Dépendances et ordre suggéré
+## 5. Dépendances et ordre suggéré
 
 1. **Stabiliser le lot déjà ouvert** : relire #31, #32 et #57 ; ne fusionner que sur accord de NOxygen59 et après résolution des remarques. Construire ensuite une candidate locale identifiée par son SHA source et le SHA-256 du `.tipa`.
 2. **Recette iPad courte du lot** : palette Pencil au changement de double page (#31), modes indépendants par document et après relance (#32), bulle Yomitan tactile/souris/Maj dans les modes du panneau (#57). Consigner chaque résultat dans [RETOURS-IPAD.md](RETOURS-IPAD.md).
@@ -67,13 +78,11 @@ Les chantiers n'ont **pas** d'avancement en pourcentage : cela produirait une pr
 
 Une anomalie critique démontrée peut modifier cet ordre, avec justification enregistrée. Les chantiers n'ont pas de pourcentage d'avancement : intégration, tests Mac, compilation iOS et validation iPad restent des axes séparés.
 
-## 5. Registre des validations et limites
+## 6. Registre des validations et limites
 
 - **État GitHub du 27/10** : `main` `5a50bed7a8833a6c62ca3574664741fb5ebf3340` ; PR #56 fusionnée (registre complet), PR #31/#32/#57 ouvertes en brouillon et fusionnables au relevé. Aucun de ces trois correctifs n'est confirmé sur iPad.
 - **Build locale 1.3.1 (41), recette NOxygen59 du 27/10** : candidate non publiée, source locale `e3232d5` (`main` `ec51cb8` + version/build), SHA-256 `c5b31ced0e89ee30cac80c0ff55cd3f21e4dcef712469b9a61397e6946bf9016`. Installation/version/données observées OK ; RET-008 et RET-009 confirmés ; RET-011 partiel ; RET-012 précisé vers un stockage par document.
-- **PR #31** : compilation iOS générique réussie au SHA déclaré `1cfe119` ; test PencilKit réel impossible hors appareil ; non essayé sur iPad.
-- **PR #32** : 183 tests Swift réussis, 7 ignorés et compilation iOS générique réussie au SHA déclaré `de0a889` ; non essayé sur iPad.
-- **PR #57** : 184 tests Swift réussis, 7 ignorés, compilation iOS générique et contrôle documentaire réussis au SHA déclaré `f2fc145` ; événements WebKit/GameController/.onHover non essayés sur iPad.
+- **PR #31, #32 et #57 sur leur base actuelle** : têtes `010bc8c`, `b7d79eb` et `26af233`. Assemblage local déclaré `aeb8d01` dans cet ordre : 188 tests Swift réussis, 7 ignorés, 16 Python, documentation sans erreur, compilation iOS générique réussie et `Package.resolved` inchangés. **Aucun essai iPad.**
 - **Suivi produit** : [RETOURS-IPAD.md](RETOURS-IPAD.md) contient RET-001 à RET-040 et la matrice O01–O13 / P01–P10. Les Issues et PR liées portent le détail ; le plan directeur conserve seulement l'état des chantiers.
 
 
@@ -92,7 +101,7 @@ Une anomalie critique démontrée peut modifier cet ordre, avec justification en
 - **Contrôle documentaire** : `scripts/check_documentation.py` vérifie les liens locaux et, depuis GOV-03, la présence des documents de pilotage et leurs renvois. Sur un push groupant plusieurs commits, `git diff --check HEAD^ HEAD` ne couvre que le dernier (CI-ROADMAP, phase 1). Les en-têtes SPDX des Markdown ne sont pas contrôlés : plusieurs documents historiques n'en ont pas.
 - **À ne pas confondre** : le fichier racine `PLAN.md` est le plan historique du produit (V1→V5), pas ce plan directeur.
 
-## 6. Mode opératoire : une tâche du début à la fin
+## 7. Mode opératoire : une tâche du début à la fin
 
 1. **Cadre** : identifiant du chantier, bug/objectif, bénéfice, périmètre, propriétaire de la décision.
 2. **Contrat** : invariants, données touchées, contraintes iOS 16 et modèles, tests requis, non-objectifs.
@@ -105,7 +114,7 @@ Une anomalie critique démontrée peut modifier cet ordre, avec justification en
 
 **Définition de terminé** : implémentation + vérifications exigées + documentation + revue + intégration, *et* validation sur iPad si le critère la demande. Ne jamais clore implicitement une preuve manquante.
 
-## 7. Répertoire documentaire — sans double emploi
+## 8. Répertoire documentaire — sans double emploi
 
 - **Ce fichier** : suivi du programme de professionnalisation.
 - [INDEX.md](INDEX.md) : navigation dans la documentation.
@@ -118,7 +127,7 @@ Une anomalie critique démontrée peut modifier cet ordre, avec justification en
 
 **Résolution des contradictions** : rapporter les deux sources et leur date, vérifier le code/les runs et demander une décision si nécessaire. Ne pas effacer l'historique ni mettre à jour silencieusement les anciennes notes.
 
-## 8. Point de reprise pour le prochain chat
+## 9. Point de reprise pour le prochain chat
 
 **État de référence du 27/10/2026 :**
 
@@ -131,6 +140,10 @@ Une anomalie critique démontrée peut modifier cet ordre, avec justification en
 **Une seule séquence recommandée :** revue indépendante de #31/#32/#57, décision de fusion de NOxygen59, candidate locale, puis recette iPad ciblée. Après cette recette, mettre à jour le registre et ce point de reprise. Les validations DATA-01, DATA-02, DATA-03 et PERF-01 demeurent ouvertes et passent avant une refactorisation importante.
 
 **Question standard de reprise :** « Lis `AGENTS.md`, `docs/PLAN-DIRECTEUR.md` et `docs/RETOURS-IPAD.md`, compare avec GitHub actuellement, puis indique l'état vérifié, les blocages et une seule prochaine action ; ne fusionne ni ne publie sans mon accord. »
+
+### Historique condensé du 26 octobre
+
+La campagne QA02 1.3 build 40 a produit les lots diagnostics, OCR/dictionnaire et panneau OCR, ensuite fusionnés par les PR [#8](https://github.com/NOxygen59/kyokasho/pull/8), [#9](https://github.com/NOxygen59/kyokasho/pull/9) et [#10](https://github.com/NOxygen59/kyokasho/pull/10). Les constats, corrections, limites et recettes restent dans [QA02-CORRECTIONS-DIAGNOSTICS.md](QA02-CORRECTIONS-DIAGNOSTICS.md), [QA02-CORRECTIONS-OCR-DICTIONNAIRE.md](QA02-CORRECTIONS-OCR-DICTIONNAIRE.md) et [QA02-CORRECTIONS-PANNEAU.md](QA02-CORRECTIONS-PANNEAU.md). O07 et le retard de défilement n'y étaient qu'instrumentés ; ne pas les déclarer résolus sans preuve ultérieure.
 
 ### Historique conservé du 25 octobre
 
