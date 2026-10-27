@@ -22,6 +22,14 @@ struct ReaderScreen: View {
     @StateObject private var lookup: LookupSession
     @State private var sheet: Sheet?
     @State private var side: Side? = nil
+    /// Colonne de droite **réellement réservée** à la page (Issue #69). Elle suit `docked`, mais à la fermeture
+    /// elle n'est libérée qu'après l'animation de sortie du panneau : la largeur de PDFKit change une seule fois,
+    /// jamais à chaque image (choix du 23/10, `5efd2ca`).
+    @State private var reservedSide: Side?
+    /// Contenu de la colonne visible (animé) ; faux pendant la sortie et juste avant l'entrée.
+    @State private var dockedPanelShown = true
+    /// Annule une étape différée devenue obsolète (appuis rapides, rotation).
+    @State private var dockGeneration = 0
     @State private var autoOpenedSide = false
     @AppStorage(StudyPanelMotion.storageKey) private var animateTransitions = true
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -72,8 +80,8 @@ struct ReaderScreen: View {
     var body: some View {
         GeometryReader { geo in
             let landscape = geo.size.width > geo.size.height
-            let reservesSide = docked == .web || (docked == .study && landscape)
-            let panelWidth: CGFloat = docked == .web ? 440 : Atelier.panelWidth
+            let reservesSide = reservedSide == .web || (reservedSide == .study && landscape)
+            let panelWidth: CGFloat = (reservedSide ?? docked) == .web ? 440 : Atelier.panelWidth
             let inset: CGFloat = reservesSide ? Atelier.gap : 0
             let documentWidth = max(1, geo.size.width - (reservesSide ? panelWidth + Atelier.gap * 3 : 0))
             let documentHeight = max(1, geo.size.height - inset * 2)
@@ -140,9 +148,12 @@ struct ReaderScreen: View {
                 if reservesSide {
                     // Le panneau possède réellement sa colonne : PDFKit ne peut pas le recouvrir
                     // lors d'une navigation par la pellicule ou d'un changement de mise en page.
-                    if let docked {
-                        sidePanel(docked).frame(width: panelWidth, height: documentHeight)
-                            .transition(panelTransition)
+                    if let reservedSide {
+                        sidePanel(reservedSide).frame(width: panelWidth, height: documentHeight)
+                            // Seul le contenu s'anime ; la colonne garde sa largeur pendant l'animation.
+                            .offset(x: dockedPanelShown || reduceMotion ? 0 : panelWidth * 0.35)
+                            .opacity(dockedPanelShown ? 1 : 0)
+                            .allowsHitTesting(dockedPanelShown)
                     }
                 }
             }
@@ -152,8 +163,13 @@ struct ReaderScreen: View {
             .animation(nil, value: studyMode)
             .animation(nil, value: side)
             // Portrait : une page ; paysage : double page (affichage seulement).
-            .onChange(of: landscape) { reader.adaptLayout(portrait: !$0) }
+            .onChange(of: landscape) {
+                reader.adaptLayout(portrait: !$0)
+                finishDockTransition()
+            }
+            .onChange(of: docked) { syncDock(to: $0) }
             .onAppear {
+                reservedSide = docked
                 reader.adaptLayout(portrait: !landscape)
                 // Paysage (taille réelle de la vue, pas l'orientation de la scène) : panneau d'étude ouvert d'office.
                 if landscape, !autoOpenedSide { autoOpenedSide = true; side = .study }
@@ -524,6 +540,61 @@ struct ReaderScreen: View {
             if studyMode == .minimized { studyMode = studyRestore == .minimized ? .docked : studyRestore }
         }
         if tab == .text, reader.ocrPage == nil, reader.ocrState != .running { reader.runOCR() }
+    }
+
+    // MARK: Colonne de droite animée (Issue #69)
+
+    /// Ouverture : la colonne est réservée d'abord (un seul relayout de PDFKit), puis le panneau glisse et apparaît.
+    /// Fermeture : le panneau glisse et s'efface dans sa colonne, puis la colonne est libérée en une fois.
+    /// iOS 16 n'a pas `withAnimation(_:completion:)` : la libération attend la durée de l'animation.
+    private func syncDock(to new: Side?) {
+        dockGeneration &+= 1
+        let generation = dockGeneration
+        guard let animation = panelAnimation else {
+            setReserved(new)
+            dockedPanelShown = true
+            return
+        }
+        if let new {
+            if reservedSide == new {
+                // Réouverture pendant une sortie : la colonne n'a pas bougé.
+                withAnimation(animation) { dockedPanelShown = true }
+            } else if reservedSide != nil {
+                // Navigateur ↔ panneau d'étude : remplacement immédiat.
+                setReserved(new)
+                dockedPanelShown = true
+            } else {
+                dockedPanelShown = false
+                setReserved(new)
+                DispatchQueue.main.async {
+                    guard generation == dockGeneration else { return }
+                    withAnimation(animation) { dockedPanelShown = true }
+                }
+            }
+        } else {
+            guard reservedSide != nil else { return }
+            withAnimation(animation) { dockedPanelShown = false }
+            DispatchQueue.main.asyncAfter(deadline: .now() + StudyPanelMotion.duration(reduceMotion: reduceMotion)) {
+                guard generation == dockGeneration else { return }
+                finishDockTransition()
+            }
+        }
+    }
+
+    /// Termine tout de suite une transition en cours (fin d'animation, rotation).
+    private func finishDockTransition() {
+        dockGeneration &+= 1
+        setReserved(docked)
+        dockedPanelShown = true
+    }
+
+    /// Change la colonne réservée sans animation : la largeur de PDFKit passe directement à sa valeur finale.
+    private func setReserved(_ side: Side?) {
+        guard reservedSide != side else { return }
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) { reservedSide = side }
+        Diagnostics.log("Colonne de droite : \(side.map { "\($0)" } ?? "libérée") (relayout PDFKit)", "panneau")
     }
 
     @ViewBuilder
