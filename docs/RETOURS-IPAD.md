@@ -160,6 +160,6 @@ Build **non publiée**, construite depuis le commit local `bfd4312` (= `main` `2
 
 | ID | Alias | Date | Type | Retour (résumé) | Build | État | Issue | PR | Preuve |
 |---|---|---|---|---|---|---|---|---|---|
-| RET-048 | — | 2026-10-27 | Bug (données, PageShift) | Un rapport d'analyse dont une page est hors du document est décalé sans contrôle ; l'ajout de pages devrait s'arrêter comme pour les brouillons et les lectures IA | `main` `8b89b93`, tests Mac | reproduit | [#74](https://github.com/NOxygen59/kyokasho/issues/74) | — (tests : [#75](https://github.com/NOxygen59/kyokasho/pull/75), fusionnée) | `testS7ReportPageOutsideTheDocumentStopsTheAddition`, marqué `XCTExpectFailure` strict ; non corrigé |
+| RET-048 | — | 2026-10-27 | Bug (données, PageShift) | Un rapport d'analyse dont une page est hors du document est décalé sans contrôle ; l'ajout de pages devrait s'arrêter comme pour les brouillons et les lectures IA | `main` `8b89b93`, tests Mac | compilé iOS | [#74](https://github.com/NOxygen59/kyokasho/issues/74) | [#77](https://github.com/NOxygen59/kyokasho/pull/77) (tests : [#75](https://github.com/NOxygen59/kyokasho/pull/75), fusionnée) | garde de plage `116431e` ; `testS7…` démarqué (pages 7, 2, −1), échoue sans la garde ; 39 PageShift + ASan + 218 KyokashoKit verts ; build iOS générique réussie ; pas d'essai iPad |
 
 Prochain identifiant libre : **RET-049**.

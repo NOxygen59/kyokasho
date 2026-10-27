@@ -250,34 +250,26 @@ extension PageShiftRecoveryTests {
     }
 
     /// S7 — rapport d'analyse portant une page hors du document : comme les brouillons et les lectures IA,
-    /// l'ajout doit s'arrêter avant toute mutation.
-    /// Défaut connu RET-048 (#74) : aujourd'hui le rapport est décalé sans contrôle et l'ajout aboutit. Marquage
-    /// strict : quand le défaut sera corrigé, ce test échouera tant que `XCTExpectFailure` n'est pas retiré.
-    /// Seule l'assertion du défaut est attendue en échec (`issueMatcher`) : une panne de préparation, d'E/S ou toute
-    /// autre assertion reste un échec réel.
+    /// l'ajout s'arrête avant toute mutation. Régression de RET-048 (#74), corrigé : ce test était marqué
+    /// `XCTExpectFailure` tant que le rapport était décalé sans contrôle.
     func testS7ReportPageOutsideTheDocumentStopsTheAddition() async throws {
-        let defect = "RET-048 : l'ajout aurait dû s'arrêter"
-        let options = XCTExpectedFailure.Options()
-        options.issueMatcher = { $0.compactDescription.contains(defect) }
-        XCTExpectFailure("Défaut connu RET-048 : https://github.com/NOxygen59/kyokasho/issues/74", options: options)
-        try await withFixture { model, doc, root in
-            let card = try seed(model, doc)
-            let url = DocumentAnalysisService.folder.appendingPathComponent(doc.id + ".json")
-            var report = try JSONDecoder().decode(DocumentAnalysis.self, from: Data(contentsOf: url))
-            report.pages[7] = .init(source: 7, baseEngine: "test")
-            let bytes = try JSONEncoder().encode(report)
-            try bytes.write(to: url)
-            let merged = root.appendingPathComponent("input.pdf")
-            try writePDF(merged, pages: 4)
-            var stopped = false
-            do { _ = try await PageShift.apply(model, document: doc, merged: merged, offset: 2, newCount: 4) } catch { stopped = true }
-            XCTAssertTrue(stopped, "\(defect) (rapport avec une page 7 sur un document de 2 pages)")
-            // Conséquences vérifiées seulement quand l'ajout s'arrête (après le correctif) : aujourd'hui elles
-            // découlent du même défaut et ne doivent pas être confondues avec une autre panne.
-            guard stopped else { return }
-            XCTAssertFalse(FileManager.default.fileExists(atPath: root.appendingPathComponent(journalName).path))
-            XCTAssertEqual(try Data(contentsOf: url), bytes)
-            try assertUnshifted(model, doc, card)
+        for page in [7, 2, -1] {
+            try await withFixture { model, doc, root in
+                let card = try seed(model, doc)
+                let url = DocumentAnalysisService.folder.appendingPathComponent(doc.id + ".json")
+                var report = try JSONDecoder().decode(DocumentAnalysis.self, from: Data(contentsOf: url))
+                report.pages[page] = .init(source: page, baseEngine: "test")
+                let bytes = try JSONEncoder().encode(report)
+                try bytes.write(to: url)
+                let merged = root.appendingPathComponent("input.pdf")
+                try writePDF(merged, pages: 4)
+                await assertThrowsAsync({ try await PageShift.apply(model, document: doc, merged: merged, offset: 2, newCount: 4) },
+                                        "Rapport avec une page \(page) sur 2 : l'ajout aurait dû s'arrêter")
+                XCTAssertFalse(FileManager.default.fileExists(atPath: root.appendingPathComponent(journalName).path), "\(page)")
+                XCTAssertEqual(try Data(contentsOf: url), bytes, "\(page)")
+                XCTAssertNil(model.storageRecoveryError, "\(page)")
+                try assertUnshifted(model, doc, card)
+            }
         }
     }
 
