@@ -5,7 +5,7 @@
 
 ## Contrat et preuves
 
-Base : `431f1c6`, candidate rapportée sur iPad 1.3 build 40. Autorisation de NOxygen59 dans le chat
+Base : `431f1c6`, candidate rapportée sur iPad 1.3 build 40. Autorisation de l’utilisateur dans le chat
 du 26 octobre 2026 : corriger les trois lots dans l'ordre, PR séparées, sans fusion ni candidate.
 Objectif : consultation fiable des données disponibles, sans refonte du diagnostic ni suivi automatique.
 Invariants : export et données inchangés, iOS 16, aucun modèle ni dépendance changé.
