@@ -36,7 +36,7 @@ Les chemins précis de chaque sous-système restent définis par le code ; une f
 
 L'app propose des exports PDF, Markdown, images et Anki. Le code examiné ne démontre pas une fonction de sauvegarde/restauration intégrale et cohérente du conteneur. Aucun export isolé n'est donc présenté comme une assurance de récupération de toutes les données.
 
-Avant une opération risquée : exporter les PDF utiles, notes et cartes par les parcours disponibles ; ouvrir les exports ailleurs ; garder les PDF sources ; noter version/build et modèles. Ne pas désinstaller l'app. Une sauvegarde de conteneur par un outil disponible sur l'appareil demande une procédure propre à cet environnement, à vérifier avec NOxygen59 ; ne pas inventer une commande universelle TrollStore.
+Avant une opération risquée : exporter les PDF utiles, notes et cartes par les parcours disponibles ; ouvrir les exports ailleurs ; garder les PDF sources ; noter version/build et modèles. Ne pas désinstaller l'app. Une sauvegarde de conteneur par un outil disponible sur l'appareil demande une procédure propre à cet environnement, à vérifier avec l’utilisateur ; ne pas inventer une commande universelle TrollStore.
 
 Pour une future sauvegarde intégrale, mettre les écritures au repos, utiliser l'API de sauvegarde SQLite adaptée plutôt qu'une copie isolée du `.sqlite` pendant des écritures WAL, et inclure médias, fichiers IA, lexique et préférences. Si l'on copie un conteneur arrêté, traiter ensemble les éventuels fichiers SQLite annexes et vérifier la cohérence après restauration. Ne pas remplacer une base en fonctionnement.
 
