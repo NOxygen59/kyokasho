@@ -232,12 +232,13 @@ struct RubyWebView: UIViewRepresentable {
         view.backgroundColor = .clear
         view.navigationDelegate = context.coordinator
         Diagnostics.log("Création du texte web OCR", "ocr-scroll")
-        // Se déplacer dans le texte (tableaux larges, texte zoomé) : glisser à l'horizontale ou, zoomé, partout.
-        // Pas zoomé, la hauteur suit le contenu : un glisser vertical fait défiler la fenêtre OCR, pas le texte.
+        // Un seul défilement vertical, celui du panneau (#34, #17) : la vue web prend toute la hauteur de son
+        // contenu, zoom compris (`Coordinator.fitHeight`), et ne se déplace qu'à l'horizontale (tableau large,
+        // texte vertical, texte zoomé). Sans rien à faire défiler, son geste est coupé (`applyScrollPolicy`) :
+        // le panneau reçoit le doigt, la molette et le trackpad sans arbitrage. Le pincement (1× à 5×) reste actif.
         let scroll = view.scrollView
-        scroll.isScrollEnabled = true
-        // Déplacement libre dans toutes les directions ; pincer de 1× à 5×.
-        scroll.isDirectionalLockEnabled = false
+        scroll.isScrollEnabled = false
+        scroll.isDirectionalLockEnabled = true
         scroll.alwaysBounceVertical = false
         scroll.alwaysBounceHorizontal = false
         scroll.bounces = true
@@ -246,6 +247,7 @@ struct RubyWebView: UIViewRepresentable {
         scroll.maximumZoomScale = 5
         scroll.contentInsetAdjustmentBehavior = .never
         context.coordinator.setDiagnostics(view, enabled: diagnosticsEnabled)
+        context.coordinator.attachScrollPolicy(view)
         return view
     }
 
@@ -268,6 +270,7 @@ struct RubyWebView: UIViewRepresentable {
         // Le contrôleur gardé à la création (pas une copie) : le gestionnaire est bien retiré.
         coordinator.controller?.removeScriptMessageHandler(forName: "kyokasho")
         coordinator.setDiagnostics(view, enabled: false)
+        coordinator.detachScrollPolicy(view)
         view.navigationDelegate = nil
     }
 
@@ -325,6 +328,9 @@ struct RubyWebView: UIViewRepresentable {
         var lastHoverReset = 0
         weak var controller: WKUserContentController?
         var offsetObservation: NSKeyValueObservation?
+        /// Hauteur du contenu en pixels CSS (`document.body.scrollHeight`), avant zoom.
+        var cssHeight: CGFloat = 0
+        private var contentSizeObservation: NSKeyValueObservation?
         var diagnosticsEnabled = false
         private var lastNativeScroll = Date.distantPast
 
@@ -345,6 +351,48 @@ struct RubyWebView: UIViewRepresentable {
                 offsetObservation?.invalidate()
                 offsetObservation = nil
                 removeScrollListeners(view)
+            }
+        }
+
+        /// Suit la fin des pincements et la taille du contenu pour garder un seul défilement vertical.
+        func attachScrollPolicy(_ view: WKWebView) {
+            view.scrollView.pinchGestureRecognizer?.addTarget(self, action: #selector(pinchChanged(_:)))
+            contentSizeObservation = view.scrollView.observe(\.contentSize, options: [.new]) { [weak self] scroll, _ in
+                DispatchQueue.main.async { self?.applyScrollPolicy(scroll) }
+            }
+        }
+
+        func detachScrollPolicy(_ view: WKWebView) {
+            view.scrollView.pinchGestureRecognizer?.removeTarget(self, action: #selector(pinchChanged(_:)))
+            contentSizeObservation?.invalidate()
+            contentSizeObservation = nil
+        }
+
+        /// Fin de pincement : la hauteur suit le nouveau zoom. Seconde mesure après le rebond éventuel vers 1×.
+        @objc func pinchChanged(_ gesture: UIPinchGestureRecognizer) {
+            guard gesture.state == .ended || gesture.state == .cancelled,
+                  let web = gesture.view?.superview as? WKWebView else { return } // vue du geste : le scrollView de la vue web
+            fitHeight(web)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self, weak web] in
+                if let web { self?.fitHeight(web) }
+            }
+        }
+
+        /// Hauteur du cadre = hauteur CSS × zoom : le contenu ne dépasse jamais verticalement, donc la vue web
+        /// n'a jamais de défilement vertical propre (pas de « fenêtre dans la fenêtre »).
+        func fitHeight(_ web: WKWebView) {
+            let target = (cssHeight * web.scrollView.zoomScale).rounded(.up)
+            if target > 0, abs(target - parent.height) > 1 { parent.height = target }
+            applyScrollPolicy(web.scrollView)
+        }
+
+        /// Geste de la vue web actif seulement s'il y a un déplacement horizontal possible (zoom ou contenu large).
+        /// Contenu entièrement visible en hauteur : décalage vertical ramené à 0.
+        func applyScrollPolicy(_ scroll: UIScrollView) {
+            let horizontal = scroll.zoomScale > 1.01 || scroll.contentSize.width > scroll.bounds.width + 1
+            if scroll.isScrollEnabled != horizontal { scroll.isScrollEnabled = horizontal }
+            if scroll.contentOffset.y != 0, scroll.contentSize.height <= scroll.bounds.height + 1 {
+                scroll.contentOffset.y = 0
             }
         }
 
@@ -385,7 +433,9 @@ struct RubyWebView: UIViewRepresentable {
                 let delay = Date().timeIntervalSince1970 * 1000 - time
                 Diagnostics.log("Événement HTML \(kind), délai pont=\(Int(delay)) ms", "ocr-scroll")
             case "height":
-                if let value = body["value"] as? Double, abs(CGFloat(value) - parent.height) > 1 { parent.height = CGFloat(value) }
+                guard let value = body["value"] as? Double, value.isFinite, value > 0 else { return }
+                cssHeight = CGFloat(value)
+                if let web = message.webView { fitHeight(web) }
             case "lookup":
                 guard let text = body["text"] as? String, !text.isEmpty else { return }
                 // Rectangle CSS du mot → points de la vue web (zoom du pincement) → coordonnées de la fenêtre.

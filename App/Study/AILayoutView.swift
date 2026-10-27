@@ -25,7 +25,6 @@ struct AILayoutView: View {
     private var layoutKey: String { "layout|\(reader.document.id)|\(source)" }
     private var translateKey: String { "translate|\(reader.document.id)|\(source)" }
     private var reading: Bool { center.isRunning(layoutKey) }
-    private var translating: Bool { center.isRunning(translateKey) }
     private var error: String? { center.errors[layoutKey] ?? center.errors[translateKey] }
     /// Traduction française (Qwen3-VL, hors ligne) de la mise en page, gardée par page.
     @AppStorage("study.aiLayoutFrench") private var french = false
@@ -52,9 +51,6 @@ struct AILayoutView: View {
                 }
             }
             if let error { Text(error).font(.caption).foregroundStyle(.red) }
-            if markdown != nil {
-                languageRow
-            }
             if markdown != nil, !html.isEmpty {
                 RubyWebView(html: html, height: $height, hoverReset: hoverReset, onLookup: onLookup)
                     .frame(height: height)
@@ -67,52 +63,6 @@ struct AILayoutView: View {
             }
         }
         .task(id: "\(reader.document.id)|\(source)|\(furigana)|\(tint.rawValue)|\(french)|\(center.finished)") { await load() }
-    }
-
-    /// Japonais / français (si traduit), ou bouton de traduction hors ligne par Qwen3-VL.
-    @ViewBuilder
-    private var languageRow: some View {
-        if translating {
-            HStack(spacing: 10) {
-                ProgressView()
-                Text("Qwen3-VL traduit la page… (1 à 3 min, hors ligne)").font(.footnote).foregroundStyle(Atelier.textSecondary)
-            }
-        } else if frenchMarkdown != nil {
-            HStack {
-                Picker("Langue", selection: $french) {
-                    Text("日本語").tag(false)
-                    Text("Français").tag(true)
-                }
-                .pickerStyle(.segmented)
-                .frame(maxWidth: 220)
-                Spacer()
-                Button { translate() } label: { Image(systemName: "arrow.clockwise") }
-                    .accessibilityLabel("Retraduire la page")
-                    .foregroundStyle(Atelier.textTertiary)
-                    .disabled(!Qwen3VLReader().isAvailable)
-            }
-        } else if Qwen3VLReader().isAvailable {
-            Button { translate() } label: {
-                Label("Traduire en français (hors ligne)", systemImage: "character.bubble")
-            }
-            .font(.footnote.weight(.semibold))
-            .foregroundStyle(Atelier.Tint.ai)
-        }
-    }
-
-    /// Traduction de la page (fichier gardé), même si on change de page entre-temps.
-    private func translate() {
-        guard let markdown else { return }
-        let source = source, documentId = reader.document.id, glossary = DomainLexicon.shared.glossary
-        center.run(translateKey, title: "Traduction Qwen3-VL p. \(source + 1)", modelId: ModelSpec.qwen3vl4b.id, activity: "traduction") { _ in
-            let fr = try await Diagnostics.measure("traduction p. \(source)", "traduction") {
-                try await Qwen3VLReader().translate(markdown: markdown, glossary: glossary)
-            }
-            // Arrêtée : la génération rend un texte partiel, jamais gardé.
-            try Task.checkCancellation()
-            try DocumentAITextStore.write(fr, documentId: documentId, reader: "fr", page: source)
-            UserDefaults.standard.set(true, forKey: "study.aiLayoutFrench")
-        }
     }
 
     private func load() async {
@@ -355,6 +305,77 @@ private enum FormulaMarkup {
                 }
             }
             return out
+        }
+    }
+}
+
+/// Barre 日本語 / Français de la mise en page IA (#17), **hors du défilement** du panneau Texte : toujours visible,
+/// même en bas d'une longue page. Mêmes données qu'`AILayoutView` (clé `study.aiLayoutFrench`, tâches
+/// `AITaskCenter`, fichiers `DocumentAITextStore`) ; elle se relit à chaque page et à chaque tâche terminée.
+struct AILayoutLanguageBar: View {
+    @ObservedObject var reader: ReaderController
+    @ObservedObject private var center = AITaskCenter.shared
+    @AppStorage("study.aiLayoutFrench") private var french = false
+    @State private var markdown: String?
+    @State private var hasFrench = false
+
+    private var source: Int { reader.focusSource }
+    private var translateKey: String { "translate|\(reader.document.id)|\(source)" }
+    private var translating: Bool { center.isRunning(translateKey) }
+
+    var body: some View {
+        Group {
+            if markdown != nil { languageRow }
+        }
+        .task(id: "\(reader.document.id)|\(source)|\(center.finished)") {
+            markdown = DocumentAITextStore.read(documentId: reader.document.id, reader: ModelSpec.ovisocr2.id, page: source)
+            hasFrench = DocumentAITextStore.read(documentId: reader.document.id, reader: "fr", page: source) != nil
+        }
+    }
+
+    /// Japonais / français (si traduit), ou bouton de traduction hors ligne par Qwen3-VL.
+    @ViewBuilder
+    private var languageRow: some View {
+        if translating {
+            HStack(spacing: 10) {
+                ProgressView()
+                Text("Qwen3-VL traduit la page… (1 à 3 min, hors ligne)").font(.footnote).foregroundStyle(Atelier.textSecondary)
+            }
+        } else if hasFrench {
+            HStack {
+                Picker("Langue", selection: $french) {
+                    Text("日本語").tag(false)
+                    Text("Français").tag(true)
+                }
+                .pickerStyle(.segmented)
+                .frame(maxWidth: 220)
+                Spacer()
+                Button { translate() } label: { Image(systemName: "arrow.clockwise") }
+                    .accessibilityLabel("Retraduire la page")
+                    .foregroundStyle(Atelier.textTertiary)
+                    .disabled(!Qwen3VLReader().isAvailable)
+            }
+        } else if Qwen3VLReader().isAvailable {
+            Button { translate() } label: {
+                Label("Traduire en français (hors ligne)", systemImage: "character.bubble")
+            }
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(Atelier.Tint.ai)
+        }
+    }
+
+    /// Traduction de la page (fichier gardé), même si on change de page entre-temps.
+    private func translate() {
+        guard let markdown else { return }
+        let source = source, documentId = reader.document.id, glossary = DomainLexicon.shared.glossary
+        center.run(translateKey, title: "Traduction Qwen3-VL p. \(source + 1)", modelId: ModelSpec.qwen3vl4b.id, activity: "traduction") { _ in
+            let fr = try await Diagnostics.measure("traduction p. \(source)", "traduction") {
+                try await Qwen3VLReader().translate(markdown: markdown, glossary: glossary)
+            }
+            // Arrêtée : la génération rend un texte partiel, jamais gardé.
+            try Task.checkCancellation()
+            try DocumentAITextStore.write(fr, documentId: documentId, reader: "fr", page: source)
+            UserDefaults.standard.set(true, forKey: "study.aiLayoutFrench")
         }
     }
 }
