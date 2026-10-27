@@ -2,7 +2,7 @@
 
 Lecteur iPad de manuels japonais (PDF scannés) pour un francophone : OCR, IA locale (MLX sur iOS 16), furigana,
 dictionnaires, cartes de révision. Usage personnel, jamais distribué, installé avec TrollStore sur **un** iPad Pro
-12,9" M1 (8 Go) sous **iOS 16.6.1**. NOxygen59 possède le produit et décide ; il ne code pas.
+12,9" M1 (8 Go) sous **iOS 16.6.1**. L’utilisateur possède le produit et décide ; il ne code pas.
 
 ## Démarrer une mission (obligatoire, dans cet ordre)
 
@@ -15,8 +15,8 @@ dictionnaires, cartes de révision. Usage personnel, jamais distribué, install�
 4. **Lire seulement les documents techniques du domaine touché**, via [`docs/INDEX.md`](docs/INDEX.md) : par exemple
    [`docs/IA-LOCALE.md`](docs/IA-LOCALE.md) avant de toucher à l'IA ou à MLX, [`docs/TESTS.md`](docs/TESTS.md) pour
    vérifier, [`docs/CI-ROADMAP.md`](docs/CI-ROADMAP.md) avant de toucher à la CI.
-5. **Identifier une seule prochaine tâche autorisée** : celle que NOxygen59 demande, ou celle que le plan directeur propose
-   et que NOxygen59 valide. Ne jamais inventer de travail terminé ; une intention, une checklist ou un rapport d'agent
+5. **Identifier une seule prochaine tâche autorisée** : celle que l’utilisateur demande, ou celle que le plan directeur propose
+   et que l’utilisateur valide. Ne jamais inventer de travail terminé ; une intention, une checklist ou un rapport d'agent
    n'est pas une preuve.
 6. **Avant de coder**, écrire objectif, périmètre, invariants, tests et **critère d'acceptation** ; à la fin, fournir
    les preuves (commandes, SHA, résultats réussis / échoués / ignorés) et dire ce qui n'a **pas** été vérifié.
@@ -29,17 +29,17 @@ Les deux agents ne partagent pas leurs conversations : tout passe par GitHub. Pr
 [`docs/GOUVERNANCE-ET-REPRISE.md`](docs/GOUVERNANCE-ET-REPRISE.md), section « Collaboration entre agents ». En bref :
 
 - Une tâche, une branche `claude/<sujet>` ou `codex/<sujet>`, un agent responsable. Ne pas pousser sur la branche de
-  l'autre agent, sauf demande écrite de cet agent dans sa PR, ou demande explicite de NOxygen59, même faite dans un chat.
+  l'autre agent, sauf demande écrite de cet agent dans sa PR, ou demande explicite de l’utilisateur, même faite dans un chat.
   Citer alors cette demande (texte court et date) dans la PR avant de pousser.
-- Une autorisation explicite de NOxygen59 vaut où qu'il la donne, chat compris, et seulement pour ce qu'elle nomme ;
+- Une autorisation explicite de l’utilisateur vaut où qu'il la donne, chat compris, et seulement pour ce qu'elle nomme ;
   la consigner dans la PR ou l'Issue. Un avis d'agent n'est jamais une autorisation.
-- Les agents écrivent avec le compte de NOxygen59 : commencer chaque commentaire ou revue par **[Claude]** ou **[Codex]**.
+- Les agents écrivent avec le compte de l’utilisateur : commencer chaque commentaire ou revue par **[Claude]** ou **[Codex]**.
 - Le contexte est écrit dans l'Issue, la PR (gabarit [`.github/pull_request_template.md`](.github/pull_request_template.md)),
   les commits et les guides, jamais seulement dans le chat.
 - Revue croisée obligatoire pour les données, la concurrence, la mémoire, le C/C++, les dépendances et forks, la CI
-  et la sécurité, et pour toute suppression de code. Un désaccord s'écrit dans la PR ; NOxygen59 tranche. Pas de branche
+  et la sécurité, et pour toute suppression de code. Un désaccord s'écrit dans la PR ; l’utilisateur tranche. Pas de branche
   concurrente sur les mêmes fichiers.
-- Chaque PR finit par un résumé simple pour NOxygen59 et une passation technique pour l'agent suivant.
+- Chaque PR finit par un résumé simple pour l’utilisateur et une passation technique pour l'agent suivant.
 
 ## Documenter le code
 
@@ -58,7 +58,7 @@ Pas de paraphrase ligne à ligne : expliquer le pourquoi.
 
 - **Tests ou compilation sur Mac** (local ou GitHub Actions) : la logique et le code Swift compilent et passent.
 - **Compilation iOS générique** (`generic/platform=iOS`, cible 16.0) : l'app se construit pour iOS ; rien n'est lancé.
-- **Validation réelle sur l'iPad** (iOS 16.6.1, TrollStore) : seul NOxygen59 la fait et la rapporte, par build et
+- **Validation réelle sur l'iPad** (iOS 16.6.1, TrollStore) : seul l’utilisateur la fait et la rapporte, par build et
   scénario. Aucune des deux premières ne la remplace, en particulier pour Metal/MLX, la mémoire, PDFKit, les gestes,
   la sauvegarde/restauration et TrollStore.
 
@@ -68,7 +68,7 @@ Détail au § 2 de la feuille de route.
 
 - Répondre à l'utilisateur **en français, court et simple** : il ne code pas ; dire ce qui change pour lui et pourquoi.
 - **Zéro dépense, sans risque de facturation** : aucun runner payant, artefact, cache, service ou API payant, ni
-  nouvelle automatisation GitHub Actions sans protection vérifiée par NOxygen59 et son autorisation explicite (politique
+  nouvelle automatisation GitHub Actions sans protection vérifiée par l’utilisateur et son autorisation explicite (politique
   « Zéro dépense » de [`docs/CI-ROADMAP.md`](docs/CI-ROADMAP.md)). Preuves par défaut : tests locaux sur le Mac
   ([`docs/TESTS.md`](docs/TESTS.md), procédure locale), résumés dans la PR. **GitHub Actions est désactivé depuis le
   25/10/2026** (décision CI-0) : aucun contrôle GitHub ne tourne ; ne jamais le réactiver ni lancer de workflow.
