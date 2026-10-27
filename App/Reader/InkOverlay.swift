@@ -126,6 +126,20 @@ final class InkStore: NSObject, PDFPageOverlayViewProvider {
         }
     }
 
+    /// Au changement de page ou de double page, PDFKit retire la surcouche qui avait le focus : plus aucun
+    /// répondeur enregistré n'est premier répondeur et la palette disparaît (recette 1.3.1, Issue #14).
+    /// Au tour suivant de la boucle (les nouvelles surcouches sont alors dans la fenêtre), on redonne le
+    /// focus à une page visible, sauf si une toile ou la vue PDF l'a déjà.
+    private func scheduleToolPickerFocus() {
+        guard editing else { return }
+        DispatchQueue.main.async { [weak self] in
+            guard let self, self.editing else { return }
+            let canvases = self.liveViews.allObjects.compactMap(\.existingCanvas)
+            guard !canvases.contains(where: \.isFirstResponder), self.controller?.pdfView.isFirstResponder != true else { return }
+            canvases.first(where: { $0.window != nil })?.becomeFirstResponder()
+        }
+    }
+
     // MARK: PDFPageOverlayViewProvider
 
     nonisolated func pdfView(_ view: PDFView, overlayViewFor page: PDFPage) -> UIView? {
@@ -143,6 +157,7 @@ final class InkStore: NSObject, PDFPageOverlayViewProvider {
             if showOCRBoxes { overlay.showOCR(ocrPages[source]) }
             overlay.setEditing(editing, toolPicker: toolPicker, finger: model.drawWithFinger)
             liveViews.add(overlay)
+            scheduleToolPickerFocus()
             return overlay
         }
     }
@@ -155,6 +170,7 @@ final class InkStore: NSObject, PDFPageOverlayViewProvider {
                 toolPicker.removeObserver(canvas)
             }
             liveViews.remove(overlay)
+            scheduleToolPickerFocus()
             if !dirty.isEmpty { flush() }
         }
     }
