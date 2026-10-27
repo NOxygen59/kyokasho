@@ -5,9 +5,9 @@
 
 ## Périmètre
 
-Ce lot ajoute un outil développeur Python sans dépendance tierce, `tools/backup_container.py`, et des tests. Il ne modifie pas le comportement de l'app ni son interface, n'extrait pas le conteneur d'un appareil, ne s'exécute pas sur l'iPad et ne touche pas à la bibliothèque de NOxygen59. Les tests emploient exclusivement des conteneurs synthétiques temporaires.
+Ce lot ajoute un outil développeur Python sans dépendance tierce, `tools/backup_container.py`, et des tests. Il ne modifie pas le comportement de l'app ni son interface, n'extrait pas le conteneur d'un appareil, ne s'exécute pas sur l'iPad et ne touche pas à la bibliothèque de l’utilisateur. Les tests emploient exclusivement des conteneurs synthétiques temporaires.
 
-Il prend en entrée une **copie exportée du conteneur, app arrêtée**, contenant `Documents/` et `Library/`. Les bases essentielles attendues sont `Library/Application Support/Kyokasho/kyokasho.sqlite` et `Library/Application Support/Kyokasho/Review/review.sqlite`. Une méthode réelle d'export/import du conteneur TrollStore sur iOS 16.6.1 reste à qualifier avec NOxygen59 ; aucun accès automatique n'est ajouté.
+Il prend en entrée une **copie exportée du conteneur, app arrêtée**, contenant `Documents/` et `Library/`. Les bases essentielles attendues sont `Library/Application Support/Kyokasho/kyokasho.sqlite` et `Library/Application Support/Kyokasho/Review/review.sqlite`. Une méthode réelle d'export/import du conteneur TrollStore sur iOS 16.6.1 reste à qualifier avec l’utilisateur ; aucun accès automatique n'est ajouté.
 
 ## Inventaire et exclusions explicites
 
