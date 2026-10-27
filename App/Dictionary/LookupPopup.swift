@@ -136,6 +136,8 @@ struct LookupPopup: View {
     var added: Set<String> = []
     /// Ajoute une carte ; renvoie un petit message à afficher (doublon, erreur…), ou `nil`.
     var onAddCard: ((TermResult) -> String?)? = nil
+    /// Bulle de la fenêtre OCR : mot et définitions seulement (`GlossaryRenderer.compactCSS`).
+    var compact = false
     var close: () -> Void
     @State private var toast: String?
     @ObservedObject private var translations = DefinitionTranslations.shared
@@ -154,7 +156,8 @@ struct LookupPopup: View {
     }
 
     private var pageHTML: String {
-        let html = session.html(canAddCards: onAddCard != nil, added: added)
+        let rendered = session.html(canAddCards: onAddCard != nil, added: added)
+        let html = compact ? GlossaryRenderer.compact(rendered) : rendered
         guard let term = englishTerm else { return html }
         let block = DefinitionTranslationHTML.block(entry: translations.entries[DefinitionTranslations.key(term)],
                                                     hasKey: deepl.hasKey, busy: translating, error: translateError)
