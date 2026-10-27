@@ -136,7 +136,8 @@ Build **non publiée**, construite depuis le commit local `bfd4312` (= `main` `2
 - RET-011 (palette Pencil) et RET-012 (modes par document) : **OK**, Issues #14 et #15 fermées.
 - RET-010 (bulle Yomitan) : **OK** sur tous les points, y compris « changer de page avec la bulle ouverte » (précisé ensuite par NOxygen59) ; Issue #13 fermée.
 - Régressions rapides : OK (RET-008 brouillon, RET-009 premier toucher, défilement, annotations, OCR, aucune anomalie évidente).
-- Nouveaux problèmes : RET-041 et RET-042 ci-dessous.
+- Nouveaux problèmes : RET-041 et RET-042 ci-dessous, **ouverts et non résolus**.
+- **Aucune release publiée** : la candidate n'existe que sur le Mac de NOxygen59 ; `main` reste en 1.3 (40).
 
 | ID | Alias | Date | Type | Retour (résumé) | Build | État | Issue | PR | Preuve |
 |---|---|---|---|---|---|---|---|---|---|
