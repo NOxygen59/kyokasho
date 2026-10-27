@@ -266,8 +266,8 @@ extension ReaderController {
         hasSelection = true
     }
 
-    /// Glisser du défilement interne de PDFKit (le pincement est un autre geste et reste actif).
-    private func setInnerPan(enabled: Bool) {
+    /// Premier `UIScrollView` sous la vue PDF : le défilement interne de PDFKit (`PDFScrollView` en double page).
+    var pdfInnerScrollView: UIScrollView? {
         func find(_ view: UIView) -> UIScrollView? {
             for sub in view.subviews {
                 if let scroll = sub as? UIScrollView { return scroll }
@@ -275,7 +275,12 @@ extension ReaderController {
             }
             return nil
         }
-        guard let scroll = find(pdfView) else {
+        return find(pdfView)
+    }
+
+    /// Glisser du défilement interne de PDFKit (le pincement est un autre geste et reste actif).
+    private func setInnerPan(enabled: Bool) {
+        guard let scroll = pdfInnerScrollView else {
             Diagnostics.log("sélection : défilement interne de PDFKit introuvable", "gestes")
             return
         }
