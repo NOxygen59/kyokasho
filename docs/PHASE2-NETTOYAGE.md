@@ -26,6 +26,6 @@ Inspection du code v1.3 (`16d2dd8`), recoupée avec la correction PageShift prop
 
 Intégrer d'abord les preuves de reprise et qualifier la restauration. Choisir ensuite un défaut de persistance observable, écrire sa régression, faire la correction ciblée puis seulement une extraction qui conserve le comportement. Séparer chaque changement de format, mise à jour de dépendance et amélioration visuelle. Une PR doit rester examinable avec son critère de fin et son retour arrière.
 
-Les tests prioritaires suivants sont : échecs de sauvegarde des conversations/rapports ; langue et lignes OCR éditées ; ciblage du chat sur pages imprimées/romaines/absentes ; annotations et export après égalisation ; durée de vie de tâches et modèles. Les nouvelles fonctions (Continuer, grammaire, moteurs) viennent après la stabilisation, selon les choix de NOxygen59.
+Les tests prioritaires suivants sont : échecs de sauvegarde des conversations/rapports ; langue et lignes OCR éditées ; ciblage du chat sur pages imprimées/romaines/absentes ; annotations et export après égalisation ; durée de vie de tâches et modèles. Les nouvelles fonctions (Continuer, grammaire, moteurs) viennent après la stabilisation, selon les choix de l’utilisateur.
 
 Les commentaires doivent expliquer contrats, propriété mémoire, repères et raisons des rétroportages iOS 16. Aucun objectif de commentaire par ligne, de réécriture totale, de suppression massive ou de pourcentage arbitraire de couverture n'est proposé.
