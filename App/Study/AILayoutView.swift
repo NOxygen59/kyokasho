@@ -361,6 +361,12 @@ struct AILayoutLanguageBar: View {
             }
             .font(.footnote.weight(.semibold))
             .foregroundStyle(Atelier.Tint.ai)
+        } else {
+            // Recette 1.3.2 (53) : sans Qwen3-VL ni traduction gardée, la barre était vide et semblait disparue.
+            Label("Traduction hors ligne : télécharge Qwen3-VL dans Réglages → Modèles d'IA et outils.",
+                  systemImage: "character.bubble")
+                .font(.caption)
+                .foregroundStyle(Atelier.textTertiary)
         }
     }
 
