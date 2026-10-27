@@ -148,7 +148,9 @@ Build **non publiée**, construite depuis le commit local `bfd4312` (= `main` `2
 
 | ID | Alias | Date | Type | Retour (résumé) | Build | État | Issue | PR | Preuve |
 |---|---|---|---|---|---|---|---|---|---|
-| RET-043 | — | 2026-10-27 | Bug (navigation) | Pincement difficile et déplacement bloqué sur un axe en double page (mode lecture) ; cause mesurée : verrou de direction et pan à deux doigts du `PDFScrollView` de PDFKit | 1.3.2 (50) locale, `d1480fe` | à tester iPad | [#63](https://github.com/NOxygen59/kyokasho/issues/63) | [#68](https://github.com/NOxygen59/kyokasho/pull/68) | candidates de diagnostic 2a à 2g (journaux iPad) ; 2d + 2g validées par NOxygen59 ; correctif `c7d20c8` compilé iOS ; recette 1.3.2 (50) : double page OK, non-régression page simple / écriture à rapporter |
+| RET-043 | — | 2026-10-27 | Bug (navigation) | Pincement difficile et déplacement bloqué sur un axe en double page (mode lecture) ; cause mesurée : verrou de direction et pan à deux doigts du `PDFScrollView` de PDFKit | 1.3.2 (50) locale, `d1480fe` | confirmé iPad | [#63](https://github.com/NOxygen59/kyokasho/issues/63) (fermée) | [#68](https://github.com/NOxygen59/kyokasho/pull/68) | candidates de diagnostic 2a à 2g (journaux iPad) ; 2d + 2g validées par NOxygen59 ; correctif `c7d20c8` compilé iOS ; recette 1.3.2 (50) : double page OK, page simple et mode écriture inchangés |
 | RET-044 | — | 2026-10-27 | Bug (affichage) | La fiabilité de l'analyse du document affiche toujours 0,0 % ; cause démontrée (entier formaté avec %.1f) | 1.3.2 (50) locale, `d1480fe` | confirmé iPad | [#65](https://github.com/NOxygen59/kyokasho/issues/65) (fermée) | [#66](https://github.com/NOxygen59/kyokasho/pull/66) | 3 tests + suite Swift 191 réussis, iOS générique ; recette NOxygen59 1.3.2 (50) OK |
+| RET-045 | — | 2026-10-27 | Bug (performance) | « Voir le journal » met plus de 30 s à s'ouvrir quand le journal est long | 1.3.2 (47), diagnostic local | rapporté | [#67](https://github.com/NOxygen59/kyokasho/issues/67) | — | — |
+| RET-046 | — | 2026-10-27 | Bug (animation) | Animation de fermeture de la fenêtre OCR changée (régression possible, cause non établie) | 1.3.2 (50) locale, `d1480fe` | rapporté | [#69](https://github.com/NOxygen59/kyokasho/issues/69) | — | — |
 
-Prochain identifiant libre : **RET-045**.
+Prochain identifiant libre : **RET-047**.
