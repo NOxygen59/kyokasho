@@ -117,8 +117,12 @@ struct StudyTextTab: View {
     @AppStorage("study.layoutEngine") private var layoutEngineRaw = LayoutDetector.Engine.geometry.rawValue
     @State private var regions: [OCRLayout.Region] = []
     @State private var layoutError: String?
+    /// Session réutilisée pendant toute la vie du panneau (les résultats restent en mémoire entre deux mots).
     @State private var lookup: LookupSession?
-    @State private var showLookup = false
+    /// Session affichée : la feuille reçoit **cette valeur** (`sheet(item:)`), pas une capture de `lookup`.
+    /// Avec `sheet(isPresented:)`, le contenu lisait encore `lookup == nil` au premier toucher après
+    /// l'ouverture du livre, et la feuille s'ouvrait vide (RET-009, Issue #12).
+    @State private var presentedLookup: LookupSession?
     @State private var translating = false
     @State private var translateError: String?
     @State private var showCompare = false
@@ -154,14 +158,14 @@ struct StudyTextTab: View {
                             let session = lookup ?? LookupSession(dictionary: model.dictionary)
                             lookup = session
                             session.start(text)
-                            showLookup = true
+                            presentedLookup = session
                         }
                     } else if furigana {
                         FuriganaTextView(page: page, formatted: formatted, regions: regions) { text in
                             let session = lookup ?? LookupSession(dictionary: model.dictionary)
                             lookup = session
                             session.start(text)
-                            showLookup = true
+                            presentedLookup = session
                         }
                     } else if formatted {
                         FormattedOCRText(page: page, regions: regions)
@@ -204,19 +208,17 @@ struct StudyTextTab: View {
             translateError = nil
         }
         .task(id: "\(reader.focusSource)|\(layoutEngineRaw)|\(formatted)|\(reader.ocrPage != nil)") { await loadRegions() }
-        .sheet(isPresented: $showLookup, onDismiss: { lookup?.clear() }) {
+        .sheet(item: $presentedLookup, onDismiss: { lookup?.clear() }) { lookup in
             // Fenêtre compacte du dictionnaire (mot touché dans le texte à furigana).
-            if let lookup {
-                LookupPopup(session: lookup, added: model.review.keys, onAddCard: { term in
-                    model.review.add(term, sentence: reader.ocrPage?.lines.first { $0.text.contains(term.matchedText) }?.text,
-                                     source: "\(reader.document.title) · p. \(reader.document.pageLabel(reader.focusSource))",
-                                     image: nil, documentId: reader.document.id, page: reader.focusSource,
-                                     dictionary: model.dictionary)
-                }, close: { showLookup = false })
-                .environmentObject(model.dictionary)
-                .presentationDetents([.medium, .large])
-                .preferredColorScheme(.dark)
-            }
+            LookupPopup(session: lookup, added: model.review.keys, onAddCard: { term in
+                model.review.add(term, sentence: reader.ocrPage?.lines.first { $0.text.contains(term.matchedText) }?.text,
+                                 source: "\(reader.document.title) · p. \(reader.document.pageLabel(reader.focusSource))",
+                                 image: nil, documentId: reader.document.id, page: reader.focusSource,
+                                 dictionary: model.dictionary)
+            }, close: { presentedLookup = nil })
+            .environmentObject(model.dictionary)
+            .presentationDetents([.medium, .large])
+            .preferredColorScheme(.dark)
         }
         .alert("Corriger la ligne", isPresented: Binding(get: { editingLine != nil }, set: { if !$0 { editingLine = nil } })) {
             TextField("Texte de la ligne", text: $lineDraft)
@@ -723,3 +725,6 @@ final class LayoutRegionsCache {
 
     func clear() { entries = [:]; order = [] }
 }
+
+/// Identité d'objet : `sheet(item:)` présente la session elle-même (RET-009).
+extension LookupSession: Identifiable {}
