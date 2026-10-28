@@ -46,9 +46,13 @@ final class AppModel: ObservableObject {
     @Published var importProgress: ImportProgress?
     @Published var lastError: String?
     @Published var storageRecoveryError: String?
-    /// Document à ouvrir (bibliothèque → lecteur).
+    /// Onglets des documents ouverts dans le lecteur (#16), dans l'ordre d'ouverture.
+    @Published private(set) var tabs = DocumentTabs()
+
+    /// Document à ouvrir (bibliothèque → lecteur) ; chaque document ouvert prend un onglet.
     @Published var openDocumentId: String? {
         didSet {
+            if let openDocumentId { tabs.open(openDocumentId) }
             // Lecteur fermé : la bibliothèque reçoit enfin les positions de lecture mises de côté.
             if openDocumentId == nil, let pending = pendingDocuments {
                 pendingDocuments = nil
@@ -217,6 +221,7 @@ final class AppModel: ObservableObject {
         // Retiré de la liste tout de suite ; remis (avec le message d'erreur) si l'effacement échoue.
         deletingIds.insert(document.id)
         documents.removeAll { $0.id == document.id }
+        closeTab(document.id)
         pendingDocuments?.removeAll { $0.id == document.id }
         let url = storage.url(for: document.id)
         ioQueue.async {
@@ -241,6 +246,12 @@ final class AppModel: ObservableObject {
                 }
             }
         }
+    }
+
+    /// Ferme l'onglet ; s'il était affiché, le voisin prend sa place (aucun : retour à la bibliothèque).
+    func closeTab(_ id: String) {
+        let next = tabs.close(id, current: openDocumentId)
+        if next != openDocumentId { openDocumentId = next }
     }
 
     func rename(_ document: LibraryDocument, to title: String) {
