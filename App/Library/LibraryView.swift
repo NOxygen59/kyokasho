@@ -182,6 +182,7 @@ struct LibraryView: View {
                 actionRow(icon: "gearshape", title: "Réglages", tint: Atelier.textSecondary) { showSettings = true }
             }
             Spacer()
+            LocalAIEnergyCard()
             statsCard
         }
         .padding(18)
