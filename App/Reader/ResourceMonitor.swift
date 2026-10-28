@@ -126,6 +126,8 @@ struct ResourceMonitorPanel: View {
     var expandsDown = false
     /// Prend toute la largeur proposée (sous la capsule d'actions du lecteur) ; sinon, la taille de son contenu.
     var fillsWidth = false
+    /// Dans la capsule d'actions du lecteur : pas de fond ni de bord à lui, la capsule s'allonge.
+    var embedded = false
     @ObservedObject private var monitor = ResourceMonitor.shared
     @AppStorage(ResourceMonitor.shownKey) private var shown = false
     @AppStorage("monitor.detailed") private var detailed = false
@@ -142,8 +144,9 @@ struct ResourceMonitorPanel: View {
         .foregroundStyle(Atelier.textPrimary)
         .padding(.horizontal, 10).padding(.vertical, 6)
         .frame(maxWidth: fillsWidth ? .infinity : nil, alignment: .leading)
-        .atelierPanel(radius: 14)
-        .animation(reduceMotion ? .easeOut(duration: 0.15) : .spring(response: 0.35, dampingFraction: 0.85), value: detailed)
+        .modifier(MonitorBackground(embedded: embedded))
+        // Même ressort que la capsule : la courbe se déroule dans le prolongement du même mouvement.
+        .animation(reduceMotion ? .easeOut(duration: 0.15) : .spring(response: 0.42, dampingFraction: 0.9), value: detailed)
         .onAppear { monitor.start() }
         .onDisappear { monitor.stop() }
     }
@@ -190,8 +193,8 @@ struct ResourceMonitorPanel: View {
             Text("90 s · \(metric.unit)").font(.caption2).foregroundStyle(Atelier.textTertiary)
         }
         .accessibilityLabel("\(metric.title), 90 dernières secondes")
-        .transition(reduceMotion ? .opacity
-                    : .move(edge: expandsDown ? .top : .bottom).combined(with: .opacity))
+        // Révélée par le haut (la forme qui la porte s'allonge), sans glisser par-dessus les valeurs.
+        .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 1, anchor: expandsDown ? .top : .bottom)))
     }
 
     /// Valeur de l'en-tête ; en mode détaillé, la toucher choisit la courbe affichée (mesure choisie mise en avant).
@@ -229,5 +232,13 @@ struct ActivityDock: View {
             }
             AITaskPill()
         }
+    }
+}
+
+/// Fond du moniteur : le sien quand il est seul (accueil), aucun quand il prolonge la capsule d'actions.
+private struct MonitorBackground: ViewModifier {
+    let embedded: Bool
+    func body(content: Content) -> some View {
+        if embedded { content } else { content.atelierPanel(radius: 14) }
     }
 }
