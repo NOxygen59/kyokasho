@@ -79,4 +79,33 @@ final class AnalysisCorrectionTests: XCTestCase {
         XCTAssertEqual(saved?.lines[0].edited, true)
         XCTAssertEqual(saved?.lines[0].doubt, [])
     }
+
+    /// #41 : « Annuler le dernier choix » remet la ligne d'avant et rouvre le désaccord.
+    func testUndoRestoresLineAndReopensDisagreement() async throws {
+        let (analysis, ocr, _, id) = try fixture()
+        let original = page("末来")
+        try await ocr.store(original, documentId: id, pageIndex: 0)
+        let applied = await analysis.apply([(source: 0, line: 0, text: "未来")], documentId: id, service: ocr)
+        XCTAssertEqual(applied.count, 1)
+        await analysis.undo(applied, documentId: id, service: ocr)
+        XCTAssertNil(analysis.lastError)
+        XCTAssertEqual(analysis.reportValue.pages[0]?.disagreements[0].settled, false)
+        XCTAssertEqual(analysis.reportValue.pages[0]?.confirmed, 0)
+        let saved = await ocr.cached(documentId: id, pageIndex: 0, engine: OCREngineID.vision)
+        XCTAssertEqual(saved, original)
+    }
+
+    /// Ligne retouchée après le choix : l'annulation ne l'écrase pas.
+    func testUndoKeepsLaterManualChange() async throws {
+        let (analysis, ocr, _, id) = try fixture()
+        try await ocr.store(page("末来"), documentId: id, pageIndex: 0)
+        let applied = await analysis.apply([(source: 0, line: 0, text: "未来")], documentId: id, service: ocr)
+        let later = page("未来の土地", edited: true)
+        try await ocr.store(later, documentId: id, pageIndex: 0)
+        await analysis.undo(applied, documentId: id, service: ocr)
+        XCTAssertTrue(analysis.lastError?.contains("changé") == true)
+        XCTAssertEqual(analysis.reportValue.pages[0]?.disagreements[0].settled, true)
+        let saved = await ocr.cached(documentId: id, pageIndex: 0, engine: OCREngineID.vision)
+        XCTAssertEqual(saved, later)
+    }
 }
