@@ -6,6 +6,7 @@ import OCRKit
 import ReaderCore
 import AVFoundation
 import SwiftUI
+import UIKit
 
 /// Réglages → Modèles → une page par IA : à quoi elle sert, place prise, chargée ou non (mémoire, dernier usage),
 /// « Décharger », ses réglages, ses dernières tâches. Qwen3-VL : conversation (`QwenChatView`).
@@ -165,6 +166,7 @@ struct QwenChatView: View {
     @State private var renaming = false
     @State private var newTitle = ""
     @State private var confirmDelete = false
+    @State private var showConversations = false
     /// Bref retour après une action sur une réponse (« Copié », « Ajouté aux notes »).
     @State private var toast: String?
     private static let speaker = AVSpeechSynthesizer()
@@ -208,6 +210,11 @@ struct QwenChatView: View {
             statusLine
             if ready { chips.padding(.top, 6) }
             HStack(spacing: 10) {
+                // Corbeille à côté du champ (recette 62) : efface la conversation affichée, après une confirmation.
+                Button { confirmDelete = true } label: { Image(systemName: "trash").font(.body) }
+                    .foregroundStyle(.red)
+                    .disabled(answering != nil || loading || storageError || (messages.isEmpty && (document == nil || conversations.count < 2)))
+                    .accessibilityLabel("Supprimer cette conversation")
                 TextField(loading ? "Chargement du modèle…" : ready ? "Ta question" : "Modèle indisponible", text: $draft, axis: .vertical)
                     .lineLimit(1...5)
                     .textFieldStyle(.roundedBorder)
@@ -276,6 +283,20 @@ struct QwenChatView: View {
         } message: {
             Text("Ses messages seront effacés de l'iPad. Les autres conversations sont gardées.")
         }
+        .sheet(isPresented: $showConversations) {
+            ConversationListSheet(
+                items: conversations.map { ($0.id, $0.title, $0.messages.count) },
+                selected: selectedConversation,
+                onOpen: { id in showConversations = false; switchConversation(to: id) },
+                onRename: { id in
+                    showConversations = false
+                    newTitle = conversations.first(where: { $0.id == id })?.title ?? ""
+                    if id != selectedConversation { switchConversation(to: id) }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { renaming = true }
+                },
+                onDelete: { ids in deleteConversations(ids) },
+                onNew: { showConversations = false; newConversation() })
+        }
         .sheet(isPresented: $showSettings, onDismiss: applySettingsIfChanged) {
             NavigationStack {
                 AIChatSettingsView(modelID: selectedModelID, fixedModel: true)
@@ -295,23 +316,8 @@ struct QwenChatView: View {
     private var conversationBar: some View {
         VStack(alignment: .leading, spacing: 5) {
         HStack(spacing: 8) {
-            Menu {
-                ForEach(conversations) { conversation in
-                    Button {
-                        switchConversation(to: conversation.id)
-                    } label: {
-                        if conversation.id == selectedConversation {
-                            Label(conversation.title, systemImage: "checkmark")
-                        } else { Text(conversation.title) }
-                    }
-                }
-                Divider()
-                Button { newTitle = conversations.first(where: { $0.id == selectedConversation })?.title ?? ""; renaming = true } label: {
-                    Label("Renommer…", systemImage: "pencil")
-                }
-                Button(role: .destructive) { confirmDelete = true } label: { Label("Supprimer…", systemImage: "trash") }
-                    .disabled(conversations.count < 2 && messages.isEmpty)
-            } label: {
+            // Liste des conversations en feuille (recette 62) : choisir, renommer, en supprimer plusieurs.
+            Button { showConversations = true } label: {
                 Label(conversations.first(where: { $0.id == selectedConversation })?.title ?? "Conversation", systemImage: "bubble.left")
                     .lineLimit(1)
             }
@@ -549,7 +555,8 @@ struct QwenChatView: View {
             }
             Button { speak(m.text) } label: { Image(systemName: Self.speaker.isSpeaking ? "stop.circle" : "speaker.wave.2") }
                 .accessibilityLabel("Lire à voix haute")
-            ShareLink(item: m.text) { Image(systemName: "square.and.arrow.up") }
+            // Feuille de partage présentée par UIKit : `ShareLink` ne s'ouvrait pas depuis le panneau (recette 62).
+            Button { ShareSheetPresenter.present([m.text]) } label: { Image(systemName: "square.and.arrow.up") }
                 .accessibilityLabel("Partager la réponse")
         }
         .font(.caption)
@@ -663,7 +670,21 @@ struct QwenChatView: View {
             Task { await chat.reset() }
             return
         }
-        conversations.removeAll { $0.id == selectedConversation }
+        guard let id = selectedConversation else { return }
+        deleteConversations([id])
+    }
+
+    /// Supprime plusieurs conversations (la feuille a déjà demandé confirmation). Si l'affichée en fait partie,
+    /// une restante prend sa place, sinon une conversation vide.
+    private func deleteConversations(_ ids: Set<UUID>) {
+        guard !ids.isEmpty else { return }
+        let removesShown = selectedConversation.map(ids.contains) ?? false
+        conversations.removeAll { ids.contains($0.id) }
+        guard removesShown else {
+            if conversations.isEmpty { conversations = [Conversation(title: "Nouveau chat", modelID: selectedModelID)] }
+            saveConversations()
+            return
+        }
         if conversations.isEmpty { conversations = [Conversation(title: "Nouveau chat", modelID: selectedModelID)] }
         let next = conversations[0]
         selectedConversation = next.id
@@ -792,6 +813,99 @@ struct QwenChatView: View {
         let lower = question.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         return ["et ça", "et cela", "ce point", "cette partie", "comment ça", "qu'en est-il"].contains {
             lower.hasPrefix($0)
+        }
+    }
+}
+
+/// Feuille de partage d'iOS présentée sur le contrôleur visible le plus haut (fenêtre OCR, feuilles empilées) :
+/// `ShareLink` et une feuille SwiftUI ne s'ouvraient pas depuis le panneau intégré.
+enum ShareSheetPresenter {
+    @MainActor
+    static func present(_ items: [Any]) {
+        guard let scene = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene })
+                .first(where: { $0.activationState == .foregroundActive }),
+              var top = scene.windows.first(where: \.isKeyWindow)?.rootViewController else { return }
+        while let next = top.presentedViewController, !next.isBeingDismissed { top = next }
+        let controller = UIActivityViewController(activityItems: items, applicationActivities: nil)
+        // iPad : la feuille s'ancre au centre de l'écran visible (pas de bouton UIKit à viser).
+        if let popover = controller.popoverPresentationController {
+            popover.sourceView = top.view
+            popover.sourceRect = CGRect(x: top.view.bounds.midX, y: top.view.bounds.midY, width: 1, height: 1)
+            popover.permittedArrowDirections = []
+        }
+        top.present(controller, animated: true)
+    }
+}
+
+/// Conversations d'un livre (recette 1.3.2 (62)) : toucher en ouvre une ; « Sélectionner » permet d'en cocher
+/// plusieurs et de les supprimer après une confirmation ; balayer ou appui long pour renommer ou supprimer une seule.
+struct ConversationListSheet: View {
+    let items: [(id: UUID, title: String, count: Int)]
+    let selected: UUID?
+    var onOpen: (UUID) -> Void
+    var onRename: (UUID) -> Void
+    var onDelete: (Set<UUID>) -> Void
+    var onNew: () -> Void
+    @Environment(\.dismiss) private var dismiss
+    @State private var editMode: EditMode = .inactive
+    @State private var picked: Set<UUID> = []
+    @State private var pending: Set<UUID> = []
+    @State private var confirm = false
+
+    var body: some View {
+        NavigationStack {
+            List(selection: $picked) {
+                ForEach(items, id: \.id) { item in
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(item.title).lineLimit(1)
+                            Text("\(item.count / 2) échange\(item.count / 2 > 1 ? "s" : "")").font(.caption).foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        if item.id == selected { Image(systemName: "checkmark").foregroundStyle(Atelier.Tint.ai) }
+                    }
+                    .contentShape(Rectangle())
+                    .onTapGesture { if editMode == .inactive { onOpen(item.id) } }
+                    .swipeActions {
+                        Button(role: .destructive) { pending = [item.id]; confirm = true } label: { Label("Supprimer", systemImage: "trash") }
+                        Button { onRename(item.id) } label: { Label("Renommer", systemImage: "pencil") }
+                    }
+                    .contextMenu {
+                        Button { onRename(item.id) } label: { Label("Renommer", systemImage: "pencil") }
+                        Button(role: .destructive) { pending = [item.id]; confirm = true } label: { Label("Supprimer", systemImage: "trash") }
+                    }
+                }
+            }
+            .environment(\.editMode, $editMode)
+            .navigationTitle("Conversations")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(editMode == .active ? "Terminé" : "Sélectionner") {
+                        withAnimation { editMode = editMode == .active ? .inactive : .active }
+                        picked = []
+                    }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    if editMode == .active {
+                        Button("Supprimer (\(picked.count))", role: .destructive) { pending = picked; confirm = true }
+                            .disabled(picked.isEmpty)
+                    } else {
+                        Button { onNew() } label: { Label("Nouveau chat", systemImage: "square.and.pencil") }
+                    }
+                }
+            }
+            .confirmationDialog(pending.count > 1 ? "Supprimer \(pending.count) conversations ?" : "Supprimer cette conversation ?",
+                                isPresented: $confirm, titleVisibility: .visible) {
+                Button("Supprimer", role: .destructive) {
+                    onDelete(pending)
+                    picked.subtract(pending)
+                    pending = []
+                    editMode = .inactive
+                }
+            } message: {
+                Text("Leurs messages seront effacés de l'iPad.")
+            }
         }
     }
 }
