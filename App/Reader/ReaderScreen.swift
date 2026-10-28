@@ -36,7 +36,11 @@ struct ReaderScreen: View {
     @State private var studyTab: StudyPanel.Tab = .text
     @AppStorage(StudyPanelMode.storageKey) private var studyMode = StudyPanelMode.docked
     @AppStorage(StudyPanelMode.restoreKey) private var studyRestore = StudyPanelMode.docked
+    /// Choix gardé entre les sessions. L'affichage passe par `filmstripVisible` : un changement d'`@AppStorage`
+    /// arrive par la notification de `UserDefaults`, hors de la transaction `withAnimation`, et la bande apparaissait
+    /// sans transition (RET-049, Issue #79).
     @AppStorage("reader.filmstripShown") private var filmstripShown = true
+    @State private var filmstripVisible = UserDefaults.standard.object(forKey: "reader.filmstripShown") as? Bool ?? true
     @AppStorage("reader.trackpadScrollPassThrough") private var trackpadScrollPassThrough = true
     @AppStorage("pencil.lookupOption") private var pencilOption = false
     @AppStorage(PageTone.storageKey) private var pageTone = PageTone.normal
@@ -142,7 +146,7 @@ struct ReaderScreen: View {
                 .overlay(alignment: .bottomLeading) {
                     AITaskPill()
                         .padding(.leading, Atelier.gap)
-                        .padding(.bottom, chromeVisible && filmstripShown && !reader.isDrawing ? 120 : Atelier.gap)
+                        .padding(.bottom, chromeVisible && filmstripVisible && !reader.isDrawing ? 120 : Atelier.gap)
                 }
                 .animation(.easeOut(duration: 0.18), value: chromeVisible)
                 if reservesSide {
@@ -286,10 +290,10 @@ struct ReaderScreen: View {
             }
                 .padding(Atelier.gap)
             if !reader.isDrawing {
-                if filmstripShown {
+                if filmstripVisible {
                     PageFilmstrip(reader: reader)
                         .overlay(alignment: .topTrailing) {
-                            Button { withAnimation(.easeOut(duration: 0.2)) { filmstripShown = false } } label: {
+                            Button { setFilmstrip(false) } label: {
                                 Image(systemName: "chevron.down").font(.system(size: 12, weight: .bold))
                                     .frame(width: 28, height: 28).foregroundStyle(Atelier.textPrimary)
                                     .background(Atelier.surfaceHigh, in: Circle())
@@ -300,9 +304,9 @@ struct ReaderScreen: View {
                         }
                         .padding(.horizontal, Atelier.gap)
                         .padding(.bottom, 10)
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                        .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
                 } else {
-                    Button { withAnimation(.easeOut(duration: 0.2)) { filmstripShown = true } } label: {
+                    Button { setFilmstrip(true) } label: {
                         Label("Pages", systemImage: "chevron.up").font(.system(size: 13, weight: .semibold))
                             .padding(.horizontal, 14).padding(.vertical, 8)
                             .foregroundStyle(Atelier.textPrimary)
@@ -310,9 +314,20 @@ struct ReaderScreen: View {
                     }
                     .buttonStyle(PressScale())
                     .padding(.bottom, 10)
+                    .transition(.opacity)
                 }
             }
         }
+    }
+
+    /// Ouvre ou ferme la bande des pages avec l'animation des fenêtres (mêmes réglages que la fenêtre OCR :
+    /// « Animer les changements de fenêtre », « Réduire les animations »), puis garde le choix. La bande est en
+    /// surimpression : le PDF n'est pas redimensionné, seule la pastille des tâches IA suit.
+    private func setFilmstrip(_ shown: Bool) {
+        withAnimation(StudyPanelMotion.animation(enabled: animateTransitions, reduceMotion: reduceMotion)) {
+            filmstripVisible = shown
+        }
+        filmstripShown = shown
     }
 
     private var titleCapsule: some View {
