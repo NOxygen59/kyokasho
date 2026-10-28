@@ -81,17 +81,12 @@ struct DocumentTabsBar: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
-                ScrollViewReader { proxy in
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 6) {
-                            ForEach(openDocuments) { document in tab(document).id(document.id) }
-                        }
-                    }
-                    // Hauteur du contenu seulement : sans elle, la zone défilante pouvait s'étirer en hauteur.
-                    .fixedSize(horizontal: false, vertical: true)
-                    .onAppear { proxy.scrollTo(current) }
-                    .onChange(of: current) { id in withAnimation { proxy.scrollTo(id) } }
-                }
+                // Barre en UIKit (recette 1.3.2 (63), 3 et 4) : dans une zone défilante SwiftUI, ni les boutons ni les
+                // gestes des pastilles ne recevaient le toucher, alors que le + (bouton UIKit) marchait.
+                TabStripView(tabs: openDocuments.map { .init(id: $0.id, title: $0.title) }, current: current,
+                             onSelect: { id in if let d = openDocuments.first(where: { $0.id == id }) { select(d) } },
+                             onClose: { id in if let d = openDocuments.first(where: { $0.id == id }) { close(d) } })
+                    .frame(height: 32)
                 Menu {
                     ForEach(model.documents.filter { !model.tabs.ids.contains($0.id) }) { document in
                         Button(document.title) { model.openDocumentId = document.id }
@@ -106,28 +101,6 @@ struct DocumentTabsBar: View {
         }
     }
 
-    /// Toute la pastille est la zone de toucher (recette 1.3.2 (62), L6 : toucher le titre seul ne faisait rien) ;
-    /// le × a sa propre zone, prioritaire.
-    private func tab(_ document: LibraryDocument) -> some View {
-        let selected = document.id == current
-        return HStack(spacing: 6) {
-            Text(document.title).lineLimit(1).frame(maxWidth: 180)
-            Image(systemName: "xmark").font(.system(size: 10, weight: .bold))
-                .frame(width: 24, height: 24)
-                .contentShape(Rectangle())
-                .highPriorityGesture(TapGesture().onEnded { close(document) })
-                .accessibilityLabel("Fermer l'onglet \(document.title)")
-                .accessibilityAddTraits(.isButton)
-        }
-        .font(.system(size: 13, weight: selected ? .semibold : .regular))
-        .foregroundStyle(selected ? Color.black.opacity(0.85) : Atelier.textPrimary)
-        .padding(.leading, 12).padding(.trailing, 4).padding(.vertical, 3)
-        .background(selected ? AnyShapeStyle(Atelier.Tint.read) : AnyShapeStyle(Atelier.surface.opacity(0.85)), in: Capsule())
-        .contentShape(Capsule())
-        .onTapGesture { select(document) }
-        .accessibilityAddTraits(selected ? [.isSelected, .isButton] : .isButton)
-    }
-
     private func select(_ document: LibraryDocument) {
         guard document.id != current else { return }
         Diagnostics.log("onglets : passage à « \(document.title) »", "lecteur")
@@ -137,5 +110,98 @@ struct DocumentTabsBar: View {
     private func close(_ document: LibraryDocument) {
         Diagnostics.log("onglets : fermeture de « \(document.title) »", "lecteur")
         model.closeTab(document.id)
+    }
+}
+
+/// Pastilles des onglets en UIKit : `UIScrollView` horizontal et `UIButton` (titre et ×), mis à jour sans tout
+/// recréer. Couleurs du thème (Atelier) ; l'onglet affiché est rempli de la teinte de lecture.
+struct TabStripView: UIViewRepresentable {
+    struct Tab: Equatable { let id: String; let title: String }
+    let tabs: [Tab]
+    let current: String
+    var onSelect: (String) -> Void
+    var onClose: (String) -> Void
+
+    func makeCoordinator() -> Coordinator { Coordinator() }
+
+    func makeUIView(context: Context) -> UIScrollView {
+        let scroll = UIScrollView()
+        scroll.showsHorizontalScrollIndicator = false
+        scroll.alwaysBounceHorizontal = true
+        let stack = UIStackView()
+        stack.axis = .horizontal
+        stack.spacing = 6
+        stack.alignment = .center
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        scroll.addSubview(stack)
+        NSLayoutConstraint.activate([
+            stack.leadingAnchor.constraint(equalTo: scroll.contentLayoutGuide.leadingAnchor),
+            stack.trailingAnchor.constraint(equalTo: scroll.contentLayoutGuide.trailingAnchor),
+            stack.topAnchor.constraint(equalTo: scroll.contentLayoutGuide.topAnchor),
+            stack.bottomAnchor.constraint(equalTo: scroll.contentLayoutGuide.bottomAnchor),
+            stack.heightAnchor.constraint(equalTo: scroll.frameLayoutGuide.heightAnchor),
+        ])
+        context.coordinator.stack = stack
+        return scroll
+    }
+
+    func updateUIView(_ scroll: UIScrollView, context: Context) {
+        let c = context.coordinator
+        c.onSelect = onSelect
+        c.onClose = onClose
+        guard c.shown != tabs || c.current != current, let stack = c.stack else { return }
+        c.shown = tabs
+        c.current = current
+        stack.arrangedSubviews.forEach { $0.removeFromSuperview() }
+        for tab in tabs { stack.addArrangedSubview(c.pill(tab, selected: tab.id == current)) }
+        // Onglet affiché rendu visible (barre défilée jusqu'à lui).
+        DispatchQueue.main.async {
+            if let index = tabs.firstIndex(where: { $0.id == current }), stack.arrangedSubviews.indices.contains(index) {
+                scroll.scrollRectToVisible(stack.arrangedSubviews[index].frame.insetBy(dx: -12, dy: 0), animated: true)
+            }
+        }
+    }
+
+    final class Coordinator: NSObject {
+        weak var stack: UIStackView?
+        var shown: [Tab] = []
+        var current = ""
+        var onSelect: (String) -> Void = { _ in }
+        var onClose: (String) -> Void = { _ in }
+
+        func pill(_ tab: Tab, selected: Bool) -> UIView {
+            let ink = selected ? UIColor.black.withAlphaComponent(0.85) : UIColor(Atelier.textPrimary)
+            var config = UIButton.Configuration.plain()
+            config.title = tab.title
+            config.titleLineBreakMode = .byTruncatingTail
+            config.baseForegroundColor = ink
+            config.contentInsets = NSDirectionalEdgeInsets(top: 6, leading: 12, bottom: 6, trailing: 4)
+            config.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { attrs in
+                var a = attrs
+                a.font = .systemFont(ofSize: 13, weight: selected ? .semibold : .regular)
+                return a
+            }
+            let title = UIButton(configuration: config, primaryAction: UIAction { [weak self] _ in self?.onSelect(tab.id) })
+            title.widthAnchor.constraint(lessThanOrEqualToConstant: 190).isActive = true
+            title.accessibilityLabel = tab.title
+            title.accessibilityTraits = selected ? [.button, .selected] : .button
+
+            var closeConfig = UIButton.Configuration.plain()
+            closeConfig.image = UIImage(systemName: "xmark", withConfiguration: UIImage.SymbolConfiguration(pointSize: 10, weight: .bold))
+            closeConfig.baseForegroundColor = ink
+            closeConfig.contentInsets = NSDirectionalEdgeInsets(top: 6, leading: 6, bottom: 6, trailing: 10)
+            let close = UIButton(configuration: closeConfig, primaryAction: UIAction { [weak self] _ in self?.onClose(tab.id) })
+            close.accessibilityLabel = "Fermer l'onglet \(tab.title)"
+
+            let row = UIStackView(arrangedSubviews: [title, close])
+            row.axis = .horizontal
+            row.spacing = 0
+            row.backgroundColor = selected ? UIColor(Atelier.Tint.read) : UIColor(Atelier.surface).withAlphaComponent(0.85)
+            row.layer.cornerRadius = 15
+            row.layer.cornerCurve = .continuous
+            row.clipsToBounds = true
+            row.heightAnchor.constraint(equalToConstant: 30).isActive = true
+            return row
+        }
     }
 }
