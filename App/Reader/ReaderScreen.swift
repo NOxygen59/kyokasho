@@ -275,15 +275,11 @@ struct ReaderScreen: View {
                         .transition(.scale.combined(with: .opacity))
                 }
                 actionsCapsule
-                    // Moniteur collé sous la capsule d'actions, à sa largeur (capture de NOxygen59, recette 63) ; sa
-                    // courbe se déroule en dessous, par-dessus la page, sans pousser la barre d'outils.
-                    .overlay(alignment: .bottom) {
-                        if monitorEnabled && monitorShown {
-                            ResourceMonitorPanel(expandsDown: true, fillsWidth: true)
-                                .alignmentGuide(.bottom) { $0[.top] - 6 }
-                                .transition(.move(edge: .top).combined(with: .opacity))
-                        }
-                    }
+                    // La capsule garde la hauteur de sa ligne de boutons dans la mise en page : en s'allongeant vers
+                    // le bas (moniteur, puis courbe), elle passe par-dessus la page sans pousser la barre d'outils.
+                    // Taille idéale : la largeur reste celle des boutons (le moniteur s'y adapte, sans élargir).
+                    .fixedSize()
+                    .frame(height: Self.actionsRowHeight, alignment: .top)
                     .zIndex(1)
             }
             .padding(.horizontal, Atelier.gap)
@@ -382,7 +378,28 @@ struct ReaderScreen: View {
         .frame(maxWidth: 420, alignment: .leading)
     }
 
+    /// Hauteur de la ligne de boutons de la capsule d'actions (bouton de 44 pt + marges).
+    static let actionsRowHeight: CGFloat = 52
+
+    /// Capsule d'actions ; le moniteur en est le prolongement vers le bas (captures de NOxygen59, recette 64) : la
+    /// forme s'allonge pour la ligne CPU / RAM / FPS, puis encore pour la courbe, d'un même mouvement.
     private var actionsCapsule: some View {
+        VStack(spacing: 0) {
+            actionsRow
+            if monitorEnabled && monitorShown {
+                Rectangle().fill(Atelier.hairline).frame(height: 1).padding(.horizontal, 10)
+                    .transition(.opacity)
+                ResourceMonitorPanel(expandsDown: true, fillsWidth: true, embedded: true)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+        .padding(4)
+        .atelierPanel(radius: 26)
+        .animation(reduceMotion ? .easeOut(duration: 0.15) : .spring(response: 0.42, dampingFraction: 0.9),
+                   value: monitorEnabled && monitorShown)
+    }
+
+    private var actionsRow: some View {
         HStack(spacing: 0) {
             TextField(reader.document.pageLabel(reader.currentSourcePage), text: $pageField)
                 .font(Atelier.mono)
@@ -485,8 +502,6 @@ struct ReaderScreen: View {
                 }
             }
         }
-        .padding(4)
-        .atelierPanel(radius: 26)
     }
 
     private func railDivider(_ vertical: Bool) -> some View {
