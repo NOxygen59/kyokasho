@@ -648,6 +648,9 @@ struct StudyNotesTab: View {
     /// modification ne soit jamais enregistrée sur la page qu'on vient de quitter.
     @State private var draftPage: Int?
     @FocusState private var focused: Bool
+    /// Pages dont le brouillon n'est pas encore ajouté (RET-051). Relu depuis `NoteDraftStore` à l'ouverture,
+    /// au changement de page et après chaque enregistrement : le disque reste la seule source de vérité.
+    @State private var pendingPages: [Int] = []
 
     private var page: Int { reader.focusSource }
     private let drafts = NoteDraftStore.shared
@@ -686,6 +689,8 @@ struct StudyNotesTab: View {
             }
             ScrollView {
                 VStack(alignment: .leading, spacing: 10) {
+                    // Un avertissement par brouillon : il reste tant que « Ajouter » n'a pas créé la note.
+                    ForEach(pendingPages, id: \.self) { pendingWarning($0) }
                     let here = reader.notes.filter { $0.pageIndex == page }
                     let others = reader.notes.filter { $0.pageIndex != page }
                     if here.isEmpty { Text("Aucune note sur cette page.").font(.footnote).foregroundStyle(Atelier.textTertiary) }
@@ -697,8 +702,26 @@ struct StudyNotesTab: View {
                 }
             }
         }
-        .onAppear { loadDraft(page) }
-        .onChange(of: page) { loadDraft($0) }
+        .onAppear { loadDraft(page); refreshPending() }
+        .onChange(of: page) { loadDraft($0); refreshPending() }
+    }
+
+    private func refreshPending() {
+        pendingPages = NoteDraftStore.pendingPages(drafts.drafts(documentId: reader.document.id))
+    }
+
+    /// Petit avertissement d'un brouillon non ajouté ; toucher celui d'une autre page y mène.
+    private func pendingWarning(_ pending: Int) -> some View {
+        Button { if pending != page { reader.go(toSource: pending) } } label: {
+            Label(pending == page ? "Brouillon non ajouté sur cette page"
+                                  : "Brouillon non ajouté · p. \(reader.document.pageLabel(pending))",
+                  systemImage: "exclamationmark.triangle.fill")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.orange)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .buttonStyle(.plain)
+        .accessibilityHint(pending == page ? "Touche Ajouter pour créer la note" : "Ouvre la page du brouillon")
     }
 
     /// Affiche le brouillon de `page`. Celui de la page quittée est déjà sur disque (écrit à chaque frappe).
@@ -716,6 +739,7 @@ struct StudyNotesTab: View {
         } catch {
             Diagnostics.error("Brouillon de note non enregistré : \(error.localizedDescription)", "notes")
         }
+        refreshPending()
     }
 
     /// Toucher : ouvrir la note dans la fenêtre flottante ; ＊ : aller au mot ancré.
