@@ -372,3 +372,16 @@ public struct BenchRun: Codable, Identifiable, Hashable, Sendable {
 extension BenchRun: FetchableRecord, PersistableRecord {
     public static let databaseTableName = "benchRun"
 }
+
+extension PageComment {
+    /// Texte modifié dans la liste des notes (recette 1.3.2 (62), N1) : `nil` si rien ne change, ou si le texte
+    /// deviendrait vide sur une note sans dessin (une note vide ne sert à rien ; « Supprimer » existe pour ça).
+    public func editing(body newBody: String, at date: Date = Date()) -> PageComment? {
+        let trimmed = newBody.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed != body, !trimmed.isEmpty || drawing != nil else { return nil }
+        var note = self
+        note.body = trimmed
+        note.updatedAt = date
+        return note
+    }
+}
