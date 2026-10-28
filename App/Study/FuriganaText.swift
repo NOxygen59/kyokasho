@@ -217,6 +217,9 @@ struct RubyWebView: UIViewRepresentable {
     @Binding var height: CGFloat
     /// Change quand la bulle se ferme : l'état de survol JavaScript est alors remis à zéro.
     var hoverReset = 0
+    /// Page à deux langues (mise en page IA traduite) : `true` = français. `nil` : page d'une seule langue.
+    /// Un changement bascule sans recharger et garde la position de lecture (`Coordinator.switchLanguage`).
+    var language: Bool? = nil
     var onLookup: (PanelLookupEvent) -> Void
     @AppStorage(Diagnostics.enabledKey) private var diagnosticsEnabled = false
 
@@ -232,12 +235,13 @@ struct RubyWebView: UIViewRepresentable {
         view.backgroundColor = .clear
         view.navigationDelegate = context.coordinator
         Diagnostics.log("Création du texte web OCR", "ocr-scroll")
-        // Se déplacer dans le texte (tableaux larges, texte zoomé) : glisser à l'horizontale ou, zoomé, partout.
-        // Pas zoomé, la hauteur suit le contenu : un glisser vertical fait défiler la fenêtre OCR, pas le texte.
+        // Un seul défilement vertical, celui du panneau (#34, #17) : la vue web prend toute la hauteur de son
+        // contenu, zoom compris (`Coordinator.fitHeight`), et ne se déplace qu'à l'horizontale (tableau large,
+        // texte vertical, texte zoomé). Sans rien à faire défiler, son geste est coupé (`applyScrollPolicy`) :
+        // le panneau reçoit le doigt, la molette et le trackpad sans arbitrage. Le pincement (1× à 5×) reste actif.
         let scroll = view.scrollView
-        scroll.isScrollEnabled = true
-        // Déplacement libre dans toutes les directions ; pincer de 1× à 5×.
-        scroll.isDirectionalLockEnabled = false
+        scroll.isScrollEnabled = false
+        scroll.isDirectionalLockEnabled = true
         scroll.alwaysBounceVertical = false
         scroll.alwaysBounceHorizontal = false
         scroll.bounces = true
@@ -246,6 +250,7 @@ struct RubyWebView: UIViewRepresentable {
         scroll.maximumZoomScale = 5
         scroll.contentInsetAdjustmentBehavior = .never
         context.coordinator.setDiagnostics(view, enabled: diagnosticsEnabled)
+        context.coordinator.attachScrollPolicy(view)
         return view
     }
 
@@ -258,8 +263,16 @@ struct RubyWebView: UIViewRepresentable {
             context.coordinator.lastHoverReset = hoverReset
             view.evaluateJavaScript("window.__kyokashoResetHover&&window.__kyokashoResetHover()", completionHandler: nil)
         }
-        guard context.coordinator.lastHTML != html else { return }
+        if context.coordinator.lastHTML == html {
+            if let language, context.coordinator.loaded, context.coordinator.shownLanguage != language {
+                context.coordinator.switchLanguage(view, french: language, keepPosition: true)
+            }
+            return
+        }
         context.coordinator.lastHTML = html
+        context.coordinator.switchGeneration.advance()
+        context.coordinator.loaded = false
+        context.coordinator.shownLanguage = nil
         Diagnostics.log("Chargement HTML OCR : \(html.utf8.count) octets", "ocr-scroll")
         view.loadHTMLString(html, baseURL: nil)
     }
@@ -268,6 +281,7 @@ struct RubyWebView: UIViewRepresentable {
         // Le contrôleur gardé à la création (pas une copie) : le gestionnaire est bien retiré.
         coordinator.controller?.removeScriptMessageHandler(forName: "kyokasho")
         coordinator.setDiagnostics(view, enabled: false)
+        coordinator.detachScrollPolicy(view)
         view.navigationDelegate = nil
     }
 
@@ -325,6 +339,15 @@ struct RubyWebView: UIViewRepresentable {
         var lastHoverReset = 0
         weak var controller: WKUserContentController?
         var offsetObservation: NSKeyValueObservation?
+        /// Hauteur du contenu en pixels CSS (`document.body.scrollHeight`), avant zoom.
+        var cssHeight: CGFloat = 0
+        /// Page chargée (`didFinish`) et langue affichée d'une page à deux langues.
+        var loaded = false
+        var shownLanguage: Bool?
+        /// Avancée à chaque nouvelle page HTML (donc à chaque changement de page) et à chaque bascule : un rappel
+        /// JavaScript ou un décalage différé d'une bascule plus ancienne est ignoré (revue de Codex, #78).
+        var switchGeneration = LatestGeneration()
+        private var contentSizeObservation: NSKeyValueObservation?
         var diagnosticsEnabled = false
         private var lastNativeScroll = Date.distantPast
 
@@ -348,6 +371,92 @@ struct RubyWebView: UIViewRepresentable {
             }
         }
 
+        /// Suit la fin des pincements et la taille du contenu pour garder un seul défilement vertical.
+        func attachScrollPolicy(_ view: WKWebView) {
+            view.scrollView.pinchGestureRecognizer?.addTarget(self, action: #selector(pinchChanged(_:)))
+            contentSizeObservation = view.scrollView.observe(\.contentSize, options: [.new]) { [weak self] scroll, _ in
+                DispatchQueue.main.async { self?.applyScrollPolicy(scroll) }
+            }
+        }
+
+        func detachScrollPolicy(_ view: WKWebView) {
+            view.scrollView.pinchGestureRecognizer?.removeTarget(self, action: #selector(pinchChanged(_:)))
+            contentSizeObservation?.invalidate()
+            contentSizeObservation = nil
+        }
+
+        /// Fin de pincement : la hauteur suit le nouveau zoom. Seconde mesure après le rebond éventuel vers 1×.
+        @objc func pinchChanged(_ gesture: UIPinchGestureRecognizer) {
+            guard gesture.state == .ended || gesture.state == .cancelled,
+                  let web = gesture.view?.superview as? WKWebView else { return } // vue du geste : le scrollView de la vue web
+            fitHeight(web)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self, weak web] in
+                if let web { self?.fitHeight(web) }
+            }
+        }
+
+        /// Hauteur du cadre = hauteur CSS × zoom : le contenu ne dépasse jamais verticalement, donc la vue web
+        /// n'a jamais de défilement vertical propre (pas de « fenêtre dans la fenêtre »).
+        func fitHeight(_ web: WKWebView) {
+            let target = (cssHeight * web.scrollView.zoomScale).rounded(.up)
+            if target > 0, abs(target - parent.height) > 1 { parent.height = target }
+            applyScrollPolicy(web.scrollView)
+        }
+
+        /// Geste de la vue web actif seulement s'il y a un déplacement horizontal possible (zoom ou contenu large).
+        /// Contenu entièrement visible en hauteur : décalage vertical ramené à 0.
+        func applyScrollPolicy(_ scroll: UIScrollView) {
+            let horizontal = scroll.zoomScale > 1.01 || scroll.contentSize.width > scroll.bounds.width + 1
+            if scroll.isScrollEnabled != horizontal { scroll.isScrollEnabled = horizontal }
+            if scroll.contentOffset.y != 0, scroll.contentSize.height <= scroll.bounds.height + 1 {
+                scroll.contentOffset.y = 0
+            }
+        }
+
+        /// Bascule 日本語 / Français dans la page (`AILayoutView.languageSwitchScript`), sans recharger. Avec
+        /// `keepPosition`, le haut de la zone visible du panneau est converti en pixels CSS de la page, le script
+        /// renvoie la position équivalente dans l'autre langue, et le défilement du panneau est décalé d'autant
+        /// une fois la nouvelle hauteur appliquée (iOS 16 : pas d'API SwiftUI de position, d'où le `UIScrollView`).
+        func switchLanguage(_ web: WKWebView, french: Bool, keepPosition: Bool) {
+            shownLanguage = french
+            let token = switchGeneration.advance()
+            let outer = keepPosition ? Self.enclosingScrollView(of: web) : nil
+            let zoom = web.scrollView.zoomScale
+            var cssTop: CGFloat = 0
+            if let outer {
+                let visibleTop = CGPoint(x: 0, y: outer.contentOffset.y + outer.adjustedContentInset.top)
+                cssTop = outer.convert(visibleTop, to: web).y / max(zoom, 0.01)
+            }
+            let js = "window.__kyokashoSwitchLanguage&&window.__kyokashoSwitchLanguage(\(french),\(Double(max(cssTop, 0))))"
+            web.evaluateJavaScript(js) { [weak self, weak web, weak outer] result, _ in
+                guard let self, self.switchGeneration.isCurrent(token), let web, let values = result as? [String: Any],
+                      let newY = values["y"] as? Double, let newHeight = values["h"] as? Double else { return }
+                if newHeight > 0 { self.cssHeight = CGFloat(newHeight) }
+                self.fitHeight(web)
+                guard let outer, cssTop > 0 else { return }
+                let delta = (CGFloat(newY) - cssTop) * zoom
+                // Laisser SwiftUI appliquer la nouvelle hauteur avant de borner le décalage.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self, weak outer] in
+                    guard let self, self.switchGeneration.isCurrent(token), let outer else { return }
+                    outer.superview?.layoutIfNeeded()
+                    let inset = outer.adjustedContentInset
+                    let maxY = max(-inset.top, outer.contentSize.height - outer.bounds.height + inset.bottom)
+                    let y = min(max(outer.contentOffset.y + delta, -inset.top), maxY)
+                    outer.setContentOffset(CGPoint(x: outer.contentOffset.x, y: y), animated: false)
+                }
+            }
+        }
+
+        /// Défilement du panneau qui contient la vue web (premier `UIScrollView` parent).
+        static func enclosingScrollView(of web: WKWebView) -> UIScrollView? {
+            var view = web.superview
+            while let current = view {
+                if let scroll = current as? UIScrollView { return scroll }
+                view = current.superview
+            }
+            return nil
+        }
+
         private func removeScrollListeners(_ view: WKWebView) {
             view.evaluateJavaScript("window.__kyokashoRemoveScrollDiagnostic?.();", completionHandler: nil)
         }
@@ -359,6 +468,9 @@ struct RubyWebView: UIViewRepresentable {
         }
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            loaded = true
+            // Page à deux langues : afficher la langue demandée entre-temps, sans chercher à garder une position.
+            if let language = parent.language { switchLanguage(webView, french: language, keepPosition: false) }
             setDiagnostics(webView, enabled: parent.diagnosticsEnabled)
             if diagnosticsEnabled {
                 webView.evaluateJavaScript(RubyWebView.scrollDiagnosticScript, completionHandler: nil)
@@ -385,7 +497,9 @@ struct RubyWebView: UIViewRepresentable {
                 let delay = Date().timeIntervalSince1970 * 1000 - time
                 Diagnostics.log("Événement HTML \(kind), délai pont=\(Int(delay)) ms", "ocr-scroll")
             case "height":
-                if let value = body["value"] as? Double, abs(CGFloat(value) - parent.height) > 1 { parent.height = CGFloat(value) }
+                guard let value = body["value"] as? Double, value.isFinite, value > 0 else { return }
+                cssHeight = CGFloat(value)
+                if let web = message.webView { fitHeight(web) }
             case "lookup":
                 guard let text = body["text"] as? String, !text.isEmpty else { return }
                 // Rectangle CSS du mot → points de la vue web (zoom du pincement) → coordonnées de la fenêtre.

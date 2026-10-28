@@ -141,56 +141,60 @@ struct StudyTextTab: View {
     @State private var lineDraft = ""
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 14) {
-                if reader.ocrPage != nil { PageSearchField(query: $query) }
-                engineRow
-                verificationRow
-                switch (reader.ocrPage, reader.ocrState) {
-                case (_, .running):
-                    HStack(spacing: 10) { ProgressView().tint(Atelier.Tint.japanese); Text("Lecture de la page…") }
-                        .foregroundStyle(Atelier.textSecondary)
-                case (_, .failed(let message)):
-                    Text(message).foregroundStyle(Atelier.textSecondary)
-                    Button("Lire avec Apple Vision") { reader.runOCR(engine: OCREngineID.vision) }
-                        .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.japanese))
-                case (_, _) where !query.isEmpty && reader.ocrPage != nil:
-                    PageSearchResults(matches: matches)
-                case (let page?, _):
-                    if let layoutError, formatted {
-                        Text(layoutError).font(.caption).foregroundStyle(Atelier.textTertiary)
-                    }
-                    doubtRow(page)
-                    if aiLayout {
-                        AILayoutView(reader: reader, furigana: furigana, hoverReset: hoverReset) { handleLookup($0) }
-                    } else if furigana {
-                        FuriganaTextView(page: page, formatted: formatted, regions: regions, hoverReset: hoverReset) { handleLookup($0) }
-                    } else if formatted {
-                        FormattedOCRText(page: page, regions: regions)
-                    } else {
-                        // Brut : une ligne par ligne lue, caractères douteux soulignés, appui long → corriger.
-                        VStack(alignment: .leading, spacing: 7) {
-                            ForEach(Array(page.lines.enumerated()), id: \.offset) { index, line in
-                                Text(Self.marked(line))
-                                    .font(Atelier.jp)
-                                    .foregroundStyle(Atelier.textPrimary)
-                                    .textSelection(.enabled)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .contextMenu {
-                                        Button { lineDraft = line.text; editingLine = index } label: {
-                                            Label("Corriger cette ligne", systemImage: "pencil")
+        VStack(alignment: .leading, spacing: 10) {
+            // Barre de langue de la mise en page IA, hors du défilement : visible même en bas de la page (#17).
+            if aiLayout, query.isEmpty, reader.ocrPage != nil { AILayoutLanguageBar(reader: reader) }
+            ScrollView {
+                VStack(alignment: .leading, spacing: 14) {
+                    if reader.ocrPage != nil { PageSearchField(query: $query) }
+                    engineRow
+                    verificationRow
+                    switch (reader.ocrPage, reader.ocrState) {
+                    case (_, .running):
+                        HStack(spacing: 10) { ProgressView().tint(Atelier.Tint.japanese); Text("Lecture de la page…") }
+                            .foregroundStyle(Atelier.textSecondary)
+                    case (_, .failed(let message)):
+                        Text(message).foregroundStyle(Atelier.textSecondary)
+                        Button("Lire avec Apple Vision") { reader.runOCR(engine: OCREngineID.vision) }
+                            .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.japanese))
+                    case (_, _) where !query.isEmpty && reader.ocrPage != nil:
+                        PageSearchResults(matches: matches)
+                    case (let page?, _):
+                        if let layoutError, formatted {
+                            Text(layoutError).font(.caption).foregroundStyle(Atelier.textTertiary)
+                        }
+                        doubtRow(page)
+                        if aiLayout {
+                            AILayoutView(reader: reader, furigana: furigana, hoverReset: hoverReset) { handleLookup($0) }
+                        } else if furigana {
+                            FuriganaTextView(page: page, formatted: formatted, regions: regions, hoverReset: hoverReset) { handleLookup($0) }
+                        } else if formatted {
+                            FormattedOCRText(page: page, regions: regions)
+                        } else {
+                            // Brut : une ligne par ligne lue, caractères douteux soulignés, appui long → corriger.
+                            VStack(alignment: .leading, spacing: 7) {
+                                ForEach(Array(page.lines.enumerated()), id: \.offset) { index, line in
+                                    Text(Self.marked(line))
+                                        .font(Atelier.jp)
+                                        .foregroundStyle(Atelier.textPrimary)
+                                        .textSelection(.enabled)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .contextMenu {
+                                            Button { lineDraft = line.text; editingLine = index } label: {
+                                                Label("Corriger cette ligne", systemImage: "pencil")
+                                            }
                                         }
-                                    }
+                                }
                             }
                         }
+                        translationBlock(for: page.text)
+                    default:
+                        Text("La page n'a pas encore été lue.").foregroundStyle(Atelier.textSecondary)
+                        Button { reader.runOCR() } label: { Label("Lire la page", systemImage: "text.viewfinder") }
+                            .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.japanese))
                     }
-                    translationBlock(for: page.text)
-                default:
-                    Text("La page n'a pas encore été lue.").foregroundStyle(Atelier.textSecondary)
-                    Button { reader.runOCR() } label: { Label("Lire la page", systemImage: "text.viewfinder") }
-                        .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.japanese))
+                    documentOCRRow
                 }
-                documentOCRRow
             }
         }
         .task(id: "\(query)|\(reader.focusSource)|\(reader.ocrPage?.hashValue ?? 0)") {
