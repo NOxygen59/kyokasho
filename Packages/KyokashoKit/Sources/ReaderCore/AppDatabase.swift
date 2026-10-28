@@ -146,6 +146,12 @@ public final class AppDatabase: @unchecked Sendable {
                 t.add(column: "anchorText", .text)
             }
         }
+        // Colonne facultative (NULL = non classé) : les documents existants ne changent pas (RET-039, #54).
+        m.registerMigration("v5-document-category") { db in
+            try db.alter(table: "document") { t in
+                t.add(column: "category", .text)
+            }
+        }
         return m
     }
 }
@@ -169,6 +175,14 @@ extension AppDatabase {
 
     public func deleteDocument(id: String) throws {
         try writer.write { db in _ = try LibraryDocument.deleteOne(db, key: id) }
+    }
+
+    /// Change seulement la catégorie (requête ciblée) : une copie du document gardée ailleurs ne l'écrase pas, et
+    /// cette mise à jour n'écrase rien d'autre (RET-039, #54).
+    public func updateCategory(documentId: String, category: DocumentCategory?) throws {
+        try writer.write { db in
+            try db.execute(sql: "UPDATE document SET category = ? WHERE id = ?", arguments: [category?.rawValue, documentId])
+        }
     }
 
     /// Enregistre la position de lecture (appelé souvent : requête minimale).

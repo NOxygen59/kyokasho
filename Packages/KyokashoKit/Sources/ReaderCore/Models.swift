@@ -4,6 +4,18 @@
 import Foundation
 import GRDB
 
+/// Catégorie choisie à l'import, pour se repérer sur l'accueil (RET-039, #54). Modifiable dans « Ce document ».
+public enum DocumentCategory: String, Codable, CaseIterable, Sendable {
+    case book, textbook
+
+    public var title: String {
+        switch self {
+        case .book: return "Livre"
+        case .textbook: return "Manuel"
+        }
+    }
+}
+
 /// Un PDF importé. `id` = empreinte SHA-256 du fichier (hexadécimal) : un même fichier importé
 /// deux fois n'est stocké qu'une fois. Le fichier lui-même vit dans `DocumentStorage`, jamais modifié.
 public struct LibraryDocument: Codable, Identifiable, Hashable, Sendable {
@@ -23,11 +35,13 @@ public struct LibraryDocument: Codable, Identifiable, Hashable, Sendable {
     public var driveRevision: String?
     /// Index (base 0) de la page source qui porte le numéro 1 imprimé (manuels avec pages de garde).
     public var firstPageIndex: Int
+    /// Livre ou manuel (`nil` : pas encore choisi, documents d'avant la migration `v5-document-category`).
+    public var category: DocumentCategory?
 
     public init(id: String, title: String, originalFileName: String, pageCount: Int, fileSize: Int64,
                 importedAt: Date = Date(), lastOpenedAt: Date? = nil, lastPageIndex: Int = 0,
                 settingsJSON: String? = nil, driveFileId: String? = nil, driveRevision: String? = nil,
-                firstPageIndex: Int = 0) {
+                firstPageIndex: Int = 0, category: DocumentCategory? = nil) {
         self.id = id
         self.title = title
         self.originalFileName = originalFileName
@@ -40,6 +54,7 @@ public struct LibraryDocument: Codable, Identifiable, Hashable, Sendable {
         self.driveFileId = driveFileId
         self.driveRevision = driveRevision
         self.firstPageIndex = firstPageIndex
+        self.category = category
     }
 
     /// Numéro affiché pour une page source : la page `firstPageIndex` porte « 1 » ;
