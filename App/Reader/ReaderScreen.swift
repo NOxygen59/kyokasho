@@ -220,11 +220,11 @@ struct ReaderScreen: View {
         .onAppear {
             reader.load()
             ReaderArrowKeys.shared.webOpen = side == .web
-            ReadingTimeTracker.shared.readerOpened()
+            ReadingTimeTracker.shared.readerOpened(documentId: reader.document.id)
         }
         .onDisappear {
             reader.close()
-            ReadingTimeTracker.shared.readerClosed()
+            ReadingTimeTracker.shared.readerClosed(documentId: reader.document.id)
         }
         // Temps de lecture active (accueil) : pause en arrière-plan ou iPad verrouillé (RET-037, #52).
         .onChange(of: scenePhase) { ReadingTimeTracker.shared.scenePhaseChanged($0) }
