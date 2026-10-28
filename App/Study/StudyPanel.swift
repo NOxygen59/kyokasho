@@ -797,7 +797,10 @@ struct StudyMarksTab: View {
                 .foregroundStyle(Atelier.textPrimary)
                 AtelierLabel("Signets · \(reader.bookmarks.count)", tint: Atelier.Tint.read)
                 if reader.bookmarks.isEmpty {
-                    Text("Touche ★ en haut pour marquer une page.").font(.footnote).foregroundStyle(Atelier.textTertiary)
+                    // Même symbole que le bouton « Signet » de la barre du haut (`bookmark`), pas une étoile (RET-028, #43).
+                    Text("Touche \(Image(systemName: "bookmark")) en haut pour marquer une page.")
+                        .font(.footnote).foregroundStyle(Atelier.textTertiary)
+                        .accessibilityLabel("Touche le bouton Signet en haut pour marquer une page.")
                 }
                 ForEach(reader.bookmarks) { b in
                     row(icon: "bookmark.fill", tint: Atelier.Tint.read, title: b.title, page: b.pageIndex)
