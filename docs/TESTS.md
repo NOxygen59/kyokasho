@@ -190,18 +190,18 @@ Base : `main` `35c5242`. Aucune bibliothèque réelle, aucun iPad ; l'outil et l
 
 | Code | Test | Ce qui est vérifié |
 |---|---|---|
-| I1 | `testI1RecentDataRoundTripsAndDraftsAreReadable` (Swift) | brouillons relus par `NoteDraftStore`, `definition-translations.json`, base de dictionnaire SQLite, journal de diagnostic, copie `PageShift/<UUID>` sans journal : retour octet pour octet |
-| I2 | `testI2EveryStorageLocationInCodeIsInventoried` (Swift) | toute source de `App/` ou `Packages/KyokashoKit/Sources` qui ouvre un dossier du conteneur figure dans l'inventaire de référence du test ; une nouvelle source ou une entrée périmée fait échouer le test |
-| R1 | `test_r1_japanese_unicode_and_long_names_roundtrip_exactly` (Python) | noms japonais, formes NFC et NFD (octets exacts), espaces, nom de 200 caractères |
-| R2 | `test_r2_empty_large_and_read_only_files_roundtrip` (Python) | fichier vide, 64 Mo, fichier source en lecture seule |
+| I1 | `testI1RecentDataRoundTripsAndDraftsAreReadable` (Swift) | brouillons relus par `NoteDraftStore` ; **vraie base `DictionaryDatabase`** (`Dictionaries/dictionaries.sqlite`) remplie par `DictionaryImporter` depuis un dictionnaire Yomitan synthétique, rouverte et interrogée après restauration ; `definition-translations.json`, journal de diagnostic, copie `PageShift/<UUID>` sans journal : retour octet pour octet |
+| I2 | `testI2EveryStorageLocationInCodeIsInventoried` (Swift) | **alerte partielle** : toute source de `App/` ou `Packages/KyokashoKit/Sources` qui ouvre un dossier du conteneur figure dans l'inventaire, **et** chaque composant de chemin littéral (`appendingPathComponent("…")`) de ces sources y est déclaré ; un nouveau fichier, un nouveau dossier dans un fichier connu (y compris sous `Caches/`) ou une entrée périmée fait échouer le test. Non couverts : chemins entièrement calculés sans littéral, et préférences (`UserDefaults`, `@AppStorage`), copiées en bloc avec `Library/Preferences` |
+| R1 | `test_r1_japanese_unicode_and_long_names_roundtrip_exactly` (Python) | noms japonais, espaces, nom de 200 caractères ; formes NFC et NFD placées dans **deux dossiers distincts** : prouve que les octets de chaque nom sont conservés, pas l'absence de collision NFC/NFD dans un même dossier (APFS ne permet pas de créer les deux) |
+| R2 | `test_r2_empty_large_and_read_only_files_roundtrip` (Python) | fichier vide, 64 Mo, fichier source en lecture seule : **contenus** identiques ; les **permissions ne sont pas conservées** (`shutil.copyfile` : un fichier `0444` ressort selon l'umask, par exemple `0644`) |
 | R3 | `test_r3_backup_killed_…`, `test_r3_restore_killed_…` (Python) | SIGKILL réel après la 1re copie, après la 4e, juste avant la publication : jamais de `backup/` ni de `container/` partiel, source intacte, relance réussie vers une nouvelle destination |
 | R4 | `test_r4_known_limit_…` (Python) | limite connue : une archive modifiée avec un manifeste recalculé est acceptée |
 | C1 | `testC1OlderAppDatabaseSchemaRestoresAndMigrates` (Swift) | base ramenée au schéma `v3-page-one`, sauvegardée, restaurée, ouverte par l'`AppDatabase` actuel : `v4` appliquée, données relues, note ancrée écrite |
 | C2 | — | écarté : `ReviewStore` n'a qu'une migration (`v1`), il n'existe pas de schéma plus ancien |
 
-**Résultats sur ce Mac :** `python3 -I -m unittest discover -s tests -v` : 21 tests, 0 échec. `swift test --filter BackupRoundTripTests` : 4 tests, 0 échec. Résultats de la suite complète dans la PR.
+**Résultats sur ce Mac, base réécrite `5f5caaf` :** `python3 -I -m unittest discover -s tests -v` : 21 tests, 0 échec. `swift test --filter BackupRoundTripTests` : 4 tests, 0 échec. Résultats de la suite complète dans la PR.
 
-**Constats, sans correctif :** après un SIGKILL, le dossier privé `<destination>.partial-…` reste à côté de la destination. Si l'arrêt survient entre la réservation et la publication, la destination existe vide, et une relance vers le même chemin est refusée : il faut choisir un nouveau chemin. L'audio des dictionnaires (`Documents/Audio`) est copié mais n'est pas vérifié (décision de NOxygen59).
+**Constats, sans correctif, avec consigne :** après un SIGKILL, le dossier privé `<destination>.partial-…` reste à côté de la destination **et peut contenir des copies de données personnelles** : le mettre à la corbeille (`trash`) avant de relancer. Si l'arrêt survient entre la réservation et la publication, la destination existe vide et une relance vers le même chemin est refusée : la mettre à la corbeille si elle est bien vide, ou choisir un nouveau chemin. L'audio des dictionnaires (`Documents/Audio`) est copié mais n'est pas vérifié (décision de NOxygen59).
 
 ## QA-02 — vérifications de préparation du 25 octobre 2026
 

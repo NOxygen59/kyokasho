@@ -63,7 +63,7 @@ La première comparaison du test a révélé un artefact de précision des dates
 
 Tests ajoutés sans modifier l'outil : inventaire des données récentes et garde-fou d'inventaire (Swift), noms japonais et Unicode, fichiers vide, gros ou en lecture seule, SIGKILL réel pendant la sauvegarde et la restauration, limite du manifeste (Python), restauration et migration d'une base au schéma `v3-page-one` (Swift). Détail et résultats : [TESTS.md](TESTS.md), section DATA-02.
 
-Constats documentés, sans correctif : après un arrêt brutal, le dossier privé `.partial-…` reste à côté de la destination, et une destination réservée vide refuse la relance au même chemin. Les copies `PageShift/<UUID>` conservées après chaque ajout de pages sont incluses dans la sauvegarde et peuvent l'alourdir.
+Constats documentés, sans correctif : après un arrêt brutal, le dossier privé `.partial-…` reste à côté de la destination et peut contenir des données personnelles ; une destination réservée vide refuse la relance au même chemin. **Reprise :** mettre le dossier `.partial-…` à la corbeille, puis relancer vers un chemin neuf (ou après avoir mis à la corbeille la destination vide). Les copies `PageShift/<UUID>` conservées après chaque ajout de pages sont incluses dans la sauvegarde et peuvent l'alourdir. Les permissions des fichiers ne sont pas restaurées : seuls les contenus le sont.
 
 ## Limites et prochaines validations
 

@@ -201,6 +201,8 @@ class BackupTests(unittest.TestCase):
     # --- DATA-02 (Issue #83) : noms, fichiers particuliers, arrêt brutal, limite du manifeste ---
 
     def test_r1_japanese_unicode_and_long_names_roundtrip_exactly(self):
+        """Octets de chaque nom conservés. NFC et NFD sont dans deux dossiers : APFS ne permet pas de créer les deux
+        formes dans le même dossier, l'absence de collision n'est donc pas testée ici."""
         nfc = unicodedata.normalize("NFC", "が教科書.md")
         nfd = unicodedata.normalize("NFD", "が教科書.md")
         self.assertNotEqual(nfc.encode(), nfd.encode())
@@ -224,6 +226,8 @@ class BackupTests(unittest.TestCase):
         self.assertEqual(os.listdir(os.fsencode(chats / "nfd")), [os.fsencode(nfd)])
 
     def test_r2_empty_large_and_read_only_files_roundtrip(self):
+        """Contenus identiques. Les permissions ne sont pas conservées (`shutil.copyfile`) : un fichier 0444 ressort
+        selon l'umask ; seule la lisibilité est garantie."""
         large = bytes(range(256)) * (64 * 1024 * 1024 // 256)
         files = {
             "Library/Application Support/Kyokasho/vide.json": b"",

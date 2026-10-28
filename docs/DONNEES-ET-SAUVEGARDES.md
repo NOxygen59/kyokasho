@@ -16,7 +16,8 @@ Les chemins ci-dessous sont relatifs au conteneur de l'app sur iPad. Ils ne dés
 | Audio des dictionnaires | `Documents/Audio`, `DictionaryModel` | Copié par la sauvegarde mais non vérifié : non essentiel (décision de NOxygen59, 28/10/2026) |
 | Traductions de définitions | `Application Support/definition-translations.json`, `DefinitionTranslations` | Traductions françaises et votes 👍/👎 ; donnée personnelle |
 | Brouillons de notes | `Application Support/Kyokasho/NoteDrafts/<id>.json`, `NoteDraftStore` | Brouillons non encore ajoutés (RET-008) ; donnée personnelle |
-| Modèles et UniDic | `ModelStore.root`, sous `Application Support/Kyokasho/Models` | Retéléchargeables si source/version encore disponibles ; coûteux |
+| Modèles et UniDic | `ModelStore.root`, sous `Application Support/Kyokasho/Models` (UniDic : `Models/unidic`) | Retéléchargeables si source/version encore disponibles ; coûteux |
+| Mesures de vitesse (banc d'essai) | `Application Support/Kyokasho/Bench/`, `AppModel` | Résultats de mesures locales ; incluses dans la sauvegarde |
 | Lectures IA, traductions | `Application Support/Analysis/<id>/*.md`, `DocumentAITextStore` | Données dérivées coûteuses ; garder pour reproduire un bug |
 | Rapports | `Application Support/Analysis/<id>.json` | Résultats dépendant des versions des lectures |
 | Chats | `Application Support/Kyokasho/Chats/qwen*.json`, `AIModelViews` | Donnée personnelle persistante |
