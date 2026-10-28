@@ -147,6 +147,9 @@ final class ReaderController: NSObject, ObservableObject {
         pencilTap?.isEnabled = pencilLookup
     }
     var hoverTask: Task<Void, Never>?
+    /// Dernière recherche au survol lancée grâce à Maj seule (bouton de survol éteint) : relâcher Maj la ferme
+    /// (RET-021, #24).
+    var lookupOpenedByShiftOnly = false
     private var lookupDiagnosticTimes: [String: Date] = [:]
 
     /// Trace bornée du trajet du pointeur, sans texte, titre ou identifiant du document.
@@ -532,6 +535,7 @@ final class ReaderController: NSObject, ObservableObject {
     /// quand le pointeur passe sur un blanc (pour pouvoir aller jusqu'au popup).
     func lookup(at point: CGPoint, fromHover: Bool = false) async {
         traceLookup("Recherche lancée ; survol=\(fromHover)")
+        if !fromHover { lookupOpenedByShiftOnly = false }
         guard let pdf, let page = pdfView.page(for: point, nearest: false) else { return }
         let index = pdf.index(for: page)
         guard presented.indices.contains(index) else { return }

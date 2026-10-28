@@ -67,7 +67,7 @@ Source : message de NOxygen59 du 27/10/2026. Build observée : QA02 « 1.3 (40) 
 | RET-018 | 4 | 2026-10-27 | Fonction | Avertissement sur la consommation de l'IA locale à l'accueil | — | rapporté | [#21](https://github.com/NOxygen59/kyokasho/issues/21) | — | — |
 | RET-019 | 5 | 2026-10-27 | Fonction | Date et heure des notes, groupées par jour | — | rapporté | [#22](https://github.com/NOxygen59/kyokasho/issues/22) | — | — |
 | RET-020 | 5 | 2026-10-26 | Fonction | Surligner directement les zones OCR détectées (accès facile, portable sur Mac) | — | rapporté | [#23](https://github.com/NOxygen59/kyokasho/issues/23) | — | — |
-| RET-021 | 5 | 2026-10-26 | Fonction | Survol Yomitan seulement pendant l'appui sur Maj | — | rapporté | [#24](https://github.com/NOxygen59/kyokasho/issues/24) | — | — |
+| RET-021 | 5 | 2026-10-26 | Fonction | Survol Yomitan seulement pendant l'appui sur Maj | `claude/survol-maj-page` `f4a759f`, tests Mac | compilé iOS | [#24](https://github.com/NOxygen59/kyokasho/issues/24) | — (PR à ouvrir à la réouverture de GitHub) | panneau Texte : fait par #57, confirmé iPad ; page PDF : Maj tenue active le survol même bouton éteint, relâcher Maj ferme la bulle ainsi ouverte, bouton allumé inchangé (`HoverLookupMode`, 4 tests) ; compilé iOS ; non testé iPad |
 
 ### Recette du 27/10/2026 — build de test 1.3.1 (41)
 

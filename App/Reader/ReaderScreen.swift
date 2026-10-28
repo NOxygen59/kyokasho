@@ -55,6 +55,7 @@ struct ReaderScreen: View {
     @AppStorage(ResourceMonitor.shownKey) private var monitorShown = false
     @State private var pageField = ""
     @ObservedObject private var keyboard = HardwareKeyboard.shared
+    @ObservedObject private var shift = ShiftKey.shared
 
     enum Sheet: String, Identifiable {
         case search, ai, settings, pageCards
@@ -226,6 +227,14 @@ struct ReaderScreen: View {
             if let request { lookup.start(request.text) } else { lookup.clear() }
         }
         .onChange(of: lookup.matchedLength) { reader.setLookupMatchLength($0) }
+        .onChange(of: shift.pressed) { pressed in
+            // Bulle ouverte au survol avec Maj seule : relâcher Maj la ferme, comme dans le panneau Texte (RET-021, #24).
+            if !pressed, HoverLookupMode.closesOnShiftRelease(toggleOn: reader.hoverLookup,
+                                                             openedByShiftOnly: reader.lookupOpenedByShiftOnly,
+                                                             bubbleOpen: reader.lookupRequest != nil) {
+                reader.endLookup()
+            }
+        }
         .animation(.spring(response: 0.3, dampingFraction: 0.86), value: reader.lookupRequest)
         .onReceive(model.$readerDefaults.removeDuplicates().dropFirst()) { defaults in
             reader.update(settings: defaults.applying(reader.document.settingsOverride))

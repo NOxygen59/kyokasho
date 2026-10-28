@@ -215,7 +215,10 @@ extension ReaderController {
 
     @objc func handleHover(_ gesture: UIHoverGestureRecognizer) {
         traceLookup("Événement survol état=\(gesture.state.rawValue)")
-        guard hoverLookup, !isDrawing, gesture.state == .began || gesture.state == .changed else {
+        // Maj tenue : survol même bouton éteint (RET-021, #24). Les modificateurs viennent de l'événement lui-même.
+        let shift = gesture.modifierFlags.contains(.shift)
+        guard HoverLookupMode.isActive(toggleOn: hoverLookup, shiftHeld: shift, drawing: isDrawing),
+              gesture.state == .began || gesture.state == .changed else {
             hoverTask?.cancel()
             return
         }
@@ -231,6 +234,7 @@ extension ReaderController {
         hoverTask = Task { [weak self] in
             try? await Task.sleep(nanoseconds: 120_000_000)
             guard !Task.isCancelled, let self else { return }
+            self.lookupOpenedByShiftOnly = HoverLookupMode.opensWithShiftOnly(toggleOn: self.hoverLookup, shiftHeld: shift)
             await self.lookup(at: point, fromHover: true)
         }
     }
