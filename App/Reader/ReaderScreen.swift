@@ -31,6 +31,8 @@ struct ReaderScreen: View {
     /// Annule une étape différée devenue obsolète (appuis rapides, rotation).
     @State private var dockGeneration = 0
     @State private var autoOpenedSide = false
+    /// Lecteur ouvert par un changement d'onglet : pas d'animation du panneau le temps de s'installer.
+    @State private var arrivingFromTab = false
     @AppStorage(StudyPanelMotion.storageKey) private var animateTransitions = true
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var studyTab: StudyPanel.Tab = .text
@@ -67,6 +69,13 @@ struct ReaderScreen: View {
         self.model = model
         _reader = StateObject(wrappedValue: ReaderController(document: document, model: model))
         _lookup = StateObject(wrappedValue: LookupSession(dictionary: model.dictionary))
+        // Changement d'onglet (recette 1.3.2 (64), point 1) : le panneau reprend tel quel, sans animation d'arrivée.
+        if let handoff = ReaderTabHandoff.shared.take() {
+            _side = State(initialValue: handoff.side)
+            _studyTab = State(initialValue: handoff.studyTab)
+            _autoOpenedSide = State(initialValue: true)
+            _arrivingFromTab = State(initialValue: true)
+        }
     }
 
     private var chromeVisible: Bool { reader.barsVisible || reader.isDrawing }
@@ -77,7 +86,7 @@ struct ReaderScreen: View {
     }
 
     private var panelAnimation: Animation? {
-        StudyPanelMotion.animation(enabled: animateTransitions, reduceMotion: reduceMotion)
+        arrivingFromTab ? nil : StudyPanelMotion.animation(enabled: animateTransitions, reduceMotion: reduceMotion)
     }
 
     private var panelTransition: AnyTransition {
@@ -214,6 +223,15 @@ struct ReaderScreen: View {
         // ←/→ du clavier physique, prioritaires sur le focus des champs (RET-050, Issue #81).
         .background(ReaderArrowKeysHost(reader: reader).frame(width: 0, height: 0))
         .onChange(of: side) { ReaderArrowKeys.shared.webOpen = $0 == .web }
+        // État du panneau confié au prochain lecteur si l'on change d'onglet (lu une seule fois par son `init`).
+        .onAppear {
+            ReaderTabHandoff.shared.current = { [side, studyTab] in (side, studyTab) }
+            if arrivingFromTab {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { arrivingFromTab = false }
+            }
+        }
+        .onChange(of: side) { new in ReaderTabHandoff.shared.current = { [studyTab] in (new, studyTab) } }
+        .onChange(of: studyTab) { new in ReaderTabHandoff.shared.current = { [side] in (side, new) } }
         .statusBarHidden(!chromeVisible)
         .persistentSystemOverlays(chromeVisible ? .automatic : .hidden)
         .onAppear {
@@ -869,5 +887,28 @@ enum PopupPlacement {
         let x = min(max(margin, word.minX - 30), size.width - w - margin)
         let y = useBelow ? word.maxY + gap : max(margin, word.minY - gap - h)
         return CGRect(x: x, y: y, width: w, height: h)
+    }
+}
+
+/// Passage d'un lecteur à l'autre par les onglets (recette 1.3.2 (64), point 1) : le panneau d'étude (ouvert ou non,
+/// onglet Texte, Notes…) est repris tel quel par le lecteur suivant, sans animation d'arrivée. `prepare()` est appelé
+/// juste avant le changement d'onglet ; le `init` du nouveau lecteur le consomme avec `take()`.
+@MainActor
+final class ReaderTabHandoff {
+    static let shared = ReaderTabHandoff()
+    struct State { let side: ReaderScreen.Side?; let studyTab: StudyPanel.Tab }
+
+    /// Lecture de l'état du lecteur affiché (fournie par lui).
+    var current: (() -> (ReaderScreen.Side?, StudyPanel.Tab))?
+    private var pending: State?
+
+    func prepare() {
+        guard let (side, tab) = current?() else { return }
+        pending = State(side: side, studyTab: tab)
+    }
+
+    func take() -> State? {
+        defer { pending = nil }
+        return pending
     }
 }
