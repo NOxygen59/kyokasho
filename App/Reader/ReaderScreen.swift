@@ -156,7 +156,7 @@ struct ReaderScreen: View {
                 .clipped()
                 .overlay(alignment: .bottomLeading) {
                     // Moniteur fixé puis pastilles IA (#47) ; plus de moniteur flottant à déplacer.
-                    ActivityDock()
+                    ActivityDock(showsMonitor: false)
                         .padding(.leading, Atelier.gap)
                         .padding(.bottom, chromeVisible && filmstripVisible && !reader.isDrawing ? 120 : Atelier.gap)
                 }
@@ -311,6 +311,16 @@ struct ReaderScreen: View {
                 if reader.hasSelection {
                     HighlightMenu { reader.highlightSelection(color: $0) }
                         .transition(.scale.combined(with: .opacity))
+                }
+                // Moniteur rangé en haut à droite, à côté des actions ; il se déroule vers le bas (recette 62, L9).
+                if monitorEnabled && monitorShown {
+                    ResourceMonitorPanel(expandsDown: true)
+                        .fixedSize()
+                        // Ne prend que la hauteur de sa ligne : la courbe déroulée passe par-dessus la page, sans
+                        // pousser la barre d'outils.
+                        .frame(height: 30, alignment: .top)
+                        .zIndex(1)
+                        .transition(.move(edge: .top).combined(with: .opacity))
                 }
                 actionsCapsule
             }

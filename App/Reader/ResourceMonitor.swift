@@ -116,58 +116,77 @@ private final class FrameCounter: NSObject {
     @objc func tick() { onFrame() }
 }
 
-/// Moniteur fixé en bas à gauche, dans la bibliothèque comme dans le lecteur (#47) : compact (trois valeurs) ou
-/// détaillé (courbe de la mesure choisie, au-dessus des valeurs). Il ne se déplace plus ; les pastilles des IA
-/// locales sortent à sa droite (`ActivityDock`).
-///
-/// En mode détaillé, les trois valeurs servent de sélecteur et le graphique occupe le reste : plus de sélecteur ni
-/// de légende sous la courbe (#40, panneau trop long).
+/// Moniteur de ressources, petit par défaut : CPU, RAM et FPS sur une ligne. La flèche déroule la courbe de la
+/// mesure choisie (touchée parmi les trois), avec une animation. Recette 1.3.2 (62), L9 : dans le lecteur, il est
+/// rangé dans la barre du haut à droite et se déroule **vers le bas** ; dans la bibliothèque, il reste en bas à
+/// gauche (`ActivityDock`) et se déroule vers le haut. La courbe est à 50 % d'opacité, avec un fondu vers son bord
+/// extérieur ; les valeurs restent nettes.
 struct ResourceMonitorPanel: View {
+    /// `true` : sous la barre du lecteur (la courbe s'ouvre en dessous) ; `false` : en bas d'écran (au-dessus).
+    var expandsDown = false
     @ObservedObject private var monitor = ResourceMonitor.shared
     @AppStorage(ResourceMonitor.shownKey) private var shown = false
     @AppStorage("monitor.detailed") private var detailed = false
     @AppStorage("monitor.metric") private var metric = ResourceMonitor.Metric.cpu
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            if detailed {
-                Chart(monitor.samples) { s in
-                    LineMark(x: .value("t", s.id), y: .value(metric.title, metric.value(s)))
-                        .foregroundStyle(Atelier.Tint.read)
-                        .interpolationMethod(.monotone)
-                    AreaMark(x: .value("t", s.id), y: .value(metric.title, metric.value(s)))
-                        .foregroundStyle(Atelier.Tint.read.opacity(0.15))
-                }
-                .chartXAxis(.hidden)
-                .chartYAxis { AxisMarks(position: .leading) { _ in AxisGridLine(); AxisValueLabel() } }
-                .frame(width: 280, height: 130)
-                .overlay(alignment: .topTrailing) {
-                    Text("90 s · \(metric.unit)").font(.caption2).foregroundStyle(Atelier.textTertiary)
-                }
-                .accessibilityLabel("\(metric.title), 90 dernières secondes")
-            }
-            HStack(spacing: 10) {
-                Image(systemName: "gauge.with.dots.needle.33percent").foregroundStyle(Atelier.Tint.read)
-                if let s = monitor.last {
-                    value(.cpu, String(format: "%.0f %%", s.cpu))
-                    value(.ram, String(format: "%.0f Mo", s.ramMB))
-                    value(.fps, String(format: "%.0f", s.fps))
-                } else {
-                    Text("Mesure…").foregroundStyle(Atelier.textTertiary)
-                }
-                Button { detailed.toggle() } label: { Image(systemName: detailed ? "chevron.down" : "chart.xyaxis.line") }
-                    .accessibilityLabel(detailed ? "Mode compact" : "Mode graphique")
-                Button { shown = false } label: { Image(systemName: "xmark") }
-                    .accessibilityLabel("Fermer le moniteur")
-            }
-            .buttonStyle(.plain)
+        VStack(alignment: .leading, spacing: 6) {
+            if detailed && !expandsDown { chart }
+            header
+            if detailed && expandsDown { chart }
         }
-        .font(.system(size: 12, weight: .semibold, design: .monospaced))
+        .font(.system(size: 11, weight: .semibold, design: .monospaced))
         .foregroundStyle(Atelier.textPrimary)
-        .padding(.horizontal, 12).padding(.vertical, 8)
+        .padding(.horizontal, 10).padding(.vertical, 6)
         .atelierPanel(radius: 14)
+        .animation(reduceMotion ? .easeOut(duration: 0.15) : .spring(response: 0.35, dampingFraction: 0.85), value: detailed)
         .onAppear { monitor.start() }
         .onDisappear { monitor.stop() }
+    }
+
+    private var header: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "gauge.with.dots.needle.33percent").foregroundStyle(Atelier.Tint.read)
+            if let s = monitor.last {
+                value(.cpu, String(format: "%.0f %%", s.cpu))
+                value(.ram, String(format: "%.0f Mo", s.ramMB))
+                value(.fps, String(format: "%.0f", s.fps))
+            } else {
+                Text("Mesure…").foregroundStyle(Atelier.textTertiary)
+            }
+            Button { detailed.toggle() } label: {
+                Image(systemName: "chevron.down")
+                    .rotationEffect(.degrees((detailed ? 180 : 0) + (expandsDown ? 0 : 180)))
+            }
+            .accessibilityLabel(detailed ? "Replier le graphique" : "Dérouler le graphique")
+            Button { shown = false } label: { Image(systemName: "xmark") }
+                .accessibilityLabel("Fermer le moniteur")
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var chart: some View {
+        Chart(monitor.samples) { s in
+            LineMark(x: .value("t", s.id), y: .value(metric.title, metric.value(s)))
+                .foregroundStyle(Atelier.Tint.read)
+                .interpolationMethod(.monotone)
+            AreaMark(x: .value("t", s.id), y: .value(metric.title, metric.value(s)))
+                .foregroundStyle(Atelier.Tint.read.opacity(0.3))
+        }
+        .chartXAxis(.hidden)
+        .chartYAxis { AxisMarks(position: .leading) { _ in AxisGridLine(); AxisValueLabel() } }
+        .frame(width: 260, height: 110)
+        // Seul le graphique est atténué : 50 %, avec un fondu vers son bord extérieur.
+        .opacity(0.5)
+        .mask(LinearGradient(colors: [.clear, .black, .black], startPoint: expandsDown ? .bottom : .top,
+                             endPoint: expandsDown ? .top : .bottom))
+        .overlay(alignment: expandsDown ? .bottomTrailing : .topTrailing) {
+            Text("90 s · \(metric.unit)").font(.caption2).foregroundStyle(Atelier.textTertiary)
+        }
+        .accessibilityLabel("\(metric.title), 90 dernières secondes")
+        .transition(reduceMotion ? .opacity
+                    : .move(edge: expandsDown ? .top : .bottom).combined(with: .opacity))
     }
 
     /// Valeur de l'en-tête ; en mode détaillé, la toucher choisit la courbe affichée (mesure choisie mise en avant).
@@ -193,12 +212,14 @@ struct ResourceMonitorPanel: View {
 /// Bas gauche de la bibliothèque et du lecteur (#47) : le moniteur (s'il est affiché), puis les pastilles des IA
 /// locales, qui sortent de sa droite en glissant (sans mouvement si « Réduire les animations » est activé).
 struct ActivityDock: View {
+    /// Lecteur : le moniteur est dans la barre du haut (recette 62, L9) ; seules les pastilles restent ici.
+    var showsMonitor = true
     @AppStorage(ResourceMonitor.enabledKey) private var monitorEnabled = false
     @AppStorage(ResourceMonitor.shownKey) private var monitorShown = false
 
     var body: some View {
         HStack(alignment: .bottom, spacing: 6) {
-            if monitorEnabled && monitorShown {
+            if showsMonitor && monitorEnabled && monitorShown {
                 ResourceMonitorPanel().transition(.opacity)
             }
             AITaskPill()
