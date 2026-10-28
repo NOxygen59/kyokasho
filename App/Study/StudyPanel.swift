@@ -648,6 +648,7 @@ struct StudyNotesTab: View {
     /// modification ne soit jamais enregistrée sur la page qu'on vient de quitter.
     @State private var draftPage: Int?
     @FocusState private var focused: Bool
+    @State private var markdownFile: SharedFile?
 
     private var page: Int { reader.focusSource }
     private let drafts = NoteDraftStore.shared
@@ -675,14 +676,13 @@ struct StudyNotesTab: View {
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(Atelier.Tint.annotate)
                 Spacer()
-                ShareLink(item: MarkdownFile(name: reader.document.title) { [reader] in
-                              MarkdownExporter.export(title: reader.document.title, comments: reader.notes,
-                                                      highlights: reader.allHighlights, bookmarks: reader.bookmarks)
-                          },
-                          preview: SharePreview("\(reader.document.title).md")) {
+                // Notes, surlignages et signets du livre en fichier `.md`, écrit d'abord puis partagé (recette
+                // 1.3.2 (61) : l'ancien partage n'ouvrait rien sur l'iPad).
+                Button { shareMarkdown() } label: {
                     Label("Markdown", systemImage: "square.and.arrow.up").font(.system(size: 13, weight: .semibold))
                 }
                 .foregroundStyle(Atelier.Tint.annotate)
+                .accessibilityHint("Partage les notes, surlignages et signets du livre en fichier Markdown")
             }
             ScrollView {
                 VStack(alignment: .leading, spacing: 10) {
@@ -697,11 +697,22 @@ struct StudyNotesTab: View {
                 }
             }
         }
+        .sheet(item: $markdownFile) { ActivityShareSheet(url: $0.url) }
         .onAppear { loadDraft(page) }
         .onChange(of: page) { loadDraft($0) }
     }
 
     /// Affiche le brouillon de `page`. Celui de la page quittée est déjà sur disque (écrit à chaque frappe).
+    private func shareMarkdown() {
+        let text = MarkdownExporter.export(title: reader.document.title, comments: reader.notes,
+                                           highlights: reader.allHighlights, bookmarks: reader.bookmarks)
+        do {
+            markdownFile = SharedFile(url: try MarkdownShareFile.write(text, title: reader.document.title))
+        } catch {
+            Diagnostics.error("Export Markdown impossible : \(error.localizedDescription)", "notes")
+        }
+    }
+
     private func loadDraft(_ page: Int) {
         guard draftPage != page else { return }
         draftPage = page
