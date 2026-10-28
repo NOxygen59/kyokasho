@@ -89,7 +89,7 @@ struct DocumentTabsBar: View {
                     .frame(height: 32)
                 Menu {
                     ForEach(model.documents.filter { !model.tabs.ids.contains($0.id) }) { document in
-                        Button(document.title) { model.openDocumentId = document.id }
+                        Button(document.title) { ReaderTabHandoff.shared.prepare(); model.openDocumentId = document.id }
                     }
                 } label: {
                     Image(systemName: "plus").font(.system(size: 13, weight: .bold))
@@ -104,12 +104,16 @@ struct DocumentTabsBar: View {
     private func select(_ document: LibraryDocument) {
         guard document.id != current else { return }
         Diagnostics.log("onglets : passage à « \(document.title) »", "lecteur")
+        ReaderTabHandoff.shared.prepare()
         model.openDocumentId = document.id
     }
 
     private func close(_ document: LibraryDocument) {
         Diagnostics.log("onglets : fermeture de « \(document.title) »", "lecteur")
+        ReaderTabHandoff.shared.prepare()
         model.closeTab(document.id)
+        // Dernier onglet fermé : retour à la bibliothèque, rien à reprendre.
+        if model.openDocumentId == nil { _ = ReaderTabHandoff.shared.take() }
     }
 }
 
