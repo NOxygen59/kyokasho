@@ -226,6 +226,7 @@ struct DocumentSettingsSheet: View {
                 } footer: {
                     Text("Guide les prochaines lectures OvisOCR2 et corrige les confusions d'écriture connues. Les pages déjà enregistrées ne sont pas rescannées ; rouvre le livre pour actualiser leur affichage.")
                 }
+                PageAdditionHistorySection(documentId: reader.document.id)
             }
             .navigationTitle("Ce document")
             .navigationBarTitleDisplayMode(.inline)
