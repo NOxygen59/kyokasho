@@ -127,6 +127,8 @@ struct StudyTextTab: View {
     @State private var bubble: PanelBubble?
     /// Pointeur (souris, trackpad) au-dessus de la bulle : elle ne se ferme pas tant qu'il y reste.
     @State private var pointerInBubble = false
+    /// Annule les fermetures différées devenues caduques (RET-042, #61).
+    @State private var hoverGate = HoverBubbleGate()
     /// Incrémenté à chaque fermeture : la vue web oublie le mot survolé (sinon il ne rouvrirait pas).
     @State private var hoverReset = 0
     @ObservedObject private var shift = ShiftKey.shared
@@ -277,7 +279,8 @@ struct StudyTextTab: View {
     // MARK: Bulle de contexte du dictionnaire (Issue #13)
 
     struct PanelBubble: Identifiable {
-        let id = UUID()
+        /// Gardé d'un mot à l'autre au survol (`HoverBubbleGate.reusesBubble`) : pas de nouvelle apparition à chaque mot.
+        var id = UUID()
         let session: LookupSession
         /// Mot en coordonnées de la fenêtre (`.global`).
         let wordRect: CGRect
@@ -296,12 +299,22 @@ struct StudyTextTab: View {
             if let bubble, bubble.hover, hover, bubble.wordRect == wordRect { return }
             session.start(text)
             pointerInBubble = false
-            withAnimation(bubbleAnimation) { bubble = PanelBubble(session: session, wordRect: wordRect, hover: hover) }
+            hoverGate.opened()
+            if let current = bubble, HoverBubbleGate.reusesBubble(currentIsHover: current.hover, incomingIsHover: hover) {
+                // Autre mot survolé : la même bulle suit le pointeur, sans rejouer son apparition (RET-042, #61).
+                var moved = PanelBubble(session: session, wordRect: wordRect, hover: hover)
+                moved.id = current.id
+                bubble = moved
+            } else {
+                withAnimation(bubbleAnimation) { bubble = PanelBubble(session: session, wordRect: wordRect, hover: hover) }
+            }
         case .hoverEnd:
             guard bubble?.hover == true else { return }
-            // Laisser le temps au pointeur d'entrer dans la bulle (elle est collée au mot).
+            // Laisser le temps au pointeur d'entrer dans la bulle (elle est collée au mot). Si un autre mot s'ouvre
+            // entre-temps, cette fermeture ne s'applique plus (RET-042, #61).
+            let token = hoverGate.token
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                if bubble?.hover == true, !pointerInBubble { closeBubble() }
+                if hoverGate.shouldClose(token: token), bubble?.hover == true, !pointerInBubble { closeBubble() }
             }
         case .tapOutside:
             closeBubble()
