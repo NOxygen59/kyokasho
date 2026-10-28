@@ -55,6 +55,7 @@ struct ReaderScreen: View {
     @AppStorage(ResourceMonitor.shownKey) private var monitorShown = false
     @State private var pageField = ""
     @ObservedObject private var keyboard = HardwareKeyboard.shared
+    @Environment(\.scenePhase) private var scenePhase
 
     enum Sheet: String, Identifiable {
         case search, ai, settings, pageCards
@@ -219,8 +220,14 @@ struct ReaderScreen: View {
         .onAppear {
             reader.load()
             ReaderArrowKeys.shared.webOpen = side == .web
+            ReadingTimeTracker.shared.readerOpened()
         }
-        .onDisappear { reader.close() }
+        .onDisappear {
+            reader.close()
+            ReadingTimeTracker.shared.readerClosed()
+        }
+        // Temps de lecture active (accueil) : pause en arrière-plan ou iPad verrouillé (RET-037, #52).
+        .onChange(of: scenePhase) { ReadingTimeTracker.shared.scenePhaseChanged($0) }
         .task { await deepl.refreshUsage() }
         .onChange(of: reader.lookupRequest) { request in
             if let request { lookup.start(request.text) } else { lookup.clear() }
