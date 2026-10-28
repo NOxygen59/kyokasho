@@ -65,7 +65,7 @@ Source : message de NOxygen59 du 27/10/2026. Build observée : QA02 « 1.3 (40) 
 | RET-016 | 5 | 2026-10-27 | Ergonomie | Boutons de page plus discrets | à confirmer | rapporté | [#19](https://github.com/NOxygen59/kyokasho/issues/19) | — | — |
 | RET-017 | 4 | 2026-10-27 | Bug (énergie) | 60 % de batterie en 1 h 30 avec l'IA locale | à confirmer | rapporté | [#20](https://github.com/NOxygen59/kyokasho/issues/20) | — | — |
 | RET-018 | 4 | 2026-10-27 | Fonction | Avertissement sur la consommation de l'IA locale à l'accueil | — | rapporté | [#21](https://github.com/NOxygen59/kyokasho/issues/21) | — | — |
-| RET-019 | 5 | 2026-10-27 | Fonction | Date et heure des notes, groupées par jour | — | rapporté | [#22](https://github.com/NOxygen59/kyokasho/issues/22) | — | — |
+| RET-019 | 5 | 2026-10-27 | Fonction | Date et heure des notes, groupées par jour | `claude/notes-heure-par-jour` `72c392c`, tests Mac | compilé iOS | [#22](https://github.com/NOxygen59/kyokasho/issues/22) | — (PR à ouvrir à la réouverture de GitHub) | cadrage NOxygen59 du 28/10 : heure de création discrète, notes groupées par jour (`createdAt` existant, aucune migration) ; `NoteDayGroups`, 3 tests ; compilé iOS ; non testé iPad |
 | RET-020 | 5 | 2026-10-26 | Fonction | Surligner directement les zones OCR détectées (accès facile, portable sur Mac) | — | rapporté | [#23](https://github.com/NOxygen59/kyokasho/issues/23) | — | — |
 | RET-021 | 5 | 2026-10-26 | Fonction | Survol Yomitan seulement pendant l'appui sur Maj | — | rapporté | [#24](https://github.com/NOxygen59/kyokasho/issues/24) | — | — |
 
