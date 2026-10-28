@@ -109,7 +109,11 @@ final class AppModel: ObservableObject {
             .sink { [weak self] list in
                 guard let self else { return }
                 // Une suppression en cours ne doit pas faire réapparaître le livre un instant.
-                let list = list.filter { !self.deletingIds.contains($0.id) }
+                let all = list.filter { !self.deletingIds.contains($0.id) }
+                // Corbeille : ces documents existent toujours mais quittent la bibliothèque.
+                self.trashedDocuments = all.filter { self.trash.contains($0.id) }
+                let list = all.filter { !self.trash.contains($0.id) }
+                self.purgeExpiredTrashOnce(all)
                 if self.openDocumentId != nil, Self.onlyReadingPositionChanged(self.documents, list) {
                     self.pendingDocuments = list
                 } else {
@@ -210,6 +214,57 @@ final class AppModel: ObservableObject {
 
     /// Documents en cours de suppression (cachés de la liste jusqu'à la fin de l'effacement).
     private var deletingIds: Set<String> = []
+
+    // MARK: Corbeille
+
+    static let trashKey = "library.trash"
+    /// Dates de mise à la corbeille (préférences, donc dans la sauvegarde) ; voir `DocumentTrash`.
+    private(set) var trash = DocumentTrash.decode(UserDefaults.standard.data(forKey: AppModel.trashKey))
+    /// Documents à la corbeille, du plus récent au plus ancien.
+    @Published private(set) var trashedDocuments: [LibraryDocument] = []
+    private var trashPurged = false
+
+    private func saveTrash() { UserDefaults.standard.set(trash.encoded(), forKey: Self.trashKey) }
+
+    /// « Supprimer » : met le document de côté (rien n'est effacé ; restaurable pendant 30 jours).
+    func moveToTrash(_ document: LibraryDocument) {
+        // Lecteur sur ce document : retour à la bibliothèque (son onglet disparaît avec lui de la liste).
+        if openDocumentId == document.id { openDocumentId = nil }
+        trash.put(document.id)
+        saveTrash()
+        documents.removeAll { $0.id == document.id }
+        pendingDocuments?.removeAll { $0.id == document.id }
+        if !trashedDocuments.contains(where: { $0.id == document.id }) { trashedDocuments.insert(document, at: 0) }
+        Diagnostics.log("corbeille : « \(document.title) » mis de côté", "bibliotheque")
+    }
+
+    func restoreFromTrash(_ document: LibraryDocument) {
+        trash.remove(document.id)
+        saveTrash()
+        trashedDocuments.removeAll { $0.id == document.id }
+        documents = ((try? database.allDocuments()) ?? documents).filter { !trash.contains($0.id) && !deletingIds.contains($0.id) }
+        Diagnostics.log("corbeille : « \(document.title) » restauré", "bibliotheque")
+    }
+
+    /// Efface pour de bon (le même effacement qu'avant la corbeille).
+    func deleteForever(_ document: LibraryDocument) {
+        trash.remove(document.id)
+        saveTrash()
+        trashedDocuments.removeAll { $0.id == document.id }
+        delete(document)
+    }
+
+    func emptyTrash() { trashedDocuments.forEach(deleteForever) }
+
+    /// Une fois par lancement : efface les documents restés plus de 30 jours, et oublie ceux qui n'existent plus.
+    private func purgeExpiredTrashOnce(_ all: [LibraryDocument]) {
+        guard !trashPurged, !all.isEmpty else { return }
+        trashPurged = true
+        trash.keep(only: Set(all.map(\.id)))
+        let expired = Set(trash.expired())
+        saveTrash()
+        for document in all where expired.contains(document.id) { deleteForever(document) }
+    }
 
     func delete(_ document: LibraryDocument) {
         let importer = importer
