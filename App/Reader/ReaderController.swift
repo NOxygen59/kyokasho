@@ -91,6 +91,14 @@ final class ReaderController: NSObject, ObservableObject {
     @Published var lookupRequest: LookupRequest?
     /// Rectangles (repère de la vue PDF) du texte touché puis du mot reconnu.
     @Published var lookupHighlight: [CGRect] = []
+    /// Mode « Surligner l'OCR » (#23) : glisser sur les zones de l'OCR surligne au lieu de faire défiler.
+    @Published var ocrHighlightMode = false
+    /// Aperçu du surlignage en cours (repère de la vue PDF).
+    @Published var ocrHighlightPreview: [CGRect] = []
+    /// Glisser en cours : page, OCR, cadre et premier caractère (fixés à l'appui).
+    var ocrHighlightDrag: OCRHighlightDrag?
+    /// +1 à chaque relâchement : un appui dont la lecture de l'OCR finit après le relâchement est ignoré.
+    var ocrHighlightGeneration = 0
 
     struct LookupRequest: Equatable {
         let id = UUID()

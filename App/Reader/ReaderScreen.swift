@@ -53,6 +53,8 @@ struct ReaderScreen: View {
     @ObservedObject private var deepl = DeepLService.shared
     @AppStorage(ResourceMonitor.enabledKey) private var monitorEnabled = false
     @AppStorage(ResourceMonitor.shownKey) private var monitorShown = false
+    /// Couleur du mode « Surligner l'OCR » (#23), choisie par appui long sur son bouton.
+    @AppStorage("highlight.ocrColor") private var ocrHighlightColor = HighlightColor.yellow
     @State private var pageField = ""
     @ObservedObject private var keyboard = HardwareKeyboard.shared
 
@@ -98,6 +100,9 @@ struct ReaderScreen: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .clipShape(RoundedRectangle(cornerRadius: docked == nil ? 0 : Atelier.radius, style: .continuous))
                     LookupHighlightLayer(rects: reader.lookupHighlight)
+                    if reader.ocrHighlightMode {
+                        OCRHighlightDragLayer(reader: reader, color: ocrHighlightColor)
+                    }
                     if chromeVisible {
                         // Portrait : la bande des pages s'arrête au bord du panneau d'étude flottant (recette 1.3.2 (59), A11).
                         chrome(filmstripTrailing: FilmstripLayout.trailingInset(
@@ -520,6 +525,16 @@ struct ReaderScreen: View {
                     if !reader.hoverLookup { reader.endLookup() }
                 }
             }
+            // Surligner en glissant sur les zones de l'OCR (#23) ; appui long : couleur.
+            ToolButton(icon: "highlighter", label: "Surligner l'OCR en glissant", tint: Color(ocrHighlightColor.uiColor),
+                       active: reader.ocrHighlightMode) {
+                reader.setOCRHighlightMode(!reader.ocrHighlightMode)
+            }
+            .contextMenu {
+                Picker("Couleur", selection: $ocrHighlightColor) {
+                    ForEach(HighlightColor.allCases, id: \.self) { Text(Self.colorName($0)).tag($0) }
+                }
+            }
             // Pencil → dictionnaire : seulement si l'option est activée dans les réglages.
             if pencilOption {
                 ToolButton(icon: "applepencil", label: "Le Pencil cherche dans le dictionnaire",
@@ -553,6 +568,16 @@ struct ReaderScreen: View {
         .buttonStyle(PressScale())
         .opacity(chromeVisible ? 1 : 0.35)
         .accessibilityLabel(forward ? "Page suivante" : "Page précédente")
+    }
+
+    static func colorName(_ color: HighlightColor) -> String {
+        switch color {
+        case .yellow: return "Jaune"
+        case .green: return "Vert"
+        case .blue: return "Bleu"
+        case .pink: return "Rose"
+        case .orange: return "Orange"
+        }
     }
 
     /// Champ « page » : numéro imprimé (ou chiffre romain des pages d'avant).
@@ -866,5 +891,38 @@ enum PopupPlacement {
         let x = min(max(margin, word.minX - 30), size.width - w - margin)
         let y = useBelow ? word.maxY + gap : max(margin, word.minY - gap - h)
         return CGRect(x: x, y: y, width: w, height: h)
+    }
+}
+
+/// Mode « Surligner l'OCR » (#23) : capte le glisser (doigt, Pencil, souris ou trackpad cliqué) au-dessus de la page
+/// et montre l'aperçu ; le défilement à un doigt est suspendu tant que le mode est actif (‹ › et ← → tournent les
+/// pages). Repère : celui de la vue PDF (même `ZStack`, comme `LookupHighlightLayer`).
+struct OCRHighlightDragLayer: View {
+    @ObservedObject var reader: ReaderController
+    let color: HighlightColor
+    @State private var started = false
+
+    var body: some View {
+        Canvas { context, _ in
+            for r in reader.ocrHighlightPreview where r.width > 0 {
+                context.fill(Path(roundedRect: r.insetBy(dx: -1, dy: -1), cornerRadius: 2),
+                             with: .color(Color(color.uiColor).opacity(0.45)))
+            }
+        }
+        .contentShape(Rectangle())
+        .gesture(DragGesture(minimumDistance: 0)
+            .onChanged { value in
+                if !started {
+                    started = true
+                    Task { await reader.ocrHighlightBegan(at: value.startLocation) }
+                } else {
+                    reader.ocrHighlightMoved(to: value.location)
+                }
+            }
+            .onEnded { _ in
+                started = false
+                reader.ocrHighlightEnded(color: color)
+            })
+        .accessibilityLabel("Zone de surlignage : glisser sur le texte de la page")
     }
 }
