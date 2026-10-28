@@ -134,7 +134,7 @@ Une anomalie critique démontrée peut modifier cet ordre, avec justification en
 **État de référence du 27/10/2026, après la recette 1.3.2 et le lot RET-043 à RET-047 :**
 
 - `main` : `6dac083` après les fusions du 27/10 (#66, #68, #70, #72), avant la fusion de cette clôture (#64) ; relever le SHA courant sur GitHub.
-- Registre central : [RETOURS-IPAD.md](RETOURS-IPAD.md), RET-001 à RET-048 ; prochain identifiant libre RET-049.
+- Registre central : [RETOURS-IPAD.md](RETOURS-IPAD.md), RET-001 à RET-050 ; prochain identifiant libre RET-051. RET-049 (#79, animation du sélecteur de pages) et RET-050 (#81, flèches du clavier captées par les champs de saisie) : rapportés.
 - Lot du 27/10 clos : #66 (RET-044), #68 (RET-043), #70 (RET-046) et #72 (RET-047) fusionnées sur autorisation de NOxygen59 ; `main` = `6dac083`, identique à la candidate locale 1.3.2 (52) (non publiée) hors numéro de version. #63, #65, #69, #71 fermées, confirmées iPad.
 - Ouverts : RET-041 (#60), RET-042 (#61) et RET-045 (#67, journal lent, suivi séparément), non résolus ; RET-048 (#74, rapport d'analyse hors bornes dans PageShift) : correctif PR #77, compilé iOS, en revue.
 - Tests PageShift (cadrage #73) : PR #75 fusionnée (`8b89b93`) ; S1 à S7 et R1 à R8 sur données synthétiques, dont 182 doubles interruptions ; suite complète `KyokashoKit` 218 tests, 7 ignorés, 0 échec ; aucun code de l'app modifié.
