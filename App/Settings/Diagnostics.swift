@@ -59,6 +59,12 @@ enum Diagnostics {
         queue.sync { DiagnosticLogSnapshot.read(from: file) }
     }
 
+    /// Fin du journal pour l'écran « Journal » (RET-045, #67). Lit sur la file du journal pour ne pas croiser une
+    /// écriture ou une rotation ; à appeler hors du fil principal.
+    static func tail() -> DiagnosticLogSnapshot.Tail {
+        queue.sync { DiagnosticLogSnapshot.readTail(from: file) }
+    }
+
     /// Au lancement : en-tête (version, appareil, mémoire) et gestionnaire d'erreurs MLX global, qui note le
     /// message **avant** l'arrêt (sinon le rapport de plantage d'iOS ne le contient pas).
     static func start() {
@@ -144,24 +150,50 @@ struct DiagnosticsSection: View {
 /// Instantané explicite, sans suivi périodique ni changement de la position de lecture.
 struct DiagnosticLogView: View {
     @Environment(\.dismiss) private var dismiss
-    @State private var text = "Chargement du journal…"
+    @State private var tail: DiagnosticLogSnapshot.Tail?
 
+    /// Seule la fin du journal est lue, hors du fil principal, et affichée ligne par ligne dans une liste paresseuse :
+    /// un journal de 2 Mo dans un seul `Text` mettait plus de 30 s à s'ouvrir (RET-045, #67).
     var body: some View {
         NavigationStack {
-            ScrollView {
-                Text(text).font(.system(size: 11, design: .monospaced))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .textSelection(.enabled).padding()
+            ScrollViewReader { proxy in
+                ScrollView {
+                    if let tail {
+                        LazyVStack(alignment: .leading, spacing: 0) {
+                            if tail.omittedBytes > 0 {
+                                Text("Fin du journal seulement (\(tail.lines.count) dernières lignes). « Partager le journal » transmet le fichier complet.")
+                                    .font(.footnote).foregroundStyle(.secondary).padding(.bottom, 8)
+                            }
+                            ForEach(tail.lines.indices, id: \.self) { index in
+                                Text(tail.lines[index]).font(.system(size: 11, design: .monospaced))
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .textSelection(.enabled)
+                                    .id(index)
+                            }
+                        }
+                        .padding()
+                    } else {
+                        ProgressView("Chargement du journal…").padding(.top, 40)
+                    }
+                }
+                // Les lignes les plus récentes sont en bas : y aller dès le chargement.
+                .onChange(of: tail) { tail in
+                    if let last = tail?.lines.indices.last { proxy.scrollTo(last, anchor: .bottom) }
+                }
             }
             .navigationTitle("Journal")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Actualiser") { text = Diagnostics.snapshot() }
+                    Button("Actualiser") { Task { await load() } }
                 }
                 ToolbarItem(placement: .confirmationAction) { Button("OK") { dismiss() } }
             }
-            .onAppear { text = Diagnostics.snapshot() }
+            .task { await load() }
         }
+    }
+
+    private func load() async {
+        tail = await Task.detached(priority: .userInitiated) { Diagnostics.tail() }.value
     }
 }
