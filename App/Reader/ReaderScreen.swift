@@ -150,7 +150,8 @@ struct ReaderScreen: View {
                 .frame(width: documentWidth, height: documentHeight)
                 .clipped()
                 .overlay(alignment: .bottomLeading) {
-                    AITaskPill()
+                    // Moniteur fixé puis pastilles IA (#47) ; plus de moniteur flottant à déplacer.
+                    ActivityDock()
                         .padding(.leading, Atelier.gap)
                         .padding(.bottom, chromeVisible && filmstripVisible && !reader.isDrawing ? 120 : Atelier.gap)
                 }
@@ -280,9 +281,6 @@ struct ReaderScreen: View {
             GeometryReader { area in
                 ZStack(alignment: .topLeading) {
                     FloatingToolbar(area: area.size) { vertical in toolItems(vertical: vertical) }
-                    if monitorEnabled && monitorShown {
-                        ResourceMonitorPanel(area: area.size)
-                    }
                     if let note = reader.openNote {
                         NoteWindow(reader: reader, note: note, area: area.size)
                     }
