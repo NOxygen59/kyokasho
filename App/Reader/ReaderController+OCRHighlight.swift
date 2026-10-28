@@ -6,6 +6,12 @@ import PDFKit
 import ReaderCore
 import UIKit
 
+/// Un pas annulable : surlignages retirés puis ajoutés (une fusion fait les deux).
+struct HighlightChange {
+    var removed: [Highlight]
+    var added: [Highlight]
+}
+
 /// Glisser en cours du mode « Surligner l'OCR » : tout ce qu'il faut pour suivre le pointeur sans rien attendre.
 struct OCRHighlightDrag {
     let page: PDFPage
@@ -26,6 +32,7 @@ extension ReaderController {
         ocrHighlightMode = on
         ocrHighlightDrag = nil
         ocrHighlightPreview = []
+        if !on { ocrHighlightErasing = false }
         if on {
             if isDrawing { setDrawing(false) }
             endLookup()
@@ -37,6 +44,7 @@ extension ReaderController {
 
     func ocrHighlightBegan(at point: CGPoint) async {
         ocrHighlightDrag = nil
+        if ocrHighlightErasing { erase(at: point); return }
         let generation = ocrHighlightGeneration
         guard let pdf, let page = pdfView.page(for: point, nearest: false) else { return }
         let index = pdf.index(for: page)
@@ -62,6 +70,7 @@ extension ReaderController {
     }
 
     func ocrHighlightMoved(to point: CGPoint) {
+        if ocrHighlightErasing { erase(at: point); return }
         guard var drag = ocrHighlightDrag else { return }
         // Hors de la page de départ : on garde le dernier caractère survolé.
         guard pdfView.page(for: point, nearest: false) == drag.page,
@@ -79,17 +88,51 @@ extension ReaderController {
             ocrHighlightDrag = nil
             ocrHighlightPreview = []
         }
-        guard let drag = ocrHighlightDrag, let pdf else { return }
+        guard let drag = ocrHighlightDrag else { return }
         let segments = OCRRangeSelection.segments(in: drag.ocr, from: drag.anchor, to: drag.last)
         let rects = OCRRangeSelection.boxes(in: drag.ocr, segments).map(drag.frame.pageRect)
         guard !rects.isEmpty else { return }
+        let fresh = rects.map { PageRect(x: $0.minX, y: $0.minY, width: $0.width, height: $0.height) }
+        // Pas de couches (recette 62, L5) : les surlignages recouverts sont absorbés, les rectangles fusionnés.
+        let covered = HighlightLayers.covered(by: fresh, among: highlights, page: drag.source)
+        let text = OCRRangeSelection.text(in: drag.ocr, segments)
+        let texts = covered.map(\.text).filter { !$0.isEmpty && !text.contains($0) } + [text]
         let highlight = Highlight(documentId: document.id, pageIndex: drag.source,
-                                  rects: rects.map { PageRect(x: $0.minX, y: $0.minY, width: $0.width, height: $0.height) },
-                                  color: color, text: OCRRangeSelection.text(in: drag.ocr, segments))
-        highlights.append(highlight)
-        annotate(highlight, in: pdf)
-        model.persist { try $0.save(highlight) }
-        Diagnostics.log("surligner OCR : p. \(drag.source + 1), \(highlight.text.count) caractère(s)", "lecteur")
+                                  rects: HighlightLayers.merged(covered.flatMap(\.rects) + fresh),
+                                  color: color, text: texts.joined(separator: "\n"))
+        apply(HighlightChange(removed: covered, added: [highlight]))
+        Diagnostics.log("surligner OCR : p. \(drag.source + 1), \(highlight.text.count) caractère(s), \(covered.count) fusionné(s)", "lecteur")
+    }
+
+    /// Gomme : efface le surlignage sous le point (repère de la vue PDF).
+    private func erase(at point: CGPoint) {
+        guard let pdf, let page = pdfView.page(for: point, nearest: false) else { return }
+        let index = pdf.index(for: page)
+        guard presented.indices.contains(index) else { return }
+        let p = pdfView.convert(point, to: page)
+        guard let hit = HighlightLayers.hit(Double(p.x), Double(p.y), in: highlights, page: presented[index].source) else { return }
+        apply(HighlightChange(removed: [hit], added: []))
+        Diagnostics.log("surligner OCR : surlignage effacé p. \(presented[index].source + 1)", "lecteur")
+    }
+
+    /// Applique un pas (retraits puis ajouts) et le garde pour ⌘Z (30 pas au plus).
+    private func apply(_ change: HighlightChange, record: Bool = true) {
+        change.removed.forEach(deleteHighlight)
+        for h in change.added {
+            highlights.append(h)
+            if let pdf { annotate(h, in: pdf) }
+            model.persist { try $0.save(h) }
+        }
+        guard record else { return }
+        highlightUndo.append(change)
+        if highlightUndo.count > 30 { highlightUndo.removeFirst(highlightUndo.count - 30) }
+    }
+
+    /// ⌘Z : défait le dernier surlignage, fusion ou coup de gomme (les surlignages retirés reviennent tels quels).
+    func undoHighlight() {
+        guard let last = highlightUndo.popLast() else { return }
+        apply(HighlightChange(removed: last.added, added: last.removed), record: false)
+        Diagnostics.log("surligner OCR : annulation", "lecteur")
     }
 
     private func updateOCRHighlightPreview() {

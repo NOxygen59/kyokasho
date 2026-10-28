@@ -102,6 +102,10 @@ struct ReaderScreen: View {
                     LookupHighlightLayer(rects: reader.lookupHighlight)
                     if reader.ocrHighlightMode {
                         OCRHighlightDragLayer(reader: reader, color: ocrHighlightColor)
+                        OCRHighlightControls(reader: reader)
+                            .frame(maxHeight: .infinity, alignment: .bottom)
+                            .padding(.bottom, chromeVisible ? 110 : 24)
+                            .transition(.move(edge: .bottom).combined(with: .opacity))
                     }
                     if chromeVisible {
                         // Portrait : la bande des pages s'arrête au bord du panneau d'étude flottant (recette 1.3.2 (59), A11).
@@ -924,5 +928,31 @@ struct OCRHighlightDragLayer: View {
                 reader.ocrHighlightEnded(color: color)
             })
         .accessibilityLabel("Zone de surlignage : glisser sur le texte de la page")
+    }
+}
+
+/// Commandes du mode « Surligner l'OCR » (recette 1.3.2 (62), L5) : surligner ou gommer, annuler (⌘Z), terminer.
+struct OCRHighlightControls: View {
+    @ObservedObject var reader: ReaderController
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Picker("Outil", selection: $reader.ocrHighlightErasing) {
+                Label("Surligner", systemImage: "highlighter").tag(false)
+                Label("Gomme", systemImage: "eraser").tag(true)
+            }
+            .pickerStyle(.segmented)
+            .frame(width: 200)
+            Button { reader.undoHighlight() } label: { Image(systemName: "arrow.uturn.backward") }
+                .keyboardShortcut("z", modifiers: .command)
+                .disabled(reader.highlightUndo.isEmpty)
+                .accessibilityLabel("Annuler (⌘ Z)")
+            Button("Terminé") { reader.setOCRHighlightMode(false) }
+                .fontWeight(.semibold)
+                .keyboardShortcut(.escape, modifiers: [])
+        }
+        .font(.system(size: 14))
+        .padding(.horizontal, 14).padding(.vertical, 8)
+        .atelierPanel(radius: 20)
     }
 }

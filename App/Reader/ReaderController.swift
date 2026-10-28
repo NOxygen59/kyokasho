@@ -99,6 +99,10 @@ final class ReaderController: NSObject, ObservableObject {
     var ocrHighlightDrag: OCRHighlightDrag?
     /// +1 à chaque relâchement : un appui dont la lecture de l'OCR finit après le relâchement est ignoré.
     var ocrHighlightGeneration = 0
+    /// Gomme du mode « Surligner l'OCR » (recette 62, L5) : glisser efface les surlignages touchés.
+    @Published var ocrHighlightErasing = false
+    /// Annulation (⌘Z ou bouton) des surlignages faits ou effacés dans le mode, le plus récent en dernier.
+    @Published var highlightUndo: [HighlightChange] = []
 
     struct LookupRequest: Equatable {
         let id = UUID()
