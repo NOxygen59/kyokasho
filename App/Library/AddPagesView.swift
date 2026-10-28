@@ -168,6 +168,8 @@ struct AddPagesView: View {
         // Ancien PDF et ses réponses « texte intégré ? » oubliés (hors du fil principal : peut attendre un OCR).
         Task.detached { PDFPool.release(current) }
         done = true
+        PageAdditionHistory.record(PageAddition(date: Date(), added: added, insertedBefore: offset, totalAfter: pageCount,
+                                                sources: items.filter { $0.url != nil }.map(\.name)), documentId: id)
         // Nouvelles pages lues par l'IA (seulement celles pas encore lues).
         if let updated = try? model.database.document(id: id) {
             DocumentScan.start(updated, url: current, ocr: model.ocr)
