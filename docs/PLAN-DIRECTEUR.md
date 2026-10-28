@@ -141,7 +141,7 @@ Une anomalie critique démontrée peut modifier cet ordre, avec justification en
 - Tests PageShift (cadrage #73) : PR #75 fusionnée (`8b89b93`) ; S1 à S7 et R1 à R8 sur données synthétiques, dont 182 doubles interruptions ; suite complète `KyokashoKit` 218 tests, 7 ignorés, 0 échec ; aucun code de l'app modifié.
 - Actions désactivé ; aucune release ; dépendances/forks MLX inchangés ; aucune donnée personnelle manipulée.
 
-**Une seule séquence recommandée :** revue de Codex puis décision de NOxygen59 sur la PR DATA-02 (#83, tests et documentation seulement) ; la restauration réelle sur iPad (niveau B de QA-02) reste bloquée sans accords distincts. Une seule Issue et une seule PR à la fois ; aucune manipulation de la bibliothèque personnelle.
+**Une seule séquence recommandée :** à la reprise des publications (purge de l'historique Git par GitHub Support), décision de NOxygen59 sur la PR DATA-02 (#83, tests et documentation seulement ; revue de Codex favorable après corrections, puis auto-relecture en deux passes de Claude, Codex n'étant plus disponible) ; la restauration réelle sur iPad (niveau B de QA-02) reste bloquée sans accords distincts. Une seule Issue et une seule PR à la fois ; aucune manipulation de la bibliothèque personnelle.
 
 **Question standard de reprise :** « Lis `AGENTS.md`, `docs/PLAN-DIRECTEUR.md` et `docs/RETOURS-IPAD.md`, compare avec GitHub actuellement, puis indique l'état vérifié, les blocages et une seule prochaine action ; ne fusionne ni ne publie sans mon accord. »
 
