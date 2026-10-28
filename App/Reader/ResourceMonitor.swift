@@ -117,6 +117,9 @@ private final class FrameCounter: NSObject {
 }
 
 /// Panneau flottant du moniteur : compact (trois valeurs) ou détaillé (courbe de la mesure choisie).
+///
+/// En mode détaillé, les trois valeurs de l'en-tête servent de sélecteur et le graphique occupe le reste : plus de
+/// sélecteur ni de légende sous la courbe (#40, panneau trop long).
 struct ResourceMonitorPanel: View {
     let area: CGSize
     @ObservedObject private var monitor = ResourceMonitor.shared
@@ -135,9 +138,9 @@ struct ResourceMonitorPanel: View {
             HStack(spacing: 10) {
                 Image(systemName: "gauge.with.dots.needle.33percent").foregroundStyle(Atelier.Tint.read)
                 if let s = monitor.last {
-                    value("CPU", String(format: "%.0f %%", s.cpu))
-                    value("RAM", String(format: "%.0f Mo", s.ramMB))
-                    value("FPS", String(format: "%.0f", s.fps))
+                    value(.cpu, String(format: "%.0f %%", s.cpu))
+                    value(.ram, String(format: "%.0f Mo", s.ramMB))
+                    value(.fps, String(format: "%.0f", s.fps))
                 } else {
                     Text("Mesure…").foregroundStyle(Atelier.textTertiary)
                 }
@@ -148,10 +151,6 @@ struct ResourceMonitorPanel: View {
             }
             .buttonStyle(.plain)
             if detailed {
-                Picker("Mesure", selection: $metric) {
-                    ForEach(ResourceMonitor.Metric.allCases) { Text($0.title).tag($0) }
-                }
-                .pickerStyle(.segmented)
                 Chart(monitor.samples) { s in
                     LineMark(x: .value("t", s.id), y: .value(metric.title, metric.value(s)))
                         .foregroundStyle(Atelier.Tint.read)
@@ -161,8 +160,11 @@ struct ResourceMonitorPanel: View {
                 }
                 .chartXAxis(.hidden)
                 .chartYAxis { AxisMarks(position: .leading) { _ in AxisGridLine(); AxisValueLabel() } }
-                .frame(width: 280, height: 120)
-                Text("90 dernières secondes · \(metric.unit)").font(.caption2).foregroundStyle(Atelier.textTertiary)
+                .frame(width: 280, height: 130)
+                .overlay(alignment: .topTrailing) {
+                    Text("90 s · \(metric.unit)").font(.caption2).foregroundStyle(Atelier.textTertiary)
+                }
+                .accessibilityLabel("\(metric.title), 90 dernières secondes")
             }
         }
         .font(.system(size: 12, weight: .semibold, design: .monospaced))
@@ -183,10 +185,22 @@ struct ResourceMonitorPanel: View {
         .onDisappear { monitor.stop() }
     }
 
-    private func value(_ label: String, _ text: String) -> some View {
-        HStack(spacing: 3) {
-            Text(label).foregroundStyle(Atelier.textTertiary)
+    /// Valeur de l'en-tête ; en mode détaillé, la toucher choisit la courbe affichée (mesure choisie mise en avant).
+    @ViewBuilder
+    private func value(_ m: ResourceMonitor.Metric, _ text: String) -> some View {
+        let label = HStack(spacing: 3) {
+            Text(m.title).foregroundStyle(detailed && metric == m ? Atelier.Tint.read : Atelier.textTertiary)
             Text(text)
+        }
+        if detailed {
+            Button { metric = m } label: {
+                label.padding(.horizontal, 5).padding(.vertical, 2)
+                    .background(metric == m ? Atelier.Tint.read.opacity(0.15) : .clear, in: Capsule())
+            }
+            .accessibilityLabel("Courbe \(m.title)")
+            .accessibilityAddTraits(metric == m ? .isSelected : [])
+        } else {
+            label
         }
     }
 }
