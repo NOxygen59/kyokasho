@@ -26,6 +26,7 @@ struct LibraryView: View {
     @State private var renaming: LibraryDocument?
     @EnvironmentObject private var review: ReviewModel
     @EnvironmentObject private var themes: ThemeManager
+    @ObservedObject private var readingTime = ReadingTimeTracker.shared
     @State private var showReview = false
     @State private var settingPageOne: LibraryDocument?
     @State private var pageOneText = ""
@@ -229,16 +230,13 @@ struct LibraryView: View {
         .buttonStyle(PressScale())
     }
 
+    /// Temps de lecture active, à la place de « Progression XX/XX pages » (RET-037, #52).
     private var statsCard: some View {
-        let pages = model.documents.reduce(0) { $0 + $1.pageCount }
-        let read = model.documents.reduce(0) { $0 + min($1.lastPageIndex + 1, $1.pageCount) }
-        return VStack(alignment: .leading, spacing: 8) {
-            AtelierLabel("Progression")
-            HStack(alignment: .firstTextBaseline, spacing: 4) {
-                Text("\(read)").font(Atelier.display(30)).foregroundStyle(Atelier.textPrimary)
-                Text("/ \(pages) pages").font(.system(size: 13)).foregroundStyle(Atelier.textSecondary)
-            }
-            ProgressView(value: Double(read), total: Double(max(pages, 1))).tint(Atelier.Tint.read)
+        VStack(alignment: .leading, spacing: 8) {
+            AtelierLabel("Temps de lecture")
+            Text(ReadingClock.format(readingTime.clock.elapsed(at: Date())))
+                .font(Atelier.display(30)).foregroundStyle(Atelier.textPrimary)
+            Text("livre ouvert à l'écran").font(.system(size: 13)).foregroundStyle(Atelier.textSecondary)
         }
         .padding(14)
         .background(Atelier.surfaceHigh, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
