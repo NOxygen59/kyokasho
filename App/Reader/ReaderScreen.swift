@@ -123,7 +123,7 @@ struct ReaderScreen: View {
                             .opacity(0).allowsHitTesting(false)
                     }
                     // Flèches pour tourner les pages : avec les barres affichées, ou toujours si un clavier
-                    // est branché (← → aussi au clavier).
+                    // est branché. ← → au clavier : `ReaderArrowKeys`, indépendamment de ces boutons.
                     if keyboard.connected || chromeVisible {
                         HStack {
                             pageArrow(left: true)
@@ -211,10 +211,14 @@ struct ReaderScreen: View {
             }
         }
         .background(Atelier.canvas.ignoresSafeArea())
+        // ←/→ du clavier physique, prioritaires sur le focus des champs (RET-050, Issue #81).
+        .background(ReaderArrowKeysHost(reader: reader).frame(width: 0, height: 0))
+        .onChange(of: side) { ReaderArrowKeys.shared.webOpen = $0 == .web }
         .statusBarHidden(!chromeVisible)
         .persistentSystemOverlays(chromeVisible ? .automatic : .hidden)
         .onAppear {
             reader.load()
+            ReaderArrowKeys.shared.webOpen = side == .web
         }
         .onDisappear { reader.close() }
         .task { await deepl.refreshUsage() }
@@ -547,7 +551,6 @@ struct ReaderScreen: View {
                 .background(Atelier.surface.opacity(0.7), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
         .buttonStyle(PressScale())
-        .keyboardShortcut(left ? .leftArrow : .rightArrow, modifiers: [])
         .opacity(chromeVisible ? 1 : 0.35)
         .accessibilityLabel(forward ? "Page suivante" : "Page précédente")
     }
