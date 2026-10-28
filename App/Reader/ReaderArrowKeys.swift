@@ -15,6 +15,9 @@ import UIKit
 /// Elles sont **retirées** pendant une saisie réelle (`UITextField` / `UITextView` en édition) et tant que le
 /// navigateur est ouvert (les pages web ont leurs propres champs) : les flèches y déplacent alors le curseur.
 /// En mode dessin, la toile PencilKit n'est pas une saisie : ←/→ tournent la page (décision de NOxygen59, 28/10).
+///
+/// ↑/↓ sont aussi captées, sans action : sinon le focus clavier d'iPadOS les utilisait pour entrer dans la bulle du
+/// numéro de page, qui passait en saisie, et ←/→ ne tournaient plus les pages (recette du 28/10, RET-052).
 @MainActor
 final class ReaderArrowKeys {
     static let shared = ReaderArrowKeys()
@@ -31,6 +34,8 @@ final class ReaderArrowKeys {
     private let commands: [UIKeyCommand] = [
         (UIKeyCommand.inputLeftArrow, #selector(UIApplication.kyokashoArrowLeft(_:))),
         (UIKeyCommand.inputRightArrow, #selector(UIApplication.kyokashoArrowRight(_:))),
+        (UIKeyCommand.inputUpArrow, #selector(UIApplication.kyokashoArrowIgnored(_:))),
+        (UIKeyCommand.inputDownArrow, #selector(UIApplication.kyokashoArrowIgnored(_:))),
     ].map { input, action in
         let command = UIKeyCommand(input: input, modifierFlags: [], action: action)
         command.wantsPriorityOverSystemBehavior = true
@@ -117,6 +122,11 @@ extension UIApplication {
 
     @objc func kyokashoArrowRight(_ sender: UIKeyCommand) {
         MainActor.assumeIsolated { ReaderArrowKeys.shared.turn(towardLeft: false) }
+    }
+
+    /// ↑/↓ : rien, volontairement (voir `ReaderArrowKeys`) ; seulement pour que le focus clavier ne les reçoive pas.
+    @objc func kyokashoArrowIgnored(_ sender: UIKeyCommand) {
+        MainActor.assumeIsolated { Diagnostics.log("Flèche ↑/↓ ignorée (lecteur)", "clavier") }
     }
 }
 
