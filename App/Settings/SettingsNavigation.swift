@@ -220,7 +220,6 @@ struct StudyPanelSettingsView: View {
                     Text("Fixe à droite").tag(StudyPanelMode.docked)
                     Text("Fenêtre déplaçable").tag(StudyPanelMode.floating)
                     Text("Plein écran").tag(StudyPanelMode.full)
-                    Text("Réduite en pastille").tag(StudyPanelMode.minimized)
                 }
             } header: { Text("Fenêtre texte OCR") } footer: {
                 Text("À droite en paysage, elle dispose de sa propre colonne. En portrait, la fenêtre apparaît par-dessus la page. Tu peux aussi changer sa position depuis les boutons de son en-tête.")

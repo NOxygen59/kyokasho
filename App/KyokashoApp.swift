@@ -14,6 +14,8 @@ struct KyokashoApp: App {
         Diagnostics.start()
         // Avant toute lecture du fond des pages (`@AppStorage`, `PageTone.current`) : valeurs retirées remplacées.
         PageTone.migrateStoredSetting()
+        // Avant toute lecture de la position du panneau d'étude (`@AppStorage`) : position retirée remplacée.
+        StudyPanelMode.migrateStoredSetting()
     }
 
     @StateObject private var model = AppModel()
