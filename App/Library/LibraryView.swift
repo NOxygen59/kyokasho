@@ -300,11 +300,25 @@ struct LibraryView: View {
                 emptyState
             } else {
                 ScrollView {
+                    // Sections « Manuels », « Livres », « Non classés » (recette 1.3.2 (61), E5) : chacune s'allonge
+                    // avec ses documents, les suivantes descendent d'autant.
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 180, maximum: 220), spacing: 22)], spacing: 26) {
-                        ForEach(filtered) { document in
-                            Button { model.openDocumentId = document.id } label: { DocumentCard(document: document) }
-                                .buttonStyle(PressScale())
-                                .contextMenu { menu(for: document) }
+                        ForEach(LibrarySections.group(filtered), id: \.title) { section in
+                            Section {
+                                ForEach(section.documents) { document in
+                                    Button { model.openDocumentId = document.id } label: { DocumentCard(document: document) }
+                                        .buttonStyle(PressScale())
+                                        .contextMenu { menu(for: document) }
+                                }
+                            } header: {
+                                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                                    AtelierLabel(section.title, tint: section.category == .textbook ? Atelier.Tint.read
+                                                 : section.category == .book ? Atelier.Tint.annotate : Atelier.textTertiary)
+                                    Text("\(section.documents.count)").font(Atelier.mono).foregroundStyle(Atelier.textTertiary)
+                                    Spacer()
+                                }
+                                .padding(.top, 8)
+                            }
                         }
                     }
                     .padding(.vertical, 6)
