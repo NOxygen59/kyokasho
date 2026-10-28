@@ -174,4 +174,10 @@ Build **non publiée**, construite depuis le commit local `bfd4312` (= `main` `2
 |---|---|---|---|---|---|---|---|---|---|
 | RET-050 | — | 2026-10-28 | Bug (navigation clavier) | Les flèches gauche et droite ciblent désormais les champs de saisie au lieu de changer de page lorsque l’utilisateur ne cherche pas à modifier un champ | 1.3.2 (59) et (60) locales, `5200a3c` | confirmé iPad | [#81](https://github.com/NOxygen59/kyokasho/issues/81) | [#85](https://github.com/NOxygen59/kyokasho/pull/85) | retour direct de NOxygen59 ; cause : `keyboardShortcut` de SwiftUI perdait face au focus clavier d'iPadOS, remplacé par des `UIKeyCommand` prioritaires retirés pendant la saisie et côté Web ; compilé iOS ; recette NOxygen59 1.3.2 (59) B1–B8 et C1–C6 OK, 1.3.2 (60) R2–R3 OK ; lié à la demande de navigation clavier [#18](https://github.com/NOxygen59/kyokasho/issues/18) |
 
-Prochain identifiant libre : **RET-051**.
+### Demande du 28/10/2026 — recette 1.3.2 (59), point B4
+
+| ID | Alias | Date | Type | Retour (résumé) | Build | État | Issue | PR | Preuve |
+|---|---|---|---|---|---|---|---|---|---|
+| RET-051 | — | 2026-10-28 | Ergonomie (notes) | Dans les notes, afficher un petit avertissement pour chaque brouillon non ajouté, avec la page concernée, jusqu'à l'appui sur le bouton qui ajoute réellement la note | 1.3.2 (59) locale (recette) | rapporté | [#87](https://github.com/NOxygen59/kyokasho/issues/87) | — | demande de NOxygen59 pendant la recette 1.3.2 (59), point B4 ; correctif local sur la branche `claude/notes-brouillons-avertissement`, non publié, non testé iPad |
+
+Prochain identifiant libre : **RET-052**.
