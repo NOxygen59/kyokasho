@@ -5,7 +5,7 @@
 
 ## Contrat et portée
 
-Base `431f1c6`, retour rapporté sur iPad QA02 1.3 build 40. Autorisation du chat du 26/10/2026 :
+Base `28d8b4c`, retour rapporté sur iPad QA02 1.3 build 40. Autorisation du chat du 26/10/2026 :
 corrections minimales, PR distinctes, aucune fusion/candidate. Aucun changement des modes du panneau,
 des données documentaires, de PDFKit, des dépendances/forks, des versions ou d'Actions.
 O05 : même géométrie avant/après relâchement ; petits gestes effectifs après rotation ; poignée accessible.

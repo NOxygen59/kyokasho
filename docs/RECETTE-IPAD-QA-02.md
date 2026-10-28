@@ -3,7 +3,7 @@
 
 # QA-02 — recette iPad PageShift et sauvegarde
 
-**Préparation du 25 octobre 2026 ; aucun essai iPad effectué.** Base étudiée : `f83aec8c61d88f1e6c119376590899c9c1ce2876` (PR #1 à #6 fusionnées). Agent : Codex. Autorisation : demande de NOxygen59 dans le chat du 25/10, préparation et PR uniquement, sans build, bibliothèque personnelle, release ni GitHub Actions.
+**Préparation du 25 octobre 2026 ; aucun essai iPad effectué.** Base étudiée : `23d33c0ff70747ba7b47a7484c1e713ed0cd83c5` (PR #1 à #6 fusionnées). Agent : Codex. Autorisation : demande de NOxygen59 dans le chat du 25/10, préparation et PR uniquement, sans build, bibliothèque personnelle, release ni GitHub Actions.
 
 ## Fiche courte — commencer par A0, A1 et A2
 

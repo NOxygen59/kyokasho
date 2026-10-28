@@ -9,7 +9,7 @@
 
 ## Tests existants
 
-Au SHA `f83aec8c61d88f1e6c119376590899c9c1ce2876` (25/10/2026), `Packages/KyokashoKit/Package.swift` déclare **neuf cibles de tests**, avec **163 déclarations `func test` dans 20 fichiers**. Ce relevé des sources n'est pas une nouvelle exécution. Les sept cibles / 142 tests du registre historique en bas de page décrivent la base avant les PR #2/#3. GLMOCRKit garde sa cible séparée de tests de modèles. `project.yml` ne déclare pas de cible XCTest de l'app ni de tests UI.
+Au SHA `23d33c0ff70747ba7b47a7484c1e713ed0cd83c5` (25/10/2026), `Packages/KyokashoKit/Package.swift` déclare **neuf cibles de tests**, avec **163 déclarations `func test` dans 20 fichiers**. Ce relevé des sources n'est pas une nouvelle exécution. Les sept cibles / 142 tests du registre historique en bas de page décrivent la base avant les PR #2/#3. GLMOCRKit garde sa cible séparée de tests de modèles. `project.yml` ne déclare pas de cible XCTest de l'app ni de tests UI.
 
 **Campagne en préparation : [QA-02 — recette iPad PageShift et sauvegarde](RECETTE-IPAD-QA-02.md).** Elle détaille le corpus synthétique à fabriquer, les gestes, les attentes, les conditions d'arrêt, les autorisations et les fiches GitHub. Aucun essai iPad ni build n'est effectué par cette préparation.
 
@@ -122,7 +122,7 @@ Ne pas provoquer une interruption destructive sur l'unique bibliothèque de l'ut
 
 ## Registre des preuves — 25 octobre 2026
 
-Base : `16d2dd8`, Mac arm64, Apple Swift 6.4 (`swiftlang-6.4.0.34.1`), cible package macOS 14. Le premier lancement sous sandbox échoue sur le cache compilateur ; un lancement avec accès aux caches autorisé a ensuite compilé les dépendances épinglées.
+Base : `d866319`, Mac arm64, Apple Swift 6.4 (`swiftlang-6.4.0.34.1`), cible package macOS 14. Le premier lancement sous sandbox échoue sur le cache compilateur ; un lancement avec accès aux caches autorisé a ensuite compilé les dépendances épinglées.
 
 **Avant correction du test :** `swift test --disable-automatic-resolution` échoue à la compilation, car `ServiceTests.testCacheAndEngines` lit deux fois `.ocrCacheStats().pages` alors que l'API renvoie `(bytes, results)`. Aucun résultat d'exécution de suite ne découle de cet échec.
 
@@ -147,7 +147,7 @@ App iOS complète : non recompilée par ce lot. GLMOCRKit avec poids : non exéc
 
 ## PageShift — sécurité et reprise (27 octobre 2026, cadrage #73)
 
-Base : `main` `8b957dd`. Fichier `Packages/KyokashoKit/Tests/PageShiftTests/PageShiftSafetyTests.swift`, extension de `PageShiftRecoveryTests` (même harnais `withFixture` : dossier temporaire, `PageShift.support` redirigé, aucune bibliothèque réelle).
+Base : `main` `85839f0`. Fichier `Packages/KyokashoKit/Tests/PageShiftTests/PageShiftSafetyTests.swift`, extension de `PageShiftRecoveryTests` (même harnais `withFixture` : dossier temporaire, `PageShift.support` redirigé, aucune bibliothèque réelle).
 
 | Code | Test | Ce qui est vérifié |
 |---|---|---|
@@ -186,7 +186,7 @@ Non couvert : parcours UIKit, espace disque réel, gros PDF, conteneur TrollStor
 
 ## QA-02 — vérifications de préparation du 25 octobre 2026
 
-Base de travail : `f83aec8c61d88f1e6c119376590899c9c1ce2876`, worktree dédié `codex/qa02-recette-ipad`. Mac local, macOS 27.0.1 (26A434), Python 3.13.13. La PR ne modifie que des documents Markdown.
+Base de travail : `23d33c0ff70747ba7b47a7484c1e713ed0cd83c5`, worktree dédié `codex/qa02-recette-ipad`. Mac local, macOS 27.0.1 (26A434), Python 3.13.13. La PR ne modifie que des documents Markdown.
 
 | Contrôle | Nature de la preuve | Résultat |
 |---|---|---|

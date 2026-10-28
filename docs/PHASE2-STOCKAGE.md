@@ -3,11 +3,11 @@
 
 # Phase 2 — correction ciblée de la reprise d'ajout de pages
 
-Base : `16d2dd8` (code v1.3). Référence documentaire : PR #1, conservée séparément et non fusionnée. Aucun numéro de version, dépendance, fork MLX ou schéma SQLite n'est changé par ce lot.
+Base : `d866319` (code v1.3). Référence documentaire : PR #1, conservée séparément et non fusionnée. Aucun numéro de version, dépendance, fork MLX ou schéma SQLite n'est changé par ce lot.
 
 ## Défauts reproduits avant correction
 
-Le commit de tests `4bb2afc` compile le véritable fichier `App/Library/PageShift.swift` dans une cible de tests Mac, via un lien symbolique. Seule la composition UI est doublée ; PDFKit, AppDatabase, ReviewStore et DocumentAnalysis sont ceux du projet. Trois tests échouent sur le protocole ancien :
+Le commit de tests `7872806` compile le véritable fichier `App/Library/PageShift.swift` dans une cible de tests Mac, via un lien symbolique. Seule la composition UI est doublée ; PDFKit, AppDatabase, ReviewStore et DocumentAnalysis sont ceux du projet. Trois tests échouent sur le protocole ancien :
 
 1. Un journal `cards` ambigu est supprimé sans prouver que les cartes ont été déplacées.
 2. Un journal `report` peut poursuivre jusqu'à sa suppression alors que le rapport est encore sur les anciens numéros.

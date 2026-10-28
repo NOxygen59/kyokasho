@@ -9,7 +9,7 @@ Ce document prépare une future mise en œuvre de l'intégration continue. Il ne
 
 Audit réalisé le **25 octobre 2026** sur le commit local combiné `edd09b29df7dd9aa02cbdbe01730a3a054e98985` (`codex/validation-combinee-2`). Ce checkout assemble le travail des PR 1, 2 et 3. Avant toute mise en œuvre, le futur agent doit relever le SHA de départ, relire `AGENTS.md`, [le plan directeur](PLAN-DIRECTEUR.md) et [la feuille de route](FEUILLE-DE-ROUTE.md), puis comparer ce document avec les workflows réellement présents sur la branche cible.
 
-**Vérification lors de la publication (25 octobre 2026, `main` à `ee07c55`)** : l'arbre de fichiers du commit audité `edd09b2` est identique à celui de `main` au commit `c2b1b29` (fusion de la PR #3) ; `main` n'a reçu depuis que le plan directeur (PR #4). Les trois workflows décrits ci-dessous sont identiques, octet pour octet, à ceux de `main`. Le reste du document est publié tel que rédigé par Codex ; les tarifs, labels de runners et versions Xcode cités n'ont **pas** été revérifiés lors de cette publication.
+**Vérification lors de la publication (25 octobre 2026, `main` à `c419479`)** : l'arbre de fichiers du commit audité `edd09b2` est identique à celui de `main` au commit `8aa1ab3` (fusion de la PR #3) ; `main` n'a reçu depuis que le plan directeur (PR #4). Les trois workflows décrits ci-dessous sont identiques, octet pour octet, à ceux de `main`. Le reste du document est publié tel que rédigé par Codex ; les tarifs, labels de runners et versions Xcode cités n'ont **pas** été revérifiés lors de cette publication.
 
 **La politique [Zéro dépense](#zéro-dépense--politique-obligatoire) prime sur tout ce document.** GitHub Actions est **désactivé** depuis le 25/10/2026 (décision CI-0) : les tests s'exécutent localement et se documentent dans les PR.
 
@@ -27,7 +27,7 @@ Trois workflows sont versionnés sur l'état audité.
 
 Les trois workflows utilisent `actions/checkout` avec un SHA complet et `persist-credentials: false`. C'est la bonne base de sécurité. Ils n'utilisent ni secrets, ni signature, ni `pull_request_target`, ni runner auto-hébergé.
 
-L'historique des exécutions GitHub n'a pas été interrogé avec succès pendant l'audit initial. Relevé lors de la publication, sur `main` à `c2b1b29` : `Stockage Mac` (run `40152582505`, job `tests` ≈ 1 min 22 s), `Sauvegarde synthétique` (run `40152580509`, jobs `outil` ≈ 5 s et `bases-reelles` ≈ 1 min 49 s) et `Documentation` réussis. Les deux workflows Mac ont été lancés **manuellement** (`workflow_dispatch`) : ils ne se déclenchent pas sur un push vers `main`. Le futur agent devra associer chaque résultat au SHA exact avant de définir des contrôles obligatoires.
+L'historique des exécutions GitHub n'a pas été interrogé avec succès pendant l'audit initial. Relevé lors de la publication, sur `main` à `8aa1ab3` : `Stockage Mac` (run `40152582505`, job `tests` ≈ 1 min 22 s), `Sauvegarde synthétique` (run `40152580509`, jobs `outil` ≈ 5 s et `bases-reelles` ≈ 1 min 49 s) et `Documentation` réussis. Les deux workflows Mac ont été lancés **manuellement** (`workflow_dispatch`) : ils ne se déclenchent pas sur un push vers `main`. Le futur agent devra associer chaque résultat au SHA exact avant de définir des contrôles obligatoires.
 
 ### Tests déjà automatisables
 
