@@ -5,7 +5,7 @@
 
 ## État et première automatisation
 
-Au commit audité `16d2dd8`, aucun workflow GitHub Actions n'est versionné. Cela ne prouve pas l'absence de contrôles externes ; seulement l'absence de pipeline défini dans ce dépôt.
+Au commit audité `d866319`, aucun workflow GitHub Actions n'est versionné. Cela ne prouve pas l'absence de contrôles externes ; seulement l'absence de pipeline défini dans ce dépôt.
 
 Ce lot ajoute un contrôle documentaire léger : `.github/workflows/documentation.yml` lance `scripts/check_documentation.py` sur les changements de Markdown et sur ses propres fichiers. Le script contrôle les destinations locales des liens Markdown, sans accès réseau et sans exécuter l'app. Un contrôle local réussi ne prouve pas qu'une exécution GitHub Actions a déjà eu lieu.
 

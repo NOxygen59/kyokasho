@@ -3,7 +3,7 @@
 
 # Documentation de Kyōkasho
 
-Ce dossier organise la reprise du projet à partir de **v1.3, build 40**. L'audit du 25 octobre 2026 porte sur le commit `16d2dd89e4cb811b0bc956ef2a225431ed83864a`, dont le code applicatif correspond à v1.3 (`7fb7362`). Ce n'est pas une nouvelle version de l'application.
+Ce dossier organise la reprise du projet à partir de **v1.3, build 40**. L'audit du 25 octobre 2026 porte sur le commit `d866319e6462564f19f48758af3326ee62becd7c`, dont le code applicatif correspond à v1.3 (`f70c28f`). Ce n'est pas une nouvelle version de l'application.
 
 ## Choisir son point d'entrée
 

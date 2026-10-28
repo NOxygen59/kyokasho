@@ -3,7 +3,7 @@
 
 # Relecture finale de la PR documentaire #1
 
-Relecture du 25 octobre 2026, base `16d2dd8`, proposition initiale `44e450f`.
+Relecture du 25 octobre 2026, base `d866319`, proposition initiale `07c8a45`.
 
 - Le diff de `App/`, des sources des packages, des manifestes, du paquetage et de `project.yml` est vide. Les seules modifications Swift sont deux références d'assertions de test, `.pages` vers `.results`, correspondant au tuple réel de `AppDatabase.ocrCacheStats`. Aucun comportement applicatif n'est modifié.
 - La recette historique de test MLX ne lance plus de mise à jour de dépendances ; le nettoyage du checkout de maintenance utilise `trash` conformément aux consignes. Il s’agit uniquement de corrections des instructions, pas d’une exécution de ces commandes.

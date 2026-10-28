@@ -5,7 +5,7 @@
 
 ## Périmètre et méthode
 
-Audit du 25 octobre 2026 sur `16d2dd89e4cb811b0bc956ef2a225431ed83864a` : mêmes sources applicatives que le tag v1.3, plus l'histoire du développement. La branche `main` distante a été comparée par SHA à la copie locale. Lecture des manifestes, du projet XcodeGen, du script de paquetage, des tests, de la documentation et de chemins sensibles : `PageShift`, `DocumentAITextStore`, `DocumentKnowledge`, interface MeCab. Il s'agit d'un audit ciblé, pas d'une revue exhaustive de chaque ligne ni d'un audit de sécurité complet.
+Audit du 25 octobre 2026 sur `d866319e6462564f19f48758af3326ee62becd7c` : mêmes sources applicatives que le tag v1.3, plus l'histoire du développement. La branche `main` distante a été comparée par SHA à la copie locale. Lecture des manifestes, du projet XcodeGen, du script de paquetage, des tests, de la documentation et de chemins sensibles : `PageShift`, `DocumentAITextStore`, `DocumentKnowledge`, interface MeCab. Il s'agit d'un audit ciblé, pas d'une revue exhaustive de chaque ligne ni d'un audit de sécurité complet.
 
 Le fichier joint `HISTOIRE-DU-DEVELOPPEMENT.md` a été lu et recoupé avec sa version déjà présente dans le dépôt. Ses annonces de tests et releases restent des preuves historiques attribuées à leurs sources. Aucun simulateur, iPad, téléchargement de modèle ou nouvelle release n'est nécessaire à ce lot documentaire.
 

@@ -3,7 +3,7 @@
 
 # Nettoyage recommandé — classement avant toute refactorisation
 
-Inspection du code v1.3 (`16d2dd8`), recoupée avec la correction PageShift proposée séparément. Aucun code n'est supprimé ou déplacé par ce document. Les noms et responsabilités constituent des points de départ, pas une preuve d'inutilité fondée sur une seule recherche textuelle.
+Inspection du code v1.3 (`d866319`), recoupée avec la correction PageShift proposée séparément. Aucun code n'est supprimé ou déplacé par ce document. Les noms et responsabilités constituent des points de départ, pas une preuve d'inutilité fondée sur une seule recherche textuelle.
 
 | Rang | Zone et constat | Bénéfice attendu | Risque / preuve préalable |
 |---|---|---|---|

@@ -8,7 +8,7 @@
 O03 : après enregistrement d'une correction, le lecteur ouvert reflète le cache concerné ; les lignes
 acceptées ne redeviennent pas douteuses et les lignes non acceptées restent à revoir.
 O07 : établir la frontière qui cesse de répondre, sans présumer d'une cause commune avec O02.
-Base indépendante `431f1c6`. Autorisation du chat du 26/10/2026 : correction et PR, aucune fusion/candidate.
+Base indépendante `28d8b4c`. Autorisation du chat du 26/10/2026 : correction et PR, aucune fusion/candidate.
 Invariants : corrections manuelles conservées, pas de migration ni changement des moteurs, iOS 16 maintenu.
 
 ## O03 — preuve et correction
