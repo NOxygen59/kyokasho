@@ -178,6 +178,6 @@ Build **non publiée**, construite depuis le commit local `bfd4312` (= `main` `2
 
 | ID | Alias | Date | Type | Retour (résumé) | Build | État | Issue | PR | Preuve |
 |---|---|---|---|---|---|---|---|---|---|
-| RET-051 | — | 2026-10-28 | Ergonomie (notes) | Dans les notes, afficher un petit avertissement pour chaque brouillon non ajouté, avec la page concernée, jusqu'à l'appui sur le bouton qui ajoute réellement la note | 1.3.2 (59) locale (recette) | rapporté | [#87](https://github.com/NOxygen59/kyokasho/issues/87) | — | demande de NOxygen59 pendant la recette 1.3.2 (59), point B4 ; correctif local sur la branche `claude/notes-brouillons-avertissement`, non publié, non testé iPad |
+| RET-051 | — | 2026-10-28 | Ergonomie (notes) | Dans les notes, afficher un petit avertissement pour chaque brouillon non ajouté, avec la page concernée, jusqu'à l'appui sur le bouton qui ajoute réellement la note | `claude/notes-brouillons-avertissement` `8f7bcc8`, tests Mac | compilé iOS | [#87](https://github.com/NOxygen59/kyokasho/issues/87) | [#88](https://github.com/NOxygen59/kyokasho/pull/88) (brouillon) | demande de NOxygen59 pendant la recette 1.3.2 (59), point B4 ; compilé iOS, suite Swift 232 (7 ignorés), 2 tests `NoteDraftStoreTests` ; non testé iPad |
 
 Prochain identifiant libre : **RET-052**.
