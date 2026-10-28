@@ -46,32 +46,6 @@ struct SearchSheet: View {
     }
 }
 
-/// Fichier Markdown partageable (nom de fichier propre, type .md).
-struct MarkdownFile: Transferable {
-    /// Texte construit seulement au moment du partage (pas à chaque redessin de la vue).
-    let make: @MainActor @Sendable () -> String
-    let name: String
-
-    init(name: String, make: @escaping @MainActor @Sendable () -> String) {
-        self.name = name
-        self.make = make
-    }
-
-    init(text: String, name: String) {
-        self.init(name: name) { text }
-    }
-
-    static var transferRepresentation: some TransferRepresentation {
-        FileRepresentation(exportedContentType: UTType(filenameExtension: "md") ?? .plainText) { file in
-            let safe = file.name.replacingOccurrences(of: "/", with: "-")
-            let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(safe).md")
-            let text = await file.make()
-            try text.write(to: url, atomically: true, encoding: .utf8)
-            return SentTransferredFile(url)
-        }
-    }
-}
-
 // MARK: - Page vers IA
 
 struct AIPageSheet: View {

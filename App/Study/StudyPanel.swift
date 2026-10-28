@@ -664,6 +664,7 @@ struct StudyNotesTab: View {
     /// Pages dont le brouillon n'est pas encore ajouté (RET-051). Relu depuis `NoteDraftStore` à l'ouverture,
     /// au changement de page et après chaque enregistrement : le disque reste la seule source de vérité.
     @State private var pendingPages: [Int] = []
+    @State private var markdownFile: SharedFile?
 
     private var page: Int { reader.focusSource }
     private let drafts = NoteDraftStore.shared
@@ -691,14 +692,13 @@ struct StudyNotesTab: View {
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(Atelier.Tint.annotate)
                 Spacer()
-                ShareLink(item: MarkdownFile(name: reader.document.title) { [reader] in
-                              MarkdownExporter.export(title: reader.document.title, comments: reader.notes,
-                                                      highlights: reader.allHighlights, bookmarks: reader.bookmarks)
-                          },
-                          preview: SharePreview("\(reader.document.title).md")) {
+                // Notes, surlignages et signets du livre en fichier `.md`, écrit d'abord puis partagé (recette
+                // 1.3.2 (61) : l'ancien partage n'ouvrait rien sur l'iPad).
+                Button { shareMarkdown() } label: {
                     Label("Markdown", systemImage: "square.and.arrow.up").font(.system(size: 13, weight: .semibold))
                 }
                 .foregroundStyle(Atelier.Tint.annotate)
+                .accessibilityHint("Partage les notes, surlignages et signets du livre en fichier Markdown")
             }
             ScrollView {
                 VStack(alignment: .leading, spacing: 10) {
@@ -715,6 +715,7 @@ struct StudyNotesTab: View {
                 }
             }
         }
+        .sheet(item: $markdownFile) { ActivityShareSheet(url: $0.url) }
         .onAppear { loadDraft(page); refreshPending() }
         .onChange(of: page) { loadDraft($0); refreshPending() }
     }
@@ -738,6 +739,16 @@ struct StudyNotesTab: View {
     }
 
     /// Affiche le brouillon de `page`. Celui de la page quittée est déjà sur disque (écrit à chaque frappe).
+    private func shareMarkdown() {
+        let text = MarkdownExporter.export(title: reader.document.title, comments: reader.notes,
+                                           highlights: reader.allHighlights, bookmarks: reader.bookmarks)
+        do {
+            markdownFile = SharedFile(url: try MarkdownShareFile.write(text, title: reader.document.title))
+        } catch {
+            Diagnostics.error("Export Markdown impossible : \(error.localizedDescription)", "notes")
+        }
+    }
+
     private func loadDraft(_ page: Int) {
         guard draftPage != page else { return }
         draftPage = page
@@ -784,14 +795,24 @@ struct StudyNotesTab: View {
                     .lineLimit(4)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
-            // Heure de création, discrète sur le côté (RET-019, #22).
-            Text(NoteDayGroups.time(comment.createdAt)).font(Atelier.mono).foregroundStyle(Atelier.textTertiary)
-                .accessibilityLabel("créée à \(NoteDayGroups.time(comment.createdAt))")
+            VStack(alignment: .trailing, spacing: 6) {
+                // Heure de création, discrète sur le côté (RET-019, #22).
+                Text(NoteDayGroups.time(comment.createdAt)).font(Atelier.mono).foregroundStyle(Atelier.textTertiary)
+                    .accessibilityLabel("créée à \(NoteDayGroups.time(comment.createdAt))")
+                // Modifier : la note s'ouvre dans sa fenêtre, où texte et dessin se modifient. Toucher la note fait
+                // la même chose, mais rien ne le montrait (recette 1.3.2 (61), D1).
+                Button { reader.openNote = comment } label: {
+                    Image(systemName: "square.and.pencil").font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Atelier.Tint.annotate)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Modifier la note")
+            }
         }
         .contentShape(Rectangle())
         .onTapGesture { reader.openNote = comment }
         .contextMenu {
-            Button { reader.openNote = comment } label: { Label("Ouvrir", systemImage: "macwindow") }
+            Button { reader.openNote = comment } label: { Label("Modifier", systemImage: "square.and.pencil") }
             if showPage { Button { reader.go(toSource: comment.pageIndex) } label: { Label("Aller à la page", systemImage: "arrow.right") } }
             Button(role: .destructive) { reader.deleteNote(comment) } label: { Label("Supprimer", systemImage: "trash") }
         }
