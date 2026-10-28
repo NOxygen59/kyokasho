@@ -686,6 +686,10 @@ struct StudyNotesTab: View {
     /// au changement de page et après chaque enregistrement : le disque reste la seule source de vérité.
     @State private var pendingPages: [Int] = []
     @State private var markdownFile: SharedFile?
+    /// Note en cours de modification dans la liste, et son texte (recette 1.3.2 (62), N1).
+    @State private var editingID: String?
+    @State private var editText = ""
+    @FocusState private var editFocused: Bool
 
     private var page: Int { reader.focusSource }
     private let drafts = NoteDraftStore.shared
@@ -811,18 +815,36 @@ struct StudyNotesTab: View {
                         .buttonStyle(.plain)
                     }
                 }
-                Text(comment.body.isEmpty ? "(note sans texte)" : comment.body)
-                    .foregroundStyle(comment.body.isEmpty ? Atelier.textTertiary : Atelier.textPrimary)
-                    .lineLimit(4)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                if editingID == comment.id {
+                    // Modification sur place : la fenêtre flottante ne montrait pas le texte (recette 62, N1).
+                    TextEditor(text: $editText)
+                        .focused($editFocused)
+                        .scrollContentBackground(.hidden)
+                        .frame(minHeight: 70, maxHeight: 160)
+                        .padding(4)
+                        .background(Atelier.surfaceHigh, in: RoundedRectangle(cornerRadius: Atelier.smallRadius, style: .continuous))
+                    HStack {
+                        Button("Enregistrer") { saveEdit(comment) }
+                            .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.annotate))
+                            .keyboardShortcut(.return, modifiers: .command)
+                        Button("Annuler") { editingID = nil }
+                            .font(.system(size: 13, weight: .semibold))
+                            .keyboardShortcut(.cancelAction)
+                    }
+                } else {
+                    Text(comment.body.isEmpty ? "(note sans texte)" : comment.body)
+                        .foregroundStyle(comment.body.isEmpty ? Atelier.textTertiary : Atelier.textPrimary)
+                        .lineLimit(4)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
             }
             VStack(alignment: .trailing, spacing: 6) {
                 // Heure de création, discrète sur le côté (RET-019, #22).
                 Text(NoteDayGroups.time(comment.createdAt)).font(Atelier.mono).foregroundStyle(Atelier.textTertiary)
                     .accessibilityLabel("créée à \(NoteDayGroups.time(comment.createdAt))")
-                // Modifier : la note s'ouvre dans sa fenêtre, où texte et dessin se modifient. Toucher la note fait
-                // la même chose, mais rien ne le montrait (recette 1.3.2 (61), D1).
-                Button { reader.openNote = comment } label: {
+                // Modifier : le texte se modifie ici même (recette 1.3.2 (62), N1). Toucher la note ouvre toujours
+                // sa fenêtre flottante, pour le dessin.
+                Button { startEdit(comment) } label: {
                     Image(systemName: "square.and.pencil").font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(Atelier.Tint.annotate)
                 }
@@ -831,12 +853,26 @@ struct StudyNotesTab: View {
             }
         }
         .contentShape(Rectangle())
-        .onTapGesture { reader.openNote = comment }
+        .onTapGesture { if editingID != comment.id { reader.openNote = comment } }
         .contextMenu {
-            Button { reader.openNote = comment } label: { Label("Modifier", systemImage: "square.and.pencil") }
+            Button { startEdit(comment) } label: { Label("Modifier le texte", systemImage: "square.and.pencil") }
+            Button { reader.openNote = comment } label: { Label("Ouvrir en fenêtre (dessin)", systemImage: "macwindow") }
             if showPage { Button { reader.go(toSource: comment.pageIndex) } label: { Label("Aller à la page", systemImage: "arrow.right") } }
             Button(role: .destructive) { reader.deleteNote(comment) } label: { Label("Supprimer", systemImage: "trash") }
         }
+    }
+
+    private func startEdit(_ comment: PageComment) {
+        editText = comment.body
+        editingID = comment.id
+        editFocused = true
+    }
+
+    /// Enregistre seulement un vrai changement ; la note relue dans `reader.notes` (une fenêtre a pu la changer).
+    private func saveEdit(_ comment: PageComment) {
+        let current = reader.notes.first { $0.id == comment.id } ?? comment
+        if let edited = current.editing(body: editText) { reader.saveNote(edited) }
+        editingID = nil
     }
 
     private func add() {
