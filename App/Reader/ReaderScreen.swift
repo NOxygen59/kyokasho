@@ -36,7 +36,14 @@ struct ReaderScreen: View {
     @State private var studyTab: StudyPanel.Tab = .text
     @AppStorage(StudyPanelMode.storageKey) private var studyMode = StudyPanelMode.docked
     @AppStorage(StudyPanelMode.restoreKey) private var studyRestore = StudyPanelMode.docked
+    /// Choix gardé entre les sessions. L'affichage passe par `filmstripVisible` : un changement d'`@AppStorage`
+    /// arrive par la notification de `UserDefaults`, hors de la transaction `withAnimation`, et la bande apparaissait
+    /// sans transition (RET-049, Issue #79).
     @AppStorage("reader.filmstripShown") private var filmstripShown = true
+    @State private var filmstripVisible = UserDefaults.standard.object(forKey: "reader.filmstripShown") as? Bool ?? true
+    /// Vrai dès la première ouverture : la bande reste ensuite montée, masquée, pour garder la position de défilement
+    /// et ne pas recréer les miniatures à chaque ouverture.
+    @State private var filmstripMounted = UserDefaults.standard.object(forKey: "reader.filmstripShown") as? Bool ?? true
     @AppStorage("reader.trackpadScrollPassThrough") private var trackpadScrollPassThrough = true
     @AppStorage("pencil.lookupOption") private var pencilOption = false
     @AppStorage(PageTone.storageKey) private var pageTone = PageTone.normal
@@ -92,7 +99,10 @@ struct ReaderScreen: View {
                         .clipShape(RoundedRectangle(cornerRadius: docked == nil ? 0 : Atelier.radius, style: .continuous))
                     LookupHighlightLayer(rects: reader.lookupHighlight)
                     if chromeVisible {
-                        chrome.transition(.opacity)
+                        // Portrait : la bande des pages s'arrête au bord du panneau d'étude flottant (recette 1.3.2 (59), A11).
+                        chrome(filmstripTrailing: FilmstripLayout.trailingInset(
+                            portraitPanelShown: docked == .study && !landscape, panelWidth: panelWidth, gap: Atelier.gap))
+                            .transition(.opacity)
                     }
                     if let request = reader.lookupRequest {
                         GeometryReader { area in
@@ -142,7 +152,7 @@ struct ReaderScreen: View {
                 .overlay(alignment: .bottomLeading) {
                     AITaskPill()
                         .padding(.leading, Atelier.gap)
-                        .padding(.bottom, chromeVisible && filmstripShown && !reader.isDrawing ? 120 : Atelier.gap)
+                        .padding(.bottom, chromeVisible && filmstripVisible && !reader.isDrawing ? 120 : Atelier.gap)
                 }
                 .animation(.easeOut(duration: 0.18), value: chromeVisible)
                 if reservesSide {
@@ -250,7 +260,7 @@ struct ReaderScreen: View {
 
     // MARK: Chrome flottant
 
-    private var chrome: some View {
+    private func chrome(filmstripTrailing: CGFloat) -> some View {
         VStack(spacing: 0) {
             HStack(alignment: .top, spacing: Atelier.gap) {
                 titleCapsule
@@ -286,33 +296,58 @@ struct ReaderScreen: View {
             }
                 .padding(Atelier.gap)
             if !reader.isDrawing {
-                if filmstripShown {
-                    PageFilmstrip(reader: reader)
-                        .overlay(alignment: .topTrailing) {
-                            Button { withAnimation(.easeOut(duration: 0.2)) { filmstripShown = false } } label: {
-                                Image(systemName: "chevron.down").font(.system(size: 12, weight: .bold))
-                                    .frame(width: 28, height: 28).foregroundStyle(Atelier.textPrimary)
-                                    .background(Atelier.surfaceHigh, in: Circle())
+                ZStack(alignment: .bottom) {
+                    if filmstripMounted {
+                        PageFilmstrip(reader: reader)
+                            .overlay(alignment: .topTrailing) {
+                                Button { setFilmstrip(false) } label: {
+                                    Image(systemName: "chevron.down").font(.system(size: 12, weight: .bold))
+                                        .frame(width: 28, height: 28).foregroundStyle(Atelier.textPrimary)
+                                        .background(Atelier.surfaceHigh, in: Circle())
+                                }
+                                .buttonStyle(PressScale())
+                                .accessibilityLabel("Rentrer la bande des pages")
+                                .offset(x: -10, y: -12)
                             }
-                            .buttonStyle(PressScale())
-                            .accessibilityLabel("Rentrer la bande des pages")
-                            .offset(x: -10, y: -12)
-                        }
-                        .padding(.horizontal, Atelier.gap)
-                        .padding(.bottom, 10)
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
-                } else {
-                    Button { withAnimation(.easeOut(duration: 0.2)) { filmstripShown = true } } label: {
-                        Label("Pages", systemImage: "chevron.up").font(.system(size: 13, weight: .semibold))
-                            .padding(.horizontal, 14).padding(.vertical, 8)
-                            .foregroundStyle(Atelier.textPrimary)
-                            .atelierPanel(radius: 18)
+                            .padding(.horizontal, Atelier.gap)
+                            .padding(.bottom, 10)
+                            // Masquée sans être retirée : glissement court et fondu, fondu seul avec « Réduire les animations ».
+                            .offset(y: filmstripVisible || reduceMotion ? 0 : 24)
+                            .opacity(filmstripVisible ? 1 : 0)
+                            .allowsHitTesting(filmstripVisible)
+                            .accessibilityHidden(!filmstripVisible)
+                            // Première ouverture dans la session (bande rangée au lancement) : même mouvement.
+                            .transition(.opacity.combined(with: .offset(y: reduceMotion ? 0 : 24)))
                     }
-                    .buttonStyle(PressScale())
-                    .padding(.bottom, 10)
+                    if !filmstripVisible {
+                        Button { setFilmstrip(true) } label: {
+                            Label("Pages", systemImage: "chevron.up").font(.system(size: 13, weight: .semibold))
+                                .padding(.horizontal, 14).padding(.vertical, 8)
+                                .foregroundStyle(Atelier.textPrimary)
+                                .atelierPanel(radius: 18)
+                        }
+                        .buttonStyle(PressScale())
+                        .padding(.bottom, 10)
+                        .transition(.opacity)
+                    }
                 }
+                .padding(.trailing, filmstripTrailing)
+                // Suit le panneau qui entre ou sort (le conteneur coupe l'animation des changements de `side`).
+                .animation(panelAnimation, value: filmstripTrailing)
             }
         }
+    }
+
+    /// Ouvre ou ferme la bande des pages avec l'animation des fenêtres (mêmes réglages que la fenêtre OCR :
+    /// « Animer les changements de fenêtre », « Réduire les animations »), puis garde le choix. La bande est en
+    /// surimpression : le PDF n'est pas redimensionné, seule la pastille des tâches IA suit. Un appui pendant
+    /// l'animation la reprend depuis l'état courant.
+    private func setFilmstrip(_ shown: Bool) {
+        withAnimation(StudyPanelMotion.animation(enabled: animateTransitions, reduceMotion: reduceMotion)) {
+            if shown { filmstripMounted = true }
+            filmstripVisible = shown
+        }
+        filmstripShown = shown
     }
 
     private var titleCapsule: some View {
@@ -618,13 +653,16 @@ struct PageFilmstrip: View {
     @ObservedObject var reader: ReaderController
 
     var body: some View {
+        // Pages réellement à l'écran : une en page simple, la planche en double page (recette 1.3.2 (59), A2).
+        let visible = FilmstripLayout.highlightedPages(current: reader.currentSourcePage, shown: reader.shownSources,
+                                                       isDouble: reader.settings.layout == .double)
         ScrollViewReader { proxy in
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(spacing: 8) {
                     ForEach(0..<reader.document.pageCount, id: \.self) { page in
                         FilmstripCell(thumbnails: reader.model.thumbnails, documentId: reader.document.id, fileURL: reader.fileURL, page: page,
                                       label: reader.document.pageLabel(page),
-                                      current: page == reader.currentSourcePage)
+                                      visible: visible.contains(page))
                             .id(page)
                             .onTapGesture { reader.go(toSource: page) }
                     }
@@ -649,8 +687,12 @@ struct FilmstripCell: View {
     let fileURL: URL
     let page: Int
     let label: String
-    let current: Bool
+    let visible: Bool
     @State private var image: UIImage?
+
+    /// Repère des pages à l'écran : bleu vif fixe, lisible sur tous les thèmes, là où la teinte « lecture »
+    /// (pastel, jaune pâle selon le thème) se voyait mal sur les miniatures (recette 1.3.2 (59), A2).
+    static let visibleMark = Color(hex: 0x0A84FF)
 
     var body: some View {
         VStack(spacing: 3) {
@@ -659,9 +701,9 @@ struct FilmstripCell: View {
                 if let image { Image(uiImage: image).resizable().scaledToFit().clipShape(RoundedRectangle(cornerRadius: 4)) }
             }
             .frame(width: 46, height: 62)
-            .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(current ? Atelier.Tint.read : .clear, lineWidth: 2))
-            Text(label).font(.system(size: 10, weight: .semibold, design: .monospaced))
-                .foregroundStyle(current ? Atelier.Tint.read : Atelier.textTertiary)
+            .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(visible ? Self.visibleMark : .clear, lineWidth: 3))
+            Text(label).font(.system(size: 10, weight: visible ? .bold : .semibold, design: .monospaced))
+                .foregroundStyle(visible ? Self.visibleMark : Atelier.textTertiary)
         }
         .onAppear(perform: load)
     }
