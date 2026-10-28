@@ -56,7 +56,7 @@ extension BackupRoundTripTests {
         "App/Library/AddPagesView.swift": ("temporaire : tmp/AddPages-<UUID>/", ["AddPages-\\(UUID().uuidString)", "merged.pdf"]),
         "App/Library/PDFMergeView.swift": ("temporaire : tmp/Merge-<UUID>/", ["Merge-\\(UUID().uuidString)"]),
         "App/Library/DocumentExport.swift": ("temporaire : tmp/Export/", ["Export"]),
-        "App/Reader/ReaderSheets.swift": ("temporaire : tmp/<titre>.md (partage)", ["\\(safe).md"]),
+        "Packages/KyokashoKit/Sources/ReaderCore/MarkdownShareFile.swift": ("temporaire : tmp/partage-markdown-<UUID>/<titre>.md (partage)", ["partage-markdown-"]),
         "App/Review/ReviewSettingsView.swift": ("temporaire : tmp/Export/", ["Export", "Kyokasho.\\(apkg ? "]),
         "Packages/KyokashoKit/Sources/ReviewKit/Exporters.swift": ("temporaire : tmp/apkg-<UUID>/", ["apkg-", "collection.anki2"]),
     ]
