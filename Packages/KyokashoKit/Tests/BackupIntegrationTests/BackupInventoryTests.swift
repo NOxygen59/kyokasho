@@ -167,7 +167,7 @@ extension BackupRoundTripTests {
     }
 
     /// C1 — base `AppDatabase` au schéma `v3-page-one` (avant `v4-note-canvas-anchor`), sauvegardée et restaurée :
-    /// l'app actuelle l'ouvre, applique `v4` et relit notes, repères et OCR, puis écrit une note ancrée.
+    /// l'app actuelle l'ouvre, applique `v4` et `v5` et relit notes, repères et OCR, puis écrit une note ancrée.
     func testC1OlderAppDatabaseSchemaRestoresAndMigrates() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("kyokasho-old-schema-test-" + UUID().uuidString)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
@@ -184,8 +184,10 @@ extension BackupRoundTripTests {
         let ocr = Data(#"{"edited":true}"#.utf8)
         try database.save(OCRResultRecord(documentId: doc.id, pageIndex: 0, engine: "synthetic", json: ocr, durationMs: 1))
         try database.writer.close()
-        // Revenir au schéma v3 : colonnes de v4 retirées et migration oubliée, comme une base jamais migrée.
+        // Revenir au schéma v3 : colonnes de v4 et v5 retirées et migrations oubliées, comme une base jamais migrée.
         try sqlite(path, """
+            ALTER TABLE document DROP COLUMN category;
+            DELETE FROM grdb_migrations WHERE identifier = 'v5-document-category';
             ALTER TABLE pageComment DROP COLUMN drawing; ALTER TABLE pageComment DROP COLUMN anchorX;
             ALTER TABLE pageComment DROP COLUMN anchorY; ALTER TABLE pageComment DROP COLUMN anchorWidth;
             ALTER TABLE pageComment DROP COLUMN anchorHeight; ALTER TABLE pageComment DROP COLUMN anchorText;
@@ -201,6 +203,7 @@ extension BackupRoundTripTests {
         let restored = target.appendingPathComponent("container/Library/Application Support/Kyokasho/kyokasho.sqlite")
         let app = try AppDatabase.open(at: restored)
         XCTAssertEqual(try app.document(id: doc.id)?.title, "Ancien")
+        XCTAssertNil(try app.document(id: doc.id)?.category)
         XCTAssertEqual(try app.comments(documentId: doc.id).map(\.body), ["Note d'avant v4"])
         XCTAssertNil(try app.comments(documentId: doc.id).first?.anchorRect)
         XCTAssertEqual(try app.bookmarks(documentId: doc.id).first?.pageIndex, 1)
@@ -211,6 +214,8 @@ extension BackupRoundTripTests {
         XCTAssertEqual(try app.comments(documentId: doc.id).count, 2)
         try app.writer.close()
         XCTAssertTrue(try sqliteRows(restored, "SELECT identifier FROM grdb_migrations").contains("v4-note-canvas-anchor"))
+        // v5 (RET-039, #54) appliquée aussi : document ancien non classé.
+        XCTAssertTrue(try sqliteRows(restored, "SELECT identifier FROM grdb_migrations").contains("v5-document-category"))
     }
 
     // MARK: SQLite direct (sans dépendance supplémentaire à GRDB dans cette cible)

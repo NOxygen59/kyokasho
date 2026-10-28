@@ -96,7 +96,7 @@ Le document de feedback complet du 26/10 (13 observations O01–O13, 10 proposit
 | RET-036 | P07 | 2026-10-26 | Conception (données) | Sauvegarde cloud, restauration, import OCR | QA02 1.3 (40), `431f1c6` | rapporté | [#51](https://github.com/NOxygen59/kyokasho/issues/51) | — | — |
 | RET-037 | P08 | 2026-10-26 | Fonction | Temps passé à la place de la progression | QA02 1.3 (40), `431f1c6` | rapporté | [#52](https://github.com/NOxygen59/kyokasho/issues/52) | — | — |
 | RET-038 | P09 | 2026-10-26 | Design | Nouvelle icône | QA02 1.3 (40), `431f1c6` | rapporté | [#53](https://github.com/NOxygen59/kyokasho/issues/53) | — | — |
-| RET-039 | P10 | 2026-10-26 | Fonction | Catégorie livre / manuel | QA02 1.3 (40), `431f1c6` | rapporté | [#54](https://github.com/NOxygen59/kyokasho/issues/54) | — | — |
+| RET-039 | P10 | 2026-10-26 | Fonction | Catégorie livre / manuel | QA02 1.3 (40), `431f1c6` ; correctif `9f1e90f` | compilé iOS | [#54](https://github.com/NOxygen59/kyokasho/issues/54) | — (PR à ouvrir à la réouverture de GitHub) | cadrage NOxygen59 du 28/10 : question à chaque import, pastille sur l'accueil, choix dans « Ce document » ; migration `v5-document-category` (colonne facultative), 3 tests sur bases jetables + test de sauvegarde C1 adapté ; compilé iOS ; non testé iPad ; données : revue croisée requise |
 | RET-040 | Pensées | 2026-10-26 | Conception | Version Mac (PORT-01) | QA02 1.3 (40), `431f1c6` | rapporté | [#55](https://github.com/NOxygen59/kyokasho/issues/55) | — | — |
 
 ### Correspondance complète O/P → registre
