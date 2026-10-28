@@ -747,14 +747,24 @@ struct StudyNotesTab: View {
                     .lineLimit(4)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
-            // Heure de création, discrète sur le côté (RET-019, #22).
-            Text(NoteDayGroups.time(comment.createdAt)).font(Atelier.mono).foregroundStyle(Atelier.textTertiary)
-                .accessibilityLabel("créée à \(NoteDayGroups.time(comment.createdAt))")
+            VStack(alignment: .trailing, spacing: 6) {
+                // Heure de création, discrète sur le côté (RET-019, #22).
+                Text(NoteDayGroups.time(comment.createdAt)).font(Atelier.mono).foregroundStyle(Atelier.textTertiary)
+                    .accessibilityLabel("créée à \(NoteDayGroups.time(comment.createdAt))")
+                // Modifier : la note s'ouvre dans sa fenêtre, où texte et dessin se modifient. Toucher la note fait
+                // la même chose, mais rien ne le montrait (recette 1.3.2 (61), D1).
+                Button { reader.openNote = comment } label: {
+                    Image(systemName: "square.and.pencil").font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Atelier.Tint.annotate)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Modifier la note")
+            }
         }
         .contentShape(Rectangle())
         .onTapGesture { reader.openNote = comment }
         .contextMenu {
-            Button { reader.openNote = comment } label: { Label("Ouvrir", systemImage: "macwindow") }
+            Button { reader.openNote = comment } label: { Label("Modifier", systemImage: "square.and.pencil") }
             if showPage { Button { reader.go(toSource: comment.pageIndex) } label: { Label("Aller à la page", systemImage: "arrow.right") } }
             Button(role: .destructive) { reader.deleteNote(comment) } label: { Label("Supprimer", systemImage: "trash") }
         }
