@@ -166,7 +166,7 @@ Build **non publiée**, construite depuis le commit local `bfd4312` (= `main` `2
 
 | ID | Alias | Date | Type | Retour (résumé) | Build | État | Issue | PR | Preuve |
 |---|---|---|---|---|---|---|---|---|---|
-| RET-049 | — | 2026-10-28 | Ergonomie (animation) | Animer l’apparition et la disparition de la vue de sélection des pages, qui apparaît actuellement sans transition ; préserver la page, le défilement des miniatures et la stabilité du PDF, avec Réduire les animations et iOS 16.6.1 | — | rapporté | [#79](https://github.com/NOxygen59/kyokasho/issues/79) | — | retour direct de NOxygen59 ; aucun code ni essai |
+| RET-049 | — | 2026-10-28 | Ergonomie (animation) | Animer l’apparition et la disparition de la vue de sélection des pages, qui apparaît actuellement sans transition ; préserver la page, le défilement des miniatures et la stabilité du PDF, avec Réduire les animations et iOS 16.6.1 | `claude/selecteur-pages-anime` `1f2b88e`, tests Mac | compilé iOS | [#79](https://github.com/NOxygen59/kyokasho/issues/79) | [#86](https://github.com/NOxygen59/kyokasho/pull/86) (brouillon) | retour direct de NOxygen59 ; correctif `1f2b88e` compilé iOS (`generic/platform=iOS`), suite Swift 225 (7 ignorés), non testé iPad ; recette prévue avec #85 dans une candidate locale unique |
 
 ### Bug du 28/10/2026 — navigation au clavier
 
