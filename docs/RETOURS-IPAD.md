@@ -142,7 +142,7 @@ Build **non publiée**, construite depuis le commit local `bfd4312` (= `main` `2
 | ID | Alias | Date | Type | Retour (résumé) | Build | État | Issue | PR | Preuve |
 |---|---|---|---|---|---|---|---|---|---|
 | RET-041 | — | 2026-10-27 | Bug (affichage) | La pastille « Apple Vision », lorsqu'elle est sélectionnée, semble recharger son libellé à chaque changement de page : elle se redimensionne pendant une fraction de seconde puis reprend sa taille (cause à confirmer) | 1.3.2 (42) locale, `bfd4312` | rapporté, symptôme précisé | [#60](https://github.com/NOxygen59/kyokasho/issues/60) | — | observation iPad de NOxygen59 ; reproduction ciblée encore nécessaire |
-| RET-042 | — | 2026-10-27 | Ergonomie | Survol avec Maj peu fiable quand le curseur bouge vite ; s'inspirer de Yomitan (GPL-3.0, licence à respecter) | 1.3.2 (42) locale, `bfd4312` | rapporté | [#61](https://github.com/NOxygen59/kyokasho/issues/61) | — | — |
+| RET-042 | — | 2026-10-27 | Ergonomie | Survol avec Maj peu fiable quand le curseur bouge vite ; s'inspirer de Yomitan (GPL-3.0, licence à respecter) | 1.3.2 (42) locale, `bfd4312` ; correctif `969bd6a` | compilé iOS | [#61](https://github.com/NOxygen59/kyokasho/issues/61) | — (PR à ouvrir à la réouverture de GitHub) | cause établie dans le code : la fermeture différée (0,2 s) d'un mot quitté fermait la bulle du mot suivant ; génération par ouverture (`HoverBubbleGate`, 4 tests) et bulle gardée d'un mot à l'autre sans réapparition (couvre aussi la remarque de la recette 53) ; compilé iOS ; non testé iPad |
 
 ### Retours du 27/10/2026 — après la recette 1.3.2 (lot clos par les fusions #66, #68, #70, #72)
 
