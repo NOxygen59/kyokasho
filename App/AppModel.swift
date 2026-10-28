@@ -59,6 +59,10 @@ final class AppModel: ObservableObject {
     /// Liste reçue pendant la lecture quand seule la position de lecture a changé : pas publiée
     /// tout de suite (sinon la bibliothèque, derrière le lecteur, se redessine à chaque page tournée).
     private var pendingDocuments: [LibraryDocument]?
+    /// Documents nouvellement importés dont la catégorie reste à demander (« Livre ou manuel ? », RET-039, #54).
+    @Published private(set) var categoryQuestions: [LibraryDocument] = []
+    /// Import d'un seul fichier : il s'ouvre une fois la question répondue.
+    private var openAfterCategory: String?
 
     private var cancellables = Set<AnyCancellable>()
     /// File d'écriture : les enregistrements ne bloquent jamais l'interface.
@@ -154,6 +158,7 @@ final class AppModel: ObservableObject {
         Task.detached(priority: .userInitiated) {
             var lastImported: String?
             var imported: [LibraryDocument] = []
+            var newDocuments: [LibraryDocument] = []
             var errors: [String] = []
             for (index, url) in urls.enumerated() {
                 await MainActor.run {
@@ -162,7 +167,10 @@ final class AppModel: ObservableObject {
                 let scoped = url.startAccessingSecurityScopedResource()
                 do {
                     let result = try importer.importFile(at: url, displayName: url.lastPathComponent)
-                    if result.isNew { OCRTargetLanguage.set(language, forDocument: result.document.id) }
+                    if result.isNew {
+                        OCRTargetLanguage.set(language, forDocument: result.document.id)
+                        newDocuments.append(result.document)
+                    }
                     lastImported = result.document.id
                     imported.append(result.document)
                 } catch {
@@ -177,7 +185,11 @@ final class AppModel: ObservableObject {
                     DocumentScan.start(document, url: self.storage.url(for: document.id), ocr: self.ocr)
                 }
                 if !errors.isEmpty { self.lastError = errors.joined(separator: "\n") }
-                if openWhenSingle, urls.count == 1, let lastImported { self.openDocumentId = lastImported }
+                self.categoryQuestions.append(contentsOf: newDocuments)
+                if openWhenSingle, urls.count == 1, let lastImported {
+                    // Question en attente : le livre s'ouvre après la réponse (`answerCategory`).
+                    if self.categoryQuestions.isEmpty { self.openDocumentId = lastImported } else { self.openAfterCategory = lastImported }
+                }
             }
         }
     }
@@ -232,6 +244,25 @@ final class AppModel: ObservableObject {
         doc.title = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !doc.title.isEmpty else { return }
         persist { try $0.save(doc) }
+    }
+
+    /// Réponse à « Livre ou manuel ? » pour le premier document en attente ; `nil` : « Plus tard » (non classé).
+    func answerCategory(_ category: DocumentCategory?) {
+        guard !categoryQuestions.isEmpty else { return }
+        let document = categoryQuestions.removeFirst()
+        if let category { setCategory(document.id, category) }
+        if categoryQuestions.isEmpty, let id = openAfterCategory {
+            openAfterCategory = nil
+            openDocumentId = id
+        }
+    }
+
+    /// Catégorie d'un document (requête ciblée : rien d'autre n'est réécrit).
+    func setCategory(_ documentId: String, _ category: DocumentCategory?) {
+        // Copie en mémoire mise à jour tout de suite : le lecteur ouvert juste après part de la bonne catégorie et ne
+        // la réécrit pas avec l'ancienne en enregistrant ses réglages (la base suit, sur la file d'écriture).
+        if let index = documents.firstIndex(where: { $0.id == documentId }) { documents[index].category = category }
+        persist { try $0.updateCategory(documentId: documentId, category: category) }
     }
 
     /// `pdfPage` : numéro de page du PDF (1 = première page du fichier) qui porte le n° 1 imprimé.

@@ -185,6 +185,17 @@ struct DocumentSettingsSheet: View {
         NavigationStack {
             Form {
                 Section {
+                    // Repère de l'accueil (RET-039, #54) : requête ciblée, la copie du lecteur suit pour ne pas
+                    // réécrire l'ancienne valeur en enregistrant les autres réglages.
+                    Picker("Catégorie", selection: Binding(get: { reader.document.category }, set: { category in
+                        reader.document.category = category
+                        model.setCategory(reader.document.id, category)
+                    })) {
+                        Text("Non classé").tag(DocumentCategory?.none)
+                        ForEach(DocumentCategory.allCases, id: \.self) { Text($0.title).tag(DocumentCategory?.some($0)) }
+                    }
+                }
+                Section {
                     OptionalPicker("Pages", value: $override.layout, defaultValue: d.layout, options: [
                         (.auto, "Automatique selon l'orientation"), (.single, "Page simple"), (.double, "Double page")])
                     OptionalPicker("Défilement", value: $override.scrollMode, defaultValue: d.scrollMode, options: [

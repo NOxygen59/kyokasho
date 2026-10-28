@@ -71,6 +71,17 @@ struct LibraryView: View {
                 ImportBanner(progress: progress).padding(.bottom, 28)
             }
         }
+        // « Livre ou manuel ? » après chaque import (RET-039, #54). Une alerte ne se ferme pas par un toucher à côté :
+        // chaque document reçoit une réponse, « Plus tard » compris.
+        .alert("Livre ou manuel ?", isPresented: Binding(get: { !model.categoryQuestions.isEmpty }, set: { _ in }),
+               presenting: model.categoryQuestions.first) { _ in
+            ForEach(DocumentCategory.allCases, id: \.self) { category in
+                Button(category.title) { model.answerCategory(category) }
+            }
+            Button("Plus tard", role: .cancel) { model.answerCategory(nil) }
+        } message: { document in
+            Text("« \(document.title) » : la catégorie s'affiche sur l'accueil pour t'aider à te repérer. Tu pourras la changer dans « Ce document ».")
+        }
         .sheet(isPresented: $showImportOptions) {
             ImportOptionsView { urls, language in model.importFiles(urls, language: language) }
                 .preferredColorScheme(.dark)
@@ -399,6 +410,15 @@ struct DocumentCard: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Atelier.hairline))
                 .shadow(color: .black.opacity(0.5), radius: 12, y: 8)
+                if let category = document.category {
+                    // Repère sur l'accueil (RET-039, #54).
+                    Text(category.title).font(.system(size: 11, weight: .semibold))
+                        .padding(.horizontal, 8).padding(.vertical, 4)
+                        .foregroundStyle(.black.opacity(0.8))
+                        .background(category == .textbook ? Atelier.Tint.read : Atelier.Tint.annotate, in: Capsule())
+                        .padding(8)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                }
                 if document.driveFileId != nil {
                     Image(systemName: "externaldrive.badge.icloud")
                         .font(.system(size: 12, weight: .bold))
