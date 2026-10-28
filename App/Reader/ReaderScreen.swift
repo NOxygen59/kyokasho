@@ -99,7 +99,10 @@ struct ReaderScreen: View {
                         .clipShape(RoundedRectangle(cornerRadius: docked == nil ? 0 : Atelier.radius, style: .continuous))
                     LookupHighlightLayer(rects: reader.lookupHighlight)
                     if chromeVisible {
-                        chrome.transition(.opacity)
+                        // Portrait : la bande des pages s'arrête au bord du panneau d'étude flottant (recette 1.3.2 (59), A11).
+                        chrome(filmstripTrailing: FilmstripLayout.trailingInset(
+                            portraitPanelShown: docked == .study && !landscape, panelWidth: panelWidth, gap: Atelier.gap))
+                            .transition(.opacity)
                     }
                     if let request = reader.lookupRequest {
                         GeometryReader { area in
@@ -257,7 +260,7 @@ struct ReaderScreen: View {
 
     // MARK: Chrome flottant
 
-    private var chrome: some View {
+    private func chrome(filmstripTrailing: CGFloat) -> some View {
         VStack(spacing: 0) {
             HStack(alignment: .top, spacing: Atelier.gap) {
                 titleCapsule
@@ -328,6 +331,9 @@ struct ReaderScreen: View {
                         .transition(.opacity)
                     }
                 }
+                .padding(.trailing, filmstripTrailing)
+                // Suit le panneau qui entre ou sort (le conteneur coupe l'animation des changements de `side`).
+                .animation(panelAnimation, value: filmstripTrailing)
             }
         }
     }
@@ -647,13 +653,16 @@ struct PageFilmstrip: View {
     @ObservedObject var reader: ReaderController
 
     var body: some View {
+        // Pages réellement à l'écran : une en page simple, la planche en double page (recette 1.3.2 (59), A2).
+        let visible = FilmstripLayout.highlightedPages(current: reader.currentSourcePage, shown: reader.shownSources,
+                                                       isDouble: reader.settings.layout == .double)
         ScrollViewReader { proxy in
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(spacing: 8) {
                     ForEach(0..<reader.document.pageCount, id: \.self) { page in
                         FilmstripCell(thumbnails: reader.model.thumbnails, documentId: reader.document.id, fileURL: reader.fileURL, page: page,
                                       label: reader.document.pageLabel(page),
-                                      current: page == reader.currentSourcePage)
+                                      visible: visible.contains(page))
                             .id(page)
                             .onTapGesture { reader.go(toSource: page) }
                     }
@@ -678,8 +687,12 @@ struct FilmstripCell: View {
     let fileURL: URL
     let page: Int
     let label: String
-    let current: Bool
+    let visible: Bool
     @State private var image: UIImage?
+
+    /// Repère des pages à l'écran : bleu vif fixe, lisible sur tous les thèmes, là où la teinte « lecture »
+    /// (pastel, jaune pâle selon le thème) se voyait mal sur les miniatures (recette 1.3.2 (59), A2).
+    static let visibleMark = Color(hex: 0x0A84FF)
 
     var body: some View {
         VStack(spacing: 3) {
@@ -688,9 +701,9 @@ struct FilmstripCell: View {
                 if let image { Image(uiImage: image).resizable().scaledToFit().clipShape(RoundedRectangle(cornerRadius: 4)) }
             }
             .frame(width: 46, height: 62)
-            .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(current ? Atelier.Tint.read : .clear, lineWidth: 2))
-            Text(label).font(.system(size: 10, weight: .semibold, design: .monospaced))
-                .foregroundStyle(current ? Atelier.Tint.read : Atelier.textTertiary)
+            .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(visible ? Self.visibleMark : .clear, lineWidth: 3))
+            Text(label).font(.system(size: 10, weight: visible ? .bold : .semibold, design: .monospaced))
+                .foregroundStyle(visible ? Self.visibleMark : Atelier.textTertiary)
         }
         .onAppear(perform: load)
     }
