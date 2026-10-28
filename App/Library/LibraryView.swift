@@ -313,6 +313,10 @@ struct LibraryView: View {
     // MARK: Planche
 
     private static let monitorWidth: CGFloat = 300
+
+    static func monitorAnimation(_ reduceMotion: Bool) -> Animation {
+        reduceMotion ? .easeInOut(duration: 0.2) : .spring(response: 0.6, dampingFraction: 1)
+    }
     private var monitorVisible: Bool { monitorEnabled && monitorShown }
 
     private var main: some View {
@@ -386,12 +390,15 @@ struct LibraryView: View {
                 if monitorVisible {
                     ResourceMonitorPanel(expandsDown: true, fillsWidth: monitorDetailed)
                         .frame(width: monitorDetailed ? Self.monitorWidth : nil)
-                        .transition(reduceMotion ? .opacity : .move(edge: .trailing).combined(with: .opacity))
+                        .transition(reduceMotion ? .opacity
+                                    : .asymmetric(insertion: .opacity.combined(with: .offset(x: 24)),
+                                                  removal: .opacity.combined(with: .offset(x: 24))))
                 }
             }
-            .animation(reduceMotion ? .easeOut(duration: 0.15) : .spring(response: 0.4, dampingFraction: 0.85),
-                       value: monitorVisible && monitorDetailed)
-            .animation(reduceMotion ? nil : .spring(response: 0.4, dampingFraction: 0.85), value: monitorVisible)
+            // Ressort amorti sans rebond, un peu plus long (recette 1.3.2 (64), point 7 : transition trop sèche) : les
+            // cartes glissent vers leur nouvelle colonne au lieu de sauter.
+            .animation(Self.monitorAnimation(reduceMotion), value: monitorVisible && monitorDetailed)
+            .animation(Self.monitorAnimation(reduceMotion), value: monitorVisible)
         }
         .padding(.horizontal, 6)
     }
