@@ -12,6 +12,16 @@ enum StudyPanelMode: String {
     static let storageKey = "study.panelMode"
     /// Mode à retrouver en touchant la pastille du panneau réduit.
     static let restoreKey = "study.panelRestore"
+
+    /// Au lancement : le bouton « − » est retiré (RET-023, #38), un panneau resté réduit reprend sa dernière position.
+    /// Le cas `minimized` reste géré plus bas par prudence (valeur écrite par une ancienne version pendant la session).
+    static func migrateStoredSetting() {
+        let defaults = UserDefaults.standard
+        guard let mode = StudyPanelModeMigration.migrated(mode: defaults.string(forKey: storageKey),
+                                                          restore: defaults.string(forKey: restoreKey)) else { return }
+        defaults.set(mode, forKey: storageKey)
+        Diagnostics.log("Panneau d'étude : position « réduite » retirée, remplacée par « \(mode) »", "ocr-panel")
+    }
 }
 
 /// Transitions visuelles des panneaux ; la géométrie du PDF est recalée séparément.
@@ -37,7 +47,6 @@ struct StudyWindowButtons: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            button("minus", "Réduire le panneau") { restore = mode; mode = .minimized }
             if mode != .floating { button("macwindow", "Détacher le panneau en fenêtre") { mode = .floating } }
             if mode != .docked { button("sidebar.trailing", "Ancrer le panneau à droite") { mode = .docked } }
             if mode != .full {

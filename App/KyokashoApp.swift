@@ -12,6 +12,8 @@ struct KyokashoApp: App {
     init() {
         // Avant tout : journal de diagnostic et gestionnaire d'erreurs MLX (message noté avant un arrêt).
         Diagnostics.start()
+        // Avant toute lecture de la position du panneau d'étude (`@AppStorage`) : position retirée remplacée.
+        StudyPanelMode.migrateStoredSetting()
     }
 
     @StateObject private var model = AppModel()
