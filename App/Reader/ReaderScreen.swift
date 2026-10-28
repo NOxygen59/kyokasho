@@ -235,11 +235,11 @@ struct ReaderScreen: View {
             }
             reader.load()
             ReaderArrowKeys.shared.webOpen = side == .web
-            ReadingTimeTracker.shared.readerOpened()
+            ReadingTimeTracker.shared.readerOpened(documentId: reader.document.id)
         }
         .onDisappear {
             reader.close()
-            ReadingTimeTracker.shared.readerClosed()
+            ReadingTimeTracker.shared.readerClosed(documentId: reader.document.id)
             // Réglage général rétabli pour les autres livres ; `nil` d'abord, pour ne pas l'enregistrer dans celui-ci.
             if let general = generalPanelMode {
                 generalPanelMode = nil
