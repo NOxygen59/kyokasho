@@ -19,8 +19,10 @@ extension BackupRoundTripTests {
     /// Fichiers sources qui demandent un dossier du conteneur : rôle, puis **chaque composant de chemin littéral**
     /// (`appendingPathComponent("…")`) qu'ils emploient. Un nouveau fichier, ou un nouveau dossier/fichier dans un
     /// fichier déjà connu, fait échouer I2 (revue de Codex sur #84). Mettre alors à jour cette table **et**
-    /// `docs/DONNEES-ET-SAUVEGARDES.md`. Hors de portée de ce garde-fou : les chemins entièrement calculés sans
-    /// littéral, et les préférences (`UserDefaults`, `@AppStorage`), couvertes en bloc par `Library/Preferences`.
+    /// `docs/DONNEES-ET-SAUVEGARDES.md`. Seuls les fichiers qui appellent directement les API de répertoire recherchées
+    /// sont examinés. Hors de portée : un fichier qui dérive un chemin d'une racine existante sans ces API (par exemple
+    /// `ModelStore.shared.root.appendingPathComponent("…")`), les chemins entièrement calculés sans littéral, et les
+    /// préférences (`UserDefaults`, `@AppStorage`), couvertes en bloc par `Library/Preferences`.
     static let storageInventory: [String: (role: String, components: Set<String>)] = [
         "App/AppModel.swift": ("persistant : Kyokasho/kyokasho.sqlite, Kyokasho/Documents/, Kyokasho/Bench/ ; cache : Caches/Thumbnails",
                                ["Bench", "Documents", "Kyokasho", "Thumbnails", "kyokasho.sqlite"]),

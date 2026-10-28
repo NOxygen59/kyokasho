@@ -29,7 +29,7 @@ Les chemins ci-dessous sont relatifs au conteneur de l'app sur iPad. Ils ne dés
 | Reprise d'ajout de pages | `Application Support/Kyokasho/page-shift.json` et PDF de passage | État transactionnel : ne pas effacer à la main |
 | Copies de secours de l'ajout de pages | `Application Support/Kyokasho/PageShift/<UUID>/` | Conservées après succès (PDF d'origine et fusionné, rapports, lectures IA) ; incluses dans la sauvegarde, qui peut grossir d'autant ; pas de nettoyage automatique |
 
-Les chemins précis de chaque sous-système restent définis par le code. Depuis DATA-02 (#83), le test `testI2EveryStorageLocationInCodeIsInventoried` échoue si une source de l'app ouvre un dossier du conteneur sans figurer dans son inventaire de référence : mettre alors à jour ce test **et** cette table.
+Les chemins précis de chaque sous-système restent définis par le code. Depuis DATA-02 (#83), le test `testI2EveryStorageLocationInCodeIsInventoried` alerte quand une source qui appelle directement les API de répertoire du conteneur n'est pas inventoriée, ou y ajoute un nouveau composant de chemin littéral : mettre alors à jour ce test **et** cette table. C'est une alerte partielle, dont les limites sont détaillées dans [TESTS.md](TESTS.md), section DATA-02 : un chemin dérivé d'une racine existante sans ces API n'est pas détecté.
 
 ## Effacement et relecture
 
