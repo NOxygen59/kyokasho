@@ -42,7 +42,8 @@ public final class QwenChat: @unchecked Sendable {
 
     public var isAvailable: Bool { store.isInstalled(model) }
 
-    public func start(history: [Message], grounded: Bool = false) async throws {
+    /// `settings` : consigne et paramètres choisis pour ce modèle (#37, #45) ; par défaut, ceux d'avant.
+    public func start(history: [Message], grounded: Bool = false, settings: AIChatSettings = AIChatSettings()) async throws {
         guard session == nil else { return }
         guard model.id == ModelSpec.qwen3vl4b.id || model.id == ModelSpec.qwen35chat4b.id else {
             throw OCRError.engineFailed("Ce modèle ne sait pas discuter.")
@@ -54,9 +55,13 @@ public final class QwenChat: @unchecked Sendable {
         let container = try await GLMModel.shared.acquire(directory: store.directory(model), extraEOSTokens: [])
         holding = true
         let past: [Chat.Message] = history.map { $0.role == .user ? .user($0.text) : .assistant($0.text) }
-        session = ChatSession(container, instructions: Self.instructions, history: past,
-                              generateParameters: GenerateParameters(maxTokens: 1024, temperature: grounded ? 0 : 0.3),
-                              additionalContext: model.id == ModelSpec.qwen35chat4b.id ? ["enable_thinking": false] : nil)
+        let parameters = GenerateParameters(maxTokens: settings.maxTokens,
+                                            temperature: Float(settings.effectiveTemperature(grounded: grounded)),
+                                            topP: Float(settings.topP), topK: settings.topK,
+                                            repetitionPenalty: settings.repetitionPenalty.map { Float($0) })
+        session = ChatSession(container, instructions: settings.effectiveInstructions(default: Self.instructions), history: past,
+                              generateParameters: parameters,
+                              additionalContext: model.id == ModelSpec.qwen35chat4b.id ? ["enable_thinking": settings.thinking] : nil)
     }
 
     /// Aide fiable ajoutée à la question (le modèle de 4 milliards invente souvent les lectures, ex. 天井 « あまね ») :

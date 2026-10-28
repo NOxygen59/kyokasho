@@ -154,6 +154,9 @@ struct QwenChatView: View {
     @State private var modelSwitch: Task<Void, Never>?
     @State private var error: String?
     @State private var storageError = false
+    /// Réglages du chat du modèle choisi (#45) ; feuille ouverte par la roue dentée.
+    @State private var showSettings = false
+    @State private var settingsAtOpen = AIChatSettings()
 
     private var file: URL {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -213,6 +216,7 @@ struct QwenChatView: View {
                 ToolbarItem(placement: .cancellationAction) { Button("Fermer") { dismiss() } }
             }
             if document == nil {
+                ToolbarItem(placement: .secondaryAction) { HStack { tasksMenu; settingsButton } }
                 ToolbarItem(placement: .primaryAction) {
                     Button {
                         answering?.cancel()
@@ -237,6 +241,12 @@ struct QwenChatView: View {
                 return
             }
             await startSelectedModel()
+        }
+        .sheet(isPresented: $showSettings, onDismiss: applySettingsIfChanged) {
+            NavigationStack {
+                AIChatSettingsView(modelID: selectedModelID, fixedModel: true)
+                    .toolbar { ToolbarItem(placement: .confirmationAction) { Button("OK") { showSettings = false } } }
+            }
         }
         // Écran quitté : réponse arrêtée, modèle déchargé.
         .onDisappear {
@@ -278,6 +288,8 @@ struct QwenChatView: View {
             if let progress = downloads.progress[ModelSpec.qwen35chat4b.id] {
                 ProgressView(value: progress).frame(width: 30)
             }
+            tasksMenu
+            settingsButton
             Button { newConversation() } label: {
                 Image(systemName: "square.and.pencil")
             }
@@ -314,6 +326,41 @@ struct QwenChatView: View {
             Button { downloads.start(spec) } label: {
                 Label("Télécharger \(title) (\(StorageUsage.format(spec.totalSize)))", systemImage: "arrow.down.circle")
             }
+        }
+    }
+
+    /// Tâches rapides (#37) : une question type écrite dans le champ, à compléter ou envoyer telle quelle.
+    private var tasksMenu: some View {
+        let page = focusPage.map { "la page \($0)" } ?? "ce passage"
+        return Menu {
+            Button("Résumer \(page)") { draft = "Résume \(page) : de quoi parle-t-elle, puis les points clés." }
+            Button("Expliquer les formules de \(page)") { draft = "Explique pas à pas chaque formule de \(page), avec un exemple chiffré." }
+            Button("Vocabulaire de \(page)") { draft = "Liste les mots techniques japonais de \(page) avec lecture et sens." }
+            Button("Traduire mot à mot") { draft = "Traduis mot à mot, puis naturellement : " }
+        } label: { Image(systemName: "list.bullet.rectangle") }
+        .disabled(!ready || answering != nil)
+        .accessibilityLabel("Tâches rapides")
+    }
+
+    private var settingsButton: some View {
+        Button {
+            settingsAtOpen = AIChatSettingsStore.load(selectedModelID)
+            showSettings = true
+        } label: { Image(systemName: "slider.horizontal.3") }
+        .disabled(loading || answering != nil)
+        .accessibilityLabel("Consigne et paramètres du chat")
+    }
+
+    /// Réglages changés : le modèle redémarre la conversation avec eux (historique gardé).
+    private func applySettingsIfChanged() {
+        guard AIChatSettingsStore.load(selectedModelID) != settingsAtOpen, downloads.installed.contains(selectedModelID) else { return }
+        let oldChat = chat
+        ready = false
+        loading = true
+        modelSwitch = Task {
+            await oldChat.stop()
+            guard !Task.isCancelled else { return }
+            await startSelectedModel()
         }
     }
 
@@ -356,7 +403,8 @@ struct QwenChatView: View {
         chat = selectedChat
         do {
             try await Diagnostics.measure("chargement de \(spec.title) (chat)", "chat") {
-                try await selectedChat.start(history: document == nil ? messages : [], grounded: document != nil)
+                try await selectedChat.start(history: document == nil ? messages : [], grounded: document != nil,
+                                             settings: AIChatSettingsStore.load(spec.id))
             }
             if Task.isCancelled {
                 await selectedChat.stop()
