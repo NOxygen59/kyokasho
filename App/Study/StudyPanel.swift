@@ -689,10 +689,10 @@ struct StudyNotesTab: View {
                     let here = reader.notes.filter { $0.pageIndex == page }
                     let others = reader.notes.filter { $0.pageIndex != page }
                     if here.isEmpty { Text("Aucune note sur cette page.").font(.footnote).foregroundStyle(Atelier.textTertiary) }
-                    ForEach(here) { note($0) }
+                    dayGroups(here, showPage: false)
                     if !others.isEmpty {
                         AtelierLabel("Autres pages").padding(.top, 6)
-                        ForEach(others) { note($0, showPage: true) }
+                        dayGroups(others, showPage: true)
                     }
                 }
             }
@@ -719,6 +719,15 @@ struct StudyNotesTab: View {
     }
 
     /// Toucher : ouvrir la note dans la fenêtre flottante ; ＊ : aller au mot ancré.
+    /// Notes séparées par jour de création (« Aujourd'hui », « Hier », date), du plus récent au plus ancien
+    /// (RET-019, #22).
+    @ViewBuilder private func dayGroups(_ notes: [PageComment], showPage: Bool) -> some View {
+        ForEach(NoteDayGroups.group(notes), id: \.day) { group in
+            Text(group.title).font(.caption.weight(.semibold)).foregroundStyle(Atelier.textTertiary).padding(.top, 2)
+            ForEach(group.notes) { note($0, showPage: showPage) }
+        }
+    }
+
     private func note(_ comment: PageComment, showPage: Bool = false) -> some View {
         HStack(alignment: .top, spacing: 10) {
             RoundedRectangle(cornerRadius: 2).fill(Atelier.Tint.annotate).frame(width: 3)
@@ -738,6 +747,9 @@ struct StudyNotesTab: View {
                     .lineLimit(4)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
+            // Heure de création, discrète sur le côté (RET-019, #22).
+            Text(NoteDayGroups.time(comment.createdAt)).font(Atelier.mono).foregroundStyle(Atelier.textTertiary)
+                .accessibilityLabel("créée à \(NoteDayGroups.time(comment.createdAt))")
         }
         .contentShape(Rectangle())
         .onTapGesture { reader.openNote = comment }
