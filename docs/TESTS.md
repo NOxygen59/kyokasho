@@ -23,7 +23,7 @@ Au SHA `f83aec8c61d88f1e6c119376590899c9c1ce2876` (25/10/2026), `Packages/Kyokas
 | ONNXOCRKitTests | Alignement et essais de moteurs | Modèles réels requis pour plusieurs scénarios |
 | MorphologyKitTests | CSV et lectures MeCab/extraction UniDic | Dictionnaire/archive requis pour les essais réels |
 | PageShiftTests | 39 tests (27/10/2026) : reprise à 14 frontières, matrice de double interruption 14 × 13, décalages 0/1/2, SIGKILL à 9 frontières, journal ambigu/corrompu/modifié (S1, S2, S5), lien symbolique, PDF tiers, ajouts concurrents, erreurs SQL/fichiers, décalage unique ; cinq tests OCR tardif/concurrence/annulation/reprise/réactivité ; RET-048 corrigé (#74), S7 sert de test de régression | Adaptateurs Mac pour l'interface ; ni parcours UIKit ni coupure matérielle |
-| BackupIntegrationTests | 1 test : vraies bases AppDatabase/ReviewStore, sauvegarde/restauration et réouverture en écriture | Conteneur synthétique Mac ; ni extraction ni réinstallation TrollStore |
+| BackupIntegrationTests | 4 tests : vraies bases AppDatabase/ReviewStore, sauvegarde/restauration et réouverture en écriture ; données récentes (brouillons, traductions de définitions, base de dictionnaire, diagnostic, secours PageShift) ; garde-fou d'inventaire des emplacements de stockage du code ; base au schéma v3 migrée après restauration (DATA-02, #83) | Conteneur synthétique Mac ; ni extraction ni réinstallation TrollStore |
 | GLMOCRKitTests | Lecture Ovis/GLM/Qwen, vrais échantillons, traduction, chat, profil | Poids et corpus externes ; tests opt-in, pas une suite légère systématique |
 
 ## Exécution Mac reproductible
@@ -183,6 +183,25 @@ Base : `main` `8b957dd`. Fichier `Packages/KyokashoKit/Tests/PageShiftTests/Page
 - `safeName` neutralisé : S1 **reste vert**, car un second rempart arrête l'opération avant toute écriture (empreinte du PDF ou document absent de la base). S1 vérifie donc le résultat (rien n'est écrit), pas ce contrôle précis.
 
 Non couvert : parcours UIKit, espace disque réel, gros PDF, conteneur TrollStore, iPad.
+
+## DATA-02 — sauvegarde et restauration synthétiques (28 octobre 2026, cadrage #83)
+
+Base : `main` `35c5242`. Aucune bibliothèque réelle, aucun iPad ; l'outil et l'app ne sont pas modifiés.
+
+| Code | Test | Ce qui est vérifié |
+|---|---|---|
+| I1 | `testI1RecentDataRoundTripsAndDraftsAreReadable` (Swift) | brouillons relus par `NoteDraftStore`, `definition-translations.json`, base de dictionnaire SQLite, journal de diagnostic, copie `PageShift/<UUID>` sans journal : retour octet pour octet |
+| I2 | `testI2EveryStorageLocationInCodeIsInventoried` (Swift) | toute source de `App/` ou `Packages/KyokashoKit/Sources` qui ouvre un dossier du conteneur figure dans l'inventaire de référence du test ; une nouvelle source ou une entrée périmée fait échouer le test |
+| R1 | `test_r1_japanese_unicode_and_long_names_roundtrip_exactly` (Python) | noms japonais, formes NFC et NFD (octets exacts), espaces, nom de 200 caractères |
+| R2 | `test_r2_empty_large_and_read_only_files_roundtrip` (Python) | fichier vide, 64 Mo, fichier source en lecture seule |
+| R3 | `test_r3_backup_killed_…`, `test_r3_restore_killed_…` (Python) | SIGKILL réel après la 1re copie, après la 4e, juste avant la publication : jamais de `backup/` ni de `container/` partiel, source intacte, relance réussie vers une nouvelle destination |
+| R4 | `test_r4_known_limit_…` (Python) | limite connue : une archive modifiée avec un manifeste recalculé est acceptée |
+| C1 | `testC1OlderAppDatabaseSchemaRestoresAndMigrates` (Swift) | base ramenée au schéma `v3-page-one`, sauvegardée, restaurée, ouverte par l'`AppDatabase` actuel : `v4` appliquée, données relues, note ancrée écrite |
+| C2 | — | écarté : `ReviewStore` n'a qu'une migration (`v1`), il n'existe pas de schéma plus ancien |
+
+**Résultats sur ce Mac :** `python3 -I -m unittest discover -s tests -v` : 21 tests, 0 échec. `swift test --filter BackupRoundTripTests` : 4 tests, 0 échec. Résultats de la suite complète dans la PR.
+
+**Constats, sans correctif :** après un SIGKILL, le dossier privé `<destination>.partial-…` reste à côté de la destination. Si l'arrêt survient entre la réservation et la publication, la destination existe vide, et une relance vers le même chemin est refusée : il faut choisir un nouveau chemin. L'audio des dictionnaires (`Documents/Audio`) est copié mais n'est pas vérifié (décision de NOxygen59).
 
 ## QA-02 — vérifications de préparation du 25 octobre 2026
 

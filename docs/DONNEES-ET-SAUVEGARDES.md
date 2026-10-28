@@ -12,7 +12,10 @@ Les chemins ci-dessous sont relatifs au conteneur de l'app sur iPad. Ils ne dés
 | PDF importés | `Application Support/Kyokasho/Documents/<id>.pdf`, `DocumentStorage` | Donnée utilisateur, conserver |
 | Bibliothèque, OCR, notes, repères, encre, réglages de base | `Application Support/Kyokasho/kyokasho.sqlite`, `AppDatabase` | Donnée persistante ; ne pas assimiler les retouches à un cache |
 | Cartes et médias | `ReviewStore`, `review.sqlite` et dossier `Media`, racine fournie par `ReviewModel` | Sauvegarder base et médias ensemble |
-| Dictionnaires | `Application Support/Kyokasho/Dictionaries`, intégration DictionaryModel | Dictionnaires et réglages associés à inventorier |
+| Dictionnaires | `Application Support/Kyokasho/Dictionaries`, `DictionaryDatabase` | Base SQLite des dictionnaires ; profils et carnet dans la base de l'app |
+| Audio des dictionnaires | `Documents/Audio`, `DictionaryModel` | Copié par la sauvegarde mais non vérifié : non essentiel (décision de NOxygen59, 28/10/2026) |
+| Traductions de définitions | `Application Support/definition-translations.json`, `DefinitionTranslations` | Traductions françaises et votes 👍/👎 ; donnée personnelle |
+| Brouillons de notes | `Application Support/Kyokasho/NoteDrafts/<id>.json`, `NoteDraftStore` | Brouillons non encore ajoutés (RET-008) ; donnée personnelle |
 | Modèles et UniDic | `ModelStore.root`, sous `Application Support/Kyokasho/Models` | Retéléchargeables si source/version encore disponibles ; coûteux |
 | Lectures IA, traductions | `Application Support/Analysis/<id>/*.md`, `DocumentAITextStore` | Données dérivées coûteuses ; garder pour reproduire un bug |
 | Rapports | `Application Support/Analysis/<id>.json` | Résultats dépendant des versions des lectures |
@@ -23,8 +26,9 @@ Les chemins ci-dessous sont relatifs au conteneur de l'app sur iPad. Ils ne dés
 | Diagnostic | `Documents/Diagnostics/journal.txt` | Potentiellement personnel ; partager après contrôle |
 | Vignettes, pages préparées/nettoyées | `Caches/`, dont Thumbnails, Sharpened, Equalized | Régénérables ; ne pas supprimer une tâche active |
 | Reprise d'ajout de pages | `Application Support/Kyokasho/page-shift.json` et PDF de passage | État transactionnel : ne pas effacer à la main |
+| Copies de secours de l'ajout de pages | `Application Support/Kyokasho/PageShift/<UUID>/` | Conservées après succès (PDF d'origine et fusionné, rapports, lectures IA) ; incluses dans la sauvegarde, qui peut grossir d'autant ; pas de nettoyage automatique |
 
-Les chemins précis de chaque sous-système restent définis par le code ; une future sauvegarde doit s'appuyer sur un inventaire central testé, pas recopier cette table comme une liste exhaustive de fichiers immuable.
+Les chemins précis de chaque sous-système restent définis par le code. Depuis DATA-02 (#83), le test `testI2EveryStorageLocationInCodeIsInventoried` échoue si une source de l'app ouvre un dossier du conteneur sans figurer dans son inventaire de référence : mettre alors à jour ce test **et** cette table.
 
 ## Effacement et relecture
 

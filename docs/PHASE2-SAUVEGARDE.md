@@ -59,6 +59,12 @@ Un test Swift supplémentaire utilise les **véritables AppDatabase et ReviewSto
 
 La première comparaison du test a révélé un artefact de précision des dates du fixture (Date natif contre représentation SQLite), pas une perte de sauvegarde ; le fixture emploie désormais une date de référence exacte. Aucun changement des formats applicatifs n'en découle. Le runner Swift 6.1.2 exige aussi deux conversions explicites `CGFloat` → `Double` dans un tuple d'OCRModels, implicitement acceptées par Swift 6.4. L'ajustement conserve les mêmes valeurs et le même algorithme, sans nouvelle API ni dépendance. Les deux assertions de test OCR obsolètes sont alignées sur `results`, comme dans #1, pour compiler la suite sans changer l'app.
 
+## Renforcement DATA-02 — 28 octobre 2026 (Issue #83)
+
+Tests ajoutés sans modifier l'outil : inventaire des données récentes et garde-fou d'inventaire (Swift), noms japonais et Unicode, fichiers vide, gros ou en lecture seule, SIGKILL réel pendant la sauvegarde et la restauration, limite du manifeste (Python), restauration et migration d'une base au schéma `v3-page-one` (Swift). Détail et résultats : [TESTS.md](TESTS.md), section DATA-02.
+
+Constats documentés, sans correctif : après un arrêt brutal, le dossier privé `.partial-…` reste à côté de la destination, et une destination réservée vide refuse la relance au même chemin. Les copies `PageShift/<UUID>` conservées après chaque ajout de pages sont incluses dans la sauvegarde et peuvent l'alourdir.
+
 ## Limites et prochaines validations
 
 ### Complément de revue indépendante — 25 octobre 2026
