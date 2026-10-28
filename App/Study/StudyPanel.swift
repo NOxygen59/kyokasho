@@ -210,6 +210,15 @@ struct StudyTextTab: View {
             translateError = nil
         }
         .task(id: "\(reader.focusSource)|\(layoutEngineRaw)|\(formatted)|\(reader.ocrPage != nil)") { await loadRegions() }
+        // OvisOCR2 par défaut, une seule fois (#39) ; ensuite le choix de l'utilisateur reste.
+        .onAppear {
+            let defaults = UserDefaults.standard
+            if OvisDefaultView.shouldSwitch(ovisInstalled: OvisOCR2Reader().isAvailable,
+                                            alreadyApplied: defaults.bool(forKey: OvisDefaultView.appliedKey)) {
+                aiLayout = true
+                defaults.set(true, forKey: OvisDefaultView.appliedKey)
+            }
+        }
         .overlay(alignment: .topLeading) { bubbleOverlay }
         .onChange(of: shift.pressed) { pressed in
             // Bulle ouverte au survol avec Maj : relâcher Maj la ferme (Issue #13).
@@ -390,8 +399,16 @@ struct StudyTextTab: View {
     private var engineRow: some View {
         HStack(spacing: 8) {
             Menu {
+                // OvisOCR2 en tête (#39) : sa lecture s'affiche dans « Mise en page IA ».
+                if OvisOCR2Reader().isAvailable {
+                    Button { aiLayout = true } label: {
+                        Label("OvisOCR2 (mise en page IA)", systemImage: "sparkles.rectangle.stack")
+                    }
+                    Divider()
+                }
                 ForEach([OCREngineID.pdfText, OCREngineID.vision] + OCREngineMenu.extra, id: \.self) { id in
-                    Button { reader.runOCR(engine: id) } label: {
+                    // Quitter la mise en page IA : sinon le texte du moteur choisi resterait caché.
+                    Button { aiLayout = false; reader.runOCR(engine: id) } label: {
                         Label(OCREngineID.displayName(id), systemImage: OCREngineMenu.icon(id))
                     }
                 }
