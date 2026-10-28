@@ -12,6 +12,8 @@ struct KyokashoApp: App {
     init() {
         // Avant tout : journal de diagnostic et gestionnaire d'erreurs MLX (message noté avant un arrêt).
         Diagnostics.start()
+        // Avant toute lecture du fond des pages (`@AppStorage`, `PageTone.current`) : valeurs retirées remplacées.
+        PageTone.migrateStoredSetting()
     }
 
     @StateObject private var model = AppModel()

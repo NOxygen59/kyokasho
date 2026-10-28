@@ -1,14 +1,17 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 NOxygen59
 
-import CoreImage
 import PDFKit
+import ReaderCore
 import UIKit
 
-/// Fond des pages PDF : blanc d'origine, adouci (crème, tamisé) ou inversé (sombre confortable).
+/// Fond des pages PDF : blanc d'origine, adouci (crème, tamisé) ou inversé (sombre confortable, sépia nuit).
 /// Appliqué au dessin de chaque page (aucun calcul à part, aucun fichier modifié).
+///
+/// « Sombre intelligent (expérimental) » a été retiré (RET-027, #42) : `migrateStoredSetting()` remplace l'ancienne
+/// valeur enregistrée au lancement.
 enum PageTone: String, CaseIterable, Identifiable {
-    case normal, cream, dim, dark, smartDark
+    case normal, cream, dim, dark, sepiaNight
 
     var id: String { rawValue }
 
@@ -18,7 +21,7 @@ enum PageTone: String, CaseIterable, Identifiable {
         case .cream: return "Crème"
         case .dim: return "Tamisé"
         case .dark: return "Sombre (inversé)"
-        case .smartDark: return "Sombre intelligent (expérimental)"
+        case .sepiaNight: return "Sépia nuit"
         }
     }
 
@@ -28,11 +31,20 @@ enum PageTone: String, CaseIterable, Identifiable {
         case .cream: return "cup.and.saucer"
         case .dim: return "sun.min"
         case .dark: return "moon"
-        case .smartDark: return "moon.stars"
+        case .sepiaNight: return "moon.haze"
         }
     }
 
     static let storageKey = "reader.pageTone"
+
+    /// Au lancement, avant toute lecture du réglage : une valeur retirée devient la teinte qui la remplace
+    /// (`PageToneMigration`), au lieu de retomber sur « Blanc ».
+    static func migrateStoredSetting() {
+        let defaults = UserDefaults.standard
+        guard let replacement = PageToneMigration.migrated(defaults.string(forKey: storageKey)) else { return }
+        defaults.set(replacement, forKey: storageKey)
+        Diagnostics.log("Fond des pages : réglage retiré remplacé par « \(replacement) »", "lecteur")
+    }
 
     /// Lu par PDFKit depuis ses fils de dessin : protégé par un verrou.
     private static let lock = NSLock()
@@ -58,12 +70,17 @@ enum PageTone: String, CaseIterable, Identifiable {
             blend(.multiply, 1.0, 0.94, 0.82)
         case .dim:
             blend(.multiply, 0.80, 0.78, 0.74)
-        case .dark, .smartDark:
+        case .dark:
             // Inverser, puis fond gris très foncé (pas noir pur) et texte blanc cassé (moins éblouissant).
-            // (Sombre intelligent : seulement en attendant son image préparée, voir `ToneCache`.)
             blend(.difference, 1, 1, 1)
             blend(.screen, 0.11, 0.11, 0.12)
             blend(.multiply, 0.86, 0.84, 0.80)
+        case .sepiaNight:
+            // Inverser, puis fond brun sépia foncé et texte beige chaud : ni blanc pur ni noir pur, contraste
+            // plus faible que « Sombre » et moins de bleu le soir (RET-027, #42).
+            blend(.difference, 1, 1, 1)
+            blend(.screen, 0.17, 0.12, 0.07)
+            blend(.multiply, 0.90, 0.78, 0.60)
         }
         context.restoreGState()
     }
@@ -109,29 +126,9 @@ enum ToneCache {
         ctx.translateBy(x: -box.minX, y: -box.minY)
         ctx.drawPDFPage(page)
         ctx.restoreGState()
-        guard var result = ctx.makeImage() else { return false }
-        if tone == .smartDark {
-            // Clair ↔ sombre inversés, teintes gardées (inversion puis rotation de teinte d'un demi-tour), puis le
-            // même adoucissement que « Sombre » (fond gris très foncé, blanc cassé).
-            let inverted = CIImage(cgImage: result).applyingFilter("CIColorInvert")
-                .applyingFilter("CIHueAdjust", parameters: [kCIInputAngleKey: Double.pi])
-            guard let smart = CIContext(options: [.cacheIntermediates: false]).createCGImage(inverted, from: inverted.extent)
-            else { return false }
-            ctx.draw(smart, in: rect)
-            ctx.saveGState()
-            ctx.setBlendMode(.screen)
-            ctx.setFillColor(red: 0.11, green: 0.11, blue: 0.12, alpha: 1)
-            ctx.fill(rect)
-            ctx.setBlendMode(.multiply)
-            ctx.setFillColor(red: 0.86, green: 0.84, blue: 0.80, alpha: 1)
-            ctx.fill(rect)
-            ctx.restoreGState()
-        } else {
-            tone.apply(in: ctx, rect: rect)
-        }
+        tone.apply(in: ctx, rect: rect)
         guard let toned = ctx.makeImage() else { return false }
-        result = toned
-        lock.withLock { images[full(key, tone)] = result }
+        lock.withLock { images[full(key, tone)] = toned }
         return true
     }
 }
