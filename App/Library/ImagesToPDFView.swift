@@ -229,11 +229,18 @@ struct ImagesToPDFView: View {
     }
 
     private func importResult(_ url: URL) {
-        // Copie : le fichier reste disponible pour « Enregistrer dans Fichiers ».
+        // Copie : le fichier de la fenêtre est effacé à sa fermeture ; l'import travaille sur la sienne.
         let copy = FileManager.default.temporaryDirectory.appendingPathComponent(url.lastPathComponent)
         try? FileManager.default.removeItem(at: copy)
         guard (try? FileManager.default.copyItem(at: url, to: copy)) != nil else { error = "Import impossible."; return }
-        model.importFiles([copy], cleanUp: true, openWhenSingle: false)
         imported = true
+        // Fenêtre fermée d'abord, import ensuite : la question « Livre ou manuel ? » s'affiche sur la bibliothèque.
+        // Posée pendant que cette fenêtre était ouverte, l'alerte ne pouvait pas paraître et restait en attente,
+        // bloquant les suivantes (confirmation de suppression) jusqu'au relancement (recette 1.3.2 (62)).
+        let model = model
+        dismiss()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+            model.importFiles([copy], cleanUp: true, openWhenSingle: false)
+        }
     }
 }
