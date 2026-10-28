@@ -8,22 +8,72 @@ import SwiftUI
 /// mémoire, sa page est gardée) ; un seul document est chargé à la fois.
 struct ReaderTabsHost: View {
     @EnvironmentObject private var model: AppModel
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Bulle mémoire façon notification (recette 1.3.2 (62), L8) : glisse du haut, repart après 3 s.
+    @State private var notice = false
+    @State private var hideTask: Task<Void, Never>?
 
     var body: some View {
-        if let id = model.openDocumentId, let document = model.documents.first(where: { $0.id == id }) {
-            ReaderScreen(document: document, model: model).id(document.id)
+        ZStack(alignment: .top) {
+            if let id = model.openDocumentId, let document = model.documents.first(where: { $0.id == id }) {
+                ReaderScreen(document: document, model: model).id(document.id)
+            }
+            if notice {
+                MemoryNotice(count: model.tabs.ids.count)
+                    .padding(.top, 8)
+                    .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
+                    .zIndex(1)
+            }
+        }
+        .onChange(of: model.tabs.ids.count) { [old = model.tabs.ids.count] count in
+            // Seulement quand un onglet s'ajoute au-delà du seuil, pas à la fermeture d'un onglet.
+            if count >= DocumentTabs.warningCount, count > old { showNotice() }
+        }
+        // Lecteur ouvert depuis la bibliothèque avec déjà assez d'onglets : prévenir une fois à l'ouverture.
+        .onAppear { if model.tabs.showsMemoryWarning { showNotice() } }
+        .onDisappear { hideTask?.cancel() }
+    }
+
+    private func showNotice() {
+        hideTask?.cancel()
+        withAnimation(.spring(response: 0.45, dampingFraction: 0.85)) { notice = true }
+        hideTask = Task {
+            try? await Task.sleep(nanoseconds: 3_000_000_000)
+            guard !Task.isCancelled else { return }
+            withAnimation(.easeIn(duration: 0.3)) { notice = false }
         }
     }
 }
 
-/// Onglets des documents ouverts, en haut du lecteur (RET-013, #16) : barre défilable, × pour fermer, + pour ouvrir
-/// un autre document. À partir de ``DocumentTabs/warningCount`` onglets, une bulle conseille de surveiller la mémoire.
-struct DocumentTabsBar: View {
-    let current: String
-    @EnvironmentObject private var model: AppModel
+/// Notification de mémoire : « N documents ouverts… », avec un bouton qui affiche le moniteur.
+private struct MemoryNotice: View {
+    let count: Int
     @AppStorage(ResourceMonitor.enabledKey) private var monitorEnabled = false
     @AppStorage(ResourceMonitor.shownKey) private var monitorShown = false
 
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "memorychip").foregroundStyle(.orange)
+            Text("\(count) documents ouverts : la mémoire peut se remplir, garde un œil sur le moniteur.")
+                .font(.system(size: 13)).foregroundStyle(Atelier.textPrimary)
+            if !(monitorEnabled && monitorShown) {
+                Button("Moniteur") { monitorEnabled = true; monitorShown = true }
+                    .font(.system(size: 13, weight: .semibold))
+            }
+        }
+        .padding(.horizontal, 16).padding(.vertical, 10)
+        .background(.regularMaterial, in: Capsule())
+        .shadow(color: .black.opacity(0.3), radius: 12, y: 4)
+        .frame(maxWidth: 560)
+    }
+}
+
+/// Onglets des documents ouverts, en haut du lecteur (RET-013, #16) : barre défilable, × pour fermer, + pour ouvrir
+/// un autre document. À partir de ``DocumentTabs/warningCount`` onglets, `ReaderTabsHost` montre une notification
+/// qui conseille de surveiller la mémoire.
+struct DocumentTabsBar: View {
+    let current: String
+    @EnvironmentObject private var model: AppModel
     private var openDocuments: [LibraryDocument] {
         model.tabs.ids.compactMap { id in model.documents.first { $0.id == id } }
     }
@@ -53,7 +103,6 @@ struct DocumentTabsBar: View {
                 }
                 .accessibilityLabel("Ouvrir un autre document dans un onglet")
             }
-            if model.tabs.showsMemoryWarning { memoryBubble }
         }
     }
 
@@ -88,22 +137,5 @@ struct DocumentTabsBar: View {
     private func close(_ document: LibraryDocument) {
         Diagnostics.log("onglets : fermeture de « \(document.title) »", "lecteur")
         model.closeTab(document.id)
-    }
-
-    /// Bulle discrète, façon notification ; « Moniteur » l'affiche directement.
-    private var memoryBubble: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "memorychip").foregroundStyle(.orange)
-            Text("\(model.tabs.ids.count) documents ouverts : la mémoire peut se remplir, garde un œil sur le moniteur.")
-                .font(.system(size: 12)).foregroundStyle(Atelier.textPrimary)
-            if !(monitorEnabled && monitorShown) {
-                Button("Moniteur") { monitorEnabled = true; monitorShown = true }
-                    .font(.system(size: 12, weight: .semibold))
-            }
-        }
-        .padding(.horizontal, 12).padding(.vertical, 7)
-        .atelierPanel(radius: 14)
-        .fixedSize(horizontal: false, vertical: true)
-        .transition(.opacity)
     }
 }
