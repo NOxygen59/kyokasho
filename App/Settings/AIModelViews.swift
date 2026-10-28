@@ -4,6 +4,7 @@
 import GLMOCRKit
 import OCRKit
 import ReaderCore
+import AVFoundation
 import SwiftUI
 
 /// Réglages → Modèles → une page par IA : à quoi elle sert, place prise, chargée ou non (mémoire, dernier usage),
@@ -134,6 +135,8 @@ struct QwenChatView: View {
     var focusPage: String? = nil
     var preferredModel: ModelSpec = .qwen3vl4b
     var openPage: ((Int) -> Void)? = nil
+    /// Fenêtre OCR : enregistre une réponse comme note de la page affichée.
+    var saveToNotes: ((String) -> Void)? = nil
     private struct Conversation: Codable, Identifiable {
         var id = UUID()
         var title: String
@@ -154,6 +157,17 @@ struct QwenChatView: View {
     @State private var modelSwitch: Task<Void, Never>?
     @State private var error: String?
     @State private var storageError = false
+    /// Réglages du chat du modèle choisi (#45) ; feuille ouverte par la roue dentée.
+    @State private var showSettings = false
+    @State private var settingsAtOpen = AIChatSettings()
+    /// Durée de la dernière réponse, affichée sous la barre (« réponse en 12 s »).
+    @State private var lastDuration: TimeInterval?
+    @State private var renaming = false
+    @State private var newTitle = ""
+    @State private var confirmDelete = false
+    /// Bref retour après une action sur une réponse (« Copié », « Ajouté aux notes »).
+    @State private var toast: String?
+    private static let speaker = AVSpeechSynthesizer()
 
     private var file: URL {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
@@ -177,9 +191,10 @@ struct QwenChatView: View {
                                  ? "Pose une question sur un mot japonais, une phrase ou un sujet qui t'intéresse. Tout reste sur l'iPad."
                                  : "Pose une question sur ce livre. Je chercherai les passages lus par OvisOCR2 et indiquerai les pages utilisées.")
                                 .font(.footnote).foregroundStyle(.secondary)
+                            if ready { suggestions }
                         }
                         ForEach(Array(messages.enumerated()), id: \.offset) { i, m in
-                            bubble(m).id(i)
+                            bubble(m, index: i).id(i)
                         }
                         if let error { Text(error).font(.caption).foregroundStyle(.red) }
                     }
@@ -190,6 +205,8 @@ struct QwenChatView: View {
                 }
             }
             Divider()
+            statusLine
+            if ready { chips.padding(.top, 6) }
             HStack(spacing: 10) {
                 TextField(loading ? "Chargement du modèle…" : ready ? "Ta question" : "Modèle indisponible", text: $draft, axis: .vertical)
                     .lineLimit(1...5)
@@ -202,7 +219,8 @@ struct QwenChatView: View {
                 } else {
                     Button(action: send) { Image(systemName: "arrow.up.circle.fill").font(.title2) }
                         .disabled(!ready || draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                        .accessibilityLabel("Envoyer")
+                        .keyboardShortcut(.return, modifiers: .command)
+                        .accessibilityLabel("Envoyer (⌘ ↩)")
                 }
             }
             .padding()
@@ -213,6 +231,7 @@ struct QwenChatView: View {
                 ToolbarItem(placement: .cancellationAction) { Button("Fermer") { dismiss() } }
             }
             if document == nil {
+                ToolbarItem(placement: .secondaryAction) { HStack { tasksMenu; settingsButton } }
                 ToolbarItem(placement: .primaryAction) {
                     Button {
                         answering?.cancel()
@@ -238,6 +257,31 @@ struct QwenChatView: View {
             }
             await startSelectedModel()
         }
+        .overlay(alignment: .top) {
+            if let toast {
+                Text(toast).font(.caption.weight(.semibold))
+                    .padding(.horizontal, 12).padding(.vertical, 6)
+                    .background(.thinMaterial, in: Capsule())
+                    .padding(.top, 50)
+                    .transition(.opacity)
+            }
+        }
+        .alert("Renommer la conversation", isPresented: $renaming) {
+            TextField("Titre", text: $newTitle)
+            Button("Annuler", role: .cancel) {}
+            Button("Renommer") { renameConversation() }
+        }
+        .confirmationDialog("Supprimer cette conversation ?", isPresented: $confirmDelete, titleVisibility: .visible) {
+            Button("Supprimer", role: .destructive) { deleteConversation() }
+        } message: {
+            Text("Ses messages seront effacés de l'iPad. Les autres conversations sont gardées.")
+        }
+        .sheet(isPresented: $showSettings, onDismiss: applySettingsIfChanged) {
+            NavigationStack {
+                AIChatSettingsView(modelID: selectedModelID, fixedModel: true)
+                    .toolbar { ToolbarItem(placement: .confirmationAction) { Button("OK") { showSettings = false } } }
+            }
+        }
         // Écran quitté : réponse arrêtée, modèle déchargé.
         .onDisappear {
             answering?.cancel()
@@ -261,6 +305,12 @@ struct QwenChatView: View {
                         } else { Text(conversation.title) }
                     }
                 }
+                Divider()
+                Button { newTitle = conversations.first(where: { $0.id == selectedConversation })?.title ?? ""; renaming = true } label: {
+                    Label("Renommer…", systemImage: "pencil")
+                }
+                Button(role: .destructive) { confirmDelete = true } label: { Label("Supprimer…", systemImage: "trash") }
+                    .disabled(conversations.count < 2 && messages.isEmpty)
             } label: {
                 Label(conversations.first(where: { $0.id == selectedConversation })?.title ?? "Conversation", systemImage: "bubble.left")
                     .lineLimit(1)
@@ -278,6 +328,8 @@ struct QwenChatView: View {
             if let progress = downloads.progress[ModelSpec.qwen35chat4b.id] {
                 ProgressView(value: progress).frame(width: 30)
             }
+            tasksMenu
+            settingsButton
             Button { newConversation() } label: {
                 Image(systemName: "square.and.pencil")
             }
@@ -286,15 +338,6 @@ struct QwenChatView: View {
         }
         .font(.caption)
         .padding(.horizontal, 12).padding(.vertical, 8)
-        if let focusPage {
-            Button {
-                let reference = "p. \(focusPage)"
-                if !draft.contains(reference) { draft = draft.isEmpty ? reference + " : " : reference + " : " + draft }
-            } label: { Label("Insérer p. \(focusPage)", systemImage: "text.insert").font(.caption2) }
-                .buttonStyle(.plain)
-                .foregroundStyle(Atelier.Tint.ai)
-                .padding(.horizontal, 12)
-        }
         if let error = downloads.errors[ModelSpec.qwen35chat4b.id] {
             Text("Téléchargement : \(error)").font(.caption2).foregroundStyle(.red)
                 .padding(.horizontal, 12)
@@ -314,6 +357,41 @@ struct QwenChatView: View {
             Button { downloads.start(spec) } label: {
                 Label("Télécharger \(title) (\(StorageUsage.format(spec.totalSize)))", systemImage: "arrow.down.circle")
             }
+        }
+    }
+
+    /// Tâches rapides (#37) : une question type écrite dans le champ, à compléter ou envoyer telle quelle.
+    private var tasksMenu: some View {
+        let page = focusPage.map { "la page \($0)" } ?? "ce passage"
+        return Menu {
+            Button("Résumer \(page)") { draft = "Résume \(page) : de quoi parle-t-elle, puis les points clés." }
+            Button("Expliquer les formules de \(page)") { draft = "Explique pas à pas chaque formule de \(page), avec un exemple chiffré." }
+            Button("Vocabulaire de \(page)") { draft = "Liste les mots techniques japonais de \(page) avec lecture et sens." }
+            Button("Traduire mot à mot") { draft = "Traduis mot à mot, puis naturellement : " }
+        } label: { Image(systemName: "list.bullet.rectangle") }
+        .disabled(!ready || answering != nil)
+        .accessibilityLabel("Tâches rapides")
+    }
+
+    private var settingsButton: some View {
+        Button {
+            settingsAtOpen = AIChatSettingsStore.load(selectedModelID)
+            showSettings = true
+        } label: { Image(systemName: "slider.horizontal.3") }
+        .disabled(loading || answering != nil)
+        .accessibilityLabel("Consigne et paramètres du chat")
+    }
+
+    /// Réglages changés : le modèle redémarre la conversation avec eux (historique gardé).
+    private func applySettingsIfChanged() {
+        guard AIChatSettingsStore.load(selectedModelID) != settingsAtOpen, downloads.installed.contains(selectedModelID) else { return }
+        let oldChat = chat
+        ready = false
+        loading = true
+        modelSwitch = Task {
+            await oldChat.stop()
+            guard !Task.isCancelled else { return }
+            await startSelectedModel()
         }
     }
 
@@ -356,7 +434,8 @@ struct QwenChatView: View {
         chat = selectedChat
         do {
             try await Diagnostics.measure("chargement de \(spec.title) (chat)", "chat") {
-                try await selectedChat.start(history: document == nil ? messages : [], grounded: document != nil)
+                try await selectedChat.start(history: document == nil ? messages : [], grounded: document != nil,
+                                             settings: AIChatSettingsStore.load(spec.id))
             }
             if Task.isCancelled {
                 await selectedChat.stop()
@@ -419,12 +498,14 @@ struct QwenChatView: View {
         Task { await chat.reset() }
     }
 
-    private func bubble(_ m: QwenChat.Message) -> some View {
+    private func bubble(_ m: QwenChat.Message, index: Int) -> some View {
         let mine = m.role == .user
+        let streaming = answering != nil && index == messages.count - 1
         return HStack {
             if mine { Spacer(minLength: 60) }
             VStack(alignment: .leading, spacing: 8) {
-                Text(m.text.isEmpty ? "…" : m.text).textSelection(.enabled)
+                // Gras, italique, code et liens du Markdown des réponses ; retours à la ligne gardés.
+                Text(Self.rendered(m.text.isEmpty ? "…" : m.text)).textSelection(.enabled)
                 if !mine, let openPage, let document {
                     let pages = citedPages(in: m.text, document: document)
                     if !pages.isEmpty {
@@ -437,11 +518,168 @@ struct QwenChatView: View {
                         }
                     }
                 }
+                if !mine, !streaming, !m.text.isEmpty { answerActions(m, index: index) }
             }
                 .padding(.horizontal, 12).padding(.vertical, 8)
                 .background(mine ? Atelier.Tint.ai.opacity(0.25) : Atelier.surfaceHigh,
                             in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .contextMenu {
+                    Button { copy(m.text) } label: { Label("Copier", systemImage: "doc.on.doc") }
+                    if mine {
+                        Button { draft = m.text } label: { Label("Reprendre dans le champ", systemImage: "pencil") }
+                    }
+                }
             if !mine { Spacer(minLength: 60) }
+        }
+    }
+
+    /// Actions sous une réponse (#chat de la fenêtre OCR) : copier, relancer, note, lire, partager.
+    private func answerActions(_ m: QwenChat.Message, index: Int) -> some View {
+        HStack(spacing: 14) {
+            Button { copy(m.text) } label: { Image(systemName: "doc.on.doc") }
+                .accessibilityLabel("Copier la réponse")
+            if index == messages.count - 1, index > 0 {
+                Button { regenerate() } label: { Image(systemName: "arrow.clockwise") }
+                    .disabled(!ready || answering != nil)
+                    .accessibilityLabel("Relancer la réponse")
+            }
+            if let saveToNotes {
+                Button { saveToNotes(m.text); show("Ajouté aux notes de la page") } label: { Image(systemName: "note.text.badge.plus") }
+                    .accessibilityLabel("Ajouter aux notes de la page")
+            }
+            Button { speak(m.text) } label: { Image(systemName: Self.speaker.isSpeaking ? "stop.circle" : "speaker.wave.2") }
+                .accessibilityLabel("Lire à voix haute")
+            ShareLink(item: m.text) { Image(systemName: "square.and.arrow.up") }
+                .accessibilityLabel("Partager la réponse")
+        }
+        .font(.caption)
+        .buttonStyle(.plain)
+        .foregroundStyle(Atelier.textSecondary)
+    }
+
+    /// Questions types quand la conversation est vide (#37) : un toucher les envoie.
+    private var suggestions: some View {
+        let page = focusPage.map { "la page \($0)" } ?? "ce passage"
+        let list = document == nil
+            ? ["Explique la différence entre は et が", "Comment lire 天井 ?", "Donne 5 mots du bâtiment en japonais"]
+            : ["Résume \(page)", "Explique les formules de \(page)", "Quels mots techniques apprendre dans \(page) ?"]
+        return VStack(alignment: .leading, spacing: 6) {
+            ForEach(list, id: \.self) { text in
+                Button { draft = text; send() } label: {
+                    Label(text, systemImage: "sparkles").font(.caption).multilineTextAlignment(.leading)
+                }
+                .buttonStyle(.bordered)
+            }
+        }
+    }
+
+    /// Raccourcis au-dessus du champ, défilables (la fenêtre OCR est étroite).
+    private var chips: some View {
+        let page = focusPage.map { "p. \($0)" }
+        return ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                if let page {
+                    chip("Insérer \(page)", "text.insert") {
+                        if !draft.contains(page) { draft = draft.isEmpty ? page + " : " : page + " : " + draft }
+                    }
+                }
+                chip("Résumer", "text.alignleft") { draft = "Résume \(page ?? "ce passage") : de quoi parle-t-elle, puis les points clés." }
+                chip("Formules", "function") { draft = "Explique pas à pas chaque formule de \(page ?? "ce passage"), avec un exemple chiffré." }
+                chip("Vocabulaire", "character.book.closed.ja") { draft = "Liste les mots techniques japonais de \(page ?? "ce passage") avec lecture et sens." }
+                chip("Plus simple", "tortoise") { draft = "Réexplique ta dernière réponse plus simplement, avec un exemple." }
+                chip("Plus court", "scissors") { draft = "Résume ta dernière réponse en trois lignes." }
+            }
+            .padding(.horizontal, 12)
+        }
+    }
+
+    private func chip(_ title: String, _ icon: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: icon).font(.caption2.weight(.semibold))
+                .padding(.horizontal, 9).padding(.vertical, 5)
+                .background(Atelier.surfaceHigh, in: Capsule())
+        }
+        .buttonStyle(.plain)
+        .disabled(answering != nil)
+    }
+
+    /// État du modèle et durée de la dernière réponse.
+    private var statusLine: some View {
+        let name = selectedSpec.id == ModelSpec.qwen35chat4b.id ? "Qwen3.5" : "Qwen3-VL"
+        let settings = AIChatSettingsStore.load(selectedModelID)
+        var parts = [loading ? "Chargement de \(name)…" : ready ? "\(name) prêt" : "\(name) indisponible"]
+        if settings.instructions != nil { parts.append("consigne perso") }
+        if answering != nil { parts.append("réponse en cours…") }
+        else if let lastDuration { parts.append("dernière réponse en \(Int(lastDuration.rounded())) s") }
+        return Text(parts.joined(separator: " · "))
+            .font(.caption2).foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 12).padding(.top, 6)
+    }
+
+    static func rendered(_ text: String) -> AttributedString {
+        (try? AttributedString(markdown: text, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)))
+            ?? AttributedString(text)
+    }
+
+    private func copy(_ text: String) {
+        UIPasteboard.general.string = text
+        show("Copié")
+    }
+
+    private func speak(_ text: String) {
+        if Self.speaker.isSpeaking { Self.speaker.stopSpeaking(at: .immediate); return }
+        let utterance = AVSpeechUtterance(string: text)
+        utterance.voice = AVSpeechSynthesisVoice(language: "fr-FR")
+        Self.speaker.speak(utterance)
+    }
+
+    private func show(_ message: String) {
+        withAnimation { toast = message }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { withAnimation { if toast == message { toast = nil } } }
+    }
+
+    /// Relance la dernière question (réponse précédente remplacée).
+    private func regenerate() {
+        guard answering == nil, messages.count >= 2, messages[messages.count - 2].role == .user else { return }
+        let question = messages[messages.count - 2].text
+        messages.removeLast(2)
+        draft = question
+        send()
+    }
+
+    private func renameConversation() {
+        let title = newTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !title.isEmpty, let i = conversations.firstIndex(where: { $0.id == selectedConversation }) else { return }
+        conversations[i].title = String(title.prefix(60))
+        saveConversations()
+    }
+
+    /// Supprime la conversation affichée (après confirmation) ; une autre prend sa place, sinon une vide.
+    private func deleteConversation() {
+        guard document != nil else {
+            messages = []
+            save()
+            Task { await chat.reset() }
+            return
+        }
+        conversations.removeAll { $0.id == selectedConversation }
+        if conversations.isEmpty { conversations = [Conversation(title: "Nouveau chat", modelID: selectedModelID)] }
+        let next = conversations[0]
+        selectedConversation = next.id
+        messages = next.messages
+        saveConversations()
+        if next.modelID == selectedModelID { Task { await chat.reset() } }
+        else {
+            let oldChat = chat
+            selectedModelID = next.modelID
+            ready = false
+            loading = true
+            modelSwitch = Task {
+                await oldChat.stop()
+                guard !Task.isCancelled else { return }
+                await startSelectedModel()
+            }
         }
     }
 
@@ -518,6 +756,7 @@ struct QwenChatView: View {
                     for try await chunk in chat.stream(prompt) { messages[index].text += chunk }
                 }
                 Diagnostics.remember("chat", "✓ réponse en \(String(format: "%.1f", Date().timeIntervalSince(start))) s")
+                lastDuration = Date().timeIntervalSince(start)
             } catch is CancellationError {
             } catch {
                 self.error = error.localizedDescription

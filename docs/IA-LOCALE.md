@@ -132,6 +132,10 @@ contrôle (mémoire `ios16-backport-rules`). Chaque correctif est listé dans `I
 - **Mise en page IA** (`AILayoutView`) : Markdown d'OvisOCR2 → `AILayout.blocks` (blocs sûrs) → HTML du thème,
   figures découpées. **Traduction** : `Analysis/<id>/fr-<page>.md`.
 - **Relecture OCR** : `OCRProofreader` (dictionnaire) puis GLM-OCR sur les lignes douteuses (`rereadDoubtful`).
+- **Chat** (`QwenChat`, `QwenChatView`) : consigne générale et paramètres propres à chaque modèle (`AIChatSettings`,
+  préférences `ai.chat.<modèle>`, écran « Consignes et paramètres du chat ») : température (automatique : 0 sur un livre,
+  0,3 sinon), top-p, top-k, longueur (128 à 4 096 jetons), pénalité de répétition, réflexion de Qwen3.5. Valeurs bornées
+  au décodage. Préréglages `AIChatPreset` ; tâches rapides dans le chat (résumer, formules, vocabulaire, traduction).
 
 ## 5. Tester sur le Mac (autorisé par l'utilisateur le 22/10 pour OvisOCR2 / Qwen3-VL)
 

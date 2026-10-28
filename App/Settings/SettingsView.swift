@@ -591,6 +591,13 @@ struct ModelsView: View {
             } footer: {
                 Text("État, mémoire, « Décharger », réglages propres et dernières tâches. Qwen3-VL et Qwen3.5 : conversation.")
             }
+            Section {
+                NavigationLink { AIChatSettingsView() } label: {
+                    Label("Consignes et paramètres du chat", systemImage: "slider.horizontal.3")
+                }
+            } footer: {
+                Text("Pour chaque modèle de chat : consigne générale, préréglages (résumer, expliquer les formules, professeur de japonais, traduction mot à mot), température, longueur…")
+            }
             OCRModelsSection(group: .ocr)
             MorphologySection()
             OCRModelsSection(group: .ai)
