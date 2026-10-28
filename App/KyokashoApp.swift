@@ -90,8 +90,8 @@ struct RootView: View {
                 }
             }
         }
-        // Moniteur de ressources (s'il est affiché) et tâches IA toujours en cours, aussi dans la bibliothèque (#47).
-        .overlay(alignment: .bottomLeading) { ActivityDock().padding(Atelier.gap) }
+        // Tâches IA toujours en cours ; le moniteur de la bibliothèque est ancré à droite de la liste (recette 63).
+        .overlay(alignment: .bottomLeading) { ActivityDock(showsMonitor: false).padding(Atelier.gap) }
         .task { AppUpdate.shared.checkAtLaunch(); MorphologyService.shared.loadIfInstalled() }
         // Une seule couverture pour tous les onglets (#16) : changer d'onglet remplace le lecteur sans refermer
         // ni rouvrir la feuille plein écran.

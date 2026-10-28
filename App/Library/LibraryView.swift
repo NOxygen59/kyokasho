@@ -19,6 +19,11 @@ struct LibraryView: View {
     @State private var showBench = false
     @State private var showMerge = false
     @State private var showImagesToPDF = false
+    // Moniteur ancré à droite, sous « Sélectionner » et « Importer » (recette 1.3.2 (63), point 15).
+    @AppStorage(ResourceMonitor.enabledKey) private var monitorEnabled = false
+    @AppStorage(ResourceMonitor.shownKey) private var monitorShown = false
+    @AppStorage("monitor.detailed") private var monitorDetailed = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var analyzing: LibraryDocument?
     @State private var exporting: LibraryDocument?
     @State private var addingPages: LibraryDocument?
@@ -307,6 +312,9 @@ struct LibraryView: View {
 
     // MARK: Planche
 
+    private static let monitorWidth: CGFloat = 300
+    private var monitorVisible: Bool { monitorEnabled && monitorShown }
+
     private var main: some View {
         VStack(alignment: .leading, spacing: Atelier.gap) {
             HStack(alignment: .bottom) {
@@ -333,42 +341,57 @@ struct LibraryView: View {
                 Button { showImportOptions = true } label: { Label("Importer", systemImage: "plus") }
                     .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.cloud))
             }
-            if filtered.isEmpty {
-                emptyState
-            } else {
-                ScrollView {
-                    // Sections « Manuels », « Livres », « Non classés » (recette 1.3.2 (61), E5) : chacune s'allonge
-                    // avec ses documents, les suivantes descendent d'autant.
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 180, maximum: 220), spacing: 22)], spacing: 26) {
-                        ForEach(LibrarySections.group(filtered), id: \.title) { section in
-                            Section {
-                                ForEach(section.documents) { document in
-                                    Button {
-                                        if selecting { batch.toggle(document.id) } else { model.openDocumentId = document.id }
-                                    } label: {
-                                        DocumentCard(document: document)
-                                            .overlay(alignment: .topTrailing) {
-                                                if selecting { selectionMark(batch.selected.contains(document.id)) }
+            ZStack(alignment: .topTrailing) {
+                VStack(alignment: .leading, spacing: Atelier.gap) {
+                    if filtered.isEmpty {
+                        emptyState
+                    } else {
+                        ScrollView {
+                            // Sections « Manuels », « Livres », « Non classés » (recette 1.3.2 (61), E5) : chacune s'allonge
+                            // avec ses documents, les suivantes descendent d'autant.
+                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 180, maximum: 220), spacing: 22)], spacing: 26) {
+                                ForEach(LibrarySections.group(filtered), id: \.title) { section in
+                                    Section {
+                                        ForEach(section.documents) { document in
+                                            Button {
+                                                if selecting { batch.toggle(document.id) } else { model.openDocumentId = document.id }
+                                            } label: {
+                                                DocumentCard(document: document)
+                                                    .overlay(alignment: .topTrailing) {
+                                                        if selecting { selectionMark(batch.selected.contains(document.id)) }
+                                                    }
                                             }
+                                            .buttonStyle(PressScale())
+                                            .contextMenu { if !selecting { menu(for: document) } }
+                                        }
+                                    } header: {
+                                        HStack(alignment: .firstTextBaseline, spacing: 8) {
+                                            AtelierLabel(section.title, tint: section.category == .textbook ? Atelier.Tint.read
+                                                         : section.category == .book ? Atelier.Tint.annotate : Atelier.textTertiary)
+                                            Text("\(section.documents.count)").font(Atelier.mono).foregroundStyle(Atelier.textTertiary)
+                                            Spacer()
+                                        }
+                                        .padding(.top, 8)
                                     }
-                                    .buttonStyle(PressScale())
-                                    .contextMenu { if !selecting { menu(for: document) } }
                                 }
-                            } header: {
-                                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                                    AtelierLabel(section.title, tint: section.category == .textbook ? Atelier.Tint.read
-                                                 : section.category == .book ? Atelier.Tint.annotate : Atelier.textTertiary)
-                                    Text("\(section.documents.count)").font(Atelier.mono).foregroundStyle(Atelier.textTertiary)
-                                    Spacer()
-                                }
-                                .padding(.top, 8)
                             }
+                            .padding(.vertical, 6)
                         }
+                        if selecting { selectionBar }
                     }
-                    .padding(.vertical, 6)
                 }
-                if selecting { selectionBar }
+                // Moniteur déroulé : les documents s'arrêtent avant lui. Replié, il se pose sur le coin sans réserver
+                // de colonne.
+                .padding(.trailing, monitorVisible && monitorDetailed ? Self.monitorWidth + Atelier.gap : 0)
+                if monitorVisible {
+                    ResourceMonitorPanel(expandsDown: true, fillsWidth: monitorDetailed)
+                        .frame(width: monitorDetailed ? Self.monitorWidth : nil)
+                        .transition(reduceMotion ? .opacity : .move(edge: .trailing).combined(with: .opacity))
+                }
             }
+            .animation(reduceMotion ? .easeOut(duration: 0.15) : .spring(response: 0.4, dampingFraction: 0.85),
+                       value: monitorVisible && monitorDetailed)
+            .animation(reduceMotion ? nil : .spring(response: 0.4, dampingFraction: 0.85), value: monitorVisible)
         }
         .padding(.horizontal, 6)
     }
