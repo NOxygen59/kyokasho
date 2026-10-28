@@ -37,6 +37,8 @@ struct DocumentTabsBar: View {
                             ForEach(openDocuments) { document in tab(document).id(document.id) }
                         }
                     }
+                    // Hauteur du contenu seulement : sans elle, la zone défilante pouvait s'étirer en hauteur.
+                    .fixedSize(horizontal: false, vertical: true)
                     .onAppear { proxy.scrollTo(current) }
                     .onChange(of: current) { id in withAnimation { proxy.scrollTo(id) } }
                 }
@@ -55,22 +57,37 @@ struct DocumentTabsBar: View {
         }
     }
 
+    /// Toute la pastille est la zone de toucher (recette 1.3.2 (62), L6 : toucher le titre seul ne faisait rien) ;
+    /// le × a sa propre zone, prioritaire.
     private func tab(_ document: LibraryDocument) -> some View {
         let selected = document.id == current
         return HStack(spacing: 6) {
-            Button { model.openDocumentId = document.id } label: {
-                Text(document.title).lineLimit(1).frame(maxWidth: 180)
-            }
-            .buttonStyle(.plain)
-            Button { model.closeTab(document.id) } label: { Image(systemName: "xmark").font(.system(size: 10, weight: .bold)) }
-                .buttonStyle(.plain)
+            Text(document.title).lineLimit(1).frame(maxWidth: 180)
+            Image(systemName: "xmark").font(.system(size: 10, weight: .bold))
+                .frame(width: 24, height: 24)
+                .contentShape(Rectangle())
+                .highPriorityGesture(TapGesture().onEnded { close(document) })
                 .accessibilityLabel("Fermer l'onglet \(document.title)")
+                .accessibilityAddTraits(.isButton)
         }
         .font(.system(size: 13, weight: selected ? .semibold : .regular))
         .foregroundStyle(selected ? Color.black.opacity(0.85) : Atelier.textPrimary)
-        .padding(.horizontal, 12).padding(.vertical, 7)
+        .padding(.leading, 12).padding(.trailing, 4).padding(.vertical, 3)
         .background(selected ? AnyShapeStyle(Atelier.Tint.read) : AnyShapeStyle(Atelier.surface.opacity(0.85)), in: Capsule())
-        .accessibilityAddTraits(selected ? .isSelected : [])
+        .contentShape(Capsule())
+        .onTapGesture { select(document) }
+        .accessibilityAddTraits(selected ? [.isSelected, .isButton] : .isButton)
+    }
+
+    private func select(_ document: LibraryDocument) {
+        guard document.id != current else { return }
+        Diagnostics.log("onglets : passage à « \(document.title) »", "lecteur")
+        model.openDocumentId = document.id
+    }
+
+    private func close(_ document: LibraryDocument) {
+        Diagnostics.log("onglets : fermeture de « \(document.title) »", "lecteur")
+        model.closeTab(document.id)
     }
 
     /// Bulle discrète, façon notification ; « Moniteur » l'affiche directement.
