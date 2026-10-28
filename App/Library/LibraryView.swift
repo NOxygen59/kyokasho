@@ -18,6 +18,7 @@ struct LibraryView: View {
     @State private var showDrive = false
     @State private var showBench = false
     @State private var showMerge = false
+    @State private var showImagesToPDF = false
     @State private var analyzing: LibraryDocument?
     @State private var exporting: LibraryDocument?
     @State private var addingPages: LibraryDocument?
@@ -97,6 +98,9 @@ struct LibraryView: View {
         }
         .sheet(isPresented: $showMerge) {
             PDFMergeView().environmentObject(model).preferredColorScheme(.dark)
+        }
+        .sheet(isPresented: $showImagesToPDF) {
+            ImagesToPDFView().environmentObject(model).preferredColorScheme(.dark)
         }
         .sheet(isPresented: $showSettings) {
             SettingsView().environmentObject(themes).environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review).preferredColorScheme(.dark)
@@ -216,6 +220,7 @@ struct LibraryView: View {
                 actionRow(icon: "character.book.closed.ja", title: "Dictionnaire", tint: Atelier.Tint.japanese,
                           count: model.dictionary.notebook.saved.count) { showDictionary = true }
                 actionRow(icon: "doc.on.doc", title: "Fusionner des PDF", tint: Atelier.Tint.cloud) { showMerge = true }
+                actionRow(icon: "photo.on.rectangle.angled", title: "Images vers PDF", tint: Atelier.Tint.cloud) { showImagesToPDF = true }
                 actionRow(icon: "gauge.with.dots.needle.33percent", title: "Banc d'essai OCR", tint: Atelier.Tint.japanese) { showBench = true }
                 actionRow(icon: "gearshape", title: "Réglages", tint: Atelier.textSecondary) { showSettings = true }
             }
