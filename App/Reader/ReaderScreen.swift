@@ -723,22 +723,45 @@ struct FilmstripCell: View {
 /// Pastille d'état OCR à côté du numéro de page.
 struct OCRStatusDot: View {
     @ObservedObject var reader: ReaderController
+    /// Moteur affiché, gardé un instant quand le résultat OCR est effacé au changement de page (RET-041, #60).
+    @State private var engine: String?
+    @State private var clearTask: Task<Void, Never>?
 
     var body: some View {
-        switch reader.ocrState {
-        case .running:
-            HStack(spacing: 4) { ProgressView().controlSize(.mini).tint(Atelier.Tint.japanese); Text("lecture…") }
-                .font(.system(size: 11))
-        case .failed:
-            Label("OCR", systemImage: "exclamationmark.triangle.fill").font(.system(size: 11)).foregroundStyle(.orange)
-        case .idle:
-            if let page = reader.ocrPage {
-                HStack(spacing: 4) {
-                    Circle().fill(Atelier.Tint.japanese).frame(width: 6, height: 6)
-                    Text(OCREngineID.displayName(page.engine)).font(.system(size: 11))
+        Group {
+            switch reader.ocrState {
+            case .running:
+                HStack(spacing: 4) { ProgressView().controlSize(.mini).tint(Atelier.Tint.japanese); Text("lecture…") }
+                    .font(.system(size: 11))
+            case .failed:
+                Label("OCR", systemImage: "exclamationmark.triangle.fill").font(.system(size: 11)).foregroundStyle(.orange)
+            case .idle:
+                if let engine {
+                    HStack(spacing: 4) {
+                        Circle().fill(Atelier.Tint.japanese).frame(width: 6, height: 6)
+                        Text(OCREngineID.displayName(engine)).font(.system(size: 11))
+                    }
                 }
             }
         }
+        .onAppear { engine = reader.ocrPage?.engine }
+        .onChange(of: reader.ocrPage?.engine) { incoming in
+            switch OCRPillHold.step(shown: engine, incoming: incoming) {
+            case .show(let shown):
+                clearTask?.cancel()
+                engine = shown
+            case .holdThenClear:
+                clearTask?.cancel()
+                clearTask = Task { @MainActor in
+                    try? await Task.sleep(nanoseconds: UInt64(OCRPillHold.holdDelay * 1_000_000_000))
+                    // Toujours rien pour la nouvelle page : la pastille disparaît.
+                    if !Task.isCancelled, reader.ocrPage == nil { engine = nil }
+                }
+            case .keep:
+                break
+            }
+        }
+        .onDisappear { clearTask?.cancel() }
     }
 }
 
