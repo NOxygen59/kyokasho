@@ -13,11 +13,16 @@ public struct ReaderToolModes: Codable, Equatable, Sendable {
     public var lookup = false
     /// Le Pencil cherche le mot touché au lieu de dessiner.
     public var pencilLookup = false
+    /// Position du panneau d'étude dans ce livre (valeur brute de `StudyPanelMode` côté app : `docked`, `floating`,
+    /// `full`) ; `nil` : réglage général (recette 1.3.2 (61), M2). Facultatif pour relire les modes enregistrés
+    /// avant ce champ.
+    public var panelMode: String?
 
-    public init(drawing: Bool = false, lookup: Bool = false, pencilLookup: Bool = false) {
+    public init(drawing: Bool = false, lookup: Bool = false, pencilLookup: Bool = false, panelMode: String? = nil) {
         self.drawing = drawing
         self.lookup = lookup
         self.pencilLookup = pencilLookup
+        self.panelMode = panelMode
     }
 }
 
