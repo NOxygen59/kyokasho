@@ -80,7 +80,7 @@ Le document de feedback complet du 26/10 (13 observations O01–O13, 10 proposit
 | ID | Alias | Date | Type | Retour (résumé) | Build | État | Issue | PR | Preuve |
 |---|---|---|---|---|---|---|---|---|---|
 | RET-022 | O04 | 2026-10-26 | Fonction (IA) | Le chat ne sait pas résumer une page | QA02 1.3 (40), `431f1c6` | rapporté | [#37](https://github.com/NOxygen59/kyokasho/issues/37) | — | — |
-| RET-023 | O06 | 2026-10-26 | Ergonomie | Boutons de la fenêtre OCR redondants (quatre états à clarifier) | QA02 1.3 (40), `431f1c6` | rapporté | [#38](https://github.com/NOxygen59/kyokasho/issues/38) | — | — |
+| RET-023 | O06 | 2026-10-26 | Ergonomie | Boutons de la fenêtre OCR redondants (quatre états à clarifier) | QA02 1.3 (40), `431f1c6` ; correctif `d963011` | compilé iOS | [#38](https://github.com/NOxygen59/kyokasho/issues/38) | — (PR à ouvrir à la réouverture de GitHub) | bouton « − » et choix « Réduite en pastille » retirés (× masque) ; panneau resté réduit remis à sa dernière position au lancement (`StudyPanelModeMigration`, 3 tests) ; compilé iOS ; non testé iPad ; suppression de code : revue croisée requise |
 | RET-024 | O08 | 2026-10-26 | Ergonomie | Choix du moteur OCR peu clair, Apple Vision d'office | QA02 1.3 (40), `431f1c6` | rapporté | [#39](https://github.com/NOxygen59/kyokasho/issues/39) | — | — |
 | RET-025 | O09 | 2026-10-26 | Ergonomie | Moniteur de performances trop long | QA02 1.3 (40), `431f1c6` | rapporté | [#40](https://github.com/NOxygen59/kyokasho/issues/40) | — | — |
 | RET-026 | O11 | 2026-10-26 | Ergonomie | Analyse : choix visible, annulation, critères, relance paramétrable | QA02 1.3 (40), `431f1c6` | rapporté | [#41](https://github.com/NOxygen59/kyokasho/issues/41) | — | — |
