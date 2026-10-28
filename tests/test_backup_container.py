@@ -2,10 +2,15 @@
 # Copyright (c) 2026 NOxygen59
 
 import json
+import os
 from pathlib import Path
+import signal
 import sqlite3
+import subprocess
 import sys
 import tempfile
+import textwrap
+import unicodedata
 import unittest
 from unittest.mock import patch
 
@@ -192,6 +197,115 @@ class BackupTests(unittest.TestCase):
                 self.create()
         self.assertFalse((self.root / "sauvegarde").exists())
 
+
+    # --- DATA-02 (Issue #83) : noms, fichiers particuliers, arrêt brutal, limite du manifeste ---
+
+    def test_r1_japanese_unicode_and_long_names_roundtrip_exactly(self):
+        """Octets de chaque nom conservés. NFC et NFD sont dans deux dossiers : APFS ne permet pas de créer les deux
+        formes dans le même dossier, l'absence de collision n'est donc pas testée ici."""
+        nfc = unicodedata.normalize("NFC", "が教科書.md")
+        nfd = unicodedata.normalize("NFD", "が教科書.md")
+        self.assertNotEqual(nfc.encode(), nfd.encode())
+        names = {
+            "Library/Application Support/Analysis/教科書 1/ovisocr2-1.md": "図 : lecture".encode(),
+            "Library/Application Support/Kyokasho/Chats/nfc/" + nfc: b"forme NFC",
+            "Library/Application Support/Kyokasho/Chats/nfd/" + nfd: b"forme NFD",
+            "Library/Application Support/Kyokasho/NoteDrafts/doc avec espaces.json": b'{"0":"brouillon"}',
+            "Library/Application Support/Kyokasho/Chats/" + "a" * 196 + ".txt": b"nom de 200 caracteres",
+        }
+        for name, value in names.items():
+            target = self.source / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(value)
+        restored = storage.restore(self.create(), self.root / "restauration")
+        for name, value in names.items():
+            self.assertEqual((restored / name).read_bytes(), value, name)
+        # Octets exacts des noms : aucune normalisation silencieuse NFC/NFD.
+        chats = restored / "Library/Application Support/Kyokasho/Chats"
+        self.assertEqual(os.listdir(os.fsencode(chats / "nfc")), [os.fsencode(nfc)])
+        self.assertEqual(os.listdir(os.fsencode(chats / "nfd")), [os.fsencode(nfd)])
+
+    def test_r2_empty_large_and_read_only_files_roundtrip(self):
+        """Contenus identiques. Les permissions ne sont pas conservées (`shutil.copyfile`) : un fichier 0444 ressort
+        selon l'umask ; seule la lisibilité est garantie."""
+        large = bytes(range(256)) * (64 * 1024 * 1024 // 256)
+        files = {
+            "Library/Application Support/Kyokasho/vide.json": b"",
+            "Library/Application Support/Kyokasho/Documents/gros.pdf": large,
+            "Library/Application Support/Kyokasho/lecture-seule.json": b'{"lecture":"seule"}',
+        }
+        for name, value in files.items():
+            target = self.source / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_bytes(value)
+        os.chmod(self.source / "Library/Application Support/Kyokasho/lecture-seule.json", 0o444)
+        restored = storage.restore(self.create(), self.root / "restauration")
+        for name, value in files.items():
+            self.assertEqual((restored / name).read_bytes(), value, name)
+
+    def run_killed(self, call, point):
+        """Exécute `call` dans un processus enfant tué par SIGKILL au point demandé (vraie mort, pas d'exception)."""
+        tools = Path(storage.__file__).resolve().parent
+        code = textwrap.dedent(f"""
+            import os, signal, sys
+            sys.path.insert(0, {str(tools)!r})
+            import backup_container as s
+            from pathlib import Path
+            point, calls = {point!r}, [0]
+            real_copy, real_rename = s.shutil.copyfile, s.os.rename
+            def copy(src, dst):
+                result = real_copy(src, dst)
+                calls[0] += 1
+                if (point == "first-copy" and calls[0] == 1) or (point == "mid-copy" and calls[0] == 4):
+                    os.kill(os.getpid(), signal.SIGKILL)
+                return result
+            def rename(old, new):
+                if point == "before-publish":
+                    os.kill(os.getpid(), signal.SIGKILL)
+                return real_rename(old, new)
+            s.shutil.copyfile, s.os.rename = copy, rename
+            {call}
+            """)
+        process = subprocess.run([sys.executable, "-I", "-c", code], capture_output=True, text=True)
+        self.assertEqual(process.returncode, -signal.SIGKILL, point + "\n" + process.stderr)
+
+    def test_r3_backup_killed_never_publishes_and_source_stays_intact(self):
+        for index, point in enumerate(("first-copy", "mid-copy", "before-publish")):
+            destination = self.root / f"sauvegarde-{index}"
+            self.run_killed(f"s.backup(Path({str(self.source)!r}), Path({str(destination)!r}), source_stopped=True)", point)
+            self.assertFalse((destination / "backup").exists(), point)
+            if destination.exists():  # Arrêt entre la réservation et la publication : dossier vide, jamais écrasé.
+                self.assertEqual(list(destination.iterdir()), [], point)
+                with self.assertRaises(ValueError):
+                    storage.backup(self.source, destination, source_stopped=True)
+            for name, value in self.payloads.items():
+                self.assertEqual((self.source / name).read_bytes(), value, point)
+        archive = storage.backup(self.source, self.root / "relance", source_stopped=True)
+        storage.verify(archive)
+
+    def test_r3_restore_killed_never_publishes_container(self):
+        archive = self.create()
+        for index, point in enumerate(("first-copy", "mid-copy", "before-publish")):
+            destination = self.root / f"restauration-{index}"
+            self.run_killed(f"s.restore(Path({str(archive)!r}), Path({str(destination)!r}))", point)
+            self.assertFalse((destination / "container").exists(), point)
+            storage.verify(archive)
+        restored = storage.restore(archive, self.root / "relance")
+        for name, value in self.payloads.items():
+            self.assertEqual((restored / name).read_bytes(), value)
+
+    def test_r4_known_limit_archive_changed_with_recomputed_manifest_is_accepted(self):
+        """Limite connue (PHASE2-SAUVEGARDE) : le manifeste prouve la cohérence, pas l'authenticité."""
+        archive = self.create()
+        name = "Library/Application Support/Kyokasho/lexique.json"
+        forged = b'{"term":"modifie"}'
+        (archive / "files" / name).write_bytes(forged)
+        manifest = json.loads((archive / "manifest.json").read_text(encoding="utf-8"))
+        manifest["files"][name].update(sha256=storage.digest(archive / "files" / name), bytes=len(forged))
+        (archive / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False), encoding="utf-8")
+        storage.verify(archive)
+        restored = storage.restore(archive, self.root / "restauration")
+        self.assertEqual((restored / name).read_bytes(), forged)
 
 if __name__ == "__main__":
     unittest.main()

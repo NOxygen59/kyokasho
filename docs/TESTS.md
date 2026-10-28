@@ -23,7 +23,7 @@ Au SHA `f83aec8c61d88f1e6c119376590899c9c1ce2876` (25/10/2026), `Packages/Kyokas
 | ONNXOCRKitTests | Alignement et essais de moteurs | Modèles réels requis pour plusieurs scénarios |
 | MorphologyKitTests | CSV et lectures MeCab/extraction UniDic | Dictionnaire/archive requis pour les essais réels |
 | PageShiftTests | 39 tests (27/10/2026) : reprise à 14 frontières, matrice de double interruption 14 × 13, décalages 0/1/2, SIGKILL à 9 frontières, journal ambigu/corrompu/modifié (S1, S2, S5), lien symbolique, PDF tiers, ajouts concurrents, erreurs SQL/fichiers, décalage unique ; cinq tests OCR tardif/concurrence/annulation/reprise/réactivité ; RET-048 corrigé (#74), S7 sert de test de régression | Adaptateurs Mac pour l'interface ; ni parcours UIKit ni coupure matérielle |
-| BackupIntegrationTests | 1 test : vraies bases AppDatabase/ReviewStore, sauvegarde/restauration et réouverture en écriture | Conteneur synthétique Mac ; ni extraction ni réinstallation TrollStore |
+| BackupIntegrationTests | 4 tests : vraies bases AppDatabase/ReviewStore, sauvegarde/restauration et réouverture en écriture ; données récentes (brouillons, traductions de définitions, base de dictionnaire, diagnostic, secours PageShift) ; garde-fou d'inventaire des emplacements de stockage du code ; base au schéma v3 migrée après restauration (DATA-02, #83) | Conteneur synthétique Mac ; ni extraction ni réinstallation TrollStore |
 | GLMOCRKitTests | Lecture Ovis/GLM/Qwen, vrais échantillons, traduction, chat, profil | Poids et corpus externes ; tests opt-in, pas une suite légère systématique |
 
 ## Exécution Mac reproductible
@@ -183,6 +183,25 @@ Base : `main` `8b957dd`. Fichier `Packages/KyokashoKit/Tests/PageShiftTests/Page
 - `safeName` neutralisé : S1 **reste vert**, car un second rempart arrête l'opération avant toute écriture (empreinte du PDF ou document absent de la base). S1 vérifie donc le résultat (rien n'est écrit), pas ce contrôle précis.
 
 Non couvert : parcours UIKit, espace disque réel, gros PDF, conteneur TrollStore, iPad.
+
+## DATA-02 — sauvegarde et restauration synthétiques (28 octobre 2026, cadrage #83)
+
+Base initiale du lot : `main` `35c5242` avant la réécriture de l'historique, soit `5f5caaf` dans l'historique réécrit. Tête de la PR réécrite : `465cc19` ; corrections de la revue de Codex : commit `e9b1bf7` puis précisions de documentation. Aucune bibliothèque réelle, aucun iPad ; l'outil et l'app ne sont pas modifiés.
+
+| Code | Test | Ce qui est vérifié |
+|---|---|---|
+| I1 | `testI1RecentDataRoundTripsAndDraftsAreReadable` (Swift) | brouillons relus par `NoteDraftStore` ; **vraie base `DictionaryDatabase`** (`Dictionaries/dictionaries.sqlite`) remplie par `DictionaryImporter` depuis un dictionnaire Yomitan synthétique, rouverte et interrogée après restauration ; `definition-translations.json`, journal de diagnostic, copie `PageShift/<UUID>` sans journal : retour octet pour octet |
+| I2 | `testI2EveryStorageLocationInCodeIsInventoried` (Swift) | **alerte partielle, limitée aux fichiers qui appellent directement les API de répertoire recherchées** (`applicationSupportDirectory`, `documentDirectory`, `cachesDirectory`, `libraryDirectory`, `temporaryDirectory`) dans `App/` et `Packages/KyokashoKit/Sources` : un tel fichier doit figurer dans l'inventaire, et chacun de ses composants de chemin littéraux (`appendingPathComponent("…")`) doit y être déclaré. Un nouveau dossier dans un fichier déjà suivi (y compris sous `Caches/`), un nouveau fichier qui appelle ces API ou une entrée périmée fait échouer le test. **Non détectés** : un fichier qui dérive un chemin d'une racine existante sans appeler ces API (par exemple `ModelStore.shared.root.appendingPathComponent("Nouveau")`), les chemins entièrement calculés sans littéral, et les préférences (`UserDefaults`, `@AppStorage`), copiées en bloc avec `Library/Preferences` |
+| R1 | `test_r1_japanese_unicode_and_long_names_roundtrip_exactly` (Python) | noms japonais, espaces, nom de 200 caractères ; formes NFC et NFD placées dans **deux dossiers distincts** : prouve que les octets de chaque nom sont conservés, pas l'absence de collision NFC/NFD dans un même dossier (APFS ne permet pas de créer les deux) |
+| R2 | `test_r2_empty_large_and_read_only_files_roundtrip` (Python) | fichier vide, 64 Mo, fichier source en lecture seule : **contenus** identiques ; les **permissions ne sont pas conservées** (`shutil.copyfile` : un fichier `0444` ressort selon l'umask, par exemple `0644`) |
+| R3 | `test_r3_backup_killed_…`, `test_r3_restore_killed_…` (Python) | SIGKILL réel après la 1re copie, après la 4e, juste avant la publication : jamais de `backup/` ni de `container/` partiel, source intacte, relance réussie vers une nouvelle destination |
+| R4 | `test_r4_known_limit_…` (Python) | limite connue : une archive modifiée avec un manifeste recalculé est acceptée |
+| C1 | `testC1OlderAppDatabaseSchemaRestoresAndMigrates` (Swift) | base ramenée au schéma `v3-page-one`, sauvegardée, restaurée, ouverte par l'`AppDatabase` actuel : `v4` appliquée, données relues, note ancrée écrite |
+| C2 | — | écarté : `ReviewStore` n'a qu'une migration (`v1`), il n'existe pas de schéma plus ancien |
+
+**Résultats rejoués sur ce Mac sur `465cc19` + `e9b1bf7` (base réécrite `5f5caaf`) :** `python3 -I -m unittest discover -s tests -v` : 21 tests, 0 échec. `swift test --filter BackupRoundTripTests` : 4 tests, 0 échec. `swift test` complet : 225 exécutés, 7 ignorés, 0 échec. Revue de Codex : 21 tests Python et contrôle documentaire rejoués de son côté ; Swift non rejoué par Codex (dépendances inaccessibles dans son environnement).
+
+**Constats, sans correctif, avec consigne :** après un SIGKILL, le dossier privé `<destination>.partial-…` reste à côté de la destination **et peut contenir des copies de données personnelles** : le mettre à la corbeille (`trash`) avant de relancer. Si l'arrêt survient entre la réservation et la publication, la destination existe vide et une relance vers le même chemin est refusée : la mettre à la corbeille si elle est bien vide, ou choisir un nouveau chemin. L'audio des dictionnaires (`Documents/Audio`) est copié mais n'est pas vérifié (décision de NOxygen59).
 
 ## QA-02 — vérifications de préparation du 25 octobre 2026
 
