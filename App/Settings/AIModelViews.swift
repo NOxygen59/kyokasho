@@ -278,11 +278,11 @@ struct QwenChatView: View {
             Button("Annuler", role: .cancel) {}
             Button("Renommer") { renameConversation() }
         }
-        .confirmationDialog("Supprimer cette conversation ?", isPresented: $confirmDelete, titleVisibility: .visible) {
-            Button("Supprimer", role: .destructive) { deleteConversation() }
-        } message: {
-            Text("Ses messages seront effacés de l'iPad. Les autres conversations sont gardées.")
-        }
+        // Fenêtre de confirmation centrée dans le chat (recette 1.3.2 (63), point 17) : la feuille d'iOS se plaçait
+        // mal dans la fenêtre OCR ; celle-ci reste au milieu du panneau, à droite, en fenêtre ou en plein écran.
+        .centeredConfirmation(isPresented: $confirmDelete, title: "Supprimer cette conversation ?",
+                              message: "Ses messages seront effacés de l'iPad. Les autres conversations sont gardées.",
+                              confirm: "Supprimer") { deleteConversation() }
         .sheet(isPresented: $showConversations) {
             ConversationListSheet(
                 items: conversations.map { ($0.id, $0.title, $0.messages.count) },
@@ -895,17 +895,65 @@ struct ConversationListSheet: View {
                     }
                 }
             }
-            .confirmationDialog(pending.count > 1 ? "Supprimer \(pending.count) conversations ?" : "Supprimer cette conversation ?",
-                                isPresented: $confirm, titleVisibility: .visible) {
-                Button("Supprimer", role: .destructive) {
-                    onDelete(pending)
-                    picked.subtract(pending)
-                    pending = []
-                    editMode = .inactive
-                }
-            } message: {
-                Text("Leurs messages seront effacés de l'iPad.")
+            .centeredConfirmation(isPresented: $confirm,
+                                  title: pending.count > 1 ? "Supprimer \(pending.count) conversations ?" : "Supprimer cette conversation ?",
+                                  message: "Leurs messages seront effacés de l'iPad.", confirm: "Supprimer") {
+                onDelete(pending)
+                picked.subtract(pending)
+                pending = []
+                editMode = .inactive
             }
         }
+    }
+}
+
+/// Confirmation centrée dans la vue qui la porte (pas dans l'écran entier) : fond assombri, carte au milieu,
+/// « Annuler » (Échap) et l'action destructive (↩). Animée ; fondu seul avec « Réduire les animations ».
+private struct CenteredConfirmation: ViewModifier {
+    @Binding var isPresented: Bool
+    let title: String
+    let message: String
+    let confirm: String
+    let action: () -> Void
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func body(content: Content) -> some View {
+        content.overlay {
+            if isPresented {
+                ZStack {
+                    Color.black.opacity(0.35).ignoresSafeArea()
+                        .onTapGesture { isPresented = false }
+                    VStack(spacing: 12) {
+                        Image(systemName: "trash").font(.title2).foregroundStyle(.red)
+                        Text(title).font(.headline).multilineTextAlignment(.center)
+                        Text(message).font(.footnote).foregroundStyle(.secondary).multilineTextAlignment(.center)
+                        HStack(spacing: 10) {
+                            Button("Annuler") { isPresented = false }
+                                .buttonStyle(.bordered)
+                                .keyboardShortcut(.cancelAction)
+                            Button(confirm, role: .destructive) { isPresented = false; action() }
+                                .buttonStyle(.borderedProminent).tint(.red)
+                                .keyboardShortcut(.defaultAction)
+                        }
+                        .padding(.top, 4)
+                    }
+                    .padding(20)
+                    .frame(maxWidth: 320)
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .shadow(color: .black.opacity(0.3), radius: 16, y: 6)
+                    .padding(16)
+                    .transition(reduceMotion ? .opacity : .scale(scale: 0.92).combined(with: .opacity))
+                    .accessibilityAddTraits(.isModal)
+                }
+            }
+        }
+        .animation(reduceMotion ? .easeOut(duration: 0.12) : .spring(response: 0.3, dampingFraction: 0.85), value: isPresented)
+    }
+}
+
+extension View {
+    func centeredConfirmation(isPresented: Binding<Bool>, title: String, message: String, confirm: String,
+                              action: @escaping () -> Void) -> some View {
+        modifier(CenteredConfirmation(isPresented: isPresented, title: title, message: message, confirm: confirm, action: action))
     }
 }
