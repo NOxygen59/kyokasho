@@ -120,7 +120,14 @@ final class DocumentAnalysisService: ObservableObject {
         return list
     }
 
-    func start(_ document: LibraryDocument, model: AppModel) {
+    /// Relance choisie (#41) : modèles, plage de pages, relecture des pages déjà lues. `nil` : tout, sans relire.
+    struct Options: Equatable {
+        var readers: [String]
+        var pages: ClosedRange<Int>
+        var reread = false
+    }
+
+    func start(_ document: LibraryDocument, model: AppModel, options: Options? = nil) {
         guard progress == nil else { return }
         lastError = nil
         let id = document.id
@@ -128,13 +135,24 @@ final class DocumentAnalysisService: ObservableObject {
         let choice = model.settings(for: document).ocrEngine
         let service = model.ocr
         let dictionary = model.dictionary
-        let pages = Array(0..<document.pageCount)
-        let readers = Self.readers
+        let all = 0...max(0, document.pageCount - 1)
+        let range = options.map { $0.pages.clamped(to: all) } ?? all
+        let pages = document.pageCount > 0 ? Array(range) : []
+        // Ordre de `readers` gardé (le plus lourd en dernier), filtré par le choix.
+        let readers = Self.readers.filter { options?.readers.contains($0) ?? true }
+        let reread = options?.reread ?? false
+        let ovis = ModelSpec.ovisocr2.id
         if report(for: id) == nil { save(DocumentAnalysis(documentId: id)) }
-        update(id) { $0.engines = readers }
+        update(id) {
+            $0.engines = Array(Set($0.engines + readers)).sorted { a, b in
+                (Self.readers.firstIndex(of: a) ?? 99) < (Self.readers.firstIndex(of: b) ?? 99)
+            }
+            $0.recordRun(.init(date: Date(), engines: readers, firstPage: range.lowerBound, lastPage: range.upperBound,
+                               reread: reread))
+        }
         progress = Progress(documentId: id, phase: "Lecture OCR", done: 0, total: pages.count, phaseStarted: Date())
         UIApplication.shared.isIdleTimerDisabled = true
-        Diagnostics.log("analyse \(document.title) : \(pages.count) pages, lecteurs \(readers)", "analyse")
+        Diagnostics.log("analyse \(document.title) : pages \(range.lowerBound + 1)–\(range.upperBound + 1), lecteurs \(readers)\(reread ? ", relecture" : "")", "analyse")
 
         task = Task { [weak self] in
             defer {
@@ -158,7 +176,9 @@ final class DocumentAnalysisService: ObservableObject {
                 for p in pages {
                     guard !Task.isCancelled else { break }
                     let file = Self.rawURL(id, reader, p)
-                    if let b = base[p], b.engine != OCREngineID.pdfText, !FileManager.default.fileExists(atPath: file.path) {
+                    // Texte intégré au PDF : seul OvisOCR2 lit quand même la page, pour le texte des images (#41).
+                    let wanted = base[p].map { $0.engine != OCREngineID.pdfText || reader == ovis } ?? false
+                    if let b = base[p], wanted, reread || !FileManager.default.fileExists(atPath: file.path) {
                         do {
                             let budget = Self.tokenBudget(b)
                             let text = try await Diagnostics.measure("\(reader) p. \(p) (≤ \(budget) jetons)", "analyse") {
@@ -180,11 +200,13 @@ final class DocumentAnalysisService: ObservableObject {
                 guard !Task.isCancelled else { return }
                 var page: DocumentAnalysis.Page
                 if let b = base[p], b.engine != OCREngineID.pdfText {
-                    let readings = readers.reduce(into: [String: String]()) { r, reader in
+                    // Toutes les lectures gardées comptent, même d'un modèle non relancé cette fois.
+                    let readings = Self.readers.reduce(into: [String: String]()) { r, reader in
                         r[reader] = DocumentAITextStore.read(documentId: id, reader: reader, page: p)
                     }
                     page = await Task.detached {
-                        await DocumentAnalysis.vote(source: p, base: b, readings: readings) { candidates in
+                        // OvisOCR2 conseillé d'abord (#41), surtout utile sur les scans.
+                        await DocumentAnalysis.vote(source: p, base: b, readings: readings, preferred: ovis) { candidates in
                             await DocumentAnalysisService.preferred(candidates, dictionary: dictionary)
                         }
                     }.value
@@ -192,7 +214,18 @@ final class DocumentAnalysisService: ObservableObject {
                     page = .init(source: p, baseEngine: base[p]?.engine ?? "")
                 }
                 page.error = errors[p]
+                // PDF à texte intégré : ce qu'Ovis voit en plus (images d'illustration).
+                var extra: [String]?
+                if let b = base[p], b.engine == OCREngineID.pdfText,
+                   let reading = DocumentAITextStore.read(documentId: id, reader: ovis, page: p) {
+                    extra = DocumentAnalysis.textOutsideBase(b.text, reading: reading)
+                }
                 self.update(id) { report in
+                    if let extra {
+                        var map = report.imageText ?? [:]
+                        map[p] = extra.isEmpty ? nil : extra
+                        report.imageText = map
+                    }
                     // Désaccords déjà réglés (appliqués ou « garder tel quel ») : ils le restent.
                     let settled = Set(report.pages[p]?.disagreements.filter(\.settled).map(\.line) ?? [])
                     for i in page.disagreements.indices where settled.contains(page.disagreements[i].line) {

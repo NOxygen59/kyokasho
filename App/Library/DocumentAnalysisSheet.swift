@@ -14,6 +14,17 @@ struct DocumentAnalysisSheet: View {
     @Environment(\.dismiss) private var dismiss
     @AppStorage(DocumentAnalysisService.useQwenKey) private var useQwen = false
     @State private var confirmOvisAll = false
+    /// Choix appliqués depuis l'ouverture de la fenêtre, le plus récent en dernier : « Annuler le dernier choix »
+    /// reste possible jusqu'à la fermeture (#41).
+    @State private var undoStack: [[DocumentAnalysisService.AppliedChoice]] = []
+    /// Choix sous le pointeur (souris, trackpad) : mis en avant avant d'être appliqué (#41).
+    @State private var hovered: String?
+    @State private var showRelaunch = false
+    @State private var relaunchReaders: Set<String> = []
+    @State private var relaunchAll = true
+    @State private var relaunchFrom = 1
+    @State private var relaunchTo = 1
+    @State private var relaunchReread = false
 
     private var running: DocumentAnalysisService.Progress? {
         service.progress?.documentId == document.id ? service.progress : nil
@@ -40,6 +51,7 @@ struct DocumentAnalysisSheet: View {
             .navigationTitle("Analyse · \(document.title)")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("OK") { dismiss() } } }
+            .sheet(isPresented: $showRelaunch) { relaunchForm }
             .confirmationDialog("Accepter les corrections OvisOCR2 ?", isPresented: $confirmOvisAll) {
                 Button("Corriger tout le document") { service.applyOvisToDocument(document, model: model) }
             } message: {
@@ -159,11 +171,19 @@ struct DocumentAnalysisSheet: View {
             if !advised.isEmpty {
                 Button {
                     Task {
-                        await service.apply(advised.map { ($0.0, $0.1.line, $0.1.advised!) }, documentId: document.id, service: model.ocr)
+                        remember(await service.apply(advised.map { ($0.0, $0.1.line, $0.1.advised!) }, documentId: document.id, service: model.ocr))
                     }
                 } label: { Label("Appliquer les \(advised.count) choix conseillés", systemImage: "wand.and.stars") }
             }
+            if let last = undoStack.last, let first = last.first {
+                Button { undoLast() } label: {
+                    Label(last.count > 1 ? "Annuler les \(last.count) derniers choix" : "Annuler le dernier choix (p. \(document.pageLabel(first.source)), ligne \(first.line + 1))",
+                          systemImage: "arrow.uturn.backward")
+                }
+                .font(.subheadline)
+            }
             Button { service.start(document, model: model) } label: { Label("Relancer l'analyse (pages manquantes)", systemImage: "arrow.clockwise") }
+            Button { prepareRelaunch(); showRelaunch = true } label: { Label("Relancer avec des choix…", systemImage: "slider.horizontal.3") }
             if Qwen3VLReader().isAvailable {
                 let t = DocumentAnalysisService.translationCount(document)
                 if t.total > t.done {
@@ -179,7 +199,24 @@ struct DocumentAnalysisSheet: View {
         } header: {
             Text("Fiabilité du texte")
         } footer: {
-            Text("Choix conseillé : la majorité des lectures, ou, à égalité, celle que ton dictionnaire comprend le mieux. Ton OCR habituel reste le texte de base ; tu peux aussi choisir un autre moteur pour ce document (lecteur → « … » → réglages de ce document).")
+            VStack(alignment: .leading, spacing: 6) {
+                if let run = report.runs?.last { Text(Self.describe(run, document: document)).font(.caption.weight(.semibold)) }
+                Text("Choix conseillé : la lecture d'OvisOCR2, sauf si deux autres lectures s'accordent contre elle ; sans OvisOCR2, la majorité des lectures, ou, à égalité, celle que ton dictionnaire comprend le mieux. Ton OCR habituel reste le texte de base ; tu peux aussi choisir un autre moteur pour ce document (lecteur → « … » → réglages de ce document).")
+            }
+        }
+        if let images = report.imageText, !images.isEmpty {
+            Section {
+                ForEach(images.keys.sorted().prefix(30), id: \.self) { source in
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("p. \(document.pageLabel(source))").font(.caption).foregroundStyle(.secondary)
+                        Text(images[source]?.prefix(6).joined(separator: "\n") ?? "").font(Atelier.jp).textSelection(.enabled)
+                    }
+                }
+            } header: {
+                Text("Texte vu dans les images")
+            } footer: {
+                Text("PDF à texte intégré : lignes qu'OvisOCR2 lit en plus, en général dans les illustrations. Le texte complet s'affiche dans la mise en page IA du panneau Texte.")
+            }
         }
         let worst = report.pages.values.filter { $0.lines - $0.unchecked > 0 }.sorted { $0.reliability < $1.reliability }.prefix(8)
         if !worst.isEmpty {
@@ -217,7 +254,7 @@ struct DocumentAnalysisSheet: View {
                 choice(Self.name(engine), text, source: source, line: vote.line, advised: vote.advised == text)
             }
             Button("Garder tel quel") {
-                Task { await service.dismiss(source: source, line: vote.line, documentId: document.id, service: model.ocr) }
+                Task { remember(await service.dismiss(source: source, line: vote.line, documentId: document.id, service: model.ocr)) }
             }
                 .font(.caption)
         }
@@ -225,16 +262,99 @@ struct DocumentAnalysisSheet: View {
     }
 
     private func choice(_ label: String, _ text: String, source: Int, line: Int, advised: Bool) -> some View {
-        Button {
-            Task { await service.apply([(source, line, text)], documentId: document.id, service: model.ocr) }
+        let key = "\(source)|\(line)|\(label)"
+        let over = hovered == key
+        return Button {
+            Task { remember(await service.apply([(source, line, text)], documentId: document.id, service: model.ocr)) }
         } label: {
             HStack(alignment: .firstTextBaseline) {
                 Text(label).font(.caption2.bold()).foregroundStyle(.secondary).frame(width: 70, alignment: .leading)
                 Text(text).font(Atelier.jp).foregroundStyle(.primary)
                 if advised { Text("conseillé").font(.caption2.bold()).foregroundStyle(.green) }
+                Spacer(minLength: 0)
+                // Pastille au survol (#41) : la version qui sera posée d'un clic.
+                if over {
+                    Text("choisir").font(.caption2.bold()).foregroundStyle(Atelier.Tint.read)
+                        .padding(.horizontal, 6).padding(.vertical, 2)
+                        .background(Atelier.Tint.read.opacity(0.15), in: Capsule())
+                }
             }
+            .padding(.horizontal, 4).padding(.vertical, 2)
+            .background(over ? Atelier.Tint.read.opacity(0.08) : .clear, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .onHover { inside in
+            if inside { hovered = key } else if hovered == key { hovered = nil }
+        }
+    }
+
+    private func remember(_ applied: [DocumentAnalysisService.AppliedChoice]) {
+        if !applied.isEmpty { undoStack.append(applied) }
+    }
+
+    private func undoLast() {
+        guard let last = undoStack.popLast() else { return }
+        Task { await service.undo(last, documentId: document.id, service: model.ocr) }
+    }
+
+    /// « Dernière analyse : 28 oct. 21:40 · OvisOCR2, GLM-OCR · pages 1 à 120 ».
+    static func describe(_ run: DocumentAnalysis.Run, document: LibraryDocument) -> String {
+        let engines = run.engines.isEmpty ? "OCR seul" : run.engines.map(name).joined(separator: ", ")
+        return "Dernière analyse : \(run.date.formatted(date: .abbreviated, time: .shortened)) · \(engines) · pages \(document.pageLabel(run.firstPage)) à \(document.pageLabel(run.lastPage))\(run.reread ? " · relues" : "")"
+    }
+
+    // MARK: Relance au choix (#41)
+
+    private func prepareRelaunch() {
+        relaunchReaders = Set(DocumentAnalysisService.readers)
+        relaunchAll = true
+        relaunchFrom = 1
+        relaunchTo = max(1, document.pageCount)
+        relaunchReread = false
+    }
+
+    private var relaunchForm: some View {
+        NavigationStack {
+            Form {
+                Section("Modèles") {
+                    ForEach(DocumentAnalysisService.readers, id: \.self) { reader in
+                        Toggle(Self.name(reader), isOn: Binding(
+                            get: { relaunchReaders.contains(reader) },
+                            set: { if $0 { relaunchReaders.insert(reader) } else { relaunchReaders.remove(reader) } }))
+                    }
+                }
+                Section {
+                    Toggle("Tout le document", isOn: $relaunchAll)
+                    if !relaunchAll {
+                        Stepper("De la page \(relaunchFrom)", value: $relaunchFrom, in: 1...max(1, relaunchTo))
+                        Stepper("à la page \(relaunchTo)", value: $relaunchTo, in: relaunchFrom...max(relaunchFrom, document.pageCount))
+                    }
+                } header: {
+                    Text("Pages")
+                } footer: {
+                    Text("Numéros dans le fichier PDF (1 = première page du fichier).")
+                }
+                Section {
+                    Toggle("Relire aussi les pages déjà lues", isOn: $relaunchReread)
+                } footer: {
+                    Text("Sinon, seules les pages pas encore lues par ces modèles le sont. Relire coûte du temps et de la batterie (≈ 30 s par page et par modèle).")
+                }
+                Section {
+                    Button {
+                        showRelaunch = false
+                        service.start(document, model: model, options: .init(
+                            readers: DocumentAnalysisService.readers.filter(relaunchReaders.contains),
+                            pages: relaunchAll ? 0...max(0, document.pageCount - 1) : (relaunchFrom - 1)...(relaunchTo - 1),
+                            reread: relaunchReread))
+                    } label: { Label("Lancer", systemImage: "checkmark.seal") }
+                    .disabled(service.progress != nil)
+                }
+            }
+            .navigationTitle("Relancer l'analyse")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Annuler") { showRelaunch = false } } }
+        }
     }
 
     static func name(_ engine: String) -> String { DocumentAnalysisService.name(engine) }
