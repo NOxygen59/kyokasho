@@ -266,6 +266,9 @@ struct ReaderScreen: View {
 
     private func chrome(filmstripTrailing: CGFloat) -> some View {
         VStack(spacing: 0) {
+            DocumentTabsBar(current: reader.document.id)
+                .padding(.horizontal, Atelier.gap)
+                .padding(.top, 6)
             HStack(alignment: .top, spacing: Atelier.gap) {
                 titleCapsule
                 Spacer(minLength: 8)

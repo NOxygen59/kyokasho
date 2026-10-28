@@ -89,11 +89,13 @@ struct RootView: View {
         // Tâches IA lancées dans le lecteur et toujours en cours.
         .overlay(alignment: .bottomLeading) { AITaskPill().padding(Atelier.gap) }
         .task { AppUpdate.shared.checkAtLaunch(); MorphologyService.shared.loadIfInstalled() }
-        .fullScreenCover(item: Binding(
-            get: { model.storageRecoveryError == nil ? model.openDocumentId.flatMap { id in model.documents.first { $0.id == id } } : nil },
-            set: { model.openDocumentId = $0?.id }
-        )) { document in
-            ReaderScreen(document: document, model: model)
+        // Une seule couverture pour tous les onglets (#16) : changer d'onglet remplace le lecteur sans refermer
+        // ni rouvrir la feuille plein écran.
+        .fullScreenCover(isPresented: Binding(
+            get: { model.storageRecoveryError == nil && model.openDocumentId.map { id in model.documents.contains { $0.id == id } } == true },
+            set: { if !$0 { model.openDocumentId = nil } }
+        )) {
+            ReaderTabsHost()
                 .environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review)
                 .preferredColorScheme(.dark)
                 .tint(Atelier.Tint.read)
