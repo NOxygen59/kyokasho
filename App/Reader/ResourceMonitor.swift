@@ -124,6 +124,8 @@ private final class FrameCounter: NSObject {
 struct ResourceMonitorPanel: View {
     /// `true` : sous la barre du lecteur (la courbe s'ouvre en dessous) ; `false` : en bas d'écran (au-dessus).
     var expandsDown = false
+    /// Prend toute la largeur proposée (sous la capsule d'actions du lecteur) ; sinon, la taille de son contenu.
+    var fillsWidth = false
     @ObservedObject private var monitor = ResourceMonitor.shared
     @AppStorage(ResourceMonitor.shownKey) private var shown = false
     @AppStorage("monitor.detailed") private var detailed = false
@@ -139,6 +141,7 @@ struct ResourceMonitorPanel: View {
         .font(.system(size: 11, weight: .semibold, design: .monospaced))
         .foregroundStyle(Atelier.textPrimary)
         .padding(.horizontal, 10).padding(.vertical, 6)
+        .frame(maxWidth: fillsWidth ? .infinity : nil, alignment: .leading)
         .atelierPanel(radius: 14)
         .animation(reduceMotion ? .easeOut(duration: 0.15) : .spring(response: 0.35, dampingFraction: 0.85), value: detailed)
         .onAppear { monitor.start() }
@@ -155,6 +158,7 @@ struct ResourceMonitorPanel: View {
             } else {
                 Text("Mesure…").foregroundStyle(Atelier.textTertiary)
             }
+            if fillsWidth { Spacer(minLength: 4) }
             Button { detailed.toggle() } label: {
                 Image(systemName: "chevron.down")
                     .rotationEffect(.degrees((detailed ? 180 : 0) + (expandsDown ? 0 : 180)))
@@ -176,7 +180,8 @@ struct ResourceMonitorPanel: View {
         }
         .chartXAxis(.hidden)
         .chartYAxis { AxisMarks(position: .leading) { _ in AxisGridLine(); AxisValueLabel() } }
-        .frame(width: 260, height: 110)
+        .frame(width: fillsWidth ? nil : 260, height: 110)
+        .frame(maxWidth: fillsWidth ? .infinity : nil)
         // Seul le graphique est atténué : 50 %, avec un fondu vers son bord extérieur.
         .opacity(0.5)
         .mask(LinearGradient(colors: [.clear, .black, .black], startPoint: expandsDown ? .bottom : .top,

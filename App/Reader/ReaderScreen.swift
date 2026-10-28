@@ -274,17 +274,17 @@ struct ReaderScreen: View {
                     HighlightMenu { reader.highlightSelection(color: $0) }
                         .transition(.scale.combined(with: .opacity))
                 }
-                // Moniteur rangé en haut à droite, à côté des actions ; il se déroule vers le bas (recette 62, L9).
-                if monitorEnabled && monitorShown {
-                    ResourceMonitorPanel(expandsDown: true)
-                        .fixedSize()
-                        // Ne prend que la hauteur de sa ligne : la courbe déroulée passe par-dessus la page, sans
-                        // pousser la barre d'outils.
-                        .frame(height: 30, alignment: .top)
-                        .zIndex(1)
-                        .transition(.move(edge: .top).combined(with: .opacity))
-                }
                 actionsCapsule
+                    // Moniteur collé sous la capsule d'actions, à sa largeur (capture de NOxygen59, recette 63) ; sa
+                    // courbe se déroule en dessous, par-dessus la page, sans pousser la barre d'outils.
+                    .overlay(alignment: .bottom) {
+                        if monitorEnabled && monitorShown {
+                            ResourceMonitorPanel(expandsDown: true, fillsWidth: true)
+                                .alignmentGuide(.bottom) { $0[.top] - 6 }
+                                .transition(.move(edge: .top).combined(with: .opacity))
+                        }
+                    }
+                    .zIndex(1)
             }
             .padding(.horizontal, Atelier.gap)
             .padding(.top, 8)
