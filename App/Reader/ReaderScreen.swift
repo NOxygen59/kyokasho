@@ -54,7 +54,6 @@ struct ReaderScreen: View {
     @AppStorage(ResourceMonitor.enabledKey) private var monitorEnabled = false
     @AppStorage(ResourceMonitor.shownKey) private var monitorShown = false
     @State private var pageField = ""
-    @ObservedObject private var keyboard = HardwareKeyboard.shared
 
     enum Sheet: String, Identifiable {
         case search, ai, settings, pageCards
@@ -122,16 +121,8 @@ struct ReaderScreen: View {
                             .keyboardShortcut(.escape, modifiers: [])
                             .opacity(0).allowsHitTesting(false)
                     }
-                    // Flèches pour tourner les pages : avec les barres affichées, ou toujours si un clavier
-                    // est branché. ← → au clavier : `ReaderArrowKeys`, indépendamment de ces boutons.
-                    if keyboard.connected || chromeVisible {
-                        HStack {
-                            pageArrow(left: true)
-                            Spacer()
-                            pageArrow(left: false)
-                        }
-                        .padding(.horizontal, 8)
-                    }
+                    // Plus de flèches sur les bords de la page (#19) : elles sont rangées de part et d'autre du champ
+                    // « page », en haut à droite. ← → au clavier : `ReaderArrowKeys` ; glisser tourne aussi les pages.
                     // Construction du document en tâche de fond (gros PDF, réglages, page coupée).
                     if reader.isBuilding {
                         HStack(spacing: 10) {
@@ -376,6 +367,7 @@ struct ReaderScreen: View {
 
     private var actionsCapsule: some View {
         HStack(spacing: 0) {
+            pageArrow(left: true)
             TextField(reader.document.pageLabel(reader.currentSourcePage), text: $pageField)
                 .font(Atelier.mono)
                 .multilineTextAlignment(.center)
@@ -387,6 +379,7 @@ struct ReaderScreen: View {
                 .background(Atelier.surfaceHigh, in: Capsule())
                 .accessibilityLabel("Aller à la page")
                 .padding(.horizontal, 4)
+            pageArrow(left: false)
             CapsuleButton(icon: "magnifyingglass", label: "Rechercher") { sheet = .search }
             CapsuleButton(icon: reader.isCurrentPageBookmarked ? "bookmark.fill" : "bookmark", label: "Signet",
                           active: reader.isCurrentPageBookmarked) { reader.toggleBookmark() }
@@ -540,19 +533,13 @@ struct ReaderScreen: View {
             }
     }
 
-    /// Flèche de bord : la gauche recule en lecture gauche → droite, avance en droite → gauche.
+    /// Flèche à côté du champ « page » (#19) : la gauche recule en lecture gauche → droite, avance en droite → gauche.
     private func pageArrow(left: Bool) -> some View {
         let forward = (reader.settings.direction == .rightToLeft) == left
-        return Button { forward ? reader.next() : reader.previous() } label: {
-            Image(systemName: left ? "chevron.left" : "chevron.right")
-                .font(.system(size: 20, weight: .semibold))
-                .frame(width: 40, height: 64)
-                .foregroundStyle(Atelier.textPrimary)
-                .background(Atelier.surface.opacity(0.7), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        return CapsuleButton(icon: left ? "chevron.left" : "chevron.right",
+                             label: forward ? "Page suivante" : "Page précédente") {
+            forward ? reader.next() : reader.previous()
         }
-        .buttonStyle(PressScale())
-        .opacity(chromeVisible ? 1 : 0.35)
-        .accessibilityLabel(forward ? "Page suivante" : "Page précédente")
     }
 
     /// Champ « page » : numéro imprimé (ou chiffre romain des pages d'avant).
