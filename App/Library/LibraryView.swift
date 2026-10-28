@@ -31,6 +31,11 @@ struct LibraryView: View {
     @State private var pageOneText = ""
     @State private var newTitle = ""
     @State private var deleting: LibraryDocument?
+    /// Suppression de plusieurs documents, avec double confirmation (recette 1.3.2 (61)).
+    @State private var selecting = false
+    @State private var batch = BatchDeletion()
+    @State private var showBatchFirst = false
+    @State private var showBatchSecond = false
     @State private var search = ""
 
     private var filtered: [LibraryDocument] {
@@ -145,6 +150,27 @@ struct LibraryView: View {
             }
         } message: {
             Text("Numéro de la page du fichier PDF où ton manuel imprime « 1 ». Plus simple : ouvre le livre sur cette page, puis menu ••• → « Cette page est la page 1 ».")
+        }
+        // Double confirmation de la suppression multiple : rien n'est effacé avant « Effacer » (`BatchDeletion`).
+        .alert("Supprimer \(batch.selected.count) document\(batch.selected.count > 1 ? "s" : "") ?", isPresented: $showBatchFirst) {
+            Button("Annuler", role: .cancel) { batch.cancel() }
+            Button("Continuer", role: .destructive) {
+                batch.confirmFirst()
+                // La première alerte doit finir de se fermer, sinon iOS ignore la seconde.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { showBatchSecond = batch.step == .secondConfirmation }
+            }
+        } message: {
+            Text(batchTitles)
+        }
+        .alert("Effacer définitivement ?", isPresented: $showBatchSecond) {
+            Button("Annuler", role: .cancel) { batch.cancel() }
+            Button("Effacer \(batch.selected.count)", role: .destructive) {
+                let ids = batch.confirmSecond(existing: Set(model.documents.map(\.id)))
+                for document in model.documents where ids.contains(document.id) { model.delete(document) }
+                selecting = false
+            }
+        } message: {
+            Text("Les PDF de ces \(batch.selected.count) documents, leurs notes, surlignages, dessins et le texte lu par l'OCR seront effacés de l'iPad. Cette action ne peut pas être annulée.")
         }
         .alert("Supprimer « \(deleting?.title ?? "") » ?",
                isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } })) {
@@ -293,6 +319,13 @@ struct LibraryView: View {
                 .padding(.horizontal, 14).padding(.vertical, 10)
                 .frame(width: 280)
                 .atelierPanel(radius: 22)
+                if !model.documents.isEmpty {
+                    Button {
+                        selecting.toggle()
+                        if !selecting { batch = BatchDeletion() }
+                    } label: { Label(selecting ? "Terminé" : "Sélectionner", systemImage: selecting ? "checkmark" : "checklist") }
+                        .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.annotate))
+                }
                 Button { showImportOptions = true } label: { Label("Importer", systemImage: "plus") }
                     .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.cloud))
             }
@@ -306,9 +339,16 @@ struct LibraryView: View {
                         ForEach(LibrarySections.group(filtered), id: \.title) { section in
                             Section {
                                 ForEach(section.documents) { document in
-                                    Button { model.openDocumentId = document.id } label: { DocumentCard(document: document) }
-                                        .buttonStyle(PressScale())
-                                        .contextMenu { menu(for: document) }
+                                    Button {
+                                        if selecting { batch.toggle(document.id) } else { model.openDocumentId = document.id }
+                                    } label: {
+                                        DocumentCard(document: document)
+                                            .overlay(alignment: .topTrailing) {
+                                                if selecting { selectionMark(batch.selected.contains(document.id)) }
+                                            }
+                                    }
+                                    .buttonStyle(PressScale())
+                                    .contextMenu { if !selecting { menu(for: document) } }
                                 }
                             } header: {
                                 HStack(alignment: .firstTextBaseline, spacing: 8) {
@@ -323,9 +363,46 @@ struct LibraryView: View {
                     }
                     .padding(.vertical, 6)
                 }
+                if selecting { selectionBar }
             }
         }
         .padding(.horizontal, 6)
+    }
+
+    /// Case de sélection sur la couverture.
+    private func selectionMark(_ on: Bool) -> some View {
+        Image(systemName: on ? "checkmark.circle.fill" : "circle")
+            .font(.system(size: 26, weight: .semibold))
+            .foregroundStyle(on ? Atelier.Tint.annotate : Atelier.textPrimary)
+            .background(Circle().fill(Atelier.surface.opacity(0.8)))
+            .padding(10)
+            .accessibilityLabel(on ? "Sélectionné" : "Non sélectionné")
+    }
+
+    /// Barre de la sélection : tout sélectionner, supprimer (première des deux confirmations).
+    private var selectionBar: some View {
+        HStack(spacing: 12) {
+            Text("\(batch.selected.count) sélectionné\(batch.selected.count > 1 ? "s" : "")")
+                .font(.system(size: 14, weight: .semibold)).foregroundStyle(Atelier.textSecondary)
+            Spacer()
+            Button("Tout sélectionner") { batch.selectAll(filtered.map(\.id)) }
+                .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.read))
+            Button(role: .destructive) {
+                batch.requestDeletion()
+                showBatchFirst = batch.step == .firstConfirmation
+            } label: { Label("Supprimer", systemImage: "trash") }
+                .buttonStyle(AtelierButtonStyle(tint: .red))
+                .disabled(batch.selected.isEmpty)
+        }
+        .padding(12)
+        .atelierPanel(radius: 18)
+    }
+
+    /// Titres des documents choisis (au plus 5), pour les deux questions.
+    private var batchTitles: String {
+        let titles = model.documents.filter { batch.selected.contains($0.id) }.map(\.title)
+        let shown = titles.prefix(5).map { "« \($0) »" }.joined(separator: "\n")
+        return titles.count > 5 ? shown + "\n… et \(titles.count - 5) autre\(titles.count - 5 > 1 ? "s" : "")" : shown
     }
 
     private var filterTitle: String {
