@@ -36,6 +36,9 @@ struct ReaderScreen: View {
     @State private var studyTab: StudyPanel.Tab = .text
     @AppStorage(StudyPanelMode.storageKey) private var studyMode = StudyPanelMode.docked
     @AppStorage(StudyPanelMode.restoreKey) private var studyRestore = StudyPanelMode.docked
+    /// Réglage général du panneau à l'ouverture du livre, rétabli à la fermeture : la position choisie dans un livre
+    /// reste à ce livre (recette 1.3.2 (61), M2).
+    @State private var generalPanelMode: StudyPanelMode?
     /// Choix gardé entre les sessions. L'affichage passe par `filmstripVisible` : un changement d'`@AppStorage`
     /// arrive par la notification de `UserDefaults`, hors de la transaction `withAnimation`, et la bande apparaissait
     /// sans transition (RET-049, Issue #79).
@@ -180,6 +183,11 @@ struct ReaderScreen: View {
                 finishDockTransition()
             }
             .onChange(of: docked) { syncDock(to: $0) }
+            // Chaque livre retient sa position du panneau ; le réglage général reste celui des livres sans choix.
+            .onChange(of: studyMode) { mode in
+                guard mode != .minimized, generalPanelMode != nil else { return }
+                reader.toolModes.update(documentId: reader.document.id) { $0.panelMode = mode.rawValue }
+            }
             .onAppear {
                 reservedSide = docked
                 reader.adaptLayout(portrait: !landscape)
@@ -219,6 +227,12 @@ struct ReaderScreen: View {
         .statusBarHidden(!chromeVisible)
         .persistentSystemOverlays(chromeVisible ? .automatic : .hidden)
         .onAppear {
+            // Position du panneau propre à ce livre, sinon le réglage général (recette 1.3.2 (61), M2).
+            generalPanelMode = studyMode
+            if let raw = reader.toolModes.modes(documentId: reader.document.id).panelMode,
+               let saved = StudyPanelMode(rawValue: raw), saved != .minimized, saved != studyMode {
+                studyMode = saved
+            }
             reader.load()
             ReaderArrowKeys.shared.webOpen = side == .web
             ReadingTimeTracker.shared.readerOpened()
@@ -226,6 +240,11 @@ struct ReaderScreen: View {
         .onDisappear {
             reader.close()
             ReadingTimeTracker.shared.readerClosed()
+            // Réglage général rétabli pour les autres livres ; `nil` d'abord, pour ne pas l'enregistrer dans celui-ci.
+            if let general = generalPanelMode {
+                generalPanelMode = nil
+                if studyMode != general { studyMode = general }
+            }
         }
         // Temps de lecture active (accueil) : pause en arrière-plan ou iPad verrouillé (RET-037, #52).
         .onChange(of: scenePhase) { ReadingTimeTracker.shared.scenePhaseChanged($0) }
