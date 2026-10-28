@@ -59,7 +59,9 @@ extension ReaderController {
                         if !force, let known = DocumentAITextStore.read(documentId: documentId, reader: ModelSpec.ovisocr2.id, page: source), !known.isEmpty {
                             markdown = known
                             Diagnostics.log("OvisOCR2 page \(source) : déjà lue (\(markdown.count) caractères)", "verif")
+                            AITaskCenter.shared.log(id, "p. \(source + 1) : lecture OvisOCR2 déjà faite, réutilisée")
                         } else {
+                            AITaskCenter.shared.log(id, "p. \(source + 1) : OvisOCR2 lit la page (≈ 20 à 40 s)…")
                             markdown = try await Diagnostics.measure("OvisOCR2 page \(source)", "verif") {
                                 try await OvisOCR2Reader(language: OCRTargetLanguage.forDocument(documentId))
                                     .read(.pdfPage(url: url, index: source),
@@ -76,11 +78,14 @@ extension ReaderController {
                         }
                         result.suggestions = OCRReferenceDiff.suggestions(ocr, reference: markdown)
                         Diagnostics.log("page \(source) : \(result.suggestions.count) différence(s)", "verif")
+                        AITaskCenter.shared.log(id, "p. \(source + 1) : comparée à l'OCR, \(result.suggestions.count) différence(s)")
                     } catch {
                         result.error = error.localizedDescription
+                        AITaskCenter.shared.log(id, "p. \(source + 1) : erreur — \(error.localizedDescription)")
                     }
                 } else {
                     result.error = "Page pas encore lue par l'OCR."
+                    AITaskCenter.shared.log(id, "p. \(source + 1) : pas encore lue par l'OCR, ignorée")
                 }
                 guard !Task.isCancelled else { break }
                 self?.verifications.append(result)

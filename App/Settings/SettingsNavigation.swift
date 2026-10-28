@@ -239,6 +239,7 @@ struct StudyPanelSettingsView: View {
 
 struct ReaderHelpSettingsView: View {
     @AppStorage(ResourceMonitor.enabledKey) private var monitorEnabled = false
+    @AppStorage(ResourceMonitor.shownKey) private var monitorShown = false
 
     var body: some View {
         Form {
@@ -249,8 +250,9 @@ struct ReaderHelpSettingsView: View {
             DiagnosticsSection()
             Section {
                 Toggle("Afficher le suivi des ressources", isOn: $monitorEnabled)
+                    .onChange(of: monitorEnabled) { if $0 { monitorShown = true } }
             } header: { Text("Outil avancé") } footer: {
-                Text("Ajoute au menu « … » du lecteur un suivi du processeur, de la mémoire et de la fluidité. Utile pour observer un ralentissement.")
+                Text("Suivi du processeur, de la mémoire et de la fluidité, fixé en bas à gauche, dans la bibliothèque comme dans le lecteur. × le masque ; menu « … » du lecteur pour le réafficher. Utile pour observer un ralentissement.")
             }
         }.navigationTitle("Aide au diagnostic")
     }

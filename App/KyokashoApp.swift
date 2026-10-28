@@ -90,8 +90,8 @@ struct RootView: View {
                 }
             }
         }
-        // Tâches IA lancées dans le lecteur et toujours en cours.
-        .overlay(alignment: .bottomLeading) { AITaskPill().padding(Atelier.gap) }
+        // Moniteur de ressources (s'il est affiché) et tâches IA toujours en cours, aussi dans la bibliothèque (#47).
+        .overlay(alignment: .bottomLeading) { ActivityDock().padding(Atelier.gap) }
         .task { AppUpdate.shared.checkAtLaunch(); MorphologyService.shared.loadIfInstalled() }
         .fullScreenCover(item: Binding(
             get: { model.storageRecoveryError == nil ? model.openDocumentId.flatMap { id in model.documents.first { $0.id == id } } : nil },
