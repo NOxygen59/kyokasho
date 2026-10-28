@@ -172,6 +172,6 @@ Build **non publiée**, construite depuis le commit local `bfd4312` (= `main` `2
 
 | ID | Alias | Date | Type | Retour (résumé) | Build | État | Issue | PR | Preuve |
 |---|---|---|---|---|---|---|---|---|---|
-| RET-050 | — | 2026-10-28 | Bug (navigation clavier) | Les flèches gauche et droite ciblent désormais les champs de saisie au lieu de changer de page lorsque l’utilisateur ne cherche pas à modifier un champ | à confirmer | rapporté | [#81](https://github.com/NOxygen59/kyokasho/issues/81) | — | retour direct de NOxygen59 ; lié à la demande de navigation clavier [#18](https://github.com/NOxygen59/kyokasho/issues/18) |
+| RET-050 | — | 2026-10-28 | Bug (navigation clavier) | Les flèches gauche et droite ciblent désormais les champs de saisie au lieu de changer de page lorsque l’utilisateur ne cherche pas à modifier un champ | 1.3.2 (59) et (60) locales, `5200a3c` | confirmé iPad | [#81](https://github.com/NOxygen59/kyokasho/issues/81) | [#85](https://github.com/NOxygen59/kyokasho/pull/85) | retour direct de NOxygen59 ; cause : `keyboardShortcut` de SwiftUI perdait face au focus clavier d'iPadOS, remplacé par des `UIKeyCommand` prioritaires retirés pendant la saisie et côté Web ; compilé iOS ; recette NOxygen59 1.3.2 (59) B1–B8 et C1–C6 OK, 1.3.2 (60) R2–R3 OK ; lié à la demande de navigation clavier [#18](https://github.com/NOxygen59/kyokasho/issues/18) |
 
 Prochain identifiant libre : **RET-051**.
