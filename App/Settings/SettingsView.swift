@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 NOxygen59
 
+import GLMOCRKit
 import OCRKit
 import ONNXOCRKit
 import ReaderCore
@@ -571,6 +572,18 @@ struct ModelsView: View {
 
     var body: some View {
         Form {
+            if !localAIAvailable {
+                // Version Mac (#55, décision de NOxygen59 du 29/10/2026) : pas d'IA locale ; Ollama prévu plus tard.
+                Section {
+                    Text("Sur Mac, l'IA locale de l'iPad (OvisOCR2, Qwen, GLM-OCR) et l'OCR NDLOCR ne fonctionnent pas. L'OCR Apple Vision, les dictionnaires et les cartes marchent. Pour lire un manuel avec ses lectures IA et ses traductions, importe-le en paquet .kyokasho exporté depuis l'iPad.")
+                        .font(.footnote)
+                    Toggle("IA locale par Ollama", isOn: .constant(false)).disabled(true)
+                } header: {
+                    Text("Version Mac")
+                } footer: {
+                    Text("Bientôt : relier Ollama installé sur ce Mac. Rien n'est envoyé sur Internet.")
+                }
+            }
             Section {
                 Text("Rien n'est obligatoire : l'app marche sans aucun modèle. Pour un livre japonais scanné, le duo conseillé est **NDLOCR-Lite** (lire le texte) + **MeCab** (furigana justes). Le reste ajoute des options.")
                     .font(.footnote)

@@ -4,7 +4,9 @@
 import CoreGraphics
 import Foundation
 import OCRKit
+#if canImport(OnnxRuntimeBindings)
 import OnnxRuntimeBindings
+#endif
 
 // Moteurs OCR sur l'iPad avec ONNX Runtime (CPU). Les modèles sont téléchargés à la demande
 // (`ModelStore`). Code écrit pour Kyōkasho d'après la description des modèles :
@@ -12,6 +14,7 @@ import OnnxRuntimeBindings
 
 // MARK: - Session ONNX
 
+#if canImport(OnnxRuntimeBindings)
 final class ONNXModel: @unchecked Sendable {
     private static let env = try? ORTEnv(loggingLevel: .warning)
     private let session: ORTSession
@@ -58,6 +61,24 @@ final class ONNXModel: @unchecked Sendable {
     func inputNames() throws -> [String] { try session.inputNames() }
     func outputNames() throws -> [String] { try session.outputNames() }
 }
+#else
+/// Mac Catalyst (#55) : pas d'ONNX Runtime. Les moteurs NDLOCR et PP-OCRv5 restent compilés mais leurs modèles ne
+/// s'installent pas sur Mac ; un appel signale l'indisponibilité. Apple Vision reste disponible.
+final class ONNXModel: @unchecked Sendable {
+    init(path: URL, threads: Int = 3, coreML: Bool = false) throws {
+        throw OCRError.engineFailed("OCR ONNX (NDLOCR, PP-OCRv5) indisponible sur Mac : utilise Apple Vision.")
+    }
+
+    struct Tensor {
+        var data: Data
+        var shape: [Int]
+    }
+
+    func run(floats: [String: ([Float], [Int])], ints: [String: ([Int64], [Int])] = [:]) throws -> [String: Tensor] { [:] }
+    func inputNames() throws -> [String] { [] }
+    func outputNames() throws -> [String] { [] }
+}
+#endif
 
 extension ONNXModel.Tensor {
     var floats: [Float] { data.withUnsafeBytes { Array($0.bindMemory(to: Float.self)) } }

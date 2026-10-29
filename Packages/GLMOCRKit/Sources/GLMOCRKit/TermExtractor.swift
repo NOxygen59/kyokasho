@@ -2,8 +2,10 @@
 // Copyright (c) 2026 NOxygen59
 
 import Foundation
+#if canImport(MLXVLM)
 import MLX
 import MLXLMCommon
+#endif
 import OCRKit
 import ReaderCore
 
@@ -56,6 +58,7 @@ public enum TermExtractor {
         if let free = PageVLMReader.availableMemory(), free < 3_800 * 1_048_576 {
             throw OCRError.engineFailed("Pas assez de mémoire libre pour \(model.title) (\(free / 1_048_576) Mo libres).")
         }
+        #if canImport(MLXVLM)
         // Qwen3.5 : pas de « réflexion » affichée, réponse directe.
         let context: [String: any Sendable]? = model.id == ModelSpec.qwen35chat4b.id ? ["enable_thinking": false] : nil
         let user = UserInput(chat: [.user(prompt(markdown: markdown, known: known, language: language))], additionalContext: context)
@@ -70,5 +73,8 @@ public enum TermExtractor {
                 }
             }
         }
+        #else
+        throw localAIUnavailableOnMac
+        #endif
     }
 }

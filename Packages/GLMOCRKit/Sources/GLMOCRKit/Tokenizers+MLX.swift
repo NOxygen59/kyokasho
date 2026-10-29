@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 NOxygen59
 
+#if canImport(MLXVLM)
 import Foundation
 import MLXLMCommon
 import Tokenizers
@@ -50,3 +51,4 @@ struct LocalOnly: MLXLMCommon.Downloader {
         throw CocoaError(.fileNoSuchFile)
     }
 }
+#endif

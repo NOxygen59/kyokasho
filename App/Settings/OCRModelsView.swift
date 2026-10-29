@@ -25,6 +25,11 @@ final class ModelDownloads: ObservableObject {
 
     func start(_ spec: ModelSpec) {
         guard tasks[spec.id] == nil else { return }
+        // Version Mac (#55) : ni MLX ni ONNX ; télécharger des Go de modèles inutilisables est refusé.
+        guard localAIAvailable else {
+            errors[spec.id] = "Sur Mac, les modèles ne fonctionnent pas : importe les documents en paquet .kyokasho avec leurs lectures."
+            return
+        }
         errors[spec.id] = nil
         progress[spec.id] = 0
         let store = store

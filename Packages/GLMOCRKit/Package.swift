@@ -21,9 +21,11 @@ let package = Package(
         .target(name: "GLMOCRKit", dependencies: [
             .product(name: "OCRKit", package: "KyokashoKit"),
             .product(name: "ONNXOCRKit", package: "KyokashoKit"),
-            .product(name: "MLXVLM", package: "mlx-swift-lm"),
-            .product(name: "MLXLMCommon", package: "mlx-swift-lm"),
-            .product(name: "Tokenizers", package: "swift-transformers"),
+            // MLX seulement sur iOS : sur Mac Catalyst (Mac Intel, #55), même interface publique, mais chaque lecture
+            // IA renvoie « IA locale indisponible sur Mac » (MacUnavailable.swift). MLX exige une puce Apple.
+            .product(name: "MLXVLM", package: "mlx-swift-lm", condition: .when(platforms: [.iOS])),
+            .product(name: "MLXLMCommon", package: "mlx-swift-lm", condition: .when(platforms: [.iOS])),
+            .product(name: "Tokenizers", package: "swift-transformers", condition: .when(platforms: [.iOS])),
         ]),
         .testTarget(name: "GLMOCRKitTests", dependencies: ["GLMOCRKit"]),
     ]

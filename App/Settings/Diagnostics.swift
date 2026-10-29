@@ -2,7 +2,9 @@
 // Copyright (c) 2026 NOxygen59
 
 import Foundation
+#if canImport(MLX)
 import MLX
+#endif
 import ReaderCore
 import SwiftUI
 import UIKit
@@ -72,11 +74,13 @@ enum Diagnostics {
         let version = "\(info?["CFBundleShortVersionString"] as? String ?? "?") (\(info?["CFBundleVersion"] as? String ?? "?"))"
         let memory = ProcessInfo.processInfo.physicalMemory / 1_048_576
         write("=== Lancement Kyōkasho \(version) · \(UIDevice.current.model) iOS \(UIDevice.current.systemVersion) · mémoire \(memory) Mo · diagnostic \(enabled ? "activé" : "désactivé")")
+        #if canImport(MLX)
         setErrorHandler({ message, _ in
             let text = message.map { String(cString: $0) } ?? "(sans message)"
             Diagnostics.write("[mlx] ERREUR FATALE : \(text) · mémoire de l'app \(Int(Diagnostics.footprintMB())) Mo", sync: true)
             fatalError("MLX : \(text)")
         })
+        #endif
     }
 
     static func footprintMB() -> Double {
