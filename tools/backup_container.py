@@ -21,6 +21,9 @@ PERSISTENT_DATABASES = (
 )
 CACHES = ("Library/Caches", "tmp")
 MODELS = "Library/Application Support/Kyokasho/Models"
+# Dictionnaires : retéléchargeables depuis le catalogue de l'app (#50, décision de NOxygen59 du 29/10/2026). Option
+# explicite seulement : un dictionnaire importé à la main (fichier .zip perso) ne se retélécharge pas.
+DICTIONARIES = "Library/Application Support/Kyokasho/Dictionaries"
 
 
 def digest(path):
@@ -88,7 +91,7 @@ def destinations(source, destination):
     return source, destination
 
 
-def inventory(root, omit_models=False, snapshot=False):
+def inventory(root, omit_models=False, snapshot=False, omit_dictionaries=False):
     files = {}
     omitted = []
     for directory, names, leaves in os.walk(root, followlinks=False):
@@ -98,7 +101,8 @@ def inventory(root, omit_models=False, snapshot=False):
             relative = path.relative_to(root).as_posix()
             if path.is_symlink():
                 raise ValueError("Lien symbolique refusé : " + relative)
-            if not snapshot and (relative in CACHES or (omit_models and relative == MODELS)):
+            if not snapshot and (relative in CACHES or (omit_models and relative == MODELS)
+                                 or (omit_dictionaries and relative == DICTIONARIES)):
                 names.remove(name)
                 omitted.append(relative)
         for name in leaves:
@@ -114,7 +118,7 @@ def inventory(root, omit_models=False, snapshot=False):
     return files, sorted(omitted)
 
 
-def backup(source, destination, source_stopped=False, omit_models=False):
+def backup(source, destination, source_stopped=False, omit_models=False, omit_dictionaries=False):
     if not source_stopped:
         raise ValueError("L'app doit être arrêtée et la source doit être une copie hors ligne")
     source, destination = destinations(source, destination)
@@ -123,7 +127,7 @@ def backup(source, destination, source_stopped=False, omit_models=False):
             raise ValueError("Base essentielle absente : " + name)
     if (source / "Library/Application Support/Kyokasho/page-shift.json").exists():
         raise ValueError("Ajout de pages en attente : conserver la copie, réparer avant sauvegarde logique")
-    before, omissions = inventory(source, omit_models)
+    before, omissions = inventory(source, omit_models, omit_dictionaries=omit_dictionaries)
     # Les WAL sont surveillés séparément : leur contenu est pris en compte par l'API SQLite.
     wal_before = {str(p.relative_to(source)): (p.stat().st_size, p.stat().st_mtime_ns)
                   for p in source.rglob("*-wal") if p.is_file()}
@@ -150,7 +154,7 @@ def backup(source, destination, source_stopped=False, omit_models=False):
             else:
                 shutil.copyfile(path, target)
             entries[name] = {"sha256": digest(target), "bytes": target.stat().st_size, "sqlite": database}
-        after, _ = inventory(source, omit_models)
+        after, _ = inventory(source, omit_models, omit_dictionaries=omit_dictionaries)
         wal_after = {str(p.relative_to(source)): (p.stat().st_size, p.stat().st_mtime_ns)
                      for p in source.rglob("*-wal") if p.is_file()}
         if before != after or wal_before != wal_after:
@@ -221,6 +225,8 @@ def main():
     create.add_argument("destination")
     create.add_argument("--source-stopped", action="store_true")
     create.add_argument("--omit-models", action="store_true")
+    create.add_argument("--omit-dictionaries", action="store_true",
+                        help="laisse de côté les dictionnaires (retéléchargeables depuis le catalogue de l'app)")
     inspect = commands.add_parser("verify")
     inspect.add_argument("archive")
     extract = commands.add_parser("restore")
@@ -229,7 +235,7 @@ def main():
     args = parser.parse_args()
     try:
         if args.command == "backup":
-            print(backup(args.source, args.destination, args.source_stopped, args.omit_models))
+            print(backup(args.source, args.destination, args.source_stopped, args.omit_models, args.omit_dictionaries))
         elif args.command == "restore":
             print(restore(args.archive, args.destination))
         else:

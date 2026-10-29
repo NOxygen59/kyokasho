@@ -134,6 +134,19 @@ final class DictionaryModel: ObservableObject {
         reload()
     }
 
+    static let firstLanguageKey = "dictionary.firstLanguage"
+
+    /// Langue des définitions qui passe en premier (#50, D2) : réordonne les dictionnaires du catalogue.
+    func applyFirstLanguage() {
+        let raw = UserDefaults.standard.string(forKey: Self.firstLanguageKey) ?? CatalogEntry.Language.french.rawValue
+        let first = CatalogEntry.Language(rawValue: raw) ?? .french
+        let list = dictionaries
+        let order = DictionaryCatalog.ordered(titles: list.map(\.title), first: first)
+        guard order != Array(list.indices) else { return }
+        try? database?.setOrder(order.compactMap { list[$0].id })
+        reload()
+    }
+
     func move(from source: IndexSet, to destination: Int) {
         var list = dictionaries
         list.move(fromOffsets: source, toOffset: destination)
