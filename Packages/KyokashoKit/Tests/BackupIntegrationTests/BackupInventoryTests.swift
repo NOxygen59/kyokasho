@@ -43,10 +43,17 @@ extension BackupRoundTripTests {
         "Packages/KyokashoKit/Sources/OCRKit/ModelStore.swift": ("modèles : Kyokasho/Models/ (omissible, retéléchargeable)", ["Kyokasho/Models", "model-"]),
         "App/Dictionary/MorphologyService.swift": ("modèles : Kyokasho/Models/unidic ; temporaire : tmp/unidic-lite.tar.gz",
                                                    ["unidic", "unidic-lite.tar.gz"]),
-        "App/Library/PageShift.swift": ("transaction : Kyokasho/page-shift.json (sauvegarde refusée) ; secours : Kyokasho/PageShift/<UUID>/",
+        "App/Library/PageShift.swift": ("transaction : Kyokasho/page-shift.json (sauvegarde refusée) ; copies 30 jours (#49) : Kyokasho/PageShift/<opération>/ avec manifest.json ; temporaire : tmp/PageEdit-<UUID>/",
                                         [".page-shift-\\(p.transaction!).pdf", "Kyokasho", "PageShift/", "drafts.json", "files", "install-files",
                                          "merged.pdf", "original-drafts.json", "original-files", "original-report.json", "original.pdf",
-                                         "page-shift.json", "report.json"]),
+                                         "page-shift.json", "report.json", "PageEdit-\\(UUID().uuidString)", "PageShift",
+                                         "PageShift/\\($0.archiveId)", "PageShift/\\(archiveId)/original.pdf",
+                                         "\\(stem[..<dash])-\\(position).md", "manifest.json"]),
+        "App/Library/DocumentPackageService.swift": ("export complet : Documents/Paquets de sécurité/<date>/ (avant remplacement) ; temporaire : tmp/PackageImport-<UUID>/ ; installation : .package-<UUID>(.pdf) à côté de la cible, échangé ensuite",
+                                                     [".package-\\(UUID().uuidString)", ".package-\\(UUID().uuidString).pdf",
+                                                      "PackageImport-\\(UUID().uuidString)", "Paquets de sécurité"]),
+        "Packages/KyokashoKit/Sources/ReaderCore/DocumentPackage.swift": ("export complet : temporaire tmp/PackageWrite-<UUID>/data",
+                                                                          ["PackageWrite-\\(UUID().uuidString)", "data"]),
         "App/Settings/Diagnostics.swift": ("diagnostic : Documents/Diagnostics/journal.txt", ["Diagnostics", "journal.txt"]),
         "App/Settings/StorageUsage.swift": ("lecture seule (calcul de l'espace)", ["Analysis", "Dictionaries", "Documents", "Kyokasho", "unidic"]),
         "App/Settings/GitHubUpdate.swift": ("cache : Caches/Update", ["Update"]),
@@ -191,6 +198,9 @@ extension BackupRoundTripTests {
         try sqlite(path, """
             ALTER TABLE document DROP COLUMN category;
             DELETE FROM grdb_migrations WHERE identifier = 'v5-document-category';
+            DROP TABLE pageEditRow; DROP TABLE pageEdit; DROP TABLE pageIdentity;
+            ALTER TABLE document DROP COLUMN layoutVersion;
+            DELETE FROM grdb_migrations WHERE identifier = 'v5-page-edits';
             ALTER TABLE pageComment DROP COLUMN drawing; ALTER TABLE pageComment DROP COLUMN anchorX;
             ALTER TABLE pageComment DROP COLUMN anchorY; ALTER TABLE pageComment DROP COLUMN anchorWidth;
             ALTER TABLE pageComment DROP COLUMN anchorHeight; ALTER TABLE pageComment DROP COLUMN anchorText;
