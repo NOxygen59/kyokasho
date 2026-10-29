@@ -50,6 +50,8 @@ final class AppModel: ObservableObject {
     @Published private(set) var tabs = DocumentTabs()
 
     /// Document à ouvrir (bibliothèque → lecteur) ; chaque document ouvert prend un onglet.
+    /// Paquet `.kyokasho` ouvert depuis Fichiers, pris en charge par la bibliothèque (vérification, accord).
+    @Published var incomingPackage: URL?
     @Published var openDocumentId: String? {
         didSet {
             if let openDocumentId { tabs.open(openDocumentId) }

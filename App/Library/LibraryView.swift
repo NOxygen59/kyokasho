@@ -71,7 +71,17 @@ struct LibraryView: View {
             } catch {
                 packageMessage = "Paquet refusé : \(error.localizedDescription)"
             }
+            // Copie déposée par iOS dans Inbox (« Ouvrir dans ») : à nous, effacée une fois lue. Un fichier ouvert
+            // sur place depuis Fichiers n'est jamais touché.
+            if url.path.contains("/Inbox/") { try? FileManager.default.removeItem(at: url) }
         }
+    }
+
+    /// Paquet touché dans Fichiers (`AppModel.incomingPackage`), au lancement comme app ouverte.
+    private func takeIncomingPackage() {
+        guard let url = model.incomingPackage else { return }
+        model.incomingPackage = nil
+        openPackage(url)
     }
 
     private func install(_ pending: DocumentPackageService.Pending, replacing: Bool) {
@@ -184,7 +194,8 @@ struct LibraryView: View {
         .fullScreenCover(isPresented: $showReview, onDismiss: { review.refresh() }) {
             ReviewScreen().environmentObject(model).environmentObject(review).preferredColorScheme(.dark)
         }
-        .onAppear { review.refresh() }
+        .onAppear { review.refresh(); takeIncomingPackage() }
+        .onChange(of: model.incomingPackage) { _ in takeIncomingPackage() }
         .sheet(item: $addingPages) { document in
             AddPagesView(document: document).environmentObject(model).preferredColorScheme(.dark)
         }

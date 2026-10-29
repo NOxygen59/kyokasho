@@ -4,6 +4,7 @@
 import GLMOCRKit
 import OCRKit
 import ONNXOCRKit
+import ReaderCore
 import SwiftUI
 import UIKit
 
@@ -33,7 +34,11 @@ struct KyokashoApp: App {
                 .onOpenURL { url in
                     // PDF ouvert depuis une autre app (« Ouvrir dans Kyōkasho »).
                     // Les copies déposées dans Inbox par le système sont à nous : on les supprime après import.
-                    if url.isFileURL { model.importFiles([url], cleanUp: url.path.contains("/Inbox/")) }
+                    // Paquet `.kyokasho` touché dans Fichiers : même parcours que « Importer un paquet » (bibliothèque).
+                    if url.isFileURL, url.pathExtension.lowercased() == DocumentPackage.fileExtension {
+                        model.openDocumentId = nil
+                        model.incomingPackage = url
+                    } else if url.isFileURL { model.importFiles([url], cleanUp: url.path.contains("/Inbox/")) }
                 }
                 #if DEBUG
                 .onAppear {
