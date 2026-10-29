@@ -185,19 +185,24 @@ struct LibraryView: View {
 
     // MARK: Barre latérale
 
-    /// Colonne de gauche. Trop haute pour l'écran (outils ajoutés, carte de l'IA), elle étirait toute la page et
-    /// poussait la barre de sélection multiple hors de l'écran (recette 1.3.2 (66), point 6) : elle défile alors.
+    /// Colonne de gauche. Trop haute pour l'écran (outils ajoutés, carte de l'IA), elle étirait toute la page,
+    /// poussait la barre de sélection multiple hors de l'écran et coupait la carte du temps de lecture (recette
+    /// 1.3.2 (66)). Les outils défilent quand ils ne tiennent pas ; le temps de lecture reste fixé en bas, entier.
     private var sidebar: some View {
-        ViewThatFits(in: .vertical) {
-            sidebarContent(fill: true)
-            ScrollView(showsIndicators: false) { sidebarContent(fill: false) }
+        VStack(alignment: .leading, spacing: 12) {
+            ViewThatFits(in: .vertical) {
+                sidebarContent
+                ScrollView(showsIndicators: false) { sidebarContent }
+            }
+            .frame(maxHeight: .infinity, alignment: .top)
+            statsCard
         }
+        .padding(18)
         .frame(maxHeight: .infinity, alignment: .top)
         .atelierPanel()
     }
 
-    /// `fill` : le temps de lecture est poussé en bas de la colonne ; sinon, il suit les outils (colonne défilante).
-    private func sidebarContent(fill: Bool) -> some View {
+    private var sidebarContent: some View {
         VStack(alignment: .leading, spacing: 22) {
             HStack(spacing: 10) {
                 Text("教").font(.custom("HiraMinProN-W6", size: 26))
@@ -234,10 +239,7 @@ struct LibraryView: View {
                           count: model.trashedDocuments.count) { showTrash = true }
                 actionRow(icon: "gearshape", title: "Réglages", tint: Atelier.textSecondary) { showSettings = true }
             }
-            if fill { Spacer(minLength: 8) }
-            statsCard
         }
-        .padding(18)
     }
 
     private func sideRow(_ value: Filter, icon: String, title: String, count: Int) -> some View {
