@@ -69,6 +69,12 @@ final class StyleTokensGuardTests: XCTestCase {
                        "Police système en dur : utiliser Atelier.font(_:weight:)")
     }
 
+    /// Recette 69 : un arrondi UIKit n'est pas limité par le système ; il doit passer par `corner(_:height:)`.
+    func testUIKitCornersAreClampedToHalfHeight() throws {
+        XCTAssertEqual(try count(#"layer\.cornerRadius = (?!Atelier\.corner\([^)]*height:)"#), [:],
+                       "layer.cornerRadius sans limite : utiliser Atelier.corner(_:height:)")
+    }
+
     private func count(_ regex: String) throws -> [String: Int] {
         let app = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
             .appendingPathComponent("../../../../App").standardizedFileURL

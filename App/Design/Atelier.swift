@@ -38,6 +38,10 @@ enum Atelier {
     /// Arrondi d'un élément d'interface : valeur d'origine (style Atelier) × `cornerScale` du style. Les dessins
     /// posés sur la page (sélection OCR, repères) n'en dépendent pas.
     static func corner(_ base: CGFloat) -> CGFloat { base * AppStyle.current.cornerScale }
+    /// Même arrondi, limité à la demi-hauteur de l'élément. Obligatoire pour un calque UIKit (`layer.cornerRadius`) :
+    /// contrairement à SwiftUI, UIKit ne le limite pas, et une pilule prend alors une forme de feuille pointue avec un
+    /// style à formes gonflées (Wabi-Sabi, Glassmorphism ; recette 69).
+    static func corner(_ base: CGFloat, height: CGFloat) -> CGFloat { min(corner(base), height / 2) }
     static var radius: CGFloat { corner(18) }
     static var smallRadius: CGFloat { corner(11) }
     /// Épaisseur d'une bordure d'interface : valeur d'origine × `borderScale` du style.
