@@ -57,7 +57,7 @@ struct DictionarySearchView: View {
                             .lineLimit(1)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 9)
-                            .foregroundStyle(shelf == item ? Color.black.opacity(0.85) : Atelier.textSecondary)
+                            .foregroundStyle(shelf == item ? Atelier.onAccentInk.opacity(0.85) : Atelier.textSecondary)
                             .background(shelf == item ? Atelier.Tint.japanese : Atelier.surfaceHigh,
                                         in: Capsule())
                     }

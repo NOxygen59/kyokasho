@@ -63,7 +63,7 @@ private struct MemoryNotice: View {
         }
         .padding(.horizontal, 16).padding(.vertical, 10)
         .background(.regularMaterial, in: Capsule())
-        .shadow(color: .black.opacity(0.3), radius: 12, y: 4)
+        .shadow(color: Atelier.shadow.opacity(0.3), radius: 12, y: 4)
         .frame(maxWidth: 560)
     }
 }
@@ -174,7 +174,7 @@ struct TabStripView: UIViewRepresentable {
         var onClose: (String) -> Void = { _ in }
 
         func pill(_ tab: Tab, selected: Bool) -> UIView {
-            let ink = selected ? UIColor.black.withAlphaComponent(0.85) : UIColor(Atelier.textPrimary)
+            let ink = selected ? UIColor(Atelier.onAccentInk).withAlphaComponent(0.85) : UIColor(Atelier.textPrimary)
             var config = UIButton.Configuration.plain()
             config.title = tab.title
             config.titleLineBreakMode = .byTruncatingTail

@@ -54,7 +54,7 @@ struct NoteWindow: View {
         .overlay(RoundedRectangle(cornerRadius: Atelier.radius, style: .continuous)
             .strokeBorder(Atelier.Tint.annotate.opacity(0.45), lineWidth: 1))
         .overlay(alignment: .bottomTrailing) { resizeHandle(w: w, h: h) }
-        .shadow(color: .black.opacity(0.5), radius: 20, y: 8)
+        .shadow(color: Atelier.shadow.opacity(0.5), radius: 20, y: 8)
         .offset(x: left, y: top)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .transaction { if move != .zero || resize != .zero { $0.animation = nil } }
@@ -68,7 +68,7 @@ struct NoteWindow: View {
             Text("Note · p. \(reader.document.pageLabel(current.pageIndex))")
                 .font(.system(size: 13, weight: .semibold)).foregroundStyle(Atelier.textSecondary).lineLimit(1)
             Spacer(minLength: 4)
-            toolButton(.pen(.black), icon: "pencil.tip", color: .white)
+            toolButton(.pen(.black), icon: "pencil.tip", color: Atelier.contrastInk)
             toolButton(.pen(.systemRed), icon: "pencil.tip", color: .red)
             toolButton(.pen(.systemBlue), icon: "pencil.tip", color: .blue)
             toolButton(.eraser, icon: "eraser", color: Atelier.textSecondary)

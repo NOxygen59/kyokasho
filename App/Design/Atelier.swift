@@ -20,6 +20,7 @@ enum Atelier {
     static var onAccentInk: Color { AppStyle.current.onAccentInk }
     static var shadow: Color { AppStyle.current.shadow }
     static var scrim: Color { AppStyle.current.scrim }
+    static var contrastInk: Color { AppStyle.current.contrastInk }
 
     /// Une couleur par fonction.
     enum Tint {
@@ -62,7 +63,7 @@ struct AtelierPanel: ViewModifier {
             .background {
                 RoundedRectangle(cornerRadius: radius, style: .continuous)
                     .fill(Atelier.surface.opacity(0.97))
-                    .shadow(color: .black.opacity(0.28), radius: 16, y: 7)
+                    .shadow(color: Atelier.shadow.opacity(0.28), radius: 16, y: 7)
             }
             .overlay {
                 RoundedRectangle(cornerRadius: radius, style: .continuous).strokeBorder(Atelier.hairline, lineWidth: 1)
@@ -104,7 +105,7 @@ struct ToolButton: View {
             Image(systemName: icon)
                 .font(.system(size: 19, weight: .medium))
                 .frame(width: 46, height: 46)
-                .foregroundStyle(active ? Color.black.opacity(0.85) : Atelier.textPrimary)
+                .foregroundStyle(active ? Atelier.onAccentInk.opacity(0.85) : Atelier.textPrimary)
                 .background {
                     RoundedRectangle(cornerRadius: Atelier.smallRadius, style: .continuous)
                         .fill(active ? tint : Color.clear)
@@ -160,7 +161,7 @@ struct AtelierButtonStyle: ButtonStyle {
         configuration.label
             .font(.system(size: 15, weight: .semibold))
             .padding(.horizontal, 16).padding(.vertical, 10)
-            .foregroundStyle(Color.black.opacity(0.85))
+            .foregroundStyle(Atelier.onAccentInk.opacity(0.85))
             .background(tint, in: RoundedRectangle(cornerRadius: Atelier.smallRadius, style: .continuous))
             .opacity(configuration.isPressed ? 0.8 : 1)
             .scaleEffect(configuration.isPressed ? 0.97 : 1)
@@ -196,7 +197,7 @@ struct PillTabs<T: Hashable>: View {
                     .padding(.horizontal, 10).padding(.vertical, 7)
                     .frame(maxWidth: on ? .infinity : nil)
                     .frame(minWidth: 40)
-                    .foregroundStyle(on ? Color.black.opacity(0.85) : Atelier.textSecondary)
+                    .foregroundStyle(on ? Atelier.onAccentInk.opacity(0.85) : Atelier.textSecondary)
                     .background(on ? tint : Color.clear, in: Capsule())
                     .contentShape(Capsule())
                 }

@@ -241,7 +241,7 @@ struct DriveSetupHelp: View {
                             ZStack {
                                 Circle().fill(done.contains(i) ? Atelier.Tint.cloud : Atelier.surfaceHigh).frame(width: 34, height: 34)
                                 if done.contains(i) {
-                                    Image(systemName: "checkmark").font(.system(size: 14, weight: .bold)).foregroundStyle(.black.opacity(0.85))
+                                    Image(systemName: "checkmark").font(.system(size: 14, weight: .bold)).foregroundStyle(Atelier.onAccentInk.opacity(0.85))
                                 } else {
                                     Text("\(i + 1)").font(Atelier.mono).foregroundStyle(Atelier.textPrimary)
                                 }

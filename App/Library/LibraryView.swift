@@ -270,7 +270,7 @@ struct LibraryView: View {
             HStack(spacing: 10) {
                 Text("教").font(.custom("HiraMinProN-W6", size: 26))
                     .frame(width: 42, height: 42)
-                    .foregroundStyle(.black.opacity(0.85))
+                    .foregroundStyle(Atelier.onAccentInk.opacity(0.85))
                     .background(Atelier.Tint.japanese, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
                 VStack(alignment: .leading, spacing: 0) {
                     Text("Kyōkasho").font(Atelier.display(19)).foregroundStyle(Atelier.textPrimary)
@@ -317,11 +317,11 @@ struct LibraryView: View {
                 Image(systemName: icon).frame(width: 22)
                 Text(title)
                 Spacer()
-                Text("\(count)").font(Atelier.mono).foregroundStyle(on ? Color.black.opacity(0.6) : Atelier.textTertiary)
+                Text("\(count)").font(Atelier.mono).foregroundStyle(on ? Atelier.onAccentInk.opacity(0.6) : Atelier.textTertiary)
             }
             .font(.system(size: 15, weight: .medium))
             .padding(.horizontal, 10).padding(.vertical, 9)
-            .foregroundStyle(on ? Color.black.opacity(0.85) : Atelier.textPrimary)
+            .foregroundStyle(on ? Atelier.onAccentInk.opacity(0.85) : Atelier.textPrimary)
             .background(on ? Atelier.Tint.read : Color.clear, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
             .contentShape(Rectangle())
         }
@@ -336,7 +336,7 @@ struct LibraryView: View {
                 Text(title).foregroundStyle(Atelier.textPrimary)
                 Spacer()
                 if let count, count > 0 {
-                    Text("\(count)").font(Atelier.mono).foregroundStyle(Color.black.opacity(0.8))
+                    Text("\(count)").font(Atelier.mono).foregroundStyle(Atelier.onAccentInk.opacity(0.8))
                         .padding(.horizontal, 7).padding(.vertical, 2)
                         .background(tint, in: Capsule())
                 }
@@ -610,12 +610,12 @@ struct DocumentCard: View {
                 }
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Atelier.hairline))
-                .shadow(color: .black.opacity(0.5), radius: 12, y: 8)
+                .shadow(color: Atelier.shadow.opacity(0.5), radius: 12, y: 8)
                 if let category = document.category {
                     // Repère sur l'accueil (RET-039, #54).
                     Text(category.title).font(.system(size: 11, weight: .semibold))
                         .padding(.horizontal, 8).padding(.vertical, 4)
-                        .foregroundStyle(.black.opacity(0.8))
+                        .foregroundStyle(Atelier.onAccentInk.opacity(0.8))
                         .background(category == .textbook ? Atelier.Tint.read : Atelier.Tint.annotate, in: Capsule())
                         .padding(8)
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -624,7 +624,7 @@ struct DocumentCard: View {
                     Image(systemName: "externaldrive.badge.icloud")
                         .font(.system(size: 12, weight: .bold))
                         .padding(7)
-                        .foregroundStyle(.black.opacity(0.8))
+                        .foregroundStyle(Atelier.onAccentInk.opacity(0.8))
                         .background(Atelier.Tint.cloud, in: Circle())
                         .padding(8)
                 }

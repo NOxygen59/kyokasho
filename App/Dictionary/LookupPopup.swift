@@ -245,7 +245,7 @@ struct LookupPopup: View {
         .background(Atelier.surface)
         .clipShape(RoundedRectangle(cornerRadius: Atelier.radius, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: Atelier.radius, style: .continuous).strokeBorder(Atelier.Tint.japanese.opacity(0.35), lineWidth: 1))
-        .shadow(color: .black.opacity(0.55), radius: 24, y: 10)
+        .shadow(color: Atelier.shadow.opacity(0.55), radius: 24, y: 10)
     }
 
     private func handle(_ message: LookupMessage) {

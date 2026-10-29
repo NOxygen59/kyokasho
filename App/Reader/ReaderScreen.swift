@@ -351,7 +351,7 @@ struct ReaderScreen: View {
                             Text("Touche le mot de la page où ancrer la note").font(.system(size: 14, weight: .semibold))
                             Button("Annuler") { reader.placingAnchorFor = nil }.fontWeight(.bold)
                         }
-                        .foregroundStyle(Color.black.opacity(0.85))
+                        .foregroundStyle(Atelier.onAccentInk.opacity(0.85))
                         .padding(.horizontal, 14).padding(.vertical, 8)
                         .background(Atelier.Tint.annotate, in: Capsule())
                         .frame(maxWidth: .infinity, alignment: .top)
@@ -597,7 +597,7 @@ struct ReaderScreen: View {
             } label: {
                 Text("辞").font(.custom("HiraMinProN-W6", size: 21))
                     .frame(width: 46, height: 46)
-                    .foregroundStyle(reader.lookupMode ? Color.black.opacity(0.85) : Atelier.textPrimary)
+                    .foregroundStyle(reader.lookupMode ? Atelier.onAccentInk.opacity(0.85) : Atelier.textPrimary)
                     .background(reader.lookupMode ? Atelier.Tint.japanese : Color.clear,
                                 in: RoundedRectangle(cornerRadius: Atelier.smallRadius, style: .continuous))
                     .contentShape(Rectangle())
@@ -932,7 +932,7 @@ struct HighlightMenu: View {
             ForEach(HighlightColor.allCases, id: \.self) { color in
                 Button { onPick(color) } label: {
                     Circle().fill(Color(color.uiColor)).frame(width: 26, height: 26)
-                        .overlay(Circle().stroke(.white.opacity(0.5), lineWidth: 1))
+                        .overlay(Circle().stroke(Atelier.contrastInk.opacity(0.5), lineWidth: 1))
                 }
                 .buttonStyle(PressScale())
                 .accessibilityLabel("Surligner en \(color.frenchName)")

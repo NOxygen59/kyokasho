@@ -84,7 +84,7 @@ enum PageTextSearch {
             out += AttributedString(String(chars[cursor..<r.lowerBound]))
             var hit = AttributedString(String(chars[r]))
             hit.backgroundColor = tint.opacity(0.35)
-            hit.foregroundColor = .white
+            hit.foregroundColor = Atelier.contrastInk
             out += hit
             cursor = r.upperBound
         }

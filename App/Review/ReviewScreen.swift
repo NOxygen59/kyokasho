@@ -155,7 +155,7 @@ struct ReviewScreen: View {
                                     .font(Atelier.mono).opacity(0.75)
                             }
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .foregroundStyle(Color.black.opacity(0.85))
+                            .foregroundStyle(Atelier.onAccentInk.opacity(0.85))
                             .background(tint(grade), in: RoundedRectangle(cornerRadius: Atelier.radius, style: .continuous))
                         }
                         .buttonStyle(PressScale())

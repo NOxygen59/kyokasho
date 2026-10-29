@@ -26,6 +26,8 @@ struct AppStyle: Identifiable, Equatable {
     var shadow: Color = .black
     /// Voile derrière une fenêtre au premier plan.
     var scrim: Color = .black
+    /// Contraste maximal sur le fond de l'interface (icône du stylo noir, contour d'une pastille, texte trouvé).
+    var contrastInk: Color = .white
 
     static let atelier = AppStyle(id: "atelier", name: "Atelier")
 

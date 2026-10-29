@@ -33,7 +33,7 @@ struct StudyPanel: View {
                                 Text("p. \(reader.document.pageLabel(source))")
                                     .font(.system(size: 13, weight: .semibold))
                                     .padding(.horizontal, 12).padding(.vertical, 5)
-                                    .foregroundStyle(on ? Color.black.opacity(0.85) : Atelier.textSecondary)
+                                    .foregroundStyle(on ? Atelier.onAccentInk.opacity(0.85) : Atelier.textSecondary)
                                     .background(Capsule().fill(on ? Atelier.Tint.japanese : Atelier.surfaceHigh))
                             }
                             .buttonStyle(.plain)
@@ -553,7 +553,7 @@ struct StudyTextTab: View {
                     Button {
                         Task { await translate(text) }
                     } label: {
-                        HStack { if translating { ProgressView().tint(.black) }; Text("Traduire en français") }
+                        HStack { if translating { ProgressView().tint(Atelier.onAccentInk) }; Text("Traduire en français") }
                     }
                     .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.ai))
                     .disabled(translating)

@@ -79,7 +79,7 @@ struct TrashView: View {
     private func card(title: String, message: String, confirm: String, cancel: @escaping () -> Void,
                       action: @escaping () -> Void) -> some View {
         ZStack {
-            Color.black.opacity(0.35).ignoresSafeArea().onTapGesture(perform: cancel)
+            Atelier.scrim.opacity(0.35).ignoresSafeArea().onTapGesture(perform: cancel)
             VStack(spacing: 12) {
                 Image(systemName: "trash").font(.title2).foregroundStyle(.red)
                 Text(title).font(.headline).multilineTextAlignment(.center)
@@ -94,7 +94,7 @@ struct TrashView: View {
             .padding(20)
             .frame(maxWidth: 340)
             .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-            .shadow(color: .black.opacity(0.3), radius: 16, y: 6)
+            .shadow(color: Atelier.shadow.opacity(0.3), radius: 16, y: 6)
             .padding(16)
             .id(title)   // nouvelle étape : la carte change d'un fondu, sans fermer ni rouvrir
             .transition(.opacity.combined(with: .scale(scale: 0.95)))

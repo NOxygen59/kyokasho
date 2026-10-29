@@ -945,7 +945,7 @@ private struct CenteredConfirmation: ViewModifier {
         content.overlay {
             if isPresented {
                 ZStack {
-                    Color.black.opacity(0.35).ignoresSafeArea()
+                    Atelier.scrim.opacity(0.35).ignoresSafeArea()
                         .onTapGesture { isPresented = false }
                     VStack(spacing: 12) {
                         Image(systemName: "trash").font(.title2).foregroundStyle(.red)
@@ -964,7 +964,7 @@ private struct CenteredConfirmation: ViewModifier {
                     .padding(20)
                     .frame(maxWidth: 320)
                     .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                    .shadow(color: .black.opacity(0.3), radius: 16, y: 6)
+                    .shadow(color: Atelier.shadow.opacity(0.3), radius: 16, y: 6)
                     .padding(16)
                     .transition(reduceMotion ? .opacity : .scale(scale: 0.92).combined(with: .opacity))
                     .accessibilityAddTraits(.isModal)
