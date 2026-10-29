@@ -53,29 +53,53 @@ struct TrashView: View {
                 Text("Un document reste 30 jours dans la corbeille, puis il est effacé de l'iPad.")
                     .font(.caption).foregroundStyle(.secondary).padding(.bottom, 8)
             }
-            .alert("Supprimer définitivement « \(forever?.title ?? "") » ?",
-                   isPresented: Binding(get: { forever != nil }, set: { if !$0 { forever = nil } })) {
-                Button("Annuler", role: .cancel) {}
-                Button("Supprimer", role: .destructive) { if let forever { model.deleteForever(forever) } }
-            } message: {
-                Text("Le PDF, ses notes, surlignages, dessins et le texte lu par l'OCR seront effacés de l'iPad. Impossible de revenir en arrière.")
-            }
-            .alert("Vider la corbeille ?", isPresented: Binding(get: { emptyStep == 1 }, set: { if !$0 && emptyStep == 1 { emptyStep = 0 } })) {
-                Button("Annuler", role: .cancel) { emptyStep = 0 }
-                Button("Continuer", role: .destructive) {
-                    // La première alerte doit finir de se fermer, sinon iOS ignore la seconde.
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { emptyStep = 2 }
-                }
-            } message: {
-                Text("\(model.trashedDocuments.count) document(s) seront effacés de l'iPad.")
-            }
-            .alert("Effacer définitivement ?", isPresented: Binding(get: { emptyStep == 2 }, set: { if !$0 { emptyStep = 0 } })) {
-                Button("Annuler", role: .cancel) { emptyStep = 0 }
-                Button("Effacer tout", role: .destructive) { model.emptyTrash(); emptyStep = 0 }
-            } message: {
-                Text("Impossible de revenir en arrière.")
-            }
+            // Confirmations dans une fenêtre centrée qui change d'étape sur place : les alertes enchaînées d'iOS
+            // demandaient une pause entre les deux (recette 1.3.2 (66), point 10 : trop lent).
+            .overlay { confirmation }
+            .animation(.spring(response: 0.28, dampingFraction: 0.9), value: emptyStep)
+            .animation(.spring(response: 0.28, dampingFraction: 0.9), value: forever)
         }
+    }
+
+    @ViewBuilder
+    private var confirmation: some View {
+        if let doc = forever {
+            card(title: "Supprimer définitivement « \(doc.title) » ?",
+                 message: "Le PDF, ses notes, surlignages, dessins et le texte lu par l'OCR seront effacés de l'iPad. Impossible de revenir en arrière.",
+                 confirm: "Supprimer", cancel: { forever = nil }) { model.deleteForever(doc); forever = nil }
+        } else if emptyStep == 1 {
+            card(title: "Vider la corbeille ?", message: "\(model.trashedDocuments.count) document(s) seront effacés de l'iPad.",
+                 confirm: "Continuer", cancel: { emptyStep = 0 }) { emptyStep = 2 }
+        } else if emptyStep == 2 {
+            card(title: "Effacer définitivement ?", message: "Dernière confirmation : impossible de revenir en arrière.",
+                 confirm: "Effacer tout", cancel: { emptyStep = 0 }) { model.emptyTrash(); emptyStep = 0 }
+        }
+    }
+
+    private func card(title: String, message: String, confirm: String, cancel: @escaping () -> Void,
+                      action: @escaping () -> Void) -> some View {
+        ZStack {
+            Color.black.opacity(0.35).ignoresSafeArea().onTapGesture(perform: cancel)
+            VStack(spacing: 12) {
+                Image(systemName: "trash").font(.title2).foregroundStyle(.red)
+                Text(title).font(.headline).multilineTextAlignment(.center)
+                Text(message).font(.footnote).foregroundStyle(.secondary).multilineTextAlignment(.center)
+                HStack(spacing: 10) {
+                    Button("Annuler", action: cancel).buttonStyle(.bordered).keyboardShortcut(.cancelAction)
+                    Button(confirm, role: .destructive, action: action)
+                        .buttonStyle(.borderedProminent).tint(.red).keyboardShortcut(.defaultAction)
+                }
+                .padding(.top, 4)
+            }
+            .padding(20)
+            .frame(maxWidth: 340)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .shadow(color: .black.opacity(0.3), radius: 16, y: 6)
+            .padding(16)
+            .id(title)   // nouvelle étape : la carte change d'un fondu, sans fermer ni rouvrir
+            .transition(.opacity.combined(with: .scale(scale: 0.95)))
+        }
+        .accessibilityAddTraits(.isModal)
     }
 
     private func remaining(_ document: LibraryDocument) -> String {

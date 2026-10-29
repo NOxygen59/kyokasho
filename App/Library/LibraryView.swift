@@ -195,7 +195,24 @@ struct LibraryView: View {
 
     // MARK: Barre latérale
 
+    /// Colonne de gauche. Trop haute pour l'écran (outils ajoutés, carte de l'IA), elle étirait toute la page,
+    /// poussait la barre de sélection multiple hors de l'écran et coupait la carte du temps de lecture (recette
+    /// 1.3.2 (66)). Les outils défilent quand ils ne tiennent pas ; le temps de lecture reste fixé en bas, entier.
     private var sidebar: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            ViewThatFits(in: .vertical) {
+                sidebarContent
+                ScrollView(showsIndicators: false) { sidebarContent }
+            }
+            .frame(maxHeight: .infinity, alignment: .top)
+            statsCard
+        }
+        .padding(18)
+        .frame(maxHeight: .infinity, alignment: .top)
+        .atelierPanel()
+    }
+
+    private var sidebarContent: some View {
         VStack(alignment: .leading, spacing: 22) {
             HStack(spacing: 10) {
                 Text("教").font(.custom("HiraMinProN-W6", size: 26))
@@ -233,13 +250,9 @@ struct LibraryView: View {
                           count: model.trashedDocuments.count) { showTrash = true }
                 actionRow(icon: "gearshape", title: "Réglages", tint: Atelier.textSecondary) { showSettings = true }
             }
-            Spacer()
+            // Avertissement de l'IA locale (RET-018) : dans la partie qui défile, au-dessus du temps de lecture fixé.
             LocalAIEnergyCard()
-            statsCard
         }
-        .padding(18)
-        .frame(maxHeight: .infinity, alignment: .top)
-        .atelierPanel()
     }
 
     private func sideRow(_ value: Filter, icon: String, title: String, count: Int) -> some View {
