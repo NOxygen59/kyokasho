@@ -345,7 +345,7 @@ extension AppDatabase {
             throw PageEditError("Suppression introuvable pour ce document.")
         }
         guard archive.restoredBy == nil else { throw PageEditError("Ces pages ont déjà été restaurées.") }
-        guard archive.purgedAt == nil else { throw PageEditError("Ces pages ont été effacées après 30 jours.") }
+        guard archive.purgedAt == nil else { throw PageEditError("Ces pages ont été effacées : restauration impossible.") }
         guard let row = try Row.fetchOne(db, sql: "SELECT pageCount, layoutVersion FROM document WHERE id = ?", arguments: [documentId]),
               try chain(db, documentId: documentId, from: archive.versionAfter, to: row["layoutVersion"]) != nil else {
             // Remplacement du PDF depuis (Drive) : d'autres pages ; ne jamais y réinsérer une ancienne archive.

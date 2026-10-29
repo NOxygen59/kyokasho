@@ -26,6 +26,9 @@ struct RemovePagesView: View {
     @State private var edits: [AppDatabase.PageEdit] = []
     @State private var confirming = false
     @State private var restoring: AppDatabase.PageEdit?
+    @State private var discarding: AppDatabase.PageEdit?
+    @State private var discardingAll = false
+    @State private var copiesSize: Int64 = 0
     @State private var working = false
     @State private var message: String?
     @State private var error: String?
@@ -79,7 +82,10 @@ struct RemovePagesView: View {
                                         .font(.caption).foregroundStyle(.secondary)
                                 }
                                 Spacer()
-                                Button("Restaurer") { restoring = edit }.disabled(working)
+                                Button("Effacer", role: .destructive) { discarding = edit }
+                                    .buttonStyle(.borderless).disabled(working)
+                                Button("Restaurer") { restoring = edit }
+                                    .buttonStyle(.borderless).disabled(working)
                             }
                         }
                     }
@@ -95,9 +101,11 @@ struct RemovePagesView: View {
                     }
                 }
                 Section {
-                    LabeledContent("Place des copies", value: ByteCountFormatter.string(fromByteCount: PageShift.copiesSize(documentId: document.id), countStyle: .file))
+                    LabeledContent("Place des copies", value: ByteCountFormatter.string(fromByteCount: copiesSize, countStyle: .file))
+                    Button("Effacer toutes les copies", role: .destructive) { discardingAll = true }
+                        .disabled(copiesSize == 0 || working)
                 } footer: {
-                    Text("Copies complètes du document gardées 30 jours après chaque ajout ou suppression de pages, puis effacées au lancement suivant. Une sauvegarde faite entre-temps garde sa propre copie.")
+                    Text("Copies complètes du document gardées 30 jours après chaque ajout ou suppression de pages, puis effacées au lancement suivant. Une restauration efface tout de suite les copies devenues inutiles. Une sauvegarde faite entre-temps garde sa propre copie.")
                 }
             }
             .navigationTitle("Pages de « \(document.title) »")
@@ -129,6 +137,18 @@ struct RemovePagesView: View {
             } message: {
                 Text("\(restoring.map(summary) ?? "") reviennent à leur place, avec leurs notes, dessins et analyses. Ce que tu as fait depuis est gardé.")
             }
+            .alert("Effacer définitivement ces pages ?", isPresented: Binding(get: { discarding != nil }, set: { if !$0 { discarding = nil } })) {
+                Button("Annuler", role: .cancel) {}
+                Button("Effacer", role: .destructive) { if let edit = discarding { discard(edit) } }
+            } message: {
+                Text("\(discarding.map(summary) ?? "") : elles ne pourront plus être restaurées. Leurs cartes de révision sont gardées, sans page.")
+            }
+            .alert("Effacer toutes les copies ?", isPresented: $discardingAll) {
+                Button("Annuler", role: .cancel) {}
+                Button("Effacer", role: .destructive) { discardAll() }
+            } message: {
+                Text("Les pages supprimées de ce document ne pourront plus être restaurées. Le document actuel, ses notes et ses cartes ne changent pas.")
+            }
             .interactiveDismissDisabled(working)
             .onAppear(perform: reload)
         }
@@ -138,6 +158,7 @@ struct RemovePagesView: View {
         if let fresh = try? model.database.document(id: document.id) { document = fresh }
         edits = (try? model.database.pageEdits(documentId: document.id)) ?? []
         selected = selected.filter { $0 < document.pageCount }
+        copiesSize = PageShift.copiesSize(documentId: document.id)
     }
 
     /// « De … à … » en numéros affichés (numéros imprimés si le document en a).
@@ -180,7 +201,7 @@ struct RemovePagesView: View {
         let date = edit.appliedAt.formatted(date: .abbreviated, time: .shortened)
         guard edit.kind == .removal else { return date }
         if edit.restoredBy != nil { return date + " · restaurées" }
-        if edit.purgedAt != nil { return date + " · effacées après 30 jours" }
+        if edit.purgedAt != nil { return date + " · effacées" }
         return date + " · restaurables"
     }
 
@@ -194,6 +215,18 @@ struct RemovePagesView: View {
     private func restore(_ edit: AppDatabase.PageEdit) {
         run(success: "Pages restaurées.") {
             try await PageShift.restorePages(model, document: document, archiveId: edit.id)
+        }
+    }
+
+    private func discard(_ edit: AppDatabase.PageEdit) {
+        run(success: "Pages effacées.") {
+            try PageShift.discardCopy(model, editId: edit.id, documentId: document.id)
+        }
+    }
+
+    private func discardAll() {
+        run(success: "Copies effacées.") {
+            try PageShift.discardCopies(model, documentId: document.id)
         }
     }
 
