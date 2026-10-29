@@ -27,7 +27,9 @@ let package = Package(
         // Code original (MIT) : modèles, base, import, réglages, logique pure.
         .target(
             name: "ReaderCore",
-            dependencies: [.product(name: "GRDB", package: "GRDB.swift")]
+            // ZIPFoundation : déjà utilisé par DictionaryKit (même version résolue) ; sert au paquet .kyokasho.
+            dependencies: [.product(name: "GRDB", package: "GRDB.swift"),
+                           .product(name: "ZIPFoundation", package: "ZIPFoundation")]
         ),
         // Code original (MIT) : moteurs OCR, boîtes de caractères, cache, banc d'essai.
         .target(name: "OCRKit", dependencies: ["ReaderCore"]),
