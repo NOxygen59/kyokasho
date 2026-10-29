@@ -128,7 +128,7 @@ final class DocumentAnalysisService: ObservableObject {
     }
 
     func start(_ document: LibraryDocument, model: AppModel, options: Options? = nil) {
-        guard progress == nil, !PageShift.isBusy(document.id) else { return }
+        guard progress == nil, !PageShift.isBusy(document.id), !LibraryBackupService.inProgress else { return }
         lastError = nil
         let id = document.id
         let url = model.storage.url(for: id)

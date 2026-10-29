@@ -100,6 +100,7 @@ extension AppModel {
         let contents = pending.contents, id = contents.manifest.documentId
         defer { discardPackage(pending) }
         guard storageRecoveryError == nil else { throw packageError("Une reprise est en attente : réessaie après.") }
+        guard !LibraryBackupService.inProgress else { throw packageError("Sauvegarde en cours : réessaie après sa fin.") }
         guard openDocumentId != id, !PageShift.isBusy(id) else {
             throw packageError("Ferme le document (et attends la fin d'une modification de ses pages) avant de l'importer.")
         }
