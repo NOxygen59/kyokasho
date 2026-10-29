@@ -88,6 +88,10 @@ public struct ReleaseNotes: Equatable, Sendable, Identifiable {
             "Analyse du document : conseil fondé d'abord sur OvisOCR2, annulation d'un choix, relance au choix, texte des images.",
             "Chat IA : consignes et paramètres par modèle, préréglages, tâches rapides, partage, liste des conversations.",
             "Moniteur de ressources intégré à la barre du lecteur ; journal des IA en clair.",
+            "Dictionnaires à télécharger dans l'app (catalogue, mises à jour, licences), langue en premier au choix, lexique du design d'intérieur fourni avec l'app.",
+            "Supprimer des pages (une, plusieurs, « de … à … »), restaurables 30 jours avec leurs notes, dessins et analyses ; historique des modifications des pages.",
+            "Traduction des pages en anglais, en plus du français ; suppression d'une traduction.",
+            "Paquet Kyōkasho : exporter un document complet et le réimporter tel quel sur un autre appareil.",
             "Fond « Sépia nuit », visite guidée et cette fenêtre de nouveautés.",
         ], fixed: [
             "Les flèches du clavier tournent les pages sans rester bloquées sur le champ du numéro de page.",
