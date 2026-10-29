@@ -35,8 +35,7 @@ extension AppDatabase {
     }
 
     /// Une opération appliquée. `pageOrder` = identifiants de toutes les pages **avant** l'opération, dans l'ordre :
-    /// une restauration replace les pages après la page restante qui les précédait, quel que soit l'ordre
-    /// d'annulation de plusieurs suppressions (R2).
+    /// les instantanés de la même génération permettent de retrouver aussi les voisines temporairement absentes.
     public struct PageEdit: Equatable, Sendable {
         public var id: String
         public var documentId: String
@@ -54,9 +53,8 @@ extension AppDatabase {
         public var removedPageIds: [String] { mapping.removed.map { pageOrder[$0] } }
     }
 
-    /// Où reviennent les pages d'une suppression (S3). Chaque page retirée revient juste après la page qui la
-    /// précédait dans l'ordre d'origine et qui est encore là (ou une page déjà replacée) ; au début sinon. Ce qui a
-    /// été ajouté ou retiré depuis reste en place : seules les pages archivées sont réinsérées (R2).
+    /// Où reviennent les pages d'une suppression (S3), selon l'ordre historique de leurs identités. Ce qui a été
+    /// ajouté ou retiré depuis est conservé : seules les pages de cette archive sont réinsérées (R2).
     public struct RestorationPlan: Codable, Equatable, Sendable {
         public var archiveId: String
         /// Pages actuelles → positions après restauration ; les positions insérées sont les pages restaurées.
@@ -147,6 +145,31 @@ extension AppDatabase {
                       current["layoutVersion"] as Int == done.versionAfter, current["pageCount"] as Int == mapping.newCount,
                       current["fileSize"] as Int64 == fileSize else {
                     throw PageEditError("Opération déjà enregistrée avec d'autres valeurs : reprise arrêtée sans modification.")
+                }
+                // F2 : les cartes sont installées APRÈS cette transaction. Le journal rejoué ne peut donc pas
+                // substituer un autre plan : le reconstruire depuis l'archive et les identités déjà réinsérées.
+                guard (kind == .restoration) == (restoring != nil), kind == .removal || detachedCards.isEmpty else {
+                    throw PageEditError("Métadonnées de reprise incohérentes.")
+                }
+                if let restoring {
+                    guard let archive = try Self.fetchEdit(db, id: restoring.archiveId),
+                          archive.documentId == documentId, archive.restoredBy == editId, archive.kind == .removal,
+                          archive.purgedAt == nil else { throw PageEditError("Archive de reprise incohérente.") }
+                    let identities = try PageIdentity.filter(Column("documentId") == documentId).fetchAll(db)
+                    let removed = Set(archive.removedPageIds)
+                    let positions = Dictionary(uniqueKeysWithValues: identities.filter { removed.contains($0.pageId) }.map { ($0.pageId, $0.position) })
+                    let expected = RestorationPlan(archiveId: archive.id, mapping: done.mapping, positions: positions,
+                        originalIndices: Dictionary(uniqueKeysWithValues: archive.removedPageIds.map { ($0, archive.pageOrder.firstIndex(of: $0)!) }),
+                        cards: try Self.restoredCards(db, archiveId: archive.id, positions: positions))
+                    guard positions.count == removed.count, restoring == expected else {
+                        throw PageEditError("Plan de restauration altéré : reprise arrêtée.")
+                    }
+                }
+                if kind == .removal {
+                    let positions = Dictionary(uniqueKeysWithValues: done.removedPageIds.map { ($0, done.pageOrder.firstIndex(of: $0)!) })
+                    guard try detachedCards == Self.restoredCards(db, archiveId: done.id, positions: positions) else {
+                        throw PageEditError("Cartes détachées altérées : reprise arrêtée.")
+                    }
                 }
                 return false
             }
@@ -333,21 +356,48 @@ extension AppDatabase {
         guard current.count == row["pageCount"] as Int, Set(current).isDisjoint(with: removed) else {
             throw PageEditError("Identités des pages incohérentes : restauration impossible.")
         }
-        var order = current
-        for pageId in removed {
-            let origin = archive.pageOrder.firstIndex(of: pageId)!
-            let anchor = archive.pageOrder[..<origin].reversed().lazy.compactMap { order.firstIndex(of: $0) }.first
-            order.insert(pageId, at: anchor.map { $0 + 1 } ?? 0)
+        // F1 : les instantanés des suppressions ultérieures ont des trous. Reconstituer l'ordre de la même
+        // génération de PDF, en gardant les identités absentes et en y insérant seulement les nouvelles pages.
+        // Ainsi B reste avant C même si B était absente quand C a été supprimée. Un remplacement coupe la chaîne.
+        var history: [PageEdit] = []
+        var version: Int = row["layoutVersion"]
+        while let id = try String.fetchOne(db, sql: "SELECT id FROM pageEdit WHERE documentId = ? AND versionAfter = ?",
+                                          arguments: [documentId, version]),
+              let edit = try fetchEdit(db, id: id), edit.versionBefore == version - 1 {
+            history.append(edit)
+            version = edit.versionBefore
+        }
+        var canonical: [String] = []
+        for snapshot in history.reversed().map(\.pageOrder) + [current] {
+            for (index, id) in snapshot.enumerated() where !canonical.contains(id) {
+                let anchor = snapshot[..<index].reversed().lazy.compactMap { canonical.firstIndex(of: $0) }.first
+                canonical.insert(id, at: anchor.map { $0 + 1 } ?? 0)
+            }
+        }
+        let live = Set(current)
+        guard canonical.filter({ live.contains($0) }) == current else {
+            throw PageEditError("Ordre des pages incohérent avec l'historique : restauration arrêtée.")
+        }
+        let wanted = live.union(removed)
+        let order = canonical.filter { wanted.contains($0) }
+        guard order.count == current.count + removed.count else {
+            throw PageEditError("Historique des pages incomplet : restauration arrêtée.")
         }
         let mapping = try PageMapping(oldCount: current.count, newCount: order.count, targets: current.map { order.firstIndex(of: $0) })
         let positions = Dictionary(uniqueKeysWithValues: removed.map { ($0, order.firstIndex(of: $0)!) })
+        let cards = try restoredCards(db, archiveId: archiveId, positions: positions)
+        return RestorationPlan(archiveId: archiveId, mapping: mapping, positions: positions,
+                               originalIndices: Dictionary(uniqueKeysWithValues: removed.map { ($0, archive.pageOrder.firstIndex(of: $0)!) }),
+                               cards: cards)
+    }
+
+    /// Inventaire autoritatif des cartes : l'archive SQL, jamais un champ du journal accepté seul.
+    private static func restoredCards(_ db: Database, archiveId: String, positions: [String: Int]) throws -> [Int64: Int] {
         var cards: [Int64: Int] = [:]
         for archived in try archivedRows(db, editId: archiveId) where archived.tableName == "card" {
             if case .integer(let id)? = archived.columns["id"], let position = positions[archived.pageId] { cards[id] = position }
         }
-        return RestorationPlan(archiveId: archiveId, mapping: mapping, positions: positions,
-                               originalIndices: Dictionary(uniqueKeysWithValues: removed.map { ($0, archive.pageOrder.firstIndex(of: $0)!) }),
-                               cards: cards)
+        return cards
     }
 
     private static func archivedRows(_ db: Database, editId: String) throws -> [ArchivedRow] {

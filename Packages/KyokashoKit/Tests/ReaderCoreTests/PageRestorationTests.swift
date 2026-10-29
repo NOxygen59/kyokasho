@@ -81,6 +81,47 @@ final class PageRestorationTests: XCTestCase {
         }
     }
 
+    func testAdjacentRemovalsRestoreInEitherOrderWithLaterInsertion() throws {
+        for added in [false, true] {
+            for order in [["s1", "s2"], ["s2", "s1"]] {
+                try setUpWithError()
+                try remove([1], id: "s1")
+                let original = try XCTUnwrap(db.pageEdit(id: "s1")).pageOrder
+                try remove([1], id: "s2") // p2 était voisine de p1, déjà absente.
+                if added {
+                    try db.remapPages(documentId: "d", mapping: PageMapping.insertion(oldCount: 4, inserted: 1, at: 1),
+                                      editId: "a", kind: .insertion, expectedVersion: version(), fileSize: 1)
+                    try db.save(PageComment(documentId: "d", pageIndex: 1, body: "nouvelle"))
+                }
+                try db.save(PageComment(documentId: "d", pageIndex: added ? 2 : 1, body: "après"))
+                for (i, archive) in order.enumerated() { try restore(archive, id: "r\(i)") }
+                let identities = try db.pageIdentities(documentId: "d").map(\.pageId)
+                XCTAssertEqual(identities.filter { original.contains($0) }, original, "\(order), ajout=\(added)")
+                let notes = try db.comments(documentId: "d")
+                XCTAssertEqual(notes.first { $0.body == "après" }?.pageIndex, added ? 4 : 3)
+                if added { XCTAssertEqual(notes.first { $0.body == "nouvelle" }?.pageIndex, 1) }
+            }
+        }
+    }
+
+    func testReplayRejectsAlteredRestorationMetadata() throws {
+        try remove([1], id: "s1", cards: [7: 1])
+        let original = try restore("s1", id: "r1")
+        XCTAssertFalse(try db.remapPages(documentId: "d", mapping: original.mapping, editId: "r1", kind: .restoration,
+                                        expectedVersion: 1, fileSize: 1, restoring: original))
+        for field in 0..<4 {
+            var altered = original
+            switch field {
+            case 0: altered.cards = [999: 999]
+            case 1: altered.archiveId = "autre"
+            case 2: altered.positions = [:]
+            default: altered.originalIndices = [:]
+            }
+            XCTAssertThrowsError(try db.remapPages(documentId: "d", mapping: original.mapping, editId: "r1", kind: .restoration,
+                                                   expectedVersion: 1, fileSize: 1, restoring: altered), "champ \(field)")
+        }
+    }
+
     func testRestorationRefusedAfterDriveReplacementOrPurge() throws {
         try remove([1], id: "s1")
         var doc = try XCTUnwrap(db.document(id: "d"))
