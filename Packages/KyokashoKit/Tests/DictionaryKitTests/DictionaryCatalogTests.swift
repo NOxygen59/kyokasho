@@ -45,4 +45,28 @@ final class DictionaryCatalogTests: XCTestCase {
         XCTAssertEqual(en.first, "Mon lexique")
         XCTAssertEqual(Array(en[1...2]), ["Jitendex.org [2026-10-03]", "KANJIDIC [2026-301]"])
     }
+
+    /// Lexique fourni avec l'app : version lue dans le zip sans l'importer ; absent d'un paquet de test.
+    func testBundledLexiconRevisionAndAbsence() throws {
+        let zip = try FakeDictionary.make(title: BundledLexicon.title, revision: "2026-10-29")
+        XCTAssertEqual(try BundledLexicon.revision(of: zip), "2026-10-29")
+        XCTAssertFalse(BundledLexicon.needsUpdate(installedRevision: "2026-10-29", bundledRevision: "2026-10-29"))
+        XCTAssertTrue(BundledLexicon.needsUpdate(installedRevision: "2026-10-29", bundledRevision: "2026-11-15"))
+        XCTAssertNil(BundledLexicon.url(in: Bundle(for: Self.self)))
+        XCTAssertNil(DictionaryCatalog.entry(forInstalledTitle: BundledLexicon.title), "pas une entrée téléchargeable")
+        let notZip = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".zip")
+        try Data("pas un zip".utf8).write(to: notZip)
+        XCTAssertThrowsError(try BundledLexicon.revision(of: notZip))
+    }
+
+    /// Même titre d'une version à l'autre : l'import remplace l'ancienne version à sa place, sans doublon.
+    func testBundledLexiconReimportReplacesInPlace() throws {
+        let db = try DictionaryDatabase.inMemory()
+        try DictionaryImporter(database: db).importDictionary(at: FakeDictionary.make(title: "Autre"))
+        try DictionaryImporter(database: db).importDictionary(at: FakeDictionary.make(title: BundledLexicon.title, revision: "1"))
+        try DictionaryImporter(database: db).importDictionary(at: FakeDictionary.make(title: BundledLexicon.title, revision: "2"))
+        let list = try db.dictionaries()
+        XCTAssertEqual(list.map(\.title), ["Autre", BundledLexicon.title])
+        XCTAssertEqual(list.last?.revision, "2")
+    }
 }

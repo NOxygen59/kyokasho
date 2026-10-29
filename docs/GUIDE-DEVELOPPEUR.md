@@ -116,6 +116,8 @@ python3 tools/build_domain_lexicon.py build --raw <dossier-hors-dépôt>/brut --
 
 Le relevé envoie une requête par seconde et réessaie si le site demande d'attendre. Les catégories relevées sont en tête du script. Tests sur pages fabriquées : `tests/test_build_domain_lexicon.py`.
 
+**Fourni avec l'app** (décision de NOxygen59 du 29/10/2026) : `build_ipa.sh` copie `../dictionnaires-construits/lexique-interieur/lexique-interieur.zip` (ou le fichier donné par `KYOKASHO_LEXIQUE`) dans `Kyokasho.app` au moment de faire le paquet. Sans ce fichier, le paquet se construit quand même et l'app affiche « Absent de cette version de l'app ». Dans l'app : Réglages > Dictionnaires > Catalogue > « Fourni avec l'app » > Installer (import depuis le paquet, sans réseau ; `BundledLexicon` dans DictionaryKit). Une nouvelle version du fichier propose « Mettre à jour » ; le titre ne change pas, donc elle garde sa place dans l'ordre.
+
 ## Documenter Swift, C et C++
 
 Un commentaire utile explique un contrat, la propriété mémoire, un invariant, une limite de plateforme ou la raison d'un choix. Commenter chaque ligne répète le code, masque les précautions utiles et devient rapidement faux lors des modifications. Préférer des noms clairs et des fonctions courtes, puis documenter les interfaces et décisions.

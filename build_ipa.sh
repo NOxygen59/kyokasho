@@ -45,6 +45,15 @@ print "==> 3/5 Dossier Payload"
 [[ ! -e "$BUILD/Payload" ]] || trash "$BUILD/Payload"
 mkdir -p "$BUILD/Payload"
 cp -R "$APP" "$BUILD/Payload/"
+# Lexique du design d'intérieur (#50, D4 piste B ; décision de NOxygen59 du 29/10/2026) : construit sur le Mac par
+# tools/build_domain_lexicon.py, jamais versionné. Ajouté au paquet s'il existe ; sinon l'app indique qu'il manque.
+LEXIQUE="${KYOKASHO_LEXIQUE:-$ROOT/../dictionnaires-construits/lexique-interieur/lexique-interieur.zip}"
+if [[ -f "$LEXIQUE" ]]; then
+  cp "$LEXIQUE" "$BUILD/Payload/Kyokasho.app/lexique-interieur.zip"
+  print "    Lexique du design d'intérieur ajouté ($(du -h "$LEXIQUE" | cut -f1))"
+else
+  print "    Lexique du design d'intérieur absent ($LEXIQUE) : paquet construit sans lui"
+fi
 
 print "==> 4/5 Pseudo-signature (ldid)"
 # Frameworks embarqués d'abord (s'il y en a), puis l'app avec ses entitlements.
