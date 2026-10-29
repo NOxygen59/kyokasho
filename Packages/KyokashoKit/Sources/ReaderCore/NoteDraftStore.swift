@@ -76,6 +76,12 @@ public struct NoteDraftStore: Sendable {
         Dictionary(uniqueKeysWithValues: drafts.map { ($0.key + offset, $0.value) })
     }
 
+    /// Brouillons suivant une modification des pages (#49). Ceux des pages retirées ne sont pas dans le résultat :
+    /// l'appelant les archive avant (le fichier d'origine est gardé dans la copie de l'opération).
+    public static func remapped(_ drafts: [Int: String], with mapping: PageMapping) -> [Int: String] {
+        Dictionary(uniqueKeysWithValues: drafts.compactMap { page, text in mapping.target(of: page).map { ($0, text) } })
+    }
+
     /// Format disque versionné : `{"version":1,"pages":{"3":"texte"}}`.
     private struct File: Codable {
         var version: Int

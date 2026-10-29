@@ -212,6 +212,45 @@ extension PageShiftRecoveryTests {
         }
     }
 
+    /// #49 — un journal v2 écrit par une version précédente de l'app est toujours repris par l'ancien chemin.
+    func testVersion2JournalFromAnEarlierBuildIsStillCompleted() async throws {
+        try await withFixture { model, doc, root in
+            let card = try seed(model, doc)
+            try await interruptedApply(model, doc, root, at: "journal.after")
+            var p = try journal(root)
+            XCTAssertEqual(p.version, 3)
+            p.version = 2
+            p.cardPages = p.cardTargets?.compactMapValues { $0 }
+            p.cardTargets = nil
+            p.mapping = nil
+            p.expectedLayoutVersion = nil
+            try writeJournal(p, root)
+            let restarted = try AppModel(root: root)
+            for _ in 0..<3 { PageShift.reconcile(restarted) }
+            XCTAssertNil(restarted.storageRecoveryError)
+            try verify(restarted, doc, card)
+            XCTAssertNil(try restarted.database.pageEdit(id: p.transaction!), "v2 : pas d'opération enregistrée")
+        }
+    }
+
+    /// #49 — journal v3 : l'opération est enregistrée une seule fois, même après plusieurs reprises.
+    func testVersion3RecordsTheEditOnceAcrossRepeatedRecoveries() async throws {
+        try await withFixture { model, doc, root in
+            let card = try seed(model, doc)
+            try await interruptedApply(model, doc, root, at: "pdf.after")
+            let p = try journal(root)
+            let restarted = try AppModel(root: root)
+            for _ in 0..<3 { PageShift.reconcile(restarted) }
+            XCTAssertNil(restarted.storageRecoveryError)
+            try verify(restarted, doc, card)
+            let edit = try XCTUnwrap(restarted.database.pageEdit(id: p.transaction!))
+            XCTAssertEqual(edit.kind, .insertion)
+            XCTAssertEqual([edit.versionBefore, edit.versionAfter], [0, 1])
+            XCTAssertEqual(try restarted.database.layoutVersion(documentId: doc.id), 1)
+            XCTAssertEqual(try restarted.database.pageIdentities(documentId: doc.id).count, 4)
+        }
+    }
+
     /// S5 — pages de cartes du journal modifiées hors plage : blocage, FSRS et annotations intacts.
     func testS5TamperedCardPagesInJournalAreRefused() async throws {
         for bad in [99, 0, 1, 4] {
@@ -220,6 +259,7 @@ extension PageShiftRecoveryTests {
                 try await interruptedApply(model, doc, root, at: "journal.after")
                 var p = try journal(root)
                 p.cardPages = [card.id!: bad]
+                p.cardTargets = [card.id!: bad] // Journal v3 (#49) : même refus.
                 try writeJournal(p, root)
                 let restarted = try AppModel(root: root)
                 for _ in 0..<3 { PageShift.reconcile(restarted) }

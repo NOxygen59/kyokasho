@@ -28,6 +28,22 @@ enum PageShift {
         var hasReport: Bool?
         /// Brouillons de notes préparés (RET-008). `nil` dans les journaux écrits avant leur ajout : rien à installer.
         var hasDrafts: Bool? = nil
+        /// v3 (#49) : correspondance des pages, version de mise en page attendue et pages finales des cartes
+        /// (`nil` = carte gardée sans page). L'identifiant d'opération en base est `transaction`.
+        var mapping: PageMapping? = nil
+        var expectedLayoutVersion: Int? = nil
+        var cardTargets: [Int64: Int?]? = nil
+    }
+
+    /// Correspondance d'un journal : v3 la porte ; v2 la décrit par le décalage (pages ajoutées avant les anciennes).
+    static func mapping(of p: Pending) throws -> PageMapping {
+        if p.version == 3 {
+            guard let mapping = p.mapping, mapping.oldCount == p.oldCount, mapping.newCount == p.newCount else {
+                throw fail("Correspondance des pages absente du journal : reprise arrêtée sans effacer les données.")
+            }
+            return mapping
+        }
+        return try PageMapping(oldCount: p.oldCount, newCount: p.newCount, targets: (0..<p.oldCount).map { $0 + p.offset })
     }
 
     // Racine injectable par les tests Mac ; en production, le conteneur reste celui de l'app.
@@ -116,14 +132,20 @@ enum PageShift {
         guard originalCardPages.values.allSatisfy({ $0 >= 0 && $0 < document.pageCount }) else {
             throw fail("Une carte porte une page inattendue : ajout arrêté sans modification.")
         }
+        guard let layoutVersion = try model.database.layoutVersion(documentId: document.id) else {
+            throw fail("Le document ou les pages à ajouter ont changé. Aucun ajout effectué.")
+        }
+        // Journal v3 : la même correspondance sert à la base, aux fichiers, au rapport, aux brouillons et aux cartes.
+        let mapping = try PageMapping(oldCount: document.pageCount, newCount: newCount,
+                                      targets: (0..<document.pageCount).map { $0 + offset })
         var p = Pending(documentId: document.id, offset: offset, oldCount: document.pageCount,
                         oldSize: document.fileSize, newCount: newCount,
                         newSize: Int64(try merged.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0),
-                        stage: "prepared", version: 2, transaction: UUID().uuidString,
+                        stage: "prepared", version: 3, transaction: UUID().uuidString,
                         oldHash: try DocumentImporter.sha256(of: current),
                         newHash: try DocumentImporter.sha256(of: merged),
-                        cardPages: originalCardPages.mapValues { $0 + offset },
-                        hasReport: false)
+                        hasReport: false, mapping: mapping, expectedLayoutVersion: layoutVersion,
+                        cardTargets: originalCardPages.mapValues { mapping.target(of: $0) })
         let work = try workspace(p)
         try fm.createDirectory(at: work, withIntermediateDirectories: true)
         do {
@@ -140,10 +162,11 @@ enum PageShift {
                 guard value.pages.keys.allSatisfy({ $0 >= 0 && $0 < document.pageCount }) else {
                     throw fail("Le rapport d'analyse porte une page inattendue : ajout arrêté sans modification.")
                 }
-                value.pages = Dictionary(uniqueKeysWithValues: value.pages.map { index, page in
-                    var shifted = page
-                    shifted.source = index + offset
-                    return (index + offset, shifted)
+                value.pages = Dictionary(uniqueKeysWithValues: value.pages.compactMap { index, page in
+                    guard let target = mapping.target(of: index) else { return nil } // Original gardé dans la copie.
+                    var moved = page
+                    moved.source = target
+                    return (target, moved)
                 })
                 try bytes.write(to: work.appendingPathComponent("original-report.json"), options: .atomic)
                 try JSONEncoder().encode(value).write(to: work.appendingPathComponent("report.json"), options: .atomic)
@@ -157,7 +180,7 @@ enum PageShift {
                     throw fail("Un brouillon de note porte une page inattendue : ajout arrêté sans modification.")
                 }
                 try bytes.write(to: work.appendingPathComponent("original-drafts.json"), options: .atomic)
-                try NoteDraftStore.encode(NoteDraftStore.shifted(drafts, by: offset))
+                try NoteDraftStore.encode(NoteDraftStore.remapped(drafts, with: mapping))
                     .write(to: work.appendingPathComponent("drafts.json"), options: .atomic)
                 p.hasDrafts = true
             }
@@ -173,6 +196,7 @@ enum PageShift {
     }
 
     private static func prepareFiles(_ p: Pending, work: URL) throws {
+        let mapping = try Self.mapping(of: p)
         let source = DocumentAnalysisService.folder.appendingPathComponent(p.documentId, isDirectory: true)
         let prepared = work.appendingPathComponent("files", isDirectory: true)
         try fm.createDirectory(at: prepared, withIntermediateDirectories: true)
@@ -185,7 +209,9 @@ enum PageShift {
             let stem = url.deletingPathExtension().lastPathComponent
             if url.pathExtension == "md", let dash = stem.lastIndex(of: "-"), let page = Int(stem[stem.index(after: dash)...]) {
                 guard page >= 0, page < p.oldCount else { throw fail("Lecture IA hors des pages du document : fichiers conservés.") }
-                name = "\(stem[..<dash])-\(page + p.offset).md"
+                // Page retirée : pas de fichier installé ; l'original reste dans la copie de l'opération (original-files).
+                guard let target = mapping.target(of: page) else { continue }
+                name = "\(stem[..<dash])-\(target).md"
             }
             try fm.copyItem(at: url, to: prepared.appendingPathComponent(name))
         }
@@ -194,12 +220,26 @@ enum PageShift {
     private static func complete(_ p: Pending, model: AppModel) throws {
         let work = try workspace(p)
         guard model.persistentStorageAvailable, model.review.persistentStorageAvailable,
-              p.oldCount > 0, p.newCount > p.oldCount, p.offset >= 0, p.offset <= p.newCount - p.oldCount,
-              p.version == 2, let oldHash = p.oldHash, let newHash = p.newHash,
-              let cardPages = p.cardPages, let hasReport = p.hasReport else {
+              p.oldCount > 0, p.version == 2 || p.version == 3, let oldHash = p.oldHash, let newHash = p.newHash,
+              let hasReport = p.hasReport else {
             throw fail("Journal incomplet : reprise arrêtée sans effacer les données.")
         }
-        guard cardPages.values.allSatisfy({ $0 >= p.offset && $0 < p.oldCount + p.offset }) else {
+        let mapping = try Self.mapping(of: p)
+        let cardPages: [Int64: Int?]
+        if p.version == 3 {
+            guard let targets = p.cardTargets, p.expectedLayoutVersion != nil else {
+                throw fail("Journal incomplet : reprise arrêtée sans effacer les données.")
+            }
+            cardPages = targets
+        } else {
+            guard p.newCount > p.oldCount, p.offset >= 0, p.offset <= p.newCount - p.oldCount, let pages = p.cardPages else {
+                throw fail("Journal incomplet : reprise arrêtée sans effacer les données.")
+            }
+            cardPages = pages.mapValues { $0 }
+        }
+        // Une carte ne peut viser qu'une ancienne page gardée (jamais une page insérée ni hors du document).
+        let kept = Set(mapping.targets.compactMap { $0 })
+        guard cardPages.values.allSatisfy({ $0.map(kept.contains) ?? (p.version == 3) }) else {
             throw fail("Pages de cartes invalides dans le journal.")
         }
         let preparedPDF = work.appendingPathComponent("merged.pdf")
@@ -210,8 +250,15 @@ enum PageShift {
             throw fail("Le PDF a changé depuis l'ajout : reprise arrêtée, copies conservées.")
         }
         try hit("database.before")
-        try model.database.shiftPages(documentId: p.documentId, by: p.offset,
-                                      pageCount: p.newCount, fileSize: p.newSize, expectedPageCount: p.oldCount)
+        if p.version == 3, let expectedVersion = p.expectedLayoutVersion, let editId = p.transaction {
+            // Reconnu par son identifiant d'opération : une reprise ne l'applique jamais deux fois.
+            try model.database.remapPages(documentId: p.documentId, mapping: mapping, editId: editId,
+                                          kind: mapping.removed.isEmpty ? .insertion : .removal,
+                                          expectedVersion: expectedVersion, fileSize: p.newSize)
+        } else {
+            try model.database.shiftPages(documentId: p.documentId, by: p.offset,
+                                          pageCount: p.newCount, fileSize: p.newSize, expectedPageCount: p.oldCount)
+        }
         try hit("database.after")
         try hit("pdf.before")
         if currentHash != newHash {
@@ -287,7 +334,7 @@ enum PageShift {
                 throw fail("Bases persistantes indisponibles : journal conservé pour la reprise.")
             }
             let p = try JSONDecoder().decode(Pending.self, from: Data(contentsOf: marker))
-            if p.version == 2 {
+            if p.version == 2 || p.version == 3 {
                 try complete(p, model: model)
             } else {
                 // Le protocole v1 ne distingue pas avant/après l'effet pour report/files/cards.

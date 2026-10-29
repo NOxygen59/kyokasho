@@ -72,4 +72,12 @@ final class NoteDraftStoreTests: XCTestCase {
         XCTAssertEqual(try NoteDraftStore.decode(data), [2: "x", 10: "y"])
         XCTAssertThrowsError(try NoteDraftStore.decode(Data(#"{"version":1,"pages":{"p":"x"}}"#.utf8)))
     }
+
+    /// #49 : les brouillons suivent leur page ; celui d'une page retirée sort du résultat (archivé par l'appelant).
+    func testRemappedFollowsPagesAndDropsRemovedOnes() throws {
+        let drafts = [0: "a", 2: "b", 3: "c"]
+        XCTAssertEqual(NoteDraftStore.remapped(drafts, with: try PageMapping.removal(oldCount: 4, removing: [2])), [0: "a", 2: "c"])
+        XCTAssertEqual(NoteDraftStore.remapped(drafts, with: try PageMapping.insertion(oldCount: 4, inserted: 2, at: 0)),
+                       NoteDraftStore.shifted(drafts, by: 2))
+    }
 }
