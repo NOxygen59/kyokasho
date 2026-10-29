@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 NOxygen59
 
+import GLMOCRKit
 import OCRKit
 import PDFKit
 import PencilKit
@@ -28,7 +29,7 @@ enum DocumentExport {
             switch self {
             case .original: return "Le fichier importé, tel quel."
             case .annotated: return "Surlignages, dessins au stylet et notes posés sur les pages ; notes en fin de fichier."
-            case .markdown: return "Mise en page IA (sinon texte de l'OCR), traduction française si elle existe, notes."
+            case .markdown: return "Mise en page IA (sinon texte de l'OCR), traductions française et anglaise si elles existent, notes."
             case .images: return "Une image par page (avec annotations), dans un fichier zip."
             case .cards: return "Les cartes de révision créées depuis ce document."
             }
@@ -235,7 +236,8 @@ enum DocumentExport {
     // MARK: Markdown
 
     static func markdown(documentId: String, title: String, pages: ClosedRange<Int>, _ a: Annotations,
-                         labels: [Int: String], aiFile: (Int) -> URL, frenchFile: (Int) -> URL) -> String {
+                         labels: [Int: String], aiFile: (Int) -> URL, frenchFile: (Int) -> URL,
+                         englishFile: ((Int) -> URL)? = nil) -> String {
         var out = "# \(title)\n"
         for index in pages {
             let label = labels[index] ?? String(index + 1)
@@ -250,6 +252,10 @@ enum DocumentExport {
             }
             if let fr = try? String(contentsOf: frenchFile(index), encoding: .utf8), !fr.isEmpty {
                 out += "\n### Traduction\n\n" + fr.replacingOccurrences(of: "<img[^>]*>", with: "", options: .regularExpression) + "\n"
+            }
+            // Traduction anglaise, si la page en a une (en plus ou à la place de la française).
+            if let englishFile, let en = try? String(contentsOf: englishFile(index), encoding: .utf8), !en.isEmpty {
+                out += "\n### Translation (English)\n\n" + en.replacingOccurrences(of: "<img[^>]*>", with: "", options: .regularExpression) + "\n"
             }
             let highlights = a.highlights.filter { $0.pageIndex == index && !$0.text.isEmpty }
             if !highlights.isEmpty {
@@ -360,6 +366,7 @@ struct DocumentExportSheet: View {
         let total = format.usesPages ? pages.count : 1
         let lower = pages.lowerBound
         let ai = pages.map { DocumentScan.file(doc.id, $0) }, fr = pages.map { DocumentAnalysisService.rawURL(doc.id, "fr", $0) }
+        let en = pages.map { DocumentAnalysisService.rawURL(doc.id, TranslationLanguage.english.rawValue, $0) }
         working = (0, total)
         task = Task.detached(priority: .userInitiated) {
             // Progression ignorée une fois l'export fini ou remplacé (aucun retour à « Préparation… »).
@@ -394,7 +401,7 @@ struct DocumentExportSheet: View {
                 case .markdown:
                     let text = DocumentExport.markdown(documentId: doc.id, title: doc.title, pages: pages, annotations,
                                                        labels: labels, aiFile: { ai[$0 - lower] },
-                                                       frenchFile: { fr[$0 - lower] })
+                                                       frenchFile: { fr[$0 - lower] }, englishFile: { en[$0 - lower] })
                     let url = folder.appendingPathComponent(name + ".md")
                     try text.write(to: url, atomically: true, encoding: .utf8)
                     return url

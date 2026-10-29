@@ -19,7 +19,8 @@ enum DocumentAITextStore {
 
     static func read(documentId: String, reader: String, page: Int) -> String? {
         guard let text = try? String(contentsOf: url(documentId: documentId, reader: reader, page: page), encoding: .utf8) else { return nil }
-        return reader != "fr" && OCRTargetLanguage.forDocument(documentId) == .japanese
+        // Une traduction (français, anglais) n'est pas du japonais : jamais normalisée comme tel.
+        return !AIPageFile.translationReaders.contains(reader) && OCRTargetLanguage.forDocument(documentId) == .japanese
             ? JapaneseOCRText.normalize(text) : text
     }
 
@@ -28,7 +29,25 @@ enum DocumentAITextStore {
         try FileManager.default.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
         try text.write(to: target, atomically: true, encoding: .utf8)
         if reader == ModelSpec.ovisocr2.id {
-            try? FileManager.default.removeItem(at: url(documentId: documentId, reader: "fr", page: page))
+            // Page relue : ses traductions ne correspondent plus, quelle que soit leur langue.
+            for language in AIPageFile.translationReaders {
+                try? FileManager.default.removeItem(at: url(documentId: documentId, reader: language, page: page))
+            }
         }
+    }
+
+    /// Supprime toutes les traductions d'un document dans une langue (`fr` ou `en`), et seulement elles : les
+    /// lectures des modèles et l'autre langue restent. Renvoie le nombre de pages supprimées.
+    @discardableResult
+    static func removeTranslation(documentId: String, reader: String) throws -> Int {
+        guard AIPageFile.translationReaders.contains(reader) else { return 0 }
+        let directory = folder.appendingPathComponent(documentId, isDirectory: true)
+        guard let names = try? FileManager.default.contentsOfDirectory(atPath: directory.path) else { return 0 }
+        var removed = 0
+        for name in names where AIPageFile.page(of: name, reader: reader) != nil {
+            try FileManager.default.removeItem(at: directory.appendingPathComponent(name))
+            removed += 1
+        }
+        return removed
     }
 }

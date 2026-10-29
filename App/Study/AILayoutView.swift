@@ -26,8 +26,10 @@ struct AILayoutView: View {
     private var translateKey: String { "translate|\(reader.document.id)|\(source)" }
     private var reading: Bool { center.isRunning(layoutKey) }
     private var error: String? { center.errors[layoutKey] ?? center.errors[translateKey] }
-    /// Traduction française (Qwen3-VL, hors ligne) de la mise en page, gardée par page.
+    /// Traduction (Qwen3-VL, hors ligne) de la mise en page, gardée par page. `french` (nom historique de la clé) :
+    /// « afficher la traduction » ; sa langue est `study.translationLanguage` (français par défaut, anglais possible).
     @AppStorage("study.aiLayoutFrench") private var french = false
+    @AppStorage("study.translationLanguage") private var language = TranslationLanguage.french.rawValue
     @State private var frenchMarkdown: String?
     /// Page construite avec les deux langues (`#langs`) : la bascule passe par `RubyWebView.language`.
     @State private var combined = false
@@ -65,7 +67,7 @@ struct AILayoutView: View {
                 .disabled(reading || !OvisOCR2Reader().isAvailable)
             }
         }
-        .task(id: "\(reader.document.id)|\(source)|\(furigana)|\(tint.rawValue)|\(center.finished)") { await load() }
+        .task(id: "\(reader.document.id)|\(source)|\(furigana)|\(tint.rawValue)|\(center.finished)|\(language)") { await load() }
         // Japonais et français dans la même page : la vue web bascule sans recharger et garde la position de
         // lecture (recette 1.3.2 (55)). Sinon (pas de traduction, texte vertical) : reconstruction comme avant.
         .onChange(of: french) { _ in if !combined { Task { await load() } } }
@@ -73,7 +75,7 @@ struct AILayoutView: View {
 
     private func load() async {
         markdown = DocumentAITextStore.read(documentId: reader.document.id, reader: ModelSpec.ovisocr2.id, page: source)
-        frenchMarkdown = DocumentAITextStore.read(documentId: reader.document.id, reader: "fr", page: source)
+        frenchMarkdown = DocumentAITextStore.read(documentId: reader.document.id, reader: language, page: source)
         html = ""
         guard let markdown else { return }
         let vertical = reader.ocrPage.map(FuriganaTextView.isVertical) == true
@@ -148,6 +150,11 @@ struct AILayoutView: View {
     // MARK: HTML
 
     /// Page complète d'une seule langue.
+    /// Langue de la traduction affichée (attribut `lang` : césure et voix de lecture correctes).
+    static var translationLanguage: String {
+        UserDefaults.standard.string(forKey: "study.translationLanguage") ?? TranslationLanguage.french.rawValue
+    }
+
     static func html(_ markdown: String, furigana: Bool, french: Bool = false, vertical: Bool = false, dictionary: DictionaryModel,
                      url: URL, page: Int) async -> String {
         FuriganaTextView.page(await body(markdown, furigana: furigana, french: french, dictionary: dictionary, url: url, page: page),
@@ -161,7 +168,7 @@ struct AILayoutView: View {
         let blocks = AILayout.blocks(markdown)
         func text(_ s: String) async -> String {
             // Français : texte simplement échappé (pas de dictionnaire japonais au toucher).
-            if french { return "<span lang=\"fr\">\(FuriganaTextView.escape(s))</span>" }
+            if french { return "<span lang=\"\(Self.translationLanguage)\">\(FuriganaTextView.escape(s))</span>" }
             var result = ""
             for part in FormulaMarkup.parts(s) {
                 switch part {
@@ -379,8 +386,10 @@ struct AILayoutLanguageBar: View {
     @ObservedObject var reader: ReaderController
     @ObservedObject private var center = AITaskCenter.shared
     @AppStorage("study.aiLayoutFrench") private var french = false
+    @AppStorage("study.translationLanguage") private var language = TranslationLanguage.french.rawValue
     @State private var markdown: String?
     @State private var hasFrench = false
+    private var target: TranslationLanguage { TranslationLanguage(rawValue: language) ?? .french }
 
     private var source: Int { reader.focusSource }
     private var translateKey: String { "translate|\(reader.document.id)|\(source)" }
@@ -393,9 +402,9 @@ struct AILayoutLanguageBar: View {
             Color.clear.frame(height: 0)
             if markdown != nil { languageRow }
         }
-        .task(id: "\(reader.document.id)|\(source)|\(center.finished)") {
+        .task(id: "\(reader.document.id)|\(source)|\(center.finished)|\(language)") {
             markdown = DocumentAITextStore.read(documentId: reader.document.id, reader: ModelSpec.ovisocr2.id, page: source)
-            hasFrench = DocumentAITextStore.read(documentId: reader.document.id, reader: "fr", page: source) != nil
+            hasFrench = DocumentAITextStore.read(documentId: reader.document.id, reader: language, page: source) != nil
         }
     }
 
@@ -411,10 +420,11 @@ struct AILayoutLanguageBar: View {
             HStack {
                 Picker("Langue", selection: $french) {
                     Text("日本語").tag(false)
-                    Text("Français").tag(true)
+                    Text(target.title).tag(true)
                 }
                 .pickerStyle(.segmented)
                 .frame(maxWidth: 220)
+                languageMenu
                 Spacer()
                 Button { translate() } label: { Image(systemName: "arrow.clockwise") }
                     .accessibilityLabel("Retraduire la page")
@@ -422,11 +432,15 @@ struct AILayoutLanguageBar: View {
                     .disabled(!Qwen3VLReader().isAvailable)
             }
         } else if Qwen3VLReader().isAvailable {
-            Button { translate() } label: {
-                Label("Traduire en français (hors ligne)", systemImage: "character.bubble")
+            HStack {
+                Button { translate() } label: {
+                    Label(target == .french ? "Traduire en français (hors ligne)" : "Traduire en anglais (hors ligne)",
+                          systemImage: "character.bubble")
+                }
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Atelier.Tint.ai)
+                languageMenu
             }
-            .font(.footnote.weight(.semibold))
-            .foregroundStyle(Atelier.Tint.ai)
         } else {
             // Sans Qwen3-VL ni traduction gardée : un message plutôt qu'une barre vide.
             Label("Traduction hors ligne : télécharge Qwen3-VL dans Réglages → Modèles d'IA et outils.",
@@ -436,19 +450,35 @@ struct AILayoutLanguageBar: View {
         }
     }
 
+    /// Langue de traduction (français par défaut) : chaque langue a ses propres fichiers, les deux restent gardés.
+    private var languageMenu: some View {
+        Menu {
+            Picker("Langue de traduction", selection: $language) {
+                ForEach(TranslationLanguage.allCases) { Text($0.title).tag($0.rawValue) }
+            }
+        } label: {
+            Text(target.rawValue.uppercased()).font(.caption2.weight(.bold))
+                .padding(.horizontal, 6).padding(.vertical, 2)
+                .background(Atelier.surfaceHigh, in: Capsule())
+        }
+        .accessibilityLabel("Langue de traduction : \(target.title)")
+    }
+
     /// Traduction de la page (fichier gardé), même si on change de page entre-temps.
     private func translate() {
         guard let markdown else { return }
-        let source = source, documentId = reader.document.id, glossary = DomainLexicon.shared.glossary
+        let source = source, documentId = reader.document.id, target = target
+        // Le lexique du domaine donne des sens en français : imposé seulement pour une traduction française.
+        let glossary = target == .french ? DomainLexicon.shared.glossary : []
         center.run(translateKey, title: "Traduction Qwen3-VL p. \(source + 1)", modelId: ModelSpec.qwen3vl4b.id, activity: "traduction") { id in
-            center.log(id, "Qwen3-VL traduit \(markdown.count) caractères de la page \(source + 1) (glossaire : \(glossary.count) terme(s))…")
-            let fr = try await Diagnostics.measure("traduction p. \(source)", "traduction") {
-                try await Qwen3VLReader().translate(markdown: markdown, glossary: glossary)
+            center.log(id, "Qwen3-VL traduit en \(target.title) \(markdown.count) caractères de la page \(source + 1) (glossaire : \(glossary.count) terme(s))…")
+            let translated = try await Diagnostics.measure("traduction (\(target.rawValue)) p. \(source)", "traduction") {
+                try await Qwen3VLReader().translate(markdown: markdown, into: target, glossary: glossary)
             }
             // Arrêtée : la génération rend un texte partiel, jamais gardé.
             try Task.checkCancellation()
-            center.log(id, "Traduction reçue : \(fr.count) caractères")
-            try DocumentAITextStore.write(fr, documentId: documentId, reader: "fr", page: source)
+            center.log(id, "Traduction reçue : \(translated.count) caractères")
+            try DocumentAITextStore.write(translated, documentId: documentId, reader: target.rawValue, page: source)
             UserDefaults.standard.set(true, forKey: "study.aiLayoutFrench")
         }
     }
