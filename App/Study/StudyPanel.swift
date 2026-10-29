@@ -77,7 +77,7 @@ struct StudyPanel: View {
                 case .marks: StudyMarksTab(reader: reader, openSearch: openSearch)
                 case .chat: QwenChatView(document: reader.document, embedded: true,
                                          focusPage: reader.document.pageLabel(reader.focusSource),
-                                         openPage: { reader.go(toSource: $0) })
+                                         openPage: { reader.go(toSource: $0) }, database: model.database)
                 }
             }
             .frame(maxHeight: .infinity, alignment: .top)

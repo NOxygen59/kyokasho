@@ -260,3 +260,21 @@ final class PageEditDatabaseTests: XCTestCase {
         try reopened.writer.close()
     }
 }
+
+/// R5 : numéros affichés après une suppression au milieu, et repli si la valeur est périmée.
+final class PrintedPageNumbersTests: XCTestCase {
+    override func tearDown() { PrintedPageNumbers.set([:]) }
+
+    func testLabelsKeepPrintedNumbersAfterAnEdit() throws {
+        var doc = LibraryDocument(id: "n", title: "T", originalFileName: "t.pdf", pageCount: 4, fileSize: 1)
+        doc.firstPageIndex = 1
+        XCTAssertEqual((0..<4).map(doc.pageLabel), ["i", "1", "2", "3"])
+        PrintedPageNumbers.set(["n": [nil, 1, 3, 4]])     // ancienne page « 2 » retirée
+        XCTAssertEqual((0..<4).map(doc.pageLabel), ["i", "1", "3", "4"])
+        XCTAssertEqual(doc.sourceIndex(forPrintedPage: 3), 2)
+        XCTAssertEqual(doc.sourceIndex(forPrintedPage: 2), 2, "numéro retiré : la page qui suit")
+        XCTAssertEqual(doc.sourceIndex(forPrintedPage: 99), 3)
+        doc.pageCount = 5                                  // valeur périmée : numérotation habituelle
+        XCTAssertEqual(doc.pageLabel(2), "2")
+    }
+}

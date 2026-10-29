@@ -118,7 +118,7 @@ struct LibraryView: View {
             AddPagesView(document: document).environmentObject(model).preferredColorScheme(.dark)
         }
         .sheet(item: $chatDocument) { document in
-            NavigationStack { QwenChatView(document: document) }
+            NavigationStack { QwenChatView(document: document, database: model.database) }
                 .environmentObject(model).preferredColorScheme(.dark)
         }
         .sheet(item: $exporting) { document in

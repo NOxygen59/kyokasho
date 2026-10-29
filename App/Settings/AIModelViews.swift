@@ -134,6 +134,8 @@ struct QwenChatView: View {
     var focusPage: String? = nil
     var preferredModel: ModelSpec = .qwen3vl4b
     var openPage: ((Int) -> Void)? = nil
+    /// Base de l'app, pour suivre les pages citées après une modification des pages (#49, R4).
+    var database: AppDatabase? = nil
     private struct Conversation: Codable, Identifiable {
         var id = UUID()
         var title: String
@@ -426,15 +428,18 @@ struct QwenChatView: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text(m.text.isEmpty ? "…" : m.text).textSelection(.enabled)
                 if !mine, let openPage, let document {
-                    let pages = citedPages(in: m.text, document: document)
-                    if !pages.isEmpty {
+                    let links = citedLinks(m, document: document)
+                    if !links.pages.isEmpty {
                         HStack(spacing: 6) {
-                            ForEach(pages, id: \.self) { page in
+                            ForEach(links.pages, id: \.self) { page in
                                 Button("p. \(document.pageLabel(page))") { openPage(page) }
                                     .font(.caption.weight(.semibold))
                                     .buttonStyle(.bordered)
                             }
                         }
+                    }
+                    if let note = links.note {
+                        Text(note).font(.caption2).foregroundStyle(.secondary)
                     }
                 }
             }
@@ -443,6 +448,23 @@ struct QwenChatView: View {
                             in: RoundedRectangle(cornerRadius: 14, style: .continuous))
             if !mine { Spacer(minLength: 60) }
         }
+    }
+
+    /// Liens des pages consultées (R4) : suivis à travers les modifications des pages ; un lien qu'on ne peut plus
+    /// suivre avec certitude est retiré, avec une explication. Le texte de la réponse n'est jamais réécrit.
+    private func citedLinks(_ m: QwenChat.Message, document: LibraryDocument) -> (pages: [Int], note: String?) {
+        let current = (try? database?.layoutVersion(documentId: document.id)) ?? 0
+        if let pages = m.pages, let version = m.layoutVersion {
+            guard version != current else { return (pages, nil) }
+            guard let mapping = try? database?.pageMapping(documentId: document.id, fromVersion: version) else {
+                return ([], "Le document a été remplacé depuis cette réponse : liens des pages retirés.")
+            }
+            let followed = pages.compactMap(mapping.target(of:))
+            return (followed, followed.count < pages.count ? "Certaines pages citées ont été supprimées depuis." : nil)
+        }
+        // Message enregistré avant le suivi des pages : ses numéros ne valent que si rien n'a changé depuis.
+        guard current == 0 else { return ([], "Pages modifiées depuis cette réponse : liens retirés.") }
+        return (citedPages(in: m.text, document: document), nil)
     }
 
     private func citedPages(in answer: String, document: LibraryDocument) -> [Int] {
@@ -513,6 +535,8 @@ struct QwenChatView: View {
                         let question = dialogue.isEmpty ? prompt : "Dernier échange (contexte, pas une source) :\n\(dialogue)\nQuestion actuelle : \(prompt)"
                         for try await chunk in chat.stream(question, context: context) { messages[index].text += chunk }
                         messages[index].text += "\n\nPages consultées : " + passages.map { "p. \(document.pageLabel($0.page))" }.joined(separator: ", ")
+                        messages[index].pages = passages.map(\.page)
+                        messages[index].layoutVersion = (try? database?.layoutVersion(documentId: document.id)) ?? 0
                     }
                 } else {
                     for try await chunk in chat.stream(prompt) { messages[index].text += chunk }

@@ -116,6 +116,7 @@ final class AppModel: ObservableObject {
             .store(in: &cancellables)
         // « Ajouter des pages… » interrompu (app arrêtée au milieu) : annulé ou terminé.
         PageShift.reconcile(self)
+        refreshPrintedNumbers()
         // Lexique du domaine lu tout de suite : la relecture de l'OCR (hors du fil principal) s'en sert.
         _ = DomainLexicon.shared
     }
@@ -199,6 +200,21 @@ final class AppModel: ObservableObject {
     /// Documents en cours de suppression (cachés de la liste jusqu'à la fin de l'effacement).
     private var deletingIds: Set<String> = []
 
+    /// Nouvelle page « 1 » enregistrée ; si les pages ont des identités (#49), leurs numéros imprimés repartent de
+    /// cette page (choix explicite de l'utilisateur), puis l'affichage est relu.
+    func savePageOne(_ doc: LibraryDocument) {
+        persist { database in
+            try database.save(doc)
+            try database.renumberPrintedPages(documentId: doc.id, firstPageIndex: doc.firstPageIndex)
+            Task { @MainActor in self.refreshPrintedNumbers() }
+        }
+    }
+
+    /// Numéros imprimés gardés par page après une modification des pages (#49, R5) : relus depuis la base.
+    func refreshPrintedNumbers() {
+        PrintedPageNumbers.set((try? database.printedNumbers()) ?? [:])
+    }
+
     func delete(_ document: LibraryDocument) {
         let importer = importer
         let thumbnails = thumbnails
@@ -241,7 +257,7 @@ final class AppModel: ObservableObject {
     func setFirstPage(_ document: LibraryDocument, pdfPage: Int) {
         var doc = document
         doc.firstPageIndex = max(0, min(pdfPage - 1, doc.pageCount - 1))
-        persist { try $0.save(doc) }
+        savePageOne(doc)
     }
 
     func settings(for document: LibraryDocument) -> ReaderSettings {

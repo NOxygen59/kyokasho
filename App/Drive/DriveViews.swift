@@ -340,6 +340,11 @@ extension AppModel {
     func importFromDrive(url: URL, file: GoogleDrive.File, language: OCRTargetLanguage? = nil) async throws {
         let importer = importer
         let existing = documents.first { $0.driveFileId == file.id }
+        // Remplacement pendant une modification des pages (ou avant sa reprise) : refusé (#49, R6).
+        if let existing, PageShift.isBusy(existing.id) {
+            throw NSError(domain: "Kyokasho.Drive", code: 1, userInfo: [NSLocalizedDescriptionKey:
+                "Les pages de « \(existing.title) » sont en cours de modification : réessaie la mise à jour ensuite."])
+        }
         let targetLanguage = language ?? existing.map { OCRTargetLanguage.forDocument($0.id) } ?? .japanese
         let result: (document: LibraryDocument, isNew: Bool) = try await Task.detached(priority: .userInitiated) {
             defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
