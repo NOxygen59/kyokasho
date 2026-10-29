@@ -117,6 +117,75 @@ enum LibraryBackupService {
         return Result(url: target, inChosenFolder: true, removed: removed)
     }
 
+    // MARK: Restaurer
+
+    /// Restauration inachevée au lancement : aucune base ne doit être ouverte (sinon une bibliothèque vide serait créée
+    /// à la place de celle mise de côté). Lu par `AppModel`, `ReviewModel` et `DictionaryModel`.
+    nonisolated(unsafe) static var restoreBlocked = false
+    nonisolated(unsafe) static var restoreMessage: String?
+
+    /// Au lancement, avant toute ouverture de base (`KyokashoApp.init`) : applique une restauration préparée.
+    static func applyPendingRestore() {
+        guard let marker = LibraryRestore.pending(support: support) else { return }
+        Diagnostics.write("[sauvegarde] restauration de \(marker.backupName)…", sync: true)
+        do {
+            try LibraryRestore.apply(support: support, analysis: DocumentAnalysisService.folder) { domain in
+                if let id = Bundle.main.bundleIdentifier { UserDefaults.standard.setPersistentDomain(domain, forName: id) }
+            }
+            restoreMessage = "Restauration terminée : « \(marker.backupName) »."
+            UserDefaults.standard.set(marker.backupName, forKey: "backup.lastRestoreName")
+            Diagnostics.write("[sauvegarde] restauration terminée", sync: true)
+        } catch {
+            restoreBlocked = true
+            restoreMessage = "Restauration inachevée : rien n'a été effacé. Relance l'app pour la reprendre. (\(error.localizedDescription))"
+            Diagnostics.error("restauration : \(error.localizedDescription)", "sauvegarde")
+        }
+    }
+
+    struct Prepared: Identifiable { let id: String; let name: String; let manifest: LibraryBackup.Manifest }
+
+    /// Étape 1 (rien de modifié) : vérifier et extraire la sauvegarde dans le dossier de préparation.
+    @MainActor
+    static func verifyRestore(from file: URL) async throws -> Prepared {
+        guard LibraryRestore.pending(support: support) == nil else { throw fail("Une restauration est déjà prête : relance l'app.") }
+        let id = UUID().uuidString
+        let staging = LibraryRestore.stagingURL(support: support, id: id)
+        let manifest: LibraryBackup.Manifest
+        do {
+            manifest = try await Task.detached(priority: .userInitiated) {
+                let access = file.startAccessingSecurityScopedResource()
+                defer { if access { file.stopAccessingSecurityScopedResource() } }
+                return try LibraryBackup.open(file, into: staging)
+            }.value
+        } catch {
+            try? FileManager.default.removeItem(at: staging)
+            throw error
+        }
+        return Prepared(id: id, name: file.lastPathComponent, manifest: manifest)
+    }
+
+    /// Étape 2, après accord : sauvegarde de sécurité de l'état actuel (obligatoire, dans le dossier choisi), puis
+    /// marqueur. La restauration s'applique au prochain lancement de l'app.
+    @MainActor
+    static func confirmRestore(_ model: AppModel, _ prepared: Prepared) async throws -> Result {
+        let staging = LibraryRestore.stagingURL(support: support, id: prepared.id)
+        do {
+            guard folder != nil else { throw fail("Choisis d'abord un dossier de sauvegarde : la copie de sécurité y sera écrite.") }
+            let safety = try await backup(model)
+            _ = try LibraryRestore.writeMarker(support: support, id: prepared.id, backupName: prepared.name)
+            Diagnostics.log("sauvegarde : restauration de \(prepared.name) prête, sécurité \(safety.url.lastPathComponent)", "sauvegarde")
+            return safety
+        } catch {
+            try? FileManager.default.removeItem(at: staging)
+            throw error
+        }
+    }
+
+    /// Préparation abandonnée : dossier de préparation effacé.
+    static func discardRestore(_ prepared: Prepared) {
+        try? FileManager.default.removeItem(at: LibraryRestore.stagingURL(support: support, id: prepared.id))
+    }
+
     private static func fail(_ text: String) -> NSError {
         NSError(domain: "Kyokasho.Backup", code: 1, userInfo: [NSLocalizedDescriptionKey: text])
     }
@@ -130,6 +199,10 @@ struct BackupSettingsView: View {
     @State private var working = false
     @State private var message: String?
     @State private var shareURL: URL?
+    @State private var pickingBackup = false
+    @State private var prepared: LibraryBackupService.Prepared?
+    @State private var restoreReady = false
+    @State private var confirming = false
 
     var body: some View {
         Form {
@@ -146,6 +219,16 @@ struct BackupSettingsView: View {
                 }
             } footer: {
                 Text("Tout : documents, notes, dessins, OCR, lectures IA, traductions, cartes et révisions, conversations, lexique, dictionnaires, réglages. Les modèles d'IA ne sont pas inclus (à retélécharger). Rien ne part en ligne : le fichier va seulement dans le dossier que tu choisis.")
+            }
+            Section {
+                Button("Restaurer une sauvegarde…") { pickingBackup = true }.disabled(working)
+                if let name = UserDefaults.standard.string(forKey: "backup.lastRestoreName") {
+                    LabeledContent("Dernière restauration", value: name)
+                }
+            } header: {
+                Text("Restaurer")
+            } footer: {
+                Text("La sauvegarde est vérifiée sans rien toucher, puis tu confirmes. Une sauvegarde de sécurité de ta bibliothèque actuelle est faite d'abord dans ton dossier ; la restauration s'applique au prochain lancement de l'app. Les modèles d'IA de l'iPad sont gardés.")
             }
             Section {
                 LabeledContent("Dossier", value: folderName ?? "aucun")
@@ -170,6 +253,29 @@ struct BackupSettingsView: View {
         .sheet(item: Binding(get: { shareURL.map(SharedFile.init) }, set: { if $0 == nil { shareURL = nil } })) { file in
             ActivityShareSheet(url: file.url)
         }
+        .sheet(isPresented: $pickingBackup) {
+            DocumentPicker(types: [UTType(filenameExtension: LibraryBackup.fileExtension) ?? .data, .data], multiple: false) { urls in
+                guard let url = urls.first else { return }
+                Task { await verify(url) }
+            }
+            .ignoresSafeArea()
+        }
+        // La sauvegarde vérifiée est passée aux boutons (`presenting`) : la fermeture de l'alerte ne peut pas l'effacer
+        // avant l'action. Annuler efface le dossier de préparation.
+        .alert("Restaurer cette sauvegarde ?", isPresented: $confirming, presenting: prepared) { p in
+            Button("Annuler", role: .cancel) { LibraryBackupService.discardRestore(p); prepared = nil }
+            Button("Restaurer", role: .destructive) { Task { await confirm(p) } }
+        } message: { p in
+            do {
+                let c = p.manifest.counts
+                Text("« \(p.name) » du \(p.manifest.createdAt.formatted(date: .abbreviated, time: .shortened)) : \(c["documents"] ?? 0) documents, \(c["notes"] ?? 0) notes, \(c["cartes"] ?? 0) cartes. Ta bibliothèque actuelle sera remplacée, après une sauvegarde de sécurité dans ton dossier.")
+            }
+        }
+        .alert("Restauration prête", isPresented: $restoreReady) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Ferme Kyōkasho (balaye-la vers le haut dans le sélecteur d'apps) puis rouvre-la : la restauration se fera au lancement.")
+        }
     }
 
     private func run() async {
@@ -185,6 +291,27 @@ struct BackupSettingsView: View {
             }
         } catch {
             message = "Sauvegarde impossible : \(error.localizedDescription)"
+        }
+        working = false
+    }
+
+    private func verify(_ url: URL) async {
+        working = true
+        message = nil
+        do { prepared = try await LibraryBackupService.verifyRestore(from: url); confirming = true }
+        catch { message = "Sauvegarde refusée : \(error.localizedDescription)" }
+        working = false
+    }
+
+    private func confirm(_ p: LibraryBackupService.Prepared) async {
+        prepared = nil
+        working = true
+        do {
+            let safety = try await LibraryBackupService.confirmRestore(model, p)
+            message = "Sauvegarde de sécurité écrite : \(safety.url.lastPathComponent)."
+            restoreReady = true
+        } catch {
+            message = "Restauration annulée : \(error.localizedDescription)"
         }
         working = false
     }

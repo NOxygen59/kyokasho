@@ -1,0 +1,117 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 NOxygen59
+
+import GRDB
+import XCTest
+@testable import ReaderCore
+
+/// Restauration (#51, C1) sur des dossiers synthétiques : la bibliothèque sauvegardée remplace l'actuelle, les modèles
+/// de l'appareil sont gardés, les réglages rétablis ; une panne à chaque étape reprend au lancement suivant.
+final class LibraryRestoreTests: XCTestCase {
+    var root: URL!
+
+    override func setUpWithError() throws {
+        root = FileManager.default.temporaryDirectory.appendingPathComponent("kyokasho-restore-" + UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+    }
+
+    override func tearDown() {
+        LibraryRestore.checkpoint = nil
+        try? FileManager.default.removeItem(at: root)
+    }
+
+    private func put(_ text: String, _ url: URL) throws {
+        try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data(text.utf8).write(to: url)
+    }
+
+    /// Sauvegarde d'une bibliothèque « source » (2 notes), préparée dans `support` (bibliothèque actuelle différente).
+    private func prepare(_ support: URL) throws -> URL {
+        let src = root.appendingPathComponent("source-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: src, withIntermediateDirectories: true)
+        let pool = try DatabasePool(path: src.appendingPathComponent("kyokasho.sqlite").path)
+        try pool.write { try $0.execute(sql: "CREATE TABLE note (body TEXT); INSERT INTO note VALUES ('sauvée'), ('aussi')") }
+        try put("pdf sauvé", src.appendingPathComponent("Kyokasho/Documents/a.pdf"))
+        try put("lecture sauvée", src.appendingPathComponent("Analysis/a/ovisocr2-0.md"))
+        try put("{\"sauvé\":1}", src.appendingPathComponent("definition-translations.json"))
+        let prefs = src.appendingPathComponent("preferences.plist")
+        try PropertyListSerialization.data(fromPropertyList: ["theme.id": "sepia"], format: .binary, options: 0).write(to: prefs)
+        let zip = root.appendingPathComponent("s-\(UUID().uuidString).kyokasho-sauvegarde")
+        try LibraryBackup.write(.init(databases: [("kyokasho/kyokasho.sqlite", pool)],
+                                      folders: [("kyokasho", src.appendingPathComponent("Kyokasho")), ("analysis", src.appendingPathComponent("Analysis"))],
+                                      files: [("support/definition-translations.json", src.appendingPathComponent("definition-translations.json")),
+                                              ("preferences.plist", prefs)],
+                                      counts: [:], models: []), to: zip, appVersion: "test")
+        // Bibliothèque actuelle de l'appareil : autre document, modèles installés, lecture IA qui doit disparaître.
+        try put("pdf actuel", support.appendingPathComponent("Kyokasho/Documents/b.pdf"))
+        try put("poids", support.appendingPathComponent("Kyokasho/Models/ovis/poids.bin"))
+        try put("lecture actuelle", support.appendingPathComponent("Analysis/b/ovisocr2-0.md"))
+        try put("{\"actuel\":1}", support.appendingPathComponent("definition-translations.json"))
+        let id = UUID().uuidString
+        _ = try LibraryBackup.open(zip, into: LibraryRestore.stagingURL(support: support, id: id))
+        _ = try LibraryRestore.writeMarker(support: support, id: id, backupName: zip.lastPathComponent)
+        return zip
+    }
+
+    private func state(_ support: URL, prefs: [String: Any]?) throws -> [String] {
+        let fm = FileManager.default
+        /// Fichiers seulement (les dossiers suivent).
+        func list(_ url: URL) -> [String] {
+            (fm.enumerator(atPath: url.path)?.compactMap { $0 as? String } ?? []).filter { name in
+                var isDir: ObjCBool = false
+                return fm.fileExists(atPath: url.appendingPathComponent(name).path, isDirectory: &isDir) && !isDir.boolValue
+            }.sorted()
+        }
+        let notes = try DatabaseQueue(path: support.appendingPathComponent("Kyokasho/kyokasho.sqlite").path)
+            .read { try String.fetchAll($0, sql: "SELECT body FROM note") }
+        return ["kyokasho \(list(support.appendingPathComponent("Kyokasho")))",
+                "analysis \(list(support.appendingPathComponent("Analysis")))",
+                "traductions \(try String(contentsOf: support.appendingPathComponent("definition-translations.json")))",
+                "notes \(notes)", "réglages \(prefs?["theme.id"] as? String ?? "-")",
+                "reste \(((try? fm.contentsOfDirectory(atPath: support.path)) ?? []).sorted())"]
+    }
+
+    private let expected = [
+        "kyokasho [\"Documents/a.pdf\", \"Models/ovis/poids.bin\", \"kyokasho.sqlite\"]",
+        "analysis [\"a/ovisocr2-0.md\"]", "traductions {\"sauvé\":1}", "notes [\"sauvée\", \"aussi\"]", "réglages sepia",
+        "reste [\"Analysis\", \"Kyokasho\", \"definition-translations.json\"]"]
+
+    func testRestoreReplacesLibraryKeepsModelsAndPreferences() throws {
+        let support = root.appendingPathComponent("support")
+        _ = try prepare(support)
+        var prefs: [String: Any]?
+        let marker = try LibraryRestore.apply(support: support, analysis: support.appendingPathComponent("Analysis")) { prefs = $0 }
+        XCTAssertNotNil(marker)
+        XCTAssertNil(LibraryRestore.pending(support: support))
+        XCTAssertEqual(try state(support, prefs: prefs), expected)
+        // Sans marqueur : rien à faire.
+        XCTAssertNil(try LibraryRestore.apply(support: support, analysis: support.appendingPathComponent("Analysis")) { _ in })
+    }
+
+    func testPowerCutAtEveryStepResumesAtNextLaunch() throws {
+        let points = ["aside.kyokasho", "installed.kyokasho", "aside.analysis", "installed.analysis",
+                      "aside.support/definition-translations.json", "installed.support/definition-translations.json",
+                      "models", "preferences", "cleaned"]
+        for point in points {
+            let support = root.appendingPathComponent("support-\(points.firstIndex(of: point)!)")
+            _ = try prepare(support)
+            LibraryRestore.checkpoint = { if $0 == point { throw CocoaError(.fileWriteUnknown) } }
+            // Les réglages déjà rétablis avant la coupure le restent (l'app les écrit tout de suite).
+            var prefs: [String: Any]?
+            XCTAssertThrowsError(try LibraryRestore.apply(support: support, analysis: support.appendingPathComponent("Analysis")) { prefs = $0 }, point)
+            XCTAssertNotNil(LibraryRestore.pending(support: support), point)
+            LibraryRestore.checkpoint = nil
+            try LibraryRestore.apply(support: support, analysis: support.appendingPathComponent("Analysis")) { prefs = $0 }
+            XCTAssertEqual(try state(support, prefs: prefs), expected, point)
+        }
+    }
+
+    func testCancelLeavesCurrentLibraryUntouched() throws {
+        let support = root.appendingPathComponent("support")
+        _ = try prepare(support)
+        LibraryRestore.cancel(support: support)
+        XCTAssertNil(LibraryRestore.pending(support: support))
+        XCTAssertEqual(try String(contentsOf: support.appendingPathComponent("Kyokasho/Documents/b.pdf")), "pdf actuel")
+        XCTAssertFalse(FileManager.default.fileExists(atPath: support.appendingPathComponent("RestoreStaging").path + "/x"))
+    }
+}

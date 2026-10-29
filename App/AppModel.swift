@@ -85,6 +85,10 @@ final class AppModel: ObservableObject {
             .appendingPathComponent("Kyokasho", isDirectory: true)
         let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
         do {
+            guard !LibraryBackupService.restoreBlocked else {
+                throw NSError(domain: "Kyokasho.Backup", code: 2,
+                              userInfo: [NSLocalizedDescriptionKey: LibraryBackupService.restoreMessage ?? "Restauration inachevée."])
+            }
             database = try AppDatabase.open(at: support.appendingPathComponent("kyokasho.sqlite"))
             persistentStorageAvailable = true
         } catch {

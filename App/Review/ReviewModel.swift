@@ -34,7 +34,7 @@ final class ReviewModel: ObservableObject {
         let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         let directory = support.appendingPathComponent("Kyokasho/Review", isDirectory: true)
         // Dernier recours : base en mémoire plutôt que de planter.
-        if let opened = try? ReviewStore.open(directory: directory) {
+        if !LibraryBackupService.restoreBlocked, let opened = try? ReviewStore.open(directory: directory) {
             store = opened
             persistentStorageAvailable = true
         } else {

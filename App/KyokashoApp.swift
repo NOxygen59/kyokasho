@@ -13,6 +13,8 @@ struct KyokashoApp: App {
     init() {
         // Avant tout : journal de diagnostic et gestionnaire d'erreurs MLX (message noté avant un arrêt).
         Diagnostics.start()
+        // Restauration préparée (#51) : appliquée avant que la moindre base soit ouverte.
+        LibraryBackupService.applyPendingRestore()
         // Avant toute lecture du fond des pages (`@AppStorage`, `PageTone.current`) : valeurs retirées remplacées.
         PageTone.migrateStoredSetting()
         // Avant toute lecture de la position du panneau d'étude (`@AppStorage`) : position retirée remplacée.

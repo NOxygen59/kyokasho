@@ -68,7 +68,9 @@ final class DictionaryModel: ObservableObject {
         let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         audioFolder = documents.appendingPathComponent("Audio", isDirectory: true)
         try? FileManager.default.createDirectory(at: audioFolder, withIntermediateDirectories: true)
-        let db = try? DictionaryDatabase.open(directory: support.appendingPathComponent("Dictionaries", isDirectory: true))
+        // Restauration inachevée (#51) : ne rien créer à la place de la bibliothèque mise de côté.
+        let db = LibraryBackupService.restoreBlocked ? nil
+            : try? DictionaryDatabase.open(directory: support.appendingPathComponent("Dictionaries", isDirectory: true))
         database = db
         translator = db.map { Translator(database: $0) }
         profiles = (try? appDatabase.storedValue(DictionaryProfiles.self, forKey: "dictionary.profiles")) ?? DictionaryProfiles()
