@@ -101,7 +101,7 @@ Règle des lots de fondation : chaque remplacement garde **exactement** la valeu
 Les écarts d'une ou deux unités entre usages ne sont pas « arrondis » pendant la fondation : ils le seront lors de
 l'harmonisation des composants (lot 4), avec une comparaison avant et après.
 
-## 4. Styles disponibles (premier lot, 29/10/2026)
+## 4. Styles disponibles
 
 | Style | Formes | Bord et relief | Police | Palette proposée |
 |---|---|---|---|---|
@@ -111,5 +111,27 @@ l'harmonisation des composants (lot 4), avec une comparaison avant et après.
 | Synthwave | arrondis × 0,5 | bord néon cyan, sans flou | arrondie | Synthwave (nuit) |
 | Swiss Design | angles droits | trait fin, sans ombre ni flou | SF | Suisse (clair) |
 | Wabi-Sabi | arrondis × 1,35 | trait fin, ombre douce | serif | Terre (clair) |
+
+### S3 à S5 — styles ajoutés le 29/10/2026
+
+| Famille | Styles | Différences portées par les jetons |
+|---|---|---|
+| Doux | Claymorphism, Neumorphism, Ethereal, Minimalism | volumes arrondis ou sobres, relief doux ou absent, verre réservé à Ethereal |
+| Typographiques | Editorial Design, Luxury Typography, Victorian, Maximalism | serif, angles et bordures différenciés, palettes Clair, Encre, Sépia et Braise |
+| Numériques | Cybercore, Cyberpunk, Y2K Aesthetic, Pixel Art | chasse fixe ou arrondie, néon, angles carrés, ombres dures ; verre réservé à Y2K |
+| Artisanaux | Scrapbook, Conceptual Sketch, Bohemian, Surrealism | papier, serif ou chasse fixe, bordures et reliefs différenciés ; verre réservé à Surrealism |
+| Structure | Bento Grid | apparence en panneaux clairs disponible ; disposition en tuiles reportée à S6 |
+
+Les 23 choix comprennent Atelier, les cinq styles validés en S2 et les 17 styles de S3 à S5. Aucun nouveau
+flou n'est utilisé hors des styles dont le principe repose sur le verre.
+
+### Limites intentionnelles de S3 à S5
+
+- Les cadres floraux, rubans adhésifs, traits à main levée et motifs propres à certains styles sont reportés à un
+  lot d'ornements dessinés, pour ne pas mélanger leur conception avec l'enregistrement des styles.
+- Pixel Art utilise la chasse fixe d'iOS. Une police pixel dessinée en code demanderait un composant séparé ; aucune
+  police tierce n'est ajoutée.
+- Bento Grid ne change pas encore la disposition de la bibliothèque ou des réglages. Ce changement structurel reste
+  isolé dans S6.
 
 Les palettes claires sont vérifiées par `ThemeContrastTests` (4,5:1).

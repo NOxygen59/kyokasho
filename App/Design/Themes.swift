@@ -212,15 +212,15 @@ struct Theme: Identifiable, Equatable {
     }
 }
 
-/// Choix de la palette (`Theme`) et du style (`AppStyle`), gardés entre deux lancements. La racine de l'app se
-/// reconstruit au changement (`identity`).
+/// Choix de la palette (`Theme`) et du style (`AppStyle`), gardés entre deux lancements. Les valeurs publiées
+/// rafraîchissent l'interface sans remplacer sa racine, afin de conserver les fenêtres et la navigation en cours.
 @MainActor
 final class ThemeManager: ObservableObject {
     @Published private(set) var theme: Theme
     @Published private(set) var style: AppStyle
 
-    /// Identité de la racine : change avec la palette ou le style.
-    var identity: String { theme.id + "|" + style.id }
+    /// Entrée de rafraîchissement de `RootView`, sans devenir son identité structurelle.
+    var appearanceRevision: String { theme.id + "|" + style.id }
 
     init() {
         let id = UserDefaults.standard.string(forKey: "theme.id")

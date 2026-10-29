@@ -23,9 +23,9 @@ struct KyokashoApp: App {
 
     var body: some Scene {
         WindowGroup {
-            RootView()
-                // Changer de thème reconstruit toute l'interface avec les nouvelles couleurs.
-                .id(themes.identity)
+            RootView(appearanceRevision: themes.appearanceRevision)
+                // Le gestionnaire publié rafraîchit les couleurs et le style sans remplacer la racine : les
+                // fenêtres déjà ouvertes (notamment Réglages → Thèmes) conservent ainsi leur état.
                 .environmentObject(themes)
                 .environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review)
                 .preferredColorScheme(themes.theme.colorScheme)
@@ -59,11 +59,14 @@ struct KyokashoApp: App {
 }
 
 struct RootView: View {
+    /// Entrée visuelle : sa variation réévalue le contenu sans changer son identité SwiftUI ni perdre ses feuilles.
+    let appearanceRevision: String
     @EnvironmentObject private var model: AppModel
     @Environment(\.scenePhase) private var scenePhase
     @State private var retryingStorage = false
 
     var body: some View {
+        let _ = appearanceRevision
         Group {
             if let error = model.storageRecoveryError {
                 VStack(spacing: 20) {

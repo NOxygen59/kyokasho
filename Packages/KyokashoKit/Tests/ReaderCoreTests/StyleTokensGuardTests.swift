@@ -7,6 +7,35 @@ import XCTest
 /// afficherait du texte blanc sur fond clair. Seuls restent les usages liés à la page ou au papier (fond de page,
 /// encre des notes, furigana sur la page, exports), qui ne dépendent pas du style, et les valeurs du style lui-même.
 final class StyleTokensGuardTests: XCTestCase {
+    /// Changer de style ou de palette doit rafraîchir l'apparence sans remplacer la racine SwiftUI. Une nouvelle
+    /// identité de racine détruit les présentations en cours et ferme notamment Réglages → Thèmes.
+    func testThemeSelectionKeepsPresentedSettingsOpen() throws {
+        let app = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .appendingPathComponent("../../../../App/KyokashoApp.swift").standardizedFileURL
+        let source = try String(contentsOf: app, encoding: .utf8)
+        XCTAssertFalse(source.contains(".id(themes.identity)"),
+                       "Ne pas remplacer la racine au changement de thème : la feuille Réglages se fermerait")
+    }
+
+    /// La liste demandée reste complète : un oubli dans `all` rendrait un style impossible à choisir.
+    func testStylePickerContainsEveryRequestedStyle() throws {
+        let file = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .appendingPathComponent("../../../../App/Design/Styles.swift").standardizedFileURL
+        let source = try String(contentsOf: file, encoding: .utf8)
+        let expected = [("atelier", "atelier"), ("brutalism", "brutalism"), ("glass", "glass"),
+                        ("synthwave", "synthwave"), ("swiss", "swiss"), ("wabisabi", "wabiSabi"),
+                        ("clay", "clay"), ("neumorphism", "neumorphism"), ("ethereal", "ethereal"),
+                        ("minimalism", "minimalism"), ("editorial", "editorial"), ("luxury", "luxury"),
+                        ("victorian", "victorian"), ("maximalism", "maximalism"), ("cybercore", "cybercore"),
+                        ("cyberpunk", "cyberpunk"), ("y2k", "y2k"), ("pixel", "pixel"),
+                        ("scrapbook", "scrapbook"), ("sketch", "sketch"), ("bohemian", "bohemian"),
+                        ("surrealism", "surrealism"), ("bento", "bento")]
+        for (id, symbol) in expected {
+            XCTAssertTrue(source.contains("AppStyle(id: \"\(id)\""), "Style absent : \(id)")
+            XCTAssertTrue(source.contains(".\(symbol)"), "Style non exposé dans AppStyle.all : \(id)")
+        }
+    }
+
     /// Fichier → nombre d'usages permis, chacun vérifié à la main le 29/10/2026.
     private let allowed: [String: Int] = [
         "Design/Styles.swift": 1,            // voile du style Atelier
