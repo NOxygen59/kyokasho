@@ -62,8 +62,8 @@ private struct MemoryNotice: View {
             }
         }
         .padding(.horizontal, 16).padding(.vertical, 10)
-        .background(.regularMaterial, in: Capsule())
-        .shadow(color: Atelier.shadow.opacity(0.3), radius: 12, y: 4)
+        .background(Atelier.material(.regularMaterial), in: Capsule())
+        .atelierShadow(opacity: 0.3, radius: 12, y: 4)
         .frame(maxWidth: 560)
     }
 }

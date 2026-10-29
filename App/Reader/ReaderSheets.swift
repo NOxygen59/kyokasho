@@ -123,7 +123,7 @@ struct AIPageSheet: View {
             .overlay(alignment: .bottom) {
                 if let copied {
                     Text("Copié : \(copied)").padding(.horizontal, 16).padding(.vertical, 10)
-                        .background(.regularMaterial, in: Capsule()).padding(.bottom, 20)
+                        .background(Atelier.material(.regularMaterial), in: Capsule()).padding(.bottom, 20)
                 }
             }
             .sheet(item: $editingPrompt) { prompt in
@@ -248,7 +248,7 @@ struct WebPanel: View {
                 }
             }
             .padding(12)
-            .background(.ultraThinMaterial)
+            .background(Atelier.material(.ultraThinMaterial))
             if state.loading {
                 ProgressView(value: state.progress).progressViewStyle(.linear).tint(Atelier.Tint.ai)
             }

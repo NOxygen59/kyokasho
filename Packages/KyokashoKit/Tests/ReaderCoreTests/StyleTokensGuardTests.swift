@@ -51,4 +51,27 @@ final class StyleTokensGuardTests: XCTestCase {
         // Sélection OCR et repères dessinés sur la page (`Path(roundedRect:)`).
         XCTAssertEqual(found, ["Reader/ReaderScreen.swift": 2], "Arrondi en dur dans l'interface : utiliser Atelier.corner(_:)")
     }
+
+    /// Lot 2b : ombres par `atelierShadow`, matières par `Atelier.material`, bordures par `Atelier.border`.
+    func testInterfaceReliefAndBordersUseStyleTokens() throws {
+        XCTAssertEqual(try count(#"\.shadow\("#), [:], "Ombre en dur : utiliser atelierShadow")
+        XCTAssertEqual(try count(#"\.background\(\.[A-Za-z]+Material"#), [:], "Matière en dur : utiliser Atelier.material")
+        // Fond dessiné du thème (motifs) et trait posé sur la page.
+        XCTAssertEqual(try count(#"lineWidth: [0-9]"#), ["Design/ThemeBackdrop.swift": 13, "Reader/ReaderScreen.swift": 1],
+                       "Bordure en dur : utiliser Atelier.border(_:)")
+    }
+
+    private func count(_ regex: String) throws -> [String: Int] {
+        let app = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .appendingPathComponent("../../../../App").standardizedFileURL
+        let pattern = try NSRegularExpression(pattern: regex)
+        var found: [String: Int] = [:]
+        let walk = try XCTUnwrap(FileManager.default.enumerator(at: app, includingPropertiesForKeys: nil))
+        for case let url as URL in walk where url.pathExtension == "swift" {
+            let text = try String(contentsOf: url, encoding: .utf8)
+            let n = pattern.numberOfMatches(in: text, range: NSRange(text.startIndex..., in: text))
+            if n > 0 { found[String(url.path.dropFirst(app.path.count + 1))] = n }
+        }
+        return found
+    }
 }

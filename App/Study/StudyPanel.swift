@@ -653,7 +653,7 @@ struct FormattedOCRText: View {
                                     Text(rows[r][c]).font(r == 0 ? Atelier.jp.bold() : Atelier.jp)
                                         .padding(.horizontal, 8).padding(.vertical, 5)
                                         .frame(maxWidth: .infinity, alignment: .leading)
-                                        .overlay(Rectangle().strokeBorder(Atelier.hairline, lineWidth: 1))
+                                        .overlay(Rectangle().strokeBorder(Atelier.hairline, lineWidth: Atelier.border(1)))
                                 }
                             }
                         }

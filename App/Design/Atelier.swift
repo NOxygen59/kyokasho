@@ -39,6 +39,12 @@ enum Atelier {
     static func corner(_ base: CGFloat) -> CGFloat { base * AppStyle.current.cornerScale }
     static var radius: CGFloat { corner(18) }
     static var smallRadius: CGFloat { corner(11) }
+    /// Épaisseur d'une bordure d'interface : valeur d'origine × `borderScale` du style.
+    static func border(_ base: CGFloat) -> CGFloat { base * AppStyle.current.borderScale }
+    /// Matière d'iOS demandée, ou fond plein du panneau si le style n'utilise pas de flou.
+    static func material(_ base: Material) -> AnyShapeStyle {
+        AppStyle.current.usesMaterials ? AnyShapeStyle(base) : AnyShapeStyle(surface)
+    }
     static let gap: CGFloat = 14
     static let panelWidth: CGFloat = 372
 
@@ -66,15 +72,26 @@ struct AtelierPanel: ViewModifier {
             .background {
                 RoundedRectangle(cornerRadius: radius, style: .continuous)
                     .fill(Atelier.surface.opacity(0.97))
-                    .shadow(color: Atelier.shadow.opacity(0.28), radius: 16, y: 7)
+                    .atelierShadow(opacity: 0.28, radius: 16, y: 7)
             }
             .overlay {
-                RoundedRectangle(cornerRadius: radius, style: .continuous).strokeBorder(Atelier.hairline, lineWidth: 1)
+                RoundedRectangle(cornerRadius: radius, style: .continuous).strokeBorder(Atelier.hairline, lineWidth: Atelier.border(1))
             }
     }
 }
 
 extension View {
+    /// Ombre portée selon le style (`AppStyle.shadowKind`). Valeurs = celles d'origine pour une ombre douce ; appliquée
+    /// là où l'était `.shadow`, donc au même calque (sur la forme seule pour les panneaux, voir `AtelierPanel`).
+    @ViewBuilder
+    func atelierShadow(opacity: Double, radius: CGFloat, y: CGFloat) -> some View {
+        switch AppStyle.current.shadowKind {
+        case .soft: shadow(color: Atelier.shadow.opacity(opacity), radius: radius, y: y)
+        case .hard(let offset): shadow(color: Atelier.shadow.opacity(min(1, opacity * 2)), radius: 0, x: offset, y: offset)
+        case .none: self
+        }
+    }
+
     func atelierPanel(padding: CGFloat = 0, radius: CGFloat = Atelier.radius) -> some View {
         modifier(AtelierPanel(padding: padding, radius: radius))
     }

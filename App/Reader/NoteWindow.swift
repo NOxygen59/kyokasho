@@ -52,9 +52,9 @@ struct NoteWindow: View {
         .background(Atelier.surface)
         .clipShape(RoundedRectangle(cornerRadius: Atelier.radius, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: Atelier.radius, style: .continuous)
-            .strokeBorder(Atelier.Tint.annotate.opacity(0.45), lineWidth: 1))
+            .strokeBorder(Atelier.Tint.annotate.opacity(0.45), lineWidth: Atelier.border(1)))
         .overlay(alignment: .bottomTrailing) { resizeHandle(w: w, h: h) }
-        .shadow(color: Atelier.shadow.opacity(0.5), radius: 20, y: 8)
+        .atelierShadow(opacity: 0.5, radius: 20, y: 8)
         .offset(x: left, y: top)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .transaction { if move != .zero || resize != .zero { $0.animation = nil } }

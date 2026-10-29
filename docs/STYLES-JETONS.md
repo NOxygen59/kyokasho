@@ -31,6 +31,9 @@ dessins, les furigana dessinés sur la page, les fichiers exportés.
 | `AppStyle.isLight` / `colorScheme` | interface claire ou sombre d'iOS (menus, alertes, clavier) | sombre |
 | `AppStyle.cornerScale` / `Atelier.corner(_:)` | facteur de tous les arrondis de l'interface (0 = angles droits) ; `corner(n)` = valeur d'origine × facteur | 1 |
 | `Atelier.radius`, `smallRadius` | arrondi des panneaux, des petits éléments (`corner(18)`, `corner(11)`) | 18, 11 |
+| `AppStyle.shadowKind` / `.atelierShadow(opacity:radius:y:)` | ombre portée : douce (valeurs d'origine), dure et décalée, ou aucune | douce |
+| `AppStyle.borderScale` / `Atelier.border(_:)` | facteur des épaisseurs de bordure de l'interface | 1 |
+| `AppStyle.usesMaterials` / `Atelier.material(_:)` | matières floutées d'iOS, ou fond plein du panneau | oui |
 | `Atelier.onAccentInk` | texte ou icône posé sur une couleur de fonction pleine | noir (opacité propre à chaque usage) |
 | `Atelier.shadow` | ombre portée | noir |
 | `Atelier.scrim` | voile derrière une fenêtre au premier plan | noir |
@@ -40,7 +43,7 @@ dessins, les furigana dessinés sur la page, les fichiers exportés.
 
 `Atelier.gap` (14), `Atelier.panelWidth` (372), `Atelier.display(_:)`, `Atelier.label`, `Atelier.mono`, `Atelier.jp`.
 
-Gardes automatiques (`StyleTokensGuardTests`) : aucun nouveau blanc ou noir en dur dans `App/` ; aucun arrondi en dur, sauf les 2 dessins posés sur la page (`ReaderScreen`, `Path(roundedRect:)`).
+Gardes automatiques (`StyleTokensGuardTests`) : aucun nouveau blanc ou noir en dur dans `App/` ; aucun arrondi en dur, sauf les 2 dessins posés sur la page (`ReaderScreen`, `Path(roundedRect:)`) ; aucune ombre ni matière en dur ; aucune épaisseur de bordure en dur, sauf le fond dessiné du thème et un trait posé sur la page.
 
 ## 2. Inventaire des valeurs directes restantes (29/10/2026, branche `claude/styles-s1`)
 
@@ -51,9 +54,9 @@ Gardes automatiques (`StyleTokensGuardTests`) : aucun nouveau blanc ou noir en d
 | Styles iOS `.secondary` / `.primary` / `.tertiary` | 117 | 30 | suivent déjà clair ou sombre, mais pas la palette : à aligner sur `textSecondary` et `textTertiary` au cas par cas |
 | Opacités en dur `.opacity(0.x)` | 80 | 23 | souvent des états (appuyé, désactivé) : jetons d'état |
 | Fonds `.background(` / remplissages `.fill(` | 76 / 43 | 29 / 18 | la plupart lisent déjà un jeton de couleur ; la forme, elle, est en dur |
-| Bordures `.stroke` / `.strokeBorder`, épaisseurs `lineWidth:` | 25 / 20 | 10 / 6 | aucun jeton de bordure aujourd'hui |
-| Ombres `.shadow(` | 8 | 8 | couleur en jeton (S1b), rayon et décalage en dur |
-| Matières (`.regularMaterial`, `.thinMaterial`…) | 7 | 5 | pilules et fenêtres d'avertissement ; `AtelierPanel` sans flou (batterie) |
+| Épaisseurs de bordure `lineWidth:` | ~~20~~ 14 | 2 | **lot 2b fait** : 6 de l'interface par `Atelier.border` ; restent le fond dessiné (13) et un trait sur la page |
+| Ombres | ~~8~~ 0 | — | **lot 2b fait** : `atelierShadow`, mêmes valeurs |
+| Matières | ~~7~~ 0 | — | **lot 2b fait** : `Atelier.material` ; `AtelierPanel` reste sans flou (batterie) |
 | Arrondis en dur | ~~38~~ 2 | 1 | **lot 2a fait** : 37 passent par `Atelier.corner`, `radius` ou `smallRadius` ; restent les 2 dessins sur la page |
 | Capsules et cercles | 44 | 22 | formes voulues (pastilles) : à garder, la bordure et le fond suivront les jetons |
 | Marges `.padding(` en dur | 188 | 32 | |
@@ -72,8 +75,8 @@ Fichiers les plus chargés en valeurs directes : `LibraryView` (74), `ReaderScre
 | Famille | Jetons prévus | Remplace |
 |---|---|---|
 | Forme | fait : `cornerScale` et `corner(_:)` (pas de jetons par taille : chaque arrondi garde sa valeur d'origine × le facteur du style) | — |
-| Bordure | `borderWidth`, `borderColor`, `focusRing` | 25 bordures et 20 épaisseurs |
-| Relief | `panelShadow` (rayon, décalage, opacité), `panelMaterial` (aucun, verre) | 8 ombres, 7 matières |
+| Bordure | fait : `borderScale` ; restent à créer `focusRing` (lot 4, champs) | — |
+| Relief | fait : `shadowKind`, `usesMaterials` | — |
 | État | `selected`, `pressed`, `disabled`, `danger`, `success` | opacités et couleurs système d'interface |
 | Espacement | échelle `space.xxs` à `space.xl` (2, 4, 6, 8, 12, 16, 24) | 188 marges, 228 espacements, à reprendre au fil des composants |
 | Typographie | rôles (`title`, `body`, `caption`, `label`, `mono`, `jp`) fondés sur les styles de texte iOS, pour garder la taille dynamique | 93 tailles fixes |

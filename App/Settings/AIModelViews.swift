@@ -270,7 +270,7 @@ struct QwenChatView: View {
             if let toast {
                 Text(toast).font(.caption.weight(.semibold))
                     .padding(.horizontal, 12).padding(.vertical, 6)
-                    .background(.thinMaterial, in: Capsule())
+                    .background(Atelier.material(.thinMaterial), in: Capsule())
                     .padding(.top, 50)
                     .transition(.opacity)
             }
@@ -963,8 +963,8 @@ private struct CenteredConfirmation: ViewModifier {
                     }
                     .padding(20)
                     .frame(maxWidth: 320)
-                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: Atelier.radius, style: .continuous))
-                    .shadow(color: Atelier.shadow.opacity(0.3), radius: 16, y: 6)
+                    .background(Atelier.material(.regularMaterial), in: RoundedRectangle(cornerRadius: Atelier.radius, style: .continuous))
+                    .atelierShadow(opacity: 0.3, radius: 16, y: 6)
                     .padding(16)
                     .transition(reduceMotion ? .opacity : .scale(scale: 0.92).combined(with: .opacity))
                     .accessibilityAddTraits(.isModal)

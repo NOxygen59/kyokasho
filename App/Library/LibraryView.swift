@@ -610,7 +610,7 @@ struct DocumentCard: View {
                 }
                 .clipShape(RoundedRectangle(cornerRadius: Atelier.corner(12), style: .continuous))
                 .overlay(RoundedRectangle(cornerRadius: Atelier.corner(12), style: .continuous).strokeBorder(Atelier.hairline))
-                .shadow(color: Atelier.shadow.opacity(0.5), radius: 12, y: 8)
+                .atelierShadow(opacity: 0.5, radius: 12, y: 8)
                 if let category = document.category {
                     // Repère sur l'accueil (RET-039, #54).
                     Text(category.title).font(.system(size: 11, weight: .semibold))

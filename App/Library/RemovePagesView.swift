@@ -114,7 +114,7 @@ struct RemovePagesView: View {
             .overlay {
                 if working {
                     ProgressView("Modification des pages…").padding(24)
-                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: Atelier.corner(14)))
+                        .background(Atelier.material(.regularMaterial), in: RoundedRectangle(cornerRadius: Atelier.corner(14)))
                 }
             }
             .alert("Supprimer \(selected.count == 1 ? "cette page" : "ces \(selected.count) pages") ?", isPresented: $confirming) {

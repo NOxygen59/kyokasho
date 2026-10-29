@@ -110,7 +110,7 @@ struct DetachedPanel<Content: View>: View {
             .frame(width: w, height: h)
             .overlay(alignment: .top) { if floating { grip(base: base, left: left, top: top, w: w, h: h) } }
             .overlay(alignment: .bottomTrailing) { if floating { resizeHandle(base: base, w: w, h: h) } }
-            .shadow(color: Atelier.shadow.opacity(floating ? 0.5 : 0), radius: 20, y: 8)
+            .atelierShadow(opacity: floating ? 0.5 : 0, radius: 20, y: 8)
             .offset(x: left, y: top)
             .opacity(mode == .minimized ? 0 : 1)
             .allowsHitTesting(mode != .minimized)

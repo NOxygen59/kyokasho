@@ -810,7 +810,7 @@ struct FilmstripCell: View {
                 if let image { Image(uiImage: image).resizable().scaledToFit().clipShape(RoundedRectangle(cornerRadius: Atelier.corner(4))) }
             }
             .frame(width: 46, height: 62)
-            .overlay(RoundedRectangle(cornerRadius: Atelier.corner(5)).strokeBorder(visible ? Self.visibleMark : .clear, lineWidth: 3))
+            .overlay(RoundedRectangle(cornerRadius: Atelier.corner(5)).strokeBorder(visible ? Self.visibleMark : .clear, lineWidth: Atelier.border(3)))
             Text(label).font(.system(size: 10, weight: visible ? .bold : .semibold, design: .monospaced))
                 .foregroundStyle(visible ? Self.visibleMark : Atelier.textTertiary)
         }
@@ -932,7 +932,7 @@ struct HighlightMenu: View {
             ForEach(HighlightColor.allCases, id: \.self) { color in
                 Button { onPick(color) } label: {
                     Circle().fill(Color(color.uiColor)).frame(width: 26, height: 26)
-                        .overlay(Circle().stroke(Atelier.contrastInk.opacity(0.5), lineWidth: 1))
+                        .overlay(Circle().stroke(Atelier.contrastInk.opacity(0.5), lineWidth: Atelier.border(1)))
                 }
                 .buttonStyle(PressScale())
                 .accessibilityLabel("Surligner en \(color.frenchName)")

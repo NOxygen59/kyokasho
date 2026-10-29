@@ -20,6 +20,15 @@ struct AppStyle: Identifiable, Equatable {
     /// droits (styles Swiss, Neo-Brutalism…), plus de 1 = formes gonflées (Claymorphism).
     var cornerScale: CGFloat = 1
 
+    // MARK: Relief et bordure
+    /// Ombres portées : douces (valeurs d'origine), dures et décalées (Neo-Brutalism), ou aucune (Swiss, Minimalism).
+    enum ShadowKind: Equatable { case soft, hard(offset: CGFloat), none }
+    var shadowKind: ShadowKind = .soft
+    /// Facteur des épaisseurs de bordure de l'interface (`Atelier.border`) : 1 = d'origine.
+    var borderScale: CGFloat = 1
+    /// Matières floutées d'iOS (pilules, fenêtres d'avertissement). `false` : fond plein du panneau à la place.
+    var usesMaterials = true
+
     // MARK: Encres hors palette (valeur de base ; chaque usage garde son opacité)
     /// Texte ou icône posé sur une couleur de fonction pleine (bouton actif, pastille).
     var onAccentInk: Color = .black
