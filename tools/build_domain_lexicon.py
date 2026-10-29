@@ -62,6 +62,8 @@ EXCERPT_LIMIT = 160
 KANA = re.compile(r"^[ぁ-ゖァ-ヺー・ゝゞヽヾ]+$")
 HAS_JAPANESE = re.compile(r"[ぁ-ゖァ-ヺ㐀-鿿]")
 SKIPPED_TITLE = re.compile(r"一覧|曖昧さ回避|^\d")
+# Noms propres (bâtiments, lieux, sociétés, personnes, œuvres) : ce ne sont pas des termes du métier.
+PROPER_NOUN = re.compile(r"にある|に所在|に位置|に建つ|の企業|株式会社|会社である|メーカー|建築家|協同組合|論文|の人物|の作品|法人|財団|かつて存在")
 
 
 # --- Analyse (fonctions pures, testées) ---
@@ -110,7 +112,7 @@ def wiktionary_entries(title, wikitext):
         if not header or header.group(1) in ("étymologie", "prononciation", "références", "voir aussi"):
             continue
         senses = [clean_wikitext(line[1:]) for line in block.splitlines() if re.match(r"#(?![*:#])", line)]
-        senses = [sense for sense in senses if sense]
+        senses = [sense for sense in senses if re.search(r"\w", sense)]
         if senses:
             entries.append((title, wiktionary_reading(block, title), header.group(1), senses))
     return entries
@@ -157,6 +159,8 @@ def term_rows(wiktionary_pages, wikipedia_pages):
         links = page.get("langlinks", {})
         glossary = [f"{label} : {links[code]}" for code, label in (("fr", "Français"), ("en", "Anglais")) if code in links]
         excerpt = first_sentence(page.get("extract", ""))
+        if PROPER_NOUN.search(excerpt):
+            continue
         if excerpt:
             glossary.append(excerpt)
         if not glossary:

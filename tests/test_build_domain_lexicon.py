@@ -46,6 +46,10 @@ class LexiconTests(unittest.TestCase):
         self.assertEqual(lexicon.wiktionary_reading("", "テスト"), "テスト")
         self.assertEqual(lexicon.wiktionary_reading("", "試"), "")
 
+    def test_empty_senses_are_dropped(self):
+        page = "== {{langue|ja}} ==\n=== {{S|nom|ja}} ===\n# {{lexique|x|ja}} {{lien|y}}, ,.\n# Vrai sens."
+        self.assertEqual(lexicon.wiktionary_entries("試", page), [("試", "", "nom", ["Vrai sens."])])
+
     def test_page_without_japanese_section_gives_nothing(self):
         self.assertEqual(lexicon.wiktionary_entries("test", "== {{langue|fr}} ==\n# Sens."), [])
 
@@ -65,6 +69,7 @@ class LexiconTests(unittest.TestCase):
              "langlinks": {"fr": "Planche d'essai", "en": "Test board"}},
             {"title": "試験の一覧", "extract": "一覧。", "langlinks": {}},
             {"title": "Test", "extract": "Latin seul.", "langlinks": {}},
+            {"title": "試験館", "extract": "試験館（しけんかん）は、架空市にある建物。", "langlinks": {"fr": "Maison d'essai"}},
         ]
         rows = lexicon.term_rows([{"title": "試験間", "wikitext": WIKTIONARY_PAGE}], wikipedia)
         self.assertEqual([row[0] for row in rows], ["試験間", "試験板"])
