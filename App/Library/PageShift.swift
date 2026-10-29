@@ -33,6 +33,8 @@ enum PageShift {
         var mapping: PageMapping? = nil
         var expectedLayoutVersion: Int? = nil
         var cardTargets: [Int64: Int?]? = nil
+        /// v3 : pages des cartes avant l'opération ; chaque cible doit en être exactement l'image (revue Codex F4).
+        var cardSources: [Int64: Int]? = nil
     }
 
     /// Correspondance d'un journal : v3 la porte ; v2 la décrit par le décalage (pages ajoutées avant les anciennes).
@@ -145,7 +147,8 @@ enum PageShift {
                         oldHash: try DocumentImporter.sha256(of: current),
                         newHash: try DocumentImporter.sha256(of: merged),
                         hasReport: false, mapping: mapping, expectedLayoutVersion: layoutVersion,
-                        cardTargets: originalCardPages.mapValues { mapping.target(of: $0) })
+                        cardTargets: originalCardPages.mapValues { mapping.target(of: $0) },
+                        cardSources: originalCardPages)
         let work = try workspace(p)
         try fm.createDirectory(at: work, withIntermediateDirectories: true)
         do {
@@ -227,8 +230,19 @@ enum PageShift {
         let mapping = try Self.mapping(of: p)
         let cardPages: [Int64: Int?]
         if p.version == 3 {
-            guard let targets = p.cardTargets, p.expectedLayoutVersion != nil else {
+            guard let targets = p.cardTargets, let sources = p.cardSources, p.expectedLayoutVersion != nil else {
                 throw fail("Journal incomplet : reprise arrêtée sans effacer les données.")
+            }
+            // Même inventaire de cartes, et chaque cible = image exacte de sa page d'origine : `nil` seulement si
+            // cette page est retirée (jamais lors d'un simple ajout).
+            guard Set(targets.keys) == Set(sources.keys),
+                  sources.allSatisfy({ id, page in page >= 0 && page < p.oldCount && targets[id] == mapping.target(of: page) }) else {
+                throw fail("Pages de cartes invalides dans le journal.")
+            }
+            // Inventaire : toute carte encore liée à une page de ce document doit figurer dans le journal ; sinon
+            // elle garderait une page devenue fausse. (Une carte déjà détachée par la reprise n'y figure plus.)
+            guard Set(try model.review.store.sourcePages(documentId: p.documentId).keys).isSubset(of: sources.keys) else {
+                throw fail("Une carte du document manque au journal : reprise arrêtée sans modification.")
             }
             cardPages = targets
         } else {

@@ -221,12 +221,20 @@ extension AppDatabase {
                     try db.execute(sql: "UPDATE OR IGNORE \(table) SET documentId = ? WHERE documentId = ?",
                                    arguments: [newDocument.id, oldId])
                 }
+                // Archives des pages retirées (#49) : gardées avec le document qui reste, jamais effacées en passant.
+                try db.execute(sql: "UPDATE pageEdit SET documentId = ? WHERE documentId = ?", arguments: [newDocument.id, oldId])
                 _ = try LibraryDocument.deleteOne(db, key: oldId)
                 try newDocument.update(db)
             } else {
                 try db.execute(sql: "UPDATE document SET id = ? WHERE id = ?", arguments: [newDocument.id, oldId])
                 try newDocument.update(db)
             }
+            // #49 (revue Codex F1) : un autre PDF n'a pas les mêmes pages, même s'il en a autant. Les identités sont
+            // refaites à la prochaine modification des pages, et la version change sans opération enregistrée : la
+            // chaîne des versions est rompue, donc une archive d'avant le remplacement n'est plus restaurable telle
+            // quelle (S2/S3 le vérifient). Les archives elles-mêmes restent jusqu'à leur échéance.
+            try db.execute(sql: "DELETE FROM pageIdentity WHERE documentId = ?", arguments: [newDocument.id])
+            try db.execute(sql: "UPDATE document SET layoutVersion = layoutVersion + 1 WHERE id = ?", arguments: [newDocument.id])
         }
     }
 

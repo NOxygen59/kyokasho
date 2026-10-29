@@ -233,6 +233,58 @@ extension PageShiftRecoveryTests {
         }
     }
 
+    /// Revue Codex F4 — journal v3 d'un ajout : une carte mise à `null`, ou une page d'origine falsifiée, est refusée
+    /// avant toute modification ; la reprise authentique reste possible ensuite.
+    func testF4CardTargetsMustBeTheExactImageOfTheirSourcePage() async throws {
+        for tamper in ["nil", "source", "inventaire"] {
+            try await withFixture { model, doc, root in
+                let card = try seed(model, doc)
+                try await interruptedApply(model, doc, root, at: "journal.after")
+                let authentic = try journal(root)
+                var p = authentic
+                switch tamper {
+                case "nil": p.cardTargets = [card.id!: nil]
+                case "source": p.cardSources = [card.id!: 1]
+                default: p.cardTargets = [:]; p.cardSources = [:]
+                }
+                try writeJournal(p, root)
+                let restarted = try AppModel(root: root)
+                for _ in 0..<3 { PageShift.reconcile(restarted) }
+                XCTAssertNotNil(restarted.storageRecoveryError, tamper)
+                try assertUnshifted(restarted, doc, card)
+                try writeJournal(authentic, root)
+                PageShift.reconcile(restarted)
+                XCTAssertNil(restarted.storageRecoveryError, tamper)
+                try verify(restarted, doc, card)
+            }
+        }
+    }
+
+    /// v2 repris après des effets déjà commis (base et PDF installés, puis coupure) : rien n'est décalé deux fois.
+    func testVersion2JournalResumedAfterCommittedEffects() async throws {
+        for point in ["pdf.after", "files.backup", "cards.after"] {
+            try await withFixture { model, doc, root in
+                let card = try seed(model, doc)
+                try await interruptedApply(model, doc, root, at: "journal.after")
+                var p = try journal(root)
+                p.version = 2
+                p.cardPages = p.cardTargets?.compactMapValues { $0 }
+                p.cardTargets = nil; p.cardSources = nil; p.mapping = nil; p.expectedLayoutVersion = nil
+                try writeJournal(p, root)
+                let restarted = try AppModel(root: root)
+                PageShift.checkpoint = { if $0 == point { throw PowerLoss.simulated } }
+                PageShift.reconcile(restarted)
+                PageShift.checkpoint = nil
+                XCTAssertNotNil(restarted.storageRecoveryError, point)
+                let again = try AppModel(root: root)
+                for _ in 0..<3 { PageShift.reconcile(again) }
+                XCTAssertNil(again.storageRecoveryError, point)
+                try verify(again, doc, card)
+                XCTAssertEqual(try again.database.layoutVersion(documentId: doc.id), 0, "v2 : pas de nouvelle version")
+            }
+        }
+    }
+
     /// #49 — journal v3 : l'opération est enregistrée une seule fois, même après plusieurs reprises.
     func testVersion3RecordsTheEditOnceAcrossRepeatedRecoveries() async throws {
         try await withFixture { model, doc, root in

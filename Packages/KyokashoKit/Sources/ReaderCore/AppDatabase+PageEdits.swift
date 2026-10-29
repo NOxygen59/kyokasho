@@ -117,7 +117,19 @@ extension AppDatabase {
     public func remapPages(documentId: String, mapping: PageMapping, editId: String, kind: PageEditKind,
                            expectedVersion: Int, fileSize: Int64, at date: Date = Date()) throws -> Bool {
         try writer.write { db in
-            if try Self.fetchEdit(db, id: editId) != nil { return false } // Déjà commis, journal encore présent.
+            if let done = try Self.fetchEdit(db, id: editId) {
+                // Rejeu (journal encore présent) : seule la **même** opération, sur un document resté dans l'état
+                // qu'elle a produit, est reconnue ; toute divergence arrête la reprise (revue Codex F2).
+                let current = try Row.fetchOne(db, sql: "SELECT pageCount, fileSize, layoutVersion FROM document WHERE id = ?",
+                                               arguments: [documentId])
+                guard done.documentId == documentId, done.kind == kind, done.mapping == mapping,
+                      done.versionBefore == expectedVersion, let current,
+                      current["layoutVersion"] as Int == done.versionAfter, current["pageCount"] as Int == mapping.newCount,
+                      current["fileSize"] as Int64 == fileSize else {
+                    throw PageEditError("Opération déjà enregistrée avec d'autres valeurs : reprise arrêtée sans modification.")
+                }
+                return false
+            }
             guard let row = try Row.fetchOne(db, sql: """
                 SELECT pageCount, layoutVersion, lastPageIndex, firstPageIndex FROM document WHERE id = ?
                 """, arguments: [documentId]) else { throw PageEditError("Document introuvable.") }
@@ -135,15 +147,17 @@ extension AppDatabase {
                 """, arguments: [editId, documentId, kind.rawValue, expectedVersion, version, date,
                                  try JSONEncoder().encode(mapping), try JSONEncoder().encode(order)])
 
-            // 1. Archive, avant tout effacement.
+            // 1. Archive, avant tout effacement : lignes des six tables ET identité de chaque page retirée (position
+            //    d'origine, numéro imprimé, même `nil` ; revue Codex F3), pour une restauration exacte.
             let removed = mapping.removed
-            for table in Self.pageTables where !removed.isEmpty {
-                let rows = try Row.fetchAll(db, sql: "SELECT * FROM \(table) WHERE documentId = ? AND pageIndex IN (\(removed.map(String.init).joined(separator: ",")))",
+            let archivedTables = Self.pageTables.map { ($0, "pageIndex") } + [("pageIdentity", "position")]
+            for (table, column) in archivedTables where !removed.isEmpty {
+                let rows = try Row.fetchAll(db, sql: "SELECT * FROM \(table) WHERE documentId = ? AND \(column) IN (\(removed.map(String.init).joined(separator: ",")))",
                                             arguments: [documentId])
                 for archived in rows {
                     let columns = Dictionary(uniqueKeysWithValues: archived.columnNames.map { ($0, ArchivedValue(archived[$0] as DatabaseValue)) })
                     try db.execute(sql: "INSERT INTO pageEditRow (editId, tableName, pageId, rowJSON) VALUES (?, ?, ?, ?)",
-                                   arguments: [editId, table, order[archived["pageIndex"] as Int], try JSONEncoder().encode(columns)])
+                                   arguments: [editId, table, order[archived[column] as Int], try JSONEncoder().encode(columns)])
                 }
             }
             // 2. Effacement des pages retirées.
