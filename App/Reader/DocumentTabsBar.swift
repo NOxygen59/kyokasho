@@ -55,15 +55,15 @@ private struct MemoryNotice: View {
         HStack(spacing: 10) {
             Image(systemName: "memorychip").foregroundStyle(.orange)
             Text("\(count) documents ouverts : la mémoire peut se remplir, garde un œil sur le moniteur.")
-                .font(.system(size: 13)).foregroundStyle(Atelier.textPrimary)
+                .font(Atelier.font(13)).foregroundStyle(Atelier.textPrimary)
             if !(monitorEnabled && monitorShown) {
                 Button("Moniteur") { monitorEnabled = true; monitorShown = true }
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(Atelier.font(13, weight: .semibold))
             }
         }
         .padding(.horizontal, 16).padding(.vertical, 10)
-        .background(.regularMaterial, in: Capsule())
-        .shadow(color: .black.opacity(0.3), radius: 12, y: 4)
+        .background(Atelier.material(.regularMaterial), in: Capsule())
+        .atelierShadow(opacity: 0.3, radius: 12, y: 4)
         .frame(maxWidth: 560)
     }
 }
@@ -92,7 +92,7 @@ struct DocumentTabsBar: View {
                         Button(document.title) { ReaderTabHandoff.shared.prepare(); model.openDocumentId = document.id }
                     }
                 } label: {
-                    Image(systemName: "plus").font(.system(size: 13, weight: .bold))
+                    Image(systemName: "plus").font(Atelier.font(13, weight: .bold))
                         .frame(width: 30, height: 30)
                         .atelierPanel(radius: 15)
                 }
@@ -174,7 +174,7 @@ struct TabStripView: UIViewRepresentable {
         var onClose: (String) -> Void = { _ in }
 
         func pill(_ tab: Tab, selected: Bool) -> UIView {
-            let ink = selected ? UIColor.black.withAlphaComponent(0.85) : UIColor(Atelier.textPrimary)
+            let ink = selected ? UIColor(Atelier.onAccentInk).withAlphaComponent(0.85) : UIColor(Atelier.textPrimary)
             var config = UIButton.Configuration.plain()
             config.title = tab.title
             config.titleLineBreakMode = .byTruncatingTail
@@ -201,7 +201,7 @@ struct TabStripView: UIViewRepresentable {
             row.axis = .horizontal
             row.spacing = 0
             row.backgroundColor = selected ? UIColor(Atelier.Tint.read) : UIColor(Atelier.surface).withAlphaComponent(0.85)
-            row.layer.cornerRadius = 15
+            row.layer.cornerRadius = Atelier.corner(15)
             row.layer.cornerCurve = .continuous
             row.clipsToBounds = true
             row.heightAnchor.constraint(equalToConstant: 30).isActive = true

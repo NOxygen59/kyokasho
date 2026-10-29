@@ -85,7 +85,7 @@ struct AIPageSheet: View {
                             if let image { Image(uiImage: image).resizable().scaledToFit() } else { ProgressView() }
                         }
                         .frame(width: 160, height: 210)
-                        .background(Color(white: 0.15), in: RoundedRectangle(cornerRadius: 8))
+                        .background(Color(white: 0.15), in: RoundedRectangle(cornerRadius: Atelier.corner(8)))
                         VStack(alignment: .leading, spacing: 10) {
                             Text(pageTitle).font(.headline)
                             Button { copyImage() } label: { Label("Copier la page en image", systemImage: "photo.on.rectangle") }
@@ -123,7 +123,7 @@ struct AIPageSheet: View {
             .overlay(alignment: .bottom) {
                 if let copied {
                     Text("Copié : \(copied)").padding(.horizontal, 16).padding(.vertical, 10)
-                        .background(.regularMaterial, in: Capsule()).padding(.bottom, 20)
+                        .background(Atelier.material(.regularMaterial), in: Capsule()).padding(.bottom, 20)
                 }
             }
             .sheet(item: $editingPrompt) { prompt in
@@ -240,7 +240,7 @@ struct WebPanel: View {
                     HStack(spacing: 6) {
                         ForEach(Self.shortcuts, id: \.url) { site in
                             Button(site.name) { go(site.url) }
-                                .font(.system(size: 13, weight: .medium))
+                                .font(Atelier.font(13, weight: .medium))
                                 .padding(.horizontal, 10).padding(.vertical, 5)
                                 .background(Capsule().fill(Atelier.surfaceHigh))
                         }
@@ -248,7 +248,7 @@ struct WebPanel: View {
                 }
             }
             .padding(12)
-            .background(.ultraThinMaterial)
+            .background(Atelier.material(.ultraThinMaterial))
             if state.loading {
                 ProgressView(value: state.progress).progressViewStyle(.linear).tint(Atelier.Tint.ai)
             }

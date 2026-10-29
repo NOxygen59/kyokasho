@@ -142,7 +142,7 @@ struct StorageUsageView: View {
                         .chartYAxis(.hidden)
                         .chartLegend(.hidden)
                         .frame(height: 28)
-                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                        .clipShape(RoundedRectangle(cornerRadius: Atelier.corner(6)))
                     }
                     .padding(.vertical, 6)
                 }
@@ -165,7 +165,7 @@ struct StorageUsageView: View {
                 Section("Détail") {
                     ForEach(Array(items.enumerated()), id: \.element.id) { i, item in
                         HStack(spacing: 12) {
-                            RoundedRectangle(cornerRadius: 3).fill(colors(items.count)[i]).frame(width: 14, height: 14)
+                            RoundedRectangle(cornerRadius: Atelier.corner(3)).fill(colors(items.count)[i]).frame(width: 14, height: 14)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(item.name)
                                 Text(item.detail).font(.caption).foregroundStyle(.secondary)

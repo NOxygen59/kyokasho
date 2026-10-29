@@ -197,7 +197,7 @@ struct LookupPopup: View {
                 }
                 Button(action: close) { Image(systemName: "xmark") }.accessibilityLabel("Fermer")
             }
-            .font(.system(size: 15, weight: .semibold))
+            .font(Atelier.font(15, weight: .semibold))
             .foregroundStyle(Atelier.textSecondary)
             .padding(.horizontal, 14).padding(.vertical, 10)
             Divider().overlay(Atelier.hairline)
@@ -217,7 +217,7 @@ struct LookupPopup: View {
         }
         .overlay(alignment: .bottom) {
             if let toast {
-                Text(toast).font(.system(size: 14, weight: .semibold)).foregroundStyle(Atelier.textPrimary)
+                Text(toast).font(Atelier.font(14, weight: .semibold)).foregroundStyle(Atelier.textPrimary)
                     .padding(.horizontal, 14).padding(.vertical, 8)
                     .background(Atelier.surfaceHigh, in: Capsule())
                     .padding(.bottom, 14)
@@ -244,8 +244,8 @@ struct LookupPopup: View {
         }
         .background(Atelier.surface)
         .clipShape(RoundedRectangle(cornerRadius: Atelier.radius, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: Atelier.radius, style: .continuous).strokeBorder(Atelier.Tint.japanese.opacity(0.35), lineWidth: 1))
-        .shadow(color: .black.opacity(0.55), radius: 24, y: 10)
+        .overlay(RoundedRectangle(cornerRadius: Atelier.radius, style: .continuous).strokeBorder(Atelier.Tint.japanese.opacity(0.35), lineWidth: Atelier.border(1)))
+        .atelierShadow(opacity: 0.55, radius: 24, y: 10)
     }
 
     private func handle(_ message: LookupMessage) {

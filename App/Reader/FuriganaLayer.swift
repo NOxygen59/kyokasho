@@ -41,8 +41,16 @@ enum FuriganaLayer {
             case .black: return (0.10, 0.10, 0.10)
             }
         }
-        /// Dans le panneau d'étude (fond sombre).
+        /// Dans le panneau d'étude : couleur de la page sur un thème clair, version claire sur un thème nuit.
         var panelHex: String {
+            guard !Theme.current.isLight else {
+                let c = page
+                return String(format: "#%02x%02x%02x", Int(c.r * 255), Int(c.g * 255), Int(c.b * 255))
+            }
+            return darkPanelHex
+        }
+        /// Version claire, pour un panneau sombre.
+        private var darkPanelHex: String {
             switch self {
             case .red: return "#ff7a6b"
             case .blue: return "#7fb2ff"

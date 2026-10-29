@@ -309,7 +309,7 @@ struct DocumentAnalysisSheet: View {
                 }
             }
             .padding(.horizontal, 4).padding(.vertical, 2)
-            .background(over ? Atelier.Tint.read.opacity(0.08) : .clear, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+            .background(over ? Atelier.Tint.read.opacity(0.08) : .clear, in: RoundedRectangle(cornerRadius: Atelier.corner(6), style: .continuous))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

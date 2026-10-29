@@ -218,7 +218,7 @@ struct BenchThumbnail: View {
 
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 6).fill(Color(white: 0.15))
+            RoundedRectangle(cornerRadius: Atelier.corner(6)).fill(Color(white: 0.15))
             if let image { Image(uiImage: image).resizable().scaledToFit() }
         }
         .task(id: url) {

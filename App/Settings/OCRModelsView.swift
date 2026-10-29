@@ -129,7 +129,7 @@ struct OCRModelsSection: View {
                 if let badge {
                     Text(badge).font(.caption2.bold())
                         .padding(.horizontal, 6).padding(.vertical, 2)
-                        .foregroundStyle(badge == "Recommandé" ? Color.black : Color.secondary)
+                        .foregroundStyle(badge == "Recommandé" ? Atelier.onAccentInk : Color.secondary)
                         .background(badge == "Recommandé" ? Color.green : Color.secondary.opacity(0.2), in: Capsule())
                 }
                 Spacer()

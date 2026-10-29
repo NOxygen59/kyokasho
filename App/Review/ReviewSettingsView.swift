@@ -158,7 +158,7 @@ struct TemplateEditorView: View {
                     .textInputAutocapitalization(.never)
                     .scrollContentBackground(.hidden)
                     .padding(8)
-                    .background(Color(white: 0.12), in: RoundedRectangle(cornerRadius: 10))
+                    .background(Color(white: 0.12), in: RoundedRectangle(cornerRadius: Atelier.corner(10)))
                 if let error = template.validationError {
                     Label(error, systemImage: "exclamationmark.triangle.fill").font(.footnote).foregroundStyle(.orange)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -173,7 +173,7 @@ struct TemplateEditorView: View {
                 let sides = template.render(sample)
                 CardWebView(html: CardHTML.page(css: template.css, body: showBack ? sides.back : sides.front),
                             mediaRoot: review.store.mediaRoot)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .clipShape(RoundedRectangle(cornerRadius: Atelier.corner(10)))
             }
             .padding()
         }

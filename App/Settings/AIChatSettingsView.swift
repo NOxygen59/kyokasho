@@ -64,7 +64,7 @@ struct AIChatSettingsView: View {
             Section {
                 TextEditor(text: $draft)
                     .frame(minHeight: 140)
-                    .font(.system(size: 14))
+                    .font(Atelier.font(14))
                     .onChange(of: draft) { settings.instructions = $0 }
                 if settings.instructions == nil {
                     Text("Consigne de l'app (vide ci-dessus) :\n\(QwenChat.instructions)")

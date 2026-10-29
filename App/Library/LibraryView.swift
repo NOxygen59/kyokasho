@@ -141,7 +141,7 @@ struct LibraryView: View {
         .sheet(isPresented: $showImportOptions) {
             ImportOptionsView(onImport: { urls, language in model.importFiles(urls, language: language) },
                               onPackage: { url in openPackage(url) })
-                .preferredColorScheme(.dark)
+                .preferredColorScheme(Theme.current.colorScheme)
         }
         .alert("Remplacer « \(pendingPackage?.contents.manifest.title ?? "") » ?",
                isPresented: Binding(get: { pendingPackage?.exists == true }, set: { if !$0, let p = pendingPackage { model.discardPackage(p); pendingPackage = nil } })) {
@@ -154,19 +154,19 @@ struct LibraryView: View {
             Button("OK", role: .cancel) {}
         } message: { Text(packageMessage ?? "") }
         .sheet(item: $analyzing) { document in
-            DocumentAnalysisSheet(document: document).environmentObject(model).preferredColorScheme(.dark)
+            DocumentAnalysisSheet(document: document).environmentObject(model).preferredColorScheme(Theme.current.colorScheme)
         }
         .sheet(isPresented: $showMerge) {
-            PDFMergeView().environmentObject(model).preferredColorScheme(.dark)
+            PDFMergeView().environmentObject(model).preferredColorScheme(Theme.current.colorScheme)
         }
         .sheet(isPresented: $showImagesToPDF) {
-            ImagesToPDFView().environmentObject(model).preferredColorScheme(.dark)
+            ImagesToPDFView().environmentObject(model).preferredColorScheme(Theme.current.colorScheme)
         }
         .sheet(isPresented: $showSettings) {
-            SettingsView().environmentObject(themes).environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review).preferredColorScheme(.dark)
+            SettingsView().environmentObject(themes).environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review).preferredColorScheme(Theme.current.colorScheme)
         }
         .sheet(isPresented: $showDrive) {
-            DriveBrowserView().environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review).preferredColorScheme(.dark)
+            DriveBrowserView().environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review).preferredColorScheme(Theme.current.colorScheme)
         }
         .fullScreenCover(isPresented: $showDictionary) {
             NavigationStack {
@@ -178,13 +178,13 @@ struct LibraryView: View {
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbar { ToolbarItem(placement: .confirmationAction) { Button("OK") { showDictionary = false } } }
             }
-            .environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review).preferredColorScheme(.dark)
+            .environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review).preferredColorScheme(Theme.current.colorScheme)
         }
         .sheet(isPresented: $showBench) {
             NavigationStack {
                 BenchView().toolbar { ToolbarItem(placement: .confirmationAction) { Button("OK") { showBench = false } } }
             }
-            .environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review).preferredColorScheme(.dark)
+            .environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review).preferredColorScheme(Theme.current.colorScheme)
         }
         .alert("Renommer", isPresented: Binding(get: { renaming != nil }, set: { if !$0 { renaming = nil } })) {
             TextField("Titre", text: $newTitle)
@@ -192,15 +192,15 @@ struct LibraryView: View {
             Button("Renommer") { if let renaming { model.rename(renaming, to: newTitle) } }
         }
         .fullScreenCover(isPresented: $showReview, onDismiss: { review.refresh() }) {
-            ReviewScreen().environmentObject(model).environmentObject(review).preferredColorScheme(.dark)
+            ReviewScreen().environmentObject(model).environmentObject(review).preferredColorScheme(Theme.current.colorScheme)
         }
         .onAppear { review.refresh(); takeIncomingPackage() }
         .onChange(of: model.incomingPackage) { _ in takeIncomingPackage() }
         .sheet(item: $addingPages) { document in
-            AddPagesView(document: document).environmentObject(model).preferredColorScheme(.dark)
+            AddPagesView(document: document).environmentObject(model).preferredColorScheme(Theme.current.colorScheme)
         }
         .sheet(item: $editingPages) { target in
-            RemovePagesView(target: target).environmentObject(model).preferredColorScheme(.dark)
+            RemovePagesView(target: target).environmentObject(model).preferredColorScheme(Theme.current.colorScheme)
         }
         .onReceive(model.$pageEditRequest) { request in
             guard let request, let document = model.documents.first(where: { $0.id == request.documentId }) else { return }
@@ -210,11 +210,11 @@ struct LibraryView: View {
         }
         .sheet(item: $chatDocument) { document in
             NavigationStack { QwenChatView(document: document, database: model.database) }
-                .environmentObject(model).preferredColorScheme(.dark)
+                .environmentObject(model).preferredColorScheme(Theme.current.colorScheme)
         }
         .sheet(item: $exporting) { document in
             DocumentExportSheet(document: document)
-                .environmentObject(model).environmentObject(model.review).preferredColorScheme(.dark)
+                .environmentObject(model).environmentObject(model.review).preferredColorScheme(Theme.current.colorScheme)
         }
         .alert("Où est la page 1 ?", isPresented: Binding(get: { settingPageOne != nil },
                                                            set: { if !$0 { settingPageOne = nil } })) {
@@ -254,7 +254,7 @@ struct LibraryView: View {
         } message: {
             Text("Il quitte la bibliothèque mais garde son PDF, ses notes, surlignages, dessins et son texte OCR. Restaurable pendant 30 jours depuis la Corbeille.")
         }
-        .sheet(isPresented: $showTrash) { TrashView().environmentObject(model).preferredColorScheme(.dark) }
+        .sheet(isPresented: $showTrash) { TrashView().environmentObject(model).preferredColorScheme(Theme.current.colorScheme) }
     }
 
     // MARK: Barre latérale
@@ -281,11 +281,11 @@ struct LibraryView: View {
             HStack(spacing: 10) {
                 Text("教").font(.custom("HiraMinProN-W6", size: 26))
                     .frame(width: 42, height: 42)
-                    .foregroundStyle(.black.opacity(0.85))
-                    .background(Atelier.Tint.japanese, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+                    .foregroundStyle(Atelier.onAccentInk.opacity(0.85))
+                    .background(Atelier.Tint.japanese, in: RoundedRectangle(cornerRadius: Atelier.smallRadius, style: .continuous))
                 VStack(alignment: .leading, spacing: 0) {
                     Text("Kyōkasho").font(Atelier.display(19)).foregroundStyle(Atelier.textPrimary)
-                    Text("教科書 · atelier de lecture").font(.system(size: 11)).foregroundStyle(Atelier.textTertiary)
+                    Text("教科書 · atelier de lecture").font(Atelier.font(11)).foregroundStyle(Atelier.textTertiary)
                 }
             }
             VStack(alignment: .leading, spacing: 4) {
@@ -328,12 +328,12 @@ struct LibraryView: View {
                 Image(systemName: icon).frame(width: 22)
                 Text(title)
                 Spacer()
-                Text("\(count)").font(Atelier.mono).foregroundStyle(on ? Color.black.opacity(0.6) : Atelier.textTertiary)
+                Text("\(count)").font(Atelier.mono).foregroundStyle(on ? Atelier.onAccentInk.opacity(0.6) : Atelier.textTertiary)
             }
-            .font(.system(size: 15, weight: .medium))
+            .font(Atelier.font(15, weight: .medium))
             .padding(.horizontal, 10).padding(.vertical, 9)
-            .foregroundStyle(on ? Color.black.opacity(0.85) : Atelier.textPrimary)
-            .background(on ? Atelier.Tint.read : Color.clear, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .foregroundStyle(on ? Atelier.onAccentInk.opacity(0.85) : Atelier.textPrimary)
+            .background(on ? Atelier.Tint.read : Color.clear, in: RoundedRectangle(cornerRadius: Atelier.corner(10), style: .continuous))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -347,12 +347,12 @@ struct LibraryView: View {
                 Text(title).foregroundStyle(Atelier.textPrimary)
                 Spacer()
                 if let count, count > 0 {
-                    Text("\(count)").font(Atelier.mono).foregroundStyle(Color.black.opacity(0.8))
+                    Text("\(count)").font(Atelier.mono).foregroundStyle(Atelier.onAccentInk.opacity(0.8))
                         .padding(.horizontal, 7).padding(.vertical, 2)
                         .background(tint, in: Capsule())
                 }
             }
-            .font(.system(size: 15, weight: .medium))
+            .font(Atelier.font(15, weight: .medium))
             .padding(.horizontal, 10).padding(.vertical, 9)
             .contentShape(Rectangle())
         }
@@ -365,10 +365,10 @@ struct LibraryView: View {
             AtelierLabel("Temps de lecture")
             Text(ReadingClock.format(readingTime.clock.elapsed(at: Date())))
                 .font(Atelier.display(30)).foregroundStyle(Atelier.textPrimary)
-            Text("livre ouvert à l'écran").font(.system(size: 13)).foregroundStyle(Atelier.textSecondary)
+            Text("livre ouvert à l'écran").font(Atelier.font(13)).foregroundStyle(Atelier.textSecondary)
         }
         .padding(14)
-        .background(Atelier.surfaceHigh, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(Atelier.surfaceHigh, in: RoundedRectangle(cornerRadius: Atelier.corner(14), style: .continuous))
     }
 
     /// Portrait : barre compacte en haut.
@@ -490,7 +490,7 @@ struct LibraryView: View {
     /// Case de sélection sur la couverture.
     private func selectionMark(_ on: Bool) -> some View {
         Image(systemName: on ? "checkmark.circle.fill" : "circle")
-            .font(.system(size: 26, weight: .semibold))
+            .font(Atelier.font(26, weight: .semibold))
             .foregroundStyle(on ? Atelier.Tint.annotate : Atelier.textPrimary)
             .background(Circle().fill(Atelier.surface.opacity(0.8)))
             .padding(10)
@@ -501,7 +501,7 @@ struct LibraryView: View {
     private var selectionBar: some View {
         HStack(spacing: 12) {
             Text("\(batch.selected.count) sélectionné\(batch.selected.count > 1 ? "s" : "")")
-                .font(.system(size: 14, weight: .semibold)).foregroundStyle(Atelier.textSecondary)
+                .font(Atelier.font(14, weight: .semibold)).foregroundStyle(Atelier.textSecondary)
             Spacer()
             Button("Tout sélectionner") { batch.selectAll(filtered.map(\.id)) }
                 .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.read))
@@ -608,7 +608,7 @@ struct DocumentCard: View {
             ZStack(alignment: .topTrailing) {
                 // Le cadre fixe la taille ; la page entière est posée dedans, centrée, jamais coupée.
                 // (Avant : `scaledToFill` dans le ZStack faisait déborder l'image hors de la case.)
-                RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Atelier.surfaceHigh)
+                RoundedRectangle(cornerRadius: Atelier.corner(12), style: .continuous).fill(Atelier.surfaceHigh)
                 .aspectRatio(0.72, contentMode: .fit)
                 .frame(maxWidth: .infinity)
                 .overlay {
@@ -619,28 +619,28 @@ struct DocumentCard: View {
                         ProgressView().tint(Atelier.textTertiary)
                     }
                 }
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Atelier.hairline))
-                .shadow(color: .black.opacity(0.5), radius: 12, y: 8)
+                .clipShape(RoundedRectangle(cornerRadius: Atelier.corner(12), style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: Atelier.corner(12), style: .continuous).strokeBorder(Atelier.hairline))
+                .atelierShadow(opacity: 0.5, radius: 12, y: 8)
                 if let category = document.category {
                     // Repère sur l'accueil (RET-039, #54).
-                    Text(category.title).font(.system(size: 11, weight: .semibold))
+                    Text(category.title).font(Atelier.font(11, weight: .semibold))
                         .padding(.horizontal, 8).padding(.vertical, 4)
-                        .foregroundStyle(.black.opacity(0.8))
+                        .foregroundStyle(Atelier.onAccentInk.opacity(0.8))
                         .background(category == .textbook ? Atelier.Tint.read : Atelier.Tint.annotate, in: Capsule())
                         .padding(8)
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 }
                 if document.driveFileId != nil {
                     Image(systemName: "externaldrive.badge.icloud")
-                        .font(.system(size: 12, weight: .bold))
+                        .font(Atelier.font(12, weight: .bold))
                         .padding(7)
-                        .foregroundStyle(.black.opacity(0.8))
+                        .foregroundStyle(Atelier.onAccentInk.opacity(0.8))
                         .background(Atelier.Tint.cloud, in: Circle())
                         .padding(8)
                 }
             }
-            Text(document.title).font(.system(size: 15, weight: .semibold)).lineLimit(2)
+            Text(document.title).font(Atelier.font(15, weight: .semibold)).lineLimit(2)
                 .foregroundStyle(Atelier.textPrimary)
             HStack(spacing: 8) {
                 GeometryReader { g in

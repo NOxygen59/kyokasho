@@ -32,6 +32,7 @@ Ce dossier organise la reprise du projet à partir de **v1.3, build 40**. L'audi
 - [Feuille de route](FEUILLE-DE-ROUTE.md) : consignes du propriétaire, passations, backlog historique et décisions. Les sections anciennes peuvent décrire une fonction remplacée.
 - [Architecture de lecture](ARCHITECTURE-LECTURE.md) : contrats du pipeline texte et positions.
 - [Chaîne OCR → furigana](CHAINE-OCR-FURIGANA.md) : du texte de la page aux lectures dessinées, étape par étape (#46).
+- [Styles : jetons et inventaire](STYLES-JETONS.md) : catalogue des jetons visuels, valeurs directes restantes, jetons prévus.
 - [OCR](OCR.md) : moteurs et fonctionnement détaillé.
 - [IA locale](IA-LOCALE.md) : rétroportages MLX/iOS 16, procédures et mesures datées.
 - [Grammaire](GRAMMAIRE.md) : proposition, sans engagement d'implémentation.

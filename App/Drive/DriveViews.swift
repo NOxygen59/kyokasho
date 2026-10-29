@@ -184,7 +184,7 @@ private struct DriveSignIn: View {
 
     var body: some View {
         VStack(spacing: 18) {
-            Image(systemName: "externaldrive.badge.icloud").font(.system(size: 52)).foregroundStyle(.secondary)
+            Image(systemName: "externaldrive.badge.icloud").font(Atelier.font(52)).foregroundStyle(.secondary)
             Text("Connecte ton compte Google").font(.title2.bold())
             Text("Accès en lecture seule à ton Drive, pour importer tes cours et récupérer leurs nouvelles versions.")
                 .multilineTextAlignment(.center).foregroundStyle(.secondary).frame(maxWidth: 420)
@@ -241,7 +241,7 @@ struct DriveSetupHelp: View {
                             ZStack {
                                 Circle().fill(done.contains(i) ? Atelier.Tint.cloud : Atelier.surfaceHigh).frame(width: 34, height: 34)
                                 if done.contains(i) {
-                                    Image(systemName: "checkmark").font(.system(size: 14, weight: .bold)).foregroundStyle(.black.opacity(0.85))
+                                    Image(systemName: "checkmark").font(Atelier.font(14, weight: .bold)).foregroundStyle(Atelier.onAccentInk.opacity(0.85))
                                 } else {
                                     Text("\(i + 1)").font(Atelier.mono).foregroundStyle(Atelier.textPrimary)
                                 }
@@ -249,8 +249,8 @@ struct DriveSetupHelp: View {
                         }
                         .buttonStyle(PressScale())
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(step.0).font(.system(size: 16, weight: .semibold)).foregroundStyle(Atelier.textPrimary)
-                            Text(step.1).font(.system(size: 14)).foregroundStyle(Atelier.textSecondary)
+                            Text(step.0).font(Atelier.font(16, weight: .semibold)).foregroundStyle(Atelier.textPrimary)
+                            Text(step.1).font(Atelier.font(14)).foregroundStyle(Atelier.textSecondary)
                         }
                         Spacer()
                         Button {
@@ -260,7 +260,7 @@ struct DriveSetupHelp: View {
                             .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.cloud))
                     }
                     .padding(14)
-                    .background(Atelier.surfaceHigh.opacity(0.5), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .background(Atelier.surfaceHigh.opacity(0.5), in: RoundedRectangle(cornerRadius: Atelier.corner(14), style: .continuous))
                 }
                 VStack(alignment: .leading, spacing: 10) {
                     AtelierLabel("5 · Colle l'identifiant", tint: Atelier.Tint.cloud)
@@ -270,7 +270,7 @@ struct DriveSetupHelp: View {
                             .autocorrectionDisabled()
                             .font(Atelier.mono)
                             .padding(12)
-                            .background(Atelier.surfaceHigh, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+                            .background(Atelier.surfaceHigh, in: RoundedRectangle(cornerRadius: Atelier.smallRadius, style: .continuous))
                         Button {
                             pasted = UIPasteboard.general.string ?? pasted
                         } label: { Label("Coller", systemImage: "doc.on.clipboard") }

@@ -31,9 +31,9 @@ struct StudyPanel: View {
                             let on = source == reader.focusSource
                             Button { reader.focus(source) } label: {
                                 Text("p. \(reader.document.pageLabel(source))")
-                                    .font(.system(size: 13, weight: .semibold))
+                                    .font(Atelier.font(13, weight: .semibold))
                                     .padding(.horizontal, 12).padding(.vertical, 5)
-                                    .foregroundStyle(on ? Color.black.opacity(0.85) : Atelier.textSecondary)
+                                    .foregroundStyle(on ? Atelier.onAccentInk.opacity(0.85) : Atelier.textSecondary)
                                     .background(Capsule().fill(on ? Atelier.Tint.japanese : Atelier.surfaceHigh))
                             }
                             .buttonStyle(.plain)
@@ -48,7 +48,7 @@ struct StudyPanel: View {
                 Spacer()
                 StudyWindowButtons()
                 Button(action: close) {
-                    Image(systemName: "xmark").font(.system(size: 14, weight: .semibold))
+                    Image(systemName: "xmark").font(Atelier.font(14, weight: .semibold))
                         .foregroundStyle(Atelier.textSecondary)
                         .frame(minWidth: 22, minHeight: 22)
                 }
@@ -241,7 +241,7 @@ struct StudyTextTab: View {
             }, close: { presentedLookup = nil })
             .environmentObject(model.dictionary)
             .presentationDetents([.medium, .large])
-            .preferredColorScheme(.dark)
+            .preferredColorScheme(Theme.current.colorScheme)
         }
         .alert("Corriger la ligne", isPresented: Binding(get: { editingLine != nil }, set: { if !$0 { editingLine = nil } })) {
             TextField("Texte de la ligne", text: $lineDraft)
@@ -253,7 +253,7 @@ struct StudyTextTab: View {
         } message: {
             Text("Ta correction est gardée ; la relecture automatique n'y touchera plus.")
         }
-        .sheet(isPresented: $showVerify) { VerifySheet(reader: reader).preferredColorScheme(.dark) }
+        .sheet(isPresented: $showVerify) { VerifySheet(reader: reader).preferredColorScheme(Theme.current.colorScheme) }
         .sheet(isPresented: $showCompare) { CompareEnginesView(reader: reader).environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review) }
     }
 
@@ -445,9 +445,9 @@ struct StudyTextTab: View {
                 // Icône seule (le nom s'écrivait en colonne dans le panneau étroit) ; le nom est dans le menu.
                 HStack(spacing: 4) {
                     Image(systemName: OCREngineMenu.icon(reader.ocrPage?.engine))
-                    Image(systemName: "chevron.down").font(.system(size: 10, weight: .bold))
+                    Image(systemName: "chevron.down").font(Atelier.font(10, weight: .bold))
                 }
-                .font(.system(size: 13, weight: .semibold))
+                .font(Atelier.font(13, weight: .semibold))
                 .padding(.horizontal, 10).padding(.vertical, 6)
                 .background(Atelier.surfaceHigh, in: Capsule())
             }
@@ -468,13 +468,13 @@ struct StudyTextTab: View {
                         Text(LayoutEngineMenu.engine(layoutEngineRaw).shortTitle)
                             .strikethrough(!LayoutEngineMenu.engine(layoutEngineRaw).isAvailable())
                     }
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(Atelier.font(13, weight: .semibold))
                     .padding(.horizontal, 8).padding(.vertical, 6)
                     .background(Atelier.surfaceHigh, in: Capsule())
                 }
                 .accessibilityLabel("Moteur de mise en page : \(LayoutEngineMenu.engine(layoutEngineRaw).title)")
             }
-            Toggle(isOn: $furigana) { Text("ふりがな").font(.system(size: 13, weight: .semibold)) }
+            Toggle(isOn: $furigana) { Text("ふりがな").font(Atelier.font(13, weight: .semibold)) }
                 .toggleStyle(.button)
                 .accessibilityLabel("Furigana sur le texte extrait")
             Spacer()
@@ -541,7 +541,7 @@ struct StudyTextTab: View {
             AtelierLabel("Traduction", tint: Atelier.Tint.ai)
             if let translation {
                 Text(translation)
-                    .font(.system(size: 15))
+                    .font(Atelier.font(15))
                     .foregroundStyle(Atelier.textPrimary)
                     .textSelection(.enabled)
                 Text("DeepL").font(.caption2).foregroundStyle(Atelier.textTertiary)
@@ -553,7 +553,7 @@ struct StudyTextTab: View {
                     Button {
                         Task { await translate(text) }
                     } label: {
-                        HStack { if translating { ProgressView().tint(.black) }; Text("Traduire en français") }
+                        HStack { if translating { ProgressView().tint(Atelier.onAccentInk) }; Text("Traduire en français") }
                     }
                     .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.ai))
                     .disabled(translating)
@@ -580,7 +580,7 @@ struct StudyTextTab: View {
             } else {
                 Button { reader.ocrWholeDocument() } label: {
                     Label("Lire tout le document", systemImage: "doc.text.viewfinder")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(Atelier.font(14, weight: .semibold))
                 }
                 .foregroundStyle(Atelier.Tint.japanese)
                 Text("Rend les pages photo (scans) cherchables. Une seule fois : le résultat est gardé.")
@@ -641,7 +641,7 @@ struct FormattedOCRText: View {
             ForEach(blocks.indices, id: \.self) { i in
                 switch blocks[i] {
                 case .heading(let level, let text):
-                    Text(text).font(.system(size: level == 1 ? 22 : 18, weight: .bold))
+                    Text(text).font(Atelier.font(level == 1 ? 22 : 18, weight: .bold))
                         .foregroundStyle(Atelier.textPrimary).padding(.top, i == 0 ? 0 : 6)
                 case .paragraph(let text):
                     Text(text).font(Atelier.jp).lineSpacing(7).foregroundStyle(Atelier.textPrimary)
@@ -653,7 +653,7 @@ struct FormattedOCRText: View {
                                     Text(rows[r][c]).font(r == 0 ? Atelier.jp.bold() : Atelier.jp)
                                         .padding(.horizontal, 8).padding(.vertical, 5)
                                         .frame(maxWidth: .infinity, alignment: .leading)
-                                        .overlay(Rectangle().strokeBorder(Atelier.hairline, lineWidth: 1))
+                                        .overlay(Rectangle().strokeBorder(Atelier.hairline, lineWidth: Atelier.border(1)))
                                 }
                             }
                         }
@@ -714,13 +714,13 @@ struct StudyNotesTab: View {
                     .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.annotate))
                     .disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 Button { reader.newNote() } label: { Label("Flottante", systemImage: "note.text.badge.plus") }
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(Atelier.font(13, weight: .semibold))
                     .foregroundStyle(Atelier.Tint.annotate)
                 Spacer()
                 // Notes, surlignages et signets du livre en fichier `.md`, écrit d'abord puis partagé (recette
                 // 1.3.2 (61) : l'ancien partage n'ouvrait rien sur l'iPad).
                 Button { shareMarkdown() } label: {
-                    Label("Markdown", systemImage: "square.and.arrow.up").font(.system(size: 13, weight: .semibold))
+                    Label("Markdown", systemImage: "square.and.arrow.up").font(Atelier.font(13, weight: .semibold))
                 }
                 .foregroundStyle(Atelier.Tint.annotate)
                 .accessibilityHint("Partage les notes, surlignages et signets du livre en fichier Markdown")
@@ -803,7 +803,7 @@ struct StudyNotesTab: View {
 
     private func note(_ comment: PageComment, showPage: Bool = false) -> some View {
         HStack(alignment: .top, spacing: 10) {
-            RoundedRectangle(cornerRadius: 2).fill(Atelier.Tint.annotate).frame(width: 3)
+            RoundedRectangle(cornerRadius: Atelier.corner(2)).fill(Atelier.Tint.annotate).frame(width: 3)
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
                     if showPage { Text("p. \(reader.document.pageLabel(comment.pageIndex))").font(Atelier.mono).foregroundStyle(Atelier.textTertiary) }
@@ -828,7 +828,7 @@ struct StudyNotesTab: View {
                             .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.annotate))
                             .keyboardShortcut(.return, modifiers: .command)
                         Button("Annuler") { editingID = nil }
-                            .font(.system(size: 13, weight: .semibold))
+                            .font(Atelier.font(13, weight: .semibold))
                             .keyboardShortcut(.cancelAction)
                     }
                 } else {
@@ -845,7 +845,7 @@ struct StudyNotesTab: View {
                 // Modifier : le texte se modifie ici même (recette 1.3.2 (62), N1). Toucher la note ouvre toujours
                 // sa fenêtre flottante, pour le dessin.
                 Button { startEdit(comment) } label: {
-                    Image(systemName: "square.and.pencil").font(.system(size: 13, weight: .semibold))
+                    Image(systemName: "square.and.pencil").font(Atelier.font(13, weight: .semibold))
                         .foregroundStyle(Atelier.Tint.annotate)
                 }
                 .buttonStyle(.plain)

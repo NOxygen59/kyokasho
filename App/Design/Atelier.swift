@@ -16,6 +16,12 @@ enum Atelier {
     static var textPrimary: Color { Theme.current.ink.opacity(0.96) }
     static var textSecondary: Color { Theme.current.secondaryInk }
     static var textTertiary: Color { Theme.current.tertiaryInk }
+    /// Encres liées à la variante de la palette (nuit, clair, sépia) : sur une couleur de fonction, contraste, ombre.
+    static var onAccentInk: Color { Theme.current.onAccent }
+    static var contrastInk: Color { Theme.current.contrast }
+    static var shadow: Color { Theme.current.shadowTint }
+    /// Voile derrière une fenêtre, lu dans le style.
+    static var scrim: Color { AppStyle.current.scrim }
 
     /// Une couleur par fonction.
     enum Tint {
@@ -28,16 +34,31 @@ enum Atelier {
 
     // MARK: Mesures
 
-    static let radius: CGFloat = 18
-    static let smallRadius: CGFloat = 11
+    // Forme : lue dans le style en cours (`AppStyle.current`, voir Styles.swift).
+    /// Arrondi d'un élément d'interface : valeur d'origine (style Atelier) × `cornerScale` du style. Les dessins
+    /// posés sur la page (sélection OCR, repères) n'en dépendent pas.
+    static func corner(_ base: CGFloat) -> CGFloat { base * AppStyle.current.cornerScale }
+    static var radius: CGFloat { corner(18) }
+    static var smallRadius: CGFloat { corner(11) }
+    /// Épaisseur d'une bordure d'interface : valeur d'origine × `borderScale` du style.
+    static func border(_ base: CGFloat) -> CGFloat { base * AppStyle.current.borderScale }
+    /// Matière d'iOS demandée, ou fond plein du panneau si le style n'utilise pas de flou.
+    static func material(_ base: Material) -> AnyShapeStyle {
+        AppStyle.current.usesMaterials ? AnyShapeStyle(base) : AnyShapeStyle(surface)
+    }
     static let gap: CGFloat = 14
     static let panelWidth: CGFloat = 372
 
     // MARK: Typographie
 
-    static func display(_ size: CGFloat) -> Font { .system(size: size, weight: .semibold, design: .default) }
+    /// Police de l'interface : taille d'origine, famille du style (`AppStyle.fontDesign`). Le japonais (Hiragino), le
+    /// texte à chasse fixe et le texte de la page (panneau OCR, taille choisie dans les réglages) n'en dépendent pas.
+    static func font(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
+        .system(size: size, weight: weight, design: AppStyle.current.fontDesign)
+    }
+    static func display(_ size: CGFloat) -> Font { font(size, weight: .semibold) }
     /// Petites étiquettes en capitales espacées, style plan d'architecte.
-    static let label = Font.system(size: 11, weight: .semibold).width(.expanded)
+    static var label: Font { font(11, weight: .semibold).width(.expanded) }
     static let mono = Font.system(size: 13, weight: .medium, design: .monospaced)
     static let jp = Font.custom("HiraginoSans-W3", size: 17)
 }
@@ -55,17 +76,52 @@ struct AtelierPanel: ViewModifier {
             // à chaque image quand la page défile derrière) et ombre portée par la forme seule
             // (sinon tout le contenu, textes et icônes, est redessiné à part pour la calculer).
             .background {
-                RoundedRectangle(cornerRadius: radius, style: .continuous)
-                    .fill(Atelier.surface.opacity(0.97))
-                    .shadow(color: .black.opacity(0.28), radius: 16, y: 7)
+                let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
+                switch AppStyle.current.panelFill {
+                case .solid:
+                    shape.fill(Atelier.surface.opacity(0.97))
+                        .atelierShadow(opacity: 0.28, radius: 16, y: 7)
+                case .glass:
+                    // Style Glassmorphism seulement : flou recalculé quand la page défile derrière (batterie, #20).
+                    shape.fill(.ultraThinMaterial)
+                        .overlay(shape.fill(Atelier.surface.opacity(0.45)))
+                        .atelierShadow(opacity: 0.28, radius: 16, y: 7)
+                }
             }
             .overlay {
-                RoundedRectangle(cornerRadius: radius, style: .continuous).strokeBorder(Atelier.hairline, lineWidth: 1)
+                let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
+                switch AppStyle.current.panelEdge {
+                case .hairline: shape.strokeBorder(Atelier.hairline, lineWidth: Atelier.border(1))
+                case .ink: shape.strokeBorder(Atelier.textPrimary, lineWidth: Atelier.border(1))
+                case .glow: shape.strokeBorder(Atelier.Tint.read.opacity(0.8), lineWidth: Atelier.border(1))
+                    .atelierGlow(Atelier.Tint.read.opacity(0.55))
+                }
             }
     }
 }
 
 extension View {
+    /// Famille du style appliquée aux styles de texte iOS (`.caption`, `.headline`…). `fontDesign` n'existe qu'à
+    /// partir d'iOS 16.1 : en 16.0, ces textes gardent la famille d'iOS (les textes `Atelier.font` suivent quand même).
+    @ViewBuilder
+    func atelierFontDesign() -> some View {
+        if #available(iOS 16.1, *) { fontDesign(AppStyle.current.fontDesign) } else { self }
+    }
+
+    /// Halo lumineux (bord néon du style Synthwave).
+    func atelierGlow(_ color: Color) -> some View { shadow(color: color, radius: 8) }
+
+    /// Ombre portée selon le style (`AppStyle.shadowKind`). Valeurs = celles d'origine pour une ombre douce ; appliquée
+    /// là où l'était `.shadow`, donc au même calque (sur la forme seule pour les panneaux, voir `AtelierPanel`).
+    @ViewBuilder
+    func atelierShadow(opacity: Double, radius: CGFloat, y: CGFloat) -> some View {
+        switch AppStyle.current.shadowKind {
+        case .soft: shadow(color: Atelier.shadow.opacity(opacity), radius: radius, y: y)
+        case .hard(let offset): shadow(color: Atelier.shadow.opacity(min(1, opacity * 2)), radius: 0, x: offset, y: offset)
+        case .none: self
+        }
+    }
+
     func atelierPanel(padding: CGFloat = 0, radius: CGFloat = Atelier.radius) -> some View {
         modifier(AtelierPanel(padding: padding, radius: radius))
     }
@@ -97,9 +153,9 @@ struct ToolButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: icon)
-                .font(.system(size: 19, weight: .medium))
+                .font(Atelier.font(19, weight: .medium))
                 .frame(width: 46, height: 46)
-                .foregroundStyle(active ? Color.black.opacity(0.85) : Atelier.textPrimary)
+                .foregroundStyle(active ? Atelier.onAccentInk.opacity(0.85) : Atelier.textPrimary)
                 .background {
                     RoundedRectangle(cornerRadius: Atelier.smallRadius, style: .continuous)
                         .fill(active ? tint : Color.clear)
@@ -128,7 +184,7 @@ struct CapsuleButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: icon)
-                .font(.system(size: 17, weight: .medium))
+                .font(Atelier.font(17, weight: .medium))
                 .frame(width: 40, height: 40)
                 .foregroundStyle(active ? tint : Atelier.textPrimary)
                 .contentShape(Rectangle())
@@ -153,9 +209,9 @@ struct AtelierButtonStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 15, weight: .semibold))
+            .font(Atelier.font(15, weight: .semibold))
             .padding(.horizontal, 16).padding(.vertical, 10)
-            .foregroundStyle(Color.black.opacity(0.85))
+            .foregroundStyle(Atelier.onAccentInk.opacity(0.85))
             .background(tint, in: RoundedRectangle(cornerRadius: Atelier.smallRadius, style: .continuous))
             .opacity(configuration.isPressed ? 0.8 : 1)
             .scaleEffect(configuration.isPressed ? 0.97 : 1)
@@ -184,14 +240,14 @@ struct PillTabs<T: Hashable>: View {
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { selection = value }
                 } label: {
                     HStack(spacing: 6) {
-                        Image(systemName: icon).font(.system(size: 13, weight: .semibold))
+                        Image(systemName: icon).font(Atelier.font(13, weight: .semibold))
                         // Nom seulement sur l'onglet actif : jamais coupé, même dans un panneau étroit.
-                        if on { Text(title).font(.system(size: 13, weight: .semibold)).lineLimit(1).fixedSize() }
+                        if on { Text(title).font(Atelier.font(13, weight: .semibold)).lineLimit(1).fixedSize() }
                     }
                     .padding(.horizontal, 10).padding(.vertical, 7)
                     .frame(maxWidth: on ? .infinity : nil)
                     .frame(minWidth: 40)
-                    .foregroundStyle(on ? Color.black.opacity(0.85) : Atelier.textSecondary)
+                    .foregroundStyle(on ? Atelier.onAccentInk.opacity(0.85) : Atelier.textSecondary)
                     .background(on ? tint : Color.clear, in: Capsule())
                     .contentShape(Capsule())
                 }

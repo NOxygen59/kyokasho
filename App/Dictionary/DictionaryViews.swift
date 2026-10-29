@@ -53,11 +53,11 @@ struct DictionarySearchView: View {
                         session.clear()
                     } label: {
                         Text(item.rawValue)
-                            .font(.system(size: compact ? 12 : 14, weight: .semibold))
+                            .font(Atelier.font(compact ? 12 : 14, weight: .semibold))
                             .lineLimit(1)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 9)
-                            .foregroundStyle(shelf == item ? Color.black.opacity(0.85) : Atelier.textSecondary)
+                            .foregroundStyle(shelf == item ? Atelier.onAccentInk.opacity(0.85) : Atelier.textSecondary)
                             .background(shelf == item ? Atelier.Tint.japanese : Atelier.surfaceHigh,
                                         in: Capsule())
                     }
@@ -111,7 +111,7 @@ struct DictionarySearchView: View {
                     } }
             }
             .environmentObject(dictionaryModel)
-            .preferredColorScheme(.dark)
+            .preferredColorScheme(Theme.current.colorScheme)
         }
         .sheet(isPresented: $showLexicon) {
             NavigationStack {
@@ -120,7 +120,7 @@ struct DictionarySearchView: View {
                         Button("OK") { showLexicon = false }
                     } }
             }
-            .preferredColorScheme(.dark)
+            .preferredColorScheme(Theme.current.colorScheme)
         }
     }
 
@@ -196,7 +196,7 @@ struct DictionarySearchView: View {
                             Text(String(character)).font(.custom("HiraMinProN-W6", size: 28))
                                 .frame(maxWidth: .infinity, minHeight: 56)
                                 .foregroundStyle(Atelier.textPrimary)
-                                .background(Atelier.surfaceHigh, in: RoundedRectangle(cornerRadius: 10))
+                                .background(Atelier.surfaceHigh, in: RoundedRectangle(cornerRadius: Atelier.corner(10)))
                         }
                         .buttonStyle(.plain)
                     }
@@ -213,7 +213,7 @@ struct DictionarySearchView: View {
                         Button { openKanji(entry.expression) } label: {
                             Text(entry.expression).font(.custom("HiraMinProN-W6", size: 25))
                                 .padding(10).foregroundStyle(Atelier.textPrimary)
-                                .background(Atelier.surfaceHigh, in: RoundedRectangle(cornerRadius: 10))
+                                .background(Atelier.surfaceHigh, in: RoundedRectangle(cornerRadius: Atelier.corner(10)))
                         }
                         .buttonStyle(.plain)
                     }

@@ -75,9 +75,9 @@ struct UpdateBanner: View {
     var body: some View {
         if let latest = update.available {
             HStack(spacing: 12) {
-                Image(systemName: "arrow.down.app.fill").font(.system(size: 22)).foregroundStyle(Atelier.Tint.read)
+                Image(systemName: "arrow.down.app.fill").font(Atelier.font(22)).foregroundStyle(Atelier.Tint.read)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Kyōkasho \(latest.version) disponible").font(.system(size: 15, weight: .semibold))
+                    Text("Kyōkasho \(latest.version) disponible").font(Atelier.font(15, weight: .semibold))
                         .foregroundStyle(Atelier.textPrimary)
                     if let notes = latest.notes {
                         Text(notes).font(.footnote).foregroundStyle(Atelier.textSecondary).lineLimit(2)

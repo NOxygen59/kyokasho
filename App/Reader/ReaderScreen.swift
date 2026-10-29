@@ -150,7 +150,7 @@ struct ReaderScreen: View {
                     if reader.isBuilding {
                         HStack(spacing: 10) {
                             ProgressView().tint(Atelier.Tint.read)
-                            Text("Préparation des pages…").font(.system(size: 14, weight: .medium))
+                            Text("Préparation des pages…").font(Atelier.font(14, weight: .medium))
                                 .foregroundStyle(Atelier.textSecondary)
                         }
                         .padding(.horizontal, 18).padding(.vertical, 12)
@@ -303,7 +303,7 @@ struct ReaderScreen: View {
                 }
             }
             .environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review)
-            .preferredColorScheme(.dark)
+            .preferredColorScheme(Theme.current.colorScheme)
         }
         .confirmationDialog("Surlignage", isPresented: Binding(get: { reader.tappedHighlight != nil },
                                                                set: { if !$0 { reader.tappedHighlight = nil } })) {
@@ -348,10 +348,10 @@ struct ReaderScreen: View {
                     }
                     if reader.placingAnchorFor != nil {
                         HStack(spacing: 10) {
-                            Text("Touche le mot de la page où ancrer la note").font(.system(size: 14, weight: .semibold))
+                            Text("Touche le mot de la page où ancrer la note").font(Atelier.font(14, weight: .semibold))
                             Button("Annuler") { reader.placingAnchorFor = nil }.fontWeight(.bold)
                         }
-                        .foregroundStyle(Color.black.opacity(0.85))
+                        .foregroundStyle(Atelier.onAccentInk.opacity(0.85))
                         .padding(.horizontal, 14).padding(.vertical, 8)
                         .background(Atelier.Tint.annotate, in: Capsule())
                         .frame(maxWidth: .infinity, alignment: .top)
@@ -365,7 +365,7 @@ struct ReaderScreen: View {
                         PageFilmstrip(reader: reader)
                             .overlay(alignment: .topTrailing) {
                                 Button { setFilmstrip(false) } label: {
-                                    Image(systemName: "chevron.down").font(.system(size: 12, weight: .bold))
+                                    Image(systemName: "chevron.down").font(Atelier.font(12, weight: .bold))
                                         .frame(width: 28, height: 28).foregroundStyle(Atelier.textPrimary)
                                         .background(Atelier.surfaceHigh, in: Circle())
                                 }
@@ -376,7 +376,7 @@ struct ReaderScreen: View {
                             .overlay(alignment: .topLeading) {
                                 // #49 : supprimer des pages ferme le lecteur, puis ouvre « Pages du document » sur la page.
                                 Button { model.requestPageEdit(documentId: reader.document.id, page: reader.focusSource) } label: {
-                                    Image(systemName: "trash").font(.system(size: 12, weight: .bold))
+                                    Image(systemName: "trash").font(Atelier.font(12, weight: .bold))
                                         .frame(width: 28, height: 28).foregroundStyle(Atelier.textPrimary)
                                         .background(Atelier.surfaceHigh, in: Circle())
                                 }
@@ -396,7 +396,7 @@ struct ReaderScreen: View {
                     }
                     if !filmstripVisible {
                         Button { setFilmstrip(true) } label: {
-                            Label("Pages", systemImage: "chevron.up").font(.system(size: 13, weight: .semibold))
+                            Label("Pages", systemImage: "chevron.up").font(Atelier.font(13, weight: .semibold))
                                 .padding(.horizontal, 14).padding(.vertical, 8)
                                 .foregroundStyle(Atelier.textPrimary)
                                 .atelierPanel(radius: 18)
@@ -429,7 +429,7 @@ struct ReaderScreen: View {
         HStack(spacing: 4) {
             CapsuleButton(icon: "chevron.left", label: "Bibliothèque") { dismiss() }
             VStack(alignment: .leading, spacing: 1) {
-                Text(reader.document.title).font(.system(size: 15, weight: .semibold)).lineLimit(1)
+                Text(reader.document.title).font(Atelier.font(15, weight: .semibold)).lineLimit(1)
                     .foregroundStyle(Atelier.textPrimary)
                 HStack(spacing: 6) {
                     Text("\(reader.document.pageLabel(reader.currentSourcePage)) / \(reader.document.pageLabel(reader.document.pageCount - 1))")
@@ -556,7 +556,7 @@ struct ReaderScreen: View {
                     Label("Pagination et réglages de ce document", systemImage: "slider.horizontal.3")
                 }
             } label: {
-                Image(systemName: "ellipsis").font(.system(size: 17, weight: .semibold))
+                Image(systemName: "ellipsis").font(Atelier.font(17, weight: .semibold))
                     .frame(width: 40, height: 40).foregroundStyle(Atelier.textPrimary)
             }
             Rectangle().fill(Atelier.hairline).frame(width: 1, height: 22).padding(.horizontal, 4)
@@ -597,7 +597,7 @@ struct ReaderScreen: View {
             } label: {
                 Text("辞").font(.custom("HiraMinProN-W6", size: 21))
                     .frame(width: 46, height: 46)
-                    .foregroundStyle(reader.lookupMode ? Color.black.opacity(0.85) : Atelier.textPrimary)
+                    .foregroundStyle(reader.lookupMode ? Atelier.onAccentInk.opacity(0.85) : Atelier.textPrimary)
                     .background(reader.lookupMode ? Atelier.Tint.japanese : Color.clear,
                                 in: RoundedRectangle(cornerRadius: Atelier.smallRadius, style: .continuous))
                     .contentShape(Rectangle())
@@ -806,11 +806,11 @@ struct FilmstripCell: View {
     var body: some View {
         VStack(spacing: 3) {
             ZStack {
-                RoundedRectangle(cornerRadius: 5).fill(Atelier.surfaceHigh)
-                if let image { Image(uiImage: image).resizable().scaledToFit().clipShape(RoundedRectangle(cornerRadius: 4)) }
+                RoundedRectangle(cornerRadius: Atelier.corner(5)).fill(Atelier.surfaceHigh)
+                if let image { Image(uiImage: image).resizable().scaledToFit().clipShape(RoundedRectangle(cornerRadius: Atelier.corner(4))) }
             }
             .frame(width: 46, height: 62)
-            .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(visible ? Self.visibleMark : .clear, lineWidth: 3))
+            .overlay(RoundedRectangle(cornerRadius: Atelier.corner(5)).strokeBorder(visible ? Self.visibleMark : .clear, lineWidth: Atelier.border(3)))
             Text(label).font(.system(size: 10, weight: visible ? .bold : .semibold, design: .monospaced))
                 .foregroundStyle(visible ? Self.visibleMark : Atelier.textTertiary)
         }
@@ -838,14 +838,14 @@ struct OCRStatusDot: View {
             switch reader.ocrState {
             case .running:
                 HStack(spacing: 4) { ProgressView().controlSize(.mini).tint(Atelier.Tint.japanese); Text("lecture…") }
-                    .font(.system(size: 11))
+                    .font(Atelier.font(11))
             case .failed:
-                Label("OCR", systemImage: "exclamationmark.triangle.fill").font(.system(size: 11)).foregroundStyle(.orange)
+                Label("OCR", systemImage: "exclamationmark.triangle.fill").font(Atelier.font(11)).foregroundStyle(.orange)
             case .idle:
                 if let engine {
                     HStack(spacing: 4) {
                         Circle().fill(Atelier.Tint.japanese).frame(width: 6, height: 6)
-                        Text(OCREngineID.displayName(engine)).font(.system(size: 11))
+                        Text(OCREngineID.displayName(engine)).font(Atelier.font(11))
                     }
                 }
             }
@@ -932,7 +932,7 @@ struct HighlightMenu: View {
             ForEach(HighlightColor.allCases, id: \.self) { color in
                 Button { onPick(color) } label: {
                     Circle().fill(Color(color.uiColor)).frame(width: 26, height: 26)
-                        .overlay(Circle().stroke(.white.opacity(0.5), lineWidth: 1))
+                        .overlay(Circle().stroke(Atelier.contrastInk.opacity(0.5), lineWidth: Atelier.border(1)))
                 }
                 .buttonStyle(PressScale())
                 .accessibilityLabel("Surligner en \(color.frenchName)")
@@ -1051,7 +1051,7 @@ struct OCRHighlightControls: View {
                 .fontWeight(.semibold)
                 .keyboardShortcut(.escape, modifiers: [])
         }
-        .font(.system(size: 14))
+        .font(Atelier.font(14))
         .padding(.horizontal, 14).padding(.vertical, 8)
         .atelierPanel(radius: 20)
     }

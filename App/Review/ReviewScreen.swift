@@ -49,7 +49,7 @@ struct ReviewScreen: View {
             if !Task.isCancelled { advance(excluding: nil) }
         }
         .sheet(isPresented: $showBrowser, onDismiss: { advance(excluding: nil) }) {
-            CardBrowserView().environmentObject(review).preferredColorScheme(.dark)
+            CardBrowserView().environmentObject(review).preferredColorScheme(Theme.current.colorScheme)
         }
         .alert("Erreur", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) {
             Button("OK", role: .cancel) {}
@@ -86,7 +86,7 @@ struct ReviewScreen: View {
     private func count(_ n: Int, _ label: String, _ tint: Color) -> some View {
         HStack(spacing: 5) {
             Text("\(n)").font(Atelier.mono).foregroundStyle(tint)
-            Text(label).font(.system(size: 12)).foregroundStyle(Atelier.textTertiary)
+            Text(label).font(Atelier.font(12)).foregroundStyle(Atelier.textTertiary)
         }
     }
 
@@ -150,12 +150,12 @@ struct ReviewScreen: View {
                     ForEach(Grade.allCases) { grade in
                         Button { answer(grade) } label: {
                             VStack(spacing: 3) {
-                                Text(grade.label).font(.system(size: 17, weight: .semibold))
+                                Text(grade.label).font(Atelier.font(17, weight: .semibold))
                                 Text(preview[grade].map { ReviewScheduler.intervalLabel(from: now, to: $0) } ?? "—")
                                     .font(Atelier.mono).opacity(0.75)
                             }
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .foregroundStyle(Color.black.opacity(0.85))
+                            .foregroundStyle(Atelier.onAccentInk.opacity(0.85))
                             .background(tint(grade), in: RoundedRectangle(cornerRadius: Atelier.radius, style: .continuous))
                         }
                         .buttonStyle(PressScale())
@@ -167,9 +167,9 @@ struct ReviewScreen: View {
             } else {
                 Button { reveal() } label: {
                     VStack(spacing: 6) {
-                        Image(systemName: "eye").font(.system(size: 22, weight: .semibold))
-                        Text("Montrer la réponse").font(.system(size: 17, weight: .semibold))
-                        Text("ou touche la carte · Espace").font(.system(size: 12)).opacity(0.6)
+                        Image(systemName: "eye").font(Atelier.font(22, weight: .semibold))
+                        Text("Montrer la réponse").font(Atelier.font(17, weight: .semibold))
+                        Text("ou touche la carte · Espace").font(Atelier.font(12)).opacity(0.6)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .foregroundStyle(Atelier.textPrimary)
