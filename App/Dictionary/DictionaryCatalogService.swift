@@ -82,6 +82,43 @@ final class DictionaryCatalogService: ObservableObject {
 
     func cancel() { task?.cancel() }
 
+    /// Version du lexique fourni dans le paquet (`nil` : app construite sans lui). Lue une fois.
+    static let bundledRevision: String? = BundledLexicon.url().flatMap { try? BundledLexicon.revision(of: $0) }
+
+    func installedBundled(in model: DictionaryModel) -> DictionaryInfo? {
+        model.dictionaries.first { $0.title == BundledLexicon.title }
+    }
+
+    /// Lexique fourni avec l'app : importé depuis le paquet, sans réseau. Même titre d'une version à l'autre :
+    /// l'importeur remplace l'ancienne version à sa place dans l'ordre.
+    func installBundled(model: DictionaryModel) {
+        guard working == nil, let database = model.database, let zip = BundledLexicon.url() else { return }
+        let id = BundledLexicon.resource
+        errors[id] = nil
+        working = (id, .importing(0))
+        task = Task { [weak self] in
+            do {
+                var last = Date.distantPast
+                let info = try await Task.detached(priority: .userInitiated) {
+                    try DictionaryImporter(database: database).importDictionary(at: zip) { p in
+                        guard Date().timeIntervalSince(last) > 0.1 || p.fraction >= 1 else { return }
+                        last = Date()
+                        Task { @MainActor in self?.working = (id, .importing(p.fraction)) }
+                    }
+                }.value
+                Diagnostics.log("dictionnaires : « \(info.title) » (\(info.revision)) installé depuis l'app", "dictionnaire")
+            } catch is CancellationError {
+            } catch {
+                self?.errors[id] = error.localizedDescription
+                Diagnostics.log("dictionnaires : échec du lexique fourni — \(error.localizedDescription)", "dictionnaire")
+            }
+            model.reload()
+            model.applyFirstLanguage()
+            self?.working = nil
+            self?.task = nil
+        }
+    }
+
     /// Lit les index publiés des dictionnaires installés depuis le catalogue (sur demande seulement).
     func checkUpdates(model: DictionaryModel) {
         guard !checking else { return }
@@ -134,6 +171,7 @@ struct DictionaryCatalogView: View {
 
     var body: some View {
         List {
+            Section("Fourni avec l'app") { bundledRow }
             Section {
                 ForEach(DictionaryCatalog.entries) { entry in row(entry) }
             } footer: {
@@ -155,6 +193,48 @@ struct DictionaryCatalogView: View {
             }
         }
         .navigationTitle("Catalogue")
+    }
+
+    /// Lexique du design d'intérieur : déjà dans l'app, rien à télécharger.
+    private var bundledRow: some View {
+        let installed = service.installedBundled(in: model)
+        let bundled = DictionaryCatalogService.bundledRevision
+        let id = BundledLexicon.resource
+        return VStack(alignment: .leading, spacing: 5) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(BundledLexicon.name).font(.body.weight(.semibold))
+                Text("FR").font(.caption2.weight(.bold))
+                    .padding(.horizontal, 5).padding(.vertical, 1)
+                    .background(Atelier.surfaceHigh, in: Capsule())
+                Text("conseillé").font(.caption2.weight(.semibold)).foregroundStyle(.green)
+            }
+            Text(BundledLexicon.summary).font(.subheadline).foregroundStyle(.secondary)
+            Text("Licence : \(BundledLexicon.license)").font(.caption2).foregroundStyle(.tertiary)
+            if service.working?.id == id, case .importing(let f)? = service.working?.phase {
+                HStack { ProgressView(value: f); Text("Import").font(.caption) }
+            } else if bundled == nil {
+                Text("Absent de cette version de l'app.").font(.caption).foregroundStyle(.secondary)
+            } else if let installed {
+                HStack {
+                    Label("Installé · \(installed.revision)", systemImage: "checkmark.circle.fill")
+                        .font(.caption).foregroundStyle(.green)
+                    Spacer()
+                    if let bundled, BundledLexicon.needsUpdate(installedRevision: installed.revision, bundledRevision: bundled) {
+                        Button("Mettre à jour (\(bundled))") { service.installBundled(model: model) }
+                            .font(.caption.weight(.semibold))
+                            .disabled(service.working != nil)
+                    }
+                }
+            } else {
+                Button { service.installBundled(model: model) } label: { Label("Installer", systemImage: "plus.circle") }
+                    .font(.subheadline.weight(.semibold))
+                    .disabled(service.working != nil)
+            }
+            if let error = service.errors[id] {
+                Text("Échec : \(error)").font(.caption).foregroundStyle(.red)
+            }
+        }
+        .padding(.vertical, 3)
     }
 
     private func row(_ entry: CatalogEntry) -> some View {
@@ -218,7 +298,9 @@ struct DictionaryLicensesView: View {
                 let entry = DictionaryCatalog.entry(forInstalledTitle: d.title)
                 VStack(alignment: .leading, spacing: 4) {
                     Text(d.title).font(.subheadline.weight(.semibold))
-                    if let entry { Text("Licence : \(entry.license)").font(.caption) }
+                    if let license = entry?.license ?? (d.title == BundledLexicon.title ? BundledLexicon.license : nil) {
+                        Text("Licence : \(license)").font(.caption)
+                    }
                     if let author = d.author, !author.isEmpty { Text("Auteur : \(author)").font(.caption).foregroundStyle(.secondary) }
                     if let a = d.attribution, !a.isEmpty { Text(a).font(.caption2).foregroundStyle(.secondary) }
                     if let url = d.url, !url.isEmpty { Text(url).font(.caption2).foregroundStyle(.tertiary).textSelection(.enabled) }
@@ -226,7 +308,7 @@ struct DictionaryLicensesView: View {
                 .padding(.vertical, 2)
             }
             Section {
-                Text("JMdict, JMnedict et KANJIDIC sont la propriété de l'Electronic Dictionary Research and Development Group (edrdg.org), utilisés selon sa licence. Jitendex s'appuie sur JMdict et Tatoeba. Les dictionnaires sont téléchargés depuis leurs sites et restent sur l'iPad.")
+                Text("JMdict, JMnedict et KANJIDIC sont la propriété de l'Electronic Dictionary Research and Development Group (edrdg.org), utilisés selon sa licence. Jitendex s'appuie sur JMdict et Tatoeba. Les dictionnaires sont téléchargés depuis leurs sites et restent sur l'iPad. Le lexique du design d'intérieur reprend des extraits du Wiktionnaire et de Wikipédia (CC BY-SA 4.0) ; chaque entrée donne l'adresse de sa page.")
                     .font(.caption).foregroundStyle(.secondary)
             }
         }

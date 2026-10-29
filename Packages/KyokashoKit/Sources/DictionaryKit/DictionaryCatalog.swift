@@ -2,6 +2,7 @@
 // Copyright (c) 2026 NOxygen59
 
 import Foundation
+import ZIPFoundation
 
 /// Dictionnaires téléchargeables dans l'app (Issue #50, plan validé par NOxygen59 le 29/10/2026).
 ///
@@ -95,5 +96,36 @@ public struct YomitanIndex: Decodable, Equatable, Sendable {
     /// Mise à jour disponible : la version publiée diffère de celle installée (titre et révision gardés en base).
     public func isNewer(thanInstalledTitle title: String, revision: String) -> Bool {
         (self.revision.map { $0 != revision } ?? false) || (self.revision == nil && self.title != title)
+    }
+}
+
+/// Dictionnaire **fourni avec l'app** (#50, D4 piste B ; décision de NOxygen59 du 29/10/2026) : le lexique du design
+/// d'intérieur, construit sur le Mac par `tools/build_domain_lexicon.py` et ajouté au paquet par `build_ipa.sh`. Il
+/// n'est jamais dans le dépôt ; une app construite sans lui le signale. L'installer l'importe depuis le paquet, sans
+/// réseau ; le titre ne porte pas de date, donc une nouvelle version remplace l'ancienne à la même place.
+public enum BundledLexicon {
+    public static let resource = "lexique-interieur"
+    public static let title = "Lexique du design d'intérieur (Wikipédia, Wiktionnaire)"
+    public static let name = "Lexique du design d'intérieur"
+    public static let summary = "Termes de l'architecture, de l'intérieur, du mobilier et des matériaux : sens en français (Wiktionnaire), titres français et anglais et première phrase (Wikipédia)."
+    public static let license = "CC BY-SA 4.0 (contributeurs du Wiktionnaire et de Wikipédia)"
+
+    /// Le fichier dans le paquet de l'app, s'il y a été ajouté au build.
+    public static func url(in bundle: Bundle = .main) -> URL? {
+        bundle.url(forResource: resource, withExtension: "zip")
+    }
+
+    /// Version du fichier (`revision` de son `index.json`), lue sans importer.
+    public static func revision(of zip: URL) throws -> String {
+        let archive = try Archive(url: zip, accessMode: .read)
+        guard let entry = archive["index.json"] else { throw DictionaryImporter.ImportError.notADictionary }
+        var data = Data()
+        _ = try archive.extract(entry) { data.append($0) }
+        return try YomitanIndex.decode(data).version
+    }
+
+    /// Une mise à jour existe si la version fournie diffère de celle installée.
+    public static func needsUpdate(installedRevision: String, bundledRevision: String) -> Bool {
+        installedRevision != bundledRevision
     }
 }
