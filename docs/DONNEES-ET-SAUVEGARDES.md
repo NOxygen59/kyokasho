@@ -23,6 +23,8 @@ Les chemins ci-dessous sont relatifs au conteneur de l'app sur iPad. Ils ne dés
 | Diagnostic | `Documents/Diagnostics/journal.txt` | Potentiellement personnel ; partager après contrôle |
 | Vignettes, pages préparées/nettoyées | `Caches/`, dont Thumbnails, Sharpened, Equalized | Régénérables ; ne pas supprimer une tâche active |
 | Reprise d'une modification des pages (ajout, suppression, restauration) | `Application Support/Kyokasho/page-shift.json` et PDF de passage | État transactionnel : ne pas effacer à la main |
+| Paquets de sécurité (export complet) | `Documents/Paquets de sécurité/<date>/<titre>.kyokasho` (visible dans Fichiers) | Version d'un document **avant** son remplacement par un paquet importé ; à garder ou effacer à la main |
+| Paquets en cours (export complet) | `tmp/Export/`, `tmp/PackageImport-<UUID>/`, `tmp/PackageWrite-<UUID>/` | Temporaires : extraction vérifiée d'un paquet importé, fichiers écrits pour un paquet ; effacés après usage |
 | Copies des modifications des pages (#49) | `Application Support/Kyokasho/PageShift/<opération>/` (`manifest.json`, PDF d'origine et préparé, lectures IA, rapport, brouillons) | Gardées **30 jours** (décision de NOxygen59) pour restaurer des pages supprimées ; effacées au lancement suivant l'échéance, ou avec le document. Les copies des ajouts faites avant les fiches suivent la date du dossier |
 | Identités et archives des pages (#49) | `kyokasho.sqlite` : `pageIdentity`, `pageEdit`, `pageEditRow`, colonne `document.layoutVersion` | Identifiant et numéro imprimé de chaque page ; opérations ; lignes des pages supprimées (notes, encre, surlignages, OCR, repères, rotations, identité, cartes détachées) jusqu'à la purge |
 
@@ -59,3 +61,7 @@ Le test n'est réussi qu'après lecture fonctionnelle, pas parce qu'une archive 
 Réinstaller une ancienne app ne garantit pas qu'elle lira une base migrée. Un retour arrière sûr combine code et sauvegarde compatible. Pour un refactoring sans schéma modifié, conserver tout de même les fichiers utilisateur avant les essais de reprise après panne.
 
 L'ajout de pages coordonne plusieurs stockages et comporte des fenêtres non intégralement testées : [audit](AUDIT-V1.3.md). Ne pas supprimer un marqueur de reprise pour masquer un problème ; conserver une copie du marqueur, des bases et des fichiers concernés avant toute analyse.
+
+## Paquet d'un document (`.kyokasho`)
+
+« Exporter… » → « Paquet Kyōkasho (tout le document) » écrit un zip : PDF exact, lignes du document dans `kyokasho.sqlite` (fiche, annotations, OCR et retouches, identités des pages), lectures IA et traductions (`Analysis/<id>/`), rapport d'analyse, brouillons, langue OCR et modes du lecteur, liste des dictionnaires. Ni cartes, ni conversations, ni réglages de l'app, ni dictionnaires, ni modèles (décision de NOxygen59, 29/10/2026). Import (Importer → « Importer un paquet Kyōkasho ») : paquet vérifié en entier avant toute modification (empreintes, PDF = identifiant, chemins autorisés) ; document déjà présent remplacé seulement après accord, après un paquet de sécurité de sa version actuelle. Code : `ReaderCore/DocumentPackage.swift`, `App/Library/DocumentPackageService.swift`.

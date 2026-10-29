@@ -14,6 +14,9 @@ struct LibraryView: View {
     @EnvironmentObject private var model: AppModel
     @State private var filter: Filter = .all
     @State private var showImportOptions = false
+    /// Paquet Kyōkasho ouvert et vérifié, en attente d'accord (document déjà présent) ou de résultat.
+    @State private var pendingPackage: DocumentPackageService.Pending?
+    @State private var packageMessage: String?
     @State private var showSettings = false
     @State private var showDrive = false
     @State private var showBench = false
@@ -46,6 +49,35 @@ struct LibraryView: View {
         return docs
     }
 
+    /// Paquet choisi : vérifié d'abord ; nouveau document installé tout de suite, document existant après accord.
+    private func openPackage(_ url: URL) {
+        Task {
+            do {
+                let pending = try await model.openPackage(url)
+                if pending.exists { pendingPackage = pending } else { install(pending, replacing: false) }
+            } catch {
+                packageMessage = "Paquet refusé : \(error.localizedDescription)"
+            }
+        }
+    }
+
+    private func install(_ pending: DocumentPackageService.Pending, replacing: Bool) {
+        pendingPackage = nil
+        Task {
+            do {
+                let safety = try await model.installPackage(pending, replacing: replacing)
+                var text = "« \(pending.contents.manifest.title) » importé avec ses notes, OCR, lectures IA, traductions et analyse."
+                if let safety { text += " Ancienne version gardée : Paquets de sécurité/\(safety.deletingLastPathComponent().lastPathComponent)." }
+                if !pending.missingDictionaries.isEmpty {
+                    text += " Dictionnaires à télécharger (Réglages → Dictionnaires → Catalogue) : " + pending.missingDictionaries.joined(separator: ", ") + "."
+                }
+                packageMessage = text
+            } catch {
+                packageMessage = "Import impossible : \(error.localizedDescription)"
+            }
+        }
+    }
+
     var body: some View {
         GeometryReader { geo in
             let landscape = geo.size.width > geo.size.height
@@ -73,9 +105,20 @@ struct LibraryView: View {
             }
         }
         .sheet(isPresented: $showImportOptions) {
-            ImportOptionsView { urls, language in model.importFiles(urls, language: language) }
+            ImportOptionsView(onImport: { urls, language in model.importFiles(urls, language: language) },
+                              onPackage: { url in openPackage(url) })
                 .preferredColorScheme(.dark)
         }
+        .alert("Remplacer « \(pendingPackage?.contents.manifest.title ?? "") » ?",
+               isPresented: Binding(get: { pendingPackage?.exists == true }, set: { if !$0, let p = pendingPackage { model.discardPackage(p); pendingPackage = nil } })) {
+            Button("Annuler", role: .cancel) {}
+            Button("Remplacer", role: .destructive) { if let p = pendingPackage { install(p, replacing: true) } }
+        } message: {
+            Text("Ce document est déjà dans ta bibliothèque. Sa version actuelle (notes, OCR, lectures IA…) sera d'abord enregistrée dans Fichiers → Kyōkasho → Paquets de sécurité, puis remplacée par celle du paquet.")
+        }
+        .alert("Paquet Kyōkasho", isPresented: Binding(get: { packageMessage != nil }, set: { if !$0 { packageMessage = nil } })) {
+            Button("OK", role: .cancel) {}
+        } message: { Text(packageMessage ?? "") }
         .sheet(item: $analyzing) { document in
             DocumentAnalysisSheet(document: document).environmentObject(model).preferredColorScheme(.dark)
         }
