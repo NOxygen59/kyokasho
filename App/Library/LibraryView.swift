@@ -162,8 +162,10 @@ struct LibraryView: View {
         .sheet(isPresented: $showImagesToPDF) {
             ImagesToPDFView().environmentObject(model).preferredColorScheme(Theme.current.colorScheme)
         }
-        .sheet(isPresented: $showSettings) {
+        // Fermeture des Réglages : la palette ou le style choisis s'appliquent à toute l'app (reconstruction).
+        .sheet(isPresented: $showSettings, onDismiss: { themes.applyAppearance() }) {
             SettingsView().environmentObject(themes).environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review).preferredColorScheme(Theme.current.colorScheme)
+                .atelierSheet()
         }
         .sheet(isPresented: $showDrive) {
             DriveBrowserView().environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review).preferredColorScheme(Theme.current.colorScheme)

@@ -25,8 +25,9 @@ struct KyokashoApp: App {
     var body: some Scene {
         WindowGroup {
             RootView()
-                // Changer de thème reconstruit toute l'interface avec les nouvelles couleurs.
-                .id(themes.identity)
+                // Reconstruit toute l'interface quand une nouvelle apparence est appliquée, c'est-à-dire à la fermeture
+                // des Réglages : la page Thèmes reste ouverte pendant le choix et tout est à jour en sortant.
+                .id(themes.appliedAppearance)
                 .environmentObject(themes)
                 .environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review)
                 .preferredColorScheme(themes.theme.colorScheme)

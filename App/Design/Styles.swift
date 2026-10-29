@@ -61,7 +61,69 @@ struct AppStyle: Identifiable, Equatable {
     static let wabiSabi = AppStyle(id: "wabisabi", name: "Wabi-Sabi", summary: "Tons de terre, serif, formes douces",
                                    defaultTheme: "terre", cornerScale: 1.35, fontDesign: .serif)
 
-    static let all: [AppStyle] = [.atelier, .brutalism, .glass, .synthwave, .swiss, .wabiSabi]
+    // S3 à S5 : styles doux, typographiques, numériques et artisanaux. Ils réemploient les jetons éprouvés ; les
+    // ornements dessinés et la disposition Bento restent des lots séparés afin de ne pas mêler apparence et structure.
+    static let clay = AppStyle(id: "clay", name: "Claymorphism", summary: "Volumes pastel, formes généreuses",
+                               defaultTheme: "clair", cornerScale: 1.6, fontDesign: .rounded,
+                               borderScale: 0.7, usesMaterials: false)
+    static let neumorphism = AppStyle(id: "neumorphism", name: "Neumorphism", summary: "Relief doux, surfaces ton sur ton",
+                                      defaultTheme: "clair", cornerScale: 1.3, borderScale: 0.5, usesMaterials: false)
+    static let ethereal = AppStyle(id: "ethereal", name: "Ethereal", summary: "Verre léger, courbes aériennes",
+                                   defaultTheme: "sakura", cornerScale: 1.5, fontDesign: .serif,
+                                   borderScale: 0.6, panelFill: .glass)
+    static let minimalism = AppStyle(id: "minimalism", name: "Minimalism", summary: "Formes sobres, aucun relief superflu",
+                                     defaultTheme: "clair", cornerScale: 0.6, shadowKind: .none,
+                                     borderScale: 0.6, usesMaterials: false)
+
+    static let editorial = AppStyle(id: "editorial", name: "Editorial Design", summary: "Hiérarchie nette, serif éditoriale",
+                                    defaultTheme: "clair", cornerScale: 0.2, fontDesign: .serif,
+                                    shadowKind: .none, borderScale: 0.7, usesMaterials: false)
+    static let luxury = AppStyle(id: "luxury", name: "Luxury Typography", summary: "Encre et or, typographie élégante",
+                                 defaultTheme: "encre", cornerScale: 0.3, fontDesign: .serif,
+                                 shadowKind: .none, borderScale: 1.2, usesMaterials: false, panelEdge: .ink)
+    static let victorian = AppStyle(id: "victorian", name: "Victorian", summary: "Sépia, cadres d'encre, serif classique",
+                                    defaultTheme: "sepia", cornerScale: 0.2, fontDesign: .serif,
+                                    borderScale: 1.5, usesMaterials: false, panelEdge: .ink)
+    static let maximalism = AppStyle(id: "maximalism", name: "Maximalism", summary: "Couleurs fortes, relief et bord lumineux",
+                                     defaultTheme: "braise", cornerScale: 1.2, fontDesign: .rounded,
+                                     borderScale: 2, usesMaterials: false, panelEdge: .glow)
+
+    static let cybercore = AppStyle(id: "cybercore", name: "Cybercore", summary: "Terminal sombre, lignes techniques",
+                                    defaultTheme: "foret", cornerScale: 0.3, fontDesign: .monospaced,
+                                    borderScale: 1.4, usesMaterials: false, panelEdge: .glow)
+    static let cyberpunk = AppStyle(id: "cyberpunk", name: "Cyberpunk", summary: "Angles vifs, néon et ombres franches",
+                                    defaultTheme: "synthwave", cornerScale: 0.2, fontDesign: .monospaced,
+                                    shadowKind: .hard(offset: 4), borderScale: 1.7, usesMaterials: false, panelEdge: .glow)
+    static let y2k = AppStyle(id: "y2k", name: "Y2K Aesthetic", summary: "Bulles chromées, verre et couleur",
+                             defaultTheme: "lagon", cornerScale: 1.4, fontDesign: .rounded,
+                             borderScale: 1.2, panelFill: .glass, panelEdge: .glow)
+    static let pixel = AppStyle(id: "pixel", name: "Pixel Art", summary: "Angles carrés, grille et ombres décalées",
+                               defaultTheme: "foret", cornerScale: 0, fontDesign: .monospaced,
+                               shadowKind: .hard(offset: 4), borderScale: 2, usesMaterials: false, panelEdge: .ink)
+
+    static let scrapbook = AppStyle(id: "scrapbook", name: "Scrapbook", summary: "Papier découpé, couches et contraste",
+                                    defaultTheme: "sepia", cornerScale: 0.6, fontDesign: .serif,
+                                    shadowKind: .hard(offset: 3), borderScale: 1.5, usesMaterials: false)
+    static let sketch = AppStyle(id: "sketch", name: "Conceptual Sketch", summary: "Trait d'étude, papier clair, chasse fixe",
+                                defaultTheme: "clair", cornerScale: 0.4, fontDesign: .monospaced,
+                                shadowKind: .none, borderScale: 1.5, usesMaterials: false, panelEdge: .ink)
+    static let bohemian = AppStyle(id: "bohemian", name: "Bohemian", summary: "Terre chaude, serif et formes libres",
+                                   defaultTheme: "terre", cornerScale: 1.2, fontDesign: .serif,
+                                   shadowKind: .hard(offset: 2), borderScale: 0.8, usesMaterials: false)
+    static let surrealism = AppStyle(id: "surrealism", name: "Surrealism", summary: "Courbes oniriques et profondeur vitrée",
+                                     defaultTheme: "soir", cornerScale: 1.5, fontDesign: .serif,
+                                     borderScale: 0.8, panelFill: .glass)
+    static let bento = AppStyle(id: "bento", name: "Bento Grid", summary: "Tuiles claires et panneaux compacts",
+                               defaultTheme: "clair", cornerScale: 1.1, shadowKind: .none,
+                               borderScale: 0.8, usesMaterials: false)
+
+    static let all: [AppStyle] = [
+        .atelier, .brutalism, .glass, .synthwave, .swiss, .wabiSabi,
+        .clay, .neumorphism, .ethereal, .minimalism,
+        .editorial, .luxury, .victorian, .maximalism,
+        .cybercore, .cyberpunk, .y2k, .pixel,
+        .scrapbook, .sketch, .bohemian, .surrealism, .bento,
+    ]
 
     /// Style en cours (lu par `Atelier`). Changé par `ThemeManager`.
     static var current: AppStyle = .atelier
