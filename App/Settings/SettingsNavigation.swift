@@ -247,6 +247,7 @@ struct ReaderHelpSettingsView: View {
                 Text("Un problème d'affichage ou de lecture ? Active le journal, refais l'action, puis partage-le pour qu'on puisse comprendre ce qui se passe.")
                     .font(.subheadline).foregroundStyle(Atelier.textSecondary)
             }
+            IntroSettingsSection()
             DiagnosticsSection()
             Section {
                 Toggle("Afficher le suivi des ressources", isOn: $monitorEnabled)

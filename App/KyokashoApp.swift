@@ -93,6 +93,8 @@ struct RootView: View {
         // Tâches IA toujours en cours ; le moniteur de la bibliothèque est ancré à droite de la liste (recette 63).
         .overlay(alignment: .bottomLeading) { ActivityDock(showsMonitor: false).padding(Atelier.gap) }
         .task { AppUpdate.shared.checkAtLaunch(); MorphologyService.shared.loadIfInstalled() }
+        // Visite guidée au premier lancement, nouveautés après une mise à jour.
+        .modifier(IntroPresenter(hasLibrary: { [model] in !model.documents.isEmpty }))
         // Une seule couverture pour tous les onglets (#16) : changer d'onglet remplace le lecteur sans refermer
         // ni rouvrir la feuille plein écran.
         .fullScreenCover(isPresented: Binding(
