@@ -140,6 +140,11 @@ struct DictionaryCatalogView: View {
                 Text("Téléchargés depuis le site officiel de chaque projet, puis importés sur l'iPad. Rien d'autre ne part en ligne. Les dictionnaires ne sont pas dans la sauvegarde : on les retélécharge.")
             }
             Section {
+                NavigationLink { DictionaryLicensesView() } label: {
+                    Label("Sources et licences", systemImage: "doc.text")
+                }
+            }
+            Section {
                 Button { service.checkUpdates(model: model) } label: {
                     HStack {
                         Label("Rechercher des mises à jour", systemImage: "arrow.triangle.2.circlepath")
@@ -199,5 +204,32 @@ struct DictionaryCatalogView: View {
             }
         }
         .padding(.vertical, 3)
+    }
+}
+
+/// Attribution demandée par les licences (CC BY-SA, EDRDG) : chaque dictionnaire installé, sa source et le texte
+/// d'attribution fourni dans son `index.json`.
+struct DictionaryLicensesView: View {
+    @EnvironmentObject private var model: DictionaryModel
+
+    var body: some View {
+        List {
+            ForEach(model.dictionaries) { d in
+                let entry = DictionaryCatalog.entry(forInstalledTitle: d.title)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(d.title).font(.subheadline.weight(.semibold))
+                    if let entry { Text("Licence : \(entry.license)").font(.caption) }
+                    if let author = d.author, !author.isEmpty { Text("Auteur : \(author)").font(.caption).foregroundStyle(.secondary) }
+                    if let a = d.attribution, !a.isEmpty { Text(a).font(.caption2).foregroundStyle(.secondary) }
+                    if let url = d.url, !url.isEmpty { Text(url).font(.caption2).foregroundStyle(.tertiary).textSelection(.enabled) }
+                }
+                .padding(.vertical, 2)
+            }
+            Section {
+                Text("JMdict, JMnedict et KANJIDIC sont la propriété de l'Electronic Dictionary Research and Development Group (edrdg.org), utilisés selon sa licence. Jitendex s'appuie sur JMdict et Tatoeba. Les dictionnaires sont téléchargés depuis leurs sites et restent sur l'iPad.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+        }
+        .navigationTitle("Sources et licences")
     }
 }

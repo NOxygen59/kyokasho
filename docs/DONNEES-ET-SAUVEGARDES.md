@@ -12,7 +12,7 @@ Les chemins ci-dessous sont relatifs au conteneur de l'app sur iPad. Ils ne dés
 | PDF importés | `Application Support/Kyokasho/Documents/<id>.pdf`, `DocumentStorage` | Donnée utilisateur, conserver |
 | Bibliothèque, OCR, notes, repères, encre, réglages de base | `Application Support/Kyokasho/kyokasho.sqlite`, `AppDatabase` | Donnée persistante ; ne pas assimiler les retouches à un cache |
 | Cartes et médias | `ReviewStore`, `review.sqlite` et dossier `Media`, racine fournie par `ReviewModel` | Sauvegarder base et médias ensemble |
-| Dictionnaires | `Application Support/Kyokasho/Dictionaries`, `DictionaryDatabase` | Base SQLite des dictionnaires ; profils et carnet dans la base de l'app |
+| Dictionnaires | `Application Support/Kyokasho/Dictionaries`, `DictionaryDatabase` | Base SQLite des dictionnaires ; profils et carnet dans la base de l'app. Ceux du catalogue (#50) se retéléchargent : `tools/backup_container.py --omit-dictionaries` les laisse de côté (option explicite, car un dictionnaire importé à la main ne se retélécharge pas). Téléchargement temporaire : `tmp/DictionaryDownload-<UUID>/`, effacé après import |
 | Audio des dictionnaires | `Documents/Audio`, `DictionaryModel` | Copié par la sauvegarde mais non vérifié : non essentiel (décision de NOxygen59, 28/10/2026) |
 | Traductions de définitions | `Application Support/definition-translations.json`, `DefinitionTranslations` | Traductions françaises et votes 👍/👎 ; donnée personnelle |
 | Brouillons de notes | `Application Support/Kyokasho/NoteDrafts/<id>.json`, `NoteDraftStore` | Brouillons non encore ajoutés (RET-008) ; donnée personnelle |

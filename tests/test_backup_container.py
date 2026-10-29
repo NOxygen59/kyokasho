@@ -169,6 +169,22 @@ class BackupTests(unittest.TestCase):
         restored = storage.restore(archive, self.root / "restauration")
         self.assertFalse((restored / storage.MODELS).exists())
 
+    def test_dictionaries_can_be_left_out_and_are_kept_by_default(self):
+        # Dictionnaires retéléchargeables (#50) : laissés de côté seulement sur demande explicite.
+        target = self.source / storage.DICTIONARIES / "dictionaries.sqlite-synthetique"
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text("synthetique")
+        kept = storage.verify(self.create())
+        self.assertIn(storage.DICTIONARIES + "/dictionaries.sqlite-synthetique", kept["files"])
+        archive = storage.backup(self.source, self.root / "sauvegarde-sans-dico", source_stopped=True,
+                                 omit_dictionaries=True)
+        manifest = storage.verify(archive)
+        self.assertIn(storage.DICTIONARIES, manifest["omitted"])
+        restored = storage.restore(archive, self.root / "restauration-sans-dico")
+        self.assertFalse((restored / storage.DICTIONARIES).exists())
+        for name, value in self.payloads.items():
+            self.assertEqual((restored / name).read_bytes(), value)
+
     def test_copy_failure_never_publishes_backup(self):
         with patch.object(storage.shutil, "copyfile", side_effect=OSError("disque plein")):
             with self.assertRaises(OSError):
