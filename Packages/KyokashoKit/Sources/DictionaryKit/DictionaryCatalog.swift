@@ -59,6 +59,18 @@ public enum DictionaryCatalog {
         return String(title[..<open]).trimmingCharacters(in: .whitespaces)
     }
 
+    /// Ordre de priorité quand NOxygen59 choisit la langue qui passe en premier (#50, D2) : parmi les places occupées
+    /// par des dictionnaires du catalogue, ceux de `first` passent devant les autres langues, chacun gardant son rang
+    /// relatif ; les dictionnaires importés à la main (lexique, autres) ne bougent pas.
+    public static func ordered(titles: [String], first: CatalogEntry.Language) -> [Int] {
+        let language = titles.map { entry(forInstalledTitle: $0)?.language }
+        let slots = language.indices.filter { language[$0] != nil }
+        let refill = slots.filter { language[$0] == first } + slots.filter { language[$0] != first }
+        var order = Array(titles.indices)
+        for (slot, index) in zip(slots, refill) { order[slot] = index }
+        return order
+    }
+
     /// Entrée du catalogue d'un dictionnaire installé (par son titre), s'il en vient.
     public static func entry(forInstalledTitle title: String) -> CatalogEntry? {
         let base = baseTitle(title)

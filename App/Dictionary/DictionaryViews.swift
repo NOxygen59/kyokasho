@@ -372,6 +372,7 @@ struct FlowLayout: Layout {
 
 struct DictionaryManagerView: View {
     @EnvironmentObject private var dictionaryModel: DictionaryModel
+    @AppStorage(DictionaryModel.firstLanguageKey) private var firstLanguage = "fr"
     @State private var showImporter = false
     @State private var deleting: DictionaryInfo?
 
@@ -417,6 +418,12 @@ struct DictionaryManagerView: View {
                 NavigationLink { DictionaryCatalogView() } label: {
                     Label("Catalogue : télécharger des dictionnaires", systemImage: "books.vertical")
                 }
+                // Langue des définitions qui passe en premier (#50, D2) ; réordonne les dictionnaires du catalogue.
+                Picker("Langue en premier", selection: $firstLanguage) {
+                    Text("Français").tag("fr")
+                    Text("Anglais").tag("en")
+                }
+                .onChange(of: firstLanguage) { _ in dictionaryModel.applyFirstLanguage() }
                 Button { showImporter = true } label: { Label("Importer des dictionnaires (.zip)", systemImage: "plus") }
                     .disabled(dictionaryModel.importState != nil)
             }

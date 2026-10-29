@@ -74,6 +74,7 @@ final class DictionaryCatalogService: ObservableObject {
                 Diagnostics.log("dictionnaires : échec « \(entry.name) » — \(error.localizedDescription)", "dictionnaire")
             }
             model.reload()
+            model.applyFirstLanguage()
             self?.working = nil
             self?.task = nil
         }

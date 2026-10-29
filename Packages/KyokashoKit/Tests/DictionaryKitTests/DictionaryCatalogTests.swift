@@ -35,4 +35,14 @@ final class DictionaryCatalogTests: XCTestCase {
         XCTAssertTrue(noRevision.isNewer(thanInstalledTitle: "Jitendex.org [2026-09-01]", revision: "x"))
         XCTAssertFalse(noRevision.isNewer(thanInstalledTitle: "Jitendex.org [2026-10-03]", revision: "x"))
     }
+
+    /// D2 : la langue choisie passe en premier, les dictionnaires hors catalogue restent à leur place.
+    func testLanguageFirstOrdering() {
+        let titles = ["Mon lexique", "Jitendex.org [2026-10-03]", "KANJIDIC [2026-301]", "JMdict (French) [2026-10-28]", "KANJIDIC (French) [2026-301]"]
+        let fr = DictionaryCatalog.ordered(titles: titles, first: .french).map { titles[$0] }
+        XCTAssertEqual(fr, ["Mon lexique", "JMdict (French) [2026-10-28]", "KANJIDIC (French) [2026-301]", "Jitendex.org [2026-10-03]", "KANJIDIC [2026-301]"])
+        let en = DictionaryCatalog.ordered(titles: fr, first: .english).map { fr[$0] }
+        XCTAssertEqual(en.first, "Mon lexique")
+        XCTAssertEqual(Array(en[1...2]), ["Jitendex.org [2026-10-03]", "KANJIDIC [2026-301]"])
+    }
 }
