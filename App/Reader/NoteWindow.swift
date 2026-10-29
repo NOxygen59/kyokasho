@@ -66,7 +66,7 @@ struct NoteWindow: View {
         HStack(spacing: 10) {
             Image(systemName: "line.3.horizontal").foregroundStyle(Atelier.textTertiary)
             Text("Note · p. \(reader.document.pageLabel(current.pageIndex))")
-                .font(.system(size: 13, weight: .semibold)).foregroundStyle(Atelier.textSecondary).lineLimit(1)
+                .font(Atelier.font(13, weight: .semibold)).foregroundStyle(Atelier.textSecondary).lineLimit(1)
             Spacer(minLength: 4)
             toolButton(.pen(.black), icon: "pencil.tip", color: Atelier.contrastInk)
             toolButton(.pen(.systemRed), icon: "pencil.tip", color: .red)
@@ -81,7 +81,7 @@ struct NoteWindow: View {
             Button { reader.openNote = nil } label: { Image(systemName: "xmark").foregroundStyle(Atelier.textSecondary) }
                 .accessibilityLabel("Fermer la note")
         }
-        .font(.system(size: 14, weight: .semibold))
+        .font(Atelier.font(14, weight: .semibold))
         .buttonStyle(.plain)
         .padding(.horizontal, 12).padding(.vertical, 9)
         .background(Atelier.surfaceHigh.opacity(0.6))
@@ -129,7 +129,7 @@ struct NoteWindow: View {
     private func resizeHandle(w: CGFloat, h: CGFloat) -> some View {
         Image(systemName: "arrow.down.right.and.arrow.up.left")
             .rotationEffect(.degrees(90))
-            .font(.system(size: 11, weight: .bold))
+            .font(Atelier.font(11, weight: .bold))
             .foregroundStyle(Atelier.textTertiary)
             .frame(width: 30, height: 30)
             .contentShape(Rectangle())

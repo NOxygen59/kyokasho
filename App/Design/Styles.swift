@@ -20,6 +20,10 @@ struct AppStyle: Identifiable, Equatable {
     /// droits (styles Swiss, Neo-Brutalism…), plus de 1 = formes gonflées (Claymorphism).
     var cornerScale: CGFloat = 1
 
+    // MARK: Typographie
+    /// Famille du texte latin de l'interface (`Atelier.font`, et les styles de texte iOS à partir d'iOS 16.1).
+    var fontDesign: Font.Design = .default
+
     // MARK: Relief et bordure
     /// Ombres portées : douces (valeurs d'origine), dures et décalées (Neo-Brutalism), ou aucune (Swiss, Minimalism).
     enum ShadowKind: Equatable { case soft, hard(offset: CGFloat), none }

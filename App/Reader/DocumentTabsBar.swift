@@ -55,10 +55,10 @@ private struct MemoryNotice: View {
         HStack(spacing: 10) {
             Image(systemName: "memorychip").foregroundStyle(.orange)
             Text("\(count) documents ouverts : la mémoire peut se remplir, garde un œil sur le moniteur.")
-                .font(.system(size: 13)).foregroundStyle(Atelier.textPrimary)
+                .font(Atelier.font(13)).foregroundStyle(Atelier.textPrimary)
             if !(monitorEnabled && monitorShown) {
                 Button("Moniteur") { monitorEnabled = true; monitorShown = true }
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(Atelier.font(13, weight: .semibold))
             }
         }
         .padding(.horizontal, 16).padding(.vertical, 10)
@@ -92,7 +92,7 @@ struct DocumentTabsBar: View {
                         Button(document.title) { ReaderTabHandoff.shared.prepare(); model.openDocumentId = document.id }
                     }
                 } label: {
-                    Image(systemName: "plus").font(.system(size: 13, weight: .bold))
+                    Image(systemName: "plus").font(Atelier.font(13, weight: .bold))
                         .frame(width: 30, height: 30)
                         .atelierPanel(radius: 15)
                 }

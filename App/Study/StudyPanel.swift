@@ -31,7 +31,7 @@ struct StudyPanel: View {
                             let on = source == reader.focusSource
                             Button { reader.focus(source) } label: {
                                 Text("p. \(reader.document.pageLabel(source))")
-                                    .font(.system(size: 13, weight: .semibold))
+                                    .font(Atelier.font(13, weight: .semibold))
                                     .padding(.horizontal, 12).padding(.vertical, 5)
                                     .foregroundStyle(on ? Atelier.onAccentInk.opacity(0.85) : Atelier.textSecondary)
                                     .background(Capsule().fill(on ? Atelier.Tint.japanese : Atelier.surfaceHigh))
@@ -48,7 +48,7 @@ struct StudyPanel: View {
                 Spacer()
                 StudyWindowButtons()
                 Button(action: close) {
-                    Image(systemName: "xmark").font(.system(size: 14, weight: .semibold))
+                    Image(systemName: "xmark").font(Atelier.font(14, weight: .semibold))
                         .foregroundStyle(Atelier.textSecondary)
                         .frame(minWidth: 22, minHeight: 22)
                 }
@@ -445,9 +445,9 @@ struct StudyTextTab: View {
                 // Icône seule (le nom s'écrivait en colonne dans le panneau étroit) ; le nom est dans le menu.
                 HStack(spacing: 4) {
                     Image(systemName: OCREngineMenu.icon(reader.ocrPage?.engine))
-                    Image(systemName: "chevron.down").font(.system(size: 10, weight: .bold))
+                    Image(systemName: "chevron.down").font(Atelier.font(10, weight: .bold))
                 }
-                .font(.system(size: 13, weight: .semibold))
+                .font(Atelier.font(13, weight: .semibold))
                 .padding(.horizontal, 10).padding(.vertical, 6)
                 .background(Atelier.surfaceHigh, in: Capsule())
             }
@@ -468,13 +468,13 @@ struct StudyTextTab: View {
                         Text(LayoutEngineMenu.engine(layoutEngineRaw).shortTitle)
                             .strikethrough(!LayoutEngineMenu.engine(layoutEngineRaw).isAvailable())
                     }
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(Atelier.font(13, weight: .semibold))
                     .padding(.horizontal, 8).padding(.vertical, 6)
                     .background(Atelier.surfaceHigh, in: Capsule())
                 }
                 .accessibilityLabel("Moteur de mise en page : \(LayoutEngineMenu.engine(layoutEngineRaw).title)")
             }
-            Toggle(isOn: $furigana) { Text("ふりがな").font(.system(size: 13, weight: .semibold)) }
+            Toggle(isOn: $furigana) { Text("ふりがな").font(Atelier.font(13, weight: .semibold)) }
                 .toggleStyle(.button)
                 .accessibilityLabel("Furigana sur le texte extrait")
             Spacer()
@@ -541,7 +541,7 @@ struct StudyTextTab: View {
             AtelierLabel("Traduction", tint: Atelier.Tint.ai)
             if let translation {
                 Text(translation)
-                    .font(.system(size: 15))
+                    .font(Atelier.font(15))
                     .foregroundStyle(Atelier.textPrimary)
                     .textSelection(.enabled)
                 Text("DeepL").font(.caption2).foregroundStyle(Atelier.textTertiary)
@@ -580,7 +580,7 @@ struct StudyTextTab: View {
             } else {
                 Button { reader.ocrWholeDocument() } label: {
                     Label("Lire tout le document", systemImage: "doc.text.viewfinder")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(Atelier.font(14, weight: .semibold))
                 }
                 .foregroundStyle(Atelier.Tint.japanese)
                 Text("Rend les pages photo (scans) cherchables. Une seule fois : le résultat est gardé.")
@@ -641,7 +641,7 @@ struct FormattedOCRText: View {
             ForEach(blocks.indices, id: \.self) { i in
                 switch blocks[i] {
                 case .heading(let level, let text):
-                    Text(text).font(.system(size: level == 1 ? 22 : 18, weight: .bold))
+                    Text(text).font(Atelier.font(level == 1 ? 22 : 18, weight: .bold))
                         .foregroundStyle(Atelier.textPrimary).padding(.top, i == 0 ? 0 : 6)
                 case .paragraph(let text):
                     Text(text).font(Atelier.jp).lineSpacing(7).foregroundStyle(Atelier.textPrimary)
@@ -714,13 +714,13 @@ struct StudyNotesTab: View {
                     .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.annotate))
                     .disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 Button { reader.newNote() } label: { Label("Flottante", systemImage: "note.text.badge.plus") }
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(Atelier.font(13, weight: .semibold))
                     .foregroundStyle(Atelier.Tint.annotate)
                 Spacer()
                 // Notes, surlignages et signets du livre en fichier `.md`, écrit d'abord puis partagé (recette
                 // 1.3.2 (61) : l'ancien partage n'ouvrait rien sur l'iPad).
                 Button { shareMarkdown() } label: {
-                    Label("Markdown", systemImage: "square.and.arrow.up").font(.system(size: 13, weight: .semibold))
+                    Label("Markdown", systemImage: "square.and.arrow.up").font(Atelier.font(13, weight: .semibold))
                 }
                 .foregroundStyle(Atelier.Tint.annotate)
                 .accessibilityHint("Partage les notes, surlignages et signets du livre en fichier Markdown")
@@ -828,7 +828,7 @@ struct StudyNotesTab: View {
                             .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.annotate))
                             .keyboardShortcut(.return, modifiers: .command)
                         Button("Annuler") { editingID = nil }
-                            .font(.system(size: 13, weight: .semibold))
+                            .font(Atelier.font(13, weight: .semibold))
                             .keyboardShortcut(.cancelAction)
                     }
                 } else {
@@ -845,7 +845,7 @@ struct StudyNotesTab: View {
                 // Modifier : le texte se modifie ici même (recette 1.3.2 (62), N1). Toucher la note ouvre toujours
                 // sa fenêtre flottante, pour le dessin.
                 Button { startEdit(comment) } label: {
-                    Image(systemName: "square.and.pencil").font(.system(size: 13, weight: .semibold))
+                    Image(systemName: "square.and.pencil").font(Atelier.font(13, weight: .semibold))
                         .foregroundStyle(Atelier.Tint.annotate)
                 }
                 .buttonStyle(.plain)

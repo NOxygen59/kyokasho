@@ -40,7 +40,7 @@ struct IntroTourView: View {
                 ForEach(Array(steps.enumerated()), id: \.offset) { index, step in
                     VStack(spacing: 18) {
                         Image(systemName: step.icon)
-                            .font(.system(size: 54, weight: .light))
+                            .font(Atelier.font(54, weight: .light))
                             .foregroundStyle(Atelier.Tint.read)
                             .frame(height: 70)
                         Text(step.title).font(Atelier.display(28)).foregroundStyle(Atelier.textPrimary)

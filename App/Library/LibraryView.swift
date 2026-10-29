@@ -274,7 +274,7 @@ struct LibraryView: View {
                     .background(Atelier.Tint.japanese, in: RoundedRectangle(cornerRadius: Atelier.smallRadius, style: .continuous))
                 VStack(alignment: .leading, spacing: 0) {
                     Text("Kyōkasho").font(Atelier.display(19)).foregroundStyle(Atelier.textPrimary)
-                    Text("教科書 · atelier de lecture").font(.system(size: 11)).foregroundStyle(Atelier.textTertiary)
+                    Text("教科書 · atelier de lecture").font(Atelier.font(11)).foregroundStyle(Atelier.textTertiary)
                 }
             }
             VStack(alignment: .leading, spacing: 4) {
@@ -319,7 +319,7 @@ struct LibraryView: View {
                 Spacer()
                 Text("\(count)").font(Atelier.mono).foregroundStyle(on ? Atelier.onAccentInk.opacity(0.6) : Atelier.textTertiary)
             }
-            .font(.system(size: 15, weight: .medium))
+            .font(Atelier.font(15, weight: .medium))
             .padding(.horizontal, 10).padding(.vertical, 9)
             .foregroundStyle(on ? Atelier.onAccentInk.opacity(0.85) : Atelier.textPrimary)
             .background(on ? Atelier.Tint.read : Color.clear, in: RoundedRectangle(cornerRadius: Atelier.corner(10), style: .continuous))
@@ -341,7 +341,7 @@ struct LibraryView: View {
                         .background(tint, in: Capsule())
                 }
             }
-            .font(.system(size: 15, weight: .medium))
+            .font(Atelier.font(15, weight: .medium))
             .padding(.horizontal, 10).padding(.vertical, 9)
             .contentShape(Rectangle())
         }
@@ -354,7 +354,7 @@ struct LibraryView: View {
             AtelierLabel("Temps de lecture")
             Text(ReadingClock.format(readingTime.clock.elapsed(at: Date())))
                 .font(Atelier.display(30)).foregroundStyle(Atelier.textPrimary)
-            Text("livre ouvert à l'écran").font(.system(size: 13)).foregroundStyle(Atelier.textSecondary)
+            Text("livre ouvert à l'écran").font(Atelier.font(13)).foregroundStyle(Atelier.textSecondary)
         }
         .padding(14)
         .background(Atelier.surfaceHigh, in: RoundedRectangle(cornerRadius: Atelier.corner(14), style: .continuous))
@@ -479,7 +479,7 @@ struct LibraryView: View {
     /// Case de sélection sur la couverture.
     private func selectionMark(_ on: Bool) -> some View {
         Image(systemName: on ? "checkmark.circle.fill" : "circle")
-            .font(.system(size: 26, weight: .semibold))
+            .font(Atelier.font(26, weight: .semibold))
             .foregroundStyle(on ? Atelier.Tint.annotate : Atelier.textPrimary)
             .background(Circle().fill(Atelier.surface.opacity(0.8)))
             .padding(10)
@@ -490,7 +490,7 @@ struct LibraryView: View {
     private var selectionBar: some View {
         HStack(spacing: 12) {
             Text("\(batch.selected.count) sélectionné\(batch.selected.count > 1 ? "s" : "")")
-                .font(.system(size: 14, weight: .semibold)).foregroundStyle(Atelier.textSecondary)
+                .font(Atelier.font(14, weight: .semibold)).foregroundStyle(Atelier.textSecondary)
             Spacer()
             Button("Tout sélectionner") { batch.selectAll(filtered.map(\.id)) }
                 .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.read))
@@ -613,7 +613,7 @@ struct DocumentCard: View {
                 .atelierShadow(opacity: 0.5, radius: 12, y: 8)
                 if let category = document.category {
                     // Repère sur l'accueil (RET-039, #54).
-                    Text(category.title).font(.system(size: 11, weight: .semibold))
+                    Text(category.title).font(Atelier.font(11, weight: .semibold))
                         .padding(.horizontal, 8).padding(.vertical, 4)
                         .foregroundStyle(Atelier.onAccentInk.opacity(0.8))
                         .background(category == .textbook ? Atelier.Tint.read : Atelier.Tint.annotate, in: Capsule())
@@ -622,14 +622,14 @@ struct DocumentCard: View {
                 }
                 if document.driveFileId != nil {
                     Image(systemName: "externaldrive.badge.icloud")
-                        .font(.system(size: 12, weight: .bold))
+                        .font(Atelier.font(12, weight: .bold))
                         .padding(7)
                         .foregroundStyle(Atelier.onAccentInk.opacity(0.8))
                         .background(Atelier.Tint.cloud, in: Circle())
                         .padding(8)
                 }
             }
-            Text(document.title).font(.system(size: 15, weight: .semibold)).lineLimit(2)
+            Text(document.title).font(Atelier.font(15, weight: .semibold)).lineLimit(2)
                 .foregroundStyle(Atelier.textPrimary)
             HStack(spacing: 8) {
                 GeometryReader { g in

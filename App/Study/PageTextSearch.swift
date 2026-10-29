@@ -110,7 +110,7 @@ struct PageSearchField: View {
                     .accessibilityLabel("Effacer la recherche")
             }
         }
-        .font(.system(size: 14))
+        .font(Atelier.font(14))
         .padding(.horizontal, 10).padding(.vertical, 7)
         .background(Atelier.surfaceHigh, in: Capsule())
     }

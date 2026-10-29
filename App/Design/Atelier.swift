@@ -50,9 +50,14 @@ enum Atelier {
 
     // MARK: Typographie
 
-    static func display(_ size: CGFloat) -> Font { .system(size: size, weight: .semibold, design: .default) }
+    /// Police de l'interface : taille d'origine, famille du style (`AppStyle.fontDesign`). Le japonais (Hiragino), le
+    /// texte à chasse fixe et le texte de la page (panneau OCR, taille choisie dans les réglages) n'en dépendent pas.
+    static func font(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
+        .system(size: size, weight: weight, design: AppStyle.current.fontDesign)
+    }
+    static func display(_ size: CGFloat) -> Font { font(size, weight: .semibold) }
     /// Petites étiquettes en capitales espacées, style plan d'architecte.
-    static let label = Font.system(size: 11, weight: .semibold).width(.expanded)
+    static var label: Font { font(11, weight: .semibold).width(.expanded) }
     static let mono = Font.system(size: 13, weight: .medium, design: .monospaced)
     static let jp = Font.custom("HiraginoSans-W3", size: 17)
 }
@@ -81,6 +86,13 @@ struct AtelierPanel: ViewModifier {
 }
 
 extension View {
+    /// Famille du style appliquée aux styles de texte iOS (`.caption`, `.headline`…). `fontDesign` n'existe qu'à
+    /// partir d'iOS 16.1 : en 16.0, ces textes gardent la famille d'iOS (les textes `Atelier.font` suivent quand même).
+    @ViewBuilder
+    func atelierFontDesign() -> some View {
+        if #available(iOS 16.1, *) { fontDesign(AppStyle.current.fontDesign) } else { self }
+    }
+
     /// Ombre portée selon le style (`AppStyle.shadowKind`). Valeurs = celles d'origine pour une ombre douce ; appliquée
     /// là où l'était `.shadow`, donc au même calque (sur la forme seule pour les panneaux, voir `AtelierPanel`).
     @ViewBuilder
@@ -123,7 +135,7 @@ struct ToolButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: icon)
-                .font(.system(size: 19, weight: .medium))
+                .font(Atelier.font(19, weight: .medium))
                 .frame(width: 46, height: 46)
                 .foregroundStyle(active ? Atelier.onAccentInk.opacity(0.85) : Atelier.textPrimary)
                 .background {
@@ -154,7 +166,7 @@ struct CapsuleButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: icon)
-                .font(.system(size: 17, weight: .medium))
+                .font(Atelier.font(17, weight: .medium))
                 .frame(width: 40, height: 40)
                 .foregroundStyle(active ? tint : Atelier.textPrimary)
                 .contentShape(Rectangle())
@@ -179,7 +191,7 @@ struct AtelierButtonStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 15, weight: .semibold))
+            .font(Atelier.font(15, weight: .semibold))
             .padding(.horizontal, 16).padding(.vertical, 10)
             .foregroundStyle(Atelier.onAccentInk.opacity(0.85))
             .background(tint, in: RoundedRectangle(cornerRadius: Atelier.smallRadius, style: .continuous))
@@ -210,9 +222,9 @@ struct PillTabs<T: Hashable>: View {
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { selection = value }
                 } label: {
                     HStack(spacing: 6) {
-                        Image(systemName: icon).font(.system(size: 13, weight: .semibold))
+                        Image(systemName: icon).font(Atelier.font(13, weight: .semibold))
                         // Nom seulement sur l'onglet actif : jamais coupé, même dans un panneau étroit.
-                        if on { Text(title).font(.system(size: 13, weight: .semibold)).lineLimit(1).fixedSize() }
+                        if on { Text(title).font(Atelier.font(13, weight: .semibold)).lineLimit(1).fixedSize() }
                     }
                     .padding(.horizontal, 10).padding(.vertical, 7)
                     .frame(maxWidth: on ? .infinity : nil)

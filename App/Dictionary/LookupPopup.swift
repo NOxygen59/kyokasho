@@ -197,7 +197,7 @@ struct LookupPopup: View {
                 }
                 Button(action: close) { Image(systemName: "xmark") }.accessibilityLabel("Fermer")
             }
-            .font(.system(size: 15, weight: .semibold))
+            .font(Atelier.font(15, weight: .semibold))
             .foregroundStyle(Atelier.textSecondary)
             .padding(.horizontal, 14).padding(.vertical, 10)
             Divider().overlay(Atelier.hairline)
@@ -217,7 +217,7 @@ struct LookupPopup: View {
         }
         .overlay(alignment: .bottom) {
             if let toast {
-                Text(toast).font(.system(size: 14, weight: .semibold)).foregroundStyle(Atelier.textPrimary)
+                Text(toast).font(Atelier.font(14, weight: .semibold)).foregroundStyle(Atelier.textPrimary)
                     .padding(.horizontal, 14).padding(.vertical, 8)
                     .background(Atelier.surfaceHigh, in: Capsule())
                     .padding(.bottom, 14)

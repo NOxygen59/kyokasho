@@ -203,7 +203,7 @@ struct AITaskPill: View {
                             Circle().fill(badge.active ? Atelier.Tint.ai : Atelier.textSecondary)
                                 .frame(width: 5, height: 5)
                             Text("\(badge.name) · \(badge.activity)")
-                                .font(.system(size: 11, weight: .medium))
+                                .font(Atelier.font(11, weight: .medium))
                                 .lineLimit(1)
                         }
                         .foregroundStyle(Atelier.textPrimary)

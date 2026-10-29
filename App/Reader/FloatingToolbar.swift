@@ -74,7 +74,7 @@ struct FloatingToolbar<Items: View>: View {
     private func grip(vertical: Bool) -> some View {
         Image(systemName: "line.3.horizontal")
             .rotationEffect(.degrees(vertical ? 0 : 90))
-            .font(.system(size: 13, weight: .bold))
+            .font(Atelier.font(13, weight: .bold))
             .foregroundStyle(Atelier.textTertiary)
             .frame(width: vertical ? 46 : 22, height: vertical ? 22 : 46)
             .contentShape(Rectangle())
@@ -96,7 +96,7 @@ struct FloatingToolbar<Items: View>: View {
     private func styleButton(_ target: Style, icon: String, label: String, vertical: Bool) -> some View {
         let current = style == target
         return Button { setStyle(target) } label: {
-            Image(systemName: icon).font(.system(size: 12, weight: .semibold))
+            Image(systemName: icon).font(Atelier.font(12, weight: .semibold))
                 .frame(width: vertical ? 46 : 26, height: vertical ? 26 : 46)
                 .foregroundStyle(current ? Atelier.Tint.read : Atelier.textTertiary)
                 .contentShape(Rectangle())

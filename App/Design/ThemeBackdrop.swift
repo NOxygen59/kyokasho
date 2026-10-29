@@ -103,7 +103,7 @@ struct ThemeBackdrop: View {
             let center = CGPoint(x: size.width * a, y: size.height - 30)
             c.stroke(Path(ellipseIn: CGRect(x: center.x - 10, y: center.y - 10, width: 20, height: 20)),
                      with: .color(ink), lineWidth: 0.8)
-            c.draw(Text(String(UnicodeScalar(65 + i)!)).font(.system(size: 10, weight: .semibold)).foregroundColor(ink),
+            c.draw(Text(String(UnicodeScalar(65 + i)!)).font(Atelier.font(10, weight: .semibold)).foregroundColor(ink),
                    at: center)
         }
     }

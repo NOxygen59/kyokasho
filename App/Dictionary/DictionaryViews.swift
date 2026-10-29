@@ -53,7 +53,7 @@ struct DictionarySearchView: View {
                         session.clear()
                     } label: {
                         Text(item.rawValue)
-                            .font(.system(size: compact ? 12 : 14, weight: .semibold))
+                            .font(Atelier.font(compact ? 12 : 14, weight: .semibold))
                             .lineLimit(1)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 9)

@@ -150,7 +150,7 @@ struct SettingsEntryRow: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 13) {
-            Image(systemName: icon).font(.system(size: 18, weight: .medium))
+            Image(systemName: icon).font(Atelier.font(18, weight: .medium))
                 .foregroundStyle(tint).frame(width: 42, height: 42)
                 .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: Atelier.corner(12)))
             VStack(alignment: .leading, spacing: 5) {

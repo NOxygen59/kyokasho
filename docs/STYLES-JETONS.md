@@ -34,14 +34,15 @@ dessins, les furigana dessinés sur la page, les fichiers exportés.
 | `AppStyle.shadowKind` / `.atelierShadow(opacity:radius:y:)` | ombre portée : douce (valeurs d'origine), dure et décalée, ou aucune | douce |
 | `AppStyle.borderScale` / `Atelier.border(_:)` | facteur des épaisseurs de bordure de l'interface | 1 |
 | `AppStyle.usesMaterials` / `Atelier.material(_:)` | matières floutées d'iOS, ou fond plein du panneau | oui |
+| `AppStyle.fontDesign` / `Atelier.font(_:weight:)` | famille du texte latin de l'interface (taille d'origine gardée) ; `atelierFontDesign()` l'applique aux styles de texte iOS dès iOS 16.1 | `.default` |
 | `Atelier.onAccentInk` | texte ou icône posé sur une couleur de fonction pleine | noir (opacité propre à chaque usage) |
 | `Atelier.shadow` | ombre portée | noir |
 | `Atelier.scrim` | voile derrière une fenêtre au premier plan | noir |
 | `Atelier.contrastInk` | contraste maximal sur le fond de l'interface | blanc |
 
-### Mesures et typographie (existants, encore fixes)
+### Mesures et typographie
 
-`Atelier.gap` (14), `Atelier.panelWidth` (372), `Atelier.display(_:)`, `Atelier.label`, `Atelier.mono`, `Atelier.jp`.
+`Atelier.gap` (14), `Atelier.panelWidth` (372) : encore fixes. `Atelier.display(_:)` et `Atelier.label` suivent `fontDesign` ; `Atelier.mono` (chasse fixe) et `Atelier.jp` (Hiragino) gardent leur famille, voulue.
 
 Gardes automatiques (`StyleTokensGuardTests`) : aucun nouveau blanc ou noir en dur dans `App/` ; aucun arrondi en dur, sauf les 2 dessins posés sur la page (`ReaderScreen`, `Path(roundedRect:)`) ; aucune ombre ni matière en dur ; aucune épaisseur de bordure en dur, sauf le fond dessiné du thème et un trait posé sur la page.
 
@@ -62,7 +63,7 @@ Gardes automatiques (`StyleTokensGuardTests`) : aucun nouveau blanc ou noir en d
 | Marges `.padding(` en dur | 188 | 32 | |
 | Espacements `spacing:` en dur | 228 | 48 | surtout 10, 6, 8, 2, 12 : une échelle de 6 à 8 crans suffit |
 | Tailles `.frame(width/height:` en dur | 80 | 27 | souvent des zones de toucher et des icônes : garder 44 points minimum |
-| Polices à taille fixe `.system(size:` | 93 | 29 | **ne suivent pas la taille dynamique du texte** (accessibilité) |
+| Polices `.system(size:` | ~~93~~ 13 | 9 | **lot 2c fait** : 81 par `Atelier.font` ; restent les familles voulues (`design:`) et le texte de la page. **Taille dynamique toujours absente** : la rendre réglable change l'affichage, donc lot visuel à part, testé sur l'iPad |
 | Styles de texte iOS (`.title`, `.caption`…) | 251 | 39 | suivent la taille dynamique : bonne base |
 | Animations | 47 | 14 | 9 usages respectent déjà « Réduire les animations » |
 
@@ -79,7 +80,7 @@ Fichiers les plus chargés en valeurs directes : `LibraryView` (74), `ReaderScre
 | Relief | fait : `shadowKind`, `usesMaterials` | — |
 | État | `selected`, `pressed`, `disabled`, `danger`, `success` | opacités et couleurs système d'interface |
 | Espacement | échelle `space.xxs` à `space.xl` (2, 4, 6, 8, 12, 16, 24) | 188 marges, 228 espacements, à reprendre au fil des composants |
-| Typographie | rôles (`title`, `body`, `caption`, `label`, `mono`, `jp`) fondés sur les styles de texte iOS, pour garder la taille dynamique | 93 tailles fixes |
+| Typographie | fait : `fontDesign`. Restent : taille dynamique (lot visuel), famille japonaise par style (Mincho ou Gothic), styles de texte iOS en iOS 16.0 | — |
 
 Règle des lots de fondation : chaque remplacement garde **exactement** la valeur actuelle pour le style Atelier.
 Les écarts d'une ou deux unités entre usages ne sont pas « arrondis » pendant la fondation : ils le seront lors de

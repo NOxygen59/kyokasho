@@ -240,7 +240,7 @@ struct WebPanel: View {
                     HStack(spacing: 6) {
                         ForEach(Self.shortcuts, id: \.url) { site in
                             Button(site.name) { go(site.url) }
-                                .font(.system(size: 13, weight: .medium))
+                                .font(Atelier.font(13, weight: .medium))
                                 .padding(.horizontal, 10).padding(.vertical, 5)
                                 .background(Capsule().fill(Atelier.surfaceHigh))
                         }

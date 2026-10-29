@@ -29,6 +29,7 @@ struct KyokashoApp: App {
                 .environmentObject(themes)
                 .environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review)
                 .preferredColorScheme(themes.style.colorScheme)
+                .atelierFontDesign()
                 .tint(Atelier.Tint.read)
                 .onOpenURL { url in
                     // PDF ouvert depuis une autre app (« Ouvrir dans Kyōkasho »).
@@ -104,6 +105,7 @@ struct RootView: View {
             ReaderTabsHost()
                 .environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review)
                 .preferredColorScheme(AppStyle.current.colorScheme)
+                .atelierFontDesign()
                 .tint(Atelier.Tint.read)
         }
         // Retour à la bibliothèque ou app en arrière-plan : les IA rendent leur mémoire.

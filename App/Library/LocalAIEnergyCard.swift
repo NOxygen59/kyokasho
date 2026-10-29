@@ -32,18 +32,18 @@ struct LocalAIEnergyCard: View {
             case .general:
                 VStack(alignment: .leading, spacing: 6) {
                     Label("IA locale et batterie", systemImage: "bolt.batteryblock")
-                        .font(.system(size: 13, weight: .semibold)).foregroundStyle(Atelier.Tint.ai)
+                        .font(Atelier.font(13, weight: .semibold)).foregroundStyle(Atelier.Tint.ai)
                     Text("Les modèles d'IA locaux (OvisOCR2, GLM-OCR, Qwen) font travailler la puce à plein : la batterie baisse vite et l'iPad chauffe. Branche-le pour les longues analyses.")
-                        .font(.system(size: 12)).foregroundStyle(Atelier.textSecondary)
+                        .font(Atelier.font(12)).foregroundStyle(Atelier.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                     Button("Compris") { acknowledged = true }
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(Atelier.font(12, weight: .semibold))
                 }
                 .padding(12)
                 .background(Atelier.surfaceHigh, in: RoundedRectangle(cornerRadius: Atelier.corner(14), style: .continuous))
             case .activeOnBattery:
                 Label("IA locale en cours sur batterie", systemImage: "bolt.batteryblock")
-                    .font(.system(size: 12, weight: .semibold)).foregroundStyle(Atelier.Tint.ai)
+                    .font(Atelier.font(12, weight: .semibold)).foregroundStyle(Atelier.Tint.ai)
                     .padding(.horizontal, 12).padding(.vertical, 8)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(Atelier.surfaceHigh, in: RoundedRectangle(cornerRadius: Atelier.corner(14), style: .continuous))

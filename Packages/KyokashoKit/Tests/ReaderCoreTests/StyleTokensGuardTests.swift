@@ -61,6 +61,13 @@ final class StyleTokensGuardTests: XCTestCase {
                        "Bordure en dur : utiliser Atelier.border(_:)")
     }
 
+    /// Lot 2c : le texte latin de l'interface passe par `Atelier.font` (famille du style). Restent `.system` les
+    /// textes à famille voulue (`design:` chasse fixe, arrondie) et le texte de la page choisi dans les réglages.
+    func testInterfaceFontsUseStyleToken() throws {
+        XCTAssertEqual(try count(#"\.system\(size: (?:(?!design:)[^)])*\)"#), ["Reader/OCRTextViews.swift": 1],
+                       "Police système en dur : utiliser Atelier.font(_:weight:)")
+    }
+
     private func count(_ regex: String) throws -> [String: Int] {
         let app = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
             .appendingPathComponent("../../../../App").standardizedFileURL

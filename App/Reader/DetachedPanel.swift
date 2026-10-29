@@ -61,7 +61,7 @@ struct StudyWindowButtons: View {
         Button {
             withAnimation(StudyPanelMotion.animation(enabled: animateTransitions, reduceMotion: reduceMotion)) { action() }
         } label: {
-            Image(systemName: icon).font(.system(size: 14, weight: .semibold)).foregroundStyle(Atelier.textSecondary)
+            Image(systemName: icon).font(Atelier.font(14, weight: .semibold)).foregroundStyle(Atelier.textSecondary)
                 .frame(minWidth: 22, minHeight: 22)
                 .contentShape(Rectangle())
         }
@@ -143,7 +143,7 @@ struct DetachedPanel<Content: View>: View {
     private func resizeHandle(base: CGRect, w: CGFloat, h: CGFloat) -> some View {
         Image(systemName: "arrow.down.right.and.arrow.up.left")
             .rotationEffect(.degrees(90))
-            .font(.system(size: 11, weight: .bold))
+            .font(Atelier.font(11, weight: .bold))
             .foregroundStyle(Atelier.textTertiary)
             .frame(width: 28, height: 28)
             .background(Circle().fill(Atelier.surfaceHigh))
@@ -180,7 +180,7 @@ struct DetachedPanel<Content: View>: View {
             }
         } label: {
             Label("Étude", systemImage: "sidebar.trailing")
-                .font(.system(size: 14, weight: .semibold))
+                .font(Atelier.font(14, weight: .semibold))
                 .foregroundStyle(Atelier.textPrimary)
                 .padding(.horizontal, 14).padding(.vertical, 9)
                 .atelierPanel(radius: 20)

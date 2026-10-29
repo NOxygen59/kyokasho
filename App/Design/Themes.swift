@@ -222,7 +222,7 @@ struct ThemePickerView: View {
                         Text("教科書").font(.custom("HiraMinProN-W3", size: 32)).foregroundStyle(t.ink)
                         Spacer()
                         Image(systemName: on ? "checkmark.circle.fill" : "circle")
-                            .font(.system(size: 22, weight: .medium))
+                            .font(Atelier.font(22, weight: .medium))
                             .foregroundStyle(on ? t.read : t.tertiaryInk)
                     }
                     Spacer()
@@ -237,19 +237,19 @@ struct ThemePickerView: View {
             .frame(height: 142)
             VStack(alignment: .leading, spacing: 12) {
                 VStack(alignment: .leading, spacing: 5) {
-                    Text(t.name).font(.system(size: 16, weight: .semibold)).foregroundStyle(t.ink)
-                    Text(t.atmosphere).font(.system(size: 12)).foregroundStyle(t.secondaryInk)
+                    Text(t.name).font(Atelier.font(16, weight: .semibold)).foregroundStyle(t.ink)
+                    Text(t.atmosphere).font(Atelier.font(12)).foregroundStyle(t.secondaryInk)
                 }
                 HStack(spacing: 10) {
                     Text("辞").font(.custom("HiraginoSans-W3", size: 18))
                         .foregroundStyle(t.japanese).frame(width: 38, height: 38)
                         .background(t.japanese.opacity(0.12), in: RoundedRectangle(cornerRadius: Atelier.corner(10)))
                     VStack(alignment: .leading, spacing: 3) {
-                        Text("Texte de la page").font(.system(size: 12, weight: .medium)).foregroundStyle(t.ink)
-                        Text("Lecture · vocabulaire · notes").font(.system(size: 10)).foregroundStyle(t.secondaryInk)
+                        Text("Texte de la page").font(Atelier.font(12, weight: .medium)).foregroundStyle(t.ink)
+                        Text("Lecture · vocabulaire · notes").font(Atelier.font(10)).foregroundStyle(t.secondaryInk)
                     }
                     Spacer(minLength: 0)
-                    Image(systemName: "arrow.right").font(.system(size: 12, weight: .semibold)).foregroundStyle(t.read)
+                    Image(systemName: "arrow.right").font(Atelier.font(12, weight: .semibold)).foregroundStyle(t.read)
                 }
                 .padding(10)
                 .background(t.surfaceHigh, in: RoundedRectangle(cornerRadius: Atelier.corner(13)))
