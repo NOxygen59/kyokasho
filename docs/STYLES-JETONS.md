@@ -50,6 +50,7 @@ dessins, les furigana dessinés sur la page, les fichiers exportés.
 | `AppStyle.usesMaterials` / `Atelier.material(_:)` | matières floutées d'iOS, ou fond plein du panneau | oui |
 | `AppStyle.panelFill` | fond des panneaux `AtelierPanel` : plein, ou verre flouté (plus coûteux en GPU) | plein |
 | `AppStyle.panelEdge` / `.atelierGlow(_:)` | bord des panneaux : trait fin, encre pleine, ou néon de la couleur de lecture | trait fin |
+| `.atelierSheet()` | fenêtre d'iOS habillée (#44) : fond du thème, coins du style (arrondis d'iOS pour Atelier) ; iOS 16.4 et plus, sinon apparence d'iOS | appliquée aux Réglages et aux feuilles du lecteur (pagination et réglages du document, recherche, IA, cartes) |
 | `AppStyle.defaultTheme`, `summary` | palette proposée avec le style (remplaçable), ligne affichée dans le choix | `atelier` |
 | `AppStyle.fontDesign` / `Atelier.font(_:weight:)` | famille du texte latin de l'interface (taille d'origine gardée) ; `atelierFontDesign()` l'applique aux styles de texte iOS dès iOS 16.1 | `.default` |
 | `Atelier.scrim` | voile derrière une fenêtre au premier plan | noir |

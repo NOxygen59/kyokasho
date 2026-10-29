@@ -105,6 +105,18 @@ struct AtelierPanel: ViewModifier {
 }
 
 extension View {
+    /// Fenêtre d'iOS habillée par le style (#44, approche A choisie le 29/10/2026) : la feuille reste celle d'iOS
+    /// (balayer pour fermer, clavier, VoiceOver, Stage Manager) ; son fond prend le fond du thème et ses coins suivent
+    /// le style (arrondis d'iOS gardés pour Atelier, angles droits pour Swiss ou Brutalism). Ces deux réglages
+    /// n'existent qu'à partir d'iOS 16.4 : en 16.0 à 16.3, la feuille garde l'apparence d'iOS, sans perte de fonction.
+    @ViewBuilder
+    func atelierSheet() -> some View {
+        if #available(iOS 16.4, *) {
+            presentationBackground(Atelier.canvas)
+                .presentationCornerRadius(AppStyle.current.cornerScale == 1 ? nil : Atelier.radius)
+        } else { self }
+    }
+
     /// Famille du style appliquée aux styles de texte iOS (`.caption`, `.headline`…). `fontDesign` n'existe qu'à
     /// partir d'iOS 16.1 : en 16.0, ces textes gardent la famille d'iOS (les textes `Atelier.font` suivent quand même).
     @ViewBuilder

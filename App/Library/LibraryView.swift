@@ -154,6 +154,7 @@ struct LibraryView: View {
         }
         .sheet(isPresented: $showSettings) {
             SettingsView().environmentObject(themes).environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review).preferredColorScheme(Theme.current.colorScheme)
+                .atelierSheet()
         }
         .sheet(isPresented: $showDrive) {
             DriveBrowserView().environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review).preferredColorScheme(Theme.current.colorScheme)
