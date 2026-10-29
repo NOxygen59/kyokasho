@@ -40,6 +40,8 @@ enum PageShift {
         var kind: String? = nil
         var detachedCards: [Int64: Int]? = nil
         var restoration: AppDatabase.RestorationPlan? = nil
+        /// Copies originales inventoriées avant le journal ; absent des anciens journaux.
+        var sealedArchive: Bool? = nil
     }
 
     /// Correspondance d'un journal : v3 la porte ; v2 la décrit par le décalage (pages ajoutées avant les anciennes).
@@ -105,6 +107,42 @@ enum PageShift {
         var documentId: String
         var kind: String
         var createdAt: Date
+        /// Empreintes des originaux, répertoires compris (valeur "directory"). nil = ancien format non vérifiable.
+        var originalHashes: [String: String]? = nil
+    }
+
+    /// Inventaire calculé depuis le disque, sans suivre de lien. Comparer les ensembles distingue une absence
+    /// normale d'un fichier perdu ; les clés du manifeste ne servent jamais à construire un chemin à lire.
+    private static func originalInventory(_ folder: URL) throws -> [String: String] {
+        var hashes: [String: String] = [:]
+        func visit(_ url: URL, relative: String) throws {
+            let values = try url.resourceValues(forKeys: [.isSymbolicLinkKey, .isDirectoryKey, .isRegularFileKey])
+            guard values.isSymbolicLink != true else { throw fail("Lien inattendu dans une archive de pages.") }
+            if values.isDirectory == true {
+                hashes[relative] = "directory"
+                for child in try fm.contentsOfDirectory(at: url, includingPropertiesForKeys: nil) {
+                    try visit(child, relative: relative + "/" + child.lastPathComponent)
+                }
+            } else {
+                guard values.isRegularFile == true else { throw fail("Fichier d'archive inattendu.") }
+                hashes[relative] = try DocumentImporter.sha256(of: url)
+            }
+        }
+        for url in try fm.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)
+            where url.lastPathComponent.hasPrefix("original") {
+            try visit(url, relative: url.lastPathComponent)
+        }
+        return hashes
+    }
+
+    /// Une ancienne copie sans inventaire est conservée, mais ne peut pas promettre une restauration complète.
+    private static func validateArchive(_ folder: URL, editId: String, documentId: String) throws {
+        let manifest = try JSONDecoder().decode(Manifest.self, from: Data(contentsOf: folder.appendingPathComponent("manifest.json")))
+        guard manifest.editId == editId, manifest.documentId == documentId,
+              let hashes = manifest.originalHashes, hashes["original.pdf"] != nil,
+              try originalInventory(folder) == hashes else {
+            throw fail("Copie de pages incomplète ou altérée : restauration arrêtée, fichiers conservés.")
+        }
     }
 
     static func apply(_ model: AppModel, document: LibraryDocument, merged: URL, offset: Int, newCount: Int) async throws -> [String] {
@@ -168,6 +206,7 @@ enum PageShift {
                 guard UUID(uuidString: archiveId) != nil, fm.fileExists(atPath: archivePDF.path) else {
                     throw fail("La copie de ces pages n'existe plus : restauration impossible.")
                 }
+                try validateArchive(archivePDF.deletingLastPathComponent(), editId: archiveId, documentId: document.id)
                 merged = try await buildPDF(current: current, archive: archivePDF, mapping: restoring.mapping, plan: restoring)
                 built = merged
                 plan = restoring
@@ -277,15 +316,14 @@ enum PageShift {
         let archive = plan.map { support.appendingPathComponent("PageShift/\($0.archiveId)", isDirectory: true) }
         try fm.createDirectory(at: work, withIntermediateDirectories: true)
         do {
-            try JSONEncoder().encode(Manifest(editId: p.transaction!, documentId: document.id, kind: kind.rawValue, createdAt: Date()))
-                .write(to: work.appendingPathComponent("manifest.json"), options: .atomic)
             try fm.copyItem(at: current, to: work.appendingPathComponent("original.pdf"))
             try fm.copyItem(at: merged, to: work.appendingPathComponent("merged.pdf"))
             try prepareFiles(p, work: work, archive: archive)
             let report = DocumentAnalysisService.folder.appendingPathComponent(document.id + ".json")
-            if fm.fileExists(atPath: report.path) {
-                let bytes = try Data(contentsOf: report)
-                var value = try JSONDecoder().decode(DocumentAnalysis.self, from: bytes)
+            let savedReport = archive.map { $0.appendingPathComponent("original-report.json") }
+            if fm.fileExists(atPath: report.path) || savedReport.map({ fm.fileExists(atPath: $0.path) }) == true {
+                let bytes = fm.fileExists(atPath: report.path) ? try Data(contentsOf: report) : nil
+                var value = try bytes.map { try JSONDecoder().decode(DocumentAnalysis.self, from: $0) } ?? DocumentAnalysis(documentId: document.id)
                 guard value.documentId == document.id else { throw fail("Rapport associé à un autre document.") }
                 // RET-048 (#74) : comme les brouillons et les lectures IA, une page hors du document arrête l'opération
                 // avant le journal ; un rapport déjà incohérent ne doit pas être décalé en silence.
@@ -300,15 +338,16 @@ enum PageShift {
                     return (target, moved)
                 })
                 // Restauration : les pages revenues retrouvent leur analyse, gardée dans la copie de la suppression.
-                if let plan, let archive, let saved = try? JSONDecoder().decode(DocumentAnalysis.self,
-                        from: Data(contentsOf: archive.appendingPathComponent("original-report.json"))), saved.documentId == document.id {
+                if let plan, let savedReport, fm.fileExists(atPath: savedReport.path) {
+                    let saved = try JSONDecoder().decode(DocumentAnalysis.self, from: Data(contentsOf: savedReport))
+                    guard saved.documentId == document.id else { throw fail("Rapport archivé associé à un autre document.") }
                     for (id, position) in plan.positions {
                         guard let index = plan.originalIndices[id], var page = saved.pages[index] else { continue }
                         page.source = position
                         value.pages[position] = page
                     }
                 }
-                try bytes.write(to: work.appendingPathComponent("original-report.json"), options: .atomic)
+                if let bytes { try bytes.write(to: work.appendingPathComponent("original-report.json"), options: .atomic) }
                 try JSONEncoder().encode(value).write(to: work.appendingPathComponent("report.json"), options: .atomic)
                 p.hasReport = true
             }
@@ -322,8 +361,8 @@ enum PageShift {
                 throw fail("Le fichier des brouillons de notes est illisible : rien n'est modifié.")
             }
             var restoredDrafts: [Int: String] = [:]
-            if let plan, let archive, let bytes = try? Data(contentsOf: archive.appendingPathComponent("original-drafts.json")),
-               let saved = try? NoteDraftStore.decode(bytes) {
+            if let plan, let archive, fm.fileExists(atPath: archive.appendingPathComponent("original-drafts.json").path) {
+                let saved = try NoteDraftStore.decode(Data(contentsOf: archive.appendingPathComponent("original-drafts.json")))
                 for (id, position) in plan.positions {
                     if let index = plan.originalIndices[id], let text = saved[index] { restoredDrafts[position] = text }
                 }
@@ -338,6 +377,13 @@ enum PageShift {
                     .write(to: work.appendingPathComponent("drafts.json"), options: .atomic)
                 p.hasDrafts = true
             }
+            // F3 : l'archive complète existe et est relue AVANT la transaction. Une reprise ne l'enrichit jamais
+            // depuis des données déjà renumérotées ; les empreintes couvrent aussi les brouillons et les lectures IA.
+            let manifest = Manifest(editId: p.transaction!, documentId: document.id, kind: kind.rawValue,
+                                    createdAt: Date(), originalHashes: try originalInventory(work))
+            try JSONEncoder().encode(manifest).write(to: work.appendingPathComponent("manifest.json"), options: .atomic)
+            try validateArchive(work, editId: p.transaction!, documentId: document.id)
+            p.sealedArchive = true
             try save(p) // Dernière étape avant toute mutation des données actives.
             try complete(p, model: model)
             model.storageRecoveryError = nil
@@ -355,6 +401,7 @@ enum PageShift {
         let prepared = work.appendingPathComponent("files", isDirectory: true)
         try fm.createDirectory(at: prepared, withIntermediateDirectories: true)
         if fm.fileExists(atPath: source.path) {
+            try fm.copyItem(at: source, to: work.appendingPathComponent("original-files", isDirectory: true))
             for url in try fm.contentsOfDirectory(at: source, includingPropertiesForKeys: [.isSymbolicLinkKey]) {
                 guard try url.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink != true else {
                     throw fail("Lien symbolique inattendu dans les lectures IA.")
@@ -369,6 +416,9 @@ enum PageShift {
                 }
                 try fm.copyItem(at: url, to: prepared.appendingPathComponent(name))
             }
+        } else {
+            // Même vide, le dossier existe avant le journal : une reprise ne doit pas archiver les fichiers finaux.
+            try fm.createDirectory(at: work.appendingPathComponent("original-files"), withIntermediateDirectories: true)
         }
         // Restauration : lectures IA des pages revenues, reprises de la copie de la suppression.
         guard let plan = p.restoration, let archive else { return }
@@ -435,6 +485,7 @@ enum PageShift {
         guard cardPages.values.allSatisfy({ $0.map(kept.contains) ?? (p.version == 3) }) else {
             throw fail("Pages de cartes invalides dans le journal.")
         }
+        if p.sealedArchive == true { try validateArchive(work, editId: p.transaction!, documentId: p.documentId) }
         let preparedPDF = work.appendingPathComponent("merged.pdf")
         guard try DocumentImporter.sha256(of: preparedPDF) == newHash else { throw fail("Copie PDF préparée altérée.") }
         let current = model.storage.url(for: p.documentId)

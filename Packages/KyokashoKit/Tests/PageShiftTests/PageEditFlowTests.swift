@@ -127,4 +127,65 @@ extension PageShiftRecoveryTests {
             XCTAssertEqual(PageShift.copiesSize(documentId: doc.id), 0)
         }
     }
+    func testF2TamperedRestorationCardsAfterDatabaseCommitAreRefused() async throws {
+        try await withFixture { model, doc, root in
+            let card = try seed(model, doc)
+            try await PageShift.removePages(model, document: doc, pages: [0])
+            let removed = try XCTUnwrap(model.database.document(id: doc.id))
+            PageShift.checkpoint = { if $0 == "database.after" { throw PowerLoss.simulated } }
+            await assertThrowsAsync { try await PageShift.restorePages(model, document: removed, archiveId: try archiveId(model, doc)) }
+            PageShift.checkpoint = nil
+            let marker = root.appendingPathComponent("page-shift.json")
+            let authentic = try Data(contentsOf: marker)
+            var pending = try JSONDecoder().decode(PageShift.Pending.self, from: authentic)
+            pending.restoration?.cards = [card.id!: 999]
+            try JSONEncoder().encode(pending).write(to: marker)
+            PageShift.reconcile(model)
+            XCTAssertNotNil(model.storageRecoveryError)
+            XCTAssertNil(try model.review.store.card(id: card.id!)?.sourcePage)
+            XCTAssertEqual(PDFDocument(url: model.storage.url(for: doc.id))?.pageCount, 1)
+            try authentic.write(to: marker)
+            PageShift.reconcile(model)
+            XCTAssertNil(model.storageRecoveryError)
+            XCTAssertEqual(try model.review.store.card(id: card.id!)?.sourcePage, 0)
+        }
+    }
+
+    func testF3IncompleteOrAlteredArchivesAreRefusedBeforeMutation() async throws {
+        for item in ["original.pdf", "original-report.json", "original-drafts.json", "original-files", "original-files/fr-0.md", "manifest.json"] {
+            for corrupt in [false, true] {
+                try await withFixture { model, doc, root in
+                    let card = try seed(model, doc)
+                    try await PageShift.removePages(model, document: doc, pages: [0])
+                    let archive = try archiveId(model, doc)
+                    let folder = root.appendingPathComponent("PageShift/" + archive)
+                    let url = folder.appendingPathComponent(item)
+                    let held = root.appendingPathComponent("held")
+                    try FileManager.default.moveItem(at: url, to: held)
+                    if corrupt { try Data("altéré".utf8).write(to: url) }
+                    let before = try pageState(model, doc, card)
+                    let removed = try XCTUnwrap(model.database.document(id: doc.id))
+                    await assertThrowsAsync({ try await PageShift.restorePages(model, document: removed, archiveId: archive) }, "\(item), altéré=\(corrupt)")
+                    XCTAssertEqual(try pageState(model, doc, card), before)
+                    XCTAssertNil(try model.database.pageEdit(id: archive)?.restoredBy)
+                    XCTAssertFalse(FileManager.default.fileExists(atPath: root.appendingPathComponent("page-shift.json").path))
+                }
+            }
+        }
+    }
+
+    func testF3ArchivedReportRestoredWhenLiveReportIsAbsent() async throws {
+        try await withFixture { model, doc, root in
+            _ = try seed(model, doc)
+            try await PageShift.removePages(model, document: doc, pages: [0])
+            let reportURL = DocumentAnalysisService.folder.appendingPathComponent(doc.id + ".json")
+            try FileManager.default.moveItem(at: reportURL, to: root.appendingPathComponent("held-report"))
+            let removed = try XCTUnwrap(model.database.document(id: doc.id))
+            try await PageShift.restorePages(model, document: removed, archiveId: try archiveId(model, doc))
+            let report = try JSONDecoder().decode(DocumentAnalysis.self, from: Data(contentsOf: reportURL))
+            XCTAssertEqual(Set(report.pages.keys), [0], "seule la page restaurée, pas l'analyse active effacée depuis")
+        }
+    }
+
+
 }
