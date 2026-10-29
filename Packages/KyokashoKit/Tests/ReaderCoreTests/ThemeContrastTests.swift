@@ -53,7 +53,7 @@ final class ThemeContrastTests: XCTestCase {
 
     func testLightVariantsKeepAAContrast() throws {
         let themes = try lightThemes()
-        XCTAssertEqual(Set(themes.keys), ["clair", "sepia"])
+        XCTAssertTrue(Set(themes.keys).isSuperset(of: ["clair", "sepia", "brutal", "swiss", "terre"]), "\(themes.keys)")
         for (name, t) in themes {
             let ink = try color(t["ink"]), onAccent = try color(t["onAccent"])
             let secondary = try XCTUnwrap(t["secondaryLevel"].flatMap(Double.init))

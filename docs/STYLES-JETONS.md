@@ -48,6 +48,9 @@ dessins, les furigana dessinés sur la page, les fichiers exportés.
 | `AppStyle.shadowKind` / `.atelierShadow(opacity:radius:y:)` | ombre portée : douce (valeurs d'origine), dure et décalée, ou aucune | douce |
 | `AppStyle.borderScale` / `Atelier.border(_:)` | facteur des épaisseurs de bordure de l'interface | 1 |
 | `AppStyle.usesMaterials` / `Atelier.material(_:)` | matières floutées d'iOS, ou fond plein du panneau | oui |
+| `AppStyle.panelFill` | fond des panneaux `AtelierPanel` : plein, ou verre flouté (plus coûteux en GPU) | plein |
+| `AppStyle.panelEdge` / `.atelierGlow(_:)` | bord des panneaux : trait fin, encre pleine, ou néon de la couleur de lecture | trait fin |
+| `AppStyle.defaultTheme`, `summary` | palette proposée avec le style (remplaçable), ligne affichée dans le choix | `atelier` |
 | `AppStyle.fontDesign` / `Atelier.font(_:weight:)` | famille du texte latin de l'interface (taille d'origine gardée) ; `atelierFontDesign()` l'applique aux styles de texte iOS dès iOS 16.1 | `.default` |
 | `Atelier.scrim` | voile derrière une fenêtre au premier plan | noir |
 
@@ -96,3 +99,16 @@ Fichiers les plus chargés en valeurs directes : `LibraryView` (74), `ReaderScre
 Règle des lots de fondation : chaque remplacement garde **exactement** la valeur actuelle pour le style Atelier.
 Les écarts d'une ou deux unités entre usages ne sont pas « arrondis » pendant la fondation : ils le seront lors de
 l'harmonisation des composants (lot 4), avec une comparaison avant et après.
+
+## 4. Styles disponibles (premier lot, 29/10/2026)
+
+| Style | Formes | Bord et relief | Police | Palette proposée |
+|---|---|---|---|---|
+| Atelier | arrondis d'origine | trait fin, ombre douce | SF | Atelier (nuit) |
+| Neo-Brutalism | angles droits | encre pleine × 2,5, ombre dure décalée, sans flou | chasse fixe | Brutal (clair) |
+| Glassmorphism | arrondis × 1,2 | panneaux en verre flouté | SF | Lumière du soir (nuit) |
+| Synthwave | arrondis × 0,5 | bord néon cyan, sans flou | arrondie | Synthwave (nuit) |
+| Swiss Design | angles droits | trait fin, sans ombre ni flou | SF | Suisse (clair) |
+| Wabi-Sabi | arrondis × 1,35 | trait fin, ombre douce | serif | Terre (clair) |
+
+Les palettes claires sont vérifiées par `ThemeContrastTests` (4,5:1).

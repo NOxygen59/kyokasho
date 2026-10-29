@@ -76,12 +76,26 @@ struct AtelierPanel: ViewModifier {
             // à chaque image quand la page défile derrière) et ombre portée par la forme seule
             // (sinon tout le contenu, textes et icônes, est redessiné à part pour la calculer).
             .background {
-                RoundedRectangle(cornerRadius: radius, style: .continuous)
-                    .fill(Atelier.surface.opacity(0.97))
-                    .atelierShadow(opacity: 0.28, radius: 16, y: 7)
+                let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
+                switch AppStyle.current.panelFill {
+                case .solid:
+                    shape.fill(Atelier.surface.opacity(0.97))
+                        .atelierShadow(opacity: 0.28, radius: 16, y: 7)
+                case .glass:
+                    // Style Glassmorphism seulement : flou recalculé quand la page défile derrière (batterie, #20).
+                    shape.fill(.ultraThinMaterial)
+                        .overlay(shape.fill(Atelier.surface.opacity(0.45)))
+                        .atelierShadow(opacity: 0.28, radius: 16, y: 7)
+                }
             }
             .overlay {
-                RoundedRectangle(cornerRadius: radius, style: .continuous).strokeBorder(Atelier.hairline, lineWidth: Atelier.border(1))
+                let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
+                switch AppStyle.current.panelEdge {
+                case .hairline: shape.strokeBorder(Atelier.hairline, lineWidth: Atelier.border(1))
+                case .ink: shape.strokeBorder(Atelier.textPrimary, lineWidth: Atelier.border(1))
+                case .glow: shape.strokeBorder(Atelier.Tint.read.opacity(0.8), lineWidth: Atelier.border(1))
+                    .atelierGlow(Atelier.Tint.read.opacity(0.55))
+                }
             }
     }
 }
@@ -93,6 +107,9 @@ extension View {
     func atelierFontDesign() -> some View {
         if #available(iOS 16.1, *) { fontDesign(AppStyle.current.fontDesign) } else { self }
     }
+
+    /// Halo lumineux (bord néon du style Synthwave).
+    func atelierGlow(_ color: Color) -> some View { shadow(color: color, radius: 8) }
 
     /// Ombre portée selon le style (`AppStyle.shadowKind`). Valeurs = celles d'origine pour une ombre douce ; appliquée
     /// là où l'était `.shadow`, donc au même calque (sur la forme seule pour les panneaux, voir `AtelierPanel`).
