@@ -54,6 +54,8 @@ extension BackupRoundTripTests {
                                                       "PackageImport-\\(UUID().uuidString)", "Paquets de sécurité"]),
         "Packages/KyokashoKit/Sources/ReaderCore/DocumentPackage.swift": ("export complet : temporaire tmp/PackageWrite-<UUID>/data",
                                                                           ["PackageWrite-\\(UUID().uuidString)", "data"]),
+        "Packages/KyokashoKit/Sources/ReaderCore/LibraryBackup.swift": ("sauvegarde complète (#51) : temporaire tmp/BackupWrite-<UUID>/ (copies des bases, relecture check/)",
+                                                                        ["BackupWrite-\\(UUID().uuidString)", "check", "db-\\(index).sqlite"]),
         "App/Settings/Diagnostics.swift": ("diagnostic : Documents/Diagnostics/journal.txt", ["Diagnostics", "journal.txt"]),
         "App/Settings/StorageUsage.swift": ("lecture seule (calcul de l'espace)", ["Analysis", "Dictionaries", "Documents", "Kyokasho", "unidic"]),
         "App/Settings/GitHubUpdate.swift": ("cache : Caches/Update", ["Update"]),
