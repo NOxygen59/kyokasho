@@ -370,8 +370,10 @@ extension AppDatabase {
         var canonical: [String] = []
         for snapshot in history.reversed().map(\.pageOrder) + [current] {
             for (index, id) in snapshot.enumerated() where !canonical.contains(id) {
-                let anchor = snapshot[..<index].reversed().lazy.compactMap { canonical.firstIndex(of: $0) }.first
-                canonical.insert(id, at: anchor.map { $0 + 1 } ?? 0)
+                // Les pages ajoutées dans un trou viennent après les anciennes pages de ce trou, comme avec
+                // l'ancien placement des restaurations juste après leur prédécesseur ; leur ordre mutuel reste intact.
+                let successor = snapshot.dropFirst(index + 1).lazy.compactMap { canonical.firstIndex(of: $0) }.first
+                canonical.insert(id, at: successor ?? canonical.count)
             }
         }
         let live = Set(current)

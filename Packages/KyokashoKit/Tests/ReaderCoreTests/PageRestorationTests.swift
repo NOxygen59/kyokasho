@@ -99,7 +99,7 @@ final class PageRestorationTests: XCTestCase {
                 XCTAssertEqual(identities.filter { original.contains($0) }, original, "\(order), ajout=\(added)")
                 let notes = try db.comments(documentId: "d")
                 XCTAssertEqual(notes.first { $0.body == "après" }?.pageIndex, added ? 4 : 3)
-                if added { XCTAssertEqual(notes.first { $0.body == "nouvelle" }?.pageIndex, 1) }
+                if added { XCTAssertEqual(notes.first { $0.body == "nouvelle" }?.pageIndex, 3) }
             }
         }
     }
