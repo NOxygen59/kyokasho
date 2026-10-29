@@ -55,6 +55,8 @@ extension BackupRoundTripTests {
         "App/Drive/GoogleDrive.swift": ("temporaire : tmp/<UUID>/", []),
         "App/Library/AddPagesView.swift": ("temporaire : tmp/AddPages-<UUID>/", ["AddPages-\\(UUID().uuidString)", "merged.pdf"]),
         "App/Library/PDFMergeView.swift": ("temporaire : tmp/Merge-<UUID>/", ["Merge-\\(UUID().uuidString)"]),
+        "App/Dictionary/DictionaryCatalogService.swift": ("temporaire : tmp/DictionaryDownload-<UUID>/ (dictionnaire téléchargé, effacé après import)",
+                                                          ["DictionaryDownload-\\(UUID().uuidString)", "\\(entry.id).zip"]),
         "App/Library/DocumentExport.swift": ("temporaire : tmp/Export/", ["Export"]),
         "App/Reader/ReaderSheets.swift": ("temporaire : tmp/<titre>.md (partage)", ["\\(safe).md"]),
         "App/Review/ReviewSettingsView.swift": ("temporaire : tmp/Export/", ["Export", "Kyokasho.\\(apkg ? "]),

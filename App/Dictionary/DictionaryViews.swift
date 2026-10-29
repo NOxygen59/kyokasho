@@ -413,6 +413,10 @@ struct DictionaryManagerView: View {
                 Text("Mettre à jour : réimporte le nouveau .zip d'un dictionnaire (même titre) ; son ordre est gardé. Les dictionnaires ne sont jamais chargés entièrement en mémoire.")
             }
             Section {
+                // Catalogue (#50) : dictionnaires conseillés, téléchargés et importés dans l'app.
+                NavigationLink { DictionaryCatalogView() } label: {
+                    Label("Catalogue : télécharger des dictionnaires", systemImage: "books.vertical")
+                }
                 Button { showImporter = true } label: { Label("Importer des dictionnaires (.zip)", systemImage: "plus") }
                     .disabled(dictionaryModel.importState != nil)
             }
