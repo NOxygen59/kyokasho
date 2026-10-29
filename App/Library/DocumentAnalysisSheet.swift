@@ -165,14 +165,18 @@ struct DocumentAnalysisSheet: View {
             }
             Button { service.start(document, model: model) } label: { Label("Relancer l'analyse (pages manquantes)", systemImage: "arrow.clockwise") }
             if Qwen3VLReader().isAvailable {
-                let t = DocumentAnalysisService.translationCount(document)
-                if t.total > t.done {
-                    Button { service.translateAll(document) } label: {
-                        Label("Traduire tout le document en français (\(t.total - t.done) page(s), hors ligne)", systemImage: "character.bubble")
+                // Une ligne par langue : chaque traduction a ses fichiers ; l'anglais en plus du français.
+                ForEach(TranslationLanguage.allCases) { language in
+                    let t = DocumentAnalysisService.translationCount(document, in: language)
+                    let name = language == .french ? "français" : "anglais"
+                    if t.total > t.done {
+                        Button { service.translateAll(document, into: language) } label: {
+                            Label("Traduire tout le document en \(name) (\(t.total - t.done) page(s), hors ligne)", systemImage: "character.bubble")
+                        }
+                    } else if t.total > 0 {
+                        Label("Document traduit en \(name) (\(t.done) pages) : panneau Texte → ✨ → \(language.title)", systemImage: "checkmark")
+                            .font(.footnote).foregroundStyle(.secondary)
                     }
-                } else if t.total > 0 {
-                    Label("Document traduit (\(t.done) pages) : panneau Texte → ✨ → Français", systemImage: "checkmark")
-                        .font(.footnote).foregroundStyle(.secondary)
                 }
             }
             Button("Oublier cette analyse", role: .destructive) { service.forget(document.id) }

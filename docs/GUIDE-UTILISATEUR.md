@@ -73,6 +73,8 @@ Le chat du manuel utilise les pages déjà lues par OvisOCR2. Ouvrir l'onglet Ch
 
 Ouvrir les pages citées pour vérifier la réponse. Une citation montre une source consultable, pas une garantie de fidélité. Qwen3-VL et Qwen3.5 sont proposés selon installation ; Qwen3.5-4B reste sans validation iPad documentée à la base v1.3.
 
+La traduction locale Qwen d'une page (panneau Texte → ✨) se fait en **français ou en anglais** : la petite pastille FR / EN à côté du bouton choisit la langue. Chaque langue garde ses propres fichiers ; les traductions françaises déjà faites restent. Le lexique du domaine n'est imposé qu'à la traduction française (ses sens sont en français). « Analyser le document » propose de traduire tout le document dans chaque langue, et l'export Markdown inclut les deux traductions quand elles existent.
+
 La traduction locale Qwen et l'option DeepL sont différentes : DeepL envoie le texte à un service distant. Le glossaire aide la terminologie, sans garantir le sens. Vérifier les termes techniques, nombres et unités.
 
 ## 9. Activité IA, stockage et effacement

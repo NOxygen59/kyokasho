@@ -209,14 +209,14 @@ final class DocumentAnalysisService: ObservableObject {
         }
     }
 
-    /// Traduit en français (Qwen3-VL, hors ligne) toutes les pages déjà mises en page par OvisOCR2 et pas encore
-    /// traduites ; même écran de progression que l'analyse (reprise possible).
-    func translateAll(_ document: LibraryDocument) {
+    /// Traduit (Qwen3-VL, hors ligne) dans `language` toutes les pages déjà mises en page par OvisOCR2 et pas encore
+    /// traduites dans cette langue ; même écran de progression que l'analyse (reprise possible).
+    func translateAll(_ document: LibraryDocument, into language: TranslationLanguage = .french) {
         guard progress == nil, Qwen3VLReader().isAvailable else { return }
         let id = document.id
         let pages = (0..<document.pageCount).filter {
             FileManager.default.fileExists(atPath: Self.rawURL(id, ModelSpec.ovisocr2.id, $0).path)
-                && !FileManager.default.fileExists(atPath: Self.rawURL(id, "fr", $0).path)
+                && !FileManager.default.fileExists(atPath: Self.rawURL(id, language.rawValue, $0).path)
         }
         guard !pages.isEmpty else { return }
         progress = Progress(documentId: id, phase: "Traduction (Qwen3-VL)", done: 0, total: pages.count, phaseStarted: Date())
@@ -230,8 +230,11 @@ final class DocumentAnalysisService: ObservableObject {
                 guard !Task.isCancelled else { break }
                 guard let md = DocumentAITextStore.read(documentId: id, reader: ModelSpec.ovisocr2.id, page: p) else { continue }
                 do {
-                    let fr = try await Diagnostics.measure("traduction p. \(p)", "traduction") { try await Qwen3VLReader().translate(markdown: md, glossary: DomainLexicon.shared.glossary) }
-                    try? DocumentAITextStore.write(fr, documentId: id, reader: "fr", page: p)
+                    let glossary = language == .french ? DomainLexicon.shared.glossary : []
+                    let translated = try await Diagnostics.measure("traduction (\(language.rawValue)) p. \(p)", "traduction") {
+                        try await Qwen3VLReader().translate(markdown: md, into: language, glossary: glossary)
+                    }
+                    try? DocumentAITextStore.write(translated, documentId: id, reader: language.rawValue, page: p)
                 } catch {
                     self?.lastError = "Traduction page \(p + 1) : \(error.localizedDescription)"
                 }
@@ -242,9 +245,9 @@ final class DocumentAnalysisService: ObservableObject {
     }
 
     /// Pages traduites / pages mises en page par OvisOCR2.
-    static func translationCount(_ document: LibraryDocument) -> (done: Int, total: Int) {
+    static func translationCount(_ document: LibraryDocument, in language: TranslationLanguage = .french) -> (done: Int, total: Int) {
         let laid = (0..<document.pageCount).filter { FileManager.default.fileExists(atPath: rawURL(document.id, ModelSpec.ovisocr2.id, $0).path) }
-        return (laid.filter { FileManager.default.fileExists(atPath: rawURL(document.id, "fr", $0).path) }.count, laid.count)
+        return (laid.filter { FileManager.default.fileExists(atPath: rawURL(document.id, language.rawValue, $0).path) }.count, laid.count)
     }
 
     /// Arrête après la lecture en cours (le modèle n'est libéré qu'une fois la lecture vraiment finie).
