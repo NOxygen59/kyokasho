@@ -219,8 +219,17 @@ final class ThemeManager: ObservableObject {
     @Published private(set) var theme: Theme
     @Published private(set) var style: AppStyle
 
-    /// Entrée de rafraîchissement de `RootView`, sans devenir son identité structurelle.
+    /// Apparence choisie (palette et style), visible tout de suite dans Réglages → Thèmes qui observe ce gestionnaire.
     var appearanceRevision: String { theme.id + "|" + style.id }
+    /// Apparence appliquée à toute l'app : identité de la racine, mise à jour seulement à la fermeture des Réglages
+    /// (`applyAppearance`). Les couleurs sont lues dans des valeurs globales que SwiftUI ne surveille pas : seule une
+    /// reconstruction garantit que toutes les vues, UIKit et pages web comprises, prennent la nouvelle apparence ;
+    /// la faire pendant le choix fermerait la feuille Réglages (revue Claude de 41e2ba5, constat 1).
+    @Published private(set) var appliedAppearance: String = ""
+
+    func applyAppearance() {
+        if appliedAppearance != appearanceRevision { appliedAppearance = appearanceRevision }
+    }
 
     init() {
         let id = UserDefaults.standard.string(forKey: "theme.id")
@@ -231,6 +240,7 @@ final class ThemeManager: ObservableObject {
         self.style = style
         Theme.current = theme
         AppStyle.current = style
+        appliedAppearance = theme.id + "|" + style.id
     }
 
     /// Choisir un style applique aussi sa palette proposée (décision du 29/10/2026) ; une autre palette peut être

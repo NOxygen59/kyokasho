@@ -13,8 +13,13 @@ final class StyleTokensGuardTests: XCTestCase {
         let app = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
             .appendingPathComponent("../../../../App/KyokashoApp.swift").standardizedFileURL
         let source = try String(contentsOf: app, encoding: .utf8)
-        XCTAssertFalse(source.contains(".id(themes.identity)"),
+        XCTAssertFalse(source.contains(".id(themes.identity)") || source.contains(".id(themes.appearanceRevision)"),
                        "Ne pas remplacer la racine au changement de thème : la feuille Réglages se fermerait")
+        // Revue Claude de 41e2ba5 : sans reconstruction, des vues gardent l'ancienne palette ; elle se fait à la
+        // fermeture des Réglages.
+        XCTAssertTrue(source.contains(".id(themes.appliedAppearance)"), "La racine doit suivre l'apparence appliquée")
+        let library = try String(contentsOf: app.deletingLastPathComponent().appendingPathComponent("Library/LibraryView.swift"), encoding: .utf8)
+        XCTAssertTrue(library.contains("onDismiss: { themes.applyAppearance() }"), "Appliquer l'apparence à la fermeture des Réglages")
     }
 
     /// La liste demandée reste complète : un oubli dans `all` rendrait un style impossible à choisir.
