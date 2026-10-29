@@ -373,6 +373,17 @@ struct ReaderScreen: View {
                                 .accessibilityLabel("Rentrer la bande des pages")
                                 .offset(x: -10, y: -12)
                             }
+                            .overlay(alignment: .topLeading) {
+                                // #49 : supprimer des pages ferme le lecteur, puis ouvre « Pages du document » sur la page.
+                                Button { model.requestPageEdit(documentId: reader.document.id, page: reader.focusSource) } label: {
+                                    Image(systemName: "trash").font(.system(size: 12, weight: .bold))
+                                        .frame(width: 28, height: 28).foregroundStyle(Atelier.textPrimary)
+                                        .background(Atelier.surfaceHigh, in: Circle())
+                                }
+                                .buttonStyle(PressScale())
+                                .accessibilityLabel("Supprimer des pages")
+                                .offset(x: 10, y: -12)
+                            }
                             .padding(.horizontal, Atelier.gap)
                             .padding(.bottom, 10)
                             // Masquée sans être retirée : glissement court et fondu, fondu seul avec « Réduire les animations ».

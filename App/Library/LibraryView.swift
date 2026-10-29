@@ -14,6 +14,9 @@ struct LibraryView: View {
     @EnvironmentObject private var model: AppModel
     @State private var filter: Filter = .all
     @State private var showImportOptions = false
+    /// Paquet Kyōkasho ouvert et vérifié, en attente d'accord (document déjà présent) ou de résultat.
+    @State private var pendingPackage: DocumentPackageService.Pending?
+    @State private var packageMessage: String?
     @State private var showSettings = false
     @State private var showDrive = false
     @State private var showBench = false
@@ -28,6 +31,7 @@ struct LibraryView: View {
     @State private var analyzing: LibraryDocument?
     @State private var exporting: LibraryDocument?
     @State private var addingPages: LibraryDocument?
+    @State private var editingPages: PageEditTarget?
     @State private var chatDocument: LibraryDocument?
     @State private var showDictionary = false
     @State private var renaming: LibraryDocument?
@@ -56,6 +60,35 @@ struct LibraryView: View {
         let query = search.trimmingCharacters(in: .whitespaces)
         if !query.isEmpty { docs = docs.filter { $0.title.localizedCaseInsensitiveContains(query) } }
         return docs
+    }
+
+    /// Paquet choisi : vérifié d'abord ; nouveau document installé tout de suite, document existant après accord.
+    private func openPackage(_ url: URL) {
+        Task {
+            do {
+                let pending = try await model.openPackage(url)
+                if pending.exists { pendingPackage = pending } else { install(pending, replacing: false) }
+            } catch {
+                packageMessage = "Paquet refusé : \(error.localizedDescription)"
+            }
+        }
+    }
+
+    private func install(_ pending: DocumentPackageService.Pending, replacing: Bool) {
+        pendingPackage = nil
+        Task {
+            do {
+                let safety = try await model.installPackage(pending, replacing: replacing)
+                var text = "« \(pending.contents.manifest.title) » importé avec ses notes, OCR, lectures IA, traductions et analyse."
+                if let safety { text += " Ancienne version gardée : Paquets de sécurité/\(safety.deletingLastPathComponent().lastPathComponent)." }
+                if !pending.missingDictionaries.isEmpty {
+                    text += " Dictionnaires à télécharger (Réglages → Dictionnaires → Catalogue) : " + pending.missingDictionaries.joined(separator: ", ") + "."
+                }
+                packageMessage = text
+            } catch {
+                packageMessage = "Import impossible : \(error.localizedDescription)"
+            }
+        }
     }
 
     var body: some View {
@@ -96,9 +129,20 @@ struct LibraryView: View {
             Text("« \(document.title) » : la catégorie s'affiche sur l'accueil pour t'aider à te repérer. Tu pourras la changer dans « Ce document ».")
         }
         .sheet(isPresented: $showImportOptions) {
-            ImportOptionsView { urls, language in model.importFiles(urls, language: language) }
+            ImportOptionsView(onImport: { urls, language in model.importFiles(urls, language: language) },
+                              onPackage: { url in openPackage(url) })
                 .preferredColorScheme(.dark)
         }
+        .alert("Remplacer « \(pendingPackage?.contents.manifest.title ?? "") » ?",
+               isPresented: Binding(get: { pendingPackage?.exists == true }, set: { if !$0, let p = pendingPackage { model.discardPackage(p); pendingPackage = nil } })) {
+            Button("Annuler", role: .cancel) {}
+            Button("Remplacer", role: .destructive) { if let p = pendingPackage { install(p, replacing: true) } }
+        } message: {
+            Text("Ce document est déjà dans ta bibliothèque. Sa version actuelle (notes, OCR, lectures IA…) sera d'abord enregistrée dans Fichiers → Kyōkasho → Paquets de sécurité, puis remplacée par celle du paquet.")
+        }
+        .alert("Paquet Kyōkasho", isPresented: Binding(get: { packageMessage != nil }, set: { if !$0 { packageMessage = nil } })) {
+            Button("OK", role: .cancel) {}
+        } message: { Text(packageMessage ?? "") }
         .sheet(item: $analyzing) { document in
             DocumentAnalysisSheet(document: document).environmentObject(model).preferredColorScheme(.dark)
         }
@@ -144,8 +188,17 @@ struct LibraryView: View {
         .sheet(item: $addingPages) { document in
             AddPagesView(document: document).environmentObject(model).preferredColorScheme(.dark)
         }
+        .sheet(item: $editingPages) { target in
+            RemovePagesView(target: target).environmentObject(model).preferredColorScheme(.dark)
+        }
+        .onReceive(model.$pageEditRequest) { request in
+            guard let request, let document = model.documents.first(where: { $0.id == request.documentId }) else { return }
+            model.pageEditRequest = nil
+            // Le lecteur (plein écran) finit de se fermer avant d'ouvrir la fenêtre.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) { editingPages = PageEditTarget(document: document, page: request.page) }
+        }
         .sheet(item: $chatDocument) { document in
-            NavigationStack { QwenChatView(document: document) }
+            NavigationStack { QwenChatView(document: document, database: model.database) }
                 .environmentObject(model).preferredColorScheme(.dark)
         }
         .sheet(item: $exporting) { document in
@@ -499,6 +552,9 @@ struct LibraryView: View {
         Button {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { addingPages = document }
         } label: { Label("Ajouter des pages…", systemImage: "doc.badge.plus") }
+        Button {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { editingPages = PageEditTarget(document: document, page: nil) }
+        } label: { Label("Supprimer des pages…", systemImage: "doc.badge.minus") }
         Button {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { exporting = document }
         } label: { Label("Exporter…", systemImage: "square.and.arrow.up") }

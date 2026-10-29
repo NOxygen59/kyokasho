@@ -15,6 +15,11 @@ public final class QwenChat: @unchecked Sendable {
         public enum Role: String, Codable, Sendable { case user, assistant }
         public var role: Role
         public var text: String
+        /// Pages source consultées pour cette réponse (base 0) et version de mise en page du document à ce moment
+        /// (#49, R4) : après une suppression ou une restauration, les liens suivent leur page ou se désactivent.
+        /// Absents des messages enregistrés avant : ceux-là gardent leurs liens seulement si les pages n'ont pas changé.
+        public var pages: [Int]? = nil
+        public var layoutVersion: Int? = nil
         public init(role: Role, text: String) { self.role = role; self.text = text }
     }
 

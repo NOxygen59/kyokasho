@@ -104,4 +104,53 @@ final class BackupRoundTripTests: XCTestCase {
         try reopened.writer.close()
         try cards.writer.close()
     }
+
+    /// #49 (revue Codex S1) : identités, opérations et archives des pages retirées passent la sauvegarde et la
+    /// restauration réelles, puis une nouvelle opération fonctionne après réouverture.
+    func testPageEditTablesSurviveBackupAndRestore() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("kyokasho-page-edits-backup-" + UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let container = root.appendingPathComponent("source")
+        let support = container.appendingPathComponent("Library/Application Support/Kyokasho")
+        let database = try AppDatabase.open(at: support.appendingPathComponent("kyokasho.sqlite"))
+        let review = try ReviewStore.open(directory: support.appendingPathComponent("Review"))
+        var doc = LibraryDocument(id: "synth", title: "Manuel", originalFileName: "synth.pdf", pageCount: 4, fileSize: 1,
+                                  importedAt: Date(timeIntervalSince1970: 1000))
+        doc.firstPageIndex = 1
+        try database.save(doc)
+        try database.save(PageComment(documentId: doc.id, pageIndex: 2, body: "Note 図", drawing: Data([0, 255])))
+        try database.save(InkDrawing(documentId: doc.id, pageIndex: 2, data: Data([9])), isEmpty: false)
+        try database.writer.write { db in
+            try OCRResultRecord(documentId: doc.id, pageIndex: 2, engine: "retouche", json: Data([7, 0]), durationMs: 1).insert(db)
+        }
+        try database.remapPages(documentId: doc.id, mapping: PageMapping.insertion(oldCount: 4, inserted: 1, at: 0), editId: "e1",
+                                kind: .insertion, expectedVersion: 0, fileSize: 2)
+        try database.remapPages(documentId: doc.id, mapping: PageMapping.removal(oldCount: 5, removing: [3]), editId: "e2",
+                                kind: .removal, expectedVersion: 1, fileSize: 3)
+        let identities = try database.pageIdentities(documentId: doc.id)
+        let edit = try XCTUnwrap(database.pageEdit(id: "e2"))
+        let archive = try database.archivedRows(editId: "e2")
+        XCTAssertEqual(Set(archive.map(\.tableName)), ["pageComment", "inkDrawing", "ocrResult", "pageIdentity"])
+        try database.writer.close()
+        try review.writer.close()
+        let backup = root.appendingPathComponent("backup")
+        try runTool(["backup", container.path, backup.path, "--source-stopped"])
+        try runTool(["verify", backup.appendingPathComponent("backup").path])
+        let target = root.appendingPathComponent("restored")
+        try runTool(["restore", backup.appendingPathComponent("backup").path, target.path])
+        let file = target.appendingPathComponent("container/Library/Application Support/Kyokasho/kyokasho.sqlite")
+        let restored = try AppDatabase.open(at: file)
+        XCTAssertEqual(try restored.pageIdentities(documentId: doc.id), identities)
+        XCTAssertEqual(try restored.pageEdit(id: "e2"), edit)
+        XCTAssertEqual(try restored.archivedRows(editId: "e2"), archive)
+        XCTAssertEqual(try restored.layoutVersion(documentId: doc.id), 2)
+        try restored.remapPages(documentId: doc.id, mapping: PageMapping.removal(oldCount: 4, removing: [0]), editId: "e3",
+                                kind: .removal, expectedVersion: 2, fileSize: 4)
+        try restored.writer.close()
+        let reopened = try AppDatabase.open(at: file)
+        XCTAssertEqual(try reopened.layoutVersion(documentId: doc.id), 3)
+        XCTAssertEqual(try reopened.pageIdentities(documentId: doc.id).map(\.printedNumber), [nil, 1, 3])
+        try reopened.writer.close()
+    }
 }

@@ -60,13 +60,22 @@ public struct LibraryDocument: Codable, Identifiable, Hashable, Sendable {
     /// Numéro affiché pour une page source : la page `firstPageIndex` porte « 1 » ;
     /// les pages d'avant (couverture, sommaire…) sont en chiffres romains, comme dans les livres.
     public func pageLabel(_ index: Int) -> String {
+        // Pages modifiées (#49, R5) : chaque page garde son numéro imprimé ; sans numéro (page ajoutée, garde) :
+        // chiffres romains, comme les pages avant la page 1.
+        if let numbers = PrintedPageNumbers.numbers(for: id, pageCount: pageCount) {
+            return numbers[index].map(String.init) ?? Self.roman(index + 1)
+        }
         let n = index - firstPageIndex + 1
         return n >= 1 ? String(n) : Self.roman(index + 1)
     }
 
     /// Page source pour un numéro imprimé (borné au document).
     public func sourceIndex(forPrintedPage n: Int) -> Int {
-        max(0, min(pageCount - 1, n - 1 + firstPageIndex))
+        if let numbers = PrintedPageNumbers.numbers(for: id, pageCount: pageCount) {
+            // Numéro exact, sinon la première page qui vient après (numéro retiré avec sa page), sinon la dernière.
+            return numbers.firstIndex(of: n) ?? numbers.firstIndex { ($0 ?? .min) > n } ?? pageCount - 1
+        }
+        return max(0, min(pageCount - 1, n - 1 + firstPageIndex))
     }
 
     static func roman(_ value: Int) -> String {
@@ -398,5 +407,24 @@ extension PageComment {
         note.body = trimmed
         note.updatedAt = date
         return note
+    }
+}
+
+/// Numéros imprimés des pages des documents dont les pages ont été modifiées (#49, R5), tenus à jour par l'app depuis
+/// `AppDatabase.printedNumbers()` (au lancement et après chaque modification des pages ou de la page 1). Un document
+/// absent, ou dont le nombre de pages ne correspond pas (valeur périmée), garde la numérotation par `firstPageIndex`.
+public enum PrintedPageNumbers {
+    private static let lock = NSLock()
+    nonisolated(unsafe) private static var table: [String: [Int?]] = [:]
+
+    public static func set(_ numbers: [String: [Int?]]) {
+        lock.lock(); defer { lock.unlock() }
+        table = numbers
+    }
+
+    public static func numbers(for documentId: String, pageCount: Int) -> [Int?]? {
+        lock.lock(); defer { lock.unlock() }
+        guard let numbers = table[documentId], numbers.count == pageCount else { return nil }
+        return numbers
     }
 }

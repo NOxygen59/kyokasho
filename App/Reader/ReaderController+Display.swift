@@ -259,7 +259,6 @@ extension ReaderController {
     /// La page source `index` devient la page « 1 » (numéros affichés comme dans le manuel imprimé).
     func setFirstPage(_ index: Int) {
         document.firstPageIndex = max(0, min(index, document.pageCount - 1))
-        let doc = document
-        model.persist { try $0.save(doc) }
+        model.savePageOne(document)
     }
 }

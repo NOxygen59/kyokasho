@@ -81,7 +81,7 @@ struct StudyPanel: View {
                                          saveToNotes: { text in
                                              reader.saveNote(PageComment(documentId: reader.document.id, pageIndex: reader.focusSource,
                                                                          body: "Chat IA :\n" + text))
-                                         })
+                                         }, database: model.database)
                 }
             }
             .frame(maxHeight: .infinity, alignment: .top)

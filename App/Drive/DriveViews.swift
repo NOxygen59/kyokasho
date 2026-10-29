@@ -341,16 +341,24 @@ extension AppModel {
         let importer = importer
         let existing = documents.first { $0.driveFileId == file.id }
         let targetLanguage = language ?? existing.map { OCRTargetLanguage.forDocument($0.id) } ?? .japanese
-        let result: (document: LibraryDocument, isNew: Bool) = try await Task.detached(priority: .userInitiated) {
-            defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
-            if let existing {
-                let updated = try importer.replace(documentId: existing.id, withFileAt: url, driveRevision: file.revision)
-                return (updated, false)
-            }
-            let imported = try importer.importFile(at: url, displayName: url.lastPathComponent,
-                                                   driveFileId: file.id, driveRevision: file.revision)
-            return (imported.document, imported.isNew)
-        }.value
+        let perform = { () async throws -> (document: LibraryDocument, isNew: Bool) in
+            try await Task.detached(priority: .userInitiated) {
+                defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
+                if let existing {
+                    let updated = try importer.replace(documentId: existing.id, withFileAt: url, driveRevision: file.revision)
+                    return (updated, false)
+                }
+                let imported = try importer.importFile(at: url, displayName: url.lastPathComponent,
+                                                       driveFileId: file.id, driveRevision: file.revision)
+                return (imported.document, imported.isNew)
+            }.value
+        }
+        let result: (document: LibraryDocument, isNew: Bool)
+        if let existing {
+            result = try await PageShift.withDriveReplacement(self, documentId: existing.id, operation: perform)
+        } else {
+            result = try await perform()
+        }
         let document = result.document
         if result.isNew || existing != nil { OCRTargetLanguage.set(targetLanguage, forDocument: document.id) }
         if let existing, existing.id != document.id { OCRTargetLanguage.forget(existing.id) }

@@ -14,7 +14,7 @@ import UIKit
 /// choisies. Tout est fait hors du fil principal ; le fichier part dans `tmp/Export` puis dans la feuille de partage.
 enum DocumentExport {
     enum Format: String, CaseIterable, Identifiable {
-        case original, annotated, markdown, images, cards
+        case original, annotated, markdown, images, cards, package
         var id: String { rawValue }
         var title: String {
             switch self {
@@ -23,6 +23,7 @@ enum DocumentExport {
             case .markdown: return "Texte (Markdown)"
             case .images: return "Images PNG (zip)"
             case .cards: return "Cartes Anki (.apkg)"
+            case .package: return "Paquet Kyōkasho (tout le document)"
             }
         }
         var detail: String {
@@ -32,6 +33,7 @@ enum DocumentExport {
             case .markdown: return "Mise en page IA (sinon texte de l'OCR), traductions française et anglaise si elles existent, notes."
             case .images: return "Une image par page (avec annotations), dans un fichier zip."
             case .cards: return "Les cartes de révision créées depuis ce document."
+            case .package: return "PDF, notes, surlignages, dessins, OCR et retouches, lectures IA, traductions, analyse et brouillons : à réimporter tel quel dans Kyōkasho sur un autre appareil. Sans cartes, conversations ni réglages de l'app."
             }
         }
         var icon: String {
@@ -41,10 +43,11 @@ enum DocumentExport {
             case .markdown: return "text.alignleft"
             case .images: return "photo.on.rectangle"
             case .cards: return "rectangle.stack"
+            case .package: return "shippingbox"
             }
         }
         /// Pas de choix de pages pour le fichier d'origine ni les cartes.
-        var usesPages: Bool { self != .original && self != .cards }
+        var usesPages: Bool { self != .original && self != .cards && self != .package }
     }
 
     /// Ce qu'il faut lire dans la base, pris sur le fil principal (la base est partagée).
@@ -363,6 +366,11 @@ struct DocumentExportSheet: View {
             guard !list.isEmpty else { error = "Aucune carte créée depuis ce document."; return }
             cards = (list, template, review.store.mediaRoot)
         }
+        // Paquet complet : valeurs de l'app lues ici, fichier écrit hors du fil principal.
+        let database = model.database
+        let drafts = NoteDraftStore.shared.drafts(documentId: doc.id)
+        let preferences = DocumentPackageService.preferences(documentId: doc.id)
+        let dictionaries = model.dictionary.dictionaries.map(\.title)
         let total = format.usesPages ? pages.count : 1
         let lower = pages.lowerBound
         let ai = pages.map { DocumentScan.file(doc.id, $0) }, fr = pages.map { DocumentAnalysisService.rawURL(doc.id, "fr", $0) }
@@ -398,6 +406,9 @@ struct DocumentExportSheet: View {
                     let url = folder.appendingPathComponent(name + " (images).zip")
                     try DocumentExport.zip(dir, to: url)
                     return url
+                case .package:
+                    return try DocumentPackageService.export(doc, database: database, pdf: source, drafts: drafts,
+                                                             preferences: preferences, dictionaries: dictionaries, to: folder)
                 case .markdown:
                     let text = DocumentExport.markdown(documentId: doc.id, title: doc.title, pages: pages, annotations,
                                                        labels: labels, aiFile: { ai[$0 - lower] },

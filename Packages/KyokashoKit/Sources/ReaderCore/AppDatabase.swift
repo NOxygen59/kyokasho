@@ -152,6 +152,42 @@ public final class AppDatabase: @unchecked Sendable {
                 t.add(column: "category", .text)
             }
         }
+        m.registerMigration("v5-page-edits") { db in
+            // Modifications des pages (#49) : voir AppDatabase+PageEdits.swift.
+            try db.alter(table: "document") { t in
+                t.add(column: "layoutVersion", .integer).notNull().defaults(to: 0)
+            }
+            try db.create(table: "pageIdentity") { t in
+                t.column("documentId", .text).notNull().references("document", onDelete: .cascade, onUpdate: .cascade)
+                t.column("position", .integer).notNull()
+                t.column("pageId", .text).notNull()
+                t.column("printedNumber", .integer)
+                t.primaryKey(["documentId", "position"])
+                t.uniqueKey(["documentId", "pageId"])
+            }
+            try db.create(table: "pageEdit") { t in
+                t.primaryKey("id", .text)
+                t.column("documentId", .text).notNull().references("document", onDelete: .cascade, onUpdate: .cascade)
+                t.column("kind", .text).notNull()
+                t.column("versionBefore", .integer).notNull()
+                t.column("versionAfter", .integer).notNull()
+                t.column("appliedAt", .datetime).notNull()
+                t.column("mappingJSON", .blob).notNull()
+                t.column("pageOrderJSON", .blob).notNull()
+                // Suppression seulement : opération qui l'a restaurée, ou date de l'effacement de son archive (30 j).
+                // Ajoutées avant toute livraison de cette migration (branche locale) : pas de migration séparée.
+                t.column("restoredBy", .text)
+                t.column("purgedAt", .datetime)
+            }
+            try db.create(index: "pageEdit_doc", on: "pageEdit", columns: ["documentId", "appliedAt"])
+            try db.create(table: "pageEditRow") { t in
+                t.column("editId", .text).notNull().references("pageEdit", onDelete: .cascade)
+                t.column("tableName", .text).notNull()
+                t.column("pageId", .text).notNull()
+                t.column("rowJSON", .blob).notNull()
+            }
+            try db.create(index: "pageEditRow_edit", on: "pageEditRow", columns: ["editId"])
+        }
         return m
     }
 }
@@ -203,12 +239,20 @@ extension AppDatabase {
                     try db.execute(sql: "UPDATE OR IGNORE \(table) SET documentId = ? WHERE documentId = ?",
                                    arguments: [newDocument.id, oldId])
                 }
+                // Archives des pages retirées (#49) : gardées avec le document qui reste, jamais effacées en passant.
+                try db.execute(sql: "UPDATE pageEdit SET documentId = ? WHERE documentId = ?", arguments: [newDocument.id, oldId])
                 _ = try LibraryDocument.deleteOne(db, key: oldId)
                 try newDocument.update(db)
             } else {
                 try db.execute(sql: "UPDATE document SET id = ? WHERE id = ?", arguments: [newDocument.id, oldId])
                 try newDocument.update(db)
             }
+            // #49 (revue Codex F1) : un autre PDF n'a pas les mêmes pages, même s'il en a autant. Les identités sont
+            // refaites à la prochaine modification des pages, et la version change sans opération enregistrée : la
+            // chaîne des versions est rompue, donc une archive d'avant le remplacement n'est plus restaurable telle
+            // quelle (S2/S3 le vérifient). Les archives elles-mêmes restent jusqu'à leur échéance.
+            try db.execute(sql: "DELETE FROM pageIdentity WHERE documentId = ?", arguments: [newDocument.id])
+            try db.execute(sql: "UPDATE document SET layoutVersion = layoutVersion + 1 WHERE id = ?", arguments: [newDocument.id])
         }
     }
 

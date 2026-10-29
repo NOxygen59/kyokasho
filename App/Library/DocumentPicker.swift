@@ -8,13 +8,14 @@ import UniformTypeIdentifiers
 /// Sélecteur de l'app Fichiers. `asCopy: true` : le système télécharge d'abord les fichiers
 /// « en ligne seulement » (Google Drive, iCloud…) puis nous donne une copie locale complète.
 struct DocumentPicker: UIViewControllerRepresentable {
-    /// PDF d'office ; images pour « Images vers PDF ».
+    /// PDF d'office ; images pour « Images vers PDF » ; paquet Kyōkasho (un seul fichier).
     var types: [UTType] = [.pdf]
+    var multiple = true
     var onPick: ([URL]) -> Void
 
     func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
         let picker = UIDocumentPickerViewController(forOpeningContentTypes: types, asCopy: true)
-        picker.allowsMultipleSelection = true
+        picker.allowsMultipleSelection = multiple
         picker.delegate = context.coordinator
         picker.shouldShowFileExtensions = true
         return picker

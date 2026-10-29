@@ -128,6 +128,7 @@ final class AppModel: ObservableObject {
             .store(in: &cancellables)
         // « Ajouter des pages… » interrompu (app arrêtée au milieu) : annulé ou terminé.
         PageShift.reconcile(self)
+        refreshPrintedNumbers()
         // Lexique du domaine lu tout de suite : la relecture de l'OCR (hors du fil principal) s'en sert.
         _ = DomainLexicon.shared
     }
@@ -270,7 +271,45 @@ final class AppModel: ObservableObject {
         for document in all where expired.contains(document.id) { deleteForever(document) }
     }
 
+    /// Nouvelle page « 1 » enregistrée ; si les pages ont des identités (#49), leurs numéros imprimés repartent de
+    /// cette page (choix explicite de l'utilisateur), puis l'affichage est relu.
+    func savePageOne(_ doc: LibraryDocument) {
+        persist { database in
+            try database.save(doc)
+            try database.renumberPrintedPages(documentId: doc.id, firstPageIndex: doc.firstPageIndex)
+            Task { @MainActor in self.refreshPrintedNumbers() }
+        }
+    }
+
+    /// Demande venue du lecteur (bande des pages → corbeille) : le lecteur se ferme, puis la bibliothèque ouvre
+    /// « Pages du document » sur cette page (#49 : aucune modification des pages avec le document ouvert).
+    struct PageEditRequest: Equatable {
+        let documentId: String
+        let page: Int
+    }
+    @Published var pageEditRequest: PageEditRequest?
+
+    func requestPageEdit(documentId: String, page: Int) {
+        pageEditRequest = PageEditRequest(documentId: documentId, page: page)
+        openDocumentId = nil
+    }
+
+    /// Attend la fin des écritures en file (position de lecture, réglages, page 1…) : une écriture tardive du
+    /// lecteur ne doit pas arriver après une modification des pages (revue Codex R6).
+    func drainWrites() async {
+        let queue = ioQueue
+        await withCheckedContinuation { (done: CheckedContinuation<Void, Never>) in queue.async { done.resume() } }
+    }
+
+    /// Numéros imprimés gardés par page après une modification des pages (#49, R5) : relus depuis la base.
+    func refreshPrintedNumbers() {
+        PrintedPageNumbers.set((try? database.printedNumbers()) ?? [:])
+    }
+
     func delete(_ document: LibraryDocument) {
+        // Avant la cascade SQL : réparer l'association UUID → document des copies d'avant remplacement Drive.
+        do { try PageShift.synchronizeCopyOwners(database) }
+        catch { lastError = "Suppression impossible : \(error.localizedDescription)"; return }
         let importer = importer
         let thumbnails = thumbnails
         // Retiré de la liste tout de suite ; remis (avec le message d'erreur) si l'effacement échoue.
@@ -292,6 +331,7 @@ final class AppModel: ObservableObject {
                 Task { @MainActor in
                     self.deletingIds.remove(document.id)
                     ReadingTimeTracker.shared.forget(documentId: document.id)
+                    PageShift.removeCopies(documentId: document.id) // Pages supprimées gardées 30 jours (#49).
                 }
             } catch {
                 Task { @MainActor in
@@ -339,7 +379,7 @@ final class AppModel: ObservableObject {
     func setFirstPage(_ document: LibraryDocument, pdfPage: Int) {
         var doc = document
         doc.firstPageIndex = max(0, min(pdfPage - 1, doc.pageCount - 1))
-        persist { try $0.save(doc) }
+        savePageOne(doc)
     }
 
     func settings(for document: LibraryDocument) -> ReaderSettings {
