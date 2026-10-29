@@ -14,7 +14,10 @@ import UniformTypeIdentifiers
 /// (une transaction) : si l'app s'arrête au milieu d'un remplacement, le paquet de sécurité permet de revenir en
 /// arrière. Le document ne doit pas être ouvert ni en cours de modification des pages.
 enum DocumentPackageService {
-    static let contentType = UTType(filenameExtension: DocumentPackage.fileExtension) ?? .zip
+    /// Type déclaré dans Info.plist (`UTExportedTypeDeclarations`) : Fichiers montre les paquets comme des documents
+    /// Kyōkasho et les ouvre dans l'app. Conforme à `public.data` seulement (pas au zip), pour que Fichiers ne
+    /// propose pas de les décompresser.
+    static let contentType = UTType(exportedAs: "fr.noxygen59.kyokasho.package", conformingTo: .data)
 
     /// Réglages propres au document (pas ceux de l'app) : langue de l'OCR et modes du lecteur.
     @MainActor
