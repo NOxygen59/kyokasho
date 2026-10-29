@@ -24,14 +24,22 @@ public enum LibraryRestore {
         /// Emplacements présents dans la sauvegarde préparée (`kyokasho`, `analysis`, `support/<fichier>`). Un
         /// emplacement absent de la sauvegarde est quand même vidé, pour ne pas mêler deux bibliothèques.
         public var staged: [String]
+        /// Installation terminée (réglages compris) : un rejeu ne fait plus que le nettoyage, sans réappliquer les
+        /// réglages de la sauvegarde par-dessus ceux modifiés depuis (revue Codex de e777c68).
+        public var installed: Bool?
 
-        public init(id: String, createdAt: Date, backupName: String, staged: [String]) {
+        public init(id: String, createdAt: Date, backupName: String, staged: [String], installed: Bool? = nil) {
             self.id = id
             self.createdAt = createdAt
             self.backupName = backupName
             self.staged = staged
+            self.installed = installed
         }
     }
+
+    /// Résultat au lancement. `cleanupPending` : la bibliothèque restaurée est en place et utilisable, mais des copies
+    /// mises de côté n'ont pas pu être effacées ; le marqueur reste pour réessayer au prochain lancement.
+    public enum Outcome: Equatable { case nothing, restored(Marker), cleanupPending(Marker) }
 
     public struct RestoreError: LocalizedError, Equatable {
         public let errorDescription: String?
@@ -50,11 +58,22 @@ public enum LibraryRestore {
         support.appendingPathComponent("RestoreOld", isDirectory: true).appendingPathComponent(id, isDirectory: true)
     }
 
-    public static func pending(support: URL) -> Marker? {
-        guard let data = try? Data(contentsOf: markerURL(support: support)) else { return nil }
+    /// Marqueur en attente. Absent : `nil`. Présent mais illisible : **erreur**, jamais « pas de restauration » :
+    /// après une coupure, ouvrir la bibliothèque dans un état incomplet perdrait des données (revue Codex de e777c68).
+    public static func pending(support: URL) throws -> Marker? {
+        let url = markerURL(support: support)
+        guard FileManager.default.fileExists(atPath: url.path) else { return nil }
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
-        return try? decoder.decode(Marker.self, from: data)
+        do { return try decoder.decode(Marker.self, from: Data(contentsOf: url)) } catch {
+            throw RestoreError("Marqueur de restauration illisible : restauration arrêtée, fichiers gardés.")
+        }
+    }
+
+    private static func save(_ marker: Marker, support: URL) throws {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        try encoder.encode(marker).write(to: markerURL(support: support), options: .atomic)
     }
 
     /// Dernière étape de la préparation : écrit le marqueur (la sauvegarde est déjà extraite et vérifiée dans le
@@ -69,15 +88,13 @@ public enum LibraryRestore {
         }
         guard staged.contains("kyokasho") else { throw RestoreError("Sauvegarde sans bibliothèque : restauration refusée.") }
         let marker = Marker(id: id, createdAt: date, backupName: backupName, staged: staged.sorted())
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
-        try encoder.encode(marker).write(to: markerURL(support: support), options: .atomic)
+        try save(marker, support: support)
         return marker
     }
 
     /// Préparation abandonnée (ou refusée) : dossier de préparation effacé, rien d'autre touché.
     public static func cancel(support: URL) {
-        guard let marker = pending(support: support) else { return }
+        guard let marker = try? pending(support: support), marker.installed != true else { return }
         try? FileManager.default.removeItem(at: stagingURL(support: support, id: marker.id))
         try? FileManager.default.removeItem(at: markerURL(support: support))
     }
@@ -85,10 +102,36 @@ public enum LibraryRestore {
     /// Applique la restauration en attente, s'il y en a une. `analysis` : dossier des lectures IA de l'app.
     /// `applyPreferences` reçoit les réglages sauvegardés (domaine UserDefaults). Renvoie le marqueur appliqué.
     @discardableResult
-    public static func apply(support: URL, analysis: URL, applyPreferences: ([String: Any]) -> Void) throws -> Marker? {
-        guard let marker = pending(support: support) else { return nil }
+    public static func apply(support: URL, analysis: URL, applyPreferences: ([String: Any]) -> Void) throws -> Outcome {
+        guard var marker = try pending(support: support) else { return .nothing }
         let fm = FileManager.default
         let staging = stagingURL(support: support, id: marker.id), old = oldURL(support: support, id: marker.id)
+        if marker.installed != true {
+            try install(marker, support: support, analysis: analysis, staging: staging, old: old, applyPreferences: applyPreferences)
+            marker.installed = true
+            try save(marker, support: support)
+            try hit("marked")
+        }
+        // L'état d'avant a sa sauvegarde de sécurité (faite avant le marqueur) : il peut partir. Un échec garde le
+        // marqueur pour réessayer au prochain lancement, sans bloquer la bibliothèque déjà en place.
+        do {
+            try hit("cleanup")
+            for url in [old, staging] where fm.fileExists(atPath: url.path) { try fm.removeItem(at: url) }
+            for parent in [old.deletingLastPathComponent(), staging.deletingLastPathComponent()]
+                where ((try? fm.contentsOfDirectory(atPath: parent.path)) ?? ["?"]).isEmpty {
+                try fm.removeItem(at: parent)
+            }
+        } catch {
+            return .cleanupPending(marker)
+        }
+        try hit("cleaned")
+        try fm.removeItem(at: markerURL(support: support))
+        return .restored(marker)
+    }
+
+    private static func install(_ marker: Marker, support: URL, analysis: URL, staging: URL, old: URL,
+                                applyPreferences: ([String: Any]) -> Void) throws {
+        let fm = FileManager.default
         try fm.createDirectory(at: old.appendingPathComponent("support", isDirectory: true), withIntermediateDirectories: true)
         // Emplacements : nom dans la sauvegarde → emplacement réel de l'app.
         var targets: [(String, URL)] = [("kyokasho", support.appendingPathComponent("Kyokasho", isDirectory: true)),
@@ -130,15 +173,5 @@ public enum LibraryRestore {
             applyPreferences(domain)
             try hit("preferences")
         }
-        // L'état d'avant a sa sauvegarde de sécurité (faite avant le marqueur) : il peut partir.
-        try? fm.removeItem(at: old)
-        try? fm.removeItem(at: staging)
-        for parent in [old.deletingLastPathComponent(), staging.deletingLastPathComponent()]
-            where ((try? fm.contentsOfDirectory(atPath: parent.path)) ?? ["?"]).isEmpty {
-            try? fm.removeItem(at: parent)
-        }
-        try hit("cleaned")
-        try fm.removeItem(at: markerURL(support: support))
-        return marker
     }
 }

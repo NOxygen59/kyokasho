@@ -81,6 +81,8 @@ final class AppModel: ObservableObject {
     }
 
     init() {
+        // Restauration préparée (#51) : avant d'ouvrir la moindre base, quel que soit l'ordre de création par SwiftUI.
+        LibraryBackupService.applyPendingRestoreOnce()
         let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("Kyokasho", isDirectory: true)
         let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
@@ -134,6 +136,8 @@ final class AppModel: ObservableObject {
             .store(in: &cancellables)
         // « Ajouter des pages… » interrompu (app arrêtée au milieu) : annulé ou terminé.
         PageShift.reconcile(self)
+        // Après la reprise des pages, qui efface un ancien message : la restauration inachevée prime et bloque tout.
+        if LibraryBackupService.restoreBlocked { storageRecoveryError = LibraryBackupService.restoreMessage }
         refreshPrintedNumbers()
         // Lexique du domaine lu tout de suite : la relecture de l'OCR (hors du fil principal) s'en sert.
         _ = DomainLexicon.shared

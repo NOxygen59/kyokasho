@@ -205,6 +205,7 @@ enum PageShift {
         guard model.openDocumentId != document.id else {
             throw fail("Ferme le document avant de modifier ses pages.")
         }
+        guard !LibraryBackupService.inProgress else { throw fail("Sauvegarde en cours : réessaie après sa fin.") }
         guard applyingDocuments.insert(document.id).inserted else {
             throw fail("Une modification des pages de ce document est déjà en cours.")
         }

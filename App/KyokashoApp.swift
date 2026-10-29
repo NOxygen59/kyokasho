@@ -14,7 +14,7 @@ struct KyokashoApp: App {
         // Avant tout : journal de diagnostic et gestionnaire d'erreurs MLX (message noté avant un arrêt).
         Diagnostics.start()
         // Restauration préparée (#51) : appliquée avant que la moindre base soit ouverte.
-        LibraryBackupService.applyPendingRestore()
+        LibraryBackupService.applyPendingRestoreOnce()
         // Avant toute lecture du fond des pages (`@AppStorage`, `PageTone.current`) : valeurs retirées remplacées.
         PageTone.migrateStoredSetting()
         // Avant toute lecture de la position du panneau d'étude (`@AppStorage`) : position retirée remplacée.
@@ -76,7 +76,8 @@ struct RootView: View {
                 VStack(spacing: 20) {
                     Text("Reprise des données nécessaire").font(.title2)
                     Text(error)
-                    Button("Réessayer la reprise") {
+                    // Restauration inachevée (#51) : seule une relance peut la reprendre, avant l'ouverture des bases.
+                    if !LibraryBackupService.restoreBlocked { Button("Réessayer la reprise") {
                         guard !retryingStorage else { return }
                         retryingStorage = true
                         Task {
@@ -89,7 +90,7 @@ struct RootView: View {
                                 model.storageRecoveryError = nil
                             }
                         }
-                    }.disabled(retryingStorage)
+                    }.disabled(retryingStorage) }
                 }.padding()
             } else {
                 NavigationStack {

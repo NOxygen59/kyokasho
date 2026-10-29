@@ -80,18 +80,18 @@ final class LibraryRestoreTests: XCTestCase {
         let support = root.appendingPathComponent("support")
         _ = try prepare(support)
         var prefs: [String: Any]?
-        let marker = try LibraryRestore.apply(support: support, analysis: support.appendingPathComponent("Analysis")) { prefs = $0 }
-        XCTAssertNotNil(marker)
-        XCTAssertNil(LibraryRestore.pending(support: support))
+        let outcome = try LibraryRestore.apply(support: support, analysis: support.appendingPathComponent("Analysis")) { prefs = $0 }
+        guard case .restored = outcome else { return XCTFail("\(outcome)") }
+        XCTAssertNil(try LibraryRestore.pending(support: support))
         XCTAssertEqual(try state(support, prefs: prefs), expected)
         // Sans marqueur : rien à faire.
-        XCTAssertNil(try LibraryRestore.apply(support: support, analysis: support.appendingPathComponent("Analysis")) { _ in })
+        XCTAssertEqual(try LibraryRestore.apply(support: support, analysis: support.appendingPathComponent("Analysis")) { _ in }, .nothing)
     }
 
     func testPowerCutAtEveryStepResumesAtNextLaunch() throws {
         let points = ["aside.kyokasho", "installed.kyokasho", "aside.analysis", "installed.analysis",
                       "aside.support/definition-translations.json", "installed.support/definition-translations.json",
-                      "models", "preferences", "cleaned"]
+                      "models", "preferences", "marked", "cleaned"]
         for point in points {
             let support = root.appendingPathComponent("support-\(points.firstIndex(of: point)!)")
             _ = try prepare(support)
@@ -99,18 +99,47 @@ final class LibraryRestoreTests: XCTestCase {
             // Les réglages déjà rétablis avant la coupure le restent (l'app les écrit tout de suite).
             var prefs: [String: Any]?
             XCTAssertThrowsError(try LibraryRestore.apply(support: support, analysis: support.appendingPathComponent("Analysis")) { prefs = $0 }, point)
-            XCTAssertNotNil(LibraryRestore.pending(support: support), point)
+            XCTAssertNotNil(try LibraryRestore.pending(support: support), point)
             LibraryRestore.checkpoint = nil
             try LibraryRestore.apply(support: support, analysis: support.appendingPathComponent("Analysis")) { prefs = $0 }
             XCTAssertEqual(try state(support, prefs: prefs), expected, point)
         }
     }
 
+    /// Revue Codex de e777c68 : un marqueur illisible arrête tout, il n'est jamais pris pour « rien à restaurer ».
+    func testUnreadableMarkerStopsInsteadOfOpeningAnIncompleteLibrary() throws {
+        let support = root.appendingPathComponent("support")
+        _ = try prepare(support)
+        try Data("{abîmé".utf8).write(to: LibraryRestore.markerURL(support: support))
+        XCTAssertThrowsError(try LibraryRestore.pending(support: support))
+        XCTAssertThrowsError(try LibraryRestore.apply(support: support, analysis: support.appendingPathComponent("Analysis")) { _ in })
+        XCTAssertEqual(try String(contentsOf: support.appendingPathComponent("Kyokasho/Documents/b.pdf")), "pdf actuel")
+    }
+
+    /// Nettoyage raté : bibliothèque restaurée utilisable, marqueur gardé ; au lancement suivant, seul le nettoyage est
+    /// refait, sans réappliquer les réglages de la sauvegarde.
+    func testFailedCleanupKeepsMarkerAndRetriesWithoutReapplyingPreferences() throws {
+        let support = root.appendingPathComponent("support")
+        _ = try prepare(support)
+        LibraryRestore.checkpoint = { if $0 == "cleanup" { throw CocoaError(.fileWriteNoPermission) } }
+        var prefs: [String: Any]?
+        let first = try LibraryRestore.apply(support: support, analysis: support.appendingPathComponent("Analysis")) { prefs = $0 }
+        guard case .cleanupPending = first else { return XCTFail("\(first)") }
+        XCTAssertEqual(try state(support, prefs: prefs).prefix(5), expected.prefix(5))
+        XCTAssertEqual(try LibraryRestore.pending(support: support)?.installed, true)
+        LibraryRestore.checkpoint = nil
+        var reapplied = false
+        let second = try LibraryRestore.apply(support: support, analysis: support.appendingPathComponent("Analysis")) { _ in reapplied = true }
+        guard case .restored = second else { return XCTFail("\(second)") }
+        XCTAssertFalse(reapplied)
+        XCTAssertEqual(try state(support, prefs: prefs), expected)
+    }
+
     func testCancelLeavesCurrentLibraryUntouched() throws {
         let support = root.appendingPathComponent("support")
         _ = try prepare(support)
         LibraryRestore.cancel(support: support)
-        XCTAssertNil(LibraryRestore.pending(support: support))
+        XCTAssertNil(try LibraryRestore.pending(support: support))
         XCTAssertEqual(try String(contentsOf: support.appendingPathComponent("Kyokasho/Documents/b.pdf")), "pdf actuel")
         XCTAssertFalse(FileManager.default.fileExists(atPath: support.appendingPathComponent("RestoreStaging").path + "/x"))
     }

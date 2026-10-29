@@ -68,3 +68,5 @@ enum Diagnostics {
     static let shared = LayoutRegionsCache()
     func clear() {}
 }
+/// Sauvegarde complète (#51) : jamais en cours dans le harnais.
+@MainActor enum LibraryBackupService { static var inProgress = false }

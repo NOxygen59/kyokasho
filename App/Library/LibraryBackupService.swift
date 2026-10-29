@@ -76,16 +76,26 @@ enum LibraryBackupService {
 
     struct Result { let url: URL; let inChosenFolder: Bool; let removed: Int }
 
+    /// Sauvegarde en cours : refuse de lancer une IA, une analyse, une modification de pages ou l'import d'un paquet
+    /// pendant la copie (revue Codex de e777c68 : un seul contrôle avant la copie ne suffisait pas).
+    @MainActor static private(set) var inProgress = false
+
     /// Écritures au repos, puis sauvegarde dans un dossier privé, déplacée dans le dossier choisi (sinon laissée à
     /// partager). Refusée pendant une modification des pages, une lecture IA ou une analyse.
     @MainActor
     static func backup(_ model: AppModel) async throws -> Result {
+        guard !inProgress else { throw fail("Une sauvegarde est déjà en cours.") }
         guard PageShift.pendingDocumentId == nil, model.storageRecoveryError == nil else {
             throw fail("Une modification des pages doit être reprise avant de sauvegarder.")
         }
         guard AITaskCenter.shared.jobs.isEmpty, DocumentAnalysisService.shared.progress == nil else {
             throw fail("Une lecture IA ou une analyse est en cours : sauvegarde possible après sa fin.")
         }
+        inProgress = true
+        defer { inProgress = false }
+        // Écritures en file terminées (notes, encre, position, réglages). Brouillons, conversations, lexique et
+        // traductions sont écrits d'un bloc (écriture atomique) : la copie voit l'ancienne ou la nouvelle version,
+        // jamais un fichier coupé.
         await model.drainWrites()
         let fm = FileManager.default
         let work = fm.temporaryDirectory.appendingPathComponent("BackupApp-\(UUID().uuidString)", isDirectory: true)
@@ -124,20 +134,54 @@ enum LibraryBackupService {
     nonisolated(unsafe) static var restoreBlocked = false
     nonisolated(unsafe) static var restoreMessage: String?
 
-    /// Au lancement, avant toute ouverture de base (`KyokashoApp.init`) : applique une restauration préparée.
-    static func applyPendingRestore() {
-        guard let marker = LibraryRestore.pending(support: support) else { return }
+    /// Réglages propres à **cet** iPad, jamais remplacés par ceux de la sauvegarde (revue Codex de e777c68) : dossier
+    /// de sauvegarde, comptes et identifiants clients, diagnostic, relevé de batterie, mises à jour, visite guidée,
+    /// moniteur, options de débogage.
+    static let devicePreferencePrefixes = ["backup.", "google", "github.", "diagnostics.", "energy.", "update.", "intro.",
+                                           "monitor.", "debug", "forceLandscape"]
+
+    /// Domaine restauré : celui de la sauvegarde, sauf les réglages de l'appareil, gardés tels qu'ils sont ici.
+    static func mergedPreferences(restored: [String: Any], current: [String: Any]) -> [String: Any] {
+        func isDevice(_ key: String) -> Bool { devicePreferencePrefixes.contains { key.hasPrefix($0) } }
+        var out = restored.filter { !isDevice($0.key) }
+        for (key, value) in current where isDevice(key) { out[key] = value }
+        return out
+    }
+
+    private nonisolated(unsafe) static var restoreChecked = false
+
+    /// Au lancement, **avant toute ouverture de base**. Appelée en tête de `AppModel.init` (qui ouvre les bases de
+    /// l'app, des cartes et des dictionnaires) et de `KyokashoApp.init` : quel que soit l'ordre réel de création par
+    /// SwiftUI, le premier appel l'exécute, une seule fois (revue Codex de e777c68).
+    static func applyPendingRestoreOnce() {
+        guard !restoreChecked else { return }
+        restoreChecked = true
+        let marker: LibraryRestore.Marker
+        do {
+            guard let found = try LibraryRestore.pending(support: support) else { return }
+            marker = found
+        } catch {
+            restoreBlocked = true
+            restoreMessage = "Restauration inachevée : rien n'a été effacé. Ferme puis rouvre l'app. (\(error.localizedDescription))"
+            Diagnostics.error("restauration : \(error.localizedDescription)", "sauvegarde")
+            return
+        }
         Diagnostics.write("[sauvegarde] restauration de \(marker.backupName)…", sync: true)
         do {
-            try LibraryRestore.apply(support: support, analysis: DocumentAnalysisService.folder) { domain in
-                if let id = Bundle.main.bundleIdentifier { UserDefaults.standard.setPersistentDomain(domain, forName: id) }
+            let bundle = Bundle.main.bundleIdentifier ?? ""
+            let current = UserDefaults.standard.persistentDomain(forName: bundle) ?? [:]
+            let outcome = try LibraryRestore.apply(support: support, analysis: DocumentAnalysisService.folder) { domain in
+                UserDefaults.standard.setPersistentDomain(mergedPreferences(restored: domain, current: current), forName: bundle)
             }
             restoreMessage = "Restauration terminée : « \(marker.backupName) »."
             UserDefaults.standard.set(marker.backupName, forKey: "backup.lastRestoreName")
+            if case .cleanupPending = outcome {
+                Diagnostics.error("restauration : copies mises de côté non effacées, nouvel essai au prochain lancement", "sauvegarde")
+            }
             Diagnostics.write("[sauvegarde] restauration terminée", sync: true)
         } catch {
             restoreBlocked = true
-            restoreMessage = "Restauration inachevée : rien n'a été effacé. Relance l'app pour la reprendre. (\(error.localizedDescription))"
+            restoreMessage = "Restauration inachevée : rien n'a été effacé. Ferme puis rouvre l'app pour la reprendre. (\(error.localizedDescription))"
             Diagnostics.error("restauration : \(error.localizedDescription)", "sauvegarde")
         }
     }
@@ -147,7 +191,9 @@ enum LibraryBackupService {
     /// Étape 1 (rien de modifié) : vérifier et extraire la sauvegarde dans le dossier de préparation.
     @MainActor
     static func verifyRestore(from file: URL) async throws -> Prepared {
-        guard LibraryRestore.pending(support: support) == nil else { throw fail("Une restauration est déjà prête : relance l'app.") }
+        guard !FileManager.default.fileExists(atPath: LibraryRestore.markerURL(support: support).path) else {
+            throw fail("Une restauration est déjà prête : ferme puis rouvre l'app.")
+        }
         let id = UUID().uuidString
         let staging = LibraryRestore.stagingURL(support: support, id: id)
         let manifest: LibraryBackup.Manifest

@@ -118,6 +118,17 @@ extension PageShiftRecoveryTests {
         }
     }
 
+    /// Revue Codex de e777c68 : aucune modification des pages pendant une sauvegarde complète.
+    func testPageEditsAreRefusedDuringABackup() async throws {
+        try await withFixture { model, doc, root in
+            _ = try seed(model, doc)
+            LibraryBackupService.inProgress = true
+            defer { LibraryBackupService.inProgress = false }
+            await assertThrowsAsync({ try await PageShift.removePages(model, document: doc, pages: [1]) })
+            XCTAssertEqual(try model.database.document(id: doc.id)?.pageCount, 2)
+        }
+    }
+
     func testDeletingTheDocumentRemovesItsCopies() async throws {
         try await withFixture { model, doc, root in
             _ = try seed(model, doc)
