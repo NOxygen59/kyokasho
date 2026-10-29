@@ -236,6 +236,9 @@ final class AppModel: ObservableObject {
     }
 
     func delete(_ document: LibraryDocument) {
+        // Avant la cascade SQL : réparer l'association UUID → document des copies d'avant remplacement Drive.
+        do { try PageShift.synchronizeCopyOwners(database) }
+        catch { lastError = "Suppression impossible : \(error.localizedDescription)"; return }
         let importer = importer
         let thumbnails = thumbnails
         // Retiré de la liste tout de suite ; remis (avec le message d'erreur) si l'effacement échoue.

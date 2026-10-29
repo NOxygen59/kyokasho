@@ -191,6 +191,8 @@ enum PageShift {
                 throw fail("Le document est ouvert ou une lecture IA est en cours : remplacement arrêté.")
             }
             let result = try await operation()
+            try synchronizeCopyOwners(model.database)
+            PrintedPageNumbers.set(try model.database.printedNumbers())
             await model.ocr.endPageMutation(documentId: documentId)
             return result
         } catch {
@@ -629,6 +631,25 @@ enum PageShift {
         }
     }
 
+    /// F6 : la base est l'autorité sur le propriétaire d'une opération après remplacement Drive. Les manifestes
+    /// sont réparés depuis l'UUID, après remplacement, au lancement et AVANT une suppression en cascade. Une
+    /// coupure entre le rekey SQL et ces écritures est donc récupérable, sans rendre l'ancienne archive restaurable.
+    static func synchronizeCopyOwners(_ database: AppDatabase) throws {
+        for copy in copies() {
+            guard let edit = try database.pageEdit(id: copy.folder.lastPathComponent) else { continue }
+            if var manifest = copy.manifest {
+                guard manifest.editId == edit.id else { throw fail("Identifiant de copie incohérent : fichiers conservés.") }
+                guard manifest.documentId != edit.documentId else { continue }
+                manifest.documentId = edit.documentId
+                try JSONEncoder().encode(manifest).write(to: copy.folder.appendingPathComponent("manifest.json"), options: .atomic)
+            } else {
+                // Une fiche perdue peut retrouver son propriétaire, jamais un inventaire prétendument intact.
+                let manifest = Manifest(editId: edit.id, documentId: edit.documentId, kind: edit.kind.rawValue, createdAt: edit.appliedAt)
+                try JSONEncoder().encode(manifest).write(to: copy.folder.appendingPathComponent("manifest.json"), options: .atomic)
+            }
+        }
+    }
+
     /// Place réelle des copies (PDF complets compris), pour un document ou pour toutes.
     static func copiesSize(documentId: String? = nil) -> Int64 {
         copies().filter { documentId == nil || $0.manifest?.documentId == documentId }.reduce(0) { total, copy in
@@ -671,8 +692,11 @@ enum PageShift {
 
     static func reconcile(_ model: AppModel) {
         guard fm.fileExists(atPath: marker.path) else {
-            model.storageRecoveryError = nil
-            purgeExpired(model)
+            do {
+                try synchronizeCopyOwners(model.database)
+                model.storageRecoveryError = nil
+                purgeExpired(model)
+            } catch { block(model, error) }
             return
         }
         do {
@@ -682,6 +706,7 @@ enum PageShift {
             let p = try JSONDecoder().decode(Pending.self, from: Data(contentsOf: marker))
             if p.version == 2 || p.version == 3 {
                 try complete(p, model: model)
+                try synchronizeCopyOwners(model.database)
                 purgeExpired(model)
             } else {
                 // Le protocole v1 ne distingue pas avant/après l'effet pour report/files/cards.
