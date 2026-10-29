@@ -95,6 +95,8 @@ public struct ReleaseNotes: Equatable, Sendable, Identifiable {
             "Styles de l'app : Neo-Brutalism, Glassmorphism, Synthwave, Swiss Design, Wabi-Sabi, avec leurs palettes ; thèmes Clair et Sépia.",
             "Pages supprimées : effacer leurs copies tout de suite ; la restauration libère la place d'elle-même.",
             "Relevé de batterie (Aide au diagnostic) : ce que consomme chaque activité, par heure.",
+            "23 styles au choix, dont Claymorphism, Editorial, Cyberpunk, Pixel Art, Victorian ; fenêtres aux couleurs du style.",
+            "Sauvegarde complète de la bibliothèque dans un dossier de Fichiers (10 gardées) et restauration.",
             "Fond « Sépia nuit », visite guidée et cette fenêtre de nouveautés.",
         ], fixed: [
             "Les flèches du clavier tournent les pages sans rester bloquées sur le champ du numéro de page.",
