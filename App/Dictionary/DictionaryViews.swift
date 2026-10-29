@@ -373,6 +373,7 @@ struct FlowLayout: Layout {
 struct DictionaryManagerView: View {
     @EnvironmentObject private var dictionaryModel: DictionaryModel
     @AppStorage(DictionaryModel.firstLanguageKey) private var firstLanguage = "fr"
+    @State private var showCatalog = false
     @State private var showImporter = false
     @State private var deleting: DictionaryInfo?
 
@@ -414,8 +415,9 @@ struct DictionaryManagerView: View {
                 Text("Mettre à jour : réimporte le nouveau .zip d'un dictionnaire (même titre) ; son ordre est gardé. Les dictionnaires ne sont jamais chargés entièrement en mémoire.")
             }
             Section {
-                // Catalogue (#50) : dictionnaires conseillés, téléchargés et importés dans l'app.
-                NavigationLink { DictionaryCatalogView() } label: {
+                // Catalogue (#50) : un bouton et une feuille, pas un lien : la liste est toujours en mode « réordonner »,
+                // qui grise les liens (recette 1.3.2 (67), D6).
+                Button { showCatalog = true } label: {
                     Label("Catalogue : télécharger des dictionnaires", systemImage: "books.vertical")
                 }
                 // Langue des définitions qui passe en premier (#50, D2) ; réordonne les dictionnaires du catalogue.
@@ -439,6 +441,13 @@ struct DictionaryManagerView: View {
             }
         }
         .environment(\.editMode, .constant(.active))
+        .sheet(isPresented: $showCatalog) {
+            NavigationStack {
+                DictionaryCatalogView()
+                    .toolbar { ToolbarItem(placement: .confirmationAction) { Button("OK") { showCatalog = false } } }
+            }
+            .environmentObject(dictionaryModel)
+        }
         .navigationTitle("Dictionnaires")
         .fileImporter(isPresented: $showImporter, allowedContentTypes: [.zip], allowsMultipleSelection: true) { result in
             if case .success(let urls) = result { dictionaryModel.importDictionaries(urls) }

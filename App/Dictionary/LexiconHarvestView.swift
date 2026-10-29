@@ -25,6 +25,12 @@ struct LexiconHarvestView: View {
     @State private var error: String?
     @State private var pagesDone = 0
     @State private var pagesTotal = 0
+    /// Choix de NOxygen59 (recette 1.3.2 (67), D8) : l'IA du relevé et la langue des sens, gardés.
+    @AppStorage("lexique.releve.modele") private var modelID = ModelSpec.qwen3vl4b.id
+    @AppStorage("lexique.releve.langue") private var languageRaw = TermExtractor.Language.french.rawValue
+
+    private var chosenModel: ModelSpec { TermExtractor.models.first { $0.id == modelID } ?? .qwen3vl4b }
+    private var language: TermExtractor.Language { TermExtractor.Language(rawValue: languageRaw) ?? .french }
 
     private static let key = "lexique|releve"
     private var running: Bool { center.isRunning(Self.key) }
@@ -37,20 +43,31 @@ struct LexiconHarvestView: View {
                         Text("Choisir…").tag(String?.none)
                         ForEach(model.documents) { d in Text(d.title).tag(Optional(d.id)) }
                     }
+                    Picker("IA", selection: $modelID) {
+                        ForEach(TermExtractor.models, id: \.id) { spec in
+                            Text(spec.id == ModelSpec.qwen35chat4b.id ? "Qwen3.5 4B" : "Qwen3-VL 4B")
+                                + Text(TermExtractor.isAvailable(spec) ? "" : " (à télécharger)")
+                        }
+                    }
+                    Picker("Sens en", selection: $languageRaw) {
+                        Text("Français").tag(TermExtractor.Language.french.rawValue)
+                        Text("Anglais").tag(TermExtractor.Language.english.rawValue)
+                    }
+                    .pickerStyle(.segmented)
                     Button {
                         harvest()
                     } label: {
                         Label(running ? "Relevé en cours… (\(pagesDone)/\(pagesTotal))" : "Relever les termes avec l'IA",
                               systemImage: "sparkles")
                     }
-                    .disabled(documentId == nil || running || !Qwen3VLReader().isAvailable)
+                    .disabled(documentId == nil || running || !TermExtractor.isAvailable(chosenModel))
                     if running { Button("Arrêter", role: .destructive) { center.cancel(key: Self.key) } }
                 } header: {
                     Text("Depuis tes manuels")
                 } footer: {
-                    Text(Qwen3VLReader().isAvailable
-                         ? "Qwen3-VL lit les pages déjà lues par OvisOCR2 et propose les termes du métier, avec lecture et sens. Environ 20 à 40 s par page ; branche l'iPad pour un livre entier."
-                         : "Télécharge Qwen3-VL dans Réglages → Modèles d'IA pour cette piste.")
+                    Text(TermExtractor.isAvailable(chosenModel)
+                         ? "L'IA choisie lit les pages déjà lues par OvisOCR2 et propose les termes du métier, avec lecture et sens dans la langue choisie. Environ 20 à 40 s par page ; branche l'iPad pour un livre entier."
+                         : "Télécharge ce modèle dans Réglages → Modèles d'IA, ou choisis-en un autre.")
                 }
                 Section {
                     Button { showImporter = true } label: { Label("Importer un glossaire (CSV, texte)", systemImage: "tablecells") }
@@ -143,12 +160,14 @@ struct LexiconHarvestView: View {
         pagesDone = 0
         pagesTotal = pages.count
         let known = lexicon.entries.map(\.term)
-        center.run(Self.key, title: "Relevé des termes : \(document.title)", modelId: ModelSpec.qwen3vl4b.id, activity: "lecture") { job in
+        let spec = chosenModel, language = language
+        center.run(Self.key, title: "Relevé des termes : \(document.title)", modelId: spec.id, activity: "lecture") { job in
             for page in pages {
                 try Task.checkCancellation()
                 guard let markdown = DocumentAITextStore.read(documentId: id, reader: ModelSpec.ovisocr2.id, page: page) else { continue }
                 center.log(job, "p. \(page + 1) : recherche des termes du métier…")
-                let text = try await Qwen3VLReader().extractTerms(markdown: markdown, known: known + candidates.map(\.term))
+                let text = try await TermExtractor.extract(markdown: markdown, known: known + candidates.map(\.term),
+                                                           language: language, model: spec)
                 let found = LexiconCandidates.parse(text, page: page)
                 center.log(job, "p. \(page + 1) : \(found.count) terme(s) proposé(s)")
                 merge(found)

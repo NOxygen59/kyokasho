@@ -133,38 +133,6 @@ public struct Qwen3VLReader: Sendable {
         ("畳", "tatami"), ("押入れ", "placard japonais (oshiire)"), ("縁側", "véranda (engawa)"),
     ]
 
-    /// Relève les termes techniques d'une page déjà lue (lexique du design d'intérieur, #50 lot D4) : une ligne
-    /// « terme | lecture en hiragana | sens en français » par terme, sans les termes de `known`. Texte seul, même
-    /// modèle que la traduction ; le résultat n'est qu'une **proposition**, validée par NOxygen59.
-    public func extractTerms(markdown: String, known: [String] = [], maxTokens: Int = 1200) async throws -> String {
-        guard isAvailable else { throw OCRError.modelMissing(base.spec.title) }
-        if let free = PageVLMReader.availableMemory(), free < base.minimumFreeMemory {
-            throw OCRError.engineFailed("Pas assez de mémoire libre pour le relevé des termes (\(free / 1_048_576) Mo libres).")
-        }
-        let skip = known.filter { markdown.contains($0) }.prefix(80).joined(separator: "、")
-        let prompt = """
-        This is a page of a Japanese textbook on interior design and building (interior coordinator).
-        List the technical terms of the trade that appear on the page (materials, parts, construction methods, tools, styles).
-        One line per term, exactly: term | reading in hiragana | short French meaning
-        Rules: only terms written on the page; no common everyday words; at most 25 lines; no other text.
-        \(skip.isEmpty ? "" : "Already known, do not list: " + skip + "\n")
-        Page:
-        \(markdown)
-        """
-        let user = UserInput(chat: [.user(prompt)])
-        return try await GLMModel.using(directory: base.store.directory(base.spec), extraEOSTokens: []) { container in
-            try await withError {
-                try await container.perform { context in
-                    let prepared = try await context.processor.prepare(input: user)
-                    let result = try MLXLMCommon.generate(
-                        input: prepared, parameters: GenerateParameters(maxTokens: maxTokens, temperature: 0), context: context
-                    ) { (_: [Int]) in Task.isCancelled ? .stop : .more }
-                    return result.output
-                }
-            }
-        }
-    }
-
     /// Traduit en français le Markdown d'une page (texte seul, pas d'image), **structure gardée** : mêmes titres,
     /// listes, tableaux et balises `<img>` ; glossaire imposé. Même modèle que la lecture (déjà téléchargé).
     public func translate(markdown: String, glossary: [(String, String)] = defaultGlossary, maxTokens: Int? = nil) async throws -> String {
