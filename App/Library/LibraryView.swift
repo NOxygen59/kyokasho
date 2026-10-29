@@ -21,6 +21,7 @@ struct LibraryView: View {
     @State private var analyzing: LibraryDocument?
     @State private var exporting: LibraryDocument?
     @State private var addingPages: LibraryDocument?
+    @State private var editingPages: PageEditTarget?
     @State private var chatDocument: LibraryDocument?
     @State private var showDictionary = false
     @State private var renaming: LibraryDocument?
@@ -116,6 +117,15 @@ struct LibraryView: View {
         .onAppear { review.refresh() }
         .sheet(item: $addingPages) { document in
             AddPagesView(document: document).environmentObject(model).preferredColorScheme(.dark)
+        }
+        .sheet(item: $editingPages) { target in
+            RemovePagesView(target: target).environmentObject(model).preferredColorScheme(.dark)
+        }
+        .onReceive(model.$pageEditRequest) { request in
+            guard let request, let document = model.documents.first(where: { $0.id == request.documentId }) else { return }
+            model.pageEditRequest = nil
+            // Le lecteur (plein écran) finit de se fermer avant d'ouvrir la fenêtre.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) { editingPages = PageEditTarget(document: document, page: request.page) }
         }
         .sheet(item: $chatDocument) { document in
             NavigationStack { QwenChatView(document: document, database: model.database) }
@@ -343,6 +353,9 @@ struct LibraryView: View {
         Button {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { addingPages = document }
         } label: { Label("Ajouter des pages…", systemImage: "doc.badge.plus") }
+        Button {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { editingPages = PageEditTarget(document: document, page: nil) }
+        } label: { Label("Supprimer des pages…", systemImage: "doc.badge.minus") }
         Button {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { exporting = document }
         } label: { Label("Exporter…", systemImage: "square.and.arrow.up") }

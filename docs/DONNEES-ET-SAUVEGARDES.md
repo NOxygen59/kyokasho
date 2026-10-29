@@ -22,7 +22,9 @@ Les chemins ci-dessous sont relatifs au conteneur de l'app sur iPad. Ils ne dés
 | Identifiants de compte | Trousseau selon intégration Drive/GitHub/DeepL | Ne pas exporter dans Git ou les rapports ; prévoir reconnexion |
 | Diagnostic | `Documents/Diagnostics/journal.txt` | Potentiellement personnel ; partager après contrôle |
 | Vignettes, pages préparées/nettoyées | `Caches/`, dont Thumbnails, Sharpened, Equalized | Régénérables ; ne pas supprimer une tâche active |
-| Reprise d'ajout de pages | `Application Support/Kyokasho/page-shift.json` et PDF de passage | État transactionnel : ne pas effacer à la main |
+| Reprise d'une modification des pages (ajout, suppression, restauration) | `Application Support/Kyokasho/page-shift.json` et PDF de passage | État transactionnel : ne pas effacer à la main |
+| Copies des modifications des pages (#49) | `Application Support/Kyokasho/PageShift/<opération>/` (`manifest.json`, PDF d'origine et préparé, lectures IA, rapport, brouillons) | Gardées **30 jours** (décision de NOxygen59) pour restaurer des pages supprimées ; effacées au lancement suivant l'échéance, ou avec le document. Les copies des ajouts faites avant les fiches suivent la date du dossier |
+| Identités et archives des pages (#49) | `kyokasho.sqlite` : `pageIdentity`, `pageEdit`, `pageEditRow`, colonne `document.layoutVersion` | Identifiant et numéro imprimé de chaque page ; opérations ; lignes des pages supprimées (notes, encre, surlignages, OCR, repères, rotations, identité, cartes détachées) jusqu'à la purge |
 
 Les chemins précis de chaque sous-système restent définis par le code ; une future sauvegarde doit s'appuyer sur un inventaire central testé, pas recopier cette table comme une liste exhaustive de fichiers immuable.
 

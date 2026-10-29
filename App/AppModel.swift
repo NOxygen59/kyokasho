@@ -210,6 +210,26 @@ final class AppModel: ObservableObject {
         }
     }
 
+    /// Demande venue du lecteur (bande des pages → corbeille) : le lecteur se ferme, puis la bibliothèque ouvre
+    /// « Pages du document » sur cette page (#49 : aucune modification des pages avec le document ouvert).
+    struct PageEditRequest: Equatable {
+        let documentId: String
+        let page: Int
+    }
+    @Published var pageEditRequest: PageEditRequest?
+
+    func requestPageEdit(documentId: String, page: Int) {
+        pageEditRequest = PageEditRequest(documentId: documentId, page: page)
+        openDocumentId = nil
+    }
+
+    /// Attend la fin des écritures en file (position de lecture, réglages, page 1…) : une écriture tardive du
+    /// lecteur ne doit pas arriver après une modification des pages (revue Codex R6).
+    func drainWrites() async {
+        let queue = ioQueue
+        await withCheckedContinuation { (done: CheckedContinuation<Void, Never>) in queue.async { done.resume() } }
+    }
+
     /// Numéros imprimés gardés par page après une modification des pages (#49, R5) : relus depuis la base.
     func refreshPrintedNumbers() {
         PrintedPageNumbers.set((try? database.printedNumbers()) ?? [:])

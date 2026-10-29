@@ -134,6 +134,7 @@ enum PageShift {
             throw fail("Une modification des pages de ce document est déjà en cours.")
         }
         defer { applyingDocuments.remove(document.id) }
+        await model.drainWrites()
         await model.ocr.beginPageMutation(documentId: document.id)
         var ownsPendingJournal = false
         var built: URL?
