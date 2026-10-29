@@ -127,7 +127,9 @@ enum Diagnostics {
 /// Réglages → Aide et informations → Aide au diagnostic.
 struct DiagnosticsSection: View {
     @AppStorage(Diagnostics.enabledKey) private var enabled = false
+    @AppStorage(EnergyMeter.enabledKey) private var energy = false
     @State private var showLog = false
+    @State private var showEnergy = false
 
     var body: some View {
         Section {
@@ -143,6 +145,17 @@ struct DiagnosticsSection: View {
             Text("Note dans un journal ce que fait l'app (chargement des modèles, durées, mémoire, erreurs) pour aider à corriger un bug. Les erreurs sont toujours notées. Le journal reste sur l'iPad (app Fichiers → Kyōkasho → Diagnostics) ; partage-le quand on te le demande. Rien ne part tout seul.")
         }
         .sheet(isPresented: $showLog) { DiagnosticLogView() }
+        Section {
+            Toggle("Relevé de batterie", isOn: $energy)
+                .onChange(of: energy) { EnergyMeter.shared.setEnabled($0) }
+            Button { showEnergy = true } label: { Label("Voir le résumé", systemImage: "battery.75") }
+            Button("Effacer le relevé", role: .destructive) { EnergyFile.erase() }
+        } header: {
+            Text("Batterie")
+        } footer: {
+            Text("Note chaque minute le niveau de batterie, la chaleur et ce que fait l'app (lecture, IA, analyse), pour savoir quelle fonction consomme. Pour une mesure utile : luminosité fixe, iPad débranché, au moins 15 minutes par activité. Le fichier reste sur l'iPad (Fichiers → Kyōkasho → Diagnostics → energie.csv).")
+        }
+        .sheet(isPresented: $showEnergy) { EnergySummaryView() }
     }
 }
 
