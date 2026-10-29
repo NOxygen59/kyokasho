@@ -241,7 +241,7 @@ struct StudyTextTab: View {
             }, close: { presentedLookup = nil })
             .environmentObject(model.dictionary)
             .presentationDetents([.medium, .large])
-            .preferredColorScheme(AppStyle.current.colorScheme)
+            .preferredColorScheme(Theme.current.colorScheme)
         }
         .alert("Corriger la ligne", isPresented: Binding(get: { editingLine != nil }, set: { if !$0 { editingLine = nil } })) {
             TextField("Texte de la ligne", text: $lineDraft)
@@ -253,7 +253,7 @@ struct StudyTextTab: View {
         } message: {
             Text("Ta correction est gardée ; la relecture automatique n'y touchera plus.")
         }
-        .sheet(isPresented: $showVerify) { VerifySheet(reader: reader).preferredColorScheme(AppStyle.current.colorScheme) }
+        .sheet(isPresented: $showVerify) { VerifySheet(reader: reader).preferredColorScheme(Theme.current.colorScheme) }
         .sheet(isPresented: $showCompare) { CompareEnginesView(reader: reader).environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review) }
     }
 

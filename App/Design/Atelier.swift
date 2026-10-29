@@ -16,11 +16,12 @@ enum Atelier {
     static var textPrimary: Color { Theme.current.ink.opacity(0.96) }
     static var textSecondary: Color { Theme.current.secondaryInk }
     static var textTertiary: Color { Theme.current.tertiaryInk }
-    /// Encres hors palette, lues dans le style (`AppStyle`) : sur une couleur de fonction, ombre, voile.
-    static var onAccentInk: Color { AppStyle.current.onAccentInk }
-    static var shadow: Color { AppStyle.current.shadow }
+    /// Encres liées à la variante de la palette (nuit, clair, sépia) : sur une couleur de fonction, contraste, ombre.
+    static var onAccentInk: Color { Theme.current.onAccent }
+    static var contrastInk: Color { Theme.current.contrast }
+    static var shadow: Color { Theme.current.shadowTint }
+    /// Voile derrière une fenêtre, lu dans le style.
     static var scrim: Color { AppStyle.current.scrim }
-    static var contrastInk: Color { AppStyle.current.contrastInk }
 
     /// Une couleur par fonction.
     enum Tint {

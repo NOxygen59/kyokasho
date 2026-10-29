@@ -127,12 +127,12 @@ struct IntroPresenter: ViewModifier {
             }
             .fullScreenCover(isPresented: Binding(get: { showing == .tour }, set: { if !$0 { showing = .none } })) {
                 IntroTourView { IntroStore.markSeen(tour: true); showing = .none }
-                    .preferredColorScheme(AppStyle.current.colorScheme)
+                    .preferredColorScheme(Theme.current.colorScheme)
             }
             .sheet(isPresented: Binding(get: { showing == .whatsNew }, set: { if !$0 { IntroStore.markSeen(tour: false); showing = .none } })) {
                 if let notes = ReleaseNotes.notes(for: IntroStore.marketingVersion) {
                     WhatsNewView(notes: notes) { IntroStore.markSeen(tour: false); showing = .none }
-                        .preferredColorScheme(AppStyle.current.colorScheme)
+                        .preferredColorScheme(Theme.current.colorScheme)
                 }
             }
     }
@@ -158,11 +158,11 @@ struct IntroSettingsSection: View {
             Text("Version \(IntroStore.currentVersion).")
         }
         .fullScreenCover(isPresented: $tour) {
-            IntroTourView { IntroStore.markSeen(tour: true); tour = false }.preferredColorScheme(AppStyle.current.colorScheme)
+            IntroTourView { IntroStore.markSeen(tour: true); tour = false }.preferredColorScheme(Theme.current.colorScheme)
         }
         .sheet(isPresented: $news) {
             if let notes = ReleaseNotes.notes(for: IntroStore.marketingVersion) {
-                WhatsNewView(notes: notes) { news = false }.preferredColorScheme(AppStyle.current.colorScheme)
+                WhatsNewView(notes: notes) { news = false }.preferredColorScheme(Theme.current.colorScheme)
             }
         }
     }

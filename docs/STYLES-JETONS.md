@@ -23,22 +23,33 @@ dessins, les furigana dessinés sur la page, les fichiers exportés.
 | `Atelier.hairline` | séparateurs fins |
 | `Atelier.textPrimary`, `textSecondary`, `textTertiary` | texte principal, légende, indication |
 | `Atelier.Tint.read`, `annotate`, `japanese`, `ai`, `cloud` | une couleur par fonction : lecture, annotation, japonais, IA, import |
+| `Theme.isLight` / `colorScheme` | variante : nuit (sombre) ou clair et sépia ; mode clair ou sombre d'iOS partout (racine, lecteur, feuilles) |
+| `Atelier.onAccentInk` (`Theme.onAccent`) | texte ou icône posé sur une couleur de fonction pleine |
+| `Atelier.contrastInk` (`Theme.contrast`) | contraste maximal sur le fond de l'interface |
+| `Atelier.shadow` (`Theme.shadowTint`) | teinte des ombres |
+| `Theme.secondaryLevel`, `tertiaryLevel` | opacité de l'encre pour la légende et l'indication |
+
+### Variantes (lot 3, planche choisie par NOxygen59 le 29/10/2026)
+
+| Variante | Thèmes | Valeurs |
+|---|---|---|
+| Nuit | Atelier et les 10 autres thèmes d'origine | inchangées : encre sur accent noire, contraste blanc, ombre noire, niveaux 0,74 et 0,60 |
+| Clair | `Theme.clair` | fond `#F4F2EE`, panneau `#FFFFFF`, encre `#1B2226`, teintes foncées, texte blanc sur teinte, niveaux 0,82 et 0,72 |
+| Sépia | `Theme.sepia` | fond `#EFE4D0`, panneau `#F8F0E1`, encre `#3B2A1A`, teintes foncées, texte crème sur teinte, niveaux 0,82 et 0,75 |
+
+`ThemeContrastTests` vérifie 4,5:1 pour clair et sépia, en lisant les valeurs dans `Themes.swift` : texte des trois niveaux sur les trois fonds, couleurs de fonction comme texte, texte sur couleur de fonction. Deux teintes de la planche (sépia lecture et notes) ont été foncées d'un cran pour passer sur le panneau le plus foncé.
 
 ### Style (`AppStyle`, lu par `Atelier`), depuis S1a et S1b
 
 | Jeton | Rôle | Valeur « Atelier » |
 |---|---|---|
-| `AppStyle.isLight` / `colorScheme` | interface claire ou sombre d'iOS (menus, alertes, clavier) | sombre |
 | `AppStyle.cornerScale` / `Atelier.corner(_:)` | facteur de tous les arrondis de l'interface (0 = angles droits) ; `corner(n)` = valeur d'origine × facteur | 1 |
 | `Atelier.radius`, `smallRadius` | arrondi des panneaux, des petits éléments (`corner(18)`, `corner(11)`) | 18, 11 |
 | `AppStyle.shadowKind` / `.atelierShadow(opacity:radius:y:)` | ombre portée : douce (valeurs d'origine), dure et décalée, ou aucune | douce |
 | `AppStyle.borderScale` / `Atelier.border(_:)` | facteur des épaisseurs de bordure de l'interface | 1 |
 | `AppStyle.usesMaterials` / `Atelier.material(_:)` | matières floutées d'iOS, ou fond plein du panneau | oui |
 | `AppStyle.fontDesign` / `Atelier.font(_:weight:)` | famille du texte latin de l'interface (taille d'origine gardée) ; `atelierFontDesign()` l'applique aux styles de texte iOS dès iOS 16.1 | `.default` |
-| `Atelier.onAccentInk` | texte ou icône posé sur une couleur de fonction pleine | noir (opacité propre à chaque usage) |
-| `Atelier.shadow` | ombre portée | noir |
 | `Atelier.scrim` | voile derrière une fenêtre au premier plan | noir |
-| `Atelier.contrastInk` | contraste maximal sur le fond de l'interface | blanc |
 
 ### Mesures et typographie
 

@@ -3,7 +3,9 @@
 
 import SwiftUI
 
-/// Un thème = fonds (toujours sombres) + une couleur par fonction + un fond dessiné (`ThemeBackdrop`).
+/// Un thème = une palette : fonds, une couleur par fonction, un fond dessiné (`ThemeBackdrop`), et sa variante
+/// (lot 3 des styles, planche choisie par NOxygen59 le 29/10/2026) : **nuit** (fonds sombres, tous les thèmes
+/// d'origine), **clair** ou **sépia** (fonds clairs : interface iOS en mode clair, encres foncées).
 struct Theme: Identifiable, Equatable {
     let id: String
     let name: String
@@ -19,15 +21,29 @@ struct Theme: Identifiable, Equatable {
     let cloud: Color
     /// Fond de la bibliothèque et du dictionnaire, dessiné ici (aucune image tierce).
     var backdrop: Backdrop = .grid
+    /// Variante claire (clair, sépia) : mode clair d'iOS et encres ci-dessous inversées.
+    var isLight = false
+    /// Texte ou icône posé sur une couleur de fonction pleine (noir sur les teintes claires des thèmes nuit).
+    var onAccent: Color = .black
+    /// Contraste maximal sur le fond de l'interface.
+    var contrast: Color = .white
+    /// Teinte des ombres portées.
+    var shadowTint: Color = .black
+    /// Opacités de l'encre pour la légende et l'indication : relevées en clair pour garder 4,5:1 sur les panneaux.
+    var secondaryLevel: Double = 0.74
+    var tertiaryLevel: Double = 0.60
 
     /// Niveaux communs : une légende reste lisible sur le panneau le plus clair.
-    var secondaryInk: Color { ink.opacity(0.74) }
-    var tertiaryInk: Color { ink.opacity(0.60) }
+    var secondaryInk: Color { ink.opacity(secondaryLevel) }
+    var tertiaryInk: Color { ink.opacity(tertiaryLevel) }
+    var colorScheme: ColorScheme { isLight ? .light : .dark }
     var separator: Color { ink.opacity(0.13) }
 
     var atmosphere: String {
         switch id {
         case "atelier": return "Graphite profond · menthe patinée"
+        case "clair": return "Papier blanc · encre graphite"
+        case "sepia": return "Papier ancien · encre brune"
         case "foret": return "Sous-bois · sauge et rouge argile"
         case "braise": return "Prune veloutée · cuivre doux"
         case "sable": return "Sable chaud · crème et terre cuite"
@@ -122,7 +138,27 @@ struct Theme: Identifiable, Equatable {
         read: Color(hex: 0xB9D1BF), annotate: Color(hex: 0xE9D0A8), japanese: Color(hex: 0xF1B1CB),
         ai: Color(hex: 0xD1C1EB), cloud: Color(hex: 0xB4CCE6), backdrop: .sakura)
 
-    static let all: [Theme] = [.atelier, .washi, .architecte, .interieur, .soir, .encre, .sakura,
+    /// Variante claire de la planche du 29/10/2026 : teintes de fonction foncées (texte blanc dessus, 4,5:1).
+    static let clair = Theme(
+        id: "clair", name: "Clair (papier blanc)",
+        canvas: Color(hex: 0xF4F2EE), surface: Color(hex: 0xFFFFFF), surfaceHigh: Color(hex: 0xECE8E1),
+        ink: Color(hex: 0x1B2226),
+        read: Color(hex: 0x0F7466), annotate: Color(hex: 0x8A5A00), japanese: Color(hex: 0xB3372A),
+        ai: Color(hex: 0x6347B8), cloud: Color(hex: 0x2563A8),
+        isLight: true, onAccent: Color(hex: 0xFFFFFF), contrast: Color(hex: 0x1B2226), shadowTint: Color(hex: 0x1B2226),
+        secondaryLevel: 0.82, tertiaryLevel: 0.72)
+
+    /// Variante sépia de la planche du 29/10/2026.
+    static let sepia = Theme(
+        id: "sepia", name: "Sépia (papier ancien)",
+        canvas: Color(hex: 0xEFE4D0), surface: Color(hex: 0xF8F0E1), surfaceHigh: Color(hex: 0xE6D8BE),
+        ink: Color(hex: 0x3B2A1A),
+        read: Color(hex: 0x1C6457), annotate: Color(hex: 0x845000), japanese: Color(hex: 0xA53A24),
+        ai: Color(hex: 0x5E4A9E), cloud: Color(hex: 0x2F5F8A), backdrop: .washi,
+        isLight: true, onAccent: Color(hex: 0xFFF8EC), contrast: Color(hex: 0x3B2A1A), shadowTint: Color(hex: 0x3B2A1A),
+        secondaryLevel: 0.82, tertiaryLevel: 0.75)
+
+    static let all: [Theme] = [.atelier, .clair, .sepia, .washi, .architecte, .interieur, .soir, .encre, .sakura,
                                .foret, .braise, .sable, .lagon]
 
     /// Thème en cours (lu par `Atelier`). Changé par `ThemeManager`.

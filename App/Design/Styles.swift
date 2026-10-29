@@ -3,8 +3,8 @@
 
 import SwiftUI
 
-/// Style de l'app (chantier des styles, S1) : tout ce qui n'est pas une couleur de fonction. Forme, relief, encres
-/// hors palette, clair ou sombre. Il se combine avec une palette (`Theme`) : décision de NOxygen59 du 29/10/2026.
+/// Style de l'app (chantier des styles, S1) : forme, typographie, relief, bordure, voile. Les couleurs, y compris
+/// clair ou sombre, viennent de la palette (`Theme`, variantes nuit, clair, sépia). Il se combine avec une palette (`Theme`) : décision de NOxygen59 du 29/10/2026.
 /// Le style habille toute l'app, lecteur compris, jamais les pages du manuel (PDF, papier, encre des notes, exports).
 ///
 /// S1 : un seul style, « Atelier », dont chaque valeur reprend exactement l'ancienne valeur écrite en dur.
@@ -12,9 +12,6 @@ import SwiftUI
 struct AppStyle: Identifiable, Equatable {
     let id: String
     let name: String
-    /// Fonds clairs : l'interface passe en mode clair d'iOS (menus, alertes, clavier).
-    var isLight = false
-
     // MARK: Forme
     /// Facteur appliqué à tous les arrondis de l'interface (`Atelier.corner`) : 1 = arrondis d'origine, 0 = angles
     /// droits (styles Swiss, Neo-Brutalism…), plus de 1 = formes gonflées (Claymorphism).
@@ -33,15 +30,9 @@ struct AppStyle: Identifiable, Equatable {
     /// Matières floutées d'iOS (pilules, fenêtres d'avertissement). `false` : fond plein du panneau à la place.
     var usesMaterials = true
 
-    // MARK: Encres hors palette (valeur de base ; chaque usage garde son opacité)
-    /// Texte ou icône posé sur une couleur de fonction pleine (bouton actif, pastille).
-    var onAccentInk: Color = .black
-    /// Ombre portée des panneaux et fenêtres.
-    var shadow: Color = .black
-    /// Voile derrière une fenêtre au premier plan.
+    // MARK: Voile
+    /// Voile derrière une fenêtre au premier plan (les encres claires ou foncées viennent de la palette, `Theme`).
     var scrim: Color = .black
-    /// Contraste maximal sur le fond de l'interface (icône du stylo noir, contour d'une pastille, texte trouvé).
-    var contrastInk: Color = .white
 
     static let atelier = AppStyle(id: "atelier", name: "Atelier")
 
@@ -49,6 +40,4 @@ struct AppStyle: Identifiable, Equatable {
 
     /// Style en cours (lu par `Atelier`). Changé par `ThemeManager`.
     static var current: AppStyle = .atelier
-
-    var colorScheme: ColorScheme { isLight ? .light : .dark }
 }

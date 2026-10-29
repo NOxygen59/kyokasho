@@ -28,7 +28,7 @@ struct KyokashoApp: App {
                 .id(themes.identity)
                 .environmentObject(themes)
                 .environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review)
-                .preferredColorScheme(themes.style.colorScheme)
+                .preferredColorScheme(themes.theme.colorScheme)
                 .atelierFontDesign()
                 .tint(Atelier.Tint.read)
                 .onOpenURL { url in
@@ -104,7 +104,7 @@ struct RootView: View {
         )) {
             ReaderTabsHost()
                 .environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review)
-                .preferredColorScheme(AppStyle.current.colorScheme)
+                .preferredColorScheme(Theme.current.colorScheme)
                 .atelierFontDesign()
                 .tint(Atelier.Tint.read)
         }

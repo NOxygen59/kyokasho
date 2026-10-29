@@ -131,7 +131,7 @@ struct LibraryView: View {
         .sheet(isPresented: $showImportOptions) {
             ImportOptionsView(onImport: { urls, language in model.importFiles(urls, language: language) },
                               onPackage: { url in openPackage(url) })
-                .preferredColorScheme(AppStyle.current.colorScheme)
+                .preferredColorScheme(Theme.current.colorScheme)
         }
         .alert("Remplacer « \(pendingPackage?.contents.manifest.title ?? "") » ?",
                isPresented: Binding(get: { pendingPackage?.exists == true }, set: { if !$0, let p = pendingPackage { model.discardPackage(p); pendingPackage = nil } })) {
@@ -144,19 +144,19 @@ struct LibraryView: View {
             Button("OK", role: .cancel) {}
         } message: { Text(packageMessage ?? "") }
         .sheet(item: $analyzing) { document in
-            DocumentAnalysisSheet(document: document).environmentObject(model).preferredColorScheme(AppStyle.current.colorScheme)
+            DocumentAnalysisSheet(document: document).environmentObject(model).preferredColorScheme(Theme.current.colorScheme)
         }
         .sheet(isPresented: $showMerge) {
-            PDFMergeView().environmentObject(model).preferredColorScheme(AppStyle.current.colorScheme)
+            PDFMergeView().environmentObject(model).preferredColorScheme(Theme.current.colorScheme)
         }
         .sheet(isPresented: $showImagesToPDF) {
-            ImagesToPDFView().environmentObject(model).preferredColorScheme(AppStyle.current.colorScheme)
+            ImagesToPDFView().environmentObject(model).preferredColorScheme(Theme.current.colorScheme)
         }
         .sheet(isPresented: $showSettings) {
-            SettingsView().environmentObject(themes).environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review).preferredColorScheme(AppStyle.current.colorScheme)
+            SettingsView().environmentObject(themes).environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review).preferredColorScheme(Theme.current.colorScheme)
         }
         .sheet(isPresented: $showDrive) {
-            DriveBrowserView().environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review).preferredColorScheme(AppStyle.current.colorScheme)
+            DriveBrowserView().environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review).preferredColorScheme(Theme.current.colorScheme)
         }
         .fullScreenCover(isPresented: $showDictionary) {
             NavigationStack {
@@ -168,13 +168,13 @@ struct LibraryView: View {
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbar { ToolbarItem(placement: .confirmationAction) { Button("OK") { showDictionary = false } } }
             }
-            .environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review).preferredColorScheme(AppStyle.current.colorScheme)
+            .environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review).preferredColorScheme(Theme.current.colorScheme)
         }
         .sheet(isPresented: $showBench) {
             NavigationStack {
                 BenchView().toolbar { ToolbarItem(placement: .confirmationAction) { Button("OK") { showBench = false } } }
             }
-            .environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review).preferredColorScheme(AppStyle.current.colorScheme)
+            .environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review).preferredColorScheme(Theme.current.colorScheme)
         }
         .alert("Renommer", isPresented: Binding(get: { renaming != nil }, set: { if !$0 { renaming = nil } })) {
             TextField("Titre", text: $newTitle)
@@ -182,14 +182,14 @@ struct LibraryView: View {
             Button("Renommer") { if let renaming { model.rename(renaming, to: newTitle) } }
         }
         .fullScreenCover(isPresented: $showReview, onDismiss: { review.refresh() }) {
-            ReviewScreen().environmentObject(model).environmentObject(review).preferredColorScheme(AppStyle.current.colorScheme)
+            ReviewScreen().environmentObject(model).environmentObject(review).preferredColorScheme(Theme.current.colorScheme)
         }
         .onAppear { review.refresh() }
         .sheet(item: $addingPages) { document in
-            AddPagesView(document: document).environmentObject(model).preferredColorScheme(AppStyle.current.colorScheme)
+            AddPagesView(document: document).environmentObject(model).preferredColorScheme(Theme.current.colorScheme)
         }
         .sheet(item: $editingPages) { target in
-            RemovePagesView(target: target).environmentObject(model).preferredColorScheme(AppStyle.current.colorScheme)
+            RemovePagesView(target: target).environmentObject(model).preferredColorScheme(Theme.current.colorScheme)
         }
         .onReceive(model.$pageEditRequest) { request in
             guard let request, let document = model.documents.first(where: { $0.id == request.documentId }) else { return }
@@ -199,11 +199,11 @@ struct LibraryView: View {
         }
         .sheet(item: $chatDocument) { document in
             NavigationStack { QwenChatView(document: document, database: model.database) }
-                .environmentObject(model).preferredColorScheme(AppStyle.current.colorScheme)
+                .environmentObject(model).preferredColorScheme(Theme.current.colorScheme)
         }
         .sheet(item: $exporting) { document in
             DocumentExportSheet(document: document)
-                .environmentObject(model).environmentObject(model.review).preferredColorScheme(AppStyle.current.colorScheme)
+                .environmentObject(model).environmentObject(model.review).preferredColorScheme(Theme.current.colorScheme)
         }
         .alert("Où est la page 1 ?", isPresented: Binding(get: { settingPageOne != nil },
                                                            set: { if !$0 { settingPageOne = nil } })) {
@@ -243,7 +243,7 @@ struct LibraryView: View {
         } message: {
             Text("Il quitte la bibliothèque mais garde son PDF, ses notes, surlignages, dessins et son texte OCR. Restaurable pendant 30 jours depuis la Corbeille.")
         }
-        .sheet(isPresented: $showTrash) { TrashView().environmentObject(model).preferredColorScheme(AppStyle.current.colorScheme) }
+        .sheet(isPresented: $showTrash) { TrashView().environmentObject(model).preferredColorScheme(Theme.current.colorScheme) }
     }
 
     // MARK: Barre latérale

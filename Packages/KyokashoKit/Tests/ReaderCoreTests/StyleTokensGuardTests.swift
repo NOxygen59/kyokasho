@@ -9,7 +9,8 @@ import XCTest
 final class StyleTokensGuardTests: XCTestCase {
     /// Fichier → nombre d'usages permis, chacun vérifié à la main le 29/10/2026.
     private let allowed: [String: Int] = [
-        "Design/Styles.swift": 4,            // valeurs du style Atelier
+        "Design/Styles.swift": 1,            // voile du style Atelier
+        "Design/Themes.swift": 3,            // encres par défaut des palettes nuit
         "Design/ThemeBackdrop.swift": 1,     // dessin du fond « collines », propre à ce motif
         "Reader/ResourceMonitor.swift": 2,   // masque de dégradé (opacité seulement)
         "Reader/ReaderController+Display.swift": 1, // fond de page noir choisi par l'utilisateur
