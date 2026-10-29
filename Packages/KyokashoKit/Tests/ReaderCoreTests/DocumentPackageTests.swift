@@ -16,8 +16,11 @@ final class DocumentPackageTests: XCTestCase {
     override func setUpWithError() throws {
         root = FileManager.default.temporaryDirectory.appendingPathComponent("kyokasho-package-" + UUID().uuidString)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
-        pdf = try makePDF(pages: 3, marker: UUID().uuidString)
-        id = try DocumentImporter.sha256(of: pdf)
+        // Comme dans l'app : l'identifiant est l'empreinte du PDF importé, puis une page ajoutée change le PDF.
+        let marker = UUID().uuidString
+        id = try DocumentImporter.sha256(of: try makePDF(pages: 3, marker: marker))
+        pdf = try makePDF(pages: 4, marker: marker)
+        let size = Int64(try pdf.resourceValues(forKeys: [.fileSizeKey]).fileSize!)
         source = try AppDatabase.inMemory()
         var doc = LibraryDocument(id: id, title: "Manuel 図", originalFileName: "m.pdf", pageCount: 3, fileSize: 9)
         doc.firstPageIndex = 1
@@ -29,7 +32,7 @@ final class DocumentPackageTests: XCTestCase {
             try OCRResultRecord(documentId: self.id, pageIndex: 1, engine: "retouche", json: Data([1, 2]), durationMs: 3).insert(db)
         }
         try source.remapPages(documentId: id, mapping: PageMapping.insertion(oldCount: 3, inserted: 1, at: 3), editId: "e",
-                              kind: .insertion, expectedVersion: 0, fileSize: 9)
+                              kind: .insertion, expectedVersion: 0, fileSize: size)
         try source.save(LibraryDocument(id: "autre", title: "Autre", originalFileName: "a.pdf", pageCount: 1, fileSize: 1))
     }
 
@@ -64,7 +67,7 @@ final class DocumentPackageTests: XCTestCase {
         XCTAssertEqual(try String(contentsOf: contents.analysisFiles["en-1.md"]!), "translation")
         XCTAssertEqual(contents.drafts, [2: "brouillon"])
         XCTAssertEqual(contents.preferences, ["ocrLanguage": "japanese"])
-        XCTAssertEqual(try DocumentImporter.sha256(of: contents.pdf), id)
+        XCTAssertEqual(try DocumentImporter.sha256(of: contents.pdf), try DocumentImporter.sha256(of: pdf), "le PDF actuel, pas l'importé")
 
         let target = try AppDatabase.inMemory()
         try target.installPackage(documentId: id, rows: contents.rows, replacing: false)
@@ -113,6 +116,14 @@ final class DocumentPackageTests: XCTestCase {
         newer["highlight"]?[0]["colonneFuture"] = .integer(1)
         XCTAssertThrowsError(try target.installPackage(documentId: id, rows: newer, replacing: false))
         XCTAssertNil(try target.document(id: id))
+    }
+
+    /// Recette 68 : un document dont les pages ont changé (PDF ≠ identifiant) s'exporte et se réimporte.
+    func testDocumentWhosePagesChangedCanBeExportedAndOpened() throws {
+        XCTAssertNotEqual(try DocumentImporter.sha256(of: pdf), id)
+        let contents = try DocumentPackage.open(try export(), into: root.appendingPathComponent("o"))
+        XCTAssertEqual(contents.manifest.documentId, id)
+        XCTAssertEqual(try DocumentImporter.sha256(of: contents.pdf), try DocumentImporter.sha256(of: pdf))
     }
 
     func testExportRefusesAPDFThatNoLongerMatches() throws {
