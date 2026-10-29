@@ -584,6 +584,9 @@ enum PageShift {
         FuriganaLayer.clearMemory()
         LayoutRegionsCache.shared.clear()
         ToneCache.clear()
+        // F5 : l'affichage suit la base pour tous les appelants (ajout compris) et après chaque reprise.
+        // Une lecture SQL échouée garde le journal au lieu de publier un cache vide comme un succès.
+        PrintedPageNumbers.set(try model.database.printedNumbers())
         try hit("complete.before")
         try fm.removeItem(at: marker) // Échec = journal conservé ; tout est rejouable.
         // Ne pas jeter ici les originaux : une suppression automatique sera étudiée après recette/restauration.
