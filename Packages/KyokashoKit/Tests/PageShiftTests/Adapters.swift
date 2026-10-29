@@ -18,7 +18,8 @@ import ReviewKit
     var openDocumentId: String?
     var lastError: String?
     let thumbnails = ThumbnailCache()
-    func drainWrites() async {}
+    var onDrain: (() async -> Void)?
+    func drainWrites() async { await onDrain?() }
     init(root: URL) throws {
         database = try .open(at: root.appendingPathComponent("kyokasho.sqlite"))
         ocr = OCRService(database: database)

@@ -53,7 +53,7 @@ final class AITaskCenter: ObservableObject {
     @discardableResult
     func run(_ key: String, title: String, modelId: String? = nil, activity: String? = nil,
              _ work: @escaping @MainActor (_ id: UUID) async throws -> Void) -> Bool {
-        guard !isRunning(key) else { return false }
+        guard !isRunning(key), !PageShift.blocksAI(jobKey: key) else { return false }
         let job = Job(key: key, title: title, modelId: modelId, activity: activity)
         jobs.append(job)
         errors[key] = nil

@@ -164,6 +164,41 @@ enum PageShift {
         applyingDocuments.contains(documentId) || pendingDocumentId == documentId
     }
 
+    /// Les clés IA portent l'identifiant entre séparateurs. Refuser les nouveaux travaux tant que le PDF ou
+    /// ses indices sont réservés, y compris pendant l'attente d'un importeur Drive détaché.
+    static func blocksAI(jobKey: String) -> Bool {
+        let ids = applyingDocuments.union(pendingDocumentId.map { [$0] } ?? [])
+        return jobKey.split(separator: "|").contains { ids.contains(String($0)) }
+    }
+
+    /// Le remplacement Drive utilise le même périmètre d'exclusion que les modifications de pages.
+    static func withDriveReplacement<T>(_ model: AppModel, documentId: String,
+                                       operation: () async throws -> T) async throws -> T {
+        guard model.openDocumentId != documentId else { throw fail("Ferme le document avant de le remplacer.") }
+        guard !fm.fileExists(atPath: marker.path), applyingDocuments.insert(documentId).inserted else {
+            throw fail("Une modification des pages est déjà en cours ou doit être reprise.")
+        }
+        defer { applyingDocuments.remove(documentId) }
+        await model.drainWrites()
+        await model.ocr.beginPageMutation(documentId: documentId)
+        do {
+            let current = model.storage.url(for: documentId)
+            await Task.detached { PDFPool.release(current) }.value
+            try Task.checkCancellation()
+            guard model.openDocumentId != documentId,
+                  !AITaskCenter.shared.jobs.contains(where: { $0.key.contains(documentId) }),
+                  DocumentAnalysisService.shared.progress?.documentId != documentId else {
+                throw fail("Le document est ouvert ou une lecture IA est en cours : remplacement arrêté.")
+            }
+            let result = try await operation()
+            await model.ocr.endPageMutation(documentId: documentId)
+            return result
+        } catch {
+            await model.ocr.endPageMutation(documentId: documentId)
+            throw error
+        }
+    }
+
     private static func run(_ model: AppModel, document: LibraryDocument, _ operation: Operation) async throws -> [String] {
         guard model.openDocumentId != document.id else {
             throw fail("Ferme le document avant de modifier ses pages.")
@@ -211,7 +246,15 @@ enum PageShift {
                 built = merged
                 plan = restoring
             }
+            try hit("build.after")
             try Task.checkCancellation()
+            // La fabrication suspend le MainActor : aucune hypothèse d'avant l'attente ne vaut comme verrou.
+            guard model.openDocumentId != document.id,
+                  !AITaskCenter.shared.jobs.contains(where: { $0.key.contains(document.id) }),
+                  DocumentAnalysisService.shared.progress?.documentId != document.id,
+                  !fm.fileExists(atPath: marker.path) else {
+                throw fail("Le document est occupé après la préparation : aucune modification effectuée.")
+            }
             ownsPendingJournal = true
             let result = try prepareAndComplete(model, document: document, operation, merged: merged, plan: plan)
             await model.ocr.endPageMutation(documentId: document.id)
