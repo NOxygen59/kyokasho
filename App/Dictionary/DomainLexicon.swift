@@ -87,6 +87,7 @@ struct DomainLexiconView: View {
     @ObservedObject private var lexicon = DomainLexicon.shared
     @State private var search = ""
     @State private var editing: DomainLexicon.Entry?
+    @State private var showHarvest = false
 
     private var shown: [DomainLexicon.Entry] {
         guard !search.isEmpty else { return lexicon.entries }
@@ -112,6 +113,8 @@ struct DomainLexiconView: View {
                 Text("\(lexicon.entries.count) termes. Un terme du lexique compte comme un mot connu pour la relecture de l'OCR (moins de faux « caractères douteux ») et l'analyse ; son sens est imposé aux traductions de Qwen3-VL ; lecture et sens aident le chat.")
             }
             Section {
+                // Lexique du design d'intérieur (#50, D4) : termes relevés dans les manuels ou importés, à valider.
+                Button { showHarvest = true } label: { Label("Enrichir : relever dans mes manuels, importer un glossaire", systemImage: "sparkles") }
                 Button("Remettre les termes de départ manquants") { lexicon.restoreStarter() }
             }
         }
@@ -123,6 +126,7 @@ struct DomainLexiconView: View {
             }
         }
         .sheet(item: $editing) { entry in LexiconEntryEditor(entry: entry) }
+        .sheet(isPresented: $showHarvest) { LexiconHarvestView() }
     }
 }
 
