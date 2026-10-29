@@ -40,13 +40,13 @@ struct LocalAIEnergyCard: View {
                         .font(.system(size: 12, weight: .semibold))
                 }
                 .padding(12)
-                .background(Atelier.surfaceHigh, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .background(Atelier.surfaceHigh, in: RoundedRectangle(cornerRadius: Atelier.corner(14), style: .continuous))
             case .activeOnBattery:
                 Label("IA locale en cours sur batterie", systemImage: "bolt.batteryblock")
                     .font(.system(size: 12, weight: .semibold)).foregroundStyle(Atelier.Tint.ai)
                     .padding(.horizontal, 12).padding(.vertical, 8)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Atelier.surfaceHigh, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .background(Atelier.surfaceHigh, in: RoundedRectangle(cornerRadius: Atelier.corner(14), style: .continuous))
                     .accessibilityHint("La batterie baisse vite pendant ce travail")
             }
         }

@@ -93,7 +93,7 @@ struct TrashView: View {
             }
             .padding(20)
             .frame(maxWidth: 340)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: Atelier.radius, style: .continuous))
             .shadow(color: Atelier.shadow.opacity(0.3), radius: 16, y: 6)
             .padding(16)
             .id(title)   // nouvelle étape : la carte change d'un fondu, sans fermer ni rouvrir

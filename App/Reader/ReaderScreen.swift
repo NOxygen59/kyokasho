@@ -806,11 +806,11 @@ struct FilmstripCell: View {
     var body: some View {
         VStack(spacing: 3) {
             ZStack {
-                RoundedRectangle(cornerRadius: 5).fill(Atelier.surfaceHigh)
-                if let image { Image(uiImage: image).resizable().scaledToFit().clipShape(RoundedRectangle(cornerRadius: 4)) }
+                RoundedRectangle(cornerRadius: Atelier.corner(5)).fill(Atelier.surfaceHigh)
+                if let image { Image(uiImage: image).resizable().scaledToFit().clipShape(RoundedRectangle(cornerRadius: Atelier.corner(4))) }
             }
             .frame(width: 46, height: 62)
-            .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(visible ? Self.visibleMark : .clear, lineWidth: 3))
+            .overlay(RoundedRectangle(cornerRadius: Atelier.corner(5)).strokeBorder(visible ? Self.visibleMark : .clear, lineWidth: 3))
             Text(label).font(.system(size: 10, weight: visible ? .bold : .semibold, design: .monospaced))
                 .foregroundStyle(visible ? Self.visibleMark : Atelier.textTertiary)
         }

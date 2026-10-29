@@ -271,7 +271,7 @@ struct LibraryView: View {
                 Text("教").font(.custom("HiraMinProN-W6", size: 26))
                     .frame(width: 42, height: 42)
                     .foregroundStyle(Atelier.onAccentInk.opacity(0.85))
-                    .background(Atelier.Tint.japanese, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+                    .background(Atelier.Tint.japanese, in: RoundedRectangle(cornerRadius: Atelier.smallRadius, style: .continuous))
                 VStack(alignment: .leading, spacing: 0) {
                     Text("Kyōkasho").font(Atelier.display(19)).foregroundStyle(Atelier.textPrimary)
                     Text("教科書 · atelier de lecture").font(.system(size: 11)).foregroundStyle(Atelier.textTertiary)
@@ -322,7 +322,7 @@ struct LibraryView: View {
             .font(.system(size: 15, weight: .medium))
             .padding(.horizontal, 10).padding(.vertical, 9)
             .foregroundStyle(on ? Atelier.onAccentInk.opacity(0.85) : Atelier.textPrimary)
-            .background(on ? Atelier.Tint.read : Color.clear, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .background(on ? Atelier.Tint.read : Color.clear, in: RoundedRectangle(cornerRadius: Atelier.corner(10), style: .continuous))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -357,7 +357,7 @@ struct LibraryView: View {
             Text("livre ouvert à l'écran").font(.system(size: 13)).foregroundStyle(Atelier.textSecondary)
         }
         .padding(14)
-        .background(Atelier.surfaceHigh, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(Atelier.surfaceHigh, in: RoundedRectangle(cornerRadius: Atelier.corner(14), style: .continuous))
     }
 
     /// Portrait : barre compacte en haut.
@@ -597,7 +597,7 @@ struct DocumentCard: View {
             ZStack(alignment: .topTrailing) {
                 // Le cadre fixe la taille ; la page entière est posée dedans, centrée, jamais coupée.
                 // (Avant : `scaledToFill` dans le ZStack faisait déborder l'image hors de la case.)
-                RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Atelier.surfaceHigh)
+                RoundedRectangle(cornerRadius: Atelier.corner(12), style: .continuous).fill(Atelier.surfaceHigh)
                 .aspectRatio(0.72, contentMode: .fit)
                 .frame(maxWidth: .infinity)
                 .overlay {
@@ -608,8 +608,8 @@ struct DocumentCard: View {
                         ProgressView().tint(Atelier.textTertiary)
                     }
                 }
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Atelier.hairline))
+                .clipShape(RoundedRectangle(cornerRadius: Atelier.corner(12), style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: Atelier.corner(12), style: .continuous).strokeBorder(Atelier.hairline))
                 .shadow(color: Atelier.shadow.opacity(0.5), radius: 12, y: 8)
                 if let category = document.category {
                     // Repère sur l'accueil (RET-039, #54).

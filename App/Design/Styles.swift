@@ -16,8 +16,9 @@ struct AppStyle: Identifiable, Equatable {
     var isLight = false
 
     // MARK: Forme
-    var radius: CGFloat = 18
-    var smallRadius: CGFloat = 11
+    /// Facteur appliqué à tous les arrondis de l'interface (`Atelier.corner`) : 1 = arrondis d'origine, 0 = angles
+    /// droits (styles Swiss, Neo-Brutalism…), plus de 1 = formes gonflées (Claymorphism).
+    var cornerScale: CGFloat = 1
 
     // MARK: Encres hors palette (valeur de base ; chaque usage garde son opacité)
     /// Texte ou icône posé sur une couleur de fonction pleine (bouton actif, pastille).

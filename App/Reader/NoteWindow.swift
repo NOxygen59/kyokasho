@@ -122,7 +122,7 @@ struct NoteWindow: View {
             Image(systemName: icon)
                 .foregroundStyle(color)
                 .padding(3)
-                .background(tool == target ? Atelier.Tint.annotate.opacity(0.35) : .clear, in: RoundedRectangle(cornerRadius: 5))
+                .background(tool == target ? Atelier.Tint.annotate.opacity(0.35) : .clear, in: RoundedRectangle(cornerRadius: Atelier.corner(5)))
         }
     }
 

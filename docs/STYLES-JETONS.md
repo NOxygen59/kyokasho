@@ -29,7 +29,8 @@ dessins, les furigana dessinés sur la page, les fichiers exportés.
 | Jeton | Rôle | Valeur « Atelier » |
 |---|---|---|
 | `AppStyle.isLight` / `colorScheme` | interface claire ou sombre d'iOS (menus, alertes, clavier) | sombre |
-| `Atelier.radius`, `smallRadius` | arrondi des panneaux, des petits éléments | 18, 11 |
+| `AppStyle.cornerScale` / `Atelier.corner(_:)` | facteur de tous les arrondis de l'interface (0 = angles droits) ; `corner(n)` = valeur d'origine × facteur | 1 |
+| `Atelier.radius`, `smallRadius` | arrondi des panneaux, des petits éléments (`corner(18)`, `corner(11)`) | 18, 11 |
 | `Atelier.onAccentInk` | texte ou icône posé sur une couleur de fonction pleine | noir (opacité propre à chaque usage) |
 | `Atelier.shadow` | ombre portée | noir |
 | `Atelier.scrim` | voile derrière une fenêtre au premier plan | noir |
@@ -39,7 +40,7 @@ dessins, les furigana dessinés sur la page, les fichiers exportés.
 
 `Atelier.gap` (14), `Atelier.panelWidth` (372), `Atelier.display(_:)`, `Atelier.label`, `Atelier.mono`, `Atelier.jp`.
 
-Garde automatique : `StyleTokensGuardTests` refuse tout nouveau blanc ou noir écrit en dur dans `App/`.
+Gardes automatiques (`StyleTokensGuardTests`) : aucun nouveau blanc ou noir en dur dans `App/` ; aucun arrondi en dur, sauf les 2 dessins posés sur la page (`ReaderScreen`, `Path(roundedRect:)`).
 
 ## 2. Inventaire des valeurs directes restantes (29/10/2026, branche `claude/styles-s1`)
 
@@ -53,7 +54,7 @@ Garde automatique : `StyleTokensGuardTests` refuse tout nouveau blanc ou noir é
 | Bordures `.stroke` / `.strokeBorder`, épaisseurs `lineWidth:` | 25 / 20 | 10 / 6 | aucun jeton de bordure aujourd'hui |
 | Ombres `.shadow(` | 8 | 8 | couleur en jeton (S1b), rayon et décalage en dur |
 | Matières (`.regularMaterial`, `.thinMaterial`…) | 7 | 5 | pilules et fenêtres d'avertissement ; `AtelierPanel` sans flou (batterie) |
-| Arrondis `cornerRadius:` en dur | 38 | 18 | valeurs 2 à 20 ; 20 usages lisent déjà `Atelier.radius` / `smallRadius` |
+| Arrondis en dur | ~~38~~ 2 | 1 | **lot 2a fait** : 37 passent par `Atelier.corner`, `radius` ou `smallRadius` ; restent les 2 dessins sur la page |
 | Capsules et cercles | 44 | 22 | formes voulues (pastilles) : à garder, la bordure et le fond suivront les jetons |
 | Marges `.padding(` en dur | 188 | 32 | |
 | Espacements `spacing:` en dur | 228 | 48 | surtout 10, 6, 8, 2, 12 : une échelle de 6 à 8 crans suffit |
@@ -70,7 +71,7 @@ Fichiers les plus chargés en valeurs directes : `LibraryView` (74), `ReaderScre
 
 | Famille | Jetons prévus | Remplace |
 |---|---|---|
-| Forme | `radius`, `smallRadius`, plus `tinyRadius` (2 à 6) et `largeRadius` (20) | 38 arrondis en dur |
+| Forme | fait : `cornerScale` et `corner(_:)` (pas de jetons par taille : chaque arrondi garde sa valeur d'origine × le facteur du style) | — |
 | Bordure | `borderWidth`, `borderColor`, `focusRing` | 25 bordures et 20 épaisseurs |
 | Relief | `panelShadow` (rayon, décalage, opacité), `panelMaterial` (aucun, verre) | 8 ombres, 7 matières |
 | État | `selected`, `pressed`, `disabled`, `danger`, `success` | opacités et couleurs système d'interface |

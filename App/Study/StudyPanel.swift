@@ -803,7 +803,7 @@ struct StudyNotesTab: View {
 
     private func note(_ comment: PageComment, showPage: Bool = false) -> some View {
         HStack(alignment: .top, spacing: 10) {
-            RoundedRectangle(cornerRadius: 2).fill(Atelier.Tint.annotate).frame(width: 3)
+            RoundedRectangle(cornerRadius: Atelier.corner(2)).fill(Atelier.Tint.annotate).frame(width: 3)
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
                     if showPage { Text("p. \(reader.document.pageLabel(comment.pageIndex))").font(Atelier.mono).foregroundStyle(Atelier.textTertiary) }

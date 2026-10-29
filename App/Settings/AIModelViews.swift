@@ -533,7 +533,7 @@ struct QwenChatView: View {
             }
                 .padding(.horizontal, 12).padding(.vertical, 8)
                 .background(mine ? Atelier.Tint.ai.opacity(0.25) : Atelier.surfaceHigh,
-                            in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            in: RoundedRectangle(cornerRadius: Atelier.corner(14), style: .continuous))
                 .contextMenu {
                     Button { copy(m.text) } label: { Label("Copier", systemImage: "doc.on.doc") }
                     if mine {
@@ -963,7 +963,7 @@ private struct CenteredConfirmation: ViewModifier {
                     }
                     .padding(20)
                     .frame(maxWidth: 320)
-                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: Atelier.radius, style: .continuous))
                     .shadow(color: Atelier.shadow.opacity(0.3), radius: 16, y: 6)
                     .padding(16)
                     .transition(reduceMotion ? .opacity : .scale(scale: 0.92).combined(with: .opacity))

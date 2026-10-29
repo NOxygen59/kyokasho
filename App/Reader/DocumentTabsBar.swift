@@ -201,7 +201,7 @@ struct TabStripView: UIViewRepresentable {
             row.axis = .horizontal
             row.spacing = 0
             row.backgroundColor = selected ? UIColor(Atelier.Tint.read) : UIColor(Atelier.surface).withAlphaComponent(0.85)
-            row.layer.cornerRadius = 15
+            row.layer.cornerRadius = Atelier.corner(15)
             row.layer.cornerCurve = .continuous
             row.clipsToBounds = true
             row.heightAnchor.constraint(equalToConstant: 30).isActive = true

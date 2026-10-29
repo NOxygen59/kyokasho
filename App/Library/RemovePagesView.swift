@@ -114,7 +114,7 @@ struct RemovePagesView: View {
             .overlay {
                 if working {
                     ProgressView("Modification des pages…").padding(24)
-                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
+                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: Atelier.corner(14)))
                 }
             }
             .alert("Supprimer \(selected.count == 1 ? "cette page" : "ces \(selected.count) pages") ?", isPresented: $confirming) {
@@ -233,7 +233,7 @@ private struct PageChoice: View {
                         if let image { Image(uiImage: image).resizable().scaledToFit() } else { Color.secondary.opacity(0.15) }
                     }
                     .frame(width: 84, height: 112)
-                    .overlay(RoundedRectangle(cornerRadius: 4).stroke(selected ? Color.red : Color.secondary.opacity(0.3), lineWidth: selected ? 3 : 1))
+                    .overlay(RoundedRectangle(cornerRadius: Atelier.corner(4)).stroke(selected ? Color.red : Color.secondary.opacity(0.3), lineWidth: selected ? 3 : 1))
                     Image(systemName: selected ? "checkmark.circle.fill" : "circle")
                         .foregroundStyle(selected ? Color.red : Color.secondary)
                         .background(Circle().fill(.background))

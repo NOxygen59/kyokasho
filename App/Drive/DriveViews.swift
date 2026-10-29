@@ -260,7 +260,7 @@ struct DriveSetupHelp: View {
                             .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.cloud))
                     }
                     .padding(14)
-                    .background(Atelier.surfaceHigh.opacity(0.5), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .background(Atelier.surfaceHigh.opacity(0.5), in: RoundedRectangle(cornerRadius: Atelier.corner(14), style: .continuous))
                 }
                 VStack(alignment: .leading, spacing: 10) {
                     AtelierLabel("5 · Colle l'identifiant", tint: Atelier.Tint.cloud)
@@ -270,7 +270,7 @@ struct DriveSetupHelp: View {
                             .autocorrectionDisabled()
                             .font(Atelier.mono)
                             .padding(12)
-                            .background(Atelier.surfaceHigh, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+                            .background(Atelier.surfaceHigh, in: RoundedRectangle(cornerRadius: Atelier.smallRadius, style: .continuous))
                         Button {
                             pasted = UIPasteboard.general.string ?? pasted
                         } label: { Label("Coller", systemImage: "doc.on.clipboard") }

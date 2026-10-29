@@ -53,7 +53,7 @@ struct ImagesToPDFView: View {
                                 }
                             }
                             .frame(width: 36, height: 48).clipped()
-                            .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+                            .clipShape(RoundedRectangle(cornerRadius: Atelier.corner(4), style: .continuous))
                             Text(item.name).lineLimit(1)
                             Spacer()
                             Button(role: .destructive) { remove(item) } label: { Image(systemName: "minus.circle.fill") }

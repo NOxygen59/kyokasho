@@ -243,7 +243,7 @@ struct ThemePickerView: View {
                 HStack(spacing: 10) {
                     Text("辞").font(.custom("HiraginoSans-W3", size: 18))
                         .foregroundStyle(t.japanese).frame(width: 38, height: 38)
-                        .background(t.japanese.opacity(0.12), in: RoundedRectangle(cornerRadius: 10))
+                        .background(t.japanese.opacity(0.12), in: RoundedRectangle(cornerRadius: Atelier.corner(10)))
                     VStack(alignment: .leading, spacing: 3) {
                         Text("Texte de la page").font(.system(size: 12, weight: .medium)).foregroundStyle(t.ink)
                         Text("Lecture · vocabulaire · notes").font(.system(size: 10)).foregroundStyle(t.secondaryInk)
@@ -252,15 +252,15 @@ struct ThemePickerView: View {
                     Image(systemName: "arrow.right").font(.system(size: 12, weight: .semibold)).foregroundStyle(t.read)
                 }
                 .padding(10)
-                .background(t.surfaceHigh, in: RoundedRectangle(cornerRadius: 13))
+                .background(t.surfaceHigh, in: RoundedRectangle(cornerRadius: Atelier.corner(13)))
             }
             .padding(18)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(t.surface)
         }
-        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous)
+        .clipShape(RoundedRectangle(cornerRadius: Atelier.corner(20), style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: Atelier.corner(20), style: .continuous)
             .strokeBorder(on ? t.read : t.separator, lineWidth: on ? 2 : 1))
-        .contentShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: Atelier.corner(20), style: .continuous))
     }
 }

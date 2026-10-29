@@ -34,8 +34,11 @@ enum Atelier {
     // MARK: Mesures
 
     // Forme : lue dans le style en cours (`AppStyle.current`, voir Styles.swift).
-    static var radius: CGFloat { AppStyle.current.radius }
-    static var smallRadius: CGFloat { AppStyle.current.smallRadius }
+    /// Arrondi d'un élément d'interface : valeur d'origine (style Atelier) × `cornerScale` du style. Les dessins
+    /// posés sur la page (sélection OCR, repères) n'en dépendent pas.
+    static func corner(_ base: CGFloat) -> CGFloat { base * AppStyle.current.cornerScale }
+    static var radius: CGFloat { corner(18) }
+    static var smallRadius: CGFloat { corner(11) }
     static let gap: CGFloat = 14
     static let panelWidth: CGFloat = 372
 

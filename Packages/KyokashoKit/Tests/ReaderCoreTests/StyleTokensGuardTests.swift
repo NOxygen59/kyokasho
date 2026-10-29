@@ -34,4 +34,21 @@ final class StyleTokensGuardTests: XCTestCase {
         }
         XCTAssertEqual(found, allowed, "Blanc ou noir en dur dans l'interface : utiliser Atelier.onAccentInk, shadow, scrim ou contrastInk")
     }
+
+    /// Lot 2a : les arrondis de l'interface passent par `Atelier.corner`, `radius` ou `smallRadius`, pour qu'un style
+    /// puisse les changer (angles droits, formes gonflées). Seuls les dessins posés sur la page restent en dur.
+    func testInterfaceCornersUseStyleTokens() throws {
+        let app = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .appendingPathComponent("../../../../App").standardizedFileURL
+        let pattern = try NSRegularExpression(pattern: #"cornerRadius(: | = )[0-9]"#)
+        var found: [String: Int] = [:]
+        let walk = try XCTUnwrap(FileManager.default.enumerator(at: app, includingPropertiesForKeys: nil))
+        for case let url as URL in walk where url.pathExtension == "swift" {
+            let text = try String(contentsOf: url, encoding: .utf8)
+            let count = pattern.numberOfMatches(in: text, range: NSRange(text.startIndex..., in: text))
+            if count > 0 { found[String(url.path.dropFirst(app.path.count + 1))] = count }
+        }
+        // Sélection OCR et repères dessinés sur la page (`Path(roundedRect:)`).
+        XCTAssertEqual(found, ["Reader/ReaderScreen.swift": 2], "Arrondi en dur dans l'interface : utiliser Atelier.corner(_:)")
+    }
 }

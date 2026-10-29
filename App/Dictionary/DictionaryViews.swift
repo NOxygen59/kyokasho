@@ -196,7 +196,7 @@ struct DictionarySearchView: View {
                             Text(String(character)).font(.custom("HiraMinProN-W6", size: 28))
                                 .frame(maxWidth: .infinity, minHeight: 56)
                                 .foregroundStyle(Atelier.textPrimary)
-                                .background(Atelier.surfaceHigh, in: RoundedRectangle(cornerRadius: 10))
+                                .background(Atelier.surfaceHigh, in: RoundedRectangle(cornerRadius: Atelier.corner(10)))
                         }
                         .buttonStyle(.plain)
                     }
@@ -213,7 +213,7 @@ struct DictionarySearchView: View {
                         Button { openKanji(entry.expression) } label: {
                             Text(entry.expression).font(.custom("HiraMinProN-W6", size: 25))
                                 .padding(10).foregroundStyle(Atelier.textPrimary)
-                                .background(Atelier.surfaceHigh, in: RoundedRectangle(cornerRadius: 10))
+                                .background(Atelier.surfaceHigh, in: RoundedRectangle(cornerRadius: Atelier.corner(10)))
                         }
                         .buttonStyle(.plain)
                     }

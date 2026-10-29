@@ -85,7 +85,7 @@ struct AIPageSheet: View {
                             if let image { Image(uiImage: image).resizable().scaledToFit() } else { ProgressView() }
                         }
                         .frame(width: 160, height: 210)
-                        .background(Color(white: 0.15), in: RoundedRectangle(cornerRadius: 8))
+                        .background(Color(white: 0.15), in: RoundedRectangle(cornerRadius: Atelier.corner(8)))
                         VStack(alignment: .leading, spacing: 10) {
                             Text(pageTitle).font(.headline)
                             Button { copyImage() } label: { Label("Copier la page en image", systemImage: "photo.on.rectangle") }
