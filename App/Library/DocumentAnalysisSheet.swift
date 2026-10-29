@@ -14,6 +14,9 @@ struct DocumentAnalysisSheet: View {
     @Environment(\.dismiss) private var dismiss
     @AppStorage(DocumentAnalysisService.useQwenKey) private var useQwen = false
     @State private var confirmOvisAll = false
+    /// Langue dont on supprime toutes les traductions (après export pour quelqu'un d'autre, par exemple).
+    @State private var removingTranslation: TranslationLanguage?
+    @State private var translationMessage: String?
 
     private var running: DocumentAnalysisService.Progress? {
         service.progress?.documentId == document.id ? service.progress : nil
@@ -44,6 +47,21 @@ struct DocumentAnalysisSheet: View {
                 Button("Corriger tout le document") { service.applyOvisToDocument(document, model: model) }
             } message: {
                 Text("Seules les pages déjà lues par OvisOCR2 sont utilisées. Les lignes corrigées à la main et celles qui ressemblent à des formules sont conservées. La comparaison reste automatique : vérifie ensuite les passages importants sur la page originale.")
+            }
+            .confirmationDialog(removingTranslation.map { "Supprimer la traduction en \($0 == .french ? "français" : "anglais") ?" } ?? "",
+                                isPresented: Binding(get: { removingTranslation != nil }, set: { if !$0 { removingTranslation = nil } }),
+                                titleVisibility: .visible) {
+                Button("Supprimer", role: .destructive) {
+                    guard let language = removingTranslation else { return }
+                    do {
+                        let count = try DocumentAITextStore.removeTranslation(documentId: document.id, reader: language.rawValue)
+                        translationMessage = "\(count) page(s) de traduction supprimée(s)."
+                    } catch {
+                        translationMessage = "Suppression interrompue : \(error.localizedDescription)"
+                    }
+                }
+            } message: {
+                Text("Toutes les pages traduites dans cette langue sont effacées de l'appareil (une traduction exportée ailleurs n'est pas touchée). Les lectures OvisOCR2, l'analyse et l'autre langue restent. On peut retraduire plus tard.")
             }
         }
     }
@@ -177,7 +195,14 @@ struct DocumentAnalysisSheet: View {
                         Label("Document traduit en \(name) (\(t.done) pages) : panneau Texte → ✨ → \(language.title)", systemImage: "checkmark")
                             .font(.footnote).foregroundStyle(.secondary)
                     }
+                    if t.done > 0 {
+                        Button(role: .destructive) { translationMessage = nil; removingTranslation = language } label: {
+                            Label("Supprimer la traduction en \(name) (\(t.done) page(s))", systemImage: "trash")
+                        }
+                        .disabled(service.progress != nil)
+                    }
                 }
+                if let translationMessage { Text(translationMessage).font(.footnote).foregroundStyle(.secondary) }
             }
             Button("Oublier cette analyse", role: .destructive) { service.forget(document.id) }
         } header: {
