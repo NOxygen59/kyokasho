@@ -12,8 +12,10 @@ import ZIPFoundation
 ///
 /// Contenu du zip (aucun autre chemin n'est accepté à l'ouverture) :
 /// `manifest.json`, `document.pdf`, `database.json`, `drafts.json`, `preferences.json`, `report.json` (s'il existe) et
-/// `analysis/<fichier>` (lectures IA et traductions). Le manifeste donne l'empreinte SHA-256 de chaque autre fichier ;
-/// l'empreinte du PDF est l'identifiant du document : un paquet modifié ou mal assemblé est refusé sans rien toucher.
+/// `analysis/<fichier>` (lectures IA et traductions). Le manifeste donne l'empreinte SHA-256 de chaque autre fichier :
+/// un paquet modifié ou mal assemblé est refusé sans rien toucher. L'identifiant du document est l'empreinte du PDF
+/// **importé** ; après un ajout ou une suppression de pages (#49), le PDF change et l'identifiant reste (recette 68).
+/// Le PDF du paquet doit donc correspondre à la fiche du document (même taille), pas à son identifiant.
 public enum DocumentPackage {
     public static let fileExtension = "kyokasho"
     public static let formatVersion = 1
@@ -59,7 +61,7 @@ public enum DocumentPackage {
                              pdf: URL, rows: [String: [[String: AppDatabase.ArchivedValue]]], analysisFolder: URL?,
                              report: URL?, drafts: [Int: String], preferences: [String: String],
                              dictionaries: [String], at date: Date = Date()) throws {
-        guard try DocumentImporter.sha256(of: pdf) == documentId else {
+        guard try matches(pdf: pdf, rows: rows, documentId: documentId) else {
             throw PackageError("Le PDF ne correspond plus au document : export annulé.")
         }
         let fm = FileManager.default
@@ -135,12 +137,14 @@ public enum DocumentPackage {
         for (path, url) in listed where try DocumentImporter.sha256(of: url) != manifest.files[path] {
             throw PackageError("Paquet modifié : « \(path) » ne correspond pas à son empreinte.")
         }
-        guard let pdf = listed["document.pdf"], manifest.files["document.pdf"] == manifest.documentId,
-              let database = listed["database.json"], let drafts = listed["drafts.json"],
+        guard let pdf = listed["document.pdf"], let database = listed["database.json"], let drafts = listed["drafts.json"],
               let preferences = listed["preferences.json"] else {
             throw PackageError("Paquet incomplet : PDF ou données du document absents.")
         }
         let rows = try JSONDecoder().decode([String: [[String: AppDatabase.ArchivedValue]]].self, from: Data(contentsOf: database))
+        guard try matches(pdf: pdf, rows: rows, documentId: manifest.documentId) else {
+            throw PackageError("Paquet incohérent : le PDF ne correspond pas à la fiche du document.")
+        }
         let draftPages = try JSONDecoder().decode([String: String].self, from: Data(contentsOf: drafts))
         var draftValues: [Int: String] = [:]
         for (key, text) in draftPages {
@@ -152,6 +156,14 @@ public enum DocumentPackage {
         return Contents(manifest: manifest, pdf: pdf, rows: rows, analysisFiles: analysis, report: listed["report.json"],
                         drafts: draftValues,
                         preferences: try JSONDecoder().decode([String: String].self, from: Data(contentsOf: preferences)))
+    }
+
+    /// Le PDF est celui de la fiche `document` du paquet : une seule fiche, du bon identifiant, de la même taille
+    /// (tenue à jour par chaque modification des pages). Les empreintes du manifeste garantissent le reste.
+    static func matches(pdf: URL, rows: [String: [[String: AppDatabase.ArchivedValue]]], documentId: String) throws -> Bool {
+        guard let fiches = rows["document"], fiches.count == 1, fiches[0]["id"] == .text(documentId),
+              case .integer(let expected)? = fiches[0]["fileSize"] else { return false }
+        return Int64(try pdf.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? -1) == expected
     }
 
     static func safeName(_ name: String) -> Bool {

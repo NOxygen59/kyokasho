@@ -591,8 +591,9 @@ enum PageShift {
         PrintedPageNumbers.set(try model.database.printedNumbers())
         try hit("complete.before")
         try fm.removeItem(at: marker) // Échec = journal conservé ; tout est rejouable.
-        // Ne pas jeter ici les originaux : une suppression automatique sera étudiée après recette/restauration.
-        // Le workspace, hors Caches, reste une copie de secours identifiée par son UUID.
+        // Ajout et suppression : le workspace, hors Caches, reste une copie de secours identifiée par son UUID.
+        // Restauration : les deux copies devenues inutiles partent maintenant (recette 68).
+        discardAfterRestoration(p, model: model)
     }
 
     private static func installFiles(_ p: Pending, work: URL) throws {
@@ -675,6 +676,54 @@ enum PageShift {
                 Diagnostics.error("pages : copie \(copy.folder.lastPathComponent) non effacée — \(error.localizedDescription)", "pages")
             }
         }
+    }
+
+    /// Efface tout de suite une copie d'opération du document, à la demande de l'utilisateur (recette 68 : la place
+    /// grossissait sans moyen de la libérer). Même ordre rejouable que la purge : archive SQL marquée effacée, puis
+    /// dossier. Une suppression effacée n'est plus restaurable ; ses cartes restent sans page. Refusé pendant une
+    /// opération ou avec un journal en attente, pour ne jamais retirer une copie qu'une reprise relirait.
+    static func discardCopy(_ model: AppModel, editId: String, documentId: String) throws {
+        guard !fm.fileExists(atPath: marker.path), !applyingDocuments.contains(documentId) else {
+            throw fail("Une modification des pages est en cours : copie gardée.")
+        }
+        guard let copy = copies().first(where: { $0.folder.lastPathComponent == editId }),
+              copy.manifest?.documentId == documentId else {
+            throw fail("Copie introuvable pour ce document.")
+        }
+        try erase(copy, model: model, now: Date())
+    }
+
+    /// Toutes les copies d'opération du document, effacées à la demande (mêmes garanties que `discardCopy`).
+    static func discardCopies(_ model: AppModel, documentId: String) throws {
+        guard !fm.fileExists(atPath: marker.path), !applyingDocuments.contains(documentId) else {
+            throw fail("Une modification des pages est en cours : copies gardées.")
+        }
+        for copy in copies() where copy.manifest?.documentId == documentId {
+            try erase(copy, model: model, now: Date())
+        }
+    }
+
+    /// Restauration terminée : la copie de la suppression restaurée ne sert plus (une suppression ne se restaure
+    /// qu'une fois), et celle de la restauration ne contient que l'état « pages supprimées », qu'une nouvelle
+    /// suppression refait. Les garder 30 jours faisait grossir la place à chaque aller-retour (recette 68).
+    /// Appelée seulement après l'effacement du journal : aucune reprise ne peut plus les relire. Un échec garde
+    /// les copies, que la purge des 30 jours ou l'utilisateur effaceront.
+    private static func discardAfterRestoration(_ p: Pending, model: AppModel) {
+        guard let plan = p.restoration, let token = p.transaction else { return }
+        for copy in copies() where [plan.archiveId, token].contains(copy.folder.lastPathComponent)
+            && copy.manifest?.documentId == p.documentId {
+            do { try erase(copy, model: model, now: Date()) } catch {
+                Diagnostics.error("pages : copie \(copy.folder.lastPathComponent) gardée — \(error.localizedDescription)", "pages")
+            }
+        }
+    }
+
+    private static func erase(_ copy: (folder: URL, manifest: Manifest?, created: Date), model: AppModel, now: Date) throws {
+        if copy.manifest?.kind == AppDatabase.PageEditKind.removal.rawValue {
+            try model.database.purgeArchive(editId: copy.folder.lastPathComponent, at: now)
+        }
+        try fm.removeItem(at: copy.folder)
+        Diagnostics.log("pages : copie \(copy.folder.lastPathComponent) effacée", "pages")
     }
 
     /// Document supprimé définitivement : ses copies partent avec lui (sa base est déjà effacée par cascade).

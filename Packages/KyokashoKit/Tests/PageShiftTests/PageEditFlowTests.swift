@@ -127,6 +127,49 @@ extension PageShiftRecoveryTests {
             XCTAssertEqual(PageShift.copiesSize(documentId: doc.id), 0)
         }
     }
+    /// Recette 68 : supprimer et restaurer en boucle la même page ne doit plus faire grossir la place des copies.
+    func testRestorationDiscardsCopiesThatNoLongerServe() async throws {
+        try await withFixture { model, doc, root in
+            let card = try seed(model, doc)
+            let before = try pageState(model, doc, card)
+            for _ in 0..<3 {
+                let current = try XCTUnwrap(model.database.document(id: doc.id))
+                try await PageShift.removePages(model, document: current, pages: [1])
+                XCTAssertGreaterThan(PageShift.copiesSize(documentId: doc.id), 0)
+                let archive = try archiveId(model, doc)
+                let removed = try XCTUnwrap(model.database.document(id: doc.id))
+                try await PageShift.restorePages(model, document: removed, archiveId: archive)
+                XCTAssertNil(model.storageRecoveryError)
+                XCTAssertEqual(PageShift.copiesSize(documentId: doc.id), 0)
+                XCTAssertNotNil(try model.database.pageEdit(id: archive)?.restoredBy)
+                XCTAssertTrue(try model.database.archivedRows(editId: archive).isEmpty)
+            }
+            XCTAssertEqual(try pageState(model, doc, card), before)
+        }
+    }
+
+    /// Recette 68 : effacement à la demande ; refusé tant qu'un journal attend sa reprise.
+    func testCopiesCanBeDiscardedOnDemand() async throws {
+        try await withFixture { model, doc, root in
+            let card = try seed(model, doc)
+            try await PageShift.removePages(model, document: doc, pages: [0])
+            let archive = try archiveId(model, doc)
+            let marker = root.appendingPathComponent("page-shift.json")
+            try Data("{}".utf8).write(to: marker)
+            XCTAssertThrowsError(try PageShift.discardCopy(model, editId: archive, documentId: doc.id))
+            XCTAssertThrowsError(try PageShift.discardCopies(model, documentId: doc.id))
+            try FileManager.default.removeItem(at: marker)
+            XCTAssertGreaterThan(PageShift.copiesSize(documentId: doc.id), 0)
+            XCTAssertThrowsError(try PageShift.discardCopy(model, editId: archive, documentId: "other"))
+            try PageShift.discardCopy(model, editId: archive, documentId: doc.id)
+            XCTAssertEqual(PageShift.copiesSize(documentId: doc.id), 0)
+            XCTAssertNotNil(try model.database.pageEdit(id: archive)?.purgedAt)
+            XCTAssertThrowsError(try model.database.restorationPlan(documentId: doc.id, archiveId: archive))
+            XCTAssertEqual(try pageState(model, doc, card)[11], "carte nil", "la carte reste, sans page")
+            try PageShift.discardCopies(model, documentId: doc.id) // rien à effacer : sans erreur
+        }
+    }
+
     func testF2TamperedRestorationCardsAfterDatabaseCommitAreRefused() async throws {
         try await withFixture { model, doc, root in
             let card = try seed(model, doc)

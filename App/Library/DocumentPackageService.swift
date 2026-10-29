@@ -122,8 +122,9 @@ extension AppModel {
         await Task.detached { PDFPool.release(pdf) }.value
         try await Task.detached(priority: .userInitiated) {
             let fm = FileManager.default
-            // PDF : même empreinte = même fichier ; sinon remplacé d'un coup.
-            if !fm.fileExists(atPath: pdf.path) || (try? DocumentImporter.sha256(of: pdf)) != id {
+            // PDF : même empreinte que celle du paquet = même fichier ; sinon remplacé d'un coup. L'identifiant n'est
+            // l'empreinte que d'un PDF jamais modifié (#49) : comparer à celle du manifeste.
+            if !fm.fileExists(atPath: pdf.path) || (try? DocumentImporter.sha256(of: pdf)) != contents.manifest.files["document.pdf"] {
                 try fm.createDirectory(at: pdf.deletingLastPathComponent(), withIntermediateDirectories: true)
                 let staged = pdf.deletingLastPathComponent().appendingPathComponent(".package-\(UUID().uuidString).pdf")
                 try fm.copyItem(at: contents.pdf, to: staged)
@@ -149,6 +150,9 @@ extension AppModel {
             // Base en dernier, en une transaction.
             try database.installPackage(documentId: id, rows: contents.rows, replacing: replacing)
         }.value
+        // Les opérations de pages ne voyagent pas et la cascade a effacé celles d'ici : leurs copies ne peuvent plus
+        // rien restaurer (le paquet de sécurité garde l'état remplacé).
+        if replacing { PageShift.removeCopies(documentId: id) }
         DocumentPackageService.applyPreferences(contents.preferences, documentId: id)
         thumbnails.removeAll(for: id)
         ScanSharpening.removeCache(documentId: id)
