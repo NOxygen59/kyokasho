@@ -91,7 +91,10 @@ public struct ReleaseNotes: Equatable, Sendable, Identifiable {
             "Dictionnaires à télécharger dans l'app (catalogue, mises à jour, licences), langue en premier au choix, lexique du design d'intérieur fourni avec l'app.",
             "Supprimer des pages (une, plusieurs, « de … à … »), restaurables 30 jours avec leurs notes, dessins et analyses ; historique des modifications des pages.",
             "Traduction des pages en anglais, en plus du français ; suppression d'une traduction.",
-            "Paquet Kyōkasho : exporter un document complet et le réimporter tel quel sur un autre appareil.",
+            "Paquet Kyōkasho : exporter un document complet et le réimporter tel quel ; un paquet touché dans Fichiers s'ouvre dans l'app.",
+            "Styles de l'app : Neo-Brutalism, Glassmorphism, Synthwave, Swiss Design, Wabi-Sabi, avec leurs palettes ; thèmes Clair et Sépia.",
+            "Pages supprimées : effacer leurs copies tout de suite ; la restauration libère la place d'elle-même.",
+            "Relevé de batterie (Aide au diagnostic) : ce que consomme chaque activité, par heure.",
             "Fond « Sépia nuit », visite guidée et cette fenêtre de nouveautés.",
         ], fixed: [
             "Les flèches du clavier tournent les pages sans rester bloquées sur le champ du numéro de page.",
