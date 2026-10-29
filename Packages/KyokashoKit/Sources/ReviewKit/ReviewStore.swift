@@ -24,7 +24,10 @@ public final class ReviewStore: @unchecked Sendable {
     }
 
     /// Installe des valeurs finales : une reprise ne touche ni la planification FSRS ni l'historique.
-    public func setSourcePages(documentId: String, pages: [Int64: Int]) throws {
+    /// `nil` = carte gardée **sans page** (page retirée du document, #49) ; elle reste liée à son document, ce qui la
+    /// distingue d'une carte sans document. Omettre une carte laisserait son ancienne page : toutes les cartes du
+    /// document concernées par l'opération doivent donc figurer dans `pages`.
+    public func setSourcePages(documentId: String, pages: [Int64: Int?]) throws {
         try writer.write { db in
             for (id, page) in pages {
                 try db.execute(sql: "UPDATE card SET sourcePage = ? WHERE id = ? AND sourceDocumentId = ?", arguments: [page, id, documentId])

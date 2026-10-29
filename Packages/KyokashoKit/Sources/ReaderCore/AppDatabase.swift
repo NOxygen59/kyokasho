@@ -146,6 +146,38 @@ public final class AppDatabase: @unchecked Sendable {
                 t.add(column: "anchorText", .text)
             }
         }
+        m.registerMigration("v5-page-edits") { db in
+            // Modifications des pages (#49) : voir AppDatabase+PageEdits.swift.
+            try db.alter(table: "document") { t in
+                t.add(column: "layoutVersion", .integer).notNull().defaults(to: 0)
+            }
+            try db.create(table: "pageIdentity") { t in
+                t.column("documentId", .text).notNull().references("document", onDelete: .cascade, onUpdate: .cascade)
+                t.column("position", .integer).notNull()
+                t.column("pageId", .text).notNull()
+                t.column("printedNumber", .integer)
+                t.primaryKey(["documentId", "position"])
+                t.uniqueKey(["documentId", "pageId"])
+            }
+            try db.create(table: "pageEdit") { t in
+                t.primaryKey("id", .text)
+                t.column("documentId", .text).notNull().references("document", onDelete: .cascade, onUpdate: .cascade)
+                t.column("kind", .text).notNull()
+                t.column("versionBefore", .integer).notNull()
+                t.column("versionAfter", .integer).notNull()
+                t.column("appliedAt", .datetime).notNull()
+                t.column("mappingJSON", .blob).notNull()
+                t.column("pageOrderJSON", .blob).notNull()
+            }
+            try db.create(index: "pageEdit_doc", on: "pageEdit", columns: ["documentId", "appliedAt"])
+            try db.create(table: "pageEditRow") { t in
+                t.column("editId", .text).notNull().references("pageEdit", onDelete: .cascade)
+                t.column("tableName", .text).notNull()
+                t.column("pageId", .text).notNull()
+                t.column("rowJSON", .blob).notNull()
+            }
+            try db.create(index: "pageEditRow_edit", on: "pageEditRow", columns: ["editId"])
+        }
         return m
     }
 }
