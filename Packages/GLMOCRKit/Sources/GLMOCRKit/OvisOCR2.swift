@@ -4,9 +4,11 @@
 import CoreGraphics
 import CoreImage
 import Foundation
+#if canImport(MLXVLM)
 import MLX
 import MLXLMCommon
 import MLXVLM
+#endif
 import OCRKit
 
 /// Modèle vision-langage (mlx-swift-lm) qui lit une page entière → Markdown dans l'ordre de lecture.
@@ -34,6 +36,7 @@ public struct PageVLMReader: Sendable {
             image = try PageRenderer.render(url: url, pageIndex: index, longSide: longSide, additionalRotation: rotation)
         case .image(let cg): image = cg
         }
+        #if canImport(MLXVLM)
         let user = UserInput(chat: [.user(prompt, images: [.ciImage(CIImage(cgImage: image))])], additionalContext: context)
         // Une erreur MLX (mémoire, noyau Metal) pendant la lecture devient une erreur Swift : la page est notée en
         // erreur au lieu d'arrêter l'app.
@@ -48,6 +51,10 @@ public struct PageVLMReader: Sendable {
             }
         }
         }
+        #else
+        _ = image
+        throw localAIUnavailableOnMac
+        #endif
     }
 
     /// Libère ce modèle seulement (un autre, s'il est chargé, reste).
@@ -154,6 +161,7 @@ public struct Qwen3VLReader: Sendable {
         Page:
         \(markdown)
         """
+        #if canImport(MLXVLM)
         let user = UserInput(chat: [.user(prompt)])
         let budget = maxTokens ?? min(6000, max(512, markdown.count * 3 + 256))
         return try await GLMModel.using(directory: base.store.directory(base.spec), extraEOSTokens: []) { container in
@@ -167,6 +175,10 @@ public struct Qwen3VLReader: Sendable {
             }
         }
         }
+        #else
+        _ = prompt
+        throw localAIUnavailableOnMac
+        #endif
     }
 }
 
