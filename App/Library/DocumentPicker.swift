@@ -11,10 +11,12 @@ struct DocumentPicker: UIViewControllerRepresentable {
     /// PDF d'office ; images pour « Images vers PDF » ; paquet Kyōkasho (un seul fichier).
     var types: [UTType] = [.pdf]
     var multiple = true
+    /// `false` : ouvrir sur place (dossier de sauvegarde gardé par signet) au lieu d'une copie dans l'app.
+    var asCopy = true
     var onPick: ([URL]) -> Void
 
     func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
-        let picker = UIDocumentPickerViewController(forOpeningContentTypes: types, asCopy: true)
+        let picker = UIDocumentPickerViewController(forOpeningContentTypes: types, asCopy: asCopy)
         picker.allowsMultipleSelection = multiple
         picker.delegate = context.coordinator
         picker.shouldShowFileExtensions = true

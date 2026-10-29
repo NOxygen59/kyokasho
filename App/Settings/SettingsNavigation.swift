@@ -43,14 +43,14 @@ enum SettingsArea: String, Identifiable {
         switch self {
         case .reading: return [.theme, .reading, .panel, .pencil]
         case .japanese: return [.dictionaries, .lexicon, .ocr, .translation]
-        case .files: return [.storage, .drive]
+        case .files: return [.storage, .backup, .drive]
         case .help: return [.diagnostics, .about]
         }
     }
 }
 
 enum SettingsRoute: String, Identifiable, CaseIterable {
-    case theme, reading, panel, pencil, dictionaries, lexicon, ocr, translation, models, cards, storage, drive, diagnostics, about
+    case theme, reading, panel, pencil, dictionaries, lexicon, ocr, translation, models, cards, storage, backup, drive, diagnostics, about
     var id: String { rawValue }
     var title: String {
         switch self {
@@ -65,6 +65,7 @@ enum SettingsRoute: String, Identifiable, CaseIterable {
         case .models: return "IA et outils hors ligne"
         case .cards: return "Cartes de révision"
         case .storage: return "Espace de stockage"
+        case .backup: return "Sauvegarde"
         case .drive: return "Google Drive"
         case .diagnostics: return "Aide au diagnostic"
         case .about: return "À propos et mises à jour"
@@ -83,6 +84,7 @@ enum SettingsRoute: String, Identifiable, CaseIterable {
         case .models: return "Voir les outils conseillés et gérer leurs téléchargements"
         case .cards: return "Rythme de révision, modèles de cartes et export Anki"
         case .storage: return "Voir ce qui prend de la place et nettoyer les caches"
+        case .backup: return "Sauvegarder toute la bibliothèque dans un dossier de Fichiers"
         case .drive: return "Connecter ton compte pour retrouver tes fichiers"
         case .diagnostics: return "Journal d'erreurs et suivi de la mémoire"
         case .about: return "Version de l'app, GitHub et crédits"
@@ -101,6 +103,7 @@ enum SettingsRoute: String, Identifiable, CaseIterable {
         case .models: return "IA locale modèles OvisOCR Qwen GLM MeCab UniDic téléchargement chat furigana nettoyage netteté"
         case .cards: return "Anki révisions cartes FSRS export"
         case .storage: return "cache place disque mémoire fichiers"
+        case .backup: return "sauvegarde restauration copie dossier fichiers icloud drive"
         case .drive: return "Google Drive compte connexion import"
         case .diagnostics: return "diagnostic bugs journal erreurs moniteur CPU RAM FPS performance"
         case .about: return "GitHub compte connexion version mise à jour installation crédits licences"
@@ -126,6 +129,7 @@ enum SettingsRoute: String, Identifiable, CaseIterable {
         case .models: return "shippingbox"
         case .cards: return "rectangle.stack"
         case .storage: return "internaldrive"
+        case .backup: return "externaldrive.badge.checkmark"
         case .drive: return "externaldrive.badge.icloud"
         case .diagnostics: return "stethoscope"
         case .about: return "info.circle"
@@ -137,7 +141,7 @@ enum SettingsRoute: String, Identifiable, CaseIterable {
         case .reading, .panel, .diagnostics: return Atelier.Tint.read
         case .dictionaries, .lexicon, .ocr, .cards: return Atelier.Tint.japanese
         case .translation, .models: return Atelier.Tint.ai
-        case .storage, .drive, .about: return Atelier.Tint.cloud
+        case .storage, .backup, .drive, .about: return Atelier.Tint.cloud
         }
     }
 }
@@ -199,6 +203,7 @@ struct SettingsRouteLink: View {
         case .models: ModelsView()
         case .cards: ReviewSettingsView()
         case .storage: StorageUsageView()
+        case .backup: BackupSettingsView()
         case .drive: DriveAccountView()
         case .diagnostics: ReaderHelpSettingsView()
         case .about: AboutView()

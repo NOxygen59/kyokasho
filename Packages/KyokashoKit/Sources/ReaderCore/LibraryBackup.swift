@@ -38,14 +38,17 @@ public enum LibraryBackup {
         public var files: [(path: String, url: URL)]
         public var counts: [String: Int]
         public var models: [String]
+        /// Chemins de sauvegarde exclus des dossiers (préfixes : `kyokasho/Models` exclut tout ce dossier).
+        public var excluded: [String]
 
         public init(databases: [(path: String, writer: any DatabaseWriter)], folders: [(path: String, url: URL)],
-                    files: [(path: String, url: URL)], counts: [String: Int], models: [String]) {
+                    files: [(path: String, url: URL)], counts: [String: Int], models: [String], excluded: [String] = []) {
             self.databases = databases
             self.folders = folders
             self.files = files
             self.counts = counts
             self.models = models
+            self.excluded = excluded
         }
     }
 
@@ -93,7 +96,14 @@ public enum LibraryBackup {
             try add(file.path, file: file.url)
         }
         for folder in source.folders {
-            for (relative, url) in try regularFiles(in: folder.url) { try add(folder.path + "/" + relative, file: url) }
+            for (relative, url) in try regularFiles(in: folder.url) {
+                let path = folder.path + "/" + relative
+                // Les bases SQLite ne passent que par l'API de sauvegarde (`databases`) : jamais leur fichier brut,
+                // ni leurs fichiers annexes du WAL.
+                guard !isSQLiteFile(url.lastPathComponent),
+                      !source.excluded.contains(where: { path == $0 || path.hasPrefix($0 + "/") }) else { continue }
+                try add(path, file: url)
+            }
         }
         let manifest = Manifest(formatVersion: formatVersion, appVersion: appVersion, createdAt: date, counts: source.counts,
                                 files: hashes, databases: source.databases.map(\.path), models: source.models)
@@ -138,6 +148,38 @@ public enum LibraryBackup {
         }
         try visit(folder, "")
         return out
+    }
+
+    static func isSQLiteFile(_ name: String) -> Bool {
+        [".sqlite", ".sqlite-wal", ".sqlite-shm", ".sqlite-journal"].contains { name.hasSuffix($0) }
+    }
+
+    /// Nom d'une sauvegarde : `Kyokasho-AAAA-MM-JJ-HHMMSS.kyokasho-sauvegarde` (tri par nom = tri par date).
+    public static func fileName(at date: Date) -> String {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "yyyy-MM-dd-HHmmss"
+        return "Kyokasho-\(f.string(from: date)).\(fileExtension)"
+    }
+
+    /// Fichier produit par Kyōkasho : bon nom, et zip qui contient une fiche. Rien d'autre n'est jamais effacé.
+    public static func isBackup(_ url: URL) -> Bool {
+        let name = url.lastPathComponent
+        guard name.hasPrefix("Kyokasho-"), url.pathExtension == fileExtension,
+              let archive = try? Archive(url: url, accessMode: .read) else { return false }
+        return archive["manifest.json"] != nil
+    }
+
+    /// Garde les `keep` sauvegardes les plus récentes du dossier (choix de NOxygen59 : 10) et efface les plus anciennes,
+    /// **seulement** parmi les fichiers reconnus par `isBackup`. Renvoie les fichiers effacés.
+    @discardableResult
+    public static func rotate(in folder: URL, keep: Int) throws -> [URL] {
+        let fm = FileManager.default
+        let backups = try fm.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)
+            .filter(isBackup).sorted { $0.lastPathComponent > $1.lastPathComponent }
+        let old = Array(backups.dropFirst(max(keep, 1)))
+        for url in old { try fm.removeItem(at: url) }
+        return old
     }
 
     // MARK: - Lecture

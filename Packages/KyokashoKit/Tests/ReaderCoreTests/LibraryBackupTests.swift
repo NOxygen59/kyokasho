@@ -103,6 +103,38 @@ final class LibraryBackupTests: XCTestCase {
         XCTAssertThrowsError(try LibraryBackup.write(s, to: root.appendingPathComponent("y.kyokasho-sauvegarde"), appVersion: "test"))
     }
 
+    /// Bases brutes et dossier exclu (modèles) jamais copiés depuis les dossiers.
+    func testFoldersSkipRawDatabasesAndExcludedPaths() throws {
+        var s = try source(try liveDatabase())
+        _ = try write("brut", "live/Documents/copie.sqlite")
+        _ = try write("wal", "live/Documents/copie.sqlite-wal")
+        _ = try write("poids", "live/Documents/Models/ovis/poids.bin")
+        s.excluded = ["documents/Models"]
+        let zip = root.appendingPathComponent("s.kyokasho-sauvegarde")
+        try LibraryBackup.write(s, to: zip, appVersion: "test")
+        let manifest = try LibraryBackup.open(zip, into: root.appendingPathComponent("o"))
+        XCTAssertFalse(manifest.files.keys.contains { $0.contains("copie.sqlite") || $0.contains("Models") }, "\(manifest.files.keys)")
+    }
+
+    /// Rotation des 10 : seules les sauvegardes de Kyōkasho sont effacées, jamais un autre fichier du dossier.
+    func testRotationKeepsNewestAndNeverTouchesOtherFiles() throws {
+        let folder = root.appendingPathComponent("dossier")
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let s = try source(try liveDatabase())
+        var names: [String] = []
+        for day in 1...12 {
+            let name = LibraryBackup.fileName(at: Date(timeIntervalSince1970: 1_800_000_000 + Double(day) * 86_400))
+            try LibraryBackup.write(s, to: folder.appendingPathComponent(name), appVersion: "test")
+            names.append(name)
+        }
+        try Data("à garder".utf8).write(to: folder.appendingPathComponent("Kyokasho-faux.kyokasho-sauvegarde"))
+        try Data("à garder".utf8).write(to: folder.appendingPathComponent("notes.txt"))
+        let removed = try LibraryBackup.rotate(in: folder, keep: 10)
+        XCTAssertEqual(Set(removed.map(\.lastPathComponent)), Set(names.prefix(2)))
+        let left = Set(try FileManager.default.contentsOfDirectory(atPath: folder.path))
+        XCTAssertEqual(left, Set(names.suffix(10)).union(["Kyokasho-faux.kyokasho-sauvegarde", "notes.txt"]))
+    }
+
     func testSafePaths() {
         XCTAssertTrue(LibraryBackup.safePath("analysis/a/fr-1.md"))
         for bad in ["", "/a", "a/../b", "a//b", "./a", ".cache/x", "a\\b"] { XCTAssertFalse(LibraryBackup.safePath(bad), bad) }
