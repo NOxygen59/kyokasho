@@ -137,15 +137,32 @@ struct Theme: Identifiable, Equatable {
     }
 }
 
-/// Choix du thème, gardé entre deux lancements. La racine de l'app se reconstruit au changement.
+/// Choix de la palette (`Theme`) et du style (`AppStyle`), gardés entre deux lancements. La racine de l'app se
+/// reconstruit au changement (`identity`).
 @MainActor
 final class ThemeManager: ObservableObject {
     @Published private(set) var theme: Theme
+    @Published private(set) var style: AppStyle
+
+    /// Identité de la racine : change avec la palette ou le style.
+    var identity: String { theme.id + "|" + style.id }
 
     init() {
         let id = UserDefaults.standard.string(forKey: "theme.id")
-        theme = Theme.all.first { $0.id == id } ?? .atelier
+        let styleId = UserDefaults.standard.string(forKey: "style.id")
+        let theme = Theme.all.first { $0.id == id } ?? .atelier
+        let style = AppStyle.all.first { $0.id == styleId } ?? .atelier
+        self.theme = theme
+        self.style = style
         Theme.current = theme
+        AppStyle.current = style
+    }
+
+    func select(style: AppStyle) {
+        guard style != self.style else { return }
+        UserDefaults.standard.set(style.id, forKey: "style.id")
+        AppStyle.current = style
+        self.style = style
     }
 
     func select(_ theme: Theme) {

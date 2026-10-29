@@ -16,6 +16,10 @@ enum Atelier {
     static var textPrimary: Color { Theme.current.ink.opacity(0.96) }
     static var textSecondary: Color { Theme.current.secondaryInk }
     static var textTertiary: Color { Theme.current.tertiaryInk }
+    /// Encres hors palette, lues dans le style (`AppStyle`) : sur une couleur de fonction, ombre, voile.
+    static var onAccentInk: Color { AppStyle.current.onAccentInk }
+    static var shadow: Color { AppStyle.current.shadow }
+    static var scrim: Color { AppStyle.current.scrim }
 
     /// Une couleur par fonction.
     enum Tint {
@@ -28,8 +32,9 @@ enum Atelier {
 
     // MARK: Mesures
 
-    static let radius: CGFloat = 18
-    static let smallRadius: CGFloat = 11
+    // Forme : lue dans le style en cours (`AppStyle.current`, voir Styles.swift).
+    static var radius: CGFloat { AppStyle.current.radius }
+    static var smallRadius: CGFloat { AppStyle.current.smallRadius }
     static let gap: CGFloat = 14
     static let panelWidth: CGFloat = 372
 

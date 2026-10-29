@@ -303,7 +303,7 @@ struct ReaderScreen: View {
                 }
             }
             .environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review)
-            .preferredColorScheme(.dark)
+            .preferredColorScheme(AppStyle.current.colorScheme)
         }
         .confirmationDialog("Surlignage", isPresented: Binding(get: { reader.tappedHighlight != nil },
                                                                set: { if !$0 { reader.tappedHighlight = nil } })) {

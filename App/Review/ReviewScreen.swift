@@ -49,7 +49,7 @@ struct ReviewScreen: View {
             if !Task.isCancelled { advance(excluding: nil) }
         }
         .sheet(isPresented: $showBrowser, onDismiss: { advance(excluding: nil) }) {
-            CardBrowserView().environmentObject(review).preferredColorScheme(.dark)
+            CardBrowserView().environmentObject(review).preferredColorScheme(AppStyle.current.colorScheme)
         }
         .alert("Erreur", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) {
             Button("OK", role: .cancel) {}

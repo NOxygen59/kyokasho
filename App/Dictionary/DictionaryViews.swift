@@ -111,7 +111,7 @@ struct DictionarySearchView: View {
                     } }
             }
             .environmentObject(dictionaryModel)
-            .preferredColorScheme(.dark)
+            .preferredColorScheme(AppStyle.current.colorScheme)
         }
         .sheet(isPresented: $showLexicon) {
             NavigationStack {
@@ -120,7 +120,7 @@ struct DictionarySearchView: View {
                         Button("OK") { showLexicon = false }
                     } }
             }
-            .preferredColorScheme(.dark)
+            .preferredColorScheme(AppStyle.current.colorScheme)
         }
     }
 

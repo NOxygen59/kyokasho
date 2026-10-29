@@ -25,10 +25,10 @@ struct KyokashoApp: App {
         WindowGroup {
             RootView()
                 // Changer de thème reconstruit toute l'interface avec les nouvelles couleurs.
-                .id(themes.theme.id)
+                .id(themes.identity)
                 .environmentObject(themes)
                 .environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review)
-                .preferredColorScheme(.dark)
+                .preferredColorScheme(themes.style.colorScheme)
                 .tint(Atelier.Tint.read)
                 .onOpenURL { url in
                     // PDF ouvert depuis une autre app (« Ouvrir dans Kyōkasho »).
@@ -103,7 +103,7 @@ struct RootView: View {
         )) {
             ReaderTabsHost()
                 .environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review)
-                .preferredColorScheme(.dark)
+                .preferredColorScheme(AppStyle.current.colorScheme)
                 .tint(Atelier.Tint.read)
         }
         // Retour à la bibliothèque ou app en arrière-plan : les IA rendent leur mémoire.
