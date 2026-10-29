@@ -58,7 +58,10 @@ enum ScanSharpening {
 }
 enum FuriganaLayer { static func clearMemory() {} }
 enum ToneCache { static func clear() {} }
-enum Diagnostics { static func error(_ message: String, _ area: String = "app") {} }
+enum Diagnostics {
+    static func error(_ message: String, _ area: String = "app") {}
+    static func log(_ message: @autoclosure () -> String, _ area: String = "app") {}
+}
 @MainActor final class LayoutRegionsCache {
     static let shared = LayoutRegionsCache()
     func clear() {}

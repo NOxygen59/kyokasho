@@ -216,7 +216,10 @@ final class AppModel: ObservableObject {
                 OCRTargetLanguage.forget(document.id)
                 try? NoteDraftStore.shared.removeAll(documentId: document.id)
                 ReaderToolModeStore().forget(documentId: document.id)
-                Task { @MainActor in self.deletingIds.remove(document.id) }
+                Task { @MainActor in
+                    self.deletingIds.remove(document.id)
+                    PageShift.removeCopies(documentId: document.id) // Pages supprimées gardées 30 jours (#49).
+                }
             } catch {
                 Task { @MainActor in
                     self.deletingIds.remove(document.id)

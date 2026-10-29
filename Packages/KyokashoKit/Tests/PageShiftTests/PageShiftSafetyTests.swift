@@ -450,7 +450,7 @@ extension PageShiftRecoveryTests {
             async let second: String? = { do { _ = try await PageShift.apply(model, document: doc, merged: merged, offset: 2, newCount: 4); return nil } catch { return error.localizedDescription } }()
             let errors = await [first, second]
             XCTAssertEqual(errors.filter { $0 == nil }.count, 1, "\(errors)")
-            XCTAssertEqual(errors.compactMap { $0 }, ["Un ajout de pages de ce document est déjà en cours."], "\(errors)")
+            XCTAssertEqual(errors.compactMap { $0 }, ["Une modification des pages de ce document est déjà en cours."], "\(errors)")
             XCTAssertFalse(FileManager.default.fileExists(atPath: root.appendingPathComponent(journalName).path))
             try verify(model, doc, card)
         }

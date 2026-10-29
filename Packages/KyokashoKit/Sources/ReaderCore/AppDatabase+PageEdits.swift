@@ -57,7 +57,7 @@ extension AppDatabase {
     /// Où reviennent les pages d'une suppression (S3). Chaque page retirée revient juste après la page qui la
     /// précédait dans l'ordre d'origine et qui est encore là (ou une page déjà replacée) ; au début sinon. Ce qui a
     /// été ajouté ou retiré depuis reste en place : seules les pages archivées sont réinsérées (R2).
-    public struct RestorationPlan: Equatable, Sendable {
+    public struct RestorationPlan: Codable, Equatable, Sendable {
         public var archiveId: String
         /// Pages actuelles → positions après restauration ; les positions insérées sont les pages restaurées.
         public var mapping: PageMapping
