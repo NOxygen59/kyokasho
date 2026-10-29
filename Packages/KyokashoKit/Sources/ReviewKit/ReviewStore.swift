@@ -38,6 +38,22 @@ public final class ReviewStore: @unchecked Sendable {
         }
     }
 
+    /// Restauration de pages (#49) : rattache une carte détachée à sa page revenue, **seulement** si elle est toujours
+    /// sans page et liée au même document (une carte rattachée ailleurs entre-temps n'est pas touchée). Rejouable.
+    /// Ne touche ni FSRS ni l'historique. Renvoie le nombre de cartes rattachées.
+    @discardableResult
+    public func reattachSourcePages(documentId: String, pages: [Int64: Int]) throws -> Int {
+        try writer.write { db in
+            var count = 0
+            for (id, page) in pages {
+                try db.execute(sql: "UPDATE card SET sourcePage = ? WHERE id = ? AND sourceDocumentId = ? AND sourcePage IS NULL",
+                               arguments: [page, id, documentId])
+                count += db.changesCount
+            }
+            return count
+        }
+    }
+
     /// Images et sons des cartes (noms de fichiers plats, comme le dossier média d'Anki).
     public let mediaRoot: URL
 

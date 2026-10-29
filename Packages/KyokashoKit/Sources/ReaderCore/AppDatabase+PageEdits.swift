@@ -46,6 +46,27 @@ extension AppDatabase {
         public var appliedAt: Date
         public var mapping: PageMapping
         public var pageOrder: [String]
+        /// Suppression restaurée : identifiant de l'opération de restauration.
+        public var restoredBy: String? = nil
+        /// Archive effacée à l'échéance (30 jours) : plus restaurable.
+        public var purgedAt: Date? = nil
+        /// Identifiants des pages retirées par cette opération, dans l'ordre.
+        public var removedPageIds: [String] { mapping.removed.map { pageOrder[$0] } }
+    }
+
+    /// Où reviennent les pages d'une suppression (S3). Chaque page retirée revient juste après la page qui la
+    /// précédait dans l'ordre d'origine et qui est encore là (ou une page déjà replacée) ; au début sinon. Ce qui a
+    /// été ajouté ou retiré depuis reste en place : seules les pages archivées sont réinsérées (R2).
+    public struct RestorationPlan: Equatable, Sendable {
+        public var archiveId: String
+        /// Pages actuelles → positions après restauration ; les positions insérées sont les pages restaurées.
+        public var mapping: PageMapping
+        /// Identifiant de page restaurée → nouvelle position.
+        public var positions: [String: Int]
+        /// Identifiant de page restaurée → position dans le PDF d'origine de la suppression (copie de l'opération).
+        public var originalIndices: [String: Int]
+        /// Cartes détachées par la suppression → nouvelle page (rattachées seulement si toujours sans page).
+        public var cards: [Int64: Int]
     }
 
     /// Valeur SQLite archivée telle quelle (texte, nombre, blob ou NULL), pour réinsérer une ligne à l'identique.
@@ -97,13 +118,7 @@ extension AppDatabase {
     }
 
     public func archivedRows(editId: String) throws -> [ArchivedRow] {
-        try writer.read { db in
-            try Row.fetchAll(db, sql: "SELECT tableName, pageId, rowJSON FROM pageEditRow WHERE editId = ? ORDER BY rowid",
-                             arguments: [editId]).map { row in
-                ArchivedRow(tableName: row["tableName"], pageId: row["pageId"],
-                            columns: try JSONDecoder().decode([String: ArchivedValue].self, from: row["rowJSON"] as Data))
-            }
-        }
+        try writer.read { db in try Self.archivedRows(db, editId: editId) }
     }
 
     /// Applique `mapping` à tout ce que la base range par numéro de page, en **une** transaction : archive des lignes
@@ -113,9 +128,14 @@ extension AppDatabase {
     /// Rejouable : si `editId` est déjà enregistré, rien n'est refait et la fonction renvoie `false`. Sinon, le
     /// document doit être exactement dans l'état attendu (`expectedVersion` et `mapping.oldCount`), sans quoi rien
     /// n'est modifié. Les cartes (`review.sqlite`) se remappent à part : `ReviewStore.remapSourcePages`.
+    ///
+    /// `detachedCards` (suppression) : cartes dont la page est retirée → ancienne page, archivées pour la restauration.
+    /// `restoring` (restauration) : plan calculé par `restorationPlan` ; il est recalculé dans la transaction et doit
+    /// être identique, puis les identités et les lignes archivées sont réinsérées à leurs nouvelles positions.
     @discardableResult
     public func remapPages(documentId: String, mapping: PageMapping, editId: String, kind: PageEditKind,
-                           expectedVersion: Int, fileSize: Int64, at date: Date = Date()) throws -> Bool {
+                           expectedVersion: Int, fileSize: Int64, detachedCards: [Int64: Int] = [:],
+                           restoring: RestorationPlan? = nil, at date: Date = Date()) throws -> Bool {
         try writer.write { db in
             if let done = try Self.fetchEdit(db, id: editId) {
                 // Rejeu (journal encore présent) : seule la **même** opération, sur un document resté dans l'état
@@ -135,6 +155,17 @@ extension AppDatabase {
                 """, arguments: [documentId]) else { throw PageEditError("Document introuvable.") }
             guard row["layoutVersion"] as Int == expectedVersion, row["pageCount"] as Int == mapping.oldCount else {
                 throw PageEditError("Le document a changé depuis la préparation : aucune modification des pages.")
+            }
+            guard (kind == .restoration) == (restoring != nil), restoring.map({ $0.mapping == mapping }) ?? true,
+                  kind == .removal || detachedCards.isEmpty,
+                  detachedCards.values.allSatisfy({ mapping.target(of: $0) == nil && $0 < mapping.oldCount }) else {
+                throw PageEditError("Opération de pages incohérente : aucune modification.")
+            }
+            if let restoring {
+                // L'état a pu changer depuis la préparation : le plan doit être exactement celui d'aujourd'hui.
+                guard try Self.plan(db, documentId: documentId, archiveId: restoring.archiveId) == restoring else {
+                    throw PageEditError("Le document a changé depuis la préparation de la restauration : rien n'est modifié.")
+                }
             }
             let identities = try Self.identities(db, documentId: documentId, pageCount: mapping.oldCount,
                                                  firstPageIndex: row["firstPageIndex"])
@@ -160,6 +191,10 @@ extension AppDatabase {
                                    arguments: [editId, table, order[archived[column] as Int], try JSONEncoder().encode(columns)])
                 }
             }
+            for (card, page) in detachedCards.sorted(by: { $0.key < $1.key }) {
+                try db.execute(sql: "INSERT INTO pageEditRow (editId, tableName, pageId, rowJSON) VALUES (?, 'card', ?, ?)",
+                               arguments: [editId, order[page], try JSONEncoder().encode(["id": ArchivedValue.integer(card)])])
+            }
             // 2. Effacement des pages retirées.
             for table in Self.pageTables where !removed.isEmpty {
                 try db.execute(sql: "DELETE FROM \(table) WHERE documentId = ? AND pageIndex IN (\(removed.map(String.init).joined(separator: ",")))",
@@ -179,9 +214,25 @@ extension AppDatabase {
                 try db.execute(sql: "UPDATE \(table) SET \(column) = -1 - \(column) WHERE documentId = ? AND \(column) < 0",
                                arguments: [documentId])
             }
-            // 4. Nouvelles pages : nouvel identifiant, sans numéro imprimé connu.
-            for position in mapping.inserted {
-                try PageIdentity(documentId: documentId, position: position, pageId: UUID().uuidString, printedNumber: nil).insert(db)
+            // 4. Nouvelles pages : nouvel identifiant, sans numéro imprimé connu. Pages restaurées : leur identité et
+            //    leurs lignes archivées reviennent, à leur nouvelle position ; l'archive est marquée restaurée.
+            if let restoring {
+                let rows = try Self.archivedRows(db, editId: restoring.archiveId)
+                for (pageId, position) in restoring.positions {
+                    for archived in rows where archived.pageId == pageId && archived.tableName != "card" {
+                        let column = archived.tableName == "pageIdentity" ? "position" : "pageIndex"
+                        var values = archived.columns
+                        values[column] = .integer(Int64(position))
+                        let names = values.keys.sorted()
+                        try db.execute(sql: "INSERT INTO \(archived.tableName) (\(names.joined(separator: ", "))) VALUES (\(names.map { _ in "?" }.joined(separator: ", ")))",
+                                       arguments: StatementArguments(names.map { values[$0]!.databaseValue }))
+                    }
+                }
+                try db.execute(sql: "UPDATE pageEdit SET restoredBy = ? WHERE id = ?", arguments: [editId, restoring.archiveId])
+            } else {
+                for position in mapping.inserted {
+                    try PageIdentity(documentId: documentId, position: position, pageId: UUID().uuidString, printedNumber: nil).insert(db)
+                }
             }
             // 5. Document : la position de lecture et la page 1 suivent leur page, ou la plus proche qui reste.
             try db.execute(sql: """
@@ -190,6 +241,120 @@ extension AppDatabase {
                 """, arguments: [mapping.newCount, fileSize, version, Self.nearest(row["lastPageIndex"], in: mapping),
                                  Self.nearest(row["firstPageIndex"], in: mapping), documentId])
             return true
+        }
+    }
+
+    /// Plan de restauration d'une suppression, sur l'état actuel du document.
+    public func restorationPlan(documentId: String, archiveId: String) throws -> RestorationPlan {
+        try writer.read { db in try Self.plan(db, documentId: documentId, archiveId: archiveId) }
+    }
+
+    /// Opérations du document, de la plus ancienne à la plus récente.
+    public func pageEdits(documentId: String) throws -> [PageEdit] {
+        try writer.read { db in
+            try String.fetchAll(db, sql: "SELECT id FROM pageEdit WHERE documentId = ? ORDER BY versionBefore, appliedAt",
+                                arguments: [documentId]).compactMap { try Self.fetchEdit(db, id: $0) }
+        }
+    }
+
+    /// Correspondance entre la mise en page `version` et l'actuelle (liens du chat, R4). `nil` si la chaîne est
+    /// rompue (remplacement Drive, opération inconnue) : un ancien numéro ne peut alors plus être suivi avec certitude.
+    public func pageMapping(documentId: String, fromVersion version: Int) throws -> PageMapping? {
+        try writer.read { db in
+            guard let row = try Row.fetchOne(db, sql: "SELECT pageCount, layoutVersion FROM document WHERE id = ?", arguments: [documentId]),
+                  let chain = try Self.chain(db, documentId: documentId, from: version, to: row["layoutVersion"]) else { return nil }
+            let count: Int = row["pageCount"]
+            guard var composed = chain.first?.mapping else {
+                return count > 0 ? try PageMapping(oldCount: count, newCount: count, targets: Array(0..<count)) : nil
+            }
+            for edit in chain.dropFirst() { composed = try composed.then(edit.mapping) }
+            return composed
+        }
+    }
+
+    /// Efface l'archive d'une suppression à son échéance (rejouable). L'opération reste dans l'historique.
+    public func purgeArchive(editId: String, at date: Date = Date()) throws {
+        try writer.write { db in
+            try db.execute(sql: "DELETE FROM pageEditRow WHERE editId = ?", arguments: [editId])
+            try db.execute(sql: "UPDATE pageEdit SET purgedAt = COALESCE(purgedAt, ?) WHERE id = ?", arguments: [date, editId])
+        }
+    }
+
+    /// Numéros imprimés des documents dont les pages ont des identités (affichage, R5) : document → numéro par position.
+    public func printedNumbers() throws -> [String: [Int?]] {
+        try writer.read { db in
+            var out: [String: [Int?]] = [:]
+            for identity in try PageIdentity.order(Column("documentId"), Column("position")).fetchAll(db) {
+                out[identity.documentId, default: []].append(identity.printedNumber)
+            }
+            return out
+        }
+    }
+
+    /// « Page 1 » choisie à la main alors que les pages ont des identités : la numérotation repart de cette page, en
+    /// séquence (choix explicite de l'utilisateur ; les numéros gardés après suppression sont alors recalculés).
+    public func renumberPrintedPages(documentId: String, firstPageIndex: Int) throws {
+        try writer.write { db in
+            try db.execute(sql: """
+                UPDATE pageIdentity SET printedNumber = CASE WHEN position >= ? THEN position - ? + 1 ELSE NULL END
+                WHERE documentId = ?
+                """, arguments: [firstPageIndex, firstPageIndex, documentId])
+        }
+    }
+
+    /// Opérations de `from` jusqu'à `to`, consécutives ; `nil` si un maillon manque.
+    private static func chain(_ db: Database, documentId: String, from: Int, to: Int) throws -> [PageEdit]? {
+        guard from <= to else { return nil }
+        var edits: [PageEdit] = []
+        var version = from
+        while version < to {
+            guard let id = try String.fetchOne(db, sql: "SELECT id FROM pageEdit WHERE documentId = ? AND versionBefore = ?",
+                                               arguments: [documentId, version]),
+                  let edit = try fetchEdit(db, id: id), edit.versionAfter == version + 1 else { return nil }
+            edits.append(edit)
+            version += 1
+        }
+        return edits
+    }
+
+    private static func plan(_ db: Database, documentId: String, archiveId: String) throws -> RestorationPlan {
+        guard let archive = try fetchEdit(db, id: archiveId), archive.documentId == documentId, archive.kind == .removal else {
+            throw PageEditError("Suppression introuvable pour ce document.")
+        }
+        guard archive.restoredBy == nil else { throw PageEditError("Ces pages ont déjà été restaurées.") }
+        guard archive.purgedAt == nil else { throw PageEditError("Ces pages ont été effacées après 30 jours.") }
+        guard let row = try Row.fetchOne(db, sql: "SELECT pageCount, layoutVersion FROM document WHERE id = ?", arguments: [documentId]),
+              try chain(db, documentId: documentId, from: archive.versionAfter, to: row["layoutVersion"]) != nil else {
+            // Remplacement du PDF depuis (Drive) : d'autres pages ; ne jamais y réinsérer une ancienne archive.
+            throw PageEditError("Le document a été remplacé depuis cette suppression : restauration impossible.")
+        }
+        let current = try PageIdentity.filter(Column("documentId") == documentId).order(Column("position")).fetchAll(db).map(\.pageId)
+        let removed = archive.removedPageIds
+        guard current.count == row["pageCount"] as Int, Set(current).isDisjoint(with: removed) else {
+            throw PageEditError("Identités des pages incohérentes : restauration impossible.")
+        }
+        var order = current
+        for pageId in removed {
+            let origin = archive.pageOrder.firstIndex(of: pageId)!
+            let anchor = archive.pageOrder[..<origin].reversed().lazy.compactMap { order.firstIndex(of: $0) }.first
+            order.insert(pageId, at: anchor.map { $0 + 1 } ?? 0)
+        }
+        let mapping = try PageMapping(oldCount: current.count, newCount: order.count, targets: current.map { order.firstIndex(of: $0) })
+        let positions = Dictionary(uniqueKeysWithValues: removed.map { ($0, order.firstIndex(of: $0)!) })
+        var cards: [Int64: Int] = [:]
+        for archived in try archivedRows(db, editId: archiveId) where archived.tableName == "card" {
+            if case .integer(let id)? = archived.columns["id"], let position = positions[archived.pageId] { cards[id] = position }
+        }
+        return RestorationPlan(archiveId: archiveId, mapping: mapping, positions: positions,
+                               originalIndices: Dictionary(uniqueKeysWithValues: removed.map { ($0, archive.pageOrder.firstIndex(of: $0)!) }),
+                               cards: cards)
+    }
+
+    private static func archivedRows(_ db: Database, editId: String) throws -> [ArchivedRow] {
+        try Row.fetchAll(db, sql: "SELECT tableName, pageId, rowJSON FROM pageEditRow WHERE editId = ? ORDER BY rowid",
+                         arguments: [editId]).map { row in
+            ArchivedRow(tableName: row["tableName"], pageId: row["pageId"],
+                        columns: try JSONDecoder().decode([String: ArchivedValue].self, from: row["rowJSON"] as Data))
         }
     }
 
@@ -226,6 +391,7 @@ extension AppDatabase {
         return PageEdit(id: row["id"], documentId: row["documentId"], kind: kind,
                         versionBefore: row["versionBefore"], versionAfter: row["versionAfter"], appliedAt: row["appliedAt"],
                         mapping: try JSONDecoder().decode(PageMapping.self, from: row["mappingJSON"] as Data),
-                        pageOrder: try JSONDecoder().decode([String].self, from: row["pageOrderJSON"] as Data))
+                        pageOrder: try JSONDecoder().decode([String].self, from: row["pageOrderJSON"] as Data),
+                        restoredBy: row["restoredBy"], purgedAt: row["purgedAt"])
     }
 }

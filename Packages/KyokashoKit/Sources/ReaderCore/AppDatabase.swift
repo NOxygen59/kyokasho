@@ -168,6 +168,10 @@ public final class AppDatabase: @unchecked Sendable {
                 t.column("appliedAt", .datetime).notNull()
                 t.column("mappingJSON", .blob).notNull()
                 t.column("pageOrderJSON", .blob).notNull()
+                // Suppression seulement : opération qui l'a restaurée, ou date de l'effacement de son archive (30 j).
+                // Ajoutées avant toute livraison de cette migration (branche locale) : pas de migration séparée.
+                t.column("restoredBy", .text)
+                t.column("purgedAt", .datetime)
             }
             try db.create(index: "pageEdit_doc", on: "pageEdit", columns: ["documentId", "appliedAt"])
             try db.create(table: "pageEditRow") { t in

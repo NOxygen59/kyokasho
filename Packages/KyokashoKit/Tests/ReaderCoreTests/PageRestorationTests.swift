@@ -1,0 +1,136 @@
+// SPDX-License-Identifier: MIT
+// Copyright (c) 2026 NOxygen59
+
+import GRDB
+import XCTest
+@testable import ReaderCore
+
+/// Restauration d'une suppression (#49, S3), base synthétique en mémoire.
+final class PageRestorationTests: XCTestCase {
+    var db: AppDatabase!
+
+    override func setUpWithError() throws {
+        db = try AppDatabase.inMemory()
+        var doc = LibraryDocument(id: "d", title: "Test", originalFileName: "t.pdf", pageCount: 6, fileSize: 1)
+        doc.firstPageIndex = 1
+        try db.save(doc)
+        for page in 0..<6 { try db.save(PageComment(documentId: "d", pageIndex: page, body: "p\(page)")) }
+        try db.writer.write { db in
+            try OCRResultRecord(documentId: "d", pageIndex: 2, engine: "retouche", json: Data([2, 0]), durationMs: 1).insert(db)
+        }
+    }
+
+    private func notes() throws -> [String] { try db.comments(documentId: "d").map { "\($0.pageIndex):\($0.body)" } }
+    private func version() throws -> Int { try XCTUnwrap(db.layoutVersion(documentId: "d")) }
+
+    @discardableResult
+    private func remove(_ pages: Set<Int>, id: String, cards: [Int64: Int] = [:]) throws -> PageMapping {
+        let count = try XCTUnwrap(db.document(id: "d")).pageCount
+        let mapping = try PageMapping.removal(oldCount: count, removing: pages)
+        try db.remapPages(documentId: "d", mapping: mapping, editId: id, kind: .removal, expectedVersion: version(),
+                          fileSize: 1, detachedCards: cards)
+        return mapping
+    }
+
+    @discardableResult
+    private func restore(_ archive: String, id: String) throws -> AppDatabase.RestorationPlan {
+        let plan = try db.restorationPlan(documentId: "d", archiveId: archive)
+        try db.remapPages(documentId: "d", mapping: plan.mapping, editId: id, kind: .restoration,
+                          expectedVersion: version(), fileSize: 1, restoring: plan)
+        return plan
+    }
+
+    func testRemoveThenRestoreGivesBackEverythingInPlace() throws {
+        try remove([2, 3], id: "s1", cards: [7: 2])
+        let before = try XCTUnwrap(db.pageEdit(id: "s1")).pageOrder
+        XCTAssertEqual(try notes(), ["0:p0", "1:p1", "2:p4", "3:p5"])
+        let plan = try restore("s1", id: "r1")
+        XCTAssertEqual(plan.positions.values.sorted(), [2, 3])
+        XCTAssertEqual(plan.cards, [7: 2])
+        XCTAssertEqual(try notes(), ["0:p0", "1:p1", "2:p2", "3:p3", "4:p4", "5:p5"])
+        XCTAssertEqual(try db.ocrResult(documentId: "d", pageIndex: 2, engine: "retouche")?.json, Data([2, 0]))
+        XCTAssertEqual(try db.pageIdentities(documentId: "d").map(\.pageId), before, "mêmes identifiants")
+        XCTAssertEqual(try db.pageIdentities(documentId: "d").map(\.printedNumber), [nil, 1, 2, 3, 4, 5], "mêmes numéros imprimés")
+        XCTAssertEqual(try db.pageEdit(id: "s1")?.restoredBy, "r1")
+        XCTAssertThrowsError(try db.restorationPlan(documentId: "d", archiveId: "s1"), "déjà restaurée")
+    }
+
+    func testLaterChangesAreKeptWhenRestoring() throws {
+        try remove([2], id: "s1")
+        try db.save(PageComment(documentId: "d", pageIndex: 2, body: "écrite après"))   // sur l'ancienne p3
+        try db.remapPages(documentId: "d", mapping: PageMapping.insertion(oldCount: 5, inserted: 1, at: 0), editId: "a1",
+                          kind: .insertion, expectedVersion: version(), fileSize: 1)
+        try restore("s1", id: "r1")
+        // La page 2 revient après p1 (décalée par l'ajout), la note écrite après reste sur sa page.
+        let comments = try db.comments(documentId: "d")
+        XCTAssertEqual(comments.first { $0.body == "p2" }?.pageIndex, 3)
+        XCTAssertEqual(comments.first { $0.body == "écrite après" }?.pageIndex, 4)
+        XCTAssertEqual(comments.first { $0.body == "p3" }?.pageIndex, 4)
+        XCTAssertEqual(try XCTUnwrap(db.document(id: "d")).pageCount, 7)
+    }
+
+    func testTwoRemovalsCanBeRestoredInEitherOrder() throws {
+        for order in [["s1", "s2"], ["s2", "s1"]] {
+            try setUpWithError()
+            try remove([1], id: "s1")
+            let before = try XCTUnwrap(db.pageEdit(id: "s1")).pageOrder
+            try remove([2, 3], id: "s2")   // anciennes p3, p4
+            for (index, archive) in order.enumerated() { try restore(archive, id: "r\(index)") }
+            XCTAssertEqual(try db.pageIdentities(documentId: "d").map(\.pageId), before, "\(order)")
+            XCTAssertEqual(try notes(), (0..<6).map { "\($0):p\($0)" }, "\(order)")
+        }
+    }
+
+    func testRestorationRefusedAfterDriveReplacementOrPurge() throws {
+        try remove([1], id: "s1")
+        var doc = try XCTUnwrap(db.document(id: "d"))
+        doc.id = "d2"
+        try db.rekeyDocument(from: "d", to: doc)
+        XCTAssertThrowsError(try db.restorationPlan(documentId: "d2", archiveId: "s1")) {
+            XCTAssertTrue($0.localizedDescription.contains("remplacé"))
+        }
+        try setUpWithError()
+        try remove([1], id: "s1")
+        try db.purgeArchive(editId: "s1")
+        try db.purgeArchive(editId: "s1")   // rejouable
+        XCTAssertTrue(try db.archivedRows(editId: "s1").isEmpty)
+        XCTAssertNotNil(try db.pageEdit(id: "s1")?.purgedAt)
+        XCTAssertThrowsError(try db.restorationPlan(documentId: "d", archiveId: "s1"))
+    }
+
+    func testStalePlanIsRefusedWithoutEffect() throws {
+        try remove([1], id: "s1")
+        let plan = try db.restorationPlan(documentId: "d", archiveId: "s1")
+        try remove([0], id: "s2")
+        XCTAssertThrowsError(try db.remapPages(documentId: "d", mapping: plan.mapping, editId: "r1", kind: .restoration,
+                                               expectedVersion: version(), fileSize: 1, restoring: plan))
+        XCTAssertEqual(try notes(), ["0:p2", "1:p3", "2:p4", "3:p5"])
+    }
+
+    func testDetachedCardsMustBelongToRemovedPages() throws {
+        let mapping = try PageMapping.removal(oldCount: 6, removing: [1])
+        XCTAssertThrowsError(try db.remapPages(documentId: "d", mapping: mapping, editId: "s1", kind: .removal,
+                                               expectedVersion: 0, fileSize: 1, detachedCards: [7: 2]))
+        XCTAssertEqual(try notes().count, 6)
+    }
+
+    func testChainMappingFollowsOldPagesOrBreaks() throws {
+        XCTAssertEqual(try db.pageMapping(documentId: "d", fromVersion: 0)?.targets, (0..<6).map { $0 })
+        try remove([0], id: "s1")
+        try db.remapPages(documentId: "d", mapping: PageMapping.insertion(oldCount: 5, inserted: 2, at: 5), editId: "a1",
+                          kind: .insertion, expectedVersion: 1, fileSize: 1)
+        XCTAssertEqual(try db.pageMapping(documentId: "d", fromVersion: 0)?.targets, [nil, 0, 1, 2, 3, 4])
+        var doc = try XCTUnwrap(db.document(id: "d"))
+        doc.id = "d2"
+        try db.rekeyDocument(from: "d", to: doc)
+        XCTAssertNil(try db.pageMapping(documentId: "d2", fromVersion: 0), "remplacement : chaîne rompue")
+    }
+
+    func testPrintedNumbersAndManualPageOne() throws {
+        XCTAssertNil(try db.printedNumbers()["d"])
+        try remove([3], id: "s1")
+        XCTAssertEqual(try db.printedNumbers()["d"], [nil, 1, 2, 4, 5])
+        try db.renumberPrintedPages(documentId: "d", firstPageIndex: 2)
+        XCTAssertEqual(try db.printedNumbers()["d"], [nil, nil, 1, 2, 3])
+    }
+}

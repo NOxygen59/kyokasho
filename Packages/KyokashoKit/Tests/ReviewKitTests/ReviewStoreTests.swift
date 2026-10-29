@@ -51,6 +51,22 @@ final class ReviewStoreTests: XCTestCase {
         XCTAssertEqual(try store.sourcePages(documentId: "d"), [try XCTUnwrap(kept.id): 3])
     }
 
+    /// #49 : rattachement à la restauration, seulement pour une carte encore sans page du même document.
+    func testReattachOnlyTouchesCardsStillWithoutPage() throws {
+        let detached = try store.add(StudyCard(deckId: deckId, templateId: templateId, key: "欄間|", fields: ["Mot": "欄間"],
+                                               sourceDocumentId: "d", sourcePage: nil, now: now))
+        let moved = try store.add(StudyCard(deckId: deckId, templateId: templateId, key: "床|", fields: ["Mot": "床"],
+                                            sourceDocumentId: "d", sourcePage: 9, now: now))
+        let other = try store.add(StudyCard(deckId: deckId, templateId: templateId, key: "壁|", fields: ["Mot": "壁"],
+                                            sourceDocumentId: "autre", sourcePage: nil, now: now))
+        let pages = [try XCTUnwrap(detached.id): 2, try XCTUnwrap(moved.id): 3, try XCTUnwrap(other.id): 4]
+        XCTAssertEqual(try store.reattachSourcePages(documentId: "d", pages: pages), 1)
+        XCTAssertEqual(try store.reattachSourcePages(documentId: "d", pages: pages), 0, "rejouable")
+        XCTAssertEqual(try store.card(id: XCTUnwrap(detached.id))?.sourcePage, 2)
+        XCTAssertEqual(try store.card(id: XCTUnwrap(moved.id))?.sourcePage, 9)
+        XCTAssertNil(try store.card(id: XCTUnwrap(other.id))?.sourcePage)
+    }
+
     func testSeed() throws {
         XCTAssertEqual(try store.decks().map(\.name), ["Kyōkasho"])
         XCTAssertEqual(try store.templates().map(\.name), [NoteTemplate.japaneseWord.name])
