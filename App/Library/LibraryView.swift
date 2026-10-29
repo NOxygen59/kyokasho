@@ -24,6 +24,7 @@ struct LibraryView: View {
     @AppStorage(ResourceMonitor.shownKey) private var monitorShown = false
     @AppStorage("monitor.detailed") private var monitorDetailed = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var showTrash = false
     @State private var analyzing: LibraryDocument?
     @State private var exporting: LibraryDocument?
     @State private var addingPages: LibraryDocument?
@@ -172,23 +173,24 @@ struct LibraryView: View {
         } message: {
             Text(batchTitles)
         }
-        .alert("Effacer définitivement ?", isPresented: $showBatchSecond) {
+        .alert("Mettre à la corbeille ?", isPresented: $showBatchSecond) {
             Button("Annuler", role: .cancel) { batch.cancel() }
-            Button("Effacer \(batch.selected.count)", role: .destructive) {
+            Button("Mettre \(batch.selected.count) à la corbeille", role: .destructive) {
                 let ids = batch.confirmSecond(existing: Set(model.documents.map(\.id)))
-                for document in model.documents where ids.contains(document.id) { model.delete(document) }
+                for document in model.documents where ids.contains(document.id) { model.moveToTrash(document) }
                 selecting = false
             }
         } message: {
-            Text("Les PDF de ces \(batch.selected.count) documents, leurs notes, surlignages, dessins et le texte lu par l'OCR seront effacés de l'iPad. Cette action ne peut pas être annulée.")
+            Text("Ces \(batch.selected.count) documents quittent la bibliothèque, avec tout ce qu'ils contiennent. Ils restent 30 jours dans la Corbeille, d'où on peut les restaurer.")
         }
-        .alert("Supprimer « \(deleting?.title ?? "") » ?",
+        .alert("Mettre « \(deleting?.title ?? "") » à la corbeille ?",
                isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } })) {
             Button("Annuler", role: .cancel) {}
-            Button("Supprimer", role: .destructive) { if let deleting { model.delete(deleting) } }
+            Button("Mettre à la corbeille", role: .destructive) { if let deleting { model.moveToTrash(deleting) } }
         } message: {
-            Text("Le PDF, ses notes, surlignages, dessins et le texte lu par l'OCR seront effacés de l'iPad.")
+            Text("Il quitte la bibliothèque mais garde son PDF, ses notes, surlignages, dessins et son texte OCR. Restaurable pendant 30 jours depuis la Corbeille.")
         }
+        .sheet(isPresented: $showTrash) { TrashView().environmentObject(model).preferredColorScheme(.dark) }
     }
 
     // MARK: Barre latérale
@@ -227,6 +229,8 @@ struct LibraryView: View {
                 actionRow(icon: "doc.on.doc", title: "Fusionner des PDF", tint: Atelier.Tint.cloud) { showMerge = true }
                 actionRow(icon: "photo.on.rectangle.angled", title: "Images vers PDF", tint: Atelier.Tint.cloud) { showImagesToPDF = true }
                 actionRow(icon: "gauge.with.dots.needle.33percent", title: "Banc d'essai OCR", tint: Atelier.Tint.japanese) { showBench = true }
+                actionRow(icon: "trash", title: "Corbeille", tint: Atelier.textSecondary,
+                          count: model.trashedDocuments.count) { showTrash = true }
                 actionRow(icon: "gearshape", title: "Réglages", tint: Atelier.textSecondary) { showSettings = true }
             }
             Spacer()
