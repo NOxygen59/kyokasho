@@ -387,6 +387,9 @@ struct LibraryView: View {
                 // Moniteur déroulé : les documents s'arrêtent avant lui. Replié, il se pose sur le coin sans réserver
                 // de colonne.
                 .padding(.trailing, monitorVisible && monitorDetailed ? Self.monitorWidth + Atelier.gap : 0)
+                // La liste prend sa nouvelle largeur d'un coup : animée, toute la grille se recalculait à chaque image
+                // et le défilement saccadait pendant l'animation (recette 1.3.2 (65), point 6). Seul le moniteur s'anime.
+                .transaction { $0.animation = nil }
                 if monitorVisible {
                     ResourceMonitorPanel(expandsDown: true, fillsWidth: monitorDetailed)
                         .frame(width: monitorDetailed ? Self.monitorWidth : nil)
@@ -395,8 +398,8 @@ struct LibraryView: View {
                                                   removal: .opacity.combined(with: .offset(x: 24))))
                 }
             }
-            // Ressort amorti sans rebond, un peu plus long (recette 1.3.2 (64), point 7 : transition trop sèche) : les
-            // cartes glissent vers leur nouvelle colonne au lieu de sauter.
+            // Ressort amorti sans rebond, un peu plus long (recette 1.3.2 (64), point 7 : transition trop sèche), pour
+            // l'entrée, la sortie et le déroulé du moniteur.
             .animation(Self.monitorAnimation(reduceMotion), value: monitorVisible && monitorDetailed)
             .animation(Self.monitorAnimation(reduceMotion), value: monitorVisible)
         }
