@@ -46,15 +46,38 @@ public enum AppTour {
     ]
 }
 
-/// Notes d'une version : ce qui est ajouté, corrigé, retiré.
-public struct ReleaseNotes: Equatable, Sendable {
+/// Notes d'une version : ce qui est ajouté, corrigé, retiré. L'historique complet (``all``) va de la 0.1.0 à la
+/// version en cours, en intercalant les builds de test non publiées (recettes iPad), demandé par NOxygen59 le 29/10.
+public struct ReleaseNotes: Equatable, Sendable, Identifiable {
+    public var id: String { version }
+    /// « 1.3.2 » pour une version ; « 1.3.2 (50–52) » pour des builds de test non publiées.
     public let version: String
+    /// Date de publication (ou de la recette pour une build non publiée), « 2026-10-20 ».
+    public let date: String
+    /// Release GitHub publiée ; sinon build de test installée seulement par NOxygen59.
+    public let published: Bool
+    /// Résumé en quelques mots.
+    public let title: String
     public let added: [String]
     public let fixed: [String]
     public let removed: [String]
 
-    public static let all: [ReleaseNotes] = [
-        ReleaseNotes(version: "1.3.2", added: [
+    public init(_ version: String, _ date: String, published: Bool = true, _ title: String,
+                added: [String] = [], fixed: [String] = [], removed: [String] = []) {
+        self.version = version
+        self.date = date
+        self.published = published
+        self.title = title
+        self.added = added
+        self.fixed = fixed
+        self.removed = removed
+    }
+
+    /// Du plus récent au plus ancien.
+    public static let all: [ReleaseNotes] = [current] + ReleaseHistory.past
+
+    /// La version en cours de préparation (cumul de tout le lot ; c'est elle que montre la fenêtre « Nouveautés »).
+    public static let current = ReleaseNotes("1.3.2", "2026-10-29", published: false, "Le grand lot de l'automne", added: [
             "Onglets en haut du lecteur pour passer d'un livre à l'autre ; une notification prévient quand beaucoup sont ouverts.",
             "Accueil en sections Manuels et Livres, question « Livre ou manuel ? » à l'import, suppression de plusieurs documents.",
             "Corbeille : un document supprimé reste 30 jours, restaurable.",
@@ -76,10 +99,9 @@ public struct ReleaseNotes: Equatable, Sendable {
             "Fond « Sombre intelligent » (remplacé par « Sépia nuit »).",
             "Fenêtre OCR « réduite en pastille » (le panneau se masque avec ×).",
             "Grosses flèches sur les bords de la page (rangées à côté du numéro de page).",
-        ]),
-    ]
+        ])
 
-    /// Notes de `version` (« 1.3.2 », sans le numéro de build).
+    /// Notes de `version` (« 1.3.2 », sans le numéro de build) : la version elle-même, jamais une build de test.
     public static func notes(for version: String) -> ReleaseNotes? { all.first { $0.version == version } }
 }
 

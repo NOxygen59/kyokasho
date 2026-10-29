@@ -82,6 +82,11 @@ struct WhatsNewView: View {
                 section("Ajouté", icon: "plus.circle.fill", tint: .green, items: notes.added)
                 section("Corrigé", icon: "wrench.and.screwdriver.fill", tint: .orange, items: notes.fixed)
                 section("Retiré", icon: "minus.circle.fill", tint: .red, items: notes.removed)
+                Section {
+                    NavigationLink { VersionHistoryView() } label: {
+                        Label("Toutes les versions depuis la 0.1.0", systemImage: "clock.arrow.circlepath")
+                    }
+                }
             }
             .navigationTitle("Nouveautés de la \(notes.version)")
             .navigationBarTitleDisplayMode(.inline)
@@ -144,6 +149,9 @@ struct IntroSettingsSection: View {
             if ReleaseNotes.notes(for: IntroStore.marketingVersion) != nil {
                 Button { news = true } label: { Label("Nouveautés de cette version", systemImage: "sparkles") }
             }
+            NavigationLink { VersionHistoryView() } label: {
+                Label("Historique des versions", systemImage: "clock.arrow.circlepath")
+            }
         } header: {
             Text("Découvrir l'app")
         } footer: {
@@ -157,5 +165,52 @@ struct IntroSettingsSection: View {
                 WhatsNewView(notes: notes) { news = false }.preferredColorScheme(.dark)
             }
         }
+    }
+}
+
+/// Historique de toutes les versions, de la plus récente à la 0.1.0, builds de test non publiées comprises
+/// (`ReleaseNotes.all`). Chaque version se déplie.
+struct VersionHistoryView: View {
+    var body: some View {
+        List {
+            ForEach(ReleaseNotes.all) { notes in
+                DisclosureGroup {
+                    lines(notes.added, icon: "plus.circle.fill", tint: .green)
+                    lines(notes.fixed, icon: "wrench.and.screwdriver.fill", tint: .orange)
+                    lines(notes.removed, icon: "minus.circle.fill", tint: .red)
+                } label: {
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: 6) {
+                            Text(notes.version).font(.headline)
+                            if !notes.published {
+                                Text("non publiée").font(.caption2.weight(.semibold))
+                                    .padding(.horizontal, 6).padding(.vertical, 1)
+                                    .background(Color.secondary.opacity(0.2), in: Capsule())
+                            }
+                            Spacer()
+                            Text(Self.date(notes.date)).font(.caption).foregroundStyle(.secondary)
+                        }
+                        Text(notes.title).font(.subheadline).foregroundStyle(.secondary)
+                    }
+                }
+            }
+        }
+        .navigationTitle("Historique des versions")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func lines(_ items: [String], icon: String, tint: Color) -> some View {
+        ForEach(items, id: \.self) { item in
+            Label { Text(item).font(.subheadline) } icon: { Image(systemName: icon).foregroundStyle(tint) }
+        }
+    }
+
+    /// « 2026-10-20 » → « 20 oct. 2026 ».
+    static func date(_ iso: String) -> String {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "yyyy-MM-dd"
+        guard let d = f.date(from: iso) else { return iso }
+        return d.formatted(.dateTime.day().month(.abbreviated).year().locale(Locale(identifier: "fr_FR")))
     }
 }
