@@ -91,11 +91,15 @@ extension ReaderController {
         ReadingTimeTracker.shared.pageViewed(currentSourcePage)
         if changed { tapLookupGeneration += 1 }
         if changed, lookupRequest != nil { endLookup() }
+        // Mac : un clic sur une page zoomée ne fait pas revenir les barres (essai de NOxygen59 du 30/10/2026) ; elles
+        // restent donc affichées au zoom et au défilement.
+        #if !targetEnvironment(macCatalyst)
         if ReaderBarsPolicy.hidesOnPageChange(pageChanged: changed, rebuilding: rebuilding, hideOnTurn: settings.hideBarsOnScroll,
                                               barsVisible: barsVisible,
                                               secondsSinceBarsChanged: ProcessInfo.processInfo.systemUptime - barsChangedAt) {
             barsVisible = false
         }
+        #endif
         scheduleSavePosition()
         // Glisser ou zoomer dans la même page : la page de travail reste (le panneau ne revient pas en haut).
         schedulePageSettled(samePageKeeps: true)

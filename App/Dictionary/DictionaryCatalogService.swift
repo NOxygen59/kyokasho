@@ -107,6 +107,23 @@ final class DictionaryCatalogService: ObservableObject {
         task?.cancel()
     }
 
+    static let firstLaunchKey = "dictionaries.firstLaunchInstallDone"
+
+    /// Première ouverture (demande de NOxygen59 du 30/10/2026) : aucun dictionnaire installé, donc tout le catalogue est
+    /// téléchargé, un dictionnaire à la fois, puis le lexique fourni avec l'app. Une seule fois : un dictionnaire retiré
+    /// ensuite n'est pas réinstallé. Un échec (hors ligne) est noté dans le catalogue, où on peut réessayer.
+    func installAllOnFirstLaunch(model: DictionaryModel) async {
+        guard !UserDefaults.standard.bool(forKey: Self.firstLaunchKey), model.database != nil, model.dictionaries.isEmpty else { return }
+        UserDefaults.standard.set(true, forKey: Self.firstLaunchKey)
+        Diagnostics.log("dictionnaires : installation de tout le catalogue à la première ouverture", "dictionnaires")
+        for entry in DictionaryCatalog.entries where installed(entry, in: model) == nil {
+            while working != nil { try? await Task.sleep(nanoseconds: 500_000_000) }
+            install(entry, model: model)
+            while working != nil { try? await Task.sleep(nanoseconds: 500_000_000) }
+        }
+        if installedBundled(in: model) == nil { installBundled(model: model) }
+    }
+
     /// Version du lexique fourni dans le paquet (`nil` : app construite sans lui). Lue une fois.
     static let bundledRevision: String? = BundledLexicon.url().flatMap { try? BundledLexicon.revision(of: $0) }
 
