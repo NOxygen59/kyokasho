@@ -1,0 +1,6516 @@
+{
+  "sourceLanguage": "fr",
+  "strings": {
+    " (depuis le lancement)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": " (since launch)"
+          }
+        }
+      }
+    },
+    "2 · Furigana et découpage des mots": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2 · Furigana and word splitting"
+          }
+        }
+      }
+    },
+    "Absent de cette version de l'app.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not in this version of the app."
+          }
+        }
+      }
+    },
+    "Accent (graphique)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pitch accent (graph)"
+          }
+        }
+      }
+    },
+    "Accepter": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accept"
+          }
+        }
+      }
+    },
+    "Accepter les corrections Ovis pour tout le document": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accept Ovis corrections for the whole document"
+          }
+        }
+      }
+    },
+    "Accepter les corrections OvisOCR2 ?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accept OvisOCR2 corrections?"
+          }
+        }
+      }
+    },
+    "Accès en lecture seule à ton Drive, pour importer tes cours et récupérer leurs nouvelles versions.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Read-only access to your Drive, to import your course files and fetch their new versions."
+          }
+        }
+      }
+    },
+    "Activité des IA": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI activity"
+          }
+        }
+      }
+    },
+    "Actualiser": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Refresh"
+          }
+        }
+      }
+    },
+    "Adresse du serveur": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Server address"
+          }
+        }
+      }
+    },
+    "Adresse ou recherche": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Address or search"
+          }
+        }
+      }
+    },
+    "Affichage": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Display"
+          }
+        }
+      }
+    },
+    "Afficher l'activité des IA": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show AI activity"
+          }
+        }
+      }
+    },
+    "Afficher le suivi des ressources": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show resource monitor"
+          }
+        }
+      }
+    },
+    "Agrandir": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enlarge"
+          }
+        }
+      }
+    },
+    "Aide au diagnostic": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diagnostics help"
+          }
+        }
+      }
+    },
+    "Ajout des images…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adding images…"
+          }
+        }
+      }
+    },
+    "Ajoute au moins deux PDF. Range-les en les faisant glisser : ils seront fusionnés de haut en bas.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add at least two PDFs. Drag to reorder them: they will be merged from top to bottom."
+          }
+        }
+      }
+    },
+    "Ajoute ce modèle depuis l'écran « Analyser le document entier » du livre. La traduction française l'utilise toujours.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add this model from the book's “Analyze the whole document” screen. French translation always uses it."
+          }
+        }
+      }
+    },
+    "Ajoute des cartes avec ＋ dans le popup du dictionnaire.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add cards with ＋ in the dictionary popup."
+          }
+        }
+      }
+    },
+    "Ajoute des images PNG, JPEG ou HEIC. Range-les en les faisant glisser : une page par image, de haut en bas.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add PNG, JPEG or HEIC images. Drag to reorder them: one page per image, from top to bottom."
+          }
+        }
+      }
+    },
+    "Ajoute des images puis lance le test.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add images, then start the test."
+          }
+        }
+      }
+    },
+    "Ajoute un bouton ✎ dans la barre d'outils du lecteur. Allumé, toucher un mot avec le Pencil ouvre sa fiche dans le dictionnaire (le doigt et la souris gardent leur rôle).": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adds a ✎ button to the reader toolbar. When on, touching a word with the Pencil opens its dictionary entry (finger and mouse keep their usual role)."
+          }
+        }
+      }
+    },
+    "Ajouter": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add"
+          }
+        }
+      }
+    },
+    "Ajouter Qwen3-VL-4B (gros modèle)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add Qwen3-VL-4B (large model)"
+          }
+        }
+      }
+    },
+    "Ajouter depuis Fichiers": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add from Files"
+          }
+        }
+      }
+    },
+    "Ajouter depuis Photos": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add from Photos"
+          }
+        }
+      }
+    },
+    "Ajouter des PDF": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add PDFs"
+          }
+        }
+      }
+    },
+    "Ajouter des outils de lecture hors ligne": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add offline reading tools"
+          }
+        }
+      }
+    },
+    "Ajouter des pages": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add pages"
+          }
+        }
+      }
+    },
+    "Ajouter des pages…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add pages…"
+          }
+        }
+      }
+    },
+    "Ajouter une source en ligne": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add an online source"
+          }
+        }
+      }
+    },
+    "Ajouts de pages": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Page additions"
+          }
+        }
+      }
+    },
+    "Aller à la page": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Go to page"
+          }
+        }
+      }
+    },
+    "Analyse du document entier": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Whole-document analysis"
+          }
+        }
+      }
+    },
+    "Analyser le document entier": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Analyze the whole document"
+          }
+        }
+      }
+    },
+    "Analyseur japonais": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Japanese analyzer"
+          }
+        }
+      }
+    },
+    "Analyseur japonais : lectures des furigana selon le contexte (今日, 上手, 一日…) et découpage en mots. Remplace l'analyseur d'iOS dès qu'il est installé.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Japanese analyzer: context-aware furigana readings (今日, 上手, 一日…) and word splitting. Replaces the iOS analyzer once installed."
+          }
+        }
+      }
+    },
+    "Anglais": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "English"
+          }
+        }
+      }
+    },
+    "Animer les changements de fenêtre": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Animate window changes"
+          }
+        }
+      }
+    },
+    "AnkiMobile": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AnkiMobile"
+          }
+        }
+      }
+    },
+    "Annuler": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel"
+          }
+        }
+      }
+    },
+    "Aperçu du verso": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back preview"
+          }
+        }
+      }
+    },
+    "Apple Pencil": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Pencil"
+          }
+        }
+      }
+    },
+    "Appliqué à la prochaine conversation ou au prochain chargement du modèle. Tout reste sur l'iPad.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Applied to the next conversation or the next model load. Everything stays on the iPad."
+          }
+        }
+      }
+    },
+    "Appliquée aux prochaines lectures IA et aux pages relues. Les pages déjà enregistrées sont conservées ; pour les relire, utilise « Relire cette page » dans le lecteur.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Applied to the next AI readings and to re-read pages. Pages already saved are kept; to re-read them, use “Re-read this page” in the reader."
+          }
+        }
+      }
+    },
+    "Apprendre": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Learn"
+          }
+        }
+      }
+    },
+    "Arrêt après la page en cours…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stopping after the current page…"
+          }
+        }
+      }
+    },
+    "Arrêter": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop"
+          }
+        }
+      }
+    },
+    "Arrêter (reprendra plus tard)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop (will resume later)"
+          }
+        }
+      }
+    },
+    "Arrêter la vérification ?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop the check?"
+          }
+        }
+      }
+    },
+    "Aucun PDF ni dossier ici.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No PDF or folder here."
+          }
+        }
+      }
+    },
+    "Aucun ajout enregistré.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No additions saved."
+          }
+        }
+      }
+    },
+    "Aucun dictionnaire": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No dictionary"
+          }
+        }
+      }
+    },
+    "Aucun dictionnaire. Importe des dictionnaires au format Yomitan (.zip) : JMdict, JPDB, accents (Kanjium), fréquences (JPDB, BCCWJ), KANJIDIC…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No dictionary. Import Yomitan-format dictionaries (.zip): JMdict, JPDB, pitch accents (Kanjium), frequencies (JPDB, BCCWJ), KANJIDIC…"
+          }
+        }
+      }
+    },
+    "Aucun réglage trouvé. Essaie « zoom », « traduction » ou « stockage ».": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No setting found. Try “zoom”, “translation” or “storage”."
+          }
+        }
+      }
+    },
+    "Aucun résultat.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No results."
+          }
+        }
+      }
+    },
+    "Aucun terme du lexique trouvé sur cette page. Tu peux enrichir le lexique dans Réglages → Japonais.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No lexicon term found on this page. You can enrich the lexicon in Settings → Japanese."
+          }
+        }
+      }
+    },
+    "Aucune": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "None"
+          }
+        }
+      }
+    },
+    "Aucune différence : OvisOCR2 lit la même chose.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No difference: OvisOCR2 reads the same thing."
+          }
+        }
+      }
+    },
+    "Aucune note sur cette page.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No note on this page."
+          }
+        }
+      }
+    },
+    "Aucune tâche IA en cours.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No AI task running."
+          }
+        }
+      }
+    },
+    "Audio": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Audio"
+          }
+        }
+      }
+    },
+    "Auto : texte intégré au PDF quand il existe (exact et instantané). Sinon NDLOCR-Lite s'il est installé (livres japonais, vertical), puis PP-OCRv5, puis Apple Vision. Remplaçable par document. Un moteur choisi mais pas téléchargé renvoie une erreur.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auto: text embedded in the PDF when present (exact and instant). Otherwise NDLOCR-Lite if installed (Japanese books, vertical text), then PP-OCRv5, then Apple Vision. Can be changed per document. An engine that is chosen but not downloaded returns an error."
+          }
+        }
+      }
+    },
+    "Automatique : une page en portrait, deux en paysage. « Droite → gauche » suit l'ordre des livres japonais. La transition par glissement est disponible en page simple, page par page.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatic: one page in portrait, two in landscape. “Right → left” follows the order of Japanese books. The slide transition is available in single-page mode, page by page."
+          }
+        }
+      }
+    },
+    "Automatique selon l'orientation": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatic based on orientation"
+          }
+        }
+      }
+    },
+    "Banc d'essai": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Benchmark"
+          }
+        }
+      }
+    },
+    "Batterie": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Battery"
+          }
+        }
+      }
+    },
+    "Bibliothèques utilisées": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Libraries used"
+          }
+        }
+      }
+    },
+    "Blanc": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "White"
+          }
+        }
+      }
+    },
+    "Bouton « Pencil → dictionnaire »": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“Pencil → dictionary” button"
+          }
+        }
+      }
+    },
+    "Brut": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Raw"
+          }
+        }
+      }
+    },
+    "CSS": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CSS"
+          }
+        }
+      }
+    },
+    "Cache": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cache"
+          }
+        }
+      }
+    },
+    "Cache OCR": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OCR cache"
+          }
+        }
+      }
+    },
+    "Calcul de la place prise…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Calculating space used…"
+          }
+        }
+      }
+    },
+    "Cartes": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cards"
+          }
+        }
+      }
+    },
+    "Cartes créées": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cards created"
+          }
+        }
+      }
+    },
+    "Cartes de la page": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cards for this page"
+          }
+        }
+      }
+    },
+    "Catalogue": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Catalog"
+          }
+        }
+      }
+    },
+    "Catalogue : télécharger des dictionnaires": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Catalog: download dictionaries"
+          }
+        }
+      }
+    },
+    "Catégorie": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Category"
+          }
+        }
+      }
+    },
+    "Ce choix guide la lecture IA lancée après l'import. Les chiffres et formules restent tels qu'ils figurent sur la page.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This choice guides the AI reading started after the import. Numbers and formulas stay as printed on the page."
+          }
+        }
+      }
+    },
+    "Ce document": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This document"
+          }
+        }
+      }
+    },
+    "Ce document est déjà dans ta bibliothèque. Sa version actuelle (notes, OCR, lectures IA…) sera d'abord enregistrée dans Fichiers → Kyōkasho → Paquets de sécurité, puis remplacée par celle du paquet.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This document is already in your library. Its current version (notes, OCR, AI readings…) will first be saved in Files → Kyōkasho → Paquets de sécurité, then replaced by the package's version."
+          }
+        }
+      }
+    },
+    "Ce mois-ci": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This month"
+          }
+        }
+      }
+    },
+    "Ce que fait chaque IA maintenant, puis les tâches en cours et terminées. Tout est aussi écrit dans le journal de diagnostic (zone « ia »).": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What each AI is doing now, then running and finished tasks. Everything is also written to the diagnostic log (“ia” area)."
+          }
+        }
+      }
+    },
+    "Ce que le modèle doit être et faire à chaque réponse : rôle, langue, format, limites. Laisse vide pour la consigne de l'app. Dans un livre, les extraits des pages et la règle « ne rien inventer » sont toujours ajoutés.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What the model must be and do in every answer: role, language, format, limits. Leave empty for the app's instruction. In a book, page excerpts and the “invent nothing” rule are always added."
+          }
+        }
+      }
+    },
+    "Ces choix s'appliquent par défaut à tes livres. Un livre peut garder ses propres réglages depuis le menu « … » du lecteur.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "These choices apply to your books by default. A book can keep its own settings from the reader's “…” menu."
+          }
+        }
+      }
+    },
+    "Ces choix valent pour ce document seulement (les autres gardent les leurs). « Par défaut » suit les réglages généraux.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "These choices apply to this document only (others keep theirs). “Default” follows the general settings."
+          }
+        }
+      }
+    },
+    "Cette page": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This page"
+          }
+        }
+      }
+    },
+    "Cette page est la page 1": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This page is page 1"
+          }
+        }
+      }
+    },
+    "Champs : ": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fields: "
+          }
+        }
+      }
+    },
+    "Changer d'identifiant Google": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Change Google ID"
+          }
+        }
+      }
+    },
+    "Chaque IA": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Each AI"
+          }
+        }
+      }
+    },
+    "Chaque page lue est relue avec ton dictionnaire : les caractères qui se ressemblent (未/末, 土/士, ロ/口…) sont corrigés quand ça forme un vrai mot, le reste est souligné en orange. Si GLM-OCR est installé, seules les lignes encore douteuses lui sont envoyées, en fond (rien ne part en ligne).": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Each page read is checked against your dictionary: look-alike characters (未/末, 土/士, ロ/口…) are corrected when they form a real word, the rest is underlined in orange. If GLM-OCR is installed, only lines still in doubt are sent to it, in the background (nothing goes online)."
+          }
+        }
+      }
+    },
+    "Chargement…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Loading…"
+          }
+        }
+      }
+    },
+    "Cherche un mot pour commencer. Les dernières recherches apparaîtront ici.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Look up a word to begin. Recent searches will appear here."
+          }
+        }
+      }
+    },
+    "Chercher dans la page (漢字, かな, romaji)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search the page (漢字, かな, romaji)"
+          }
+        }
+      }
+    },
+    "Choisir des PDF": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose PDFs"
+          }
+        }
+      }
+    },
+    "Choisir un préréglage": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose a preset"
+          }
+        }
+      }
+    },
+    "Choisir…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose…"
+          }
+        }
+      }
+    },
+    "Choisis le modèle dans le chat. Il se charge à l'ouverture et se décharge en quittant la conversation.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose the model in the chat. It loads when opened and unloads when you leave the conversation."
+          }
+        }
+      }
+    },
+    "Choisis ton style.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose your style."
+          }
+        }
+      }
+    },
+    "Choix conseillé : la lecture d'OvisOCR2, sauf si deux autres lectures s'accordent contre elle ; sans OvisOCR2, la majorité des lectures, ou, à égalité, celle que ton dictionnaire comprend le mieux. Ton OCR habituel reste le texte de base ; tu peux aussi choisir un autre moteur pour ce document (lecteur → « … » → réglages de ce document).": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recommended choice: OvisOCR2's reading, unless two other readings agree against it; without OvisOCR2, the majority of readings, or, on a tie, the one your dictionary understands best. Your usual OCR remains the base text; you can also choose another engine for this document (reader → “…” → settings for this document)."
+          }
+        }
+      }
+    },
+    "Choix du moteur, vérification des caractères, mise en page et textes enregistrés. Tu peux garder les valeurs actuelles pour commencer.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Engine choice, character check, layout and saved texts. You can keep the current values to start."
+          }
+        }
+      }
+    },
+    "Client ID de ta GitHub App (Iv1… / Iv23…)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Client ID of your GitHub App (Iv1… / Iv23…)"
+          }
+        }
+      }
+    },
+    "Clé DeepL": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DeepL key"
+          }
+        }
+      }
+    },
+    "Colle-la ensuite dans claude.ai (ou une autre IA), puis colle un prompt ci-dessous.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Then paste it into claude.ai (or another AI), then paste a prompt below."
+          }
+        }
+      }
+    },
+    "Coller": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paste"
+          }
+        }
+      }
+    },
+    "Comparer au texte OCR de la page · accepter les corrections dans la vérification.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compare with the page's OCR text · accept corrections in the check."
+          }
+        }
+      }
+    },
+    "Comparer les moteurs": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compare engines"
+          }
+        }
+      }
+    },
+    "Comprend le sens, mais sur ce manuel il lit moins bien qu'OvisOCR2 (襖 lu « 桜 ») et demande deux fois plus de mémoire et de temps. À essayer en complément, pas indispensable.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Understands meaning, but on this textbook it reads worse than OvisOCR2 (襖 read as “桜”) and needs twice the memory and time. Worth trying as a complement, not essential."
+          }
+        }
+      }
+    },
+    "Compris": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Got it"
+          }
+        }
+      }
+    },
+    "Compte": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Account"
+          }
+        }
+      }
+    },
+    "Configurer Google Drive": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Set up Google Drive"
+          }
+        }
+      }
+    },
+    "Connecte ton compte Google": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connect your Google account"
+          }
+        }
+      }
+    },
+    "Connecté": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connected"
+          }
+        }
+      }
+    },
+    "Conseillé. Sert partout où il y a des furigana (page, panneau Texte) et à la relecture de l'OCR. Téléchargé depuis PyPI (unidic-lite 1.0.8), empreinte SHA-256 vérifiée ; lu à la demande, peu de mémoire vive malgré sa taille.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recommended. Used wherever there are furigana (page, Text panel) and for OCR proofreading. Downloaded from PyPI (unidic-lite 1.0.8), SHA-256 checked; read on demand, little RAM despite its size."
+          }
+        }
+      }
+    },
+    "Conserver le zoom et la position du livre": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep the book's zoom and position"
+          }
+        }
+      }
+    },
+    "Consigne générale (prompt système)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "General instruction (system prompt)"
+          }
+        }
+      }
+    },
+    "Consignes et paramètres du chat": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chat instructions and parameters"
+          }
+        }
+      }
+    },
+    "Continu": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Continuous"
+          }
+        }
+      }
+    },
+    "Continuer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Continue"
+          }
+        }
+      }
+    },
+    "Continuer la tâche": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Continue the task"
+          }
+        }
+      }
+    },
+    "Conversations": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conversations"
+          }
+        }
+      }
+    },
+    "Copier": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy"
+          }
+        }
+      }
+    },
+    "Copier la page en image": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy page as image"
+          }
+        }
+      }
+    },
+    "Copier le texte": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy text"
+          }
+        }
+      }
+    },
+    "Copies complètes du document gardées 30 jours après chaque ajout ou suppression de pages, puis effacées au lancement suivant. Une restauration efface tout de suite les copies devenues inutiles. Une sauvegarde faite entre-temps garde sa propre copie.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Full copies of the document kept 30 days after each page addition or deletion, then erased at the next launch. A restoration erases copies that are no longer needed right away. A backup made in the meantime keeps its own copy."
+          }
+        }
+      }
+    },
+    "Corbeille": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trash"
+          }
+        }
+      }
+    },
+    "Corrections du texte": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Text corrections"
+          }
+        }
+      }
+    },
+    "Corriger cette ligne": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Correct this line"
+          }
+        }
+      }
+    },
+    "Corriger la ligne": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Correct the line"
+          }
+        }
+      }
+    },
+    "Corriger tout le document": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Correct the whole document"
+          }
+        }
+      }
+    },
+    "Couleur": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Color"
+          }
+        }
+      }
+    },
+    "Couleur des furigana": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Furigana color"
+          }
+        }
+      }
+    },
+    "Couper les doubles pages scannées": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Split scanned double pages"
+          }
+        }
+      }
+    },
+    "Couverture seule avant les doubles pages": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cover alone before double pages"
+          }
+        }
+      }
+    },
+    "Créativité. 0 : toujours la réponse la plus probable (fiable, répétitive) ; 0,7 et plus : plus varié mais plus d'erreurs. Automatique : 0 sur un livre, 0,3 en discussion libre.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Creativity. 0: always the most likely answer (reliable, repetitive); 0.7 and above: more varied but more errors. Automatic: 0 in a book, 0.3 in free chat."
+          }
+        }
+      }
+    },
+    "Créer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create"
+          }
+        }
+      }
+    },
+    "Créer des cartes de cette page": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create cards from this page"
+          }
+        }
+      }
+    },
+    "Créer la GitHub App (une fois)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create the GitHub App (once)"
+          }
+        }
+      }
+    },
+    "Créer un fichier CSV": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create a CSV file"
+          }
+        }
+      }
+    },
+    "Créer un paquet Anki (.apkg)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create an Anki package (.apkg)"
+          }
+        }
+      }
+    },
+    "Créer une clé gratuite (DeepL API Free)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Create a free key (DeepL API Free)"
+          }
+        }
+      }
+    },
+    "Dans Terminal : brew install llama.cpp, puis llama-server -hf bartowski/ATH-MaaS_OvisOCR2-GGUF:Q4_K_M --port 8080 (environ 600 Mo téléchargés une fois). Seule une adresse de ce Mac est acceptée : rien ne part sur Internet. Lent sur un processeur Intel : compte une à plusieurs minutes par page.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In Terminal: brew install llama.cpp, then llama-server -hf bartowski/ATH-MaaS_OvisOCR2-GGUF:Q4_K_M --port 8080 (about 600 MB downloaded once). Only an address on this Mac is accepted: nothing goes to the Internet. Slow on an Intel processor: expect one to several minutes per page."
+          }
+        }
+      }
+    },
+    "De la page": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "From page"
+          }
+        }
+      }
+    },
+    "De petites pastilles indiquent ce que fait chaque IA. Elles deviennent plus discrètes quand un modèle reste simplement chargé en mémoire.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Small badges show what each AI is doing. They become more discreet when a model is just kept loaded in memory."
+          }
+        }
+      }
+    },
+    "DeepL": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DeepL"
+          }
+        }
+      }
+    },
+    "Depuis Fichiers": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "From Files"
+          }
+        }
+      }
+    },
+    "Depuis Photos": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "From Photos"
+          }
+        }
+      }
+    },
+    "Depuis tes manuels": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "From your textbooks"
+          }
+        }
+      }
+    },
+    "Dernier usage": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last used"
+          }
+        }
+      }
+    },
+    "Derniers essais": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recent tests"
+          }
+        }
+      }
+    },
+    "Dernière restauration": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last restoration"
+          }
+        }
+      }
+    },
+    "Dernière sauvegarde": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last backup"
+          }
+        }
+      }
+    },
+    "Dernières tâches": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recent tasks"
+          }
+        }
+      }
+    },
+    "Dessiner aussi au doigt": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Draw with finger too"
+          }
+        }
+      }
+    },
+    "Diagnostic": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diagnostics"
+          }
+        }
+      }
+    },
+    "Dictionnaire": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dictionary"
+          }
+        }
+      }
+    },
+    "Dictionnaire japonais": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Japanese dictionary"
+          }
+        }
+      }
+    },
+    "Dictionnaires": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dictionaries"
+          }
+        }
+      }
+    },
+    "Dictionnaires (glisse pour l'ordre de priorité)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dictionaries (drag to set priority)"
+          }
+        }
+      }
+    },
+    "Discuter avec l'IA": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chat with the AI"
+          }
+        }
+      }
+    },
+    "Discuter du livre": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chat about the book"
+          }
+        }
+      }
+    },
+    "Disposition et navigation": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Layout and navigation"
+          }
+        }
+      }
+    },
+    "Dossier": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Folder"
+          }
+        }
+      }
+    },
+    "Double page": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Double page"
+          }
+        }
+      }
+    },
+    "Double page : quelle page ?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Double page: which page?"
+          }
+        }
+      }
+    },
+    "Double tap pour zoomer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Double tap to zoom"
+          }
+        }
+      }
+    },
+    "Drive": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drive"
+          }
+        }
+      }
+    },
+    "Droite → gauche": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Right → left"
+          }
+        }
+      }
+    },
+    "Durée estimée": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Estimated time"
+          }
+        }
+      }
+    },
+    "Décharger maintenant": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unload now"
+          }
+        }
+      }
+    },
+    "Décompression…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unzipping…"
+          }
+        }
+      }
+    },
+    "Découvrir l'app": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Discover the app"
+          }
+        }
+      }
+    },
+    "Défilement": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scrolling"
+          }
+        }
+      }
+    },
+    "Définir la page 1…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Set page 1…"
+          }
+        }
+      }
+    },
+    "Définitions compactes": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compact definitions"
+          }
+        }
+      }
+    },
+    "Déplacer l'ancre": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move the anchor"
+          }
+        }
+      }
+    },
+    "Désaccords": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Disagreements"
+          }
+        }
+      }
+    },
+    "Désactivé : seul l'Apple Pencil dessine, le doigt fait défiler. Le PDF original n'est jamais modifié.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Off: only the Apple Pencil draws, the finger scrolls. The original PDF is never modified."
+          }
+        }
+      }
+    },
+    "Détail": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Detail"
+          }
+        }
+      }
+    },
+    "Efface les résultats des moteurs OCR et leurs corrections manuelles ; la fiabilité du document devra être recalculée. Les lectures OvisOCR2, leurs traductions, les PDF, notes et cartes restent conservés.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erases the OCR engines' results and their manual corrections; the document's reliability will have to be recalculated. OvisOCR2 readings, their translations, PDFs, notes and cards are kept."
+          }
+        }
+      }
+    },
+    "Effacer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erase"
+          }
+        }
+      }
+    },
+    "Effacer ce cache OCR": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erase this OCR cache"
+          }
+        }
+      }
+    },
+    "Effacer définitivement ces pages ?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Permanently erase these pages?"
+          }
+        }
+      }
+    },
+    "Effacer le cache": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear the cache"
+          }
+        }
+      }
+    },
+    "Effacer le cache ?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear the cache?"
+          }
+        }
+      }
+    },
+    "Effacer le cache OCR avec positions…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear the OCR cache with positions…"
+          }
+        }
+      }
+    },
+    "Effacer le cache OCR et remettre les analyses à refaire ?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear the OCR cache and mark analyses to redo?"
+          }
+        }
+      }
+    },
+    "Effacer le journal": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear the log"
+          }
+        }
+      }
+    },
+    "Effacer le relevé": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear the record"
+          }
+        }
+      }
+    },
+    "Effacer toutes les copies": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erase all copies"
+          }
+        }
+      }
+    },
+    "Effacer toutes les copies ?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erase all copies?"
+          }
+        }
+      }
+    },
+    "Elle continue même si tu fermes cette fenêtre ou changes de page.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "It keeps going even if you close this window or change page."
+          }
+        }
+      }
+    },
+    "En attente de ta validation…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Waiting for your approval…"
+          }
+        }
+      }
+    },
+    "En changeant la position de la fenêtre ou en la fermant, une page zoomée conserve son grossissement et son point de lecture. Une page affichée entière s'ajuste à la place disponible. Désactive cette option pour retrouver le recalage précédent. Les transitions peuvent être coupées séparément et respectent « Réduire les animations » dans les réglages de l'iPad.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When you move or close the window, a zoomed page keeps its magnification and reading point. A page shown whole fits the available space. Turn this option off to get the previous behavior back. Transitions can be turned off separately and follow “Reduce Motion” in the iPad's settings."
+          }
+        }
+      }
+    },
+    "En cours": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In progress"
+          }
+        }
+      }
+    },
+    "English": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "English"
+          }
+        }
+      }
+    },
+    "Enregistrer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save"
+          }
+        }
+      }
+    },
+    "Enregistrer dans Fichiers": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save to Files"
+          }
+        }
+      }
+    },
+    "Enregistrer et continuer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save and continue"
+          }
+        }
+      }
+    },
+    "Enrichir : relever dans mes manuels, importer un glossaire": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enrich: collect from my textbooks, import a glossary"
+          }
+        }
+      }
+    },
+    "Enrichir le lexique": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enrich the lexicon"
+          }
+        }
+      }
+    },
+    "Environ 1 jeton = 1 caractère japonais ou ¾ de mot français. Plus long = plus de mémoire et de batterie ; au-delà de 2 048, risque de manque de mémoire sur l'iPad.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "About 1 token = 1 Japanese character or ¾ of a French word. Longer = more memory and battery; above 2,048, risk of running out of memory on the iPad."
+          }
+        }
+      }
+    },
+    "Envoyer aussi vers AnkiMobile": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Also send to AnkiMobile"
+          }
+        }
+      }
+    },
+    "Erreur": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Error"
+          }
+        }
+      }
+    },
+    "Exporter": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export"
+          }
+        }
+      }
+    },
+    "Exporter vers Anki": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export to Anki"
+          }
+        }
+      }
+    },
+    "Exporter…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export…"
+          }
+        }
+      }
+    },
+    "FR": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "FR"
+          }
+        }
+      }
+    },
+    "Fenêtre déplaçable": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Movable window"
+          }
+        }
+      }
+    },
+    "Fenêtre texte OCR": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OCR text window"
+          }
+        }
+      }
+    },
+    "Ferme Kyōkasho (balaye-la vers le haut dans le sélecteur d'apps) puis rouvre-la : la restauration se fera au lancement.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Close Kyōkasho (swipe it up in the app switcher) then reopen it: the restoration will happen at launch."
+          }
+        }
+      }
+    },
+    "Fermer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Close"
+          }
+        }
+      }
+    },
+    "Fiabilité du texte": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Text reliability"
+          }
+        }
+      }
+    },
+    "Fichiers": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Files"
+          }
+        }
+      }
+    },
+    "Fichiers locaux : dépose-les dans Fichiers → Sur mon iPad → Kyōkasho → Audio (ex. 食べる_たべる.mp3). Sources en ligne : utilisées seulement quand tu touches ▶︎.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Local files: put them in Files → On My iPad → Kyōkasho → Audio (e.g. 食べる_たべる.mp3). Online sources: used only when you touch ▶︎."
+          }
+        }
+      }
+    },
+    "Filtrer par partie du discours": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Filter by part of speech"
+          }
+        }
+      }
+    },
+    "Fixe à droite": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pinned right"
+          }
+        }
+      }
+    },
+    "Flottante": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Floating"
+          }
+        }
+      }
+    },
+    "Fond autour des pages": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Background around pages"
+          }
+        }
+      }
+    },
+    "Fond de page": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Page background"
+          }
+        }
+      }
+    },
+    "Format": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Format"
+          }
+        }
+      }
+    },
+    "Format de fichier": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "File format"
+          }
+        }
+      }
+    },
+    "Fourni avec l'app": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Included with the app"
+          }
+        }
+      }
+    },
+    "Français": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "French"
+          }
+        }
+      }
+    },
+    "Fréquences": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Frequencies"
+          }
+        }
+      }
+    },
+    "Furigana": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Furigana"
+          }
+        }
+      }
+    },
+    "Fusionner des PDF": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Merge PDFs"
+          }
+        }
+      }
+    },
+    "Garder": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep"
+          }
+        }
+      }
+    },
+    "Garder tel quel": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep as is"
+          }
+        }
+      }
+    },
+    "Gauche → droite": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Left → right"
+          }
+        }
+      }
+    },
+    "Gestes": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gestures"
+          }
+        }
+      }
+    },
+    "GitHub": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GitHub"
+          }
+        }
+      }
+    },
+    "Glissement": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Slide"
+          }
+        }
+      }
+    },
+    "Gomme": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eraser"
+          }
+        }
+      }
+    },
+    "Google Drive": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Google Drive"
+          }
+        }
+      }
+    },
+    "Google demande que chaque app ait son identifiant. Ouvre chaque étape, fais-la, coche, puis colle l'identifiant en bas.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Google requires every app to have its own ID. Open each step, do it, check it, then paste the ID at the bottom."
+          }
+        }
+      }
+    },
+    "Gothique": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gothic"
+          }
+        }
+      }
+    },
+    "Gris": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gray"
+          }
+        }
+      }
+    },
+    "Gris foncé": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dark gray"
+          }
+        }
+      }
+    },
+    "Guide les prochaines lectures OvisOCR2 et corrige les confusions d'écriture connues. Les pages déjà enregistrées ne sont pas rescannées ; rouvre le livre pour actualiser leur affichage.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guides the next OvisOCR2 readings and fixes known script confusions. Pages already saved are not rescanned; reopen the book to refresh their display."
+          }
+        }
+      }
+    },
+    "Génération": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Generation"
+          }
+        }
+      }
+    },
+    "Gérer et se faire aider": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manage and get help"
+          }
+        }
+      }
+    },
+    "Historique des versions": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Version history"
+          }
+        }
+      }
+    },
+    "IA": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI"
+          }
+        }
+      }
+    },
+    "IA locale (MLX)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Local AI (MLX)"
+          }
+        }
+      }
+    },
+    "IA locale en cours sur batterie": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Local AI running on battery"
+          }
+        }
+      }
+    },
+    "IA locale et batterie": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Local AI and battery"
+          }
+        }
+      }
+    },
+    "Il quitte la bibliothèque mais garde son PDF, ses notes, surlignages, dessins et son texte OCR. Restaurable pendant 30 jours depuis la Corbeille.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "It leaves the library but keeps its PDF, notes, highlights, drawings and OCR text. Restorable for 30 days from the Trash."
+          }
+        }
+      }
+    },
+    "Image": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Image"
+          }
+        }
+      }
+    },
+    "Image + texte": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Image + text"
+          }
+        }
+      }
+    },
+    "Image de la ligne du manuel": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Image of the textbook line"
+          }
+        }
+      }
+    },
+    "Images + texte de référence : taux d'erreur de caractères et temps de chaque moteur.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Images + reference text: character error rate and time for each engine."
+          }
+        }
+      }
+    },
+    "Images vers PDF": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Images to PDF"
+          }
+        }
+      }
+    },
+    "Import": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import"
+          }
+        }
+      }
+    },
+    "Importe un cours ou un manuel en PDF, depuis Fichiers ou Google Drive.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import a course or textbook as PDF, from Files or Google Drive."
+          }
+        }
+      }
+    },
+    "Importe un dictionnaire Yomitan (.zip) dans Réglages → Dictionnaires.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import a Yomitan dictionary (.zip) in Settings → Dictionaries."
+          }
+        }
+      }
+    },
+    "Importer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import"
+          }
+        }
+      }
+    },
+    "Importer dans Kyōkasho": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import into Kyōkasho"
+          }
+        }
+      }
+    },
+    "Importer depuis Drive": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import from Drive"
+          }
+        }
+      }
+    },
+    "Importer des dictionnaires (.zip)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import dictionaries (.zip)"
+          }
+        }
+      }
+    },
+    "Importer un glossaire (CSV, texte)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import a glossary (CSV, text)"
+          }
+        }
+      }
+    },
+    "Importer un paquet Kyōkasho (.kyokasho)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import a Kyōkasho package (.kyokasho)"
+          }
+        }
+      }
+    },
+    "Inspirations (comportement)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inspirations (behavior)"
+          }
+        }
+      }
+    },
+    "Installer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Install"
+          }
+        }
+      }
+    },
+    "Installé": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Installed"
+          }
+        }
+      }
+    },
+    "Interligne": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Line spacing"
+          }
+        }
+      }
+    },
+    "JMdict, JMnedict et KANJIDIC sont la propriété de l'Electronic Dictionary Research and Development Group (edrdg.org), utilisés selon sa licence. Jitendex s'appuie sur JMdict et Tatoeba. Les dictionnaires sont téléchargés depuis leurs sites et restent sur l'iPad. Le lexique du design d'intérieur reprend des extraits du Wiktionnaire et de Wikipédia (CC BY-SA 4.0) ; chaque entrée donne l'adresse de sa page.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "JMdict, JMnedict and KANJIDIC are the property of the Electronic Dictionary Research and Development Group (edrdg.org), used under its license. Jitendex builds on JMdict and Tatoeba. Dictionaries are downloaded from their sites and stay on the iPad. The interior design lexicon uses excerpts from Wiktionary and Wikipedia (CC BY-SA 4.0); each entry gives its page address."
+          }
+        }
+      }
+    },
+    "Journal": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Log"
+          }
+        }
+      }
+    },
+    "Kyōkasho": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kyōkasho"
+          }
+        }
+      }
+    },
+    "L'OCR avec positions sert à sélectionner les mots sur la page. Les furigana peuvent aussi déclencher cette lecture, même si le préchargement est désactivé. Le traitement reste hors ligne.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OCR with positions is used to select words on the page. Furigana can also trigger this reading, even if preloading is off. Processing stays offline."
+          }
+        }
+      }
+    },
+    "La corbeille est vide.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The trash is empty."
+          }
+        }
+      }
+    },
+    "La journée commence à": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The day starts at"
+          }
+        }
+      }
+    },
+    "La langue se choisit à l'import ou dans les réglages du livre.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The language is chosen at import or in the book's settings."
+          }
+        }
+      }
+    },
+    "La lecture IA privilégie cette langue. Les chiffres, lettres latines et formules restent tels qu'ils figurent sur la page. Le japonais est conseillé pour les manuels japonais.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI reading favors this language. Numbers, Latin letters and formulas stay as printed on the page. Japanese is recommended for Japanese textbooks."
+          }
+        }
+      }
+    },
+    "La page n'a pas encore été lue.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The page has not been read yet."
+          }
+        }
+      }
+    },
+    "La sauvegarde est vérifiée sans rien toucher, puis tu confirmes. Une sauvegarde de sécurité de ta bibliothèque actuelle est faite d'abord dans ton dossier ; la restauration s'applique au prochain lancement de l'app. Les modèles d'IA de l'iPad sont gardés.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The backup is checked without touching anything, then you confirm. A safety backup of your current library is made first in your folder; the restoration applies at the app's next launch. The iPad's AI models are kept."
+          }
+        }
+      }
+    },
+    "Laisse l'app ouverte. Étapes : OCR habituel, puis chaque modèle sur toutes les pages, puis le vote.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep the app open. Steps: usual OCR, then each model on all pages, then the vote."
+          }
+        }
+      }
+    },
+    "Laisser le trackpad déplacer la page": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Let the trackpad move the page"
+          }
+        }
+      }
+    },
+    "Lancer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start"
+          }
+        }
+      }
+    },
+    "Lancer le test": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start the test"
+          }
+        }
+      }
+    },
+    "Langue": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Language"
+          }
+        }
+      }
+    },
+    "Langue ciblée": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Target language"
+          }
+        }
+      }
+    },
+    "Langue de l'app": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App language"
+          }
+        }
+      }
+    },
+    "Langue de traduction": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Translation language"
+          }
+        }
+      }
+    },
+    "Langue du document": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Document language"
+          }
+        }
+      }
+    },
+    "Langue en premier": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Language first"
+          }
+        }
+      }
+    },
+    "Le jeton reste dans le Trousseau de l'iPad et ne sert qu'à lire les releases de ton dépôt privé. Dans TrollStore, active Réglages → « URL Scheme Enabled » pour l'installation en un geste.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The token stays in the iPad's Keychain and is only used to read releases from your private repository. In TrollStore, turn on Settings → “URL Scheme Enabled” for one-tap installation."
+          }
+        }
+      }
+    },
+    "Le modèle décide de ce qui est au recto et au verso. L'audio vient des sources réglées dans Dictionnaires.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The note type decides what goes on the front and back. Audio comes from the sources set in Dictionaries."
+          }
+        }
+      }
+    },
+    "Le rognage cache les marges blanches ; la découpe sépare les scans contenant deux pages. Pivoter ou découper une seule page : menu « … » du livre. Le PDF d'origine reste intact.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cropping hides white margins; splitting separates scans containing two pages. To rotate or split a single page: the book's “…” menu. The original PDF stays intact."
+          }
+        }
+      }
+    },
+    "Le style donne les formes, les bordures, les ombres et les polices. Il propose sa palette ; tu peux en choisir une autre juste en dessous. Les pages du manuel ne changent jamais.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The style sets shapes, borders, shadows and fonts. It suggests its palette; you can choose another one just below. The textbook pages never change."
+          }
+        }
+      }
+    },
+    "Le texte exact de l'image. Espaces et retours à la ligne ne comptent pas dans l'erreur.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The exact text of the image. Spaces and line breaks don't count in the error."
+          }
+        }
+      }
+    },
+    "Le trackpad déplace la page avec deux doigts ; le glissement au doigt tourne les pages. Désactive cette option si les gestes du lecteur te convenaient mieux. Un tap montre ou cache les barres.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The trackpad moves the page with two fingers; swiping with a finger turns pages. Turn this option off if you preferred the reader's gestures. A tap shows or hides the bars."
+          }
+        }
+      }
+    },
+    "Le travail déjà fait sur la page en cours sera perdu.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Work already done on the current page will be lost."
+          }
+        }
+      }
+    },
+    "Le type de note doit exister dans Anki avec les mêmes noms de champs (Mot, Lecture, Sens…). Texte seulement : AnkiMobile ne reçoit pas les images ni les sons par ce chemin.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The note type must exist in Anki with the same field names (Mot, Lecture, Sens…). Text only: AnkiMobile does not receive images or sounds this way."
+          }
+        }
+      }
+    },
+    "Lecteur de texte": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Text reader"
+          }
+        }
+      }
+    },
+    "Lecteur personnel de cours et de manuels. Usage strictement personnel, non distribué.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Personal reader for courses and textbooks. Strictly personal use, not distributed."
+          }
+        }
+      }
+    },
+    "Lecture": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reading"
+          }
+        }
+      }
+    },
+    "Lecture IA du document": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI reading of the document"
+          }
+        }
+      }
+    },
+    "Lecture automatique des documents": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatic document reading"
+          }
+        }
+      }
+    },
+    "Lecture de la page…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reading the page…"
+          }
+        }
+      }
+    },
+    "Lecture en kana (ex. のぶち)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kana reading (e.g. のぶち)"
+          }
+        }
+      }
+    },
+    "Lecture en kana (à renseigner)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kana reading (to fill in)"
+          }
+        }
+      }
+    },
+    "Lecture · vocabulaire · notes": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reading · vocabulary · notes"
+          }
+        }
+      }
+    },
+    "Les cartes arrivent comme neuves dans Anki : l'historique de révision ne suit pas.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cards arrive as new in Anki: review history does not follow."
+          }
+        }
+      }
+    },
+    "Les deux": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Both"
+          }
+        }
+      }
+    },
+    "Les modèles d'IA locaux (OvisOCR2, GLM-OCR, Qwen) font travailler la puce à plein : la batterie baisse vite et l'iPad chauffe. Branche-le pour les longues analyses.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Local AI models (OvisOCR2, GLM-OCR, Qwen) run the chip at full power: the battery drains fast and the iPad gets warm. Plug it in for long analyses."
+          }
+        }
+      }
+    },
+    "Les numéros sont ceux affichés dans le lecteur. Les pages supprimées restent restaurables pendant 30 jours, avec leurs notes, dessins et analyses ; ensuite elles sont effacées. Les cartes de révision sont gardées.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Numbers are those shown in the reader. Deleted pages stay restorable for 30 days, with their notes, drawings and analyses; after that they are erased. Review cards are kept."
+          }
+        }
+      }
+    },
+    "Les pages s'ajoutent à la fin : rien ne bouge dans ce qui existe déjà.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pages are added at the end: nothing already there moves."
+          }
+        }
+      }
+    },
+    "Les pages supprimées de ce document ne pourront plus être restaurées. Le document actuel, ses notes et ses cartes ne changent pas.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deleted pages of this document can no longer be restored. The current document, its notes and its cards don't change."
+          }
+        }
+      }
+    },
+    "Lexique du domaine": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Domain lexicon"
+          }
+        }
+      }
+    },
+    "Licences : MeCab BSD, UniDic BSD (UniDic Consortium), unidic-lite MIT (Paul McCann)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Licenses: MeCab BSD, UniDic BSD (UniDic Consortium), unidic-lite MIT (Paul McCann)"
+          }
+        }
+      }
+    },
+    "Lire avec Apple Vision": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Read with Apple Vision"
+          }
+        }
+      }
+    },
+    "Lire l'audio automatiquement": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Play audio automatically"
+          }
+        }
+      }
+    },
+    "Lire la page": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Read the page"
+          }
+        }
+      }
+    },
+    "Lire les nouvelles pages avec OvisOCR2": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Read new pages with OvisOCR2"
+          }
+        }
+      }
+    },
+    "Lire tout le document": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Read the whole document"
+          }
+        }
+      }
+    },
+    "Livre": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Book"
+          }
+        }
+      }
+    },
+    "Livre ou manuel ?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Book or textbook?"
+          }
+        }
+      }
+    },
+    "Longueur et répétitions": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Length and repetitions"
+          }
+        }
+      }
+    },
+    "Markdown": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Markdown"
+          }
+        }
+      }
+    },
+    "Masquer les barres en tournant les pages": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hide bars when turning pages"
+          }
+        }
+      }
+    },
+    "MeCab + UniDic-lite": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MeCab + UniDic-lite"
+          }
+        }
+      }
+    },
+    "Mesure…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Measuring…"
+          }
+        }
+      }
+    },
+    "Mettre en page avec OvisOCR2": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lay out with OvisOCR2"
+          }
+        }
+      }
+    },
+    "Mettre à jour : réimporte le nouveau .zip d'un dictionnaire (même titre) ; son ordre est gardé. Les dictionnaires ne sont jamais chargés entièrement en mémoire.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Update: re-import a dictionary's new .zip (same title); its order is kept. Dictionaries are never fully loaded into memory."
+          }
+        }
+      }
+    },
+    "Mettre à la corbeille": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move to Trash"
+          }
+        }
+      }
+    },
+    "Mettre à la corbeille ?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move to Trash?"
+          }
+        }
+      }
+    },
+    "Mincho": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mincho"
+          }
+        }
+      }
+    },
+    "Mis en forme": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Formatted"
+          }
+        }
+      }
+    },
+    "Mise en page": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Layout"
+          }
+        }
+      }
+    },
+    "Mise en page du texte extrait": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Layout of extracted text"
+          }
+        }
+      }
+    },
+    "Mise à jour par TrollStore": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Update via TrollStore"
+          }
+        }
+      }
+    },
+    "Mises à jour et compte": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Updates and account"
+          }
+        }
+      }
+    },
+    "Mode diagnostic": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diagnostic mode"
+          }
+        }
+      }
+    },
+    "Modifications des pages": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Page changes"
+          }
+        }
+      }
+    },
+    "Modifier": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit"
+          }
+        }
+      }
+    },
+    "Modifier le texte": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edit text"
+          }
+        }
+      }
+    },
+    "Modèle": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Model"
+          }
+        }
+      }
+    },
+    "Modèles": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Models"
+          }
+        }
+      }
+    },
+    "Modèles d'IA et outils": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI models and tools"
+          }
+        }
+      }
+    },
+    "Mon Drive": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "My Drive"
+          }
+        }
+      }
+    },
+    "Moniteur": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Monitor"
+          }
+        }
+      }
+    },
+    "Moniteur de ressources": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resource monitor"
+          }
+        }
+      }
+    },
+    "Montrer la réponse": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show answer"
+          }
+        }
+      }
+    },
+    "Montrer les zones de texte sur la page": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show text areas on the page"
+          }
+        }
+      }
+    },
+    "Moteur": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Engine"
+          }
+        }
+      }
+    },
+    "Moteur par défaut": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Default engine"
+          }
+        }
+      }
+    },
+    "Motifs de fond": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Background patterns"
+          }
+        }
+      }
+    },
+    "Mémoire": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Memory"
+          }
+        }
+      }
+    },
+    "Mémoire du GPU (MLX)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GPU memory (MLX)"
+          }
+        }
+      }
+    },
+    "Ne garde que les mots les plus probables dont la somme atteint cette part. 1 : aucun filtre ; 0,9 : écarte les choix improbables.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keeps only the most likely words whose sum reaches this share. 1: no filter; 0.9: drops unlikely choices."
+          }
+        }
+      }
+    },
+    "Nettoyage des scans": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scan cleaning"
+          }
+        }
+      }
+    },
+    "Nettoyer les médias inutilisés": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clean unused media"
+          }
+        }
+      }
+    },
+    "Noir": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Black"
+          }
+        }
+      }
+    },
+    "Nom": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Name"
+          }
+        }
+      }
+    },
+    "Nom du PDF": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PDF name"
+          }
+        }
+      }
+    },
+    "Nom du PDF fusionné": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Merged PDF name"
+          }
+        }
+      }
+    },
+    "Nom du profil": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Profile name"
+          }
+        }
+      }
+    },
+    "Nombre de mots candidats à chaque pas. 0 : sans limite ; 40 : réponses plus sages.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Number of candidate words at each step. 0: no limit; 40: tamer answers."
+          }
+        }
+      }
+    },
+    "Non classé": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unsorted"
+          }
+        }
+      }
+    },
+    "Non, continuer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No, continue"
+          }
+        }
+      }
+    },
+    "Note chaque minute le niveau de batterie, la chaleur et ce que fait l'app (lecture, IA, analyse), pour savoir quelle fonction consomme. Pour une mesure utile : luminosité fixe, iPad débranché, au moins 15 minutes par activité. Le fichier reste sur l'iPad (Fichiers → Kyōkasho → Diagnostics → energie.csv).": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Records every minute the battery level, heat and what the app is doing (reading, AI, analysis), to find out which feature uses power. For a useful measurement: fixed brightness, iPad unplugged, at least 15 minutes per activity. The file stays on the iPad (Files → Kyōkasho → Diagnostics → energie.csv)."
+          }
+        }
+      }
+    },
+    "Note dans un journal ce que fait l'app (chargement des modèles, durées, mémoire, erreurs) pour aider à corriger un bug. Les erreurs sont toujours notées. Le journal reste sur l'iPad (app Fichiers → Kyōkasho → Diagnostics) ; partage-le quand on te le demande. Rien ne part tout seul.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Writes to a log what the app does (model loading, durations, memory, errors) to help fix a bug. Errors are always recorded. The log stays on the iPad (Files app → Kyōkasho → Diagnostics); share it when asked. Nothing is sent on its own."
+          }
+        }
+      }
+    },
+    "Note sur cette page…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Note on this page…"
+          }
+        }
+      }
+    },
+    "Notes de la page": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Page notes"
+          }
+        }
+      }
+    },
+    "Nouveau chat": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New chat"
+          }
+        }
+      }
+    },
+    "Nouveau paquet": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New deck"
+          }
+        }
+      }
+    },
+    "Nouveau profil (copie de l'actif)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New profile (copy of the active one)"
+          }
+        }
+      }
+    },
+    "Nouveau prompt": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New prompt"
+          }
+        }
+      }
+    },
+    "Nouveautés de cette version": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What's new in this version"
+          }
+        }
+      }
+    },
+    "Nouvelle conversation": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New conversation"
+          }
+        }
+      }
+    },
+    "Nouvelle note flottante": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New floating note"
+          }
+        }
+      }
+    },
+    "Numéro de la page du fichier PDF où ton manuel imprime « 1 ». Plus simple : ouvre le livre sur cette page, puis menu ••• → « Cette page est la page 1 ».": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Number of the PDF file page where your textbook prints “1”. Simpler: open the book on that page, then ••• menu → “This page is page 1”."
+          }
+        }
+      }
+    },
+    "Numéros dans le fichier PDF (1 = première page du fichier).": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Numbers in the PDF file (1 = first page of the file)."
+          }
+        }
+      }
+    },
+    "Numéros du PDF (page 1 = début)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PDF numbers (page 1 = start)"
+          }
+        }
+      }
+    },
+    "OCR": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OCR"
+          }
+        }
+      }
+    },
+    "OK": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OK"
+          }
+        }
+      }
+    },
+    "Optionnel. Le texte de la page part chez DeepL seulement quand tu touches « Traduire » (panneau d'étude ou dictionnaire), ou si tu actives la traduction automatique des définitions anglaises (la définition anglaise part alors à chaque mot recherché pas encore traduit). La clé reste dans le Trousseau de l'iPad. Offre gratuite : 500 000 caractères par mois.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Optional. The page text goes to DeepL only when you touch “Translate” (study panel or dictionary), or if you turn on automatic translation of English definitions (the English definition is then sent for each looked-up word not yet translated). The key stays in the iPad's Keychain. Free plan: 500,000 characters per month."
+          }
+        }
+      }
+    },
+    "Options OCR avancées": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Advanced OCR options"
+          }
+        }
+      }
+    },
+    "Options avancées": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Advanced options"
+          }
+        }
+      }
+    },
+    "Options de lecture": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reading options"
+          }
+        }
+      }
+    },
+    "Ordre des pages (glisser pour ranger)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Page order (drag to reorder)"
+          }
+        }
+      }
+    },
+    "Oublier cette analyse": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Forget this analysis"
+          }
+        }
+      }
+    },
+    "Oui, arrêter": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yes, stop"
+          }
+        }
+      }
+    },
+    "Outil": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tool"
+          }
+        }
+      }
+    },
+    "Outil avancé": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Advanced tool"
+          }
+        }
+      }
+    },
+    "Ouvert à la demande pendant la lecture d'une page, refermé 30 s après le dernier usage.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opened on demand while reading a page, closed 30 s after last use."
+          }
+        }
+      }
+    },
+    "Ouvrir": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open"
+          }
+        }
+      }
+    },
+    "Ouvrir GitHub": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open GitHub"
+          }
+        }
+      }
+    },
+    "Ouvrir en fenêtre (dessin)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open in a window (drawing)"
+          }
+        }
+      }
+    },
+    "Ouvrir et modifier mon lexique": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open and edit my lexicon"
+          }
+        }
+      }
+    },
+    "Ouvrir le navigateur à côté": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open the browser alongside"
+          }
+        }
+      }
+    },
+    "OvisOCR2 (mise en page IA)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OvisOCR2 (AI layout)"
+          }
+        }
+      }
+    },
+    "OvisOCR2 met la page en forme… (≈ 30 s)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OvisOCR2 is laying out the page… (≈ 30 s)"
+          }
+        }
+      }
+    },
+    "OvisOCR2 par serveur local": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OvisOCR2 via local server"
+          }
+        }
+      }
+    },
+    "Où est la page 1 ?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Where is page 1?"
+          }
+        }
+      }
+    },
+    "PDF à texte intégré : lignes qu'OvisOCR2 lit en plus, en général dans les illustrations. Le texte complet s'affiche dans la mise en page IA du panneau Texte.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PDF with embedded text: lines that OvisOCR2 reads in addition, usually in illustrations. The full text appears in the Text panel's AI layout."
+          }
+        }
+      }
+    },
+    "PP-DocLayout et DocLayout-YOLO repèrent titres, colonnes et tableaux ; « Géométrie » marche sans modèle. Même choix que dans le panneau d'étude.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PP-DocLayout and DocLayout-YOLO find titles, columns and tables; “Geometry” works without a model. Same choice as in the study panel."
+          }
+        }
+      }
+    },
+    "Page du PDF": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PDF page"
+          }
+        }
+      }
+    },
+    "Page par page": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Page by page"
+          }
+        }
+      }
+    },
+    "Page simple": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Single page"
+          }
+        }
+      }
+    },
+    "Page vers IA": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Page to AI"
+          }
+        }
+      }
+    },
+    "Pages": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pages"
+          }
+        }
+      }
+    },
+    "Pages en erreur": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pages with errors"
+          }
+        }
+      }
+    },
+    "Pages et gestes": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pages and gestures"
+          }
+        }
+      }
+    },
+    "Pages les moins sûres": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Least reliable pages"
+          }
+        }
+      }
+    },
+    "Pages supprimées, restaurables": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deleted pages, restorable"
+          }
+        }
+      }
+    },
+    "Pages à supprimer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pages to delete"
+          }
+        }
+      }
+    },
+    "Pagination et réglages de ce document": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pagination and settings for this document"
+          }
+        }
+      }
+    },
+    "Palette": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Palette"
+          }
+        }
+      }
+    },
+    "Paquet": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deck"
+          }
+        }
+      }
+    },
+    "Paquet Kyōkasho": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kyōkasho package"
+          }
+        }
+      }
+    },
+    "Paquet dans Anki": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deck in Anki"
+          }
+        }
+      }
+    },
+    "Paquet des nouvelles cartes": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deck for new cards"
+          }
+        }
+      }
+    },
+    "Paquets": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Decks"
+          }
+        }
+      }
+    },
+    "Partager": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Share"
+          }
+        }
+      }
+    },
+    "Partager le journal": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Share the log"
+          }
+        }
+      }
+    },
+    "Partagés avec moi": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shared with me"
+          }
+        }
+      }
+    },
+    "Pas de réponse — réessayer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No answer — try again"
+          }
+        }
+      }
+    },
+    "Pas encore assez de mesures sur batterie. Laisse le relevé allumé, iPad débranché, au moins 10 minutes par activité.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not enough battery measurements yet. Leave the record on, iPad unplugged, at least 10 minutes per activity."
+          }
+        }
+      }
+    },
+    "Pas encore de mise en page IA pour cette page.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No AI layout for this page yet."
+          }
+        }
+      }
+    },
+    "Pas envie ? Le bouton « Fichiers » marche aussi avec Google Drive si l'app Google Drive est installée sur l'iPad.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not in the mood? The “Files” button also works with Google Drive if the Google Drive app is installed on the iPad."
+          }
+        }
+      }
+    },
+    "Passer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skip"
+          }
+        }
+      }
+    },
+    "Personnalise l'app selon ce que tu veux faire. Les réglages d'un livre restent accessibles depuis son menu « … ».": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Customize the app for what you want to do. A book's settings stay available from its “…” menu."
+          }
+        }
+      }
+    },
+    "Personnaliser": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Customize"
+          }
+        }
+      }
+    },
+    "Pivoter la page": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rotate the page"
+          }
+        }
+      }
+    },
+    "Place des copies": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Space used by copies"
+          }
+        }
+      }
+    },
+    "Place prise par l'app": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Space used by the app"
+          }
+        }
+      }
+    },
+    "Place sur l'iPad": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Space on the iPad"
+          }
+        }
+      }
+    },
+    "Plein écran": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Full screen"
+          }
+        }
+      }
+    },
+    "Plus tard": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Later"
+          }
+        }
+      }
+    },
+    "Police": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Font"
+          }
+        }
+      }
+    },
+    "Police, taille et présentation du texte": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Font, size and text layout"
+          }
+        }
+      }
+    },
+    "Position": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Position"
+          }
+        }
+      }
+    },
+    "Pour chaque modèle de chat : consigne générale, préréglages (résumer, expliquer les formules, professeur de japonais, traduction mot à mot), température, longueur…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "For each chat model: general instruction, presets (summarize, explain formulas, Japanese teacher, word-by-word translation), temperature, length…"
+          }
+        }
+      }
+    },
+    "Pour corriger à la main : « Brut », puis appui long sur la ligne.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To correct by hand: “Raw”, then long-press the line."
+          }
+        }
+      }
+    },
+    "Profil actif": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Active profile"
+          }
+        }
+      }
+    },
+    "Profil de recherche": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search profile"
+          }
+        }
+      }
+    },
+    "Prompt": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prompt"
+          }
+        }
+      }
+    },
+    "Prompts": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prompts"
+          }
+        }
+      }
+    },
+    "Prononciation (audio)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pronunciation (audio)"
+          }
+        }
+      }
+    },
+    "Précharger le texte de la page affichée": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preload the displayed page's text"
+          }
+        }
+      }
+    },
+    "Précharger les aperçus": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preload previews"
+          }
+        }
+      }
+    },
+    "Préparation des pages…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preparing pages…"
+          }
+        }
+      }
+    },
+    "Prépare les miniatures voisines. Une valeur plus faible réduit le travail en arrière-plan ; 0 désactive ce préchargement.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prepares nearby thumbnails. A lower value reduces background work; 0 turns this preloading off."
+          }
+        }
+      }
+    },
+    "Préréglages": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Presets"
+          }
+        }
+      }
+    },
+    "Présentation du texte": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Text layout"
+          }
+        }
+      }
+    },
+    "Pénalité de répétition": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Repetition penalty"
+          }
+        }
+      }
+    },
+    "Qwen3-VL traduit la page… (1 à 3 min, hors ligne)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3-VL is translating the page… (1 to 3 min, offline)"
+          }
+        }
+      }
+    },
+    "Qwen3.5 réfléchit d'abord (la réflexion s'affiche dans la réponse). Souvent plus juste en maths, mais 2 à 5 fois plus long.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5 thinks first (the thinking shows in the answer). Often more accurate in math, but 2 to 5 times slower."
+          }
+        }
+      }
+    },
+    "Recherche de la dernière version…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Looking for the latest version…"
+          }
+        }
+      }
+    },
+    "Rechercher": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search"
+          }
+        }
+      }
+    },
+    "Rechercher dans le document": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search in the document"
+          }
+        }
+      }
+    },
+    "Rechercher des mises à jour": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check for updates"
+          }
+        }
+      }
+    },
+    "Recherche…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Searching…"
+          }
+        }
+      }
+    },
+    "Recommandé": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recommended"
+          }
+        }
+      }
+    },
+    "Reconnaître le texte": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recognize text"
+          }
+        }
+      }
+    },
+    "Recto": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Front"
+          }
+        }
+      }
+    },
+    "Refaire la mise en page": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Redo the layout"
+          }
+        }
+      }
+    },
+    "Refuser": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Decline"
+          }
+        }
+      }
+    },
+    "Relance l'app pour appliquer la langue (ferme-la puis rouvre-la).": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restart the app to apply the language (close it, then reopen it)."
+          }
+        }
+      }
+    },
+    "Relancer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Run again"
+          }
+        }
+      }
+    },
+    "Relancer avec des choix…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Run again with choices…"
+          }
+        }
+      }
+    },
+    "Relancer l'analyse": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Run the analysis again"
+          }
+        }
+      }
+    },
+    "Relancer l'analyse (pages manquantes)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Run the analysis again (missing pages)"
+          }
+        }
+      }
+    },
+    "Relecture": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Proofreading"
+          }
+        }
+      }
+    },
+    "Relecture des caractères douteux": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Proofreading doubtful characters"
+          }
+        }
+      }
+    },
+    "Relecture par l'IA des lignes douteuses…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI proofreading of doubtful lines…"
+          }
+        }
+      }
+    },
+    "Relevé de batterie": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Battery record"
+          }
+        }
+      }
+    },
+    "Relie ton Drive en 5 minutes": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Link your Drive in 5 minutes"
+          }
+        }
+      }
+    },
+    "Relire aussi les pages déjà lues": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Also re-read pages already read"
+          }
+        }
+      }
+    },
+    "Relire avec OvisOCR2": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Re-read with OvisOCR2"
+          }
+        }
+      }
+    },
+    "Relire avec l'IA": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Re-read with AI"
+          }
+        }
+      }
+    },
+    "Relire les lignes douteuses avec GLM-OCR": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Re-read doubtful lines with GLM-OCR"
+          }
+        }
+      }
+    },
+    "Remettre les termes de départ manquants": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restore missing starter terms"
+          }
+        }
+      }
+    },
+    "Remplacer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Replace"
+          }
+        }
+      }
+    },
+    "Rend les pages photo (scans) cherchables. Une seule fois : le résultat est gardé.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Makes photo pages (scans) searchable. Only once: the result is kept."
+          }
+        }
+      }
+    },
+    "Renommer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rename"
+          }
+        }
+      }
+    },
+    "Renommer la conversation": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rename the conversation"
+          }
+        }
+      }
+    },
+    "Reprendre dans le champ": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use in the field"
+          }
+        }
+      }
+    },
+    "Reprise des données nécessaire": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Data recovery needed"
+          }
+        }
+      }
+    },
+    "Rescanner": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rescan"
+          }
+        }
+      }
+    },
+    "Restauration prête": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restoration ready"
+          }
+        }
+      }
+    },
+    "Restaurer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restore"
+          }
+        }
+      }
+    },
+    "Restaurer ces pages ?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restore these pages?"
+          }
+        }
+      }
+    },
+    "Restaurer cette sauvegarde ?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restore this backup?"
+          }
+        }
+      }
+    },
+    "Restaurer une sauvegarde…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restore a backup…"
+          }
+        }
+      }
+    },
+    "Retirer l'ancre": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove the anchor"
+          }
+        }
+      }
+    },
+    "Retirer la clé": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove the key"
+          }
+        }
+      }
+    },
+    "Retour à la bibliothèque": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back to the library"
+          }
+        }
+      }
+    },
+    "Retrouve un mot, explore ses kanji et garde ceux que tu veux revoir.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Find a word, explore its kanji and keep the ones you want to review."
+          }
+        }
+      }
+    },
+    "Revenir aux réglages de l'app": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back to the app settings"
+          }
+        }
+      }
+    },
+    "Revenir aux réglages généraux": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back to the general settings"
+          }
+        }
+      }
+    },
+    "Revoir la visite guidée": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Replay the guided tour"
+          }
+        }
+      }
+    },
+    "Rien d'important n'est perdu : PDF, notes, textes lus, analyses, modèles et réglages restent.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing important is lost: PDFs, notes, read texts, analyses, models and settings stay."
+          }
+        }
+      }
+    },
+    "Rien depuis le lancement de l'app.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing since the app launched."
+          }
+        }
+      }
+    },
+    "Rien n'est obligatoire : l'app marche sans aucun modèle. Pour un livre japonais scanné, le duo conseillé est **NDLOCR-Lite** (lire le texte) + **MeCab** (furigana justes). Le reste ajoute des options.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing is required: the app works without any model. For a scanned Japanese book, the recommended pair is **NDLOCR-Lite** (reading the text) + **MeCab** (accurate furigana). The rest adds options."
+          }
+        }
+      }
+    },
+    "Rogner les marges blanches": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crop white margins"
+          }
+        }
+      }
+    },
+    "Rythme": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pace"
+          }
+        }
+      }
+    },
+    "Réessayer la reprise": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retry the recovery"
+          }
+        }
+      }
+    },
+    "Réflexion avant de répondre": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Think before answering"
+          }
+        }
+      }
+    },
+    "Réglages": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Settings"
+          }
+        }
+      }
+    },
+    "Réinitialise les choix de lecture et le moteur OCR propres à ce livre.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resets the reading choices and OCR engine specific to this book."
+          }
+        }
+      }
+    },
+    "Résultats": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Results"
+          }
+        }
+      }
+    },
+    "Résultats OCR en cache": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cached OCR results"
+          }
+        }
+      }
+    },
+    "Rétention : chance de te souvenir d'une carte le jour où elle revient. Plus haut = plus de révisions. 90 % est un bon choix.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retention: chance of remembering a card on the day it comes back. Higher = more reviews. 90% is a good choice."
+          }
+        }
+      }
+    },
+    "Révisions": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reviews"
+          }
+        }
+      }
+    },
+    "Saisis un kanji ou touche-en un dans une fiche pour voir ses lectures et ses sens.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Type a kanji or touch one in an entry to see its readings and meanings."
+          }
+        }
+      }
+    },
+    "Sauvegarde": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Backup"
+          }
+        }
+      }
+    },
+    "Se connecter avec Google": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sign in with Google"
+          }
+        }
+      }
+    },
+    "Se connecter à GitHub": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sign in to GitHub"
+          }
+        }
+      }
+    },
+    "Se déconnecter": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sign out"
+          }
+        }
+      }
+    },
+    "Sens de lecture": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reading direction"
+          }
+        }
+      }
+    },
+    "Sens en": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Meaning in"
+          }
+        }
+      }
+    },
+    "Sens en français": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Meaning in French"
+          }
+        }
+      }
+    },
+    "Sens en français (ex. tasseau de plafond)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Meaning in French (e.g. tasseau de plafond)"
+          }
+        }
+      }
+    },
+    "Seules les pages déjà lues par OvisOCR2 sont utilisées. Les lignes corrigées à la main et celles qui ressemblent à des formules sont conservées. La comparaison reste automatique : vérifie ensuite les passages importants sur la page originale.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Only pages already read by OvisOCR2 are used. Lines corrected by hand and those that look like formulas are kept. The comparison stays automatic: then check important passages on the original page."
+          }
+        }
+      }
+    },
+    "Si un cours importé depuis Drive a changé, la nouvelle version remplace l'ancienne. Tes surlignages, dessins, signets et commentaires sont gardés (rattachés aux mêmes numéros de page).": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "If a course imported from Drive has changed, the new version replaces the old one. Your highlights, drawings, bookmarks and comments are kept (attached to the same page numbers)."
+          }
+        }
+      }
+    },
+    "Sinon, seules les pages pas encore lues par ces modèles le sont. Relire coûte du temps et de la batterie (≈ 30 s par page et par modèle).": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Otherwise, only pages not yet read by these models are read. Re-reading costs time and battery (≈ 30 s per page and per model)."
+          }
+        }
+      }
+    },
+    "Source audio": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Audio source"
+          }
+        }
+      }
+    },
+    "Sources et licences": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sources and licenses"
+          }
+        }
+      }
+    },
+    "Stabiliser les gestes du panneau flottant": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Steady the floating panel's gestures"
+          }
+        }
+      }
+    },
+    "Style": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Style"
+          }
+        }
+      }
+    },
+    "Suivi du processeur, de la mémoire et de la fluidité, fixé en bas à gauche, dans la bibliothèque comme dans le lecteur. × le masque ; menu « … » du lecteur pour le réafficher. Utile pour observer un ralentissement.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CPU, memory and smoothness tracking, pinned at the bottom left, in the library and in the reader. × hides it; the reader's “…” menu shows it again. Useful to watch a slowdown."
+          }
+        }
+      }
+    },
+    "Supprime les images et sons que plus aucune carte n'utilise.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deletes images and sounds no card uses anymore."
+          }
+        }
+      }
+    },
+    "Supprimer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete"
+          }
+        }
+      }
+    },
+    "Supprimer ce modèle ?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete this model?"
+          }
+        }
+      }
+    },
+    "Supprimer ce profil": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete this profile"
+          }
+        }
+      }
+    },
+    "Supprimer cette carte et son historique ?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete this card and its history?"
+          }
+        }
+      }
+    },
+    "Supprimer des pages…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete pages…"
+          }
+        }
+      }
+    },
+    "Supprimer définitivement": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete permanently"
+          }
+        }
+      }
+    },
+    "Supprimer la carte": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete the card"
+          }
+        }
+      }
+    },
+    "Supprimer le surlignage": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove the highlight"
+          }
+        }
+      }
+    },
+    "Sur Mac, Qwen, GLM-OCR et NDLOCR ne fonctionnent pas. OvisOCR2 marche par un serveur llama.cpp lancé sur ce Mac (même modèle que sur l'iPad, converti en GGUF). L'OCR Apple Vision, les dictionnaires, les cartes et l'import de paquets .kyokasho marchent toujours.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On Mac, Qwen, GLM-OCR and NDLOCR don't work. OvisOCR2 works through a llama.cpp server running on this Mac (same model as on the iPad, converted to GGUF). Apple Vision OCR, dictionaries, cards and .kyokasho package import still work."
+          }
+        }
+      }
+    },
+    "Surlignage": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Highlight"
+          }
+        }
+      }
+    },
+    "Surligner": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Highlight"
+          }
+        }
+      }
+    },
+    "Suspendue (ne revient plus en révision)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suspended (no longer comes back for review)"
+          }
+        }
+      }
+    },
+    "Système": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "System"
+          }
+        }
+      }
+    },
+    "Sélectionner": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select"
+          }
+        }
+      }
+    },
+    "Sépia": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sepia"
+          }
+        }
+      }
+    },
+    "Ta correction est gardée ; la relecture automatique n'y touchera plus.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your correction is kept; automatic proofreading won't touch it anymore."
+          }
+        }
+      }
+    },
+    "Ta traduction": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your translation"
+          }
+        }
+      }
+    },
+    "Taille": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Size"
+          }
+        }
+      }
+    },
+    "Tape ce code sur GitHub :": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Type this code on GitHub:"
+          }
+        }
+      }
+    },
+    "Température automatique": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatic temperature"
+          }
+        }
+      }
+    },
+    "Terme (ex. 野縁)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Term (e.g. 野縁)"
+          }
+        }
+      }
+    },
+    "Terminé": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Done"
+          }
+        }
+      }
+    },
+    "Terminées récemment": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recently finished"
+          }
+        }
+      }
+    },
+    "Tes termes spécialisés, leurs lectures et leurs sens en français.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your specialized terms, their readings and their French meanings."
+          }
+        }
+      }
+    },
+    "Tester : 食べる": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Test: 食べる"
+          }
+        }
+      }
+    },
+    "Texte de la ligne": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Line text"
+          }
+        }
+      }
+    },
+    "Texte de la page": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Page text"
+          }
+        }
+      }
+    },
+    "Texte de référence": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reference text"
+          }
+        }
+      }
+    },
+    "Texte de référence manquant": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reference text missing"
+          }
+        }
+      }
+    },
+    "Texte des pages": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Page text"
+          }
+        }
+      }
+    },
+    "Texte vu dans les images": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Text seen in images"
+          }
+        }
+      }
+    },
+    "Thèmes": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Themes"
+          }
+        }
+      }
+    },
+    "Titre": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Title"
+          }
+        }
+      }
+    },
+    "Ton espace de lecture": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your reading space"
+          }
+        }
+      }
+    },
+    "Touche le mot de la page où ancrer la note": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Touch the word on the page to anchor the note to"
+          }
+        }
+      }
+    },
+    "Tous": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All"
+          }
+        }
+      }
+    },
+    "Tous les paquets": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All decks"
+          }
+        }
+      }
+    },
+    "Tout : documents, notes, dessins, OCR, lectures IA, traductions, cartes et révisions, conversations, lexique, dictionnaires, réglages. Les modèles d'IA ne sont pas inclus (à retélécharger). Rien ne part en ligne : le fichier va seulement dans le dossier que tu choisis.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Everything: documents, notes, drawings, OCR, AI readings, translations, cards and reviews, conversations, lexicon, dictionaries, settings. AI models are not included (to download again). Nothing goes online: the file only goes to the folder you choose."
+          }
+        }
+      }
+    },
+    "Tout accepter": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accept all"
+          }
+        }
+      }
+    },
+    "Tout arrêter": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop all"
+          }
+        }
+      }
+    },
+    "Tout le document": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Whole document"
+          }
+        }
+      }
+    },
+    "Tout reste sur l'iPad (Application Support), hors de l'app. Le téléchargement reprend s'il est coupé ; chaque fichier est vérifié (empreinte SHA-256). Supprimer un modèle ne perd pas les pages déjà lues.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Everything stays on the iPad (Application Support), outside the app. The download resumes if interrupted; each file is checked (SHA-256). Deleting a model doesn't lose pages already read."
+          }
+        }
+      }
+    },
+    "Tout se fait sur l'iPad : rien n'est envoyé en ligne.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Everything happens on the iPad: nothing is sent online."
+          }
+        }
+      }
+    },
+    "Tout sélectionner": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select all"
+          }
+        }
+      }
+    },
+    "Toutes les pages traduites dans cette langue sont effacées de l'appareil (une traduction exportée ailleurs n'est pas touchée). Les lectures OvisOCR2, l'analyse et l'autre langue restent. On peut retraduire plus tard.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All pages translated into this language are erased from the device (a translation exported elsewhere is not touched). OvisOCR2 readings, the analysis and the other language stay. You can translate again later."
+          }
+        }
+      }
+    },
+    "Toutes les versions depuis la 0.1.0": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All versions since 0.1.0"
+          }
+        }
+      }
+    },
+    "Traduction": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Translation"
+          }
+        }
+      }
+    },
+    "Traduction DeepL : ajoute ta clé dans Réglages → Traduction.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DeepL translation: add your key in Settings → Translation."
+          }
+        }
+      }
+    },
+    "Traduction en ligne": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Online translation"
+          }
+        }
+      }
+    },
+    "Traduction française": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "French translation"
+          }
+        }
+      }
+    },
+    "Traduction hors ligne : télécharge Qwen3-VL dans Réglages → Modèles d'IA et outils.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Offline translation: download Qwen3-VL in Settings → AI models and tools."
+          }
+        }
+      }
+    },
+    "Traduire en français": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Translate into French"
+          }
+        }
+      }
+    },
+    "Traduire mot à mot": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Translate word by word"
+          }
+        }
+      }
+    },
+    "Traduire tout seul les définitions anglaises": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Translate English definitions automatically"
+          }
+        }
+      }
+    },
+    "Transition": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Transition"
+          }
+        }
+      }
+    },
+    "Très gourmand (mémoire, batterie, chaleur) : branche l'iPad et laisse l'app ouverte, l'écran reste allumé. Tu peux arrêter à tout moment : l'analyse reprendra là où elle s'est arrêtée. Rien ne part en ligne.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Very demanding (memory, battery, heat): plug in the iPad and keep the app open, the screen stays on. You can stop at any time: the analysis will resume where it stopped. Nothing goes online."
+          }
+        }
+      }
+    },
+    "Tu peux aussi ajouter une page depuis le lecteur : bouton « Texte » → icône jauge. Corrige ensuite le texte de référence.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You can also add a page from the reader: “Text” button → gauge icon. Then correct the reference text."
+          }
+        }
+      }
+    },
+    "Tu pourras le retélécharger. Les pages déjà lues restent en cache.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You can download it again. Pages already read stay cached."
+          }
+        }
+      }
+    },
+    "Type de note dans Anki": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Note type in Anki"
+          }
+        }
+      }
+    },
+    "Télécharge OvisOCR2 (et si tu veux GLM-OCR) dans Réglages → Modèles d'IA et outils.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download OvisOCR2 (and GLM-OCR if you like) in Settings → AI models and tools."
+          }
+        }
+      }
+    },
+    "Télécharge OvisOCR2 dans Réglages → Modèles d'IA et outils.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download OvisOCR2 in Settings → AI models and tools."
+          }
+        }
+      }
+    },
+    "Téléchargement": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download"
+          }
+        }
+      }
+    },
+    "Téléchargement…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Downloading…"
+          }
+        }
+      }
+    },
+    "Télécharger": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download"
+          }
+        }
+      }
+    },
+    "Télécharger (47 Mo, ≈ 260 Mo une fois installé)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Download (47 MB, ≈ 260 MB once installed)"
+          }
+        }
+      }
+    },
+    "Téléchargés depuis le site officiel de chaque projet, puis importés sur l'iPad. Rien d'autre ne part en ligne. Les dictionnaires ne sont pas dans la sauvegarde : on les retélécharge.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Downloaded from each project's official site, then imported on the iPad. Nothing else goes online. Dictionaries are not in the backup: they are downloaded again."
+          }
+        }
+      }
+    },
+    "URL avec {term} et {reading}": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "URL with {term} and {reading}"
+          }
+        }
+      }
+    },
+    "Un document exporté « en entier » depuis Kyōkasho : il revient avec ses notes, OCR, lectures IA, traductions et analyse, sans rien relancer.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A document exported “whole” from Kyōkasho: it comes back with its notes, OCR, AI readings, translations and analysis, without running anything again."
+          }
+        }
+      }
+    },
+    "Un document reste 30 jours dans la corbeille, puis il est effacé de l'iPad.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A document stays 30 days in the trash, then it is erased from the iPad."
+          }
+        }
+      }
+    },
+    "Un problème d'affichage ou de lecture ? Active le journal, refais l'action, puis partage-le pour qu'on puisse comprendre ce qui se passe.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A display or reading problem? Turn on the log, repeat the action, then share it so we can understand what is happening."
+          }
+        }
+      }
+    },
+    "Un préréglage remplit la consigne et règle la température et la longueur ; tout reste modifiable ensuite.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A preset fills in the instruction and sets the temperature and length; everything stays editable afterwards."
+          }
+        }
+      }
+    },
+    "Un seul modèle d'IA chargé à la fois. Il se libère tout seul 45 s après sa dernière lecture, en revenant à la bibliothèque ou quand l'app passe en arrière-plan. Une lecture en cours le garde jusqu'à sa fin.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Only one AI model loaded at a time. It frees itself 45 s after its last reading, when you go back to the library or when the app goes to the background. A reading in progress keeps it until it ends."
+          }
+        }
+      }
+    },
+    "Une carte en apprentissage revient bientôt. Tu peux laisser cet écran ouvert.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A card in learning comes back soon. You can leave this screen open."
+          }
+        }
+      }
+    },
+    "Une lecture et un sens sont nécessaires. Les corrections ici s'appliquent seulement aux cartes créées.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A reading and a meaning are required. Corrections here only apply to the cards created."
+          }
+        }
+      }
+    },
+    "Une ligne par terme : terme ; lecture ; sens (séparateur ; , | ou tabulation). Un tableur exporté en CSV convient.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "One line per term: term ; reading ; meaning (separator ; , | or tab). A spreadsheet exported as CSV works."
+          }
+        }
+      }
+    },
+    "Une page par image, à sa forme. Les très grandes photos sont réduites (≈ 300 ppp sur A4, assez pour l'OCR). Tout se fait sur l'iPad : rien n'est envoyé en ligne.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "One page per image, at its shape. Very large photos are reduced (≈ 300 dpi on A4, enough for OCR). Everything happens on the iPad: nothing is sent online."
+          }
+        }
+      }
+    },
+    "Utilisation": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usage"
+          }
+        }
+      }
+    },
+    "Version": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Version"
+          }
+        }
+      }
+    },
+    "Version Mac": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mac version"
+          }
+        }
+      }
+    },
+    "Verso": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back"
+          }
+        }
+      }
+    },
+    "Vider": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Empty"
+          }
+        }
+      }
+    },
+    "Vignettes, pages nettoyées, fichiers temporaires et cache web : l'app les refait au besoin. Tes PDF, notes, textes lus, analyses et modèles restent.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thumbnails, cleaned pages, temporary files and web cache: the app rebuilds them when needed. Your PDFs, notes, read texts, analyses and models stay."
+          }
+        }
+      }
+    },
+    "Voir le détail": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "See details"
+          }
+        }
+      }
+    },
+    "Voir le journal": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "View the log"
+          }
+        }
+      }
+    },
+    "Voir le journal de diagnostic": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "View the diagnostic log"
+          }
+        }
+      }
+    },
+    "Voir le résumé": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "View the summary"
+          }
+        }
+      }
+    },
+    "Vraiment arrêter ?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Really stop?"
+          }
+        }
+      }
+    },
+    "Vérification (OvisOCR2)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check (OvisOCR2)"
+          }
+        }
+      }
+    },
+    "Vérification…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Checking…"
+          }
+        }
+      }
+    },
+    "Vérifie la lecture et le sens : l'IA peut se tromper. Un terme ajouté se modifie ensuite dans le lexique.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check the reading and the meaning: the AI can be wrong. An added term can then be edited in the lexicon."
+          }
+        }
+      }
+    },
+    "Vérifie les lectures et les sens avant l'ajout. Les doublons sont ignorés. Les cartes restent liées à ce livre et à cette page ; tu peux les exporter en Anki depuis la bibliothèque.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check readings and meanings before adding. Duplicates are ignored. Cards stay linked to this book and this page; you can export them to Anki from the library."
+          }
+        }
+      }
+    },
+    "Vérifier les mises à jour": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check for updates"
+          }
+        }
+      }
+    },
+    "Vérifier les mises à jour des cours": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check for course updates"
+          }
+        }
+      }
+    },
+    "choisir": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "choose"
+          }
+        }
+      }
+    },
+    "conseillé": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "recommended"
+          }
+        }
+      }
+    },
+    "exporté en PDF": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "exported as PDF"
+          }
+        }
+      }
+    },
+    "github.com/polm/unidic-lite": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "github.com/polm/unidic-lite"
+          }
+        }
+      }
+    },
+    "lecture…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "reading…"
+          }
+        }
+      }
+    },
+    "lignes confirmées par au moins deux lectures": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "lines confirmed by at least two readings"
+          }
+        }
+      }
+    },
+    "livre ouvert à l'écran": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "book open on screen"
+          }
+        }
+      }
+    },
+    "non publiée": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "unpublished"
+          }
+        }
+      }
+    },
+    "ou touche la carte · Espace": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "or touch the card · Space"
+          }
+        }
+      }
+    },
+    "pas depuis le lancement": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "not since launch"
+          }
+        }
+      }
+    },
+    "trouvé par la lecture": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "found by the reading"
+          }
+        }
+      }
+    },
+    "utilisés par Kyōkasho": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "used by Kyōkasho"
+          }
+        }
+      }
+    },
+    "xxxx.apps.googleusercontent.com": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "xxxx.apps.googleusercontent.com"
+          }
+        }
+      }
+    },
+    "« Ajouter des pages… » (appui long sur le livre dans la bibliothèque). Les ajouts faits avant cette version ne sont pas listés.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“Add pages…” (long-press the book in the library). Additions made before this version are not listed."
+          }
+        }
+      }
+    },
+    "À droite en paysage, elle dispose de sa propre colonne. En portrait, la fenêtre apparaît par-dessus la page. Tu peux aussi changer sa position depuis les boutons de son en-tête.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On the right in landscape, it has its own column. In portrait, the window appears over the page. You can also change its position from the buttons in its header."
+          }
+        }
+      }
+    },
+    "À jour — vérifier encore": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Up to date — check again"
+          }
+        }
+      }
+    },
+    "À l'import et à l'ouverture, OvisOCR2 lit les pages non encore enregistrées, si le modèle est installé. Ce texte sert au panneau, aux furigana et au chat ; les pages déjà lues ne sont pas relancées.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "At import and opening, OvisOCR2 reads pages not yet saved, if the model is installed. This text feeds the panel, furigana and chat; pages already read are not run again."
+          }
+        }
+      }
+    },
+    "À propos": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "About"
+          }
+        }
+      }
+    },
+    "Ça ne ressemble pas à un ID client (il finit par .apps.googleusercontent.com).": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This doesn't look like a client ID (it ends with .apps.googleusercontent.com)."
+          }
+        }
+      }
+    },
+    "Échantillon": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sample"
+          }
+        }
+      }
+    },
+    "État": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Status"
+          }
+        }
+      }
+    },
+    "État, mémoire, « Décharger », réglages propres et dernières tâches. Qwen3-VL et Qwen3.5 : conversation.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Status, memory, “Unload”, its own settings and recent tasks. Qwen3-VL and Qwen3.5: conversation."
+          }
+        }
+      }
+    },
+    "Étiquettes": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Labels"
+          }
+        }
+      }
+    },
+    "Étude": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Study"
+          }
+        }
+      }
+    },
+    "Évite qu'il boucle sur la même phrase. 1,1 suffit en général ; trop fort, il évite aussi les mots utiles.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stops it from looping on the same sentence. 1.1 is usually enough; too high, it also avoids useful words."
+          }
+        }
+      }
+    },
+    "à": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "to"
+          }
+        }
+      }
+    },
+    "教科書 · atelier de lecture": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "教科書 · reading workshop"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}
