@@ -353,8 +353,8 @@ struct ThemePickerView: View {
                 .overlay(Text("教").font(.custom("HiraMinProN-W6", size: 22)).foregroundStyle(palette.japanese))
                 .frame(width: 52, height: 52)
             VStack(alignment: .leading, spacing: 3) {
-                Text(s.name).font(.system(size: 15, weight: .semibold, design: s.fontDesign)).foregroundStyle(Atelier.textPrimary)
-                Text(s.summary).font(.system(size: 12, design: s.fontDesign)).foregroundStyle(Atelier.textSecondary)
+                Text(ui: s.name).font(.system(size: 15, weight: .semibold, design: s.fontDesign)).foregroundStyle(Atelier.textPrimary)
+                Text(ui: s.summary).font(.system(size: 12, design: s.fontDesign)).foregroundStyle(Atelier.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 0)
@@ -395,8 +395,8 @@ struct ThemePickerView: View {
             .frame(height: 142)
             VStack(alignment: .leading, spacing: 12) {
                 VStack(alignment: .leading, spacing: 5) {
-                    Text(t.name).font(Atelier.font(16, weight: .semibold)).foregroundStyle(t.ink)
-                    Text(t.atmosphere).font(Atelier.font(12)).foregroundStyle(t.secondaryInk)
+                    Text(ui: t.name).font(Atelier.font(16, weight: .semibold)).foregroundStyle(t.ink)
+                    Text(ui: t.atmosphere).font(Atelier.font(12)).foregroundStyle(t.secondaryInk)
                 }
                 HStack(spacing: 10) {
                     Text("辞").font(.custom("HiraginoSans-W3", size: 18))

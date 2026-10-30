@@ -88,9 +88,9 @@ struct OCRModelsSection: View {
                 row(.degan, badge: "Optionnel")
             }
         } header: {
-            Text(header)
+            Text(ui: header)
         } footer: {
-            Text(footer)
+            Text(ui: footer)
         }
         .confirmationDialog("Supprimer ce modèle ?", isPresented: Binding(get: { deleting != nil }, set: { if !$0 { deleting = nil } }),
                             titleVisibility: .visible) {

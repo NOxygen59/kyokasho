@@ -17,6 +17,22 @@
         }
       }
     },
+    "1 · Lire le texte des scans (OCR)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 · Read the text of scans (OCR)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 · Lire le texte des scans (OCR)"
+          }
+        }
+      }
+    },
     "2 · Furigana et découpage des mots": {
       "localizations": {
         "en": {
@@ -29,6 +45,70 @@
           "stringUnit": {
             "state": "translated",
             "value": "2 · Furigana et découpage des mots"
+          }
+        }
+      }
+    },
+    "3 · Relire et vérifier avec l'IA": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "3 · Proofread and check with AI"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "3 · Relire et vérifier avec l'IA"
+          }
+        }
+      }
+    },
+    "4 · Mise en forme du texte extrait": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "4 · Layout of extracted text"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "4 · Mise en forme du texte extrait"
+          }
+        }
+      }
+    },
+    "5 · Colle l'identifiant": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "5 · Paste the ID"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "5 · Colle l'identifiant"
+          }
+        }
+      }
+    },
+    "5 · Nettoyer les scans": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "5 · Clean the scans"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "5 · Nettoyer les scans"
           }
         }
       }
@@ -273,6 +353,22 @@
         }
       }
     },
+    "Aide et informations": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Help and information"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aide et informations"
+          }
+        }
+      }
+    },
     "Ajout des images…": {
       "localizations": {
         "en": {
@@ -365,6 +461,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ajoute des images puis lance le test."
+          }
+        }
+      }
+    },
+    "Ajoute ta clé DeepL dans Réglages → Traduction.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add your DeepL key in Settings → Translation."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajoute ta clé DeepL dans Réglages → Traduction."
           }
         }
       }
@@ -513,6 +625,22 @@
         }
       }
     },
+    "Ajouter les dictionnaires des fiches de mots": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add dictionaries for word entries"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajouter les dictionnaires des fiches de mots"
+          }
+        }
+      }
+    },
     "Ajouter une source en ligne": {
       "localizations": {
         "en": {
@@ -641,6 +769,54 @@
         }
       }
     },
+    "Angles carrés, grille et ombres décalées": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Square corners, grid and offset shadows"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Angles carrés, grille et ombres décalées"
+          }
+        }
+      }
+    },
+    "Angles droits, traits épais, ombres dures": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Square corners, thick lines, hard shadows"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Angles droits, traits épais, ombres dures"
+          }
+        }
+      }
+    },
+    "Angles vifs, néon et ombres franches": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sharp angles, neon and bold shadows"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Angles vifs, néon et ombres franches"
+          }
+        }
+      }
+    },
     "Animer les changements de fenêtre": {
       "localizations": {
         "en": {
@@ -721,6 +897,22 @@
         }
       }
     },
+    "Apple Pencil et annotations": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Pencil and annotations"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple Pencil et annotations"
+          }
+        }
+      }
+    },
     "Appliqué à la prochaine conversation ou au prochain chargement du modèle. Tout reste sur l'iPad.": {
       "localizations": {
         "en": {
@@ -765,6 +957,54 @@
           "stringUnit": {
             "state": "translated",
             "value": "Apprendre"
+          }
+        }
+      }
+    },
+    "Architecte (plan bleu)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Architect (blueprint)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Architecte (plan bleu)"
+          }
+        }
+      }
+    },
+    "Ardoise marine · jaune solaire": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Navy slate · solar yellow"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ardoise marine · jaune solaire"
+          }
+        }
+      }
+    },
+    "Argile et lin · mousse et rouille": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clay and linen · moss and rust"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Argile et lin · mousse et rouille"
           }
         }
       }
@@ -833,6 +1073,38 @@
         }
       }
     },
+    "Atelier (graphite)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Atelier (graphite)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Atelier (graphite)"
+          }
+        }
+      }
+    },
+    "Aucun": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "None"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun"
+          }
+        }
+      }
+    },
     "Aucun PDF ni dossier ici.": {
       "localizations": {
         "en": {
@@ -893,6 +1165,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Aucun dictionnaire. Importe des dictionnaires au format Yomitan (.zip) : JMdict, JPDB, accents (Kanjium), fréquences (JPDB, BCCWJ), KANJIDIC…"
+          }
+        }
+      }
+    },
+    "Aucun document importé depuis Google Drive.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No document imported from Google Drive."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun document importé depuis Google Drive."
           }
         }
       }
@@ -1073,6 +1361,22 @@
         }
       }
     },
+    "Autres pages": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Other pages"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Autres pages"
+          }
+        }
+      }
+    },
     "Banc d'essai": {
       "localizations": {
         "en": {
@@ -1089,6 +1393,54 @@
         }
       }
     },
+    "Banc d'essai OCR": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OCR benchmark"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Banc d'essai OCR"
+          }
+        }
+      }
+    },
+    "Barre horizontale": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Horizontal bar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Barre horizontale"
+          }
+        }
+      }
+    },
+    "Barre verticale": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vertical bar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Barre verticale"
+          }
+        }
+      }
+    },
     "Batterie": {
       "localizations": {
         "en": {
@@ -1101,6 +1453,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Batterie"
+          }
+        }
+      }
+    },
+    "Bibliothèque": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Library"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bibliothèque"
           }
         }
       }
@@ -1137,6 +1505,70 @@
         }
       }
     },
+    "Blanc (d'origine)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "White (original)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Blanc (d'origine)"
+          }
+        }
+      }
+    },
+    "Blanc, noir · rouge suisse": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "White, black · Swiss red"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Blanc, noir · rouge suisse"
+          }
+        }
+      }
+    },
+    "Bleu": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Blue"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bleu"
+          }
+        }
+      }
+    },
+    "Bleu de Prusse · traits de craie": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prussian blue · chalk lines"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bleu de Prusse · traits de craie"
+          }
+        }
+      }
+    },
     "Bouton « Pencil → dictionnaire »": {
       "localizations": {
         "en": {
@@ -1153,6 +1585,22 @@
         }
       }
     },
+    "Braise (prune et rouille)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ember (plum and rust)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Braise (prune et rouille)"
+          }
+        }
+      }
+    },
     "Brut": {
       "localizations": {
         "en": {
@@ -1165,6 +1613,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "Brut"
+          }
+        }
+      }
+    },
+    "Brutal (crème et encre)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Brutal (cream and ink)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Brutal (crème et encre)"
+          }
+        }
+      }
+    },
+    "Bulles chromées, verre et couleur": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chrome bubbles, glass and color"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bulles chromées, verre et couleur"
           }
         }
       }
@@ -1249,6 +1729,22 @@
         }
       }
     },
+    "Cartes Anki (.apkg)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anki cards (.apkg)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cartes Anki (.apkg)"
+          }
+        }
+      }
+    },
     "Cartes créées": {
       "localizations": {
         "en": {
@@ -1277,6 +1773,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Cartes de la page"
+          }
+        }
+      }
+    },
+    "Cartes de révision": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Review cards"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cartes de révision"
           }
         }
       }
@@ -1617,6 +2129,38 @@
         }
       }
     },
+    "Choisir l'ambiance et les motifs de fond": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose the mood and background patterns"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choisir l'ambiance et les motifs de fond"
+          }
+        }
+      }
+    },
+    "Choisir sa position et conserver le zoom du livre": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose its position and keep the book's zoom"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choisir sa position et conserver le zoom du livre"
+          }
+        }
+      }
+    },
     "Choisir un préréglage": {
       "localizations": {
         "en": {
@@ -1713,6 +2257,38 @@
         }
       }
     },
+    "Chêne fumé · lignes d'intérieur": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Smoked oak · interior lines"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chêne fumé · lignes d'intérieur"
+          }
+        }
+      }
+    },
+    "Clair (papier blanc)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Light (white paper)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clair (papier blanc)"
+          }
+        }
+      }
+    },
     "Client ID de ta GitHub App (Iv1… / Iv23…)": {
       "localizations": {
         "en": {
@@ -1741,6 +2317,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Clé DeepL"
+          }
+        }
+      }
+    },
+    "Clé DeepL refusée (vérifie-la dans Réglages → Traduction).": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DeepL key rejected (check it in Settings → Translation)."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clé DeepL refusée (vérifie-la dans Réglages → Traduction)."
           }
         }
       }
@@ -1825,6 +2417,22 @@
         }
       }
     },
+    "Comprendre les mots et le texte de tes livres": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Understand the words and text of your books"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comprendre les mots et le texte de tes livres"
+          }
+        }
+      }
+    },
     "Compris": {
       "localizations": {
         "en": {
@@ -1853,6 +2461,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Compte"
+          }
+        }
+      }
+    },
+    "Configurer DeepL pour les traductions à la demande": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Set up DeepL for on-demand translations"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Configurer DeepL pour les traductions à la demande"
           }
         }
       }
@@ -1889,6 +2513,38 @@
         }
       }
     },
+    "Connecte-toi à Google Drive d'abord.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sign in to Google Drive first."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connecte-toi à Google Drive d'abord."
+          }
+        }
+      }
+    },
+    "Connecter ton compte pour retrouver tes fichiers": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connect your account to find your files"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connecter ton compte pour retrouver tes fichiers"
+          }
+        }
+      }
+    },
     "Connecté": {
       "localizations": {
         "en": {
@@ -1901,6 +2557,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Connecté"
+          }
+        }
+      }
+    },
+    "Connexion annulée.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sign-in canceled."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connexion annulée."
           }
         }
       }
@@ -2209,6 +2881,22 @@
         }
       }
     },
+    "Couleurs fortes, relief et bord lumineux": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Strong colors, relief and glowing edge"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couleurs fortes, relief et bord lumineux"
+          }
+        }
+      }
+    },
     "Couper les doubles pages scannées": {
       "localizations": {
         "en": {
@@ -2225,6 +2913,22 @@
         }
       }
     },
+    "Courbes oniriques et profondeur vitrée": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dreamlike curves and glassy depth"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Courbes oniriques et profondeur vitrée"
+          }
+        }
+      }
+    },
     "Couverture seule avant les doubles pages": {
       "localizations": {
         "en": {
@@ -2237,6 +2941,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "Couverture seule avant les doubles pages"
+          }
+        }
+      }
+    },
+    "Crème": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cream"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crème"
+          }
+        }
+      }
+    },
+    "Crème et encre · couleurs franches": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cream and ink · bold colors"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crème et encre · couleurs franches"
           }
         }
       }
@@ -2417,6 +3153,22 @@
         }
       }
     },
+    "Depuis Drive": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "From Drive"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Depuis Drive"
+          }
+        }
+      }
+    },
     "Depuis Fichiers": {
       "localizations": {
         "en": {
@@ -2429,6 +3181,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Depuis Fichiers"
+          }
+        }
+      }
+    },
+    "Depuis Google Drive": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "From Google Drive"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Depuis Google Drive"
           }
         }
       }
@@ -2497,6 +3265,22 @@
         }
       }
     },
+    "Dernière confirmation : impossible de revenir en arrière.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Final confirmation: this cannot be undone."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dernière confirmation : impossible de revenir en arrière."
+          }
+        }
+      }
+    },
     "Dernière restauration": {
       "localizations": {
         "en": {
@@ -2545,6 +3329,22 @@
         }
       }
     },
+    "Dessiner (Apple Pencil)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Draw (Apple Pencil)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dessiner (Apple Pencil)"
+          }
+        }
+      }
+    },
     "Dessiner aussi au doigt": {
       "localizations": {
         "en": {
@@ -2557,6 +3357,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Dessiner aussi au doigt"
+          }
+        }
+      }
+    },
+    "Dessiner, surligner ou chercher un mot avec le Pencil": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Draw, highlight or look up a word with the Pencil"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dessiner, surligner ou chercher un mot avec le Pencil"
           }
         }
       }
@@ -2589,6 +3405,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Dictionnaire"
+          }
+        }
+      }
+    },
+    "Dictionnaire au survol (curseur)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dictionary on hover (pointer)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dictionnaire au survol (curseur)"
           }
         }
       }
@@ -2897,6 +3729,22 @@
         }
       }
     },
+    "Déjà dans tes cartes": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Already in your cards"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Déjà dans tes cartes"
+          }
+        }
+      }
+    },
     "Déplacer l'ancre": {
       "localizations": {
         "en": {
@@ -3005,6 +3853,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Effacer ce cache OCR"
+          }
+        }
+      }
+    },
+    "Effacer définitivement ?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Erase permanently?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Effacer définitivement ?"
           }
         }
       }
@@ -3217,6 +4081,54 @@
         }
       }
     },
+    "Encre de charbon · laiton brossé": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Charcoal ink · brushed brass"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Encre de charbon · laiton brossé"
+          }
+        }
+      }
+    },
+    "Encre et or": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ink and gold"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Encre et or"
+          }
+        }
+      }
+    },
+    "Encre et or, typographie élégante": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ink and gold, elegant typography"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Encre et or, typographie élégante"
+          }
+        }
+      }
+    },
     "English": {
       "localizations": {
         "en": {
@@ -3357,6 +4269,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Erreur"
+          }
+        }
+      }
+    },
+    "Espace de stockage": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Storage"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Espace de stockage"
           }
         }
       }
@@ -3521,6 +4449,22 @@
         }
       }
     },
+    "Fichiers et comptes": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Files and accounts"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fichiers et comptes"
+          }
+        }
+      }
+    },
     "Fichiers locaux : dépose-les dans Fichiers → Sur mon iPad → Kyōkasho → Audio (ex. 食べる_たべる.mp3). Sources en ligne : utilisées seulement quand tu touches ▶︎.": {
       "localizations": {
         "en": {
@@ -3645,6 +4589,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "Format de fichier"
+          }
+        }
+      }
+    },
+    "Formes sobres, aucun relief superflu": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sober shapes, no needless relief"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Formes sobres, aucun relief superflu"
+          }
+        }
+      }
+    },
+    "Forêt (rouge et vert)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Forest (red and green)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Forêt (rouge et vert)"
           }
         }
       }
@@ -3857,6 +4833,38 @@
         }
       }
     },
+    "Google Drive n'est pas encore configuré (identifiant client manquant). Voir README → Google Drive.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Google Drive is not set up yet (missing client ID). See README → Google Drive."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Google Drive n'est pas encore configuré (identifiant client manquant). Voir README → Google Drive."
+          }
+        }
+      }
+    },
+    "Google Drive · une seule fois": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Google Drive · only once"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Google Drive · une seule fois"
+          }
+        }
+      }
+    },
     "Google demande que chaque app ait son identifiant. Ouvre chaque étape, fais-la, coche, puis colle l'identifiant en bas.": {
       "localizations": {
         "en": {
@@ -3885,6 +4893,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "Gothique"
+          }
+        }
+      }
+    },
+    "Graphite profond · menthe patinée": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deep graphite · weathered mint"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Graphite profond · menthe patinée"
+          }
+        }
+      }
+    },
+    "Grille nette, angles droits, sans ombre": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clean grid, square corners, no shadow"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grille nette, angles droits, sans ombre"
           }
         }
       }
@@ -3953,6 +4993,22 @@
         }
       }
     },
+    "Géo": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Geo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Géo"
+          }
+        }
+      }
+    },
     "Gérer et se faire aider": {
       "localizations": {
         "en": {
@@ -3985,6 +5041,22 @@
         }
       }
     },
+    "Hiérarchie nette, serif éditoriale": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear hierarchy, editorial serif"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hiérarchie nette, serif éditoriale"
+          }
+        }
+      }
+    },
     "IA": {
       "localizations": {
         "en": {
@@ -3997,6 +5069,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "IA"
+          }
+        }
+      }
+    },
+    "IA et outils hors ligne": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI and offline tools"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "IA et outils hors ligne"
           }
         }
       }
@@ -4125,6 +5213,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Images + texte de référence : taux d'erreur de caractères et temps de chaque moteur."
+          }
+        }
+      }
+    },
+    "Images PNG (zip)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PNG images (zip)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Images PNG (zip)"
           }
         }
       }
@@ -4353,6 +5457,22 @@
         }
       }
     },
+    "Intérieur (plan et chêne)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Interior (plan and oak)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Intérieur (plan et chêne)"
+          }
+        }
+      }
+    },
     "JMdict, JMnedict et KANJIDIC sont la propriété de l'Electronic Dictionary Research and Development Group (edrdg.org), utilisés selon sa licence. Jitendex s'appuie sur JMdict et Tatoeba. Les dictionnaires sont téléchargés depuis leurs sites et restent sur l'iPad. Le lexique du design d'intérieur reprend des extraits du Wiktionnaire et de Wikipédia (CC BY-SA 4.0) ; chaque entrée donne l'adresse de sa page.": {
       "localizations": {
         "en": {
@@ -4369,6 +5489,38 @@
         }
       }
     },
+    "Japonais et traduction": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Japanese and translation"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Japonais et traduction"
+          }
+        }
+      }
+    },
+    "Jaune": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Yellow"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jaune"
+          }
+        }
+      }
+    },
     "Journal": {
       "localizations": {
         "en": {
@@ -4381,6 +5533,54 @@
           "stringUnit": {
             "state": "translated",
             "value": "Journal"
+          }
+        }
+      }
+    },
+    "Journal d'erreurs et suivi de la mémoire": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Error log and memory tracking"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Journal d'erreurs et suivi de la mémoire"
+          }
+        }
+      }
+    },
+    "Kanji enregistrés": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saved kanji"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kanji enregistrés"
+          }
+        }
+      }
+    },
+    "Kanji saisis": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Typed kanji"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kanji saisis"
           }
         }
       }
@@ -4509,6 +5709,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "La sauvegarde est vérifiée sans rien toucher, puis tu confirmes. Une sauvegarde de sécurité de ta bibliothèque actuelle est faite d'abord dans ton dossier ; la restauration s'applique au prochain lancement de l'app. Les modèles d'IA de l'iPad sont gardés."
+          }
+        }
+      }
+    },
+    "Lagon (jaune et ardoise)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lagoon (yellow and slate)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lagon (jaune et ardoise)"
           }
         }
       }
@@ -4669,6 +5885,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "Langue en premier"
+          }
+        }
+      }
+    },
+    "Le Pencil cherche dans le dictionnaire": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The Pencil looks up the dictionary"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le Pencil cherche dans le dictionnaire"
+          }
+        }
+      }
+    },
+    "Le fichier importé, tel quel.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The imported file, as is."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le fichier importé, tel quel."
           }
         }
       }
@@ -4881,6 +6129,22 @@
         }
       }
     },
+    "Lecture automatique des scans et présentation du texte": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatic scan reading and text layout"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lecture automatique des scans et présentation du texte"
+          }
+        }
+      }
+    },
     "Lecture de la page…": {
       "localizations": {
         "en": {
@@ -4929,6 +6193,22 @@
         }
       }
     },
+    "Lecture et apparence": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reading and appearance"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lecture et apparence"
+          }
+        }
+      }
+    },
     "Lecture · vocabulaire · notes": {
       "localizations": {
         "en": {
@@ -4957,6 +6237,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Les cartes arrivent comme neuves dans Anki : l'historique de révision ne suit pas."
+          }
+        }
+      }
+    },
+    "Les cartes de révision créées depuis ce document.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Review cards created from this document."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les cartes de révision créées depuis ce document."
           }
         }
       }
@@ -5041,6 +6337,22 @@
         }
       }
     },
+    "Leurs messages seront effacés de l'iPad.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Their messages will be erased from the iPad."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leurs messages seront effacés de l'iPad."
+          }
+        }
+      }
+    },
     "Lexique du domaine": {
       "localizations": {
         "en": {
@@ -5057,6 +6369,22 @@
         }
       }
     },
+    "Lexique personnel": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Personal lexicon"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lexique personnel"
+          }
+        }
+      }
+    },
     "Licences : MeCab BSD, UniDic BSD (UniDic Consortium), unidic-lite MIT (Paul McCann)": {
       "localizations": {
         "en": {
@@ -5069,6 +6397,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Licences : MeCab BSD, UniDic BSD (UniDic Consortium), unidic-lite MIT (Paul McCann)"
+          }
+        }
+      }
+    },
+    "Lire": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Read"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lire"
           }
         }
       }
@@ -5197,6 +6541,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Longueur et répétitions"
+          }
+        }
+      }
+    },
+    "Lumière du soir": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Evening light"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lumière du soir"
           }
         }
       }
@@ -5373,6 +6733,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Mise en page"
+          }
+        }
+      }
+    },
+    "Mise en page IA (sinon texte de l'OCR), traductions française et anglaise si elles existent, notes.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI layout (otherwise OCR text), French and English translations if they exist, notes."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mise en page IA (sinon texte de l'OCR), traductions française et anglaise si elles existent, notes."
           }
         }
       }
@@ -5665,6 +7041,22 @@
         }
       }
     },
+    "Mots enregistrés": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saved words"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mots enregistrés"
+          }
+        }
+      }
+    },
     "Mémoire": {
       "localizations": {
         "en": {
@@ -5693,6 +7085,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Mémoire du GPU (MLX)"
+          }
+        }
+      }
+    },
+    "Navigateur à côté": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Browser alongside"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Navigateur à côté"
           }
         }
       }
@@ -5757,6 +7165,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Noir"
+          }
+        }
+      }
+    },
+    "Noir et blanc net": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sharp black and white"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noir et blanc net"
           }
         }
       }
@@ -6049,6 +7473,38 @@
         }
       }
     },
+    "Nuit violette · cyan et rose néon": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Violet night · neon cyan and pink"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nuit violette · cyan et rose néon"
+          }
+        }
+      }
+    },
+    "Nuit violette, bords néon": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Violet night, neon edges"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nuit violette, bords néon"
+          }
+        }
+      }
+    },
     "Numéro de la page du fichier PDF où ton manuel imprime « 1 ». Plus simple : ouvre le livre sur cette page, puis menu ••• → « Cette page est la page 1 ».": {
       "localizations": {
         "en": {
@@ -6193,6 +7649,22 @@
         }
       }
     },
+    "Orange": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Orange"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Orange"
+          }
+        }
+      }
+    },
     "Ordre des pages (glisser pour ranger)": {
       "localizations": {
         "en": {
@@ -6269,6 +7741,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Outil avancé"
+          }
+        }
+      }
+    },
+    "Outils": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tools"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Outils"
           }
         }
       }
@@ -6369,6 +7857,22 @@
         }
       }
     },
+    "Ouvrir les outils": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open the tools"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ouvrir les outils"
+          }
+        }
+      }
+    },
     "OvisOCR2 (mise en page IA)": {
       "localizations": {
         "en": {
@@ -6429,6 +7933,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "Où est la page 1 ?"
+          }
+        }
+      }
+    },
+    "PDF annoté": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Annotated PDF"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PDF annoté"
+          }
+        }
+      }
+    },
+    "PDF d'origine": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Original PDF"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PDF d'origine"
           }
         }
       }
@@ -6657,6 +8193,118 @@
         }
       }
     },
+    "Panneau d'étude": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Study panel"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Panneau d'étude"
+          }
+        }
+      }
+    },
+    "Panneaux flottants, arrondis doux": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Floating panels, soft corners"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Panneaux flottants, arrondis doux"
+          }
+        }
+      }
+    },
+    "Papier ancien · encre brune": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Old paper · brown ink"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Papier ancien · encre brune"
+          }
+        }
+      }
+    },
+    "Papier blanc (couleurs gardées)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "White paper (colors kept)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Papier blanc (couleurs gardées)"
+          }
+        }
+      }
+    },
+    "Papier blanc · encre graphite": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "White paper · graphite ink"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Papier blanc · encre graphite"
+          }
+        }
+      }
+    },
+    "Papier découpé, couches et contraste": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cut paper, layers and contrast"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Papier découpé, couches et contraste"
+          }
+        }
+      }
+    },
+    "Papier fibreux · encre et céladon": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fibrous paper · ink and celadon"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Papier fibreux · encre et céladon"
+          }
+        }
+      }
+    },
     "Paquet": {
       "localizations": {
         "en": {
@@ -6685,6 +8333,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Paquet Kyōkasho"
+          }
+        }
+      }
+    },
+    "Paquet Kyōkasho (tout le document)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kyōkasho package (whole document)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paquet Kyōkasho (tout le document)"
           }
         }
       }
@@ -6897,6 +8561,22 @@
         }
       }
     },
+    "Photo": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Photo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Photo"
+          }
+        }
+      }
+    },
     "Pivoter la page": {
       "localizations": {
         "en": {
@@ -6925,6 +8605,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Place des copies"
+          }
+        }
+      }
+    },
+    "Place disponible et connexion à Google Drive": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Available space and Google Drive connection"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Place disponible et connexion à Google Drive"
           }
         }
       }
@@ -7153,6 +8849,38 @@
         }
       }
     },
+    "Prune nocturne · lumière ambrée": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Night plum · amber light"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prune nocturne · lumière ambrée"
+          }
+        }
+      }
+    },
+    "Prune veloutée · cuivre doux": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Velvet plum · soft copper"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prune veloutée · cuivre doux"
+          }
+        }
+      }
+    },
     "Précharger le texte de la page affichée": {
       "localizations": {
         "en": {
@@ -7277,6 +9005,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Quitter pour appliquer"
+          }
+        }
+      }
+    },
+    "Quota DeepL du mois atteint.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DeepL monthly quota reached."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quota DeepL du mois atteint."
           }
         }
       }
@@ -7421,6 +9165,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Reconnaître le texte"
+          }
+        }
+      }
+    },
+    "Reconnaître le texte des pages": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recognize page text"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reconnaître le texte des pages"
           }
         }
       }
@@ -7629,6 +9389,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Relie ton Drive en 5 minutes"
+          }
+        }
+      }
+    },
+    "Relief doux, surfaces ton sur ton": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Soft relief, tone-on-tone surfaces"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Relief doux, surfaces ton sur ton"
           }
         }
       }
@@ -8081,6 +9857,54 @@
         }
       }
     },
+    "Rose": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pink"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rose"
+          }
+        }
+      }
+    },
+    "Rose poudré · nuit de printemps": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Powder pink · spring night"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rose poudré · nuit de printemps"
+          }
+        }
+      }
+    },
+    "Rouge": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Red"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rouge"
+          }
+        }
+      }
+    },
     "Rythme": {
       "localizations": {
         "en": {
@@ -8093,6 +9917,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "Rythme"
+          }
+        }
+      }
+    },
+    "Rythme de révision, modèles de cartes et export Anki": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Review pace, card templates and Anki export"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rythme de révision, modèles de cartes et export Anki"
+          }
+        }
+      }
+    },
+    "Récemment consultés": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recently viewed"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Récemment consultés"
           }
         }
       }
@@ -8145,6 +10001,22 @@
         }
       }
     },
+    "Réglages, journal, données web": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Settings, log, web data"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Réglages, journal, données web"
+          }
+        }
+      }
+    },
     "Réinitialise les choix de lecture et le moteur OCR propres à ce livre.": {
       "localizations": {
         "en": {
@@ -8157,6 +10029,54 @@
           "stringUnit": {
             "state": "translated",
             "value": "Réinitialise les choix de lecture et le moteur OCR propres à ce livre."
+          }
+        }
+      }
+    },
+    "Réponse inattendue de DeepL.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unexpected response from DeepL."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Réponse inattendue de DeepL."
+          }
+        }
+      }
+    },
+    "Réponse inattendue de Google.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unexpected response from Google."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Réponse inattendue de Google."
+          }
+        }
+      }
+    },
+    "Résoudre un problème et vérifier les mises à jour": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Solve a problem and check for updates"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Résoudre un problème et vérifier les mises à jour"
           }
         }
       }
@@ -8209,6 +10129,22 @@
         }
       }
     },
+    "Rétracter la barre": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Collapse the bar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rétracter la barre"
+          }
+        }
+      }
+    },
     "Révisions": {
       "localizations": {
         "en": {
@@ -8221,6 +10157,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "Révisions"
+          }
+        }
+      }
+    },
+    "Sable (orange et crème)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sand (orange and cream)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sable (orange et crème)"
+          }
+        }
+      }
+    },
+    "Sable chaud · crème et terre cuite": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Warm sand · cream and terracotta"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sable chaud · crème et terre cuite"
           }
         }
       }
@@ -8241,6 +10209,22 @@
         }
       }
     },
+    "Sakura (nuit de printemps)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sakura (spring night)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sakura (nuit de printemps)"
+          }
+        }
+      }
+    },
     "Sauvegarde": {
       "localizations": {
         "en": {
@@ -8253,6 +10237,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sauvegarde"
+          }
+        }
+      }
+    },
+    "Sauvegarder toute la bibliothèque dans un dossier de Fichiers": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back up the whole library to a Files folder"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sauvegarder toute la bibliothèque dans un dossier de Fichiers"
           }
         }
       }
@@ -8369,6 +10369,22 @@
         }
       }
     },
+    "Ses messages seront effacés de l'iPad. Les autres conversations sont gardées.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Its messages will be erased from the iPad. Other conversations are kept."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ses messages seront effacés de l'iPad. Les autres conversations sont gardées."
+          }
+        }
+      }
+    },
     "Seules les pages déjà lues par OvisOCR2 sont utilisées. Les lignes corrigées à la main et celles qui ressemblent à des formules sont conservées. La comparaison reste automatique : vérifie ensuite les passages importants sur la page originale.": {
       "localizations": {
         "en": {
@@ -8401,6 +10417,22 @@
         }
       }
     },
+    "Signet": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bookmark"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Signet"
+          }
+        }
+      }
+    },
     "Sinon, seules les pages pas encore lues par ces modèles le sont. Relire coûte du temps et de la batterie (≈ 30 s par page et par modèle).": {
       "localizations": {
         "en": {
@@ -8413,6 +10445,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sinon, seules les pages pas encore lues par ces modèles le sont. Relire coûte du temps et de la batterie (≈ 30 s par page et par modèle)."
+          }
+        }
+      }
+    },
+    "Sombre (inversé)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dark (inverted)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sombre (inversé)"
           }
         }
       }
@@ -8449,6 +10497,22 @@
         }
       }
     },
+    "Sous-bois · sauge et rouge argile": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Undergrowth · sage and clay red"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sous-bois · sauge et rouge argile"
+          }
+        }
+      }
+    },
     "Stabiliser les gestes du panneau flottant": {
       "localizations": {
         "en": {
@@ -8477,6 +10541,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Style"
+          }
+        }
+      }
+    },
+    "Suisse (blanc et rouge)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Swiss (white and red)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suisse (blanc et rouge)"
           }
         }
       }
@@ -8577,6 +10657,22 @@
         }
       }
     },
+    "Supprimer cette conversation ?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete this conversation?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Supprimer cette conversation ?"
+          }
+        }
+      }
+    },
     "Supprimer des pages…": {
       "localizations": {
         "en": {
@@ -8673,6 +10769,22 @@
         }
       }
     },
+    "Surlignages, dessins au stylet et notes posés sur les pages ; notes en fin de fichier.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Highlights, pen drawings and notes on the pages; notes at the end of the file."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Surlignages, dessins au stylet et notes posés sur les pages ; notes en fin de fichier."
+          }
+        }
+      }
+    },
     "Surligner": {
       "localizations": {
         "en": {
@@ -8685,6 +10797,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Surligner"
+          }
+        }
+      }
+    },
+    "Surligner l'OCR en glissant": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Highlight OCR by dragging"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Surligner l'OCR en glissant"
           }
         }
       }
@@ -8753,6 +10881,70 @@
         }
       }
     },
+    "Sépia (papier ancien)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sepia (old paper)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sépia (papier ancien)"
+          }
+        }
+      }
+    },
+    "Sépia nuit": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Night sepia"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sépia nuit"
+          }
+        }
+      }
+    },
+    "Sépia, cadres d'encre, serif classique": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sepia, ink frames, classic serif"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sépia, cadres d'encre, serif classique"
+          }
+        }
+      }
+    },
+    "Ta bibliothèque est vide": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your library is empty"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ta bibliothèque est vide"
+          }
+        }
+      }
+    },
     "Ta correction est gardée ; la relecture automatique n'y touchera plus.": {
       "localizations": {
         "en": {
@@ -8801,6 +10993,22 @@
         }
       }
     },
+    "Tamisé": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dimmed"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tamisé"
+          }
+        }
+      }
+    },
     "Tape ce code sur GitHub :": {
       "localizations": {
         "en": {
@@ -8813,6 +11021,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Tape ce code sur GitHub :"
+          }
+        }
+      }
+    },
+    "Temps de lecture": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reading time"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Temps de lecture"
           }
         }
       }
@@ -8849,6 +11073,22 @@
         }
       }
     },
+    "Terminal sombre, lignes techniques": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dark terminal, technical lines"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Terminal sombre, lignes techniques"
+          }
+        }
+      }
+    },
     "Terminé": {
       "localizations": {
         "en": {
@@ -8881,6 +11121,38 @@
         }
       }
     },
+    "Terre (wabi-sabi)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Earth (wabi-sabi)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Terre (wabi-sabi)"
+          }
+        }
+      }
+    },
+    "Terre chaude, serif et formes libres": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Warm earth, serif and free shapes"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Terre chaude, serif et formes libres"
+          }
+        }
+      }
+    },
     "Tes termes spécialisés, leurs lectures et leurs sens en français.": {
       "localizations": {
         "en": {
@@ -8897,6 +11169,22 @@
         }
       }
     },
+    "Tes termes, leurs lectures et leurs sens": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your terms, their readings and meanings"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tes termes, leurs lectures et leurs sens"
+          }
+        }
+      }
+    },
     "Tester : 食べる": {
       "localizations": {
         "en": {
@@ -8909,6 +11197,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Tester : 食べる"
+          }
+        }
+      }
+    },
+    "Texte (Markdown)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Text (Markdown)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Texte (Markdown)"
           }
         }
       }
@@ -8993,6 +11297,22 @@
         }
       }
     },
+    "Texte du PDF": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PDF text"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Texte du PDF"
+          }
+        }
+      }
+    },
     "Texte vu dans les images": {
       "localizations": {
         "en": {
@@ -9021,6 +11341,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "Thèmes"
+          }
+        }
+      }
+    },
+    "Thèmes et couleurs": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Themes and colors"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thèmes et couleurs"
+          }
+        }
+      }
+    },
+    "Thèmes, double page, fenêtre OCR et Pencil": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Themes, double page, OCR window and Pencil"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thèmes, double page, fenêtre OCR et Pencil"
           }
         }
       }
@@ -9057,6 +11409,22 @@
         }
       }
     },
+    "Tons de terre, serif, formes douces": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Earth tones, serif, soft shapes"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tons de terre, serif, formes douces"
+          }
+        }
+      }
+    },
     "Touche le mot de la page où ancrer la note": {
       "localizations": {
         "en": {
@@ -9085,6 +11453,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Tous"
+          }
+        }
+      }
+    },
+    "Tous les documents": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All documents"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tous les documents"
           }
         }
       }
@@ -9377,6 +11761,22 @@
         }
       }
     },
+    "Trait d'étude, papier clair, chasse fixe": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Study line, light paper, monospace"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trait d'étude, papier clair, chasse fixe"
+          }
+        }
+      }
+    },
     "Transition": {
       "localizations": {
         "en": {
@@ -9437,6 +11837,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Tu pourras le retélécharger. Les pages déjà lues restent en cache."
+          }
+        }
+      }
+    },
+    "Tuiles claires et panneaux compacts": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Light tiles and compact panels"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tuiles claires et panneaux compacts"
           }
         }
       }
@@ -9681,6 +12097,22 @@
         }
       }
     },
+    "Une image par page (avec annotations), dans un fichier zip.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "One image per page (with annotations), in a zip file."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Une image par page (avec annotations), dans un fichier zip."
+          }
+        }
+      }
+    },
     "Une lecture et un sens sont nécessaires. Les corrections ici s'appliquent seulement aux cartes créées.": {
       "localizations": {
         "en": {
@@ -9709,6 +12141,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Une ligne par terme : terme ; lecture ; sens (séparateur ; , | ou tabulation). Un tableur exporté en CSV convient."
+          }
+        }
+      }
+    },
+    "Une ou deux pages, sens de lecture et zoom": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "One or two pages, reading direction and zoom"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Une ou deux pages, sens de lecture et zoom"
           }
         }
       }
@@ -9745,6 +12193,38 @@
         }
       }
     },
+    "Verre flouté, formes arrondies": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Frosted glass, rounded shapes"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verre flouté, formes arrondies"
+          }
+        }
+      }
+    },
+    "Verre léger, courbes aériennes": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Light glass, airy curves"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verre léger, courbes aériennes"
+          }
+        }
+      }
+    },
     "Version": {
       "localizations": {
         "en": {
@@ -9777,6 +12257,22 @@
         }
       }
     },
+    "Version de l'app, GitHub et crédits": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App version, GitHub and credits"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Version de l'app, GitHub et crédits"
+          }
+        }
+      }
+    },
     "Verso": {
       "localizations": {
         "en": {
@@ -9789,6 +12285,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Verso"
+          }
+        }
+      }
+    },
+    "Vert": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Green"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vert"
           }
         }
       }
@@ -9809,6 +12321,22 @@
         }
       }
     },
+    "Vider la corbeille ?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Empty the trash?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vider la corbeille ?"
+          }
+        }
+      }
+    },
     "Vignettes, pages nettoyées, fichiers temporaires et cache web : l'app les refait au besoin. Tes PDF, notes, textes lus, analyses et modèles restent.": {
       "localizations": {
         "en": {
@@ -9821,6 +12349,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "Vignettes, pages nettoyées, fichiers temporaires et cache web : l'app les refait au besoin. Tes PDF, notes, textes lus, analyses et modèles restent."
+          }
+        }
+      }
+    },
+    "Violet": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Purple"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Violet"
+          }
+        }
+      }
+    },
+    "Voir ce qui prend de la place et nettoyer les caches": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "See what takes up space and clear caches"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voir ce qui prend de la place et nettoyer les caches"
           }
         }
       }
@@ -9889,6 +12449,38 @@
         }
       }
     },
+    "Voir les outils conseillés et gérer leurs téléchargements": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "See recommended tools and manage their downloads"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voir les outils conseillés et gérer leurs téléchargements"
+          }
+        }
+      }
+    },
+    "Volumes pastel, formes généreuses": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pastel volumes, generous shapes"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Volumes pastel, formes généreuses"
+          }
+        }
+      }
+    },
     "Vraiment arrêter ?": {
       "localizations": {
         "en": {
@@ -9917,6 +12509,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Vérification (OvisOCR2)"
+          }
+        }
+      }
+    },
+    "Vérification OvisOCR2": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OvisOCR2 check"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vérification OvisOCR2"
           }
         }
       }
@@ -9997,6 +12605,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Vérifier les mises à jour des cours"
+          }
+        }
+      }
+    },
+    "Washi (papier et encre)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Washi (paper and ink)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Washi (papier et encre)"
           }
         }
       }
@@ -10285,6 +12909,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "À propos"
+          }
+        }
+      }
+    },
+    "À propos et mises à jour": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "About and updates"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "À propos et mises à jour"
           }
         }
       }

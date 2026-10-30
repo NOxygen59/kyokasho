@@ -104,6 +104,13 @@ struct AtelierPanel: ViewModifier {
     }
 }
 
+extension Text {
+    /// Texte d'interface venu d'une variable (libellé passé à un composant) : traduit par le catalogue
+    /// `Localizable.xcstrings` s'il y figure, sinon affiché tel quel. Réservé aux libellés de l'app, jamais au contenu
+    /// de l'utilisateur (notes, texte des pages), qu'un passage par `LocalizedStringKey` pourrait transformer.
+    init(ui key: String) { self.init(LocalizedStringKey(key)) }
+}
+
 extension View {
     /// Fenêtre d'iOS habillée par le style (#44, approche A choisie le 29/10/2026) : la feuille reste celle d'iOS
     /// (balayer pour fermer, clavier, VoiceOver, Stage Manager) ; son fond prend le fond du thème et ses coins suivent
@@ -154,7 +161,7 @@ struct AtelierLabel: View {
     }
 
     var body: some View {
-        Text(text.uppercased()).font(Atelier.label).tracking(1.2).foregroundStyle(tint)
+        Text(ui: text).textCase(.uppercase).font(Atelier.label).tracking(1.2).foregroundStyle(tint)
     }
 }
 
@@ -258,7 +265,7 @@ struct PillTabs<T: Hashable>: View {
                     HStack(spacing: 6) {
                         Image(systemName: icon).font(Atelier.font(13, weight: .semibold))
                         // Nom seulement sur l'onglet actif : jamais coupé, même dans un panneau étroit.
-                        if on { Text(title).font(Atelier.font(13, weight: .semibold)).lineLimit(1).fixedSize() }
+                        if on { Text(ui: title).font(Atelier.font(13, weight: .semibold)).lineLimit(1).fixedSize() }
                     }
                     .padding(.horizontal, 10).padding(.vertical, 7)
                     .frame(maxWidth: on ? .infinity : nil)
