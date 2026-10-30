@@ -23,7 +23,14 @@ public struct PageVLMReader: Sendable {
     let minimumFreeMemory: UInt64
     let store: ModelStore
 
-    public var isAvailable: Bool { store.isInstalled(spec) }
+    public var isAvailable: Bool {
+        #if canImport(MLXVLM)
+        return store.isInstalled(spec)
+        #else
+        // Mac : OvisOCR2 seulement, par le serveur llama.cpp local (LocalServerVLM).
+        return spec.id == ModelSpec.ovisocr2.id && LocalServerVLM.enabled
+        #endif
+    }
 
     public func read(_ input: OCRInput, maxTokens: Int = 4096) async throws -> String {
         guard isAvailable else { throw OCRError.modelMissing(spec.title) }
@@ -51,8 +58,8 @@ public struct PageVLMReader: Sendable {
         }
         }
         #else
-        _ = image
-        throw localAIUnavailableOnMac
+        guard spec.id == ModelSpec.ovisocr2.id else { throw localAIUnavailableOnMac }
+        return try await LocalServerVLM.read(prompt: prompt, image: image, maxTokens: maxTokens)
         #endif
     }
 

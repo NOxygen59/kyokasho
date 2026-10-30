@@ -569,19 +569,24 @@ struct TranslationSettingsSection: View {
 /// Tous les modèles à télécharger (OCR, netteté des scans), avec leurs liens.
 struct ModelsView: View {
     @AppStorage(AITaskPill.visibleKey) private var showAIBadges = true
+    @AppStorage(LocalServerVLM.enabledKey) private var localVLM = false
+    @AppStorage(LocalServerVLM.urlKey) private var localVLMURL = LocalServerVLM.defaultURL
 
     var body: some View {
         Form {
             if !localAIAvailable {
-                // Version Mac (#55, décision de NOxygen59 du 29/10/2026) : pas d'IA locale ; Ollama prévu plus tard.
+                // Version Mac (#55) : MLX absent ; OvisOCR2 (le même modèle, en GGUF) par un serveur llama.cpp local.
                 Section {
-                    Text("Sur Mac, l'IA locale de l'iPad (OvisOCR2, Qwen, GLM-OCR) et l'OCR NDLOCR ne fonctionnent pas. L'OCR Apple Vision, les dictionnaires et les cartes marchent. Pour lire un manuel avec ses lectures IA et ses traductions, importe-le en paquet .kyokasho exporté depuis l'iPad.")
+                    Text("Sur Mac, Qwen, GLM-OCR et NDLOCR ne fonctionnent pas. OvisOCR2 marche par un serveur llama.cpp lancé sur ce Mac (même modèle que sur l'iPad, converti en GGUF). L'OCR Apple Vision, les dictionnaires, les cartes et l'import de paquets .kyokasho marchent toujours.")
                         .font(.footnote)
-                    Toggle("IA locale par Ollama", isOn: .constant(false)).disabled(true)
+                    Toggle("OvisOCR2 par serveur local", isOn: $localVLM)
+                    TextField("Adresse du serveur", text: $localVLMURL)
+                        .textInputAutocapitalization(.never).autocorrectionDisabled()
+                        .disabled(!localVLM)
                 } header: {
                     Text("Version Mac")
                 } footer: {
-                    Text("Bientôt : relier Ollama installé sur ce Mac. Rien n'est envoyé sur Internet.")
+                    Text("Dans Terminal : brew install llama.cpp, puis llama-server -hf bartowski/ATH-MaaS_OvisOCR2-GGUF:Q4_K_M --port 8080 (environ 600 Mo téléchargés une fois). Seule une adresse de ce Mac est acceptée : rien ne part sur Internet. Lent sur un processeur Intel : compte une à plusieurs minutes par page.")
                 }
             }
             Section {
