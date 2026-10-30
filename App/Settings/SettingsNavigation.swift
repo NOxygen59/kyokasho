@@ -158,8 +158,8 @@ struct SettingsEntryRow: View {
                 .foregroundStyle(tint).frame(width: 42, height: 42)
                 .background(tint.opacity(0.12), in: RoundedRectangle(cornerRadius: Atelier.corner(12)))
             VStack(alignment: .leading, spacing: 5) {
-                Text(title).font(.headline).foregroundStyle(Atelier.textPrimary)
-                Text(subtitle).font(.subheadline).foregroundStyle(Atelier.textSecondary)
+                Text(ui: title).font(.headline).foregroundStyle(Atelier.textPrimary)
+                Text(ui: subtitle).font(.subheadline).foregroundStyle(Atelier.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }.frame(maxWidth: .infinity, alignment: .leading)
         }.padding(.vertical, 7)

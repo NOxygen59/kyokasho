@@ -99,9 +99,9 @@ struct WhatsNewView: View {
         if !items.isEmpty {
             Section {
                 ForEach(items, id: \.self) { item in
-                    Label { Text(item) } icon: { Image(systemName: icon).foregroundStyle(tint) }
+                    Label { Text(ui: item) } icon: { Image(systemName: icon).foregroundStyle(tint) }
                 }
-            } header: { Text(title) }
+            } header: { Text(ui: title) }
         }
     }
 }

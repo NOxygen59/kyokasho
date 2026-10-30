@@ -335,7 +335,7 @@ struct LibraryView: View {
         } label: {
             HStack(spacing: 10) {
                 Image(systemName: icon).frame(width: 22)
-                Text(title)
+                Text(ui: title)
                 Spacer()
                 Text("\(count)").font(Atelier.mono).foregroundStyle(on ? Atelier.onAccentInk.opacity(0.6) : Atelier.textTertiary)
             }
@@ -353,7 +353,7 @@ struct LibraryView: View {
         Button(action: action) {
             HStack(spacing: 10) {
                 Image(systemName: icon).frame(width: 22).foregroundStyle(tint)
-                Text(title).foregroundStyle(Atelier.textPrimary)
+                Text(ui: title).foregroundStyle(Atelier.textPrimary)
                 Spacer()
                 if let count, count > 0 {
                     Text("\(count)").font(Atelier.mono).foregroundStyle(Atelier.onAccentInk.opacity(0.8))
