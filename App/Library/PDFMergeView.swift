@@ -87,9 +87,7 @@ struct PDFMergeView: View {
             .navigationTitle("Fusionner des PDF")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("OK") { dismiss() } } }
-            .sheet(isPresented: $showPicker) {
-                DocumentPicker { urls in add(urls) }.ignoresSafeArea()
-            }
+            .documentPicker(isPresented: $showPicker) { urls in add(urls) }
             .sheet(isPresented: $showExporter) {
                 if let result { DocumentExporter(url: result).ignoresSafeArea() }
             }

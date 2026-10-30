@@ -99,9 +99,7 @@ struct ImagesToPDFView: View {
             .navigationTitle("Images vers PDF")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("OK") { dismiss() } } }
-            .sheet(isPresented: $showFiles) {
-                DocumentPicker(types: [.png, .jpeg, .heic, .heif]) { urls in add(urls) }.ignoresSafeArea()
-            }
+            .documentPicker(isPresented: $showFiles, types: [.png, .jpeg, .heic, .heif]) { urls in add(urls) }
             .sheet(isPresented: $showExporter) {
                 if let result { DocumentExporter(url: result).ignoresSafeArea() }
             }

@@ -16,6 +16,9 @@ struct LibraryView: View {
     @State private var showImportOptions = false
     /// Paquet Kyōkasho ouvert et vérifié, en attente d'accord (document déjà présent) ou de résultat.
     @State private var pendingPackage: DocumentPackageService.Pending?
+    /// Paquet choisi dans la fenêtre d'import : ouvert quand elle est fermée (une alerte montrée pendant la fermeture
+    /// était perdue, sur Mac surtout).
+    @State private var queuedPackage: URL?
     @State private var packageMessage: String?
     @State private var showSettings = false
     @State private var showDrive = false
@@ -70,10 +73,12 @@ struct LibraryView: View {
                 if pending.exists { pendingPackage = pending } else { install(pending, replacing: false) }
             } catch {
                 packageMessage = "Paquet refusé : \(error.localizedDescription)"
+                Diagnostics.error("paquet refusé : \(error.localizedDescription)", "import")
             }
             // Copie déposée par iOS dans Inbox (« Ouvrir dans ») : à nous, effacée une fois lue. Un fichier ouvert
             // sur place depuis Fichiers n'est jamais touché.
             if url.path.contains("/Inbox/") { try? FileManager.default.removeItem(at: url) }
+            PickedFile.discard(url)
         }
     }
 
@@ -138,9 +143,11 @@ struct LibraryView: View {
         } message: { document in
             Text("« \(document.title) » : la catégorie s'affiche sur l'accueil pour t'aider à te repérer. Tu pourras la changer dans « Ce document ».")
         }
-        .sheet(isPresented: $showImportOptions) {
+        .sheet(isPresented: $showImportOptions, onDismiss: {
+            if let url = queuedPackage { queuedPackage = nil; openPackage(url) }
+        }) {
             ImportOptionsView(onImport: { urls, language in model.importFiles(urls, language: language) },
-                              onPackage: { url in openPackage(url) })
+                              onPackage: { url in queuedPackage = PickedFile.keep(url) })
                 .preferredColorScheme(Theme.current.colorScheme)
         }
         .alert("Remplacer « \(pendingPackage?.contents.manifest.title ?? "") » ?",
