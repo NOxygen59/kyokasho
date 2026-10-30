@@ -307,6 +307,10 @@ struct ThemePickerView: View {
                     if languageChanged {
                         Text("Relance l'app pour appliquer la langue (ferme-la puis rouvre-la).")
                             .font(.footnote).foregroundStyle(Atelier.textSecondary)
+                        #if targetEnvironment(macCatalyst)
+                        // Mac : fermer la fenêtre ne quitte pas l'app, la langue ne changeait donc pas (essai du 30/10/2026).
+                        Button("Quitter pour appliquer") { exit(0) }
+                        #endif
                     }
                 }
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 220), spacing: 14)], spacing: 14) {

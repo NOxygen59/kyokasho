@@ -7265,6 +7265,22 @@
         }
       }
     },
+    "Quitter pour appliquer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quit to apply"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quitter pour appliquer"
+          }
+        }
+      }
+    },
     "Qwen3-VL traduit la page… (1 à 3 min, hors ligne)": {
       "localizations": {
         "en": {
