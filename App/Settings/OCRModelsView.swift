@@ -165,6 +165,7 @@ struct OCRModelsSection: View {
                 Button { downloads.start(spec) } label: {
                     Label("Télécharger (\(size(spec.totalSize)))", systemImage: "arrow.down.circle")
                 }
+                .disabled(!localAIAvailable) // Mac (#55) : modèles inutilisables, téléchargement grisé
                 .buttonStyle(.borderless)
             }
             if let error = downloads.errors[spec.id] {
