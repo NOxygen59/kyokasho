@@ -140,9 +140,16 @@ struct DiagnosticsSection: View {
     var body: some View {
         Section {
             Toggle("Mode diagnostic", isOn: $enabled)
+            #if targetEnvironment(macCatalyst)
+            // Mac : une feuille ouverte depuis la feuille Réglages les fermait toutes les deux (essai du 30/10/2026).
+            NavigationLink { DiagnosticLogView(embedded: true) } label: {
+                Label("Voir le journal", systemImage: "doc.text.magnifyingglass")
+            }
+            #else
             Button { showLog = true } label: {
                 Label("Voir le journal", systemImage: "doc.text.magnifyingglass")
             }
+            #endif
             ShareLink(item: Diagnostics.file) { Label("Partager le journal", systemImage: "square.and.arrow.up") }
             Button("Effacer le journal", role: .destructive) { try? FileManager.default.removeItem(at: Diagnostics.file) }
         } header: {
@@ -270,11 +277,16 @@ private struct OvisReadingExportView: View {
 struct DiagnosticLogView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var tail: DiagnosticLogSnapshot.Tail?
+    /// Affiché dans une navigation existante (Mac) : ni pile de navigation propre, ni bouton OK.
+    var embedded = false
 
     /// Seule la fin du journal est lue, hors du fil principal, et affichée ligne par ligne dans une liste paresseuse :
     /// un journal de 2 Mo dans un seul `Text` mettait plus de 30 s à s'ouvrir (RET-045, #67).
     var body: some View {
-        NavigationStack {
+        if embedded { content } else { NavigationStack { content } }
+    }
+
+    private var content: some View {
             ScrollViewReader { proxy in
                 ScrollView {
                     if let tail {
@@ -306,10 +318,9 @@ struct DiagnosticLogView: View {
                 ToolbarItem(placement: .navigationBarLeading) {
                     Button("Actualiser") { Task { await load() } }
                 }
-                ToolbarItem(placement: .confirmationAction) { Button("OK") { dismiss() } }
+                if !embedded { ToolbarItem(placement: .confirmationAction) { Button("OK") { dismiss() } } }
             }
             .task { await load() }
-        }
     }
 
     private func load() async {

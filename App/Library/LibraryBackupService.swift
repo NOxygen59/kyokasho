@@ -25,16 +25,25 @@ enum LibraryBackupService {
     static var folder: URL? {
         guard let data = UserDefaults.standard.data(forKey: bookmarkKey) else { return nil }
         var stale = false
-        guard let url = try? URL(resolvingBookmarkData: data, bookmarkDataIsStale: &stale) else { return nil }
-        if stale, let fresh = try? url.bookmarkData() { UserDefaults.standard.set(fresh, forKey: bookmarkKey) }
+        guard let url = try? URL(resolvingBookmarkData: data, options: bookmarkResolution, bookmarkDataIsStale: &stale) else { return nil }
+        if stale, let fresh = try? url.bookmarkData(options: bookmarkCreation) { UserDefaults.standard.set(fresh, forKey: bookmarkKey) }
         return url
     }
 
     static func setFolder(_ url: URL) throws {
         let access = url.startAccessingSecurityScopedResource()
         defer { if access { url.stopAccessingSecurityScopedResource() } }
-        UserDefaults.standard.set(try url.bookmarkData(), forKey: bookmarkKey)
+        UserDefaults.standard.set(try url.bookmarkData(options: bookmarkCreation), forKey: bookmarkKey)
     }
+
+    /// Mac (bac à sable, #55) : le signet doit porter la portée de sécurité pour rouvrir le dossier après relance.
+    #if targetEnvironment(macCatalyst)
+    private static let bookmarkCreation: URL.BookmarkCreationOptions = .withSecurityScope
+    private static let bookmarkResolution: URL.BookmarkResolutionOptions = .withSecurityScope
+    #else
+    private static let bookmarkCreation: URL.BookmarkCreationOptions = []
+    private static let bookmarkResolution: URL.BookmarkResolutionOptions = []
+    #endif
 
     static var lastBackup: Date? { UserDefaults.standard.object(forKey: lastBackupKey) as? Date }
 

@@ -367,6 +367,7 @@ struct QwenChatView: View {
             Button { downloads.start(spec) } label: {
                 Label("Télécharger \(title) (\(StorageUsage.format(spec.totalSize)))", systemImage: "arrow.down.circle")
             }
+            .disabled(!localAIAvailable) // Mac (#55) : modèles inutilisables, téléchargement grisé
         }
     }
 
