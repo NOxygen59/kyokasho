@@ -451,11 +451,17 @@ struct LibraryView: View {
                                                 if selecting { batch.toggle(document.id) } else { model.openDocumentId = document.id }
                                             } label: {
                                                 DocumentCard(document: document)
-                                                    .overlay(alignment: .topTrailing) {
-                                                        if selecting { selectionMark(batch.selected.contains(document.id)) }
-                                                    }
                                             }
                                             .buttonStyle(PressScale())
+                                            // L'indicateur reste au-dessus du bouton lui-même. Dans le contenu du
+                                            // bouton, SwiftUI pouvait le masquer jusqu'à la reconstruction de la
+                                            // bibliothèque après un redémarrage (constaté sur iPad, 30/10/2026).
+                                            .overlay(alignment: .topTrailing) {
+                                                if selecting {
+                                                    selectionMark(batch.selected.contains(document.id))
+                                                        .allowsHitTesting(false)
+                                                }
+                                            }
                                             .contextMenu { if !selecting { menu(for: document) } }
                                         }
                                     } header: {
