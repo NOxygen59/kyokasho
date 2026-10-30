@@ -91,6 +91,9 @@ enum LibraryBackupService {
         guard AITaskCenter.shared.jobs.isEmpty, DocumentAnalysisService.shared.progress == nil else {
             throw fail("Une lecture IA ou une analyse est en cours : sauvegarde possible après sa fin.")
         }
+        guard !model.libraryMutationInProgress else {
+            throw fail("Un import ou une suppression est en cours : sauvegarde possible après sa fin.")
+        }
         inProgress = true
         defer { inProgress = false }
         // Écritures en file terminées (notes, encre, position, réglages). Brouillons, conversations, lexique et
