@@ -45,4 +45,19 @@ final class LibraryRestoreLaunchTests: XCTestCase {
             XCTAssertTrue(service.contains(prefix), prefix)
         }
     }
+
+    /// La base et les PDF doivent décrire le même état : ni import ni suppression ne peut croiser la copie.
+    func testBackupAndLibraryMutationsExcludeEachOther() throws {
+        let model = try source("AppModel.swift")
+        let importStart = try XCTUnwrap(model.range(of: "    func importFiles("))
+        let deleteStart = try XCTUnwrap(model.range(of: "    func delete("))
+        XCTAssertNotNil(model.range(of: "guard !LibraryBackupService.inProgress",
+                                    range: importStart.lowerBound..<deleteStart.lowerBound))
+        XCTAssertNotNil(model.range(of: "guard !LibraryBackupService.inProgress",
+                                    range: deleteStart.lowerBound..<model.endIndex))
+
+        let service = try source("Library/LibraryBackupService.swift")
+        XCTAssertTrue(service.contains("guard !model.libraryMutationInProgress"))
+        XCTAssertTrue(model.contains("var libraryMutationInProgress: Bool { importProgress != nil || !deletingIds.isEmpty }"))
+    }
 }

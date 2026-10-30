@@ -179,6 +179,10 @@ final class AppModel: ObservableObject {
     func importFiles(_ urls: [URL], cleanUp: Bool = true, openWhenSingle: Bool = true,
                      language: OCRTargetLanguage = .japanese) {
         guard storageRecoveryError == nil else { return }
+        guard !LibraryBackupService.inProgress else {
+            lastError = "Sauvegarde en cours : réessaie après sa fin."
+            return
+        }
         guard !urls.isEmpty else { return }
         importProgress = ImportProgress(done: 0, total: urls.count, currentName: urls[0].lastPathComponent)
         let importer = importer
@@ -237,6 +241,9 @@ final class AppModel: ObservableObject {
 
     /// Documents en cours de suppression (cachés de la liste jusqu'à la fin de l'effacement).
     private var deletingIds: Set<String> = []
+    /// Import ou suppression qui change à la fois la base et les PDF de la bibliothèque.
+    /// Une sauvegarde ne doit pas commencer entre ces deux écritures.
+    var libraryMutationInProgress: Bool { importProgress != nil || !deletingIds.isEmpty }
 
     // MARK: Corbeille
 
@@ -325,6 +332,10 @@ final class AppModel: ObservableObject {
     }
 
     func delete(_ document: LibraryDocument) {
+        guard !LibraryBackupService.inProgress else {
+            lastError = "Sauvegarde en cours : réessaie après sa fin."
+            return
+        }
         // Avant la cascade SQL : réparer l'association UUID → document des copies d'avant remplacement Drive.
         do { try PageShift.synchronizeCopyOwners(database) }
         catch { lastError = "Suppression impossible : \(error.localizedDescription)"; return }
