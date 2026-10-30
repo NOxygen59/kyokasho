@@ -453,6 +453,14 @@ struct LibraryView: View {
                                                 DocumentCard(document: document)
                                             }
                                             .buttonStyle(PressScale())
+                                            // La catégorie appartient à l'état courant de la bibliothèque. En la
+                                            // dessinant au-dessus du bouton, elle n'est plus retenue dans l'ancien
+                                            // rendu interne de la carte après l'import.
+                                            .overlay(alignment: .topLeading) {
+                                                if let category = document.category {
+                                                    categoryMark(category).allowsHitTesting(false)
+                                                }
+                                            }
                                             // L'indicateur reste au-dessus du bouton lui-même. Dans le contenu du
                                             // bouton, SwiftUI pouvait le masquer jusqu'à la reconstruction de la
                                             // bibliothèque après un redémarrage (constaté sur iPad, 30/10/2026).
@@ -500,6 +508,15 @@ struct LibraryView: View {
             .animation(Self.monitorAnimation(reduceMotion), value: monitorVisible)
         }
         .padding(.horizontal, 6)
+    }
+
+    /// Pastille Livre/Manuel, rendue par la grille depuis la catégorie publiée la plus récente.
+    private func categoryMark(_ category: DocumentCategory) -> some View {
+        Text(category.title).font(Atelier.font(11, weight: .semibold))
+            .padding(.horizontal, 8).padding(.vertical, 4)
+            .foregroundStyle(Atelier.onAccentInk.opacity(0.8))
+            .background(category == .textbook ? Atelier.Tint.read : Atelier.Tint.annotate, in: Capsule())
+            .padding(8)
     }
 
     /// Case de sélection sur la couverture.
@@ -637,15 +654,6 @@ struct DocumentCard: View {
                 .clipShape(RoundedRectangle(cornerRadius: Atelier.corner(12), style: .continuous))
                 .overlay(RoundedRectangle(cornerRadius: Atelier.corner(12), style: .continuous).strokeBorder(Atelier.hairline))
                 .atelierShadow(opacity: 0.5, radius: 12, y: 8)
-                if let category = document.category {
-                    // Repère sur l'accueil (RET-039, #54).
-                    Text(category.title).font(Atelier.font(11, weight: .semibold))
-                        .padding(.horizontal, 8).padding(.vertical, 4)
-                        .foregroundStyle(Atelier.onAccentInk.opacity(0.8))
-                        .background(category == .textbook ? Atelier.Tint.read : Atelier.Tint.annotate, in: Capsule())
-                        .padding(8)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                }
                 if document.driveFileId != nil {
                     Image(systemName: "externaldrive.badge.icloud")
                         .font(Atelier.font(12, weight: .bold))
