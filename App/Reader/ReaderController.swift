@@ -814,7 +814,11 @@ final class ReaderController: NSObject, ObservableObject {
 
     /// Repère des résultats OCR d'une page source (cadre d'origine + rotation intrinsèque du PDF).
     func pageFrame(ofSource source: Int) -> PageFrame? {
-        originalBoxes[source].map { PageFrame(box: $0, rotation: originalRotations[source] ?? 0) }
+        originalBoxes[source].map {
+            PageFrame(box: $0, rotation: PageTransform.effectiveRotation(
+                intrinsic: originalRotations[source] ?? 0,
+                additional: transforms[source]?.rotation ?? 0))
+        }
     }
 
     // MARK: Notifications

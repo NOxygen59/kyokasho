@@ -333,6 +333,22 @@ extension AppDatabase {
         try writer.write { db in for t in transforms { try t.save(db) } }
     }
 
+    /// Applique les rotations choisies et invalide, dans la même transaction, l'OCR des pages concernées.
+    /// Les autres propriétés de la page (découpe, rognage) sont conservées.
+    public func applyPageRotations(documentId: String, rotations: [Int: Int]) throws {
+        guard !rotations.isEmpty else { return }
+        try writer.write { db in
+            for (page, value) in rotations {
+                var transform = try PageTransform.fetchOne(db, key: ["documentId": documentId, "pageIndex": page])
+                    ?? PageTransform(documentId: documentId, pageIndex: page)
+                transform.rotation = PageTransform.normalizedRotation(value)
+                try transform.save(db)
+                try db.execute(sql: "DELETE FROM ocrResult WHERE documentId = ? AND pageIndex = ?",
+                               arguments: [documentId, page])
+            }
+        }
+    }
+
     public func highlights(documentId: String) throws -> [Highlight] {
         try writer.read { db in
             try Highlight.filter(Column("documentId") == documentId).order(Column("pageIndex"), Column("createdAt")).fetchAll(db)

@@ -30,7 +30,8 @@ public struct PageVLMReader: Sendable {
         }
         let image: CGImage
         switch input {
-        case .pdfPage(let url, let index): image = try PageRenderer.render(url: url, pageIndex: index, longSide: longSide)
+        case .pdfPage(let url, let index, let rotation):
+            image = try PageRenderer.render(url: url, pageIndex: index, longSide: longSide, additionalRotation: rotation)
         case .image(let cg): image = cg
         }
         let user = UserInput(chat: [.user(prompt, images: [.ciImage(CIImage(cgImage: image))])], additionalContext: context)

@@ -3,6 +3,7 @@
 
 import CoreGraphics
 import Foundation
+import ReaderCore
 
 /// Rectangle normalisé (0…1) dans la page source, **origine en haut à gauche**, y vers le bas.
 /// Référence : la `cropBox` d'origine de la page (avant rognage, découpe ou rotation de l'app),
@@ -81,7 +82,10 @@ public struct OCRPage: Codable, Hashable, Sendable {
     /// Version du format/rendu : un résultat plus ancien en cache est refait automatiquement.
     /// 4 : boîtes de caractères de NDLOCR mesurées par PP-OCRv5 (si installé).
     /// 5 : texte intégré dans le repère tourné (pages /Rotate), comme le rendu OCR.
-    public static let currentVersion = 5
+    /// 6 : la rotation supplémentaire choisie dans Kyōkasho entre dans le rendu et les boîtes OCR.
+    public static let currentVersion = 6
+    /// Les résultats v5 restent valides tant qu'aucune rotation propre à Kyōkasho n'est appliquée à la page.
+    public static let unrotatedMinimumVersion = 5
 
     public var engine: String
     public var lines: [OCRLine]
@@ -135,6 +139,31 @@ public struct OCRPage: Codable, Hashable, Sendable {
         let distances = line.charBoxes.map { line.vertical ? abs($0.midY - point.y) : abs($0.midX - point.x) }
         guard let i = distances.indices.min(by: { distances[$0] < distances[$1] }) else { return nil }
         return (l, i)
+    }
+}
+
+public extension OCRPage {
+    /// Tourne les boîtes normalisées déjà extraites (cas du texte intégré au PDF).
+    func rotatedClockwise(_ degrees: Int) -> OCRPage {
+        let rotation = PageTransform.normalizedRotation(degrees)
+        guard rotation != 0 else { return self }
+        func rotate(_ box: NormBox) -> NormBox {
+            switch rotation {
+            case 90: return NormBox(x: 1 - box.y - box.h, y: box.x, w: box.h, h: box.w)
+            case 180: return NormBox(x: 1 - box.x - box.w, y: 1 - box.y - box.h, w: box.w, h: box.h)
+            case 270: return NormBox(x: box.y, y: 1 - box.x - box.w, w: box.h, h: box.w)
+            default: return box
+            }
+        }
+        var page = self
+        page.lines = lines.map { source in
+            var line = source
+            line.box = rotate(line.box)
+            line.charBoxes = line.charBoxes.map(rotate)
+            if rotation == 90 || rotation == 270 { line.vertical.toggle() }
+            return line
+        }
+        return page
     }
 }
 

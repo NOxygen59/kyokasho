@@ -9,6 +9,14 @@ import ONNXOCRKit
 import ReaderCore
 import SwiftUI
 
+private enum PageRotationApplicationError: LocalizedError {
+    case analysisInProgress
+
+    var errorDescription: String? {
+        "Une analyse ou une lecture IA de ce document est en cours. Attends sa fin, puis réessaie."
+    }
+}
+
 /// État global de l'app : base, stockage, bibliothèque, réglages.
 @MainActor
 final class AppModel: ObservableObject {
@@ -383,6 +391,30 @@ final class AppModel: ObservableObject {
         // la réécrit pas avec l'ancienne en enregistrant ses réglages (la base suit, sur la file d'écriture).
         if let index = documents.firstIndex(where: { $0.id == documentId }) { documents[index].category = category }
         persist { try $0.updateCategory(documentId: documentId, category: category) }
+    }
+
+    /// Applique les rotations confirmées, puis rend périmés uniquement les résultats qui dépendent de l'image tournée.
+    func applyPageRotations(_ rotations: [Int: Int], to document: LibraryDocument) async throws {
+        let valid = rotations.filter { (0..<document.pageCount).contains($0.key) }
+        guard !valid.isEmpty else { return }
+        guard !AITaskCenter.shared.jobs.contains(where: { $0.key.contains(document.id) }),
+              DocumentAnalysisService.shared.progress?.documentId != document.id else {
+            throw PageRotationApplicationError.analysisInProgress
+        }
+        await ocr.beginPageMutation(documentId: document.id)
+        do {
+            let pages = Set(valid.keys)
+            // Ces fichiers sont des caches régénérables. Les retirer avant la transaction évite qu'un échec
+            // de nettoyage laisse une rotation enregistrée avec une ancienne analyse encore visible.
+            try DocumentAITextStore.removePages(documentId: document.id, pages: pages)
+            try database.applyPageRotations(documentId: document.id, rotations: valid)
+            for page in pages { DocumentAnalysisService.shared.invalidatePage(page, documentId: document.id) }
+            await ocr.endPageMutation(documentId: document.id)
+            DocumentScan.start(document, url: storage.url(for: document.id), ocr: ocr)
+        } catch {
+            await ocr.endPageMutation(documentId: document.id)
+            throw error
+        }
     }
 
     /// `pdfPage` : numéro de page du PDF (1 = première page du fichier) qui porte le n° 1 imprimé.

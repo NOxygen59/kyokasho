@@ -13,19 +13,16 @@ import UIKit
 extension ReaderController {
     // MARK: Rotation et découpe de la page courante
 
-    func rotateCurrentPage() {
+    var pageRotations: [Int: Int] {
+        Dictionary(uniqueKeysWithValues: (0..<document.pageCount).map { ($0, transforms[$0]?.rotation ?? 0) })
+    }
+
+    func applyPageRotations(_ rotations: [Int: Int]) async throws {
         let source = currentSourcePage
-        var t = transforms[source] ?? PageTransform(documentId: document.id, pageIndex: source)
-        t.rotation = (t.rotation + 90) % 360
-        transforms[source] = t
-        model.persist { try $0.save(t) }
-        // Page entière, sans découpe automatique en jeu : on tourne sur place (pas de reconstruction).
-        if !isBuilding, let pdf, !settings.splitWidePages, !splitSources.contains(source), let base = originalRotations[source] {
-            for page in pages(forSource: source, in: pdf) { page.rotation = ((base + t.rotation) % 360 + 360) % 360 }
-            pdfView.layoutDocumentView()
-            if pdfView.isAtFit { pdfView.fitToPage() }
-            return
-        }
+        try await model.applyPageRotations(rotations, to: document)
+        transforms = try model.database.pageTransforms(documentId: document.id)
+        ocrPage = nil
+        FuriganaLayer.clearMemory()
         rebuild(keepingSource: source)
     }
 

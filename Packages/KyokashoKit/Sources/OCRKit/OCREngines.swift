@@ -4,11 +4,12 @@
 import CoreGraphics
 import Foundation
 import PDFKit
+import ReaderCore
 import Vision
 
 /// Ce qu'on donne à un moteur : une page de PDF, ou une image (banc d'essai).
 public enum OCRInput: @unchecked Sendable {
-    case pdfPage(url: URL, index: Int)
+    case pdfPage(url: URL, index: Int, additionalRotation: Int = 0)
     case image(CGImage)
 }
 
@@ -29,25 +30,35 @@ public extension OCREngine {
 public enum PageRenderer {
     /// Rend la `cropBox` d'origine de la page en niveaux de gris (OCR : la couleur n'aide pas et
     /// coûte 4× plus de mémoire), côté le plus long ≈ `longSide` pixels.
-    public static func render(url: URL, pageIndex: Int, longSide: Int = 3000) throws -> CGImage {
-        try render(url: url, pageIndex: pageIndex, gray: true) { size in Double(longSide) / max(size.width, size.height, 1) }
+    public static func render(url: URL, pageIndex: Int, longSide: Int = 3000,
+                              additionalRotation: Int = 0) throws -> CGImage {
+        try render(url: url, pageIndex: pageIndex, gray: true, additionalRotation: additionalRotation) {
+            size in Double(longSide) / max(size.width, size.height, 1)
+        }
     }
 
     /// Miniature en couleur, `width` pixels de large (bibliothèque, bande des pages).
     public static func thumbnail(document: CGPDFDocument, pageIndex: Int, width: Int) throws -> CGImage {
-        try render(document, pageIndex: pageIndex, gray: false) { size in Double(width) / max(size.width, 1) }
+        try render(document, pageIndex: pageIndex, gray: false, additionalRotation: 0) {
+            size in Double(width) / max(size.width, 1)
+        }
     }
 
-    private static func render(url: URL, pageIndex: Int, gray: Bool, scale: (CGSize) -> Double) throws -> CGImage {
+    private static func render(url: URL, pageIndex: Int, gray: Bool, additionalRotation: Int,
+                               scale: (CGSize) -> Double) throws -> CGImage {
         // Document partagé (`PDFPool`) : un gros PDF n'est pas relu en entier à chaque page.
         // Rendu sous le verrou : Core Graphics ne promet rien si deux fils dessinent le même document.
-        try PDFPool.withCGDocument(url) { try render($0, pageIndex: pageIndex, gray: gray, scale: scale) }
+        try PDFPool.withCGDocument(url) {
+            try render($0, pageIndex: pageIndex, gray: gray, additionalRotation: additionalRotation, scale: scale)
+        }
     }
 
-    private static func render(_ pdf: CGPDFDocument, pageIndex: Int, gray: Bool, scale: (CGSize) -> Double) throws -> CGImage {
+    private static func render(_ pdf: CGPDFDocument, pageIndex: Int, gray: Bool, additionalRotation: Int,
+                               scale: (CGSize) -> Double) throws -> CGImage {
         guard let page = pdf.page(at: pageIndex + 1) else { throw OCRError.pageUnavailable }
         let box = page.getBoxRect(.cropBox)
-        let rotation = ((page.rotationAngle % 360) + 360) % 360
+        let rotation = PageTransform.effectiveRotation(intrinsic: Int(page.rotationAngle),
+                                                        additional: additionalRotation)
         let rotated = rotation == 90 || rotation == 270
         let size = rotated ? CGSize(width: box.height, height: box.width) : box.size
         let factor = scale(size)
@@ -93,7 +104,8 @@ public struct VisionOCREngine: OCREngine {
         let start = Date()
         let image: CGImage
         switch input {
-        case .pdfPage(let url, let index): image = try PageRenderer.render(url: url, pageIndex: index)
+        case .pdfPage(let url, let index, let rotation):
+            image = try PageRenderer.render(url: url, pageIndex: index, additionalRotation: rotation)
         case .image(let cg): image = cg
         }
         try Task.checkCancellation()
@@ -232,10 +244,11 @@ public struct PDFTextEngine: OCREngine {
 
     public func recognize(_ input: OCRInput) async throws -> OCRPage {
         let start = Date()
-        guard case .pdfPage(let url, let index) = input else { throw OCRError.noTextLayer }
+        guard case .pdfPage(let url, let index, let additionalRotation) = input else { throw OCRError.noTextLayer }
         return try PDFPool.withDocument(url) { document in
             guard let page = document.page(at: index) else { throw OCRError.pageUnavailable }
-            return try Self.extract(page, start: start, engine: id)
+            let result = try Self.extract(page, start: start, engine: id)
+            return result.rotatedClockwise(additionalRotation)
         }
     }
 

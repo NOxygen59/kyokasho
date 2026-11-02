@@ -22,4 +22,11 @@ final class LibrarySectionsTests: XCTestCase {
         XCTAssertEqual(LibrarySections.group([doc("b", .book)]).map(\.title), ["Livres"])
         XCTAssertTrue(LibrarySections.group([]).isEmpty)
     }
+
+    func testCardIdentityChangesWithCategoryAndSelectionMode() {
+        let initial = LibraryCardRenderIdentity(documentId: "d", category: nil, selecting: false)
+        XCTAssertNotEqual(initial, LibraryCardRenderIdentity(documentId: "d", category: .book, selecting: false))
+        XCTAssertNotEqual(initial, LibraryCardRenderIdentity(documentId: "d", category: nil, selecting: true))
+        XCTAssertEqual(initial, LibraryCardRenderIdentity(documentId: "d", category: nil, selecting: false))
+    }
 }

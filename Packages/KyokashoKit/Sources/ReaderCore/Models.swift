@@ -131,6 +131,23 @@ public struct PageTransform: Codable, Hashable, Sendable {
 
 }
 
+public extension PageTransform {
+    /// Rotation canonique comprise entre 0 et 270 degrés, par pas de 90.
+    static func normalizedRotation(_ value: Int) -> Int {
+        let normalized = ((value % 360) + 360) % 360
+        return (normalized / 90) * 90
+    }
+
+    /// Rotation réellement affichée : celle du PDF, puis celle choisie dans Kyōkasho.
+    static func effectiveRotation(intrinsic: Int, additional: Int) -> Int {
+        normalizedRotation(intrinsic + additional)
+    }
+
+    mutating func rotate(by degrees: Int) {
+        rotation = Self.normalizedRotation(rotation + degrees)
+    }
+}
+
 extension PageTransform: FetchableRecord, PersistableRecord {
     public static let databaseTableName = "pageTransform"
 }

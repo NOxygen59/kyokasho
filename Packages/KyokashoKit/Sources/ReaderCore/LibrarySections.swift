@@ -31,3 +31,16 @@ public enum LibrarySections {
         }
     }
 }
+
+/// Force SwiftUI à reconstruire une carte quand elle change de section ou quand le mode sélection apparaît.
+public struct LibraryCardRenderIdentity: Hashable, Sendable {
+    public var documentId: String
+    public var category: DocumentCategory?
+    public var selecting: Bool
+
+    public init(documentId: String, category: DocumentCategory?, selecting: Bool) {
+        self.documentId = documentId
+        self.category = category
+        self.selecting = selecting
+    }
+}

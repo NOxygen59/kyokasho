@@ -57,8 +57,10 @@ enum DocumentScan {
                 let start = Date()
                 do {
                     let budget = await budget(id, page, ocr: ocr)
+                    let rotation = await ocr.additionalRotation(documentId: id, pageIndex: page)
                     let text = try await Diagnostics.measure("scan IA p. \(page)", "scan") {
-                        try await OvisOCR2Reader(language: language).read(.pdfPage(url: url, index: page), maxTokens: budget)
+                        try await OvisOCR2Reader(language: language)
+                            .read(.pdfPage(url: url, index: page, additionalRotation: rotation), maxTokens: budget)
                     }
                     // Arrêtée : texte partiel, jamais gardé.
                     try Task.checkCancellation()

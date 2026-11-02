@@ -61,9 +61,15 @@ public actor OCRService {
     /// Résultat en cache, sans rien calculer.
     public func cached(documentId: String, pageIndex: Int, engine: String) -> OCRPage? {
         guard let record = try? database.ocrResult(documentId: documentId, pageIndex: pageIndex, engine: engine) else { return nil }
+        let requiredVersion = additionalRotation(documentId: documentId, pageIndex: pageIndex) == 0
+            ? OCRPage.unrotatedMinimumVersion : OCRPage.currentVersion
         guard let page = try? decoder.decode(OCRPage.self, from: record.json),
-              page.version >= OCRPage.currentVersion else { return nil }
+              page.version >= requiredVersion else { return nil }
         return OCRTargetLanguage.forDocument(documentId) == .japanese ? JapaneseOCRText.normalize(page) : page
+    }
+
+    public func additionalRotation(documentId: String, pageIndex: Int) -> Int {
+        (try? database.pageTransforms(documentId: documentId)[pageIndex]?.rotation) ?? 0
     }
 
     /// Résultat de la page (cache, sinon calcul + mise en cache).
@@ -71,7 +77,8 @@ public actor OCRService {
         guard documentsBeingReplaced[documentId] == nil else { throw CancellationError() }
         let generation = documentGeneration[documentId, default: 0]
         if !force, let hit = cached(documentId: documentId, pageIndex: pageIndex, engine: engine) { return hit }
-        let key = "\(documentId)#\(pageIndex)#\(engine)"
+        let rotation = additionalRotation(documentId: documentId, pageIndex: pageIndex)
+        let key = "\(documentId)#\(pageIndex)#\(engine)#r\(rotation)"
         if let existing = running[key] {
             let result = try await existing.value
             guard documentsBeingReplaced[documentId] == nil,
@@ -84,7 +91,8 @@ public actor OCRService {
         let japanese = OCRTargetLanguage.forDocument(documentId) == .japanese
         // Relecture dans la même tâche : un second appel pour la même page reçoit le résultat déjà relu.
         let task = Task.detached(priority: .userInitiated) {
-            var result = try await implementation.recognize(.pdfPage(url: url, index: pageIndex))
+            var result = try await implementation.recognize(.pdfPage(url: url, index: pageIndex,
+                                                                      additionalRotation: rotation))
             if japanese { result = JapaneseOCRText.normalize(result) }
             if result.engine != OCREngineID.pdfText, let process { result = await process(result) }
             if japanese { result = JapaneseOCRText.normalize(result) }
@@ -122,9 +130,11 @@ public actor OCRService {
         let japanese = OCRTargetLanguage.forDocument(documentId) == .japanese
         var bestByPage: [Int: OCRPage] = [:]
         for record in records {
+            let requiredVersion = additionalRotation(documentId: documentId, pageIndex: record.pageIndex) == 0
+                ? OCRPage.unrotatedMinimumVersion : OCRPage.currentVersion
             guard let rank = engines.firstIndex(of: record.engine),
                   let page = try? decoder.decode(OCRPage.self, from: record.json),
-                  page.version >= OCRPage.currentVersion else { continue }
+                  page.version >= requiredVersion else { continue }
             if let current = bestByPage[record.pageIndex], let currentRank = engines.firstIndex(of: current.engine),
                currentRank <= rank { continue }
             bestByPage[record.pageIndex] = japanese ? JapaneseOCRText.normalize(page) : page

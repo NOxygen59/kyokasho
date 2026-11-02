@@ -106,7 +106,8 @@ public enum ONNXEngines {
     static func pageImage(_ input: OCRInput, longSide: Int) throws -> RGBImage {
         let cg: CGImage
         switch input {
-        case .pdfPage(let url, let index): cg = try PageRenderer.render(url: url, pageIndex: index, longSide: longSide)
+        case .pdfPage(let url, let index, let rotation):
+            cg = try PageRenderer.render(url: url, pageIndex: index, longSide: longSide, additionalRotation: rotation)
         case .image(let image): cg = image
         }
         guard let rgb = RGBImage(cg) else { throw OCRError.renderFailed }

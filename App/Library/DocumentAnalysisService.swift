@@ -322,13 +322,14 @@ final class DocumentAnalysisService: ObservableObject {
     }
 
     private static func read(_ reader: String, url: URL, page: Int, maxTokens: Int, service: OCRService, documentId: String) async throws -> String {
+        let rotation = await service.additionalRotation(documentId: documentId, pageIndex: page)
         switch reader {
         case ModelSpec.ovisocr2.id:
             return try await OvisOCR2Reader(language: OCRTargetLanguage.forDocument(documentId))
-                .read(.pdfPage(url: url, index: page), maxTokens: maxTokens)
+                .read(.pdfPage(url: url, index: page, additionalRotation: rotation), maxTokens: maxTokens)
         case ModelSpec.qwen3vl4b.id:
             return try await Qwen3VLReader(language: OCRTargetLanguage.forDocument(documentId))
-                .read(.pdfPage(url: url, index: page), maxTokens: maxTokens)
+                .read(.pdfPage(url: url, index: page, additionalRotation: rotation), maxTokens: maxTokens)
         default:
             let glm = try await service.page(documentId: documentId, url: url, pageIndex: page, engine: OCREngineID.glmocr)
             return glm.lines.map(\.text).joined(separator: "\n")

@@ -65,7 +65,7 @@ struct ReaderScreen: View {
     @Environment(\.scenePhase) private var scenePhase
 
     enum Sheet: String, Identifiable {
-        case search, ai, settings, pageCards
+        case search, ai, settings, pageCards, pageOrientation
         var id: String { rawValue }
     }
 
@@ -300,6 +300,11 @@ struct ReaderScreen: View {
                 case .ai: AIPageSheet(reader: reader, openWeb: { self.sheet = nil; side = .web })
                 case .settings: DocumentSettingsSheet(reader: reader)
                 case .pageCards: PageCardsView(reader: reader)
+                case .pageOrientation:
+                    PageOrientationView(document: reader.document, selectedPage: reader.currentSourcePage,
+                                        rotations: reader.pageRotations) {
+                        try await reader.applyPageRotations($0)
+                    }
                 }
             }
             .environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review)
@@ -524,7 +529,9 @@ struct ReaderScreen: View {
                     Button { sheet = .pageCards } label: {
                         Label("Créer des cartes de cette page", systemImage: "rectangle.stack.badge.plus")
                     }
-                    Button { reader.rotateCurrentPage() } label: { Label("Pivoter la page", systemImage: "rotate.right") }
+                    Button { sheet = .pageOrientation } label: {
+                        Label("Orientation des pages…", systemImage: "rotate.right")
+                    }
                     Button { reader.toggleSplitCurrentPage() } label: {
                         Label(reader.isCurrentPageSplit ? "Ne plus couper la page" : "Couper la page en deux",
                               systemImage: "rectangle.split.2x1")

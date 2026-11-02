@@ -446,6 +446,9 @@ struct LibraryView: View {
                                                 DocumentCard(document: document)
                                             }
                                             .buttonStyle(PressScale())
+                                            .id(LibraryCardRenderIdentity(documentId: document.id,
+                                                                          category: document.category,
+                                                                          selecting: selecting))
                                             // La catégorie appartient à l'état courant de la bibliothèque. En la
                                             // dessinant au-dessus du bouton, elle n'est plus retenue dans l'ancien
                                             // rendu interne de la carte après l'import.

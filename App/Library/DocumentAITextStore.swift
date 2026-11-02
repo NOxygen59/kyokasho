@@ -36,6 +36,17 @@ enum DocumentAITextStore {
         }
     }
 
+    /// Une rotation change l'image donnée aux modèles : toutes les lectures et traductions de ces pages sont périmées.
+    static func removePages(documentId: String, pages: Set<Int>) throws {
+        guard !pages.isEmpty else { return }
+        let directory = folder.appendingPathComponent(documentId, isDirectory: true)
+        guard let names = try? FileManager.default.contentsOfDirectory(atPath: directory.path) else { return }
+        let suffixes = pages.map { "-\($0).md" }
+        for name in names where suffixes.contains(where: name.hasSuffix) {
+            try FileManager.default.removeItem(at: directory.appendingPathComponent(name))
+        }
+    }
+
     /// Supprime toutes les traductions d'un document dans une langue (`fr` ou `en`), et seulement elles : les
     /// lectures des modèles et l'autre langue restent. Renvoie le nombre de pages supprimées.
     @discardableResult

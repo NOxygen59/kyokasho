@@ -62,9 +62,10 @@ extension ReaderController {
                             AITaskCenter.shared.log(id, "p. \(source + 1) : lecture OvisOCR2 déjà faite, réutilisée")
                         } else {
                             AITaskCenter.shared.log(id, "p. \(source + 1) : OvisOCR2 lit la page (≈ 20 à 40 s)…")
+                            let rotation = await service.additionalRotation(documentId: documentId, pageIndex: source)
                             markdown = try await Diagnostics.measure("OvisOCR2 page \(source)", "verif") {
                                 try await OvisOCR2Reader(language: OCRTargetLanguage.forDocument(documentId))
-                                    .read(.pdfPage(url: url, index: source),
+                                    .read(.pdfPage(url: url, index: source, additionalRotation: rotation),
                                                                 maxTokens: DocumentAnalysisService.tokenBudget(ocr))
                             }
                             // Arrêtée : texte partiel, jamais gardé.

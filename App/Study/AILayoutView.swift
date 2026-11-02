@@ -133,11 +133,13 @@ struct AILayoutView: View {
     private func read() {
         let budget = reader.ocrPage.map(DocumentAnalysisService.tokenBudget) ?? 2048
         let source = source, url = reader.fileURL, documentId = reader.document.id
+        let service = reader.model.ocr
         center.run(layoutKey, title: "Mise en page IA p. \(source + 1)", modelId: ModelSpec.ovisocr2.id, activity: "mise en page") { id in
             center.log(id, "OvisOCR2 lit l'image de la page \(source + 1) (au plus \(budget) jetons, ≈ 30 s)…")
+            let rotation = await service.additionalRotation(documentId: documentId, pageIndex: source)
             let text = try await Diagnostics.measure("mise en page IA p. \(source)", "miseenpage") {
                 try await OvisOCR2Reader(language: OCRTargetLanguage.forDocument(documentId))
-                    .read(.pdfPage(url: url, index: source), maxTokens: budget)
+                    .read(.pdfPage(url: url, index: source, additionalRotation: rotation), maxTokens: budget)
             }
             try Task.checkCancellation()
             center.log(id, "\(text.count) caractères mis en forme ; gardés pour cette page")

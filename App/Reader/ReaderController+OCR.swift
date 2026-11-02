@@ -361,8 +361,10 @@ extension ReaderController {
         AITaskCenter.shared.cancel(prefix: rereadKey(source))
         AITaskCenter.shared.run(key, title: "Relecture GLM-OCR p. \(source + 1)", modelId: ModelSpec.glmocr.id, activity: "relecture") { [weak self] id in
             AITaskCenter.shared.log(id, "GLM-OCR relit \(lines.count) ligne(s) douteuse(s) de la page \(source + 1)…")
+            let rotation = await service.additionalRotation(documentId: documentId, pageIndex: source)
             let read = try await Diagnostics.measure("GLM-OCR relit \(lines.count) ligne(s) p. \(source)", "relecture") {
-                try await engine.reread(page, lines: lines, input: .pdfPage(url: url, index: source))
+                try await engine.reread(page, lines: lines,
+                                        input: .pdfPage(url: url, index: source, additionalRotation: rotation))
             }
             try Task.checkCancellation()
             // Page changée entre-temps (correction à la main, autre OCR) : résultat jeté.

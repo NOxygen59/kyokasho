@@ -28,7 +28,8 @@ public struct GLMOCREngine: OCREngine {
         let start = Date()
         let image: CGImage
         switch input {
-        case .pdfPage(let url, let index): image = try PageRenderer.render(url: url, pageIndex: index, longSide: 3000)
+        case .pdfPage(let url, let index, let rotation):
+            image = try PageRenderer.render(url: url, pageIndex: index, longSide: 3000, additionalRotation: rotation)
         case .image(let cg): image = cg
         }
         // 1. Où sont les lignes (et un premier texte, gardé si l'IA ne répond rien).
@@ -61,7 +62,8 @@ public struct GLMOCREngine: OCREngine {
         guard isAvailable else { throw OCRError.modelMissing(ModelSpec.glmocr.title) }
         let image: CGImage
         switch input {
-        case .pdfPage(let url, let index): image = try PageRenderer.render(url: url, pageIndex: index, longSide: 3000)
+        case .pdfPage(let url, let index, let rotation):
+            image = try PageRenderer.render(url: url, pageIndex: index, longSide: 3000, additionalRotation: rotation)
         case .image(let cg): image = cg
         }
         return try await GLMModel.using(directory: store.directory(.glmocr)) { model in
