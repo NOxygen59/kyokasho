@@ -11,6 +11,7 @@ Ce dossier organise la reprise du projet à partir de **v1.3, build 40**. L'audi
 |---|---|
 | **Reprendre ou piloter le projet** (agents : lire d'abord [AGENTS.md](../AGENTS.md)) | [Plan directeur](PLAN-DIRECTEUR.md) |
 | Apprendre à utiliser l'app | [Guide utilisateur](GUIDE-UTILISATEUR.md) |
+| Trouver un réglage ou comprendre son rangement | [Organisation des réglages](REGLAGES.md) |
 | Comprendre les capacités et les preuves disponibles | [Audit v1.3](AUDIT-V1.3.md) |
 | Installer l'environnement et comprendre les modules | [Guide développeur et architecture](GUIDE-DEVELOPPEUR.md) |
 | Comprendre ce qui est conservé, exporté ou effacé | [Données et sauvegardes](DONNEES-ET-SAUVEGARDES.md) |

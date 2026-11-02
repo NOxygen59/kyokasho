@@ -28,15 +28,15 @@ struct SettingsView: View {
                             .listRowBackground(Atelier.surface)
                     }
                     Section("Personnaliser") {
+                        area(.general)
                         area(.reading)
-                        area(.japanese)
                     }
-                    Section("Apprendre") {
-                        SettingsRouteLink(route: .models)
-                        SettingsRouteLink(route: .cards)
+                    Section("Comprendre et apprendre") {
+                        area(.aiText)
+                        area(.japaneseReview)
                     }
-                    Section("Gérer et se faire aider") {
-                        area(.files)
+                    Section("Gérer") {
+                        area(.data)
                         area(.help)
                     }
                 } else {

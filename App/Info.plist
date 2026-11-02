@@ -6,6 +6,74 @@
 	<string>fr</string>
 	<key>CFBundleDisplayName</key>
 	<string>Kyōkasho</string>
+	<key>CFBundleIcons</key>
+	<dict>
+		<key>CFBundleAlternateIcons</key>
+		<dict>
+			<key>AppIconCharcoal</key>
+			<dict>
+				<key>CFBundleIconFiles</key>
+				<array><string>AppIconCharcoal</string></array>
+				<key>CFBundleIconName</key>
+				<string>AppIconCharcoal</string>
+			</dict>
+			<key>AppIconJade</key>
+			<dict>
+				<key>CFBundleIconFiles</key>
+				<array><string>AppIconJade</string></array>
+				<key>CFBundleIconName</key>
+				<string>AppIconJade</string>
+			</dict>
+			<key>AppIconNavy</key>
+			<dict>
+				<key>CFBundleIconFiles</key>
+				<array><string>AppIconNavy</string></array>
+				<key>CFBundleIconName</key>
+				<string>AppIconNavy</string>
+			</dict>
+		</dict>
+		<key>CFBundlePrimaryIcon</key>
+		<dict>
+			<key>CFBundleIconFiles</key>
+			<array><string>AppIcon</string></array>
+			<key>CFBundleIconName</key>
+			<string>AppIcon</string>
+		</dict>
+	</dict>
+	<key>CFBundleIcons~ipad</key>
+	<dict>
+		<key>CFBundleAlternateIcons</key>
+		<dict>
+			<key>AppIconCharcoal</key>
+			<dict>
+				<key>CFBundleIconFiles</key>
+				<array><string>AppIconCharcoal</string></array>
+				<key>CFBundleIconName</key>
+				<string>AppIconCharcoal</string>
+			</dict>
+			<key>AppIconJade</key>
+			<dict>
+				<key>CFBundleIconFiles</key>
+				<array><string>AppIconJade</string></array>
+				<key>CFBundleIconName</key>
+				<string>AppIconJade</string>
+			</dict>
+			<key>AppIconNavy</key>
+			<dict>
+				<key>CFBundleIconFiles</key>
+				<array><string>AppIconNavy</string></array>
+				<key>CFBundleIconName</key>
+				<string>AppIconNavy</string>
+			</dict>
+		</dict>
+		<key>CFBundlePrimaryIcon</key>
+		<dict>
+			<key>CFBundleIconFiles</key>
+			<array><string>AppIcon</string></array>
+			<key>CFBundleIconName</key>
+			<string>AppIcon</string>
+		</dict>
+	</dict>
 	<key>CFBundleDocumentTypes</key>
 	<array>
 		<dict>

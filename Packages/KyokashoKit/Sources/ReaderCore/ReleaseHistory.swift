@@ -10,6 +10,10 @@ import Foundation
 enum ReleaseHistory {
     static let past: [ReleaseNotes] = [
         // Builds de test non publiées, entre la 1.3 et la 1.3.2.
+        ReleaseNotes("1.3.2 (72–73)", "2026-11-02", published: false, "Orientation et personnalisation",
+                     added: ["Orientation non destructive d'une page, d'une plage ou du document, avec recalcul OCR.",
+                             "Quatre icônes au choix et Réglages rangés en six catégories."],
+                     fixed: ["Les indicateurs de catégorie et de sélection des documents nouvellement importés se reconstruisent immédiatement."]),
         ReleaseNotes("1.3.2 (62–65)", "2026-10-29", published: false, "Recettes du grand lot",
                      added: ["Corbeille, onglets, surligneur, images vers PDF, réglages du chat, moniteur dans la barre du lecteur."],
                      fixed: ["Modifier une note sur place, onglets qui répondent au toucher, suppression bloquée après « Images vers PDF », partage du chat, confirmation centrée."]),

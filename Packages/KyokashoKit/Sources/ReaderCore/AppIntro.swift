@@ -77,7 +77,7 @@ public struct ReleaseNotes: Equatable, Sendable, Identifiable {
     public static let all: [ReleaseNotes] = [current] + ReleaseHistory.past
 
     /// La version en cours de préparation (cumul de tout le lot ; c'est elle que montre la fenêtre « Nouveautés »).
-    public static let current = ReleaseNotes("1.3.2", "2026-10-29", published: false, "Le grand lot de l'automne", added: [
+    public static let current = ReleaseNotes("1.3.2", "2026-11-02", published: false, "Le grand lot de l'automne", added: [
             "Onglets en haut du lecteur pour passer d'un livre à l'autre ; une notification prévient quand beaucoup sont ouverts.",
             "Accueil en sections Manuels et Livres, question « Livre ou manuel ? » à l'import, suppression de plusieurs documents.",
             "Corbeille : un document supprimé reste 30 jours, restaurable.",
@@ -98,6 +98,7 @@ public struct ReleaseNotes: Equatable, Sendable, Identifiable {
             "23 styles au choix, dont Claymorphism, Editorial, Cyberpunk, Pixel Art, Victorian ; fenêtres aux couleurs du style.",
             "Sauvegarde complète de la bibliothèque dans un dossier de Fichiers (10 gardées) et restauration.",
             "Fond « Sépia nuit », visite guidée et cette fenêtre de nouveautés.",
+            "Quatre icônes sobres au choix et Réglages rangés par usage.",
         ], fixed: [
             "Les flèches du clavier tournent les pages sans rester bloquées sur le champ du numéro de page.",
             "Le survol du dictionnaire avec Maj suit le curseur, même rapide.",

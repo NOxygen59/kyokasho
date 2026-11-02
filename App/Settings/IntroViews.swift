@@ -138,7 +138,14 @@ struct IntroPresenter: ViewModifier {
     }
 }
 
-/// Réglages : revoir la visite ou les nouveautés.
+/// Réglages → Général : revoir la visite, les nouveautés ou l'historique.
+struct IntroSettingsView: View {
+    var body: some View {
+        Form { IntroSettingsSection() }
+            .navigationTitle("Visite et nouveautés")
+    }
+}
+
 struct IntroSettingsSection: View {
     @State private var tour = false
     @State private var news = false

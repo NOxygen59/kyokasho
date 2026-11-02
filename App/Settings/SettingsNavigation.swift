@@ -5,56 +5,68 @@ import SwiftUI
 
 /// Les liens et la recherche partagent le même catalogue : aucun outil ne disparaît dans les sous-pages.
 enum SettingsArea: String, Identifiable {
-    case reading, japanese, files, help
+    case general, reading, aiText, japaneseReview, data, help
     var id: String { rawValue }
     var title: String {
         switch self {
-        case .reading: return "Lecture et apparence"
-        case .japanese: return "Japonais et traduction"
-        case .files: return "Fichiers et comptes"
-        case .help: return "Aide et informations"
+        case .general: return "Général"
+        case .reading: return "Lecture"
+        case .aiText: return "IA et texte des pages"
+        case .japaneseReview: return "Japonais et révision"
+        case .data: return "Données"
+        case .help: return "Aide"
         }
     }
     var subtitle: String {
         switch self {
-        case .reading: return "Thèmes, double page, fenêtre OCR et Pencil"
-        case .japanese: return "Comprendre les mots et le texte de tes livres"
-        case .files: return "Place disponible et connexion à Google Drive"
-        case .help: return "Résoudre un problème et vérifier les mises à jour"
+        case .general: return "Apparence, icône, visite et nouveautés"
+        case .reading: return "Pages, gestes, fenêtre OCR et Apple Pencil"
+        case .aiText: return "Modèles, reconnaissance OCR et traduction"
+        case .japaneseReview: return "Dictionnaires, lexique et cartes de révision"
+        case .data: return "Sauvegarde, stockage et Google Drive"
+        case .help: return "Diagnostic, version, mises à jour et crédits"
         }
     }
     var icon: String {
         switch self {
+        case .general: return "gearshape"
         case .reading: return "book"
-        case .japanese: return "character.book.closed.ja"
-        case .files: return "folder"
+        case .aiText: return "text.viewfinder"
+        case .japaneseReview: return "character.book.closed.ja"
+        case .data: return "externaldrive"
         case .help: return "questionmark.circle"
         }
     }
     var tint: Color {
         switch self {
+        case .general: return Atelier.Tint.annotate
         case .reading: return Atelier.Tint.read
-        case .japanese: return Atelier.Tint.japanese
-        case .files: return Atelier.Tint.cloud
+        case .aiText: return Atelier.Tint.ai
+        case .japaneseReview: return Atelier.Tint.japanese
+        case .data: return Atelier.Tint.cloud
         case .help: return Atelier.Tint.annotate
         }
     }
     var routes: [SettingsRoute] {
         switch self {
-        case .reading: return [.theme, .reading, .panel, .pencil]
-        case .japanese: return [.dictionaries, .lexicon, .ocr, .translation]
-        case .files: return [.storage, .backup, .drive]
+        case .general: return [.theme, .appIcon, .intro]
+        case .reading: return [.reading, .panel, .pencil]
+        case .aiText: return [.models, .ocr, .translation]
+        case .japaneseReview: return [.dictionaries, .lexicon, .cards]
+        case .data: return [.backup, .storage, .drive]
         case .help: return [.diagnostics, .about]
         }
     }
 }
 
 enum SettingsRoute: String, Identifiable, CaseIterable {
-    case theme, reading, panel, pencil, dictionaries, lexicon, ocr, translation, models, cards, storage, backup, drive, diagnostics, about
+    case theme, appIcon, intro, reading, panel, pencil, models, ocr, translation, dictionaries, lexicon, cards, backup, storage, drive, diagnostics, about
     var id: String { rawValue }
     var title: String {
         switch self {
         case .theme: return "Thèmes et couleurs"
+        case .appIcon: return "Icône de l'app"
+        case .intro: return "Visite guidée et nouveautés"
         case .reading: return "Pages et gestes"
         case .panel: return "Fenêtre texte OCR"
         case .pencil: return "Apple Pencil et annotations"
@@ -74,6 +86,8 @@ enum SettingsRoute: String, Identifiable, CaseIterable {
     var subtitle: String {
         switch self {
         case .theme: return "Choisir l'ambiance et les motifs de fond"
+        case .appIcon: return "Choisir l'apparence de Kyōkasho sur l'écran d'accueil"
+        case .intro: return "Revoir la visite, les nouveautés et l'historique"
         case .reading: return "Une ou deux pages, sens de lecture et zoom"
         case .panel: return "Choisir sa position et conserver le zoom du livre"
         case .pencil: return "Dessiner, surligner ou chercher un mot avec le Pencil"
@@ -93,6 +107,8 @@ enum SettingsRoute: String, Identifiable, CaseIterable {
     var keywords: String {
         switch self {
         case .theme: return "apparence couleur sombre motifs fond"
+        case .appIcon: return "apparence icone logo accueil ivoire bleu nuit jade anthracite"
+        case .intro: return "visite guidee nouveautes versions historique découvrir"
         case .reading: return "double page portrait paysage marges rognage navigation défilement préchargement aperçus miniatures"
         case .panel: return "panneau étude fixe ancré flottant détacher texte OCR zoom"
         case .pencil: return "stylet doigt dessin encre notes"
@@ -119,6 +135,8 @@ enum SettingsRoute: String, Identifiable, CaseIterable {
     var icon: String {
         switch self {
         case .theme: return "paintpalette"
+        case .appIcon: return "app.dashed"
+        case .intro: return "sparkles"
         case .reading: return "book"
         case .panel: return "sidebar.trailing"
         case .pencil: return "pencil.tip"
@@ -137,7 +155,7 @@ enum SettingsRoute: String, Identifiable, CaseIterable {
     }
     var tint: Color {
         switch self {
-        case .theme, .pencil: return Atelier.Tint.annotate
+        case .theme, .appIcon, .intro, .pencil: return Atelier.Tint.annotate
         case .reading, .panel, .diagnostics: return Atelier.Tint.read
         case .dictionaries, .lexicon, .ocr, .cards: return Atelier.Tint.japanese
         case .translation, .models: return Atelier.Tint.ai
@@ -193,6 +211,8 @@ struct SettingsRouteLink: View {
     @ViewBuilder private var destination: some View {
         switch route {
         case .theme: ThemePickerView()
+        case .appIcon: AppIconSettingsView()
+        case .intro: IntroSettingsView()
         case .reading: ReadingSettingsView()
         case .panel: StudyPanelSettingsView()
         case .pencil: AnnotationSettingsView()
@@ -252,7 +272,6 @@ struct ReaderHelpSettingsView: View {
                 Text("Un problème d'affichage ou de lecture ? Active le journal, refais l'action, puis partage-le pour qu'on puisse comprendre ce qui se passe.")
                     .font(.subheadline).foregroundStyle(Atelier.textSecondary)
             }
-            IntroSettingsSection()
             DiagnosticsSection()
             Section {
                 Toggle("Afficher le suivi des ressources", isOn: $monitorEnabled)
