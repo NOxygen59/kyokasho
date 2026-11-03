@@ -88,6 +88,16 @@ final class OCRRotationTests: XCTestCase {
         XCTAssertEqual(kept.lines[0].box.x, 0.7, accuracy: 0.000_001)
     }
 
+    /// Revue Codex de la 74 : une correction trop ancienne pour être convertie ne doit pas être effacée.
+    func testRotationNeverErasesEditsItCannotConvert() throws {
+        let old = try JSONEncoder().encode(page(edited: true, version: 4))
+        XCTAssertEqual(OCRPage.jsonKeepingManualEdits(old, fromRotation: 0, toRotation: 90), old)
+        let unreadable = Data("{\"format\":\"inconnu\"}".utf8)
+        XCTAssertEqual(OCRPage.jsonKeepingManualEdits(unreadable, fromRotation: 0, toRotation: 90), unreadable)
+        let plain = try JSONEncoder().encode(page(edited: false, version: 4))
+        XCTAssertNil(OCRPage.jsonKeepingManualEdits(plain, fromRotation: 0, toRotation: 90))
+    }
+
     /// Le rendu pour l'OCR doit réellement tourner : un repère noir en haut à gauche de la page d'origine doit
     /// se retrouver dans le coin attendu de l'image, à chaque orientation.
     func testRendererPutsMarkInExpectedCornerForEachRotation() throws {

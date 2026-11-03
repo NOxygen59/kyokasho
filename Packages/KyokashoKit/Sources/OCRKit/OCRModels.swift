@@ -184,9 +184,12 @@ public extension OCRPage {
 
     /// JSON à garder en base quand la rotation d'une page change : seuls les résultats corrigés à la main sont
     /// conservés, tournés avec la page. `nil` : le résultat est à effacer, l'OCR sera refait.
+    /// Un résultat trop ancien pour être converti sans risque, ou illisible, est gardé tel quel : une rotation ne
+    /// doit jamais être ce qui efface une correction. Il reste ignoré à l'affichage, comme avant la rotation.
     static func jsonKeepingManualEdits(_ json: Data, fromRotation previous: Int, toRotation new: Int) -> Data? {
-        guard let stored = try? JSONDecoder().decode(OCRPage.self, from: json), stored.hasManualEdits,
-              let current = stored.readable(atAdditionalRotation: previous) else { return nil }
+        guard let stored = try? JSONDecoder().decode(OCRPage.self, from: json) else { return json }
+        guard stored.hasManualEdits else { return nil }
+        guard let current = stored.readable(atAdditionalRotation: previous) else { return json }
         var page = current.rotatedClockwise(new - previous)
         page.version = currentVersion
         return try? JSONEncoder().encode(page)
