@@ -10,6 +10,7 @@ Ce dossier organise la reprise du projet à partir de **v1.3, build 40**. L'audi
 | Besoin | Document |
 |---|---|
 | **Reprendre ou piloter le projet** (agents : lire d'abord [AGENTS.md](../AGENTS.md)) | [Plan directeur](PLAN-DIRECTEUR.md) |
+| Continuer la professionnalisation sans interrompre les tâches actives ; cycle à deux agents | [Continuité du 03/11/2026](PROFESSIONNALISATION-CONTINUITE.md) |
 | Apprendre à utiliser l'app | [Guide utilisateur](GUIDE-UTILISATEUR.md) |
 | Trouver un réglage ou comprendre son rangement | [Organisation des réglages](REGLAGES.md) |
 | Comprendre les capacités et les preuves disponibles | [Audit v1.3](AUDIT-V1.3.md) |

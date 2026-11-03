@@ -3,6 +3,8 @@
 
 # Plan directeur — professionnalisation de Kyōkasho
 
+> **Continuité locale du 03/11/2026 :** lire [la suite du plan et sa passation](PROFESSIONNALISATION-CONTINUITE.md) avant les relevés historiques ci-dessous. Elle prolonge les chantiers existants, précise les preuves des prochaines livraisons et met Qwen en retrait (facultatif). Une tâche déjà autorisée conserve son responsable et sa priorité. Le présent lot est documentaire ; les automatismes restent à réaliser séparément. GitHub reste privé et les publications suspendues selon la décision du manager ; les états publics mentionnés plus bas sont historiques.
+
 > **Point d'entrée de pilotage pour les humains et agents IA.** Ce fichier suit la transformation *technique* du projet, pas le backlog de fonctionnalités. Il n'est **pas** une autorisation d'implémenter, fusionner, publier ou modifier les données. Lire [AGENTS.md](../AGENTS.md) avant toute action.
 >
 > **Dernier instantané vérifié : 27 octobre 2026, après la recette 1.3.2.** `main` à `738dceb7fd09ccfcb1b9feb454c1d695d2658d9d` (fusion de #59), avant la fusion de cette mise à jour (#62). Les PR #8 à #10, #25, #27 à #33 et #56 à #59 sont fusionnées. Le [registre des retours iPad](RETOURS-IPAD.md) contient **RET-001 à RET-042** et fait foi. La build locale **1.3.2 (42)**, non publiée, source `bfd4312` (= `main` `242be8f` + version/build), `.tipa` SHA-256 `8276afe1fe819acdc423a76241016115eaa111987c96f01c565a0385885f8f6e` a été validée par NOxygen59 **avec limites** : RET-010, RET-011 et RET-012 **confirmés iPad** (Issues #13, #14, #15 fermées) ; deux nouveaux retours ouverts, RET-041/[#60](https://github.com/NOxygen59/kyokasho/issues/60) et RET-042/[#61](https://github.com/NOxygen59/kyokasho/issues/61). **Aucune release publiée.** **GitHub Actions reste désactivé** (CI-0). Ne pas considérer cet instantané comme actuel sans interroger GitHub.
@@ -130,6 +132,8 @@ Une anomalie critique démontrée peut modifier cet ordre, avec justification en
 **Résolution des contradictions** : rapporter les deux sources et leur date, vérifier le code/les runs et demander une décision si nécessaire. Ne pas effacer l'historique ni mettre à jour silencieusement les anciennes notes.
 
 ## 8. Point de reprise pour le prochain chat
+
+**Reprise complémentaire du 03/11/2026 :** consulter d'abord [PROFESSIONNALISATION-CONTINUITE.md](PROFESSIONNALISATION-CONTINUITE.md), puis le pont local et la passation active lorsqu'ils sont disponibles. Le lot rotation de Claude n'est ni remplacé ni validé par ce plan. Les relevés du 27/10 ci-dessous sont conservés comme historique, pas comme état courant.
 
 **État de référence du 27/10/2026, après la recette 1.3.2 et le lot RET-043 à RET-047 :**
 

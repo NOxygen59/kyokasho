@@ -1,5 +1,7 @@
 # Kyōkasho — instructions pour les agents de code (Codex, Claude ou autre)
 
+> **Coordination au 03/11/2026 :** si le cerveau commun local est disponible, commencer par son `START-HERE.md`, le protocole et le pont ; le vault reste hors Git. Lire ensuite [la continuité du plan](docs/PROFESSIONNALISATION-CONTINUITE.md) et les seuls guides utiles. Claude développe, Codex relit techniquement et contrôle les preuves ; Qwen est facultatif et ne bloque aucune reprise. Une tâche déjà autorisée garde sa priorité. Pendant le gel des publications, documenter localement et déclarer toute vérification GitHub non effectuée ; aucune ancienne consigne de push automatique ne prévaut sur le gel et les accords précis du manager.
+
 Lecteur iPad de manuels japonais (PDF scannés) pour un francophone : OCR, IA locale (MLX sur iOS 16), furigana,
 dictionnaires, cartes de révision. Usage personnel, jamais distribué, installé avec TrollStore sur **un** iPad Pro
 12,9" M1 (8 Go) sous **iOS 16.6.1**. NOxygen59 possède le produit et décide ; il ne code pas.

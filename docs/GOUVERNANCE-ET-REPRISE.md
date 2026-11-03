@@ -48,7 +48,9 @@ Les commentaires couvrent invariants, pièges de plateforme et contrats d'API. L
 
 ## Collaboration entre agents (Claude et Codex)
 
-Claude et Codex sont les deux seuls agents de développement. Ils se succèdent sans partager leurs conversations : **tout le contexte utile passe par GitHub** (Issues, PR, commits, documents versionnés). Ce qui n'est écrit que dans un chat est perdu pour l'autre agent. NOxygen59 reste seul décideur.
+Claude et Codex sont les deux agents de développement. Claude code principalement ; Codex assure la revue technique et la cohérence des preuves. Depuis la décision du 03/11/2026, Qwen est facultatif et son absence ne bloque aucune tâche ; les modèles Qwen de l'application ne sont pas concernés. Voir [la continuité du plan](PROFESSIONNALISATION-CONTINUITE.md).
+
+Ils se succèdent sans partager leurs conversations : le contexte utile est écrit dans les missions, revues, commits et documents versionnés. Pendant le gel GitHub, la coordination utilise le pont local et l'index Obsidian, conservés hors dépôt ; ne pas publier ces dossiers. Les PR/Issues seront mises à jour seulement après autorisation de publication. Les règles ci-dessous mentionnant GitHub s'appliquent sous cette réserve. Ce qui n'est écrit que dans un chat est perdu pour l'autre agent. NOxygen59 reste seul décideur.
 
 ### Règles
 
