@@ -88,6 +88,17 @@ final class OCRRotationTests: XCTestCase {
         XCTAssertEqual(kept.lines[0].box.x, 0.7, accuracy: 0.000_001)
     }
 
+    /// Recette 75 : sur une page couchée, les furigana d'une ligne horizontale de la page restent horizontaux.
+    func testLineDirectionIsJudgedOnThePageNotOnTheRotatedImage() {
+        let box = CGRect(x: 0, y: 0, width: 100, height: 100)
+        let line = page(edited: false).rotatedClockwise(90).lines[0]
+        XCTAssertTrue(line.vertical)
+        XCTAssertFalse(PageFrame(box: box, rotation: 90).isVerticalOnPage(lineVertical: line.vertical))
+        XCTAssertTrue(PageFrame(box: box, rotation: 270).isVerticalOnPage(lineVertical: false))
+        XCTAssertTrue(PageFrame(box: box, rotation: 180).isVerticalOnPage(lineVertical: true))
+        XCTAssertFalse(PageFrame(box: box, rotation: 0).isVerticalOnPage(lineVertical: false))
+    }
+
     /// Recette 74 : par défaut, une rotation ne perd aucun OCR, corrigé ou non.
     func testDefaultRotationKeepsEveryResultAndComesBackExactly() throws {
         let plain = page(edited: false)

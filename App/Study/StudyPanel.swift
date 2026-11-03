@@ -282,16 +282,19 @@ struct StudyTextTab: View {
                     Label("Rescanner", systemImage: "arrow.clockwise")
                 }
                 .disabled(aiTasks.isRunning(reader.verifyKey))
-                Button { showLineEditor = true } label: {
-                    Label("Corriger le texte", systemImage: "pencil")
-                }
-                .disabled(reader.ocrPage == nil)
             }
             .font(.caption.weight(.semibold))
             .foregroundStyle(Atelier.Tint.ai)
             Text("Comparer au texte OCR de la page · accepter les corrections dans la vérification.")
                 .font(.caption2).foregroundStyle(Atelier.textTertiary)
         }
+        // Hors de la condition : corriger le texte ne dépend d'aucun modèle.
+        Button { showLineEditor = true } label: {
+            Label("Corriger le texte", systemImage: "pencil")
+        }
+        .font(.caption.weight(.semibold))
+        .foregroundStyle(Atelier.Tint.ai)
+        .disabled(reader.ocrPage == nil || reader.ocrState == .running)
     }
 
     /// Zones de mise en page de la page de travail (modèle choisi, gardées en mémoire par page).
@@ -962,15 +965,30 @@ extension LookupSession: Identifiable {}
 
 /// Correction du texte de l'OCR, ligne par ligne. Écran à part : dans le panneau, l'appui long sur une ligne
 /// sélectionnable est pris par la sélection de texte et le menu « Corriger cette ligne » n'apparaît pas.
+/// Travaille sur le résultat présent à l'ouverture : les numéros de ligne ne valent que pour lui.
 private struct OCRLineEditor: View {
     @ObservedObject var reader: ReaderController
     @Environment(\.dismiss) private var dismiss
+    private let original: OCRPage?
+    private let source: Int
     @State private var drafts: [Int: String] = [:]
+    @State private var outdated = false
+
+    init(reader: ReaderController) {
+        self.reader = reader
+        original = reader.ocrPage
+        source = reader.focusSource
+    }
 
     var body: some View {
         NavigationStack {
             List {
-                ForEach(Array((reader.ocrPage?.lines ?? []).enumerated()), id: \.offset) { index, line in
+                if outdated {
+                    Label("Le texte de cette page a changé pendant ta correction : rien n'a été enregistré. Ferme cet écran et recommence.",
+                          systemImage: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.orange)
+                }
+                ForEach(Array((original?.lines ?? []).enumerated()), id: \.offset) { index, line in
                     TextField("Texte de la ligne", text: Binding(
                         get: { drafts[index] ?? line.text },
                         set: { drafts[index] = $0 }
@@ -981,15 +999,17 @@ private struct OCRLineEditor: View {
             .navigationTitle("Corriger le texte")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Annuler") { dismiss() } }
+                ToolbarItem(placement: .cancellationAction) { Button("Fermer") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Garder") {
-                        let lines = reader.ocrPage?.lines ?? []
-                        reader.correctOCRLines(drafts.filter { lines.indices.contains($0.key) && lines[$0.key].text != $0.value })
-                        dismiss()
-                    }
+                    Button("Garder") { save() }.disabled(outdated)
                 }
             }
         }
+    }
+
+    private func save() {
+        guard let original else { return dismiss() }
+        let changes = drafts.filter { original.lines.indices.contains($0.key) && original.lines[$0.key].text != $0.value }
+        if reader.correctOCRLines(changes, ifStill: original, source: source) { dismiss() } else { outdated = true }
     }
 }

@@ -255,6 +255,12 @@ public struct PageFrame: Sendable, Equatable {
         self.rotation = ((rotation % 360) + 360) % 360
     }
 
+    /// Sens d'une ligne OCR dans le repère de la page. Les furigana y sont dessinés et tournent avec elle, alors que
+    /// `OCRLine.vertical` décrit l'image lue, déjà tournée : à 90° ou 270°, une ligne horizontale de la page y paraît verticale.
+    public func isVerticalOnPage(lineVertical: Bool) -> Bool {
+        rotation % 180 == 0 ? lineVertical : !lineVertical
+    }
+
     /// Point de la page (repère PDF, y vers le haut) → point normalisé du rendu OCR (haut-gauche, y vers le bas).
     public func normalized(_ p: CGPoint) -> CGPoint {
         let px = (p.x - box.minX) / max(box.width, 1e-9), py = (p.y - box.minY) / max(box.height, 1e-9)

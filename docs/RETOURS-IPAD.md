@@ -186,11 +186,12 @@ Fiche et rapport de plantage hors dépôt : `recettes/RECETTE-IPAD-1.3.2-72.md`,
 
 | ID | Alias | Date | Type | Retour (résumé) | Build | État | Issue | PR | Preuve |
 |---|---|---|---|---|---|---|---|---|---|
-| RET-060 | — | 2026-11-03 | Bug (plantage, orientation) | L'app plante en appliquant une orientation différente de 0°. Cause probable : `PDFPage.rotation` modifié hors du fil principal (`_AssertAutoLayoutOnAllowedThreadsOnly`). Les furigana sont aussi mal placés sur la page tournée | 1.3.2 (72) | corrigé localement, à recetter | — | — | `claude/rotation-crash-ocr`, candidate locale 1.3.2 (74) ; tests Mac ; aucune preuve iPad |
-| RET-061 | — | 2026-11-03 | Bug (zones OCR) | À l'envers, les zones OCR restent celles de la page à l'endroit. Mémoires de l'ancienne orientation vidées ; cette cause n'explique pas forcément le cas suivi d'un plantage | 1.3.2 (72) | corrigé localement, à recetter | — | — | `claude/rotation-crash-ocr`, candidate locale 1.3.2 (74) ; aucune preuve iPad |
-| RET-062 | — | 2026-11-03 | Ergonomie (orientation) | Afficher dès l'analyse l'alerte qui empêche de tourner le document, sans attendre l'essai de rotation | 1.3.2 (72) | corrigé localement, à recetter | — | — | `claude/rotation-crash-ocr`, candidate locale 1.3.2 (74) |
-| RET-063 | — | 2026-11-03 | Bug à qualifier (gestes) | En double page dézoomée, le balayage du trackpad ne change pas de page. Régression non établie | 1.3.2 (72) | à analyser | — | — | Recette, essai 4.1 |
+| RET-060 | — | 2026-11-03 | Bug (plantage, orientation) | L'app plante en appliquant une orientation différente de 0°. Cause probable : `PDFPage.rotation` modifié hors du fil principal (`_AssertAutoLayoutOnAllowedThreadsOnly`). Les furigana sont aussi mal placés sur la page tournée | 1.3.2 (72) | confirmé iPad | — | — | candidate locale 1.3.2 (75), recette du 03/11/2026 |
+| RET-061 | — | 2026-11-03 | Bug (zones OCR) | À l'envers, les zones OCR restent celles de la page à l'endroit. Mémoires de l'ancienne orientation vidées ; cette cause n'explique pas forcément le cas suivi d'un plantage | 1.3.2 (72) | confirmé iPad | — | — | candidate locale 1.3.2 (75), recette du 03/11/2026 |
+| RET-062 | — | 2026-11-03 | Ergonomie (orientation) | Afficher dès l'analyse l'alerte qui empêche de tourner le document, sans attendre l'essai de rotation | 1.3.2 (72) | confirmé iPad | — | — | candidate locale 1.3.2 (75), recette du 03/11/2026 |
+| RET-063 | — | 2026-11-03 | Bug à qualifier (gestes) | En double page dézoomée, le balayage du trackpad ne change pas de page. Régression non établie | 1.3.2 (72) | confirmé iPad | — | — | candidate locale 1.3.2 (75), essais 6.1 et 6.2 |
+| RET-064 | — | 2026-11-03 | Bug (furigana) | Sur une page orientée à gauche ou à droite, les furigana s'affichent en longueur au lieu de suivre la ligne | 1.3.2 (75) | corrigé localement, à recetter | — | — | `claude/rotation-crash-ocr`, candidate locale 1.3.2 (76) ; aucune preuve iPad |
 
 Les notes locales de `patchs-en-attente` emploient déjà RET-052, 053, 056 et 057 sur des branches non publiées : numérotation reprise à RET-060.
 
-Prochain identifiant libre : **RET-064**.
+Prochain identifiant libre : **RET-065**.

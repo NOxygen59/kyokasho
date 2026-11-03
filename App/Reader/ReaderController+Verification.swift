@@ -146,6 +146,16 @@ extension ReaderController {
     /// Correction à la main d'une ligne (gardée : la relecture automatique n'y touche plus).
     func correctOCRLine(_ index: Int, text: String) { correctOCRLines([index: text]) }
 
+    /// Refuse si la page affichée ou son résultat OCR a changé depuis `original` : une relecture peut insérer ou
+    /// réordonner des lignes, et le même numéro désignerait alors un autre texte (revue Codex de la 75).
+    @discardableResult
+    func correctOCRLines(_ corrections: [Int: String], ifStill original: OCRPage, source: Int) -> Bool {
+        guard source == focusSource, let current = ocrPage, current.engine == original.engine,
+              current.lines.map(\.text) == original.lines.map(\.text) else { return false }
+        correctOCRLines(corrections)
+        return true
+    }
+
     /// Plusieurs lignes en une seule écriture : des écritures séparées pourraient se terminer dans le désordre.
     func correctOCRLines(_ corrections: [Int: String]) {
         guard var page = ocrPage else { return }

@@ -95,37 +95,49 @@ struct PageOrientationView: View {
     }
 
     private var controls: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(spacing: 12) {
             if let blocked = model.pageRotationBlockReason(for: document), !working {
                 Label(blocked, systemImage: "hourglass").foregroundStyle(.orange).font(.footnote)
+                    .multilineTextAlignment(.center)
             }
             if let error {
                 Label(error, systemImage: "exclamationmark.triangle.fill").foregroundStyle(.red).font(.footnote)
+                    .multilineTextAlignment(.center)
             }
             HStack(spacing: 10) {
                 Button { rotate(-90) } label: { Label("À gauche", systemImage: "rotate.left") }
+                    .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.annotate))
                 Button { rotate(90) } label: { Label("À droite", systemImage: "rotate.right") }
-                Button("Réinitialiser") { for page in selected { rotations[page] = 0 } }
-                Spacer()
-                Text("\(selected.count) sélectionnée(s)").font(.footnote).foregroundStyle(.secondary)
+                    .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.annotate))
+                Button { for page in selected { rotations[page] = 0 } } label: {
+                    Label("Réinitialiser", systemImage: "arrow.uturn.backward")
+                }
+                .buttonStyle(OrientationChipStyle())
             }
             .disabled(selected.isEmpty || working)
-            HStack(spacing: 10) {
-                Button("Tout") { selected = Set(0..<document.pageCount) }
-                Button("Aucune") { selected.removeAll() }
-                Spacer()
-                Text("De")
-                TextField("1", text: $from).keyboardType(.numberPad).frame(width: 56).textFieldStyle(.roundedBorder)
-                Text("à")
-                TextField("1", text: $to).keyboardType(.numberPad).frame(width: 56).textFieldStyle(.roundedBorder)
-                Button("Sélectionner") { selectRange() }.disabled(from.isEmpty)
+            .opacity(selected.isEmpty ? 0.45 : 1)
+            HStack(spacing: 8) {
+                Button("Tout") { selected = Set(0..<document.pageCount) }.buttonStyle(OrientationChipStyle())
+                Button("Aucune") { selected.removeAll() }.buttonStyle(OrientationChipStyle())
+                Divider().frame(height: 22).padding(.horizontal, 6)
+                Text("De").foregroundStyle(Atelier.textSecondary)
+                TextField("1", text: $from).keyboardType(.numberPad).multilineTextAlignment(.center)
+                    .frame(width: 52).textFieldStyle(.roundedBorder)
+                Text("à").foregroundStyle(Atelier.textSecondary)
+                TextField("1", text: $to).keyboardType(.numberPad).multilineTextAlignment(.center)
+                    .frame(width: 52).textFieldStyle(.roundedBorder)
+                Button("Sélectionner") { selectRange() }.buttonStyle(OrientationChipStyle()).disabled(from.isEmpty)
             }
+            .font(.subheadline)
             .disabled(working)
+            Text(selected.count == 1 ? "1 page sélectionnée" : "\(selected.count) pages sélectionnées")
+                .font(.footnote).foregroundStyle(Atelier.textSecondary)
         }
-        .buttonStyle(.bordered)
+        .frame(maxWidth: .infinity)
         .padding(.horizontal, 16)
-        .padding(.vertical, 10)
+        .padding(.vertical, 14)
         .background(Atelier.material(.regularMaterial))
+        .overlay(alignment: .bottom) { Rectangle().fill(Atelier.hairline).frame(height: 1) }
     }
 
     private func rotate(_ degrees: Int) {
@@ -155,6 +167,19 @@ struct PageOrientationView: View {
                 working = false
             }
         }
+    }
+}
+
+/// Bouton secondaire des commandes d'orientation, discret à côté des deux boutons de rotation.
+private struct OrientationChipStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(Atelier.font(14, weight: .medium))
+            .padding(.horizontal, 12).padding(.vertical, 8)
+            .foregroundStyle(Atelier.textPrimary)
+            .background(Atelier.surface, in: RoundedRectangle(cornerRadius: Atelier.smallRadius, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: Atelier.smallRadius, style: .continuous).stroke(Atelier.hairline))
+            .opacity(configuration.isPressed ? 0.7 : 1)
     }
 }
 

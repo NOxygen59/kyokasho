@@ -142,7 +142,8 @@ enum FuriganaLayer {
             let placed = boxes.compactMap { $0 }.map { frame.pageRect($0) }
             let stacked = measured && abs(placed.last!.midY - placed.first!.midY) >
                 abs(placed.last!.midX - placed.first!.midX) * 1.5
-            let vertical = line.vertical || stacked || (text.count >= 2 && lineRect.height > lineRect.width * 1.45)
+            let vertical = frame.isVerticalOnPage(lineVertical: line.vertical) || stacked
+                || (text.count >= 2 && lineRect.height > lineRect.width * 1.45)
             // Des caractères isolés empilés dans une légende verticale ne forment pas des mots :
             // le dictionnaire peut leur attribuer des lectures de prénom sans rapport.
             let verticalNeighbour = lineRects.enumerated().contains { index, other in
