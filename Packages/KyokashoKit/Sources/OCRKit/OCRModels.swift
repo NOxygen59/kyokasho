@@ -167,6 +167,32 @@ public extension OCRPage {
     }
 }
 
+public extension OCRPage {
+    var hasManualEdits: Bool { lines.contains { $0.edited == true } }
+
+    /// Résultat utilisable sur une page portant cette rotation Kyōkasho, ou `nil` s'il faut refaire l'OCR.
+    /// Un résultat v5 ignorait cette rotation : refait, sauf s'il porte des corrections manuelles, qui ne se
+    /// recalculent pas. Ses boîtes sont alors remises dans le repère tourné.
+    func readable(atAdditionalRotation rotation: Int) -> OCRPage? {
+        if rotation % 360 == 0 { return version >= Self.unrotatedMinimumVersion ? self : nil }
+        if version >= Self.currentVersion { return self }
+        guard version >= Self.unrotatedMinimumVersion, hasManualEdits else { return nil }
+        var page = rotatedClockwise(rotation)
+        page.version = Self.currentVersion
+        return page
+    }
+
+    /// JSON à garder en base quand la rotation d'une page change : seuls les résultats corrigés à la main sont
+    /// conservés, tournés avec la page. `nil` : le résultat est à effacer, l'OCR sera refait.
+    static func jsonKeepingManualEdits(_ json: Data, fromRotation previous: Int, toRotation new: Int) -> Data? {
+        guard let stored = try? JSONDecoder().decode(OCRPage.self, from: json), stored.hasManualEdits,
+              let current = stored.readable(atAdditionalRotation: previous) else { return nil }
+        var page = current.rotatedClockwise(new - previous)
+        page.version = currentVersion
+        return try? JSONEncoder().encode(page)
+    }
+}
+
 /// Identifiants des moteurs (stockés en base).
 public enum OCREngineID {
     public static let pdfText = "pdfText"

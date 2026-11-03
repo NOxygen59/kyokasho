@@ -285,6 +285,8 @@ final class ReaderController: NSObject, ObservableObject {
         let rotations: [Int: Int]
         let splits: Set<Int>
         let presented: [PresentedPage]
+        /// Rotations à poser sur le fil principal (voir `install`), moitiés de pages découpées comprises.
+        let pendingRotations: [(page: PDFPage, degrees: Int)]
     }
 
     /// PDF aux pages de même hauteur (`Caches/Equalized/<id>-<taille>-<date>.pdf`) et cadres d'origine des pages
@@ -361,7 +363,13 @@ final class ReaderController: NSObject, ObservableObject {
         guard let doc = PDFDocument(data: data as Data) else { return nil }
         doc.delegate = TonedPageProvider.shared
         guard let scaled = doc.page(at: 0) else { return nil }
-        scaled.rotation = page.rotation
+        // `PDFPage.rotation` notifie UIKit de façon synchrone (voir `install`). Cette page est recopiée dans le PDF
+        // préparé, qui doit garder sa rotation : on attend le fil principal, jamais bloqué sur cette construction.
+        let rotation = page.rotation
+        if rotation != 0 {
+            if Thread.isMainThread { scaled.rotation = rotation }
+            else { DispatchQueue.main.sync { scaled.rotation = rotation } }
+        }
         return (scaled, doc)
     }
 
@@ -414,6 +422,7 @@ final class ReaderController: NSObject, ObservableObject {
         var rotations: [Int: Int] = [:]
         let rtl = settings.direction == .rightToLeft
         var splitPages = Set<Int>()
+        var pendingRotations: [(page: PDFPage, degrees: Int)] = []
         let count = pdf.pageCount
         boxes.reserveCapacity(count)
         rotations.reserveCapacity(count)
@@ -435,17 +444,20 @@ final class ReaderController: NSObject, ObservableObject {
             (page as? TonedPage)?.pageKey = pageKey
             (page as? TonedPage)?.originalBox = box
             let transform = transforms[index]
-            if let extra = transform?.rotation, extra % 360 != 0 {
-                page.rotation = ((page.rotation + extra) % 360 + 360) % 360
-            }
-            let visibleSize = page.rotation % 180 == 0 ? box.size : CGSize(width: box.height, height: box.width)
+            // Calculée ici, posée par `install` : `PDFPage.rotation` notifie UIKit de façon synchrone, et cette
+            // construction tourne hors du fil principal (crash de la recette 1.3.2 (72), 02/11/2026).
+            let shownRotation = PageTransform.effectiveRotation(intrinsic: page.rotation, additional: transform?.rotation ?? 0)
+            let rotationChanged = shownRotation != page.rotation
+            if rotationChanged { pendingRotations.append((page, shownRotation)) }
+            let visibleSize = shownRotation % 180 == 0 ? box.size : CGSize(width: box.height, height: box.width)
             let split = transform?.split ?? false || (settings.splitWidePages && PresentationLayout.isWide(visibleSize))
             if split, let copy = page.copy() as? PDFPage {
+                if rotationChanged { pendingRotations.append((copy, shownRotation)) }
                 splitPages.insert(index)
                 let first: PresentedPage.Part = rtl ? .right : .left
                 let second: PresentedPage.Part = rtl ? .left : .right
-                page.setBounds(PresentationLayout.box(for: first, in: box), for: .cropBox)
-                copy.setBounds(PresentationLayout.box(for: second, in: box), for: .cropBox)
+                page.setBounds(PresentationLayout.box(for: first, in: box, rotation: shownRotation), for: .cropBox)
+                copy.setBounds(PresentationLayout.box(for: second, in: box, rotation: shownRotation), for: .cropBox)
                 // `copy()` ne recopie pas les propriétés Swift.
                 (copy as? TonedPage)?.pageKey = pageKey
                 (copy as? TonedPage)?.originalBox = box
@@ -473,7 +485,8 @@ final class ReaderController: NSObject, ObservableObject {
             for i in stride(from: pdf.pageCount - 1, through: 0, by: -1) { pdf.removePage(at: i) }
             for (i, page) in ordered.enumerated() { pdf.insert(page, at: i) }
         }
-        return Built(pdf: pdf, boxes: boxes, rotations: rotations, splits: splitPages, presented: presented)
+        return Built(pdf: pdf, boxes: boxes, rotations: rotations, splits: splitPages, presented: presented,
+                     pendingRotations: pendingRotations)
     }
 
     func install(_ built: Built?, source: Int, generation: Int) {
@@ -490,6 +503,8 @@ final class ReaderController: NSObject, ObservableObject {
         splitSources = built.splits
         presented = built.presented
         let pdf = built.pdf
+        // Avant `pdfView.document` : la vue découvre les pages déjà dans leur sens.
+        for (page, degrees) in built.pendingRotations { page.rotation = degrees }
         // Rognages calculés pendant la construction (l'instantané des transformations était plus ancien).
         if settings.autoCrop {
             var pagesBySource: [Int: [PDFPage]] = [:]

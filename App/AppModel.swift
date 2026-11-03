@@ -9,12 +9,9 @@ import ONNXOCRKit
 import ReaderCore
 import SwiftUI
 
-private enum PageRotationApplicationError: LocalizedError {
-    case analysisInProgress
-
-    var errorDescription: String? {
-        "Une analyse ou une lecture IA de ce document est en cours. Attends sa fin, puis réessaie."
-    }
+private struct PageRotationBlocked: LocalizedError {
+    let reason: String
+    var errorDescription: String? { reason }
 }
 
 /// État global de l'app : base, stockage, bibliothèque, réglages.
@@ -243,7 +240,8 @@ final class AppModel: ObservableObject {
     private var deletingIds: Set<String> = []
     /// Import ou suppression qui change à la fois la base et les PDF de la bibliothèque.
     /// Une sauvegarde ne doit pas commencer entre ces deux écritures.
-    var libraryMutationInProgress: Bool { importProgress != nil || !deletingIds.isEmpty }
+    var libraryMutationInProgress: Bool { importProgress != nil || !deletingIds.isEmpty || pageRotationInProgress }
+    private var pageRotationInProgress = false
 
     // MARK: Corbeille
 
@@ -404,21 +402,37 @@ final class AppModel: ObservableObject {
         persist { try $0.updateCategory(documentId: documentId, category: category) }
     }
 
+    /// Raison pour laquelle l'orientation est refusée maintenant, affichée dès l'ouverture de l'écran (RET-062).
+    func pageRotationBlockReason(for document: LibraryDocument) -> String? {
+        if LibraryBackupService.inProgress { return "Une sauvegarde est en cours. L'orientation sera possible à sa fin." }
+        if pageRotationInProgress { return "Une orientation est déjà en cours d'application." }
+        if AITaskCenter.shared.jobs.contains(where: { $0.key.contains(document.id) })
+            || DocumentAnalysisService.shared.progress?.documentId == document.id {
+            return "Une analyse ou une lecture IA de ce document est en cours. L'orientation sera possible à sa fin."
+        }
+        return nil
+    }
+
     /// Applique les rotations confirmées, puis rend périmés uniquement les résultats qui dépendent de l'image tournée.
     func applyPageRotations(_ rotations: [Int: Int], to document: LibraryDocument) async throws {
         let valid = rotations.filter { (0..<document.pageCount).contains($0.key) }
         guard !valid.isEmpty else { return }
-        guard !AITaskCenter.shared.jobs.contains(where: { $0.key.contains(document.id) }),
-              DocumentAnalysisService.shared.progress?.documentId != document.id else {
-            throw PageRotationApplicationError.analysisInProgress
-        }
+        if let reason = pageRotationBlockReason(for: document) { throw PageRotationBlocked(reason: reason) }
+        pageRotationInProgress = true
+        defer { pageRotationInProgress = false }
         await ocr.beginPageMutation(documentId: document.id)
         do {
             let pages = Set(valid.keys)
-            // Ces fichiers sont des caches régénérables. Les retirer avant la transaction évite qu'un échec
-            // de nettoyage laisse une rotation enregistrée avec une ancienne analyse encore visible.
-            try DocumentAITextStore.removePages(documentId: document.id, pages: pages)
-            try database.applyPageRotations(documentId: document.id, rotations: valid)
+            try database.applyPageRotations(documentId: document.id, rotations: valid,
+                                            keepingOCR: OCRPage.jsonKeepingManualEdits)
+            // Après la transaction : ces lectures coûtent du temps et de la batterie, un échec de la base ne doit
+            // pas les perdre. Si leur effacement échoue, la rotation reste valable et l'utilisateur est prévenu.
+            do {
+                try DocumentAITextStore.removePages(documentId: document.id, pages: pages)
+            } catch {
+                Diagnostics.error("rotation : lectures IA non effacées : \(error.localizedDescription)", "lecteur")
+                lastError = "Orientation appliquée, mais d'anciennes lectures IA n'ont pas pu être effacées."
+            }
             for page in pages { DocumentAnalysisService.shared.invalidatePage(page, documentId: document.id) }
             await ocr.endPageMutation(documentId: document.id)
             DocumentScan.start(document, url: storage.url(for: document.id), ocr: ocr)

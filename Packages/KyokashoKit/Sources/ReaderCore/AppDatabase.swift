@@ -335,16 +335,27 @@ extension AppDatabase {
 
     /// Applique les rotations choisies et invalide, dans la même transaction, l'OCR des pages concernées.
     /// Les autres propriétés de la page (découpe, rognage) sont conservées.
-    public func applyPageRotations(documentId: String, rotations: [Int: Int]) throws {
+    /// `keepingOCR` (JSON, ancienne rotation, nouvelle rotation) : JSON à garder pour un résultat, `nil` pour l'effacer.
+    /// ReaderCore ne connaît pas le format OCR : `OCRPage.jsonKeepingManualEdits` protège les corrections manuelles.
+    public func applyPageRotations(documentId: String, rotations: [Int: Int],
+                                   keepingOCR: (Data, Int, Int) -> Data? = { _, _, _ in nil }) throws {
         guard !rotations.isEmpty else { return }
         try writer.write { db in
             for (page, value) in rotations {
                 var transform = try PageTransform.fetchOne(db, key: ["documentId": documentId, "pageIndex": page])
                     ?? PageTransform(documentId: documentId, pageIndex: page)
+                let previous = transform.rotation
                 transform.rotation = PageTransform.normalizedRotation(value)
                 try transform.save(db)
-                try db.execute(sql: "DELETE FROM ocrResult WHERE documentId = ? AND pageIndex = ?",
-                               arguments: [documentId, page])
+                let records = try OCRResultRecord.filter(Column("documentId") == documentId && Column("pageIndex") == page).fetchAll(db)
+                for var record in records {
+                    if let kept = keepingOCR(record.json, previous, transform.rotation) {
+                        record.json = kept
+                        try record.save(db)
+                    } else {
+                        try record.delete(db)
+                    }
+                }
             }
         }
     }

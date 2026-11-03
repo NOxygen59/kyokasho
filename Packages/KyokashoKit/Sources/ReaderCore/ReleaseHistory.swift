@@ -10,6 +10,11 @@ import Foundation
 enum ReleaseHistory {
     static let past: [ReleaseNotes] = [
         // Builds de test non publiées, entre la 1.3 et la 1.3.2.
+        ReleaseNotes("1.3.2 (74)", "2026-11-03", published: false, "Orientation fiable",
+                     added: [],
+                     fixed: ["Plantage en tournant une page, furigana et zones de texte mal placés sur une page tournée.",
+                             "Les corrections OCR manuelles tournent avec la page au lieu d'être effacées.",
+                             "Pendant une sauvegarde, l'import, la suppression et l'orientation attendent sa fin."]),
         ReleaseNotes("1.3.2 (72–73)", "2026-11-02", published: false, "Orientation et personnalisation",
                      added: ["Orientation non destructive d'une page, d'une plage ou du document, avec recalcul OCR.",
                              "Quatre icônes au choix et Réglages rangés en six catégories."],

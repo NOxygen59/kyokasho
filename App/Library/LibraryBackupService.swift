@@ -92,7 +92,7 @@ enum LibraryBackupService {
             throw fail("Une lecture IA ou une analyse est en cours : sauvegarde possible après sa fin.")
         }
         guard !model.libraryMutationInProgress else {
-            throw fail("Un import ou une suppression est en cours : sauvegarde possible après sa fin.")
+            throw fail("Un import, une suppression ou une orientation est en cours : sauvegarde possible après sa fin.")
         }
         inProgress = true
         defer { inProgress = false }

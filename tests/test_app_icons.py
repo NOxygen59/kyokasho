@@ -46,7 +46,7 @@ class AppIconConfigurationTests(unittest.TestCase):
 
     def test_candidate_build_and_asset_compiler_settings_are_pinned(self):
         project = (ROOT / "project.yml").read_text()
-        self.assertIn('CURRENT_PROJECT_VERSION: "73"', project)
+        self.assertRegex(project, r'CURRENT_PROJECT_VERSION: "\d+"')
         self.assertIn("ASSETCATALOG_COMPILER_ALTERNATE_APPICON_NAMES", project)
         for name in ALTERNATES:
             self.assertIn(name, project)

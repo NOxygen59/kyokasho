@@ -76,12 +76,22 @@ public enum PresentationLayout {
     }
 
     /// Rectangle visible d'une moitié dans la boîte de la page (coordonnées PDF, y vers le haut).
-    public static func box(for part: PresentedPage.Part, in box: CGRect) -> CGRect {
-        switch part {
-        case .whole: return box
-        case .left: return CGRect(x: box.minX, y: box.minY, width: box.width / 2, height: box.height)
-        case .right: return CGRect(x: box.midX, y: box.minY, width: box.width / 2, height: box.height)
+    /// `rotation` : sens d'affichage de la page. « Gauche » et « droite » sont ceux de l'écran : sur une page tournée,
+    /// ils correspondent à d'autres côtés de la boîte (même convention que `PageGeometry.pageToView`).
+    public static func box(for part: PresentedPage.Part, in box: CGRect, rotation: Int = 0) -> CGRect {
+        guard part != .whole else { return box }
+        let lowHalf: Bool
+        let splitsHeight: Bool
+        switch ((rotation % 360) + 360) % 360 {
+        case 90: lowHalf = part == .left; splitsHeight = true
+        case 180: lowHalf = part == .right; splitsHeight = false
+        case 270: lowHalf = part == .right; splitsHeight = true
+        default: lowHalf = part == .left; splitsHeight = false
         }
+        if splitsHeight {
+            return CGRect(x: box.minX, y: lowHalf ? box.minY : box.midY, width: box.width, height: box.height / 2)
+        }
+        return CGRect(x: lowHalf ? box.minX : box.midX, y: box.minY, width: box.width / 2, height: box.height)
     }
 
     /// Ordre des pages pour afficher une double page de droite à gauche **sans** l'option RTL de

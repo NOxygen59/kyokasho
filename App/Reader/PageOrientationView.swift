@@ -10,6 +10,9 @@ struct PageOrientationView: View {
     let document: LibraryDocument
     let apply: ([Int: Int]) async throws -> Void
     @EnvironmentObject private var model: AppModel
+    // Observés pour que l'alerte apparaisse et disparaisse avec l'analyse, sans attendre « Appliquer ».
+    @ObservedObject private var tasks = AITaskCenter.shared
+    @ObservedObject private var analysis = DocumentAnalysisService.shared
     @Environment(\.dismiss) private var dismiss
     @State private var selected: Set<Int>
     @State private var rotations: [Int: Int]
@@ -39,6 +42,9 @@ struct PageOrientationView: View {
     var body: some View {
         NavigationStack {
             List {
+                if let blocked = model.pageRotationBlockReason(for: document), !working {
+                    Label(blocked, systemImage: "hourglass").foregroundStyle(.orange)
+                }
                 if let error {
                     Label(error, systemImage: "exclamationmark.triangle.fill").foregroundStyle(.red)
                 }
@@ -91,7 +97,7 @@ struct PageOrientationView: View {
                 ToolbarItem(placement: .cancellationAction) { Button("Annuler") { dismiss() }.disabled(working) }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Appliquer (\(changes.count))") { confirming = true }
-                        .disabled(changes.isEmpty || working)
+                        .disabled(changes.isEmpty || working || model.pageRotationBlockReason(for: document) != nil)
                 }
             }
             .overlay {
@@ -102,10 +108,10 @@ struct PageOrientationView: View {
                 }
             }
             .confirmationDialog("Appliquer l'orientation ?", isPresented: $confirming) {
-                Button("Appliquer et relancer l'analyse") { commit() }
+                Button("Appliquer") { commit() }
                 Button("Annuler", role: .cancel) {}
             } message: {
-                Text("\(changes.count) page(s) seront réorientées. Leur OCR, leurs lectures IA et leurs traductions seront recalculés. Le PDF original, les notes, cartes et annotations sont conservés.")
+                Text("\(changes.count) page(s) seront réorientées. Leur OCR sera refait et leurs lectures IA seront effacées puis relues si la lecture automatique est active. Leurs traductions seront effacées : à redemander. Une page corrigée à la main garde son OCR, tourné avec elle et sans relecture. Le PDF original, les notes, cartes et annotations sont conservés.")
             }
             .interactiveDismissDisabled(working)
         }

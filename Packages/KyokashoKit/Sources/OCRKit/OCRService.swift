@@ -61,10 +61,9 @@ public actor OCRService {
     /// Résultat en cache, sans rien calculer.
     public func cached(documentId: String, pageIndex: Int, engine: String) -> OCRPage? {
         guard let record = try? database.ocrResult(documentId: documentId, pageIndex: pageIndex, engine: engine) else { return nil }
-        let requiredVersion = additionalRotation(documentId: documentId, pageIndex: pageIndex) == 0
-            ? OCRPage.unrotatedMinimumVersion : OCRPage.currentVersion
-        guard let page = try? decoder.decode(OCRPage.self, from: record.json),
-              page.version >= requiredVersion else { return nil }
+        guard let stored = try? decoder.decode(OCRPage.self, from: record.json),
+              let page = stored.readable(atAdditionalRotation: additionalRotation(documentId: documentId, pageIndex: pageIndex))
+        else { return nil }
         return OCRTargetLanguage.forDocument(documentId) == .japanese ? JapaneseOCRText.normalize(page) : page
     }
 
@@ -130,11 +129,10 @@ public actor OCRService {
         let japanese = OCRTargetLanguage.forDocument(documentId) == .japanese
         var bestByPage: [Int: OCRPage] = [:]
         for record in records {
-            let requiredVersion = additionalRotation(documentId: documentId, pageIndex: record.pageIndex) == 0
-                ? OCRPage.unrotatedMinimumVersion : OCRPage.currentVersion
             guard let rank = engines.firstIndex(of: record.engine),
-                  let page = try? decoder.decode(OCRPage.self, from: record.json),
-                  page.version >= requiredVersion else { continue }
+                  let stored = try? decoder.decode(OCRPage.self, from: record.json),
+                  let page = stored.readable(atAdditionalRotation: additionalRotation(documentId: documentId, pageIndex: record.pageIndex))
+            else { continue }
             if let current = bestByPage[record.pageIndex], let currentRank = engines.firstIndex(of: current.engine),
                currentRank <= rank { continue }
             bestByPage[record.pageIndex] = japanese ? JapaneseOCRText.normalize(page) : page

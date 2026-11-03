@@ -6,6 +6,21 @@ import XCTest
 @testable import ReaderCore
 
 final class PageRotationTests: XCTestCase {
+    /// Découpe d'une page tournée : chaque moitié doit couvrir le bon côté de l'écran, et elles doivent se compléter.
+    func testSplitHalvesFollowDisplayedSides() {
+        let box = CGRect(x: 10, y: 20, width: 400, height: 600)
+        for rotation in [0, 90, 180, 270] {
+            let view = PageGeometry.pageToView(box: box, rotation: rotation)
+            let left = PresentationLayout.box(for: .left, in: box, rotation: rotation).applying(view)
+            let right = PresentationLayout.box(for: .right, in: box, rotation: rotation).applying(view)
+            let shownWidth = rotation % 180 == 0 ? box.width : box.height
+            XCTAssertEqual(left.minX, 0, accuracy: 0.001, "\(rotation)")
+            XCTAssertEqual(left.maxX, shownWidth / 2, accuracy: 0.001, "\(rotation)")
+            XCTAssertEqual(right.minX, shownWidth / 2, accuracy: 0.001, "\(rotation)")
+            XCTAssertEqual(right.maxX, shownWidth, accuracy: 0.001, "\(rotation)")
+        }
+    }
+
     func testRotationNormalizationAndComposition() {
         XCTAssertEqual(PageTransform.normalizedRotation(-90), 270)
         XCTAssertEqual(PageTransform.normalizedRotation(450), 90)

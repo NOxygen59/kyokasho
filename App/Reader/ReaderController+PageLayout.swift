@@ -19,9 +19,20 @@ extension ReaderController {
 
     func applyPageRotations(_ rotations: [Int: Int]) async throws {
         let source = currentSourcePage
+        // Une lecture en cours pour l'ancienne orientation ne doit plus s'afficher.
+        cancelEnsureOCR()
+        furiganaTask?.cancel()
         try await model.applyPageRotations(rotations, to: document)
         transforms = try model.database.pageTransforms(documentId: document.id)
         ocrPage = nil
+        // Mémoires de l'ancienne orientation : leurs boîtes normalisées, redessinées sur la page tournée,
+        // tomberaient là où était le texte avant la rotation (recette 1.3.2 (72), essai 3.6).
+        for page in rotations.keys {
+            ink.setOCR(nil, source: page)
+            realOCRMemo[page] = nil
+            furiganaGeneration[page, default: 0] += 1
+        }
+        LayoutRegionsCache.shared.clear()
         FuriganaLayer.clearMemory()
         rebuild(keepingSource: source)
     }

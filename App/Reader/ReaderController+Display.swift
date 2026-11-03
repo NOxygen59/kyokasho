@@ -109,9 +109,14 @@ extension ReaderController {
         let documentId = document.id
         let translator = model.dictionary.translator
         let lookupOptions = model.dictionary.profile.lookup
+        let additionalRotation = transforms[source]?.rotation ?? 0
         Task.detached(priority: .utility) { [weak self] in
+            // `PDFPool` lit le fichier d'origine, sans l'orientation choisie ; les boîtes OCR, elles, en tiennent compte.
             let frame: PageFrame? = (try? PDFPool.withDocument(url) { doc -> PageFrame? in
-                doc.page(at: source).map { PageFrame(box: $0.bounds(for: .cropBox), rotation: $0.rotation) }
+                doc.page(at: source).map {
+                    PageFrame(box: $0.bounds(for: .cropBox),
+                              rotation: PageTransform.effectiveRotation(intrinsic: $0.rotation, additional: additionalRotation))
+                }
             }) ?? nil
             guard let frame else { return }
             let reference = DocumentAITextStore.read(documentId: documentId, reader: ModelSpec.ovisocr2.id, page: source)

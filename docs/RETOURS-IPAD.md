@@ -180,4 +180,17 @@ Build **non publiée**, construite depuis le commit local `bfd4312` (= `main` `2
 |---|---|---|---|---|---|---|---|---|---|
 | RET-051 | — | 2026-10-28 | Ergonomie (notes) | Dans les notes, afficher un petit avertissement pour chaque brouillon non ajouté, avec la page concernée, jusqu'à l'appui sur le bouton qui ajoute réellement la note | `claude/notes-brouillons-avertissement` `8f7bcc8`, tests Mac | compilé iOS | [#87](https://github.com/NOxygen59/kyokasho/issues/87) | [#88](https://github.com/NOxygen59/kyokasho/pull/88) (brouillon) | demande de NOxygen59 pendant la recette 1.3.2 (59), point B4 ; compilé iOS, suite Swift 232 (7 ignorés), 2 tests `NoteDraftStoreTests` ; non testé iPad |
 
-Prochain identifiant libre : **RET-052**.
+### Recette du 03/11/2026 — candidate locale 1.3.2 (72)
+
+Fiche et rapport de plantage hors dépôt : `recettes/RECETTE-IPAD-1.3.2-72.md`, `recettes/CRASH-1.3.2-72-2026-11-02.txt`.
+
+| ID | Alias | Date | Type | Retour (résumé) | Build | État | Issue | PR | Preuve |
+|---|---|---|---|---|---|---|---|---|---|
+| RET-060 | — | 2026-11-03 | Bug (plantage, orientation) | L'app plante en appliquant une orientation différente de 0°. Cause probable : `PDFPage.rotation` modifié hors du fil principal (`_AssertAutoLayoutOnAllowedThreadsOnly`). Les furigana sont aussi mal placés sur la page tournée | 1.3.2 (72) | corrigé localement, à recetter | — | — | `claude/rotation-crash-ocr`, candidate locale 1.3.2 (74) ; tests Mac ; aucune preuve iPad |
+| RET-061 | — | 2026-11-03 | Bug (zones OCR) | À l'envers, les zones OCR restent celles de la page à l'endroit. Mémoires de l'ancienne orientation vidées ; cette cause n'explique pas forcément le cas suivi d'un plantage | 1.3.2 (72) | corrigé localement, à recetter | — | — | `claude/rotation-crash-ocr`, candidate locale 1.3.2 (74) ; aucune preuve iPad |
+| RET-062 | — | 2026-11-03 | Ergonomie (orientation) | Afficher dès l'analyse l'alerte qui empêche de tourner le document, sans attendre l'essai de rotation | 1.3.2 (72) | corrigé localement, à recetter | — | — | `claude/rotation-crash-ocr`, candidate locale 1.3.2 (74) |
+| RET-063 | — | 2026-11-03 | Bug à qualifier (gestes) | En double page dézoomée, le balayage du trackpad ne change pas de page. Régression non établie | 1.3.2 (72) | à analyser | — | — | Recette, essai 4.1 |
+
+Les notes locales de `patchs-en-attente` emploient déjà RET-052, 053, 056 et 057 sur des branches non publiées : numérotation reprise à RET-060.
+
+Prochain identifiant libre : **RET-064**.
