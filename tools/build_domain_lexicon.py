@@ -30,25 +30,48 @@ USER_AGENT = "KyokashoLexiconBuilder/1.0 (https://github.com/NOxygen59/kyokasho)
 WIKTIONARY = "https://fr.wiktionary.org"
 WIKIPEDIA = "https://ja.wikipedia.org"
 
+# Pas de « Lexique du textile » : ses sous-catégories (habillement, couture) amenaient surtout des vêtements.
 WIKTIONARY_CATEGORIES = (
     "Lexique en japonais de l’architecture",
     "Lexique en japonais de la construction",
     "Édifices en japonais",
     "Meubles en japonais",
-    "Pièces de la maison en japonais",
-    "Matériaux en japonais",
     "Lexique en japonais de la menuiserie",
+    "Lexique en japonais de la maçonnerie",
+    "Lexique en japonais du bois",
     "Couleurs en japonais",
-    "Lexique en japonais du textile",
+    "Textiles en japonais",
 )
 WIKIPEDIA_CATEGORIES = (
     "建築用語",
     "インテリア",
+    "インテリアデザイン",
     "家具",
-    "日本の住宅",
+    "建具",
+    "壁",
+    "屋根",
+    "窓",
+    "階段",
+    "照明",
     "建築材料",
-    "照明器具",
+    "塗料",
+    "建築設備",
+    "建築構造",
+    "防火",
+    "製図",
+    "日本の住宅",
 )
+# Mots courants du métier que les catégories ne ramènent pas toujours (天井, 壁, 床…) : pages demandées par leur titre.
+SEED_TERMS = tuple("""
+内装 内装材 内装制限 天井 壁 床 床材 材料 採光 不燃 準不燃 難燃 防炎 耐火 準耐火 防火 耐震 免震 制震 換気 断熱 遮音 吸音 防音
+結露 湿気 通風 間取り 間仕切り 収納 押入れ クローゼット 和室 洋室 居間 リビング ダイニング 寝室 台所 キッチン 浴室 洗面所 便所 玄関
+廊下 階段 手摺 窓 サッシ 扉 ドア 引き戸 障子 襖 畳 敷居 鴨居 欄間 床の間 縁側 柱 梁 基礎 土台 屋根 外壁 内壁 壁紙 クロス 巾木 廻り縁
+塗装 左官 漆喰 珪藻土 合板 集成材 無垢材 木材 石材 タイル カーペット フローリング クッションフロア ガラス 金属 鋼材 コンクリート モルタル
+石膏ボード 照明 照度 輝度 ダウンライト シャンデリア 間接照明 色温度 演色性 色彩 色相 明度 彩度 補色 カーテン ブラインド ロールスクリーン
+家具 椅子 机 テーブル ソファ 棚 箪笥 図面 平面図 立面図 断面図 展開図 天井伏図 縮尺 寸法 尺 建築 建物 建築物 住宅 集合住宅 マンション
+用途地域 建蔽率 容積率 建築基準法 消防法 建築士 インテリアコーディネーター 人間工学 バリアフリー ユニバーサルデザイン 動線 空調 給排水
+配管 配線 コンセント シックハウス症候群 ホルムアルデヒド
+""".split())
 
 TITLE = "Lexique du design d'intérieur (Wikipédia, Wiktionnaire)"
 ATTRIBUTION = (
@@ -63,7 +86,10 @@ KANA = re.compile(r"^[ぁ-ゖァ-ヺー・ゝゞヽヾ]+$")
 HAS_JAPANESE = re.compile(r"[ぁ-ゖァ-ヺ㐀-鿿]")
 SKIPPED_TITLE = re.compile(r"一覧|曖昧さ回避|^\d")
 # Noms propres (bâtiments, lieux, sociétés, personnes, œuvres) : ce ne sont pas des termes du métier.
-PROPER_NOUN = re.compile(r"にある|に所在|に位置|に建つ|の企業|株式会社|会社である|メーカー|建築家|協同組合|論文|の人物|の作品|法人|財団|かつて存在")
+PROPER_NOUN = re.compile(r"にある|に所在|に位置|に建つ|の企業|株式会社|会社である|メーカー|建築家|協同組合|論文|の人物|の作品|法人|財団|かつて存在"
+                         r"|生まれ|出身|\\d+月\\d+日\\s*[-－–—]|番組|小説|漫画|映画|アニメ|テレビ|歌手|タレント|政治家|の町|市の|区の|県の"
+                         r"|神社|寺院|大学|学校|教育機関|研究所|博物館|美術館|鉄道")
+PROPER_NOUN_TITLE = re.compile(r"大学|駅|神社|寺$|城$|ホテル|タワー|★|大会|キャンパス|研究所|アカデミー|図書室|プレイ")
 
 
 # --- Analyse (fonctions pures, testées) ---
@@ -145,28 +171,44 @@ def page_url(site, title):
     return f"{site}/wiki/{quote(title.replace(' ', '_'))}"
 
 
+def source_link(name, url):
+    """Lien court vers la page d'origine (attribution CC BY-SA) : une adresse brute déborde de la bulle."""
+    return {"type": "structured-content", "content": {"tag": "a", "href": url, "content": f"Source : {name}"}}
+
+
 def term_rows(wiktionary_pages, wikipedia_pages):
     """Lignes term_bank (format 3) : [terme, lecture, étiquettes, règles, score, sens, séquence, étiquettes du terme]."""
     rows = []
     for page in sorted(wiktionary_pages, key=lambda p: p["title"]):
         for term, reading, _, senses in wiktionary_entries(page["title"], page.get("wikitext", "")):
-            glossary = senses + [f"Source : {page_url(WIKTIONARY, page['title'])}"]
+            glossary = senses + [source_link("Wiktionnaire", page_url(WIKTIONARY, page["title"]))]
             rows.append([term, reading, "wikt", "", 2, glossary, 0, "interieur"])
     for page in sorted(wikipedia_pages, key=lambda p: p["title"]):
+        if page.get("disambiguation"):
+            continue
         term = wikipedia_title(page["title"])
         if SKIPPED_TITLE.search(term) or not HAS_JAPANESE.search(term) or len(term) > 20:
+            continue
+        # Demandé par son titre : le mot compte même si son article cite un lieu ou une école.
+        chosen = term in SEED_TERMS or any(alias in SEED_TERMS for alias in page.get("aliases", []))
+        if not chosen and PROPER_NOUN_TITLE.search(term):
             continue
         links = page.get("langlinks", {})
         glossary = [f"{label} : {links[code]}" for code, label in (("fr", "Français"), ("en", "Anglais")) if code in links]
         excerpt = first_sentence(page.get("extract", ""))
-        if PROPER_NOUN.search(excerpt):
+        if not chosen and PROPER_NOUN.search(excerpt):
             continue
         if excerpt:
             glossary.append(excerpt)
         if not glossary:
             continue
-        glossary.append(f"Source : {page_url(WIKIPEDIA, page['title'])}")
-        rows.append([term, wikipedia_reading(term, page.get("extract", "")), "wp", "", 1, glossary, 0, "interieur"])
+        glossary.append(source_link("Wikipédia", page_url(WIKIPEDIA, page["title"])))
+        reading = wikipedia_reading(term, page.get("extract", ""))
+        rows.append([term, reading, "wp", "", 1, glossary, 0, "interieur"])
+        # Autre graphie qui mène à cette page : même définition, cherchée sous les deux formes.
+        for alias in page.get("aliases", []):
+            if alias != term and HAS_JAPANESE.search(alias):
+                rows.append([alias, "", "wp", "", 1, glossary, 0, "interieur"])
     for sequence, row in enumerate(rows, start=1):
         row[6] = sequence
     return rows
@@ -251,9 +293,10 @@ def batches(items, size):
         yield items[start: start + size]
 
 
-def fetch_wiktionary(categories, depth):
+def fetch_wiktionary(categories, depth, seeds=SEED_TERMS):
     pages = []
-    for titles in batches(category_pages(WIKTIONARY, categories, depth), 50):
+    titles_to_read = sorted(set(category_pages(WIKTIONARY, categories, depth)) | set(seeds))
+    for titles in batches(titles_to_read, 50):
         for chunk in query_all(WIKTIONARY, prop="revisions", rvprop="content", rvslots="main", titles="|".join(titles)):
             for page in chunk.get("pages", []):
                 revisions = page.get("revisions") or [{}]
@@ -263,17 +306,25 @@ def fetch_wiktionary(categories, depth):
     return pages
 
 
-def fetch_wikipedia(categories, depth):
+def fetch_wikipedia(categories, depth, seeds=SEED_TERMS):
     pages = {}
-    for titles in batches(category_pages(WIKIPEDIA, categories, depth), 20):
-        for chunk in query_all(WIKIPEDIA, prop="extracts|langlinks", exintro="1", explaintext="1", exlimit="20",
-                               lllimit="max", titles="|".join(titles)):
+    titles_to_read = sorted(set(category_pages(WIKIPEDIA, categories, depth)) | set(seeds))
+    for titles in batches(titles_to_read, 20):
+        for chunk in query_all(WIKIPEDIA, prop="extracts|langlinks|pageprops", exintro="1", explaintext="1", exlimit="20",
+                               lllimit="max", ppprop="disambiguation", redirects="1", titles="|".join(titles)):
             for page in chunk.get("pages", []):
-                entry = pages.setdefault(page["title"], {"title": page["title"], "extract": "", "langlinks": {}})
+                if page.get("missing"):
+                    continue
+                entry = pages.setdefault(page["title"], {"title": page["title"], "extract": "", "langlinks": {}, "aliases": []})
                 entry["extract"] = page.get("extract") or entry["extract"]
+                entry["disambiguation"] = "disambiguation" in page.get("pageprops", {})
                 for link in page.get("langlinks", []):
                     if link["lang"] in ("fr", "en"):
                         entry["langlinks"][link["lang"]] = link["title"]
+            for redirect in chunk.get("redirects", []):
+                entry = pages.setdefault(redirect["to"], {"title": redirect["to"], "extract": "", "langlinks": {}, "aliases": []})
+                if redirect["from"] not in entry["aliases"]:
+                    entry["aliases"].append(redirect["from"])
     return list(pages.values())
 
 

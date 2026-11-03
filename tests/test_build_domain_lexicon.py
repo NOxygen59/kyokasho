@@ -36,6 +36,21 @@ WIKTIONARY_PAGE = """== {{langue|fr}} ==
 
 
 class LexiconTests(unittest.TestCase):
+    def test_people_places_and_disambiguation_pages_are_left_out_unless_chosen(self):
+        pages = [
+            {"title": "試験太郎", "extract": "試験太郎（1950年生まれ）は、日本の人物。"},
+            {"title": "試験大学", "extract": "試験の学校。"},
+            {"title": "試験床", "extract": "床の曖昧さ。", "disambiguation": True},
+            {"title": "試験材", "extract": "内装に使う材料。"},
+            {"title": "天井", "extract": "ある大学の研究では部屋の上面。"},
+        ]
+        self.assertEqual({row[0] for row in lexicon.term_rows([], pages)}, {"試験材", "天井"})
+
+    def test_other_spelling_gets_the_same_definition(self):
+        page = {"title": "建蔽率", "extract": "敷地に対する割合。", "aliases": ["建ぺい率"]}
+        rows = {row[0]: row for row in lexicon.term_rows([], [page])}
+        self.assertEqual(rows["建ぺい率"][5], rows["建蔽率"][5])
+
     def test_wiktionary_keeps_only_japanese_senses(self):
         entries = lexicon.wiktionary_entries("試験間", WIKTIONARY_PAGE)
         self.assertEqual(entries, [("試験間", "しけんま", "nom", ["Pièce de test."])])
@@ -77,8 +92,9 @@ class LexiconTests(unittest.TestCase):
         board = rows[1]
         self.assertEqual(board[1], "しけんいた")
         self.assertEqual(board[5][:3], ["Français : Planche d'essai", "Anglais : Test board", "試験板（しけんいた）は、試験の板。"])
-        self.assertTrue(board[5][-1].startswith("Source : https://ja.wikipedia.org/wiki/"))
-        self.assertTrue(rows[0][5][-1].startswith("Source : https://fr.wiktionary.org/wiki/"))
+        self.assertEqual(board[5][-1]["content"]["content"], "Source : Wikipédia")
+        self.assertTrue(board[5][-1]["content"]["href"].startswith("https://ja.wikipedia.org/wiki/"))
+        self.assertTrue(rows[0][5][-1]["content"]["href"].startswith("https://fr.wiktionary.org/wiki/"))
 
     def test_build_writes_a_yomitan_archive_with_attribution(self):
         with tempfile.TemporaryDirectory(prefix="kyokasho-lexicon-synthetic-") as folder:
