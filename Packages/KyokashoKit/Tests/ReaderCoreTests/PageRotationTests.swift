@@ -21,6 +21,26 @@ final class PageRotationTests: XCTestCase {
         }
     }
 
+    /// Valeurs des captures de la recette 74 : la surcouche non tournée, puis tournée par PDFKit, tombe où la page s'affiche.
+    func testOverlayTransformMatchesDisplayedPageOnceRotatedByPDFKit() {
+        let box = CGRect(x: 0, y: 421, width: 1190, height: 421)
+        let overlay = CGSize(width: CGFloat(1393), height: box.height * 1393 / box.width)
+        let inner = PageGeometry.pageToOverlay(box: box, overlayWidth: overlay.width)
+        let point = CGPoint(x: 48, y: 766).applying(inner)
+        let shown = CGPoint(x: overlay.height - point.y, y: point.x)   // rotation de 90° appliquée par PDFKit
+        let scale = overlay.width / box.width
+        let expected = CGPoint(x: 48, y: 766).applying(PageGeometry.pageToView(box: box, rotation: 90))
+        XCTAssertEqual(shown.x, expected.x * scale, accuracy: 0.001)
+        XCTAssertEqual(shown.y, expected.y * scale, accuracy: 0.001)
+    }
+
+    func testTrackpadScrollTurnsPageOnlyWhenLongAndHorizontal() {
+        XCTAssertTrue(PresentationLayout.isPageTurnScroll(CGPoint(x: -80, y: 10)))
+        XCTAssertTrue(PresentationLayout.isPageTurnScroll(CGPoint(x: 80, y: -30)))
+        XCTAssertFalse(PresentationLayout.isPageTurnScroll(CGPoint(x: 20, y: 0)))
+        XCTAssertFalse(PresentationLayout.isPageTurnScroll(CGPoint(x: 80, y: 60)))
+    }
+
     func testRotationNormalizationAndComposition() {
         XCTAssertEqual(PageTransform.normalizedRotation(-90), 270)
         XCTAssertEqual(PageTransform.normalizedRotation(450), 90)

@@ -224,6 +224,7 @@ final class ReaderController: NSObject, ObservableObject {
     var singleTap: UITapGestureRecognizer!
     var doubleTap: UITapGestureRecognizer!
     var swipeLeft: UISwipeGestureRecognizer!
+    var trackpadPageTurn: UIPanGestureRecognizer!
     /// Appui long en cours ou terminé (sélection de texte de PDFKit) : le tap qui suit est ignoré.
     var pressWasLong = false
     /// Début d'une sélection au doigt (page, point dans la page).

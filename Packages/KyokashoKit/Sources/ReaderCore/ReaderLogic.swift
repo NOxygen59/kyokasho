@@ -76,6 +76,11 @@ public enum PresentationLayout {
     }
 
     /// Rectangle visible d'une moitié dans la boîte de la page (coordonnées PDF, y vers le haut).
+    /// Défilement de trackpad assez long et assez horizontal pour tourner la page plutôt que déplacer la vue.
+    public static func isPageTurnScroll(_ translation: CGPoint) -> Bool {
+        abs(translation.x) >= 60 && abs(translation.x) >= abs(translation.y) * 2
+    }
+
     /// `rotation` : sens d'affichage de la page. « Gauche » et « droite » sont ceux de l'écran : sur une page tournée,
     /// ils correspondent à d'autres côtés de la boîte (même convention que `PageGeometry.pageToView`).
     public static func box(for part: PresentedPage.Part, in box: CGRect, rotation: Int = 0) -> CGRect {
@@ -171,6 +176,13 @@ public enum ContentBounds {
 // MARK: - Géométrie de page
 
 public enum PageGeometry {
+    /// Repère de page PDF → surcouche `PDFPageOverlayViewProvider`, posée par PDFKit dans le repère non tourné de la
+    /// page puis tournée avec elle (constat sur iPad, recette 1.3.2 (74)) : `box` et `overlayWidth` sans rotation.
+    public static func pageToOverlay(box: CGRect, overlayWidth: CGFloat) -> CGAffineTransform {
+        let scale = overlayWidth > 0 && box.width > 0 ? overlayWidth / box.width : 1
+        return pageToView(box: box, rotation: 0).concatenating(CGAffineTransform(scaleX: scale, y: scale))
+    }
+
     /// Transformation du repère de page PDF (points, y vers le haut) vers le repère d'une vue
     /// (y vers le bas, origine en haut à gauche de la boîte visible), rotation comprise.
     /// Les dessins sont stockés dans le repère PDF : ils restent justes si on change le rognage,

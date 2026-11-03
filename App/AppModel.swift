@@ -414,7 +414,9 @@ final class AppModel: ObservableObject {
     }
 
     /// Applique les rotations confirmées, puis rend périmés uniquement les résultats qui dépendent de l'image tournée.
-    func applyPageRotations(_ rotations: [Int: Int], to document: LibraryDocument) async throws {
+    /// `rereading` faux (par défaut) : OCR tourné avec la page, lectures IA et traductions gardées, rien n'est perdu.
+    /// `rereading` vrai, choix explicite pour une page lue de travers : ces résultats sont effacés et refaits.
+    func applyPageRotations(_ rotations: [Int: Int], to document: LibraryDocument, rereading: Bool = false) async throws {
         let valid = rotations.filter { (0..<document.pageCount).contains($0.key) }
         guard !valid.isEmpty else { return }
         if let reason = pageRotationBlockReason(for: document) { throw PageRotationBlocked(reason: reason) }
@@ -424,7 +426,11 @@ final class AppModel: ObservableObject {
         do {
             let pages = Set(valid.keys)
             try database.applyPageRotations(documentId: document.id, rotations: valid,
-                                            keepingOCR: OCRPage.jsonKeepingManualEdits)
+                                            keepingOCR: rereading ? OCRPage.jsonKeepingManualEdits : OCRPage.jsonFollowingRotation)
+            guard rereading else {
+                await ocr.endPageMutation(documentId: document.id)
+                return
+            }
             // Après la transaction : ces lectures coûtent du temps et de la batterie, un échec de la base ne doit
             // pas les perdre. Si leur effacement échoue, la rotation reste valable et l'utilisateur est prévenu.
             do {

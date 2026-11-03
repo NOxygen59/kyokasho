@@ -196,6 +196,23 @@ extension ReaderController {
             }
             if attach { pdfView.addGestureRecognizer(swipe) }
         }
+        // Trackpad, deux doigts : en double page dézoomée, PDFKit ne tourne pas la page au défilement (RET-063).
+        trackpadPageTurn = UIPanGestureRecognizer(target: self, action: #selector(handleTrackpadPageTurn(_:)))
+        trackpadPageTurn.allowedScrollTypesMask = .continuous
+        trackpadPageTurn.allowedTouchTypes = []
+        trackpadPageTurn.delegate = self
+        trackpadPageTurn.cancelsTouchesInView = false
+        if attach { pdfView.addGestureRecognizer(trackpadPageTurn) }
+    }
+
+    @objc func handleTrackpadPageTurn(_ gesture: UIPanGestureRecognizer) {
+        guard gesture.state == .ended, settings.layout == .double,
+              pdfView.scaleFactor <= pdfView.scaleFactorForSizeToFit * 1.05 else { return }
+        let moved = gesture.translation(in: pdfView)
+        guard PresentationLayout.isPageTurnScroll(moved) else { return }
+        let towardLeft = moved.x < 0
+        let forward = settings.direction == .rightToLeft ? !towardLeft : towardLeft
+        forward ? next() : previous()
     }
 
     @objc func handleSwipe(_ gesture: UISwipeGestureRecognizer) {

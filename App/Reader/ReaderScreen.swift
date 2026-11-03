@@ -303,7 +303,7 @@ struct ReaderScreen: View {
                 case .pageOrientation:
                     PageOrientationView(document: reader.document, selectedPage: reader.currentSourcePage,
                                         rotations: reader.pageRotations) {
-                        try await reader.applyPageRotations($0)
+                        try await reader.applyPageRotations($0, rereading: $1)
                     }
                 }
             }

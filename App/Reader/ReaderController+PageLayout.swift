@@ -17,12 +17,12 @@ extension ReaderController {
         Dictionary(uniqueKeysWithValues: (0..<document.pageCount).map { ($0, transforms[$0]?.rotation ?? 0) })
     }
 
-    func applyPageRotations(_ rotations: [Int: Int]) async throws {
+    func applyPageRotations(_ rotations: [Int: Int], rereading: Bool) async throws {
         let source = currentSourcePage
         // Une lecture en cours pour l'ancienne orientation ne doit plus s'afficher.
         cancelEnsureOCR()
         furiganaTask?.cancel()
-        try await model.applyPageRotations(rotations, to: document)
+        try await model.applyPageRotations(rotations, to: document, rereading: rereading)
         transforms = try model.database.pageTransforms(documentId: document.id)
         ocrPage = nil
         // Mémoires de l'ancienne orientation : leurs boîtes normalisées, redessinées sur la page tournée,

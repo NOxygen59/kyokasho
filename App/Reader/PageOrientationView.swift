@@ -5,10 +5,10 @@ import ReaderCore
 import SwiftUI
 import UIKit
 
-/// Prépare des rotations réversibles, puis invalide l'OCR seulement après confirmation.
+/// Prépare des rotations réversibles. Par défaut rien n'est perdu ; relire les pages est un choix explicite.
 struct PageOrientationView: View {
     let document: LibraryDocument
-    let apply: ([Int: Int]) async throws -> Void
+    let apply: ([Int: Int], Bool) async throws -> Void
     @EnvironmentObject private var model: AppModel
     // Observés pour que l'alerte apparaisse et disparaisse avec l'analyse, sans attendre « Appliquer ».
     @ObservedObject private var tasks = AITaskCenter.shared
@@ -17,6 +17,7 @@ struct PageOrientationView: View {
     @State private var selected: Set<Int>
     @State private var rotations: [Int: Int]
     private let original: [Int: Int]
+    private let currentPage: Int
     @State private var from = ""
     @State private var to = ""
     @State private var confirming = false
@@ -24,8 +25,9 @@ struct PageOrientationView: View {
     @State private var error: String?
 
     init(document: LibraryDocument, selectedPage: Int, rotations: [Int: Int],
-         apply: @escaping ([Int: Int]) async throws -> Void) {
+         apply: @escaping ([Int: Int], Bool) async throws -> Void) {
         self.document = document
+        currentPage = max(0, min(document.pageCount - 1, selectedPage))
         self.apply = apply
         let normalized = Dictionary(uniqueKeysWithValues: (0..<document.pageCount).map {
             ($0, PageTransform.normalizedRotation(rotations[$0] ?? 0))
@@ -41,56 +43,30 @@ struct PageOrientationView: View {
 
     var body: some View {
         NavigationStack {
-            List {
-                if let blocked = model.pageRotationBlockReason(for: document), !working {
-                    Label(blocked, systemImage: "hourglass").foregroundStyle(.orange)
-                }
-                if let error {
-                    Label(error, systemImage: "exclamationmark.triangle.fill").foregroundStyle(.red)
-                }
-                Section {
-                    HStack {
-                        Text("De la page")
-                        TextField("1", text: $from).keyboardType(.numberPad).frame(width: 60).textFieldStyle(.roundedBorder)
-                        Text("à")
-                        TextField("1", text: $to).keyboardType(.numberPad).frame(width: 60).textFieldStyle(.roundedBorder)
-                        Spacer()
-                        Button("Sélectionner") { selectRange() }.disabled(from.isEmpty)
-                    }
-                    HStack {
-                        Button("Tout sélectionner") { selected = Set(0..<document.pageCount) }
-                        Spacer()
-                        Button("Aucune") { selected.removeAll() }
-                    }
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 104), spacing: 10)], spacing: 12) {
-                        ForEach(0..<document.pageCount, id: \.self) { page in
-                            OrientationPageChoice(document: document, page: page,
-                                                  rotation: rotations[page, default: 0],
-                                                  selected: selected.contains(page)) {
-                                if selected.contains(page) { selected.remove(page) } else { selected.insert(page) }
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("L'aperçu ne modifie pas le PDF original.").font(.footnote).foregroundStyle(.secondary)
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 104), spacing: 10)], spacing: 12) {
+                            ForEach(0..<document.pageCount, id: \.self) { page in
+                                OrientationPageChoice(document: document, page: page,
+                                                      rotation: rotations[page, default: 0],
+                                                      selected: selected.contains(page)) {
+                                    if selected.contains(page) { selected.remove(page) } else { selected.insert(page) }
+                                }
+                                .id(page)
                             }
                         }
                     }
-                    .padding(.vertical, 4)
-                } header: {
-                    Text("Pages à orienter")
-                } footer: {
-                    Text("L'aperçu ne modifie pas le PDF original. Sélectionne une ou plusieurs pages, puis tourne-les.")
+                    .padding(16)
                 }
-
-                Section("Rotation de la sélection") {
-                    HStack(spacing: 12) {
-                        Button { rotate(-90) } label: { Label("À gauche", systemImage: "rotate.left") }
-                            .buttonStyle(.bordered).disabled(selected.isEmpty || working)
-                        Button { rotate(90) } label: { Label("À droite", systemImage: "rotate.right") }
-                            .buttonStyle(.bordered).disabled(selected.isEmpty || working)
-                        Button("Réinitialiser") {
-                            for page in selected { rotations[page] = 0 }
-                        }
-                        .buttonStyle(.bordered).disabled(selected.isEmpty || working)
-                    }
+                .onAppear {
+                    // Après la première mise en page : la grille paresseuse connaît alors la position demandée.
+                    DispatchQueue.main.async { proxy.scrollTo(currentPage, anchor: .center) }
                 }
             }
+            // Fixes au-dessus de la grille : toujours accessibles, même sur un long document.
+            .safeAreaInset(edge: .top, spacing: 0) { controls }
             .navigationTitle("Orientation des pages")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -102,19 +78,54 @@ struct PageOrientationView: View {
             }
             .overlay {
                 if working {
-                    ProgressView("Application et préparation de l'OCR…").padding(24)
+                    ProgressView("Application de l'orientation…").padding(24)
                         .background(Atelier.material(.regularMaterial),
                                     in: RoundedRectangle(cornerRadius: Atelier.corner(14)))
                 }
             }
             .confirmationDialog("Appliquer l'orientation ?", isPresented: $confirming) {
-                Button("Appliquer") { commit() }
+                Button("Tourner et tout garder") { commit(rereading: false) }
+                Button("Tourner et relire ces pages", role: .destructive) { commit(rereading: true) }
                 Button("Annuler", role: .cancel) {}
             } message: {
-                Text("\(changes.count) page(s) seront réorientées. Leur OCR sera refait et leurs lectures IA seront effacées puis relues si la lecture automatique est active. Leurs traductions seront effacées : à redemander. Une page corrigée à la main garde son OCR, tourné avec elle et sans relecture. Le PDF original, les notes, cartes et annotations sont conservés.")
+                Text("\(changes.count) page(s). « Tout garder » conserve l'OCR, les lectures IA et les traductions. « Relire », seulement pour une page lue de travers, efface ces lectures et traductions et refait l'OCR ; les corrections manuelles restent.")
             }
             .interactiveDismissDisabled(working)
         }
+    }
+
+    private var controls: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if let blocked = model.pageRotationBlockReason(for: document), !working {
+                Label(blocked, systemImage: "hourglass").foregroundStyle(.orange).font(.footnote)
+            }
+            if let error {
+                Label(error, systemImage: "exclamationmark.triangle.fill").foregroundStyle(.red).font(.footnote)
+            }
+            HStack(spacing: 10) {
+                Button { rotate(-90) } label: { Label("À gauche", systemImage: "rotate.left") }
+                Button { rotate(90) } label: { Label("À droite", systemImage: "rotate.right") }
+                Button("Réinitialiser") { for page in selected { rotations[page] = 0 } }
+                Spacer()
+                Text("\(selected.count) sélectionnée(s)").font(.footnote).foregroundStyle(.secondary)
+            }
+            .disabled(selected.isEmpty || working)
+            HStack(spacing: 10) {
+                Button("Tout") { selected = Set(0..<document.pageCount) }
+                Button("Aucune") { selected.removeAll() }
+                Spacer()
+                Text("De")
+                TextField("1", text: $from).keyboardType(.numberPad).frame(width: 56).textFieldStyle(.roundedBorder)
+                Text("à")
+                TextField("1", text: $to).keyboardType(.numberPad).frame(width: 56).textFieldStyle(.roundedBorder)
+                Button("Sélectionner") { selectRange() }.disabled(from.isEmpty)
+            }
+            .disabled(working)
+        }
+        .buttonStyle(.bordered)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(Atelier.material(.regularMaterial))
     }
 
     private func rotate(_ degrees: Int) {
@@ -131,13 +142,13 @@ struct PageOrientationView: View {
         selected.formUnion((low...high).map { $0 - 1 })
     }
 
-    private func commit() {
+    private func commit(rereading: Bool) {
         let pending = changes
         working = true
         error = nil
         Task {
             do {
-                try await apply(pending)
+                try await apply(pending, rereading)
                 dismiss()
             } catch {
                 self.error = error.localizedDescription

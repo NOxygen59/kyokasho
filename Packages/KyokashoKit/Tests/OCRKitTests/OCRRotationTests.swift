@@ -88,6 +88,16 @@ final class OCRRotationTests: XCTestCase {
         XCTAssertEqual(kept.lines[0].box.x, 0.7, accuracy: 0.000_001)
     }
 
+    /// Recette 74 : par défaut, une rotation ne perd aucun OCR, corrigé ou non.
+    func testDefaultRotationKeepsEveryResultAndComesBackExactly() throws {
+        let plain = page(edited: false)
+        let json = try JSONEncoder().encode(plain)
+        let turned = try XCTUnwrap(OCRPage.jsonFollowingRotation(json, fromRotation: 0, toRotation: 180))
+        XCTAssertEqual(try JSONDecoder().decode(OCRPage.self, from: turned).lines[0].box.x, 0.6, accuracy: 0.000_001)
+        let back = try XCTUnwrap(OCRPage.jsonFollowingRotation(turned, fromRotation: 180, toRotation: 0))
+        XCTAssertEqual(try JSONDecoder().decode(OCRPage.self, from: back).lines[0].box.x, 0.1, accuracy: 0.000_001)
+    }
+
     /// Revue Codex de la 74 : une correction trop ancienne pour être convertie ne doit pas être effacée.
     func testRotationNeverErasesEditsItCannotConvert() throws {
         let old = try JSONEncoder().encode(page(edited: true, version: 4))

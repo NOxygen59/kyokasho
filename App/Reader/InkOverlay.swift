@@ -226,7 +226,9 @@ final class InkPageView: UIView, PKCanvasViewDelegate {
             ocrCharLayer.path = nil
             return
         }
-        let transform = pageTransform
+        // PDFKit pose cette surcouche dans le repère non tourné de la page et la tourne lui-même : la rotation ne
+        // doit pas être appliquée une seconde fois (recette 1.3.2 (74) : zones hors du texte ou coupées).
+        let transform = PageGeometry.pageToOverlay(box: box, overlayWidth: bounds.width)
         func path(_ boxes: [NormBox]) -> CGPath {
             let p = CGMutablePath()
             for b in boxes {
