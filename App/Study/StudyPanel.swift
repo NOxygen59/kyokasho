@@ -144,6 +144,7 @@ struct StudyTextTab: View {
     @State private var matches: [PageTextSearch.Match] = []
     @State private var editingLine: Int?
     @State private var showVerify = false
+    @State private var showLineEditor = false
     @State private var lineDraft = ""
 
     var body: some View {
@@ -254,6 +255,7 @@ struct StudyTextTab: View {
             Text("Ta correction est gardée ; la relecture automatique n'y touchera plus.")
         }
         .sheet(isPresented: $showVerify) { VerifySheet(reader: reader).preferredColorScheme(Theme.current.colorScheme) }
+        .sheet(isPresented: $showLineEditor) { OCRLineEditor(reader: reader).preferredColorScheme(Theme.current.colorScheme) }
         .sheet(isPresented: $showCompare) { CompareEnginesView(reader: reader).environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review) }
     }
 
@@ -280,6 +282,10 @@ struct StudyTextTab: View {
                     Label("Rescanner", systemImage: "arrow.clockwise")
                 }
                 .disabled(aiTasks.isRunning(reader.verifyKey))
+                Button { showLineEditor = true } label: {
+                    Label("Corriger le texte", systemImage: "pencil")
+                }
+                .disabled(reader.ocrPage == nil)
             }
             .font(.caption.weight(.semibold))
             .foregroundStyle(Atelier.Tint.ai)
@@ -953,3 +959,37 @@ final class LayoutRegionsCache {
 
 /// Identité d'objet : `sheet(item:)` présente la session elle-même (RET-009).
 extension LookupSession: Identifiable {}
+
+/// Correction du texte de l'OCR, ligne par ligne. Écran à part : dans le panneau, l'appui long sur une ligne
+/// sélectionnable est pris par la sélection de texte et le menu « Corriger cette ligne » n'apparaît pas.
+private struct OCRLineEditor: View {
+    @ObservedObject var reader: ReaderController
+    @Environment(\.dismiss) private var dismiss
+    @State private var drafts: [Int: String] = [:]
+
+    var body: some View {
+        NavigationStack {
+            List {
+                ForEach(Array((reader.ocrPage?.lines ?? []).enumerated()), id: \.offset) { index, line in
+                    TextField("Texte de la ligne", text: Binding(
+                        get: { drafts[index] ?? line.text },
+                        set: { drafts[index] = $0 }
+                    ), axis: .vertical)
+                    .font(Atelier.jp)
+                }
+            }
+            .navigationTitle("Corriger le texte")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Annuler") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Garder") {
+                        let lines = reader.ocrPage?.lines ?? []
+                        reader.correctOCRLines(drafts.filter { lines.indices.contains($0.key) && lines[$0.key].text != $0.value })
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+}

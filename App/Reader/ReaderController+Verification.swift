@@ -144,19 +144,27 @@ extension ReaderController {
     }
 
     /// Correction à la main d'une ligne (gardée : la relecture automatique n'y touche plus).
-    func correctOCRLine(_ index: Int, text: String) {
-        guard var page = ocrPage, page.lines.indices.contains(index) else { return }
-        let new = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !new.isEmpty else { return }
-        var line = page.lines[index]
-        if new.count != line.charBoxes.count {
-            line.charBoxes = CharacterLayout.proportional(new, in: line.box, vertical: line.vertical)
-            line.measuredCharBoxes = false
+    func correctOCRLine(_ index: Int, text: String) { correctOCRLines([index: text]) }
+
+    /// Plusieurs lignes en une seule écriture : des écritures séparées pourraient se terminer dans le désordre.
+    func correctOCRLines(_ corrections: [Int: String]) {
+        guard var page = ocrPage else { return }
+        var changed = false
+        for (index, text) in corrections where page.lines.indices.contains(index) {
+            let new = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !new.isEmpty else { continue }
+            var line = page.lines[index]
+            if new.count != line.charBoxes.count {
+                line.charBoxes = CharacterLayout.proportional(new, in: line.box, vertical: line.vertical)
+                line.measuredCharBoxes = false
+            }
+            line.text = new
+            line.edited = true
+            line.doubt = []
+            page.lines[index] = line
+            changed = true
         }
-        line.text = new
-        line.edited = true
-        line.doubt = []
-        page.lines[index] = line
+        guard changed else { return }
         ocrPage = page
         showOCR(page, source: focusSource)
         wordStartMemo.removeAll()

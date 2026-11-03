@@ -10,6 +10,10 @@ import Foundation
 enum ReleaseHistory {
     static let past: [ReleaseNotes] = [
         // Builds de test non publiées, entre la 1.3 et la 1.3.2.
+        ReleaseNotes("1.3.2 (75)", "2026-11-03", published: false, "Recette de l'orientation",
+                     added: ["Bouton « Corriger le texte » dans le panneau Texte.", "Balayage du trackpad en double page dézoomée."],
+                     fixed: ["Plantage de la découpe des pages.", "Zones de texte justes sur une page tournée.",
+                             "Tourner une page garde l'OCR, les lectures IA et les traductions."]),
         ReleaseNotes("1.3.2 (74)", "2026-11-03", published: false, "Orientation fiable",
                      added: [],
                      fixed: ["Plantage en tournant une page, furigana et zones de texte mal placés sur une page tournée.",

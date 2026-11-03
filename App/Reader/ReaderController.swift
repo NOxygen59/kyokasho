@@ -288,6 +288,8 @@ final class ReaderController: NSObject, ObservableObject {
         let presented: [PresentedPage]
         /// Rotations à poser sur le fil principal (voir `install`), moitiés de pages découpées comprises.
         let pendingRotations: [(page: PDFPage, degrees: Int)]
+        /// Cadres à poser sur le fil principal : `setBounds` notifie UIKit comme `rotation` (découpe, recette 1.3.2 (74)).
+        let pendingBounds: [(page: PDFPage, box: CGRect)]
     }
 
     /// PDF aux pages de même hauteur (`Caches/Equalized/<id>-<taille>-<date>.pdf`) et cadres d'origine des pages
@@ -424,6 +426,7 @@ final class ReaderController: NSObject, ObservableObject {
         let rtl = settings.direction == .rightToLeft
         var splitPages = Set<Int>()
         var pendingRotations: [(page: PDFPage, degrees: Int)] = []
+        var pendingBounds: [(page: PDFPage, box: CGRect)] = []
         let count = pdf.pageCount
         boxes.reserveCapacity(count)
         rotations.reserveCapacity(count)
@@ -457,15 +460,15 @@ final class ReaderController: NSObject, ObservableObject {
                 splitPages.insert(index)
                 let first: PresentedPage.Part = rtl ? .right : .left
                 let second: PresentedPage.Part = rtl ? .left : .right
-                page.setBounds(PresentationLayout.box(for: first, in: box, rotation: shownRotation), for: .cropBox)
-                copy.setBounds(PresentationLayout.box(for: second, in: box, rotation: shownRotation), for: .cropBox)
+                pendingBounds.append((page, PresentationLayout.box(for: first, in: box, rotation: shownRotation)))
+                pendingBounds.append((copy, PresentationLayout.box(for: second, in: box, rotation: shownRotation)))
                 // `copy()` ne recopie pas les propriétés Swift.
                 (copy as? TonedPage)?.pageKey = pageKey
                 (copy as? TonedPage)?.originalBox = box
                 (copy as? TonedPage)?.sourceBox = sourceBox
                 ordered.append(copy)
             } else if settings.autoCrop, let crop = transform?.autoCrop {
-                page.setBounds(ContentBounds.apply(crop, to: box), for: .cropBox)
+                pendingBounds.append((page, ContentBounds.apply(crop, to: box)))
             }
         }
         var presented = PresentationLayout.pages(pageCount: boxes.count, splitPages: splitPages, rightToLeft: rtl)
@@ -487,7 +490,7 @@ final class ReaderController: NSObject, ObservableObject {
             for (i, page) in ordered.enumerated() { pdf.insert(page, at: i) }
         }
         return Built(pdf: pdf, boxes: boxes, rotations: rotations, splits: splitPages, presented: presented,
-                     pendingRotations: pendingRotations)
+                     pendingRotations: pendingRotations, pendingBounds: pendingBounds)
     }
 
     func install(_ built: Built?, source: Int, generation: Int) {
@@ -506,6 +509,7 @@ final class ReaderController: NSObject, ObservableObject {
         let pdf = built.pdf
         // Avant `pdfView.document` : la vue découvre les pages déjà dans leur sens.
         for (page, degrees) in built.pendingRotations { page.rotation = degrees }
+        for (page, bounds) in built.pendingBounds { page.setBounds(bounds, for: .cropBox) }
         // Rognages calculés pendant la construction (l'instantané des transformations était plus ancien).
         if settings.autoCrop {
             var pagesBySource: [Int: [PDFPage]] = [:]

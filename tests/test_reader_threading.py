@@ -39,9 +39,23 @@ class PDFPageRotationThreadTests(unittest.TestCase):
         body = self.body_of("nonisolated static func build(", READER.read_text(encoding="utf-8"))
         self.assertIsNone(PDF_PAGE_SETTER.search(body))
 
-    def test_install_applies_pending_rotations_before_showing_the_document(self):
+    def test_background_build_never_sets_page_bounds(self):
+        # Crash de la découpe, recette 1.3.2 (74) : `setBounds` notifie UIKit comme `rotation`.
+        body = self.body_of("nonisolated static func build(", READER.read_text(encoding="utf-8"))
+        self.assertNotIn(".setBounds(", body)
+
+    def test_every_page_bounds_setter_is_known(self):
+        found = []
+        for path in (ROOT / "App").rglob("*.swift"):
+            for line in path.read_text(encoding="utf-8").splitlines():
+                if ".setBounds(" in line and not line.lstrip().startswith("//"):
+                    found.append(path.name)
+        self.assertEqual(sorted(found), sorted(["ReaderController.swift", "ReaderController.swift", "ReaderController+PageLayout.swift"]))
+
+    def test_install_applies_pending_changes_before_showing_the_document(self):
         body = self.body_of("func install(_ built: Built?", READER.read_text(encoding="utf-8"))
-        self.assertLess(body.index("built.pendingRotations"), body.index("pdfView.document = pdf"))
+        for pending in ("built.pendingRotations", "built.pendingBounds"):
+            self.assertLess(body.index(pending), body.index("pdfView.document = pdf"))
 
 
 if __name__ == "__main__":
