@@ -20,6 +20,39 @@ final class DictionaryUpdateScheduleTests: XCTestCase {
 }
 
 final class DictionaryCatalogTests: XCTestCase {
+    /// Recette locale facultative : vrais ZIP hors dépôt, base jetable, fermeture puis réouverture.
+    /// Aucune bibliothèque personnelle n'est ouverte ; le chemin explicite évite de lire les données par défaut.
+    func testRealBundledArchivesImportAndReopenWhenProvided() throws {
+        guard let path = ProcessInfo.processInfo.environment["KYOKASHO_TEST_LEXICONS"] else {
+            throw XCTSkip("Vrais lexiques externes non fournis")
+        }
+        let source = URL(fileURLWithPath: path, isDirectory: true)
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("lexicon-import-" + UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        do {
+            let database = try DictionaryDatabase.open(directory: directory)
+            for language in BundledLexicon.Language.allCases {
+                let archive = source.appendingPathComponent(language.resource + ".zip")
+                try DictionaryImporter(database: database).importDictionary(at: archive)
+            }
+        }
+        let reopened = try DictionaryDatabase.open(directory: directory)
+        let infos = try reopened.dictionaries()
+        XCTAssertEqual(infos.count, 3)
+        XCTAssertTrue(infos.allSatisfy { $0.termCount == 3836 && $0.enabled })
+        for (language, expected) in [(BundledLexicon.Language.french, "plafond"), (.english, "ceiling"), (.chinese, "天花板")] {
+            let info = try XCTUnwrap(infos.first { $0.title == language.title })
+            let rows = try reopened.terms(matching: ["天井"], dictionaryIds: [try XCTUnwrap(info.id)])
+            XCTAssertFalse(rows.isEmpty)
+            XCTAssertTrue(rows.contains { $0.reading == "てんじょう" && $0.glossary.lowercased().contains(expected) })
+            var options = LookupOptions()
+            options.excludedDictionaryIds = BundledLexicon.excludedDictionaryIds(in: infos, language: language)
+            let results = try Translator(database: reopened).findTerms("天井", options: options)
+            XCTAssertFalse(results.isEmpty)
+            XCTAssertTrue(results.allSatisfy { $0.definitions.allSatisfy { $0.dictionaryTitle == language.title } })
+        }
+    }
+
     func testBaseTitleAndMatching() {
         XCTAssertEqual(DictionaryCatalog.baseTitle("JMdict (French) [2026-10-28]"), "JMdict (French)")
         XCTAssertEqual(DictionaryCatalog.baseTitle("Jitendex.org [2026-10-03]"), "Jitendex.org")
@@ -82,5 +115,45 @@ final class DictionaryCatalogTests: XCTestCase {
         let list = try db.dictionaries()
         XCTAssertEqual(list.map(\.title), ["Autre", BundledLexicon.title])
         XCTAssertEqual(list.last?.revision, "2")
+    }
+
+    func testBundledLanguagesFollowAppliedLocalizationAndPlatform() {
+        XCTAssertEqual(BundledLexicon.language(preferredLocalizations: ["en-GB", "fr"], supportsChinese: false), .english)
+        XCTAssertEqual(BundledLexicon.language(preferredLocalizations: ["zh-Hans"], supportsChinese: true), .chinese)
+        XCTAssertEqual(BundledLexicon.language(preferredLocalizations: ["zh-Hans"], supportsChinese: false), .french)
+        XCTAssertEqual(BundledLexicon.language(preferredLocalizations: [], supportsChinese: true), .french)
+        XCTAssertEqual(BundledLexicon.Language.french.title, "Lexique du design d'intérieur (Wikipédia, Wiktionnaire)")
+        XCTAssertEqual(Set(BundledLexicon.Language.allCases.map(\.title)).count, 3)
+        XCTAssertEqual(Set(BundledLexicon.Language.allCases.map(\.resource)).count, 3)
+    }
+
+    /// Importer les trois, mettre à jour l'anglais puis filtrer : aucune autre variante ni dictionnaire personnel
+    /// ne doit être supprimé ou désactivé, et aucune définition de la mauvaise langue ne doit sortir.
+    func testBundledVariantsCoexistAndLookupUsesOnlySelectedLanguage() throws {
+        let db = try DictionaryDatabase.inMemory()
+        for language in BundledLexicon.Language.allCases {
+            try DictionaryImporter(database: db).importDictionary(at: FakeDictionary.make(title: language.title, revision: "1"))
+        }
+        try DictionaryImporter(database: db).importDictionary(at: FakeDictionary.make(title: "Personnel"))
+        try DictionaryImporter(database: db).importDictionary(at: FakeDictionary.make(title: BundledLexicon.Language.english.title, revision: "2"))
+        let infos = try db.dictionaries()
+        XCTAssertEqual(infos.count, 4)
+        XCTAssertTrue(infos.allSatisfy(\.enabled))
+        XCTAssertEqual(infos.first { $0.title == BundledLexicon.Language.french.title }?.revision, "1")
+        XCTAssertEqual(infos.first { $0.title == BundledLexicon.Language.chinese.title }?.revision, "1")
+        XCTAssertEqual(infos.first { $0.title == BundledLexicon.Language.english.title }?.revision, "2")
+        for language in BundledLexicon.Language.allCases {
+            let excluded = BundledLexicon.excludedDictionaryIds(in: infos, language: language)
+            XCTAssertEqual(excluded.count, 2)
+            let selected = infos.filter { !excluded.contains($0.id!) }.map(\.title)
+            XCTAssertEqual(Set(selected), [language.title, "Personnel"])
+            var options = LookupOptions()
+            options.excludedDictionaryIds = excluded
+            let results = try Translator(database: db).findTerms("食べる", options: options)
+            XCTAssertFalse(results.isEmpty)
+            XCTAssertTrue(results.allSatisfy { result in
+                result.definitions.allSatisfy { $0.dictionaryTitle == language.title || $0.dictionaryTitle == "Personnel" }
+            })
+        }
     }
 }

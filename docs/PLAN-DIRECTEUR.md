@@ -3,6 +3,8 @@
 
 # Plan directeur — professionnalisation de Kyōkasho
 
+> **Lot local lexique du 04/11/2026 :** [livraison multilingue et revue ciblée](LEXIQUE-LANGUES-REPRISE.md), `codex/lexique-langues`, base `15f18a3`. Archives EN et chinois court hors dépôt, 3 836 entrées chacune ; anglais 8 121/8 121 textes. Vrai import/réouverture et filtre vérifiés, 432 Swift réussis / 7 ignorés, 67 Python, compilation iOS Release générique réussie. Revue Claude, raccordement au paquet Mac et recettes Mac/iPad restent à faire. Aucune fusion/push/version/candidate autorisée par cette note.
+
 > **Lot local du 04/11/2026 — MAINT-01 / QA-03 :** [nettoyage ciblé](NETTOYAGE-CIBLE-2026-11-04.md) sur `codex/nettoyage-cible`, base `a7ee0e8` : test des variables de traduction réparé, ancien dialogue OCR protégé, seule méthode interne `shiftReport` sans appel retirée. Lot autorisé par NOxygen59, vérification et revue séparées ; aucune fusion, nouvelle candidate ou preuve iPad ne découle de cette note. Les états historiques ci-dessous sont conservés.
 
 > **Point d'entrée de pilotage pour les humains et agents IA.** Ce fichier suit la transformation *technique* du projet, pas le backlog de fonctionnalités. Il n'est **pas** une autorisation d'implémenter, fusionner, publier ou modifier les données. Lire [AGENTS.md](../AGENTS.md) avant toute action.

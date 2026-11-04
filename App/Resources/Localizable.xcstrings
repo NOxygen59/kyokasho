@@ -37621,24 +37621,24 @@
         }
       }
     },
-    "Termes de l'architecture, de l'intérieur, du mobilier et des matériaux : sens en français (Wiktionnaire), titres français et anglais et première phrase (Wikipédia).": {
+    "Termes de l'architecture, de l'intérieur, du mobilier et des matériaux, dans la langue de l'app. Sources conservées ; traductions automatiques à vérifier.": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Terms of architecture, interiors, furniture and materials, with definitions in French (Wikipedia, Wiktionary), Wikidata labels, Japanese legal definitions and the first sentence of the Japanese article."
+            "value": "Architecture, interiors, furniture and materials in the app's language. Source links retained; machine translations require verification."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Termes de l'architecture, de l'intérieur, du mobilier et des matériaux : sens en français (Wiktionnaire), titres français et anglais et première phrase (Wikipédia)."
+            "value": "Termes de l'architecture, de l'intérieur, du mobilier et des matériaux, dans la langue de l'app. Sources conservées ; traductions automatiques à vérifier."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "建筑、室内、家具和材料术语，附法语释义（维基百科、维基词典）、Wikidata 标签、日本法律定义和日语条目首句。"
+            "value": "以应用语言显示建筑、室内设计、家具及材料术语。保留来源链接；机器翻译需核实。"
           }
         }
       }

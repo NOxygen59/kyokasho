@@ -59,7 +59,16 @@ final class DictionaryModel: ObservableObject {
         set { profiles.active = newValue }
     }
 
-    var hasTermDictionaries: Bool { dictionaries.contains { $0.enabled && $0.termCount > 0 } }
+    private var lookupOptions: LookupOptions {
+        var options = profile.lookup
+        options.excludedDictionaryIds.formUnion(BundledLexicon.excludedDictionaryIds(in: dictionaries, language: BundledLexicon.selectedLanguage))
+        return options
+    }
+
+    var hasTermDictionaries: Bool {
+        let excluded = lookupOptions.excludedDictionaryIds
+        return dictionaries.contains { $0.enabled && $0.termCount > 0 && !excluded.contains($0.id ?? -1) }
+    }
 
     init(appDatabase: AppDatabase) {
         self.appDatabase = appDatabase
@@ -160,7 +169,7 @@ final class DictionaryModel: ObservableObject {
 
     func lookup(_ text: String) async -> [TermResult] {
         guard let translator else { return [] }
-        let options = profile.lookup
+        let options = lookupOptions
         return await Task.detached(priority: .userInitiated) {
             (try? translator.findTerms(text, options: options)) ?? []
         }.value
@@ -169,7 +178,7 @@ final class DictionaryModel: ObservableObject {
     func words(startingWith prefix: String) async -> [DictionaryWord] {
         guard let database else { return [] }
         let ids = Set(dictionaries.filter { $0.enabled && $0.termCount > 0
-            && !profile.lookup.excludedDictionaryIds.contains($0.id ?? -1) }.compactMap(\.id))
+            && !lookupOptions.excludedDictionaryIds.contains($0.id ?? -1) }.compactMap(\.id))
         return await Task.detached(priority: .userInitiated) {
             (try? database.words(startingWith: prefix, dictionaryIds: ids)) ?? []
         }.value
@@ -198,7 +207,7 @@ final class DictionaryModel: ObservableObject {
 
     func segment(_ text: String) async -> [Translator.Segment] {
         guard let translator else { return [] }
-        let options = profile.lookup
+        let options = lookupOptions
         return await Task.detached(priority: .utility) { (try? translator.segment(text, options: options)) ?? [] }.value
     }
 

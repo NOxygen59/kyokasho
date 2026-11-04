@@ -31,7 +31,14 @@ final class DictionaryCatalogService: ObservableObject {
     private var queue: [String] = []
     private static let lastAutomaticCheckKey = "dictionaries.lastUpdateCheck"
     /// Version du lexique fourni déjà proposée : « Plus tard » ne redemande pas à chaque retour dans l'app.
-    private static let bundledOfferedKey = "dictionaries.bundledOfferedRevision"
+    private static var bundledOfferedKey: String { "dictionaries.bundledOfferedRevision." + BundledLexicon.selectedLanguage.rawValue }
+
+    /// Une proposition conservée avant un changement de langue ne doit pas installer la mauvaise variante.
+    private func discardOtherLanguageOffers() {
+        offeredUpdates.removeAll { id in
+            BundledLexicon.Language.allCases.contains { $0.resource == id } && id != BundledLexicon.resource
+        }
+    }
 
     func installed(_ entry: CatalogEntry, in model: DictionaryModel) -> DictionaryInfo? {
         model.dictionaries.first { DictionaryCatalog.baseTitle($0.title) == entry.titlePrefix }
@@ -156,8 +163,10 @@ final class DictionaryCatalogService: ObservableObject {
 
     /// Lexique fourni plus récent que celui installé : proposé sans réseau, il est déjà dans le paquet.
     private func bundledUpdateAvailable(in model: DictionaryModel) -> Bool {
-        guard let bundled = Self.bundledRevision, let installed = installedBundled(in: model) else { return false }
-        return installed.revision != bundled
+        guard let bundled = Self.bundledRevision,
+              model.dictionaries.contains(where: { BundledLexicon.language(forTitle: $0.title) != nil }) else { return false }
+        // Une autre langue est déjà installée : proposer la variante manquante, sans remplacer l'ancienne.
+        return installedBundled(in: model)?.revision != bundled
     }
 
     /// Une fois par semaine au plus, en Wi-Fi : cherche de nouvelles versions et les propose. N'installe rien.
@@ -165,6 +174,7 @@ final class DictionaryCatalogService: ObservableObject {
     func checkAutomaticallyIfDue(model: DictionaryModel) async {
         let defaults = UserDefaults.standard
         guard !checking, working == nil else { return }
+        discardOtherLanguageOffers()
         // Le lexique fourni arrive avec l'app, sans réseau : il n'attend pas la vérification de la semaine.
         var ids: [String] = []
         if bundledUpdateAvailable(in: model), defaults.string(forKey: Self.bundledOfferedKey) != Self.bundledRevision {
@@ -193,6 +203,7 @@ final class DictionaryCatalogService: ObservableObject {
 
     /// Réponse de l'utilisateur à la proposition : les mises à jour s'installent l'une après l'autre.
     func installOfferedUpdates(model: DictionaryModel) {
+        discardOtherLanguageOffers()
         queue = offeredUpdates
         offeredUpdates = []
         installNextQueued(model: model)
@@ -210,7 +221,7 @@ final class DictionaryCatalogService: ObservableObject {
         guard working == nil, !queue.isEmpty else { return }
         let id = queue.removeFirst()
         // Supprimé entre la proposition et la réponse : on ne le réinstalle pas.
-        if id == BundledLexicon.resource, installedBundled(in: model) != nil {
+        if id == BundledLexicon.resource, model.dictionaries.contains(where: { BundledLexicon.language(forTitle: $0.title) != nil }) {
             installBundled(model: model)
         } else if let entry = DictionaryCatalog.entries.first(where: { $0.id == id }), installed(entry, in: model) != nil {
             install(entry, model: model)
@@ -247,6 +258,10 @@ final class DictionaryCatalogService: ObservableObject {
     /// Lit les index publiés des dictionnaires installés depuis le catalogue (sur demande seulement).
     func checkUpdates(model: DictionaryModel) {
         guard !checking else { return }
+        discardOtherLanguageOffers()
+        if bundledUpdateAvailable(in: model), !offeredUpdates.contains(BundledLexicon.resource) {
+            offeredUpdates.append(BundledLexicon.resource)
+        }
         checking = true
         Task {
             updates = await publishedUpdates(model: model).found
@@ -320,7 +335,7 @@ struct DictionaryCatalogView: View {
         return VStack(alignment: .leading, spacing: 5) {
             HStack(alignment: .firstTextBaseline) {
                 Text(BundledLexicon.name).font(.body.weight(.semibold))
-                Text("FR").font(.caption2.weight(.bold))
+                Text(BundledLexicon.selectedLanguage.rawValue.uppercased()).font(.caption2.weight(.bold))
                     .padding(.horizontal, 5).padding(.vertical, 1)
                     .background(Atelier.surfaceHigh, in: Capsule())
                 Text("conseillé").font(.caption2.weight(.semibold)).foregroundStyle(.green)
@@ -415,7 +430,7 @@ struct DictionaryLicensesView: View {
                 let entry = DictionaryCatalog.entry(forInstalledTitle: d.title)
                 VStack(alignment: .leading, spacing: 4) {
                     Text(d.title).font(.subheadline.weight(.semibold))
-                    if let license = entry?.license ?? (d.title == BundledLexicon.title ? BundledLexicon.license : nil) {
+                    if let license = entry?.license ?? (BundledLexicon.language(forTitle: d.title) != nil ? BundledLexicon.license : nil) {
                         Text("Licence : \(license)").font(.caption)
                     }
                     if let author = d.author, !author.isEmpty { Text("Auteur : \(author)").font(.caption).foregroundStyle(.secondary) }
