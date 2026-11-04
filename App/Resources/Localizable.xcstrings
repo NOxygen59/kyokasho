@@ -22089,6 +22089,28 @@
         }
       }
     },
+    "Lecture OvisOCR2 : un bandeau annonce qu'elle sera longue, et l'analyse d'un document peut s'arrêter depuis la liste des IA.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OvisOCR2 reading: a banner warns that it will take a long time, and a document analysis can be stopped from the AI list."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lecture OvisOCR2 : un bandeau annonce qu'elle sera longue, et l'analyse d'un document peut s'arrêter depuis la liste des IA."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OvisOCR2 阅读：横幅提示会花很长时间，文档分析可在 AI 列表中停止。"
+          }
+        }
+      }
+    },
     "Lecture OvisOCR2 en cours : ça va prendre beaucoup de temps": {
       "localizations": {
         "en": {
@@ -22745,6 +22767,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "室内设计词库"
+          }
+        }
+      }
+    },
+    "Lexique du design d'intérieur : version anglaise, choisie selon la langue de l'app.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Interior design lexicon: English version, chosen from the app's language."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lexique du design d'intérieur : version anglaise, choisie selon la langue de l'app."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "室内设计词典：英文版，按应用语言选择。"
           }
         }
       }
@@ -23449,28 +23493,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "我的列表 · %lld"
-          }
-        }
-      }
-    },
-    "Mac : ouvrir le relevé de batterie ne ferme plus les Réglages.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mac: opening the battery log no longer closes Settings."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mac : ouvrir le relevé de batterie ne ferme plus les Réglages."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mac：打开电池记录不会再关闭设置。"
           }
         }
       }
@@ -34185,6 +34207,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "设置"
+          }
+        }
+      }
+    },
+    "Réglages : ouvrir le relevé de batterie ou une autre fenêtre de diagnostic ne ferme plus les Réglages.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Settings: opening the battery log or another diagnostic window no longer closes Settings."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Réglages : ouvrir le relevé de batterie ou une autre fenêtre de diagnostic ne ferme plus les Réglages."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "设置：打开电池记录或其他诊断窗口不会再关闭设置。"
           }
         }
       }
@@ -45163,6 +45207,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "登录界面"
+          }
+        }
+      }
+    },
+    "Écran de correction : le bouton d'annulation s'affiche en entier.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Correction screen: the undo button is fully visible."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Écran de correction : le bouton d'annulation s'affiche en entier."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "校正界面：撤销按钮完整显示。"
           }
         }
       }

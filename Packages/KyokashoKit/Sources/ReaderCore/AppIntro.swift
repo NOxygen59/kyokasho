@@ -81,8 +81,11 @@ public struct ReleaseNotes: Equatable, Sendable, Identifiable {
     public static let current = ReleaseNotes("1.4.2", "2026-11-04", published: false, String(localized: "Nouveautés et export plus clairs", bundle: .main), added: [
             String(localized: "Export : le fichier se prépare d'abord, puis un message indique clairement quand il est prêt à être enregistré ou envoyé.", bundle: .main),
             String(localized: "Extraction des lectures OvisOCR2 : le nombre de pages lues est affiché pour chaque document.", bundle: .main),
+            String(localized: "Lexique du design d'intérieur : version anglaise, choisie selon la langue de l'app.", bundle: .main),
+            String(localized: "Lecture OvisOCR2 : un bandeau annonce qu'elle sera longue, et l'analyse d'un document peut s'arrêter depuis la liste des IA.", bundle: .main),
         ], fixed: [
-            String(localized: "Mac : ouvrir le relevé de batterie ne ferme plus les Réglages.", bundle: .main),
+            String(localized: "Écran de correction : le bouton d'annulation s'affiche en entier.", bundle: .main),
+            String(localized: "Réglages : ouvrir le relevé de batterie ou une autre fenêtre de diagnostic ne ferme plus les Réglages.", bundle: .main),
             String(localized: "Cette fenêtre ne montre plus que les changements de la version installée.", bundle: .main),
             String(localized: "Fenêtre d'étude, notes et dictionnaire : le texte n'est plus dédoublé sur les styles à ombre franche.", bundle: .main),
         ])

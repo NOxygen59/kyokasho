@@ -17,6 +17,7 @@ Ce dossier organise la reprise du projet à partir de **v1.3, build 40**. L'audi
 | Comprendre ce qui est conservé, exporté ou effacé | [Données et sauvegardes](DONNEES-ET-SAUVEGARDES.md) |
 | Préparer les essais iPad PageShift et sauvegarde, sans données personnelles | [Recette QA-02 et fiches GitHub](RECETTE-IPAD-QA-02.md) |
 | Suivre un retour d'usage réel, de l'Issue à la confirmation iPad | [Registre des retours iPad](RETOURS-IPAD.md) |
+| Savoir ce que chaque version embarque | [Les trois versions](VERSIONS-PLATEFORMES.md) |
 | Vérifier une modification | [Stratégie de tests et recette iPad](TESTS.md) |
 | Automatiser progressivement les contrôles | [CI et livraison](CI-ET-LIVRAISON.md) |
 | Zéro dépense GitHub, tests locaux et future CI | [Plan d'automatisation CI](CI-ROADMAP.md) |
