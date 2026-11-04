@@ -89,6 +89,24 @@ public struct LookupOptions: Codable, Sendable, Equatable {
     }
 }
 
+/// Mémo borné et sûr entre fils, clé texte. `Box` : `NSCache` ne garde que des objets.
+private final class Memo<Value>: @unchecked Sendable {
+    private final class Box { let value: Value; init(_ value: Value) { self.value = value } }
+    private let cache = NSCache<NSString, Box>()
+
+    init(limit: Int) { cache.countLimit = limit }
+
+    subscript(key: String) -> Value? {
+        get { cache.object(forKey: key as NSString)?.value }
+        set {
+            if let newValue { cache.setObject(Box(newValue), forKey: key as NSString) }
+            else { cache.removeObject(forKey: key as NSString) }
+        }
+    }
+
+    func removeAll() { cache.removeAllObjects() }
+}
+
 /// Recherche de mots à la Yomitan : pour chaque longueur (de la plus longue à la plus courte),
 /// variantes du texte (kana, demi-chasse, emphase…), formes de base par déconjugaison, une seule
 /// requête SQL pour toutes les formes, puis tri (plus long d'abord).
@@ -98,6 +116,11 @@ public final class Translator: @unchecked Sendable {
 
     private var dictionaryCache: [Int64: DictionaryInfo]?
     private let lock = NSLock()
+    /// Formes de base d'un texte : calcul pur, le plus coûteux de la recherche. Bornes basses : l'iPad doit garder sa
+    /// mémoire pour les modèles d'IA, et `NSCache` se vide seul sous pression.
+    private let deinflectionMemo = Memo<[Deinflection]>(limit: 2000)
+    /// Mot retenu à une position du texte, par réglages : refaire une page déjà lue ne coûte plus rien.
+    private let segmentMemo = Memo<TermResult?>(limit: 2000)
 
     public init(database: DictionaryDatabase, transformer: LanguageTransformer = .japanese) {
         self.database = database
@@ -109,6 +132,7 @@ public final class Translator: @unchecked Sendable {
         lock.lock()
         dictionaryCache = nil
         lock.unlock()
+        segmentMemo.removeAll()
         database.clearCaches()
     }
 
@@ -153,6 +177,23 @@ public final class Translator: @unchecked Sendable {
 
     /// Mots qui commencent au début de `text` (le texte touché et ce qui suit).
     public func findTerms(_ text: String, options: LookupOptions = LookupOptions()) throws -> [TermResult] {
+        try search(text, options: options, withMeta: true)
+    }
+
+    /// Toutes les formes de base candidates de `raw`, mémorisées : le découpage repasse sans cesse sur les mêmes textes.
+    private func deinflections(of raw: String) -> [Deinflection] {
+        if let known = deinflectionMemo[raw] { return known }
+        let found = Self.variants(of: raw).flatMap { variant in
+            transformer.transform(variant).map {
+                Deinflection(matchedText: raw, text: $0.text, conditions: $0.conditions, rules: $0.inflectionRules)
+            }
+        }
+        deinflectionMemo[raw] = found
+        return found
+    }
+
+    /// `withMeta` : fréquences, accents et API, inutiles au découpage et coûteux (JSON de chaque entrée).
+    private func search(_ text: String, options: LookupOptions, withMeta: Bool) throws -> [TermResult] {
         let source = String(text.prefix(options.scanLength))
         guard !source.isEmpty else { return [] }
         let dictionaries = try dictionaries()
@@ -167,12 +208,7 @@ public final class Translator: @unchecked Sendable {
             let raw = String(chars[0..<length])
             // Pas de mot qui commence ou finit par une ponctuation / espace.
             if let first = raw.first, first.isWhitespace || first.isPunctuation { break }
-            for variant in Self.variants(of: raw) {
-                for t in transformer.transform(variant) {
-                    byText[t.text, default: []].append(Deinflection(matchedText: raw, text: t.text, conditions: t.conditions,
-                                                                    rules: t.inflectionRules))
-                }
-            }
+            for d in deinflections(of: raw) { byText[d.text, default: []].append(d) }
         }
 
         // 2. Une requête pour toutes les formes.
@@ -246,7 +282,7 @@ public final class Translator: @unchecked Sendable {
         results = Array(results.prefix(options.maxResults))
 
         // 6. Fréquences, accents, API.
-        try attachMeta(&results, dictionaries: dictionaries, options: options)
+        if withMeta { try attachMeta(&results, dictionaries: dictionaries, options: options) }
         return results
     }
 
@@ -349,6 +385,7 @@ public final class Translator: @unchecked Sendable {
     public func segment(_ text: String, options: LookupOptions = LookupOptions()) throws -> [Segment] {
         var opts = options
         opts.maxResults = 1
+        let optionsKey = "\(opts.scanLength)|\(opts.partsOfSpeechFilter)|\(opts.excludedDictionaryIds.sorted())|"
         let chars = Array(text)
         var segments: [Segment] = []
         var i = 0
@@ -362,7 +399,15 @@ public final class Translator: @unchecked Sendable {
                 continue
             }
             let rest = String(chars[i..<min(chars.count, i + opts.scanLength)])
-            if let best = try findTerms(rest, options: opts).first {
+            let key = optionsKey + rest
+            let found: TermResult?
+            if let known = segmentMemo[key] {
+                found = known
+            } else {
+                found = try search(rest, options: opts, withMeta: false).first
+                segmentMemo[key] = .some(found)
+            }
+            if let best = found {
                 if !pending.isEmpty { segments.append(Segment(text: pending, term: nil)); pending = "" }
                 segments.append(Segment(text: best.matchedText, term: best))
                 i += max(1, best.matchLength)

@@ -87,12 +87,6 @@ public struct ReviewScheduler: Sendable {
         return out
     }
 
-    /// Probabilité de se souvenir maintenant (0…1).
-    public func retrievability(_ card: StudyCard, now: Date = Date()) -> Double {
-        guard card.state != .new else { return 0 }
-        return fsrs.getRetrievability(card: Self.fsrsCard(card), now: now).number
-    }
-
     static func rating(_ g: Grade) -> Rating {
         switch g {
         case .again: return .again

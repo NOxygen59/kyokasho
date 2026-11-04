@@ -127,23 +127,6 @@ public struct CardTemplate: Sendable, Equatable {
         }.joined()
     }
 
-    /// Champs utilisés par le template (pour vérifier qu'ils existent).
-    public var referencedFields: Set<String> {
-        var set = Set<String>()
-        func walk(_ nodes: [Node]) {
-            for n in nodes {
-                switch n {
-                case .text: break
-                case .variable(let name, _): if !["this", ".", "@index", "FrontSide"].contains(name) { set.insert(name) }
-                case .condition(let name, _, let a, let b): if name != "this" { set.insert(name) }; walk(a); walk(b)
-                case .each(let name, let body): set.insert(name); walk(body)
-                }
-            }
-        }
-        walk(nodes)
-        return set
-    }
-
     // MARK: Analyse
 
     struct Parser {

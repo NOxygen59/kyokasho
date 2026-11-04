@@ -274,6 +274,7 @@ extension ReaderController {
         toneTask?.cancel()
         ToneCache.clear()
         furiganaTask?.cancel()
+        pageFuriganaTasks.values.forEach { $0.cancel() }
         cancelEnsureOCR()
         ocrTask?.cancel()
         documentOCRTask?.cancel()

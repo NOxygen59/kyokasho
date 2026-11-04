@@ -121,7 +121,7 @@ struct FuriganaTextView: View {
             guard !Task.isCancelled else { return }
             // Brut : une unité = une ligne OCR, ses caractères douteux sont soulignés.
             let doubt = formatted ? [] : Set(page.lines[u].doubt ?? [])
-            let segments = await dictionary.segment(unit.text)
+            let segments = await dictionary.segment(unit.text, cancellable: true)
             let rubies = TextFurigana.rubies(unit.text, segments: segments)
             let inner = Self.markup(unit.text, rubies: rubies, wordStarts: Self.wordStarts(unit.text, segments: segments), doubt: doubt)
             if unit.tag == "td" {

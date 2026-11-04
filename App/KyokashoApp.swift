@@ -69,7 +69,6 @@ struct KyokashoApp: App {
 
 struct RootView: View {
     @EnvironmentObject private var model: AppModel
-    @EnvironmentObject private var themes: ThemeManager
     @ObservedObject private var dictionaryUpdates = DictionaryCatalogService.shared
     @Environment(\.scenePhase) private var scenePhase
     @State private var retryingStorage = false
@@ -127,11 +126,7 @@ struct RootView: View {
                 .tint(Atelier.Tint.read)
         }
         // Retour à la bibliothèque ou app en arrière-plan : les IA rendent leur mémoire.
-        .onChange(of: model.openDocumentId) {
-            guard $0 == nil else { return }
-            Self.releaseAI()
-            themes.applyAppearance() // Style choisi juste avant d'ouvrir un manuel : appliqué au retour.
-        }
+        .onChange(of: model.openDocumentId) { if $0 == nil { Self.releaseAI() } }
         .onChange(of: scenePhase) { phase in
             if phase == .background { Self.releaseAI() }
             // Au retour dans l'app : le Wi-Fi a pu revenir ou la semaine être passée. La garde hebdomadaire reste.

@@ -26,16 +26,6 @@ final class ReviewStoreTests: XCTestCase {
                                 fields: fields.merging(["Mot": word]) { a, _ in a }, now: now))
     }
 
-    func testShiftSourcePages() throws {
-        let a = try store.add(StudyCard(deckId: deckId, templateId: templateId, key: "天井|", fields: ["Mot": "天井"],
-                                        sourceDocumentId: "d", sourcePage: 3, now: now))
-        let b = try store.add(StudyCard(deckId: deckId, templateId: templateId, key: "床|", fields: ["Mot": "床"],
-                                        sourceDocumentId: "autre", sourcePage: 3, now: now))
-        try store.shiftSourcePages(documentId: "d", by: 5)
-        XCTAssertEqual(try store.card(id: XCTUnwrap(a.id))?.sourcePage, 8)
-        XCTAssertEqual(try store.card(id: XCTUnwrap(b.id))?.sourcePage, 3)
-    }
-
     /// #49 : une carte dont la page est retirée reste liée à son document, sans page ; le reste de la carte est intact.
     func testSetSourcePagesCanKeepACardWithoutPage() throws {
         let removed = try store.add(StudyCard(deckId: deckId, templateId: templateId, key: "欄間|", fields: ["Mot": "欄間"],

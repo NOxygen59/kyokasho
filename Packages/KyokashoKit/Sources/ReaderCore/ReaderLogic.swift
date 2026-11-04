@@ -6,31 +6,6 @@ import Foundation
 
 // MARK: - Zones de tap
 
-public enum TapAction: Equatable, Sendable {
-    case previous, next, toggleBars
-}
-
-public enum TapZones {
-    /// Action d'un tap à la position horizontale `x` (0 = bord gauche, 1 = bord droit).
-    /// Tiers gauche / tiers droit = tourner la page, centre = afficher ou masquer les barres.
-    /// En lecture de droite à gauche, le côté gauche avance (comme un livre japonais).
-    public static func action(atFraction x: Double, settings: ReaderSettings) -> TapAction {
-        guard settings.tapZonesEnabled else { return .toggleBars }
-        let side: TapAction
-        if x < 1.0 / 3.0 {
-            side = .previous
-        } else if x > 2.0 / 3.0 {
-            side = .next
-        } else {
-            return .toggleBars
-        }
-        var forward = side == .next
-        if settings.direction == .rightToLeft { forward.toggle() }
-        if settings.invertTapZones { forward.toggle() }
-        return forward ? .next : .previous
-    }
-}
-
 // MARK: - Pages présentées (découpe des scans de double page)
 
 /// Une page telle qu'affichée : une page source entière, ou l'une de ses deux moitiés.

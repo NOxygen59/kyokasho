@@ -56,7 +56,6 @@ final class CardTemplateTests: XCTestCase {
     func testAnkiSource() throws {
         let t = try CardTemplate("{{furigana:F}}{{#if A}}x{{else}}y{{/if}}{{#each L}}{{this}}{{/each}}{{^B}}z{{/B}}")
         XCTAssertEqual(t.ankiSource, "{{furigana:F}}{{#A}}x{{/A}}{{^A}}y{{/A}}{{L}}{{^B}}z{{/B}}")
-        XCTAssertEqual(t.referencedFields, ["F", "A", "L", "B"])
     }
 
     func testFuriganaRoundTrip() {

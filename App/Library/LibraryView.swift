@@ -163,13 +163,7 @@ struct LibraryView: View {
             ImagesToPDFView().environmentObject(model).preferredColorScheme(Theme.current.colorScheme)
         }
         // Fermeture des Réglages : la palette ou le style choisis s'appliquent à toute l'app (reconstruction).
-        .sheet(isPresented: $showSettings, onDismiss: {
-            // Après la fin de la fermeture, et jamais sous un manuel ouvert : remplacer la racine pendant qu'une feuille
-            // quitte une page profonde est la cause supposée du gel de la recette 1.4.2 (essai 5.1), non reproduit.
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                if model.openDocumentId == nil { themes.applyAppearance() }
-            }
-        }) {
+        .sheet(isPresented: $showSettings, onDismiss: { themes.applyAppearance() }) {
             SettingsView().environmentObject(themes).environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review).preferredColorScheme(Theme.current.colorScheme)
                 .atelierSheet()
         }

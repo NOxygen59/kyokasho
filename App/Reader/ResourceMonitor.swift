@@ -66,7 +66,7 @@ final class ResourceMonitor: ObservableObject {
         frames = 0
         lastTick = now
         counter += 1
-        samples.append(Sample(id: counter, cpu: Self.cpuPercent(), ramMB: Self.footprintMB(), fps: fps))
+        samples.append(Sample(id: counter, cpu: Self.cpuPercent(), ramMB: Diagnostics.footprintMB(), fps: fps))
         if samples.count > 90 { samples.removeFirst(samples.count - 90) }
     }
 
@@ -96,17 +96,6 @@ final class ResourceMonitor: ObservableObject {
         return total
     }
 
-    /// Mémoire de l'app comptée par iOS (Mo).
-    nonisolated static func footprintMB() -> Double {
-        var info = task_vm_info_data_t()
-        var count = mach_msg_type_number_t(MemoryLayout<task_vm_info_data_t>.size / MemoryLayout<integer_t>.size)
-        let result = withUnsafeMutablePointer(to: &info) {
-            $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
-                task_info(mach_task_self_, task_flavor_t(TASK_VM_INFO), $0, &count)
-            }
-        }
-        return result == KERN_SUCCESS ? Double(info.phys_footprint) / 1_048_576 : 0
-    }
 }
 
 /// Cible du `CADisplayLink` (qui retient sa cible) : compte les images.

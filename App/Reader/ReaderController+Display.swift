@@ -108,9 +108,10 @@ extension ReaderController {
         // Texte d'OvisOCR2 (scan à l'import, vérification, mise en page IA) : lectures d'après lui.
         let documentId = document.id
         let translator = model.dictionary.translator
-        let lookupOptions = model.dictionary.profile.lookup
+        let lookupOptions = model.dictionary.lookupOptions
         let additionalRotation = transforms[source]?.rotation ?? 0
-        Task.detached(priority: .utility) { [weak self] in
+        pageFuriganaTasks[source]?.cancel()
+        pageFuriganaTasks[source] = Task.detached(priority: .utility) { [weak self] in
             // `PDFPool` lit le fichier d'origine, sans l'orientation choisie ; les boîtes OCR, elles, en tiennent compte.
             let frame: PageFrame? = (try? PDFPool.withDocument(url) { doc -> PageFrame? in
                 doc.page(at: source).map {

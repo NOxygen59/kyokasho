@@ -57,6 +57,8 @@ final class ReaderController: NSObject, ObservableObject {
 
     /// Dernier calcul de furigana OCR lancé par page (`showOCR`).
     var furiganaGeneration: [Int: Int] = [:]
+    /// Calcul en cours par page : annulé quand un plus récent le remplace, il ne consomme plus pour rien.
+    var pageFuriganaTasks: [Int: Task<Void, Never>] = [:]
     /// Orientation de l'écran du lecteur (`adaptLayout`) ; `nil` tant qu'elle n'est pas connue.
     var portraitMode: Bool?
     /// Préparation des pages teintées voisines (`scheduleTone`).

@@ -40,15 +40,6 @@ final class ReviewSchedulerTests: XCTestCase {
         }
     }
 
-    func testRetrievability() throws {
-        let scheduler = ReviewScheduler(settings: settings)
-        XCTAssertEqual(scheduler.retrievability(card(), now: now), 0)
-        let reviewed = try scheduler.review(card(), grade: .good, now: now).0
-        let r = scheduler.retrievability(reviewed, now: now.addingTimeInterval(86400))
-        XCTAssertGreaterThan(r, 0)
-        XCTAssertLessThanOrEqual(r, 1)
-    }
-
     func testIntervalLabel() {
         XCTAssertEqual(ReviewScheduler.intervalLabel(from: now, to: now.addingTimeInterval(30)), "< 1 min")
         XCTAssertEqual(ReviewScheduler.intervalLabel(from: now, to: now.addingTimeInterval(600)), "10 min")

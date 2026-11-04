@@ -125,6 +125,36 @@ final class DictionaryKitTests: XCTestCase {
         XCTAssertEqual(segments.map(\.text).joined(), "部屋の照明を書いた。")
     }
 
+    /// Le mémo du découpage ne change aucun résultat, à réglages égaux comme différents.
+    func testSegmentationMemoKeepsResultsAndHonoursOptions() throws {
+        let text = "部屋の照明を書いた。"
+        let first = try translator.segment(text)
+        XCTAssertEqual(try translator.segment(text), first)
+        var excluded = LookupOptions()
+        excluded.excludedDictionaryIds = Set(try db.dictionaries().compactMap(\.id))
+        XCTAssertTrue(try translator.segment(text, options: excluded).allSatisfy { $0.term == nil },
+                      "réglages différents : le mot mémorisé ne doit pas ressortir")
+        XCTAssertEqual(try translator.segment(text), first)
+    }
+
+    /// Un dictionnaire retiré ou désactivé ne doit plus répondre depuis le mémo.
+    func testSegmentationMemoIsClearedByInvalidate() throws {
+        let text = "部屋の照明を書いた。"
+        XCTAssertFalse(try translator.segment(text).compactMap(\.term).isEmpty)
+        for dictionary in try db.dictionaries() {
+            try db.setEnabled(false, dictionaryId: try XCTUnwrap(dictionary.id))
+        }
+        translator.invalidate()
+        XCTAssertTrue(try translator.segment(text).allSatisfy { $0.term == nil })
+    }
+
+    /// Le découpage ne charge pas les fréquences ; une recherche directe du même texte les garde.
+    func testFindTermsStillAttachesMetaAfterSegmentation() throws {
+        let before = try translator.findTerms("照明")
+        _ = try translator.segment("照明")
+        XCTAssertEqual(try translator.findTerms("照明").map(\.frequencies), before.map(\.frequencies))
+    }
+
     func testRendering() throws {
         let results = try translator.findTerms("照明")
         let renderer = GlossaryRenderer(inflectionName: { [translator] in translator!.inflectionName($0) })

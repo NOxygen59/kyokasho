@@ -19,7 +19,7 @@ final class StyleTokensGuardTests: XCTestCase {
         // fermeture des Réglages.
         XCTAssertTrue(source.contains(".id(themes.appliedAppearance)"), "La racine doit suivre l'apparence appliquée")
         let library = try String(contentsOf: app.deletingLastPathComponent().appendingPathComponent("Library/LibraryView.swift"), encoding: .utf8)
-        XCTAssertTrue(library.contains("if model.openDocumentId == nil { themes.applyAppearance() }"), "Appliquer l'apparence à la fermeture des Réglages")
+        XCTAssertTrue(library.contains("onDismiss: { themes.applyAppearance() }"), "Appliquer l'apparence à la fermeture des Réglages")
     }
 
     /// Une analyse OvisOCR2 doit pouvoir s'arrêter depuis la liste des IA, et sa durée être annoncée.
