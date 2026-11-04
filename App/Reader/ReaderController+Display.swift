@@ -87,7 +87,7 @@ extension ReaderController {
                 if (try? ScanSharpening.prepare(key: key, fileURL: url, page: page)) == true { changed = true }
             }
             guard changed, !Task.isCancelled else { return }
-            await self?.pdfView.redrawVisiblePages()
+            await self?.pdfView.requestRedraw()
         }
     }
 
@@ -112,6 +112,17 @@ extension ReaderController {
         let additionalRotation = transforms[source]?.rotation ?? 0
         pageFuriganaTasks[source]?.cancel()
         pageFuriganaTasks[source] = Task.detached(priority: .utility) { [weak self] in
+            let reference = DocumentAITextStore.read(documentId: documentId, reader: ModelSpec.ovisocr2.id, page: source)
+            // Page revue ou simple glissement : mêmes données, mêmes lectures, ni calcul ni redessin.
+            var hasher = Hasher()
+            hasher.combine(ocr)
+            hasher.combine(reference)
+            hasher.combine(additionalRotation)
+            hasher.combine(translator?.cacheGeneration)
+            hasher.combine(lookupOptions)
+            hasher.combine(Furigana.analyzer != nil)
+            let signature = hasher.finalize()
+            guard FuriganaLayer.signature(for: key) != signature else { return }
             // `PDFPool` lit le fichier d'origine, sans l'orientation choisie ; les boîtes OCR, elles, en tiennent compte.
             let frame: PageFrame? = (try? PDFPool.withDocument(url) { doc -> PageFrame? in
                 doc.page(at: source).map {
@@ -120,7 +131,6 @@ extension ReaderController {
                 }
             }) ?? nil
             guard let frame else { return }
-            let reference = DocumentAITextStore.read(documentId: documentId, reader: ModelSpec.ovisocr2.id, page: source)
             // Même choix de lectures que dans le panneau OCR : MeCab si présent, sinon le dictionnaire.
             // Une page scannée sans couche texte doit bénéficier des mots déjà reconnus dans le panneau.
             let marks = FuriganaLayer.marks(from: ocr, reference: reference, frame: frame) { text in
@@ -130,16 +140,16 @@ extension ReaderController {
             }
             Diagnostics.log("Furigana p. \(source + 1) : \(ocr.engine), \(ocr.lines.count) lignes OCR, "
                             + "texte Ovis \(reference?.count ?? 0) caractères, \(marks.count) lectures", "furigana")
-            await self?.publishPageFurigana(marks, key: key, source: source, generation: generation)
+            await self?.publishPageFurigana(marks, key: key, signature: signature, source: source, generation: generation)
         }
     }
 
     /// Contrôle et publication d'un seul tenant sur le fil principal : rien ne peut s'intercaler. Un calcul annulé
     /// (fermeture, remplacement) a pu rendre des lectures de secours : elles ne doivent pas entrer dans le cache.
-    private func publishPageFurigana(_ marks: [FuriganaLayer.Mark], key: String, source: Int, generation: Int) {
+    private func publishPageFurigana(_ marks: [FuriganaLayer.Mark], key: String, signature: Int, source: Int, generation: Int) {
         guard !closed, !Task.isCancelled, furiganaGeneration[source] == generation else { return }
-        FuriganaLayer.set(marks, for: key)
-        pdfView.redrawVisiblePages()
+        FuriganaLayer.set(marks, for: key, signature: signature)
+        pdfView.requestRedraw()
     }
 
 
@@ -169,7 +179,7 @@ extension ReaderController {
                 if let marks { FuriganaLayer.set(marks, for: key); changed = true }
             }
             guard changed, !Task.isCancelled else { return }
-            await self?.pdfView.redrawVisiblePages()
+            await self?.pdfView.requestRedraw()
         }
     }
 
@@ -221,7 +231,7 @@ extension ReaderController {
                 if ToneCache.prepare(key: key, fileURL: url, page: page, tone: tone), visible.contains(page) { shownReady = true }
             }
             guard shownReady, !Task.isCancelled else { return }
-            await self?.pdfView.redrawVisiblePages()
+            await self?.pdfView.requestRedraw()
         }
     }
 

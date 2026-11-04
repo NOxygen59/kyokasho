@@ -73,10 +73,12 @@ enum FuriganaLayer {
 
     /// Place libre au-dessus du mot (horizontal) ou à sa droite (vertical), jusqu'à la ligne la plus proche
     /// qui le recouvre. Sans voisine : 60 % du caractère.
-    static func room(for rect: CGRect, vertical: Bool, among lines: [CGRect]) -> CGFloat {
+    /// - Parameter skipping: indice de la ligne du mot, ignorée sans recopier le tableau à chaque lecture.
+    static func room(for rect: CGRect, vertical: Bool, among lines: [CGRect], skipping: Int? = nil) -> CGFloat {
         let base = vertical ? rect.width : rect.height
         var gap = base * 0.6
-        for other in lines where other != rect && !other.contains(CGPoint(x: rect.midX, y: rect.midY)) {
+        for (index, other) in lines.enumerated()
+        where index != skipping && other != rect && !other.contains(CGPoint(x: rect.midX, y: rect.midY)) {
             if vertical {
                 guard other.minX >= rect.maxX - base * 0.1, other.maxY > rect.minY, other.minY < rect.maxY else { continue }
                 gap = min(gap, other.minX - rect.maxX)
@@ -91,27 +93,32 @@ enum FuriganaLayer {
     // MARK: Cache (lu par PDFKit depuis ses fils de dessin)
 
     private static let lock = NSLock()
-    private static var marks: [String: [Mark]] = [:]
+    private static var pages: [String: PreparedPage] = [:]
     private static var order: [String] = []
     private static let limit = 40
 
-    static func marks(for key: String) -> [Mark]? {
+    static func prepared(for key: String) -> PreparedPage? {
         guard enabled else { return nil }
-        return lock.withLock { marks[key] }
+        return lock.withLock { pages[key] }
     }
 
-    static func has(_ key: String) -> Bool { lock.withLock { marks[key] != nil } }
+    static func has(_ key: String) -> Bool { lock.withLock { pages[key] != nil } }
 
-    static func set(_ list: [Mark], for key: String) {
+    /// Empreinte des données d'où viennent les lectures en cache : identique, le calcul est inutile.
+    static func signature(for key: String) -> Int? { lock.withLock { pages[key]?.signature } }
+
+    /// Prépare le dessin ici, hors du verrou et du fil principal : les fils de PDFKit n'ont plus qu'à poser le texte.
+    static func set(_ list: [Mark], for key: String, signature: Int? = nil) {
+        let page = PreparedPage(list, signature: signature)
         lock.withLock {
-            marks[key] = list
+            pages[key] = page
             order.removeAll { $0 == key }
             order.append(key)
-            while order.count > limit { marks[order.removeFirst()] = nil }
+            while order.count > limit { pages[order.removeFirst()] = nil }
         }
     }
 
-    static func clearMemory() { lock.withLock { marks = [:]; order = [] } }
+    static func clearMemory() { lock.withLock { pages = [:]; order = [] } }
 
     // MARK: Calcul
 
@@ -162,9 +169,8 @@ enum FuriganaLayer {
                 let wordInLine = vertical
                     ? CGRect(x: lineRect.minX, y: rect.minY, width: lineRect.width, height: rect.height)
                     : CGRect(x: rect.minX, y: lineRect.minY, width: rect.width, height: lineRect.height)
-                let others = lineRects.enumerated().filter { $0.offset != l }.map(\.element)
                 return Mark(rect: rect, reading: ruby.reading, vertical: vertical,
-                            maxSize: room(for: wordInLine, vertical: vertical, among: others) * 0.85)
+                            maxSize: room(for: wordInLine, vertical: vertical, among: lineRects, skipping: l) * 0.85)
             }
         }
     }
@@ -287,30 +293,58 @@ enum FuriganaLayer {
     /// Dans le repère de la page (y vers le haut), déjà transformé par l'appelant.
     /// Fond couleur papier sous les kana, pour rester lisible sur un dessin ou une trame.
     // FDR-3 : texte vertical jamais vérifié (kana à droite de la colonne, de haut en bas ; `room` mesure la colonne de droite). Voir § 6 étape 3.
-    static func draw(_ marks: [Mark], in context: CGContext) {
+    static func draw(_ page: PreparedPage, in context: CGContext) {
+        // PDFKit dessine une page en plusieurs morceaux : seules les lectures de ce morceau sont posées. Marge d'une
+        // taille de police : un kana peut dépasser un peu de sa bande.
+        let visible = context.boundingBoxOfClipPath
+        let color = Tint.current.page
         context.saveGState()
         context.textMatrix = .identity
-        let color = Tint.current.page
-        for mark in layout(marks) {
+        // Pas de fond derrière les lectures (demande de l'utilisateur) : texte seul, dans la couleur choisie.
+        context.setFillColor(red: color.r, green: color.g, blue: color.b, alpha: 1)
+        for mark in page.marks where mark.strip.insetBy(dx: -mark.size, dy: -mark.size).intersects(visible) {
             let size = mark.size, strip = mark.strip
-            let font = CTFontCreateWithName("HiraginoSans-W5" as CFString, size, nil)
-            let attributes: [NSAttributedString.Key: Any] = [
-                NSAttributedString.Key(kCTFontAttributeName as String): font,
-                NSAttributedString.Key(kCTForegroundColorFromContextAttributeName as String): true,
-            ]
-            // Pas de fond derrière les lectures (demande de l'utilisateur) : texte seul, dans la couleur choisie.
-            context.setFillColor(red: color.r, green: color.g, blue: color.b, alpha: 1)
-            for (i, c) in mark.reading.enumerated() {
-                let line = CTLineCreateWithAttributedString(NSAttributedString(string: String(c), attributes: attributes))
-                let width = CGFloat(CTLineGetTypographicBounds(line, nil, nil, nil))
+            for (i, kana) in mark.kana.enumerated() {
                 if mark.vertical {
-                    context.textPosition = CGPoint(x: strip.minX + (size - width) / 2, y: strip.maxY - CGFloat(i + 1) * size + size * 0.14)
+                    context.textPosition = CGPoint(x: strip.minX + (size - kana.width) / 2, y: strip.maxY - CGFloat(i + 1) * size + size * 0.14)
                 } else {
-                    context.textPosition = CGPoint(x: strip.minX + CGFloat(i) * size + (size - width) / 2, y: strip.minY + size * 0.14)
+                    context.textPosition = CGPoint(x: strip.minX + CGFloat(i) * size + (size - kana.width) / 2, y: strip.minY + size * 0.14)
                 }
-                CTLineDraw(line, context)
+                CTLineDraw(kana.line, context)
             }
         }
         context.restoreGState()
+    }
+
+    /// Lectures d'une page prêtes à poser : mise en place (`layout`) et lignes Core Text calculées une seule fois, au
+    /// lieu de l'être à chaque morceau dessiné, sur plusieurs fils. Immuable, donc lue sans verrou par ces fils.
+    struct PreparedPage: @unchecked Sendable {
+        struct PreparedMark {
+            let vertical: Bool
+            let size: CGFloat
+            let strip: CGRect
+            let kana: [(line: CTLine, width: CGFloat)]
+        }
+
+        let marks: [PreparedMark]
+        let signature: Int?
+
+        init(_ list: [Mark], signature: Int?) {
+            self.signature = signature
+            var fonts: [CGFloat: CTFont] = [:]
+            marks = FuriganaLayer.layout(list).map { placed in
+                let font = fonts[placed.size] ?? CTFontCreateWithName("HiraginoSans-W5" as CFString, placed.size, nil)
+                fonts[placed.size] = font
+                let attributes: [NSAttributedString.Key: Any] = [
+                    NSAttributedString.Key(kCTFontAttributeName as String): font,
+                    NSAttributedString.Key(kCTForegroundColorFromContextAttributeName as String): true,
+                ]
+                let kana = placed.reading.map { character -> (line: CTLine, width: CGFloat) in
+                    let line = CTLineCreateWithAttributedString(NSAttributedString(string: String(character), attributes: attributes))
+                    return (line, CGFloat(CTLineGetTypographicBounds(line, nil, nil, nil)))
+                }
+                return PreparedMark(vertical: placed.vertical, size: placed.size, strip: placed.strip, kana: kana)
+            }
+        }
     }
 }

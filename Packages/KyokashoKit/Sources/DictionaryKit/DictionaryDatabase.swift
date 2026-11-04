@@ -275,7 +275,8 @@ public final class DictionaryDatabase: @unchecked Sendable {
     }
 
     /// Entrées dont l'expression ou la lecture est dans `texts`, dictionnaires actifs seulement.
-    public func terms(matching texts: [String], dictionaryIds: Set<Int64>) throws -> [TermRow] {
+    /// - Parameter withGlossary: `false` laisse le glossaire vide : ce JSON, souvent long, n'est alors ni lu ni copié.
+    public func terms(matching texts: [String], dictionaryIds: Set<Int64>, withGlossary: Bool = true) throws -> [TermRow] {
         guard !texts.isEmpty, !dictionaryIds.isEmpty else { return [] }
         let unique = Array(Set(texts))
         return try writer.read { db in
@@ -284,7 +285,7 @@ public final class DictionaryDatabase: @unchecked Sendable {
             for chunk in stride(from: 0, to: unique.count, by: 400).map({ Array(unique[$0..<min($0 + 400, unique.count)]) }) {
                 let marks = Array(repeating: "?", count: chunk.count).joined(separator: ",")
                 let sql = """
-                    SELECT id, dictionaryId, expression, reading, definitionTags, rules, score, glossary, sequence, termTags
+                    SELECT id, dictionaryId, expression, reading, definitionTags, rules, score, \(withGlossary ? "glossary" : "''"), sequence, termTags
                     FROM term WHERE expression IN (\(marks)) OR reading IN (\(marks))
                     """
                 let cursor = try Row.fetchCursor(db, sql: sql, arguments: StatementArguments(chunk + chunk))

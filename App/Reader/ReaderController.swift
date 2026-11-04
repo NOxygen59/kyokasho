@@ -955,6 +955,21 @@ final class ReaderPDFView: PDFView {
         walk(self)
     }
 
+    /// Résultats de tâches de fond (nettoyage, teinte, furigana) : ils arrivent coup sur coup après chaque page posée,
+    /// et chacun ferait redessiner et redécoder toute la page. Un seul redessin les regroupe. Les changements de
+    /// réglage, eux, gardent le redessin immédiat.
+    func requestRedraw() {
+        guard !redrawRequested else { return }
+        redrawRequested = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.redrawDelay) { [weak self] in
+            self?.redrawRequested = false
+            self?.redrawVisiblePages()
+        }
+    }
+
+    private static let redrawDelay: TimeInterval = 0.12
+    private var redrawRequested = false
+
     override func buildMenu(with builder: UIMenuBuilder) {
         super.buildMenu(with: builder)
         guard let onLookupSelection, currentSelection?.string?.isEmpty == false else { return }

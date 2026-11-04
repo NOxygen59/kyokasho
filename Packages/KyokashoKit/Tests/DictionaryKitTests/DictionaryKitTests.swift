@@ -162,6 +162,35 @@ final class DictionaryKitTests: XCTestCase {
         XCTAssertTrue(try translator.segment(text).allSatisfy { $0.term == nil }, "résultat périmé repris du mémo")
     }
 
+    /// Le découpage allégé choisit le même mot que la recherche complète.
+    func testSegmentationPicksTheSameWordAsFullSearch() throws {
+        for text in ["部屋の照明を書いた。", "照明", "書いた", "天井の部屋"] {
+            var options = LookupOptions()
+            options.maxResults = 1
+            let chars = Array(text)
+            var offset = 0
+            for segment in try translator.segment(text) {
+                defer { offset += segment.text.count }
+                guard let term = segment.term else { continue }
+                let best = try XCTUnwrap(translator.findTerms(String(chars[offset...]), options: options).first)
+                XCTAssertEqual([term.expression, term.reading, term.matchedText], [best.expression, best.reading, best.matchedText])
+                XCTAssertEqual(term.inflectionRules, best.inflectionRules)
+                XCTAssertTrue(term.definitions.isEmpty)
+            }
+        }
+    }
+
+    func testTermsWithoutGlossaryKeepEverythingElse() throws {
+        let ids = Set(try db.dictionaries().compactMap(\.id))
+        let full = try db.terms(matching: ["照明"], dictionaryIds: ids).sorted { $0.id < $1.id }
+        let light = try db.terms(matching: ["照明"], dictionaryIds: ids, withGlossary: false).sorted { $0.id < $1.id }
+        XCTAssertFalse(full.isEmpty)
+        XCTAssertEqual(full.map(\.id), light.map(\.id))
+        XCTAssertEqual(full.map(\.rules), light.map(\.rules))
+        XCTAssertEqual(full.map(\.score), light.map(\.score))
+        XCTAssertTrue(light.allSatisfy { $0.glossary.isEmpty })
+    }
+
     /// Le découpage ne charge pas les fréquences ; une recherche directe du même texte les garde.
     func testFindTermsStillAttachesMetaAfterSegmentation() throws {
         let before = try translator.findTerms("照明")
