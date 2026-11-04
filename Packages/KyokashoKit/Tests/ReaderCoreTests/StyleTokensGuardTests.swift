@@ -37,6 +37,20 @@ final class StyleTokensGuardTests: XCTestCase {
         XCTAssertFalse(intro.contains("struct IntroSettingsSection"), "La feuille des nouveautés doit rester sur le Form")
     }
 
+    /// Mac Intel (décision de NOxygen59, 04/11/2026) : ni chat, ni gros modèles, ni lien qui lance un téléchargement.
+    func testIntelMacHidesChatHeavyModelsAndDownloadLinks() throws {
+        let app = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .appendingPathComponent("../../../../App").standardizedFileURL
+        func source(_ path: String) throws -> String {
+            try String(contentsOf: app.appendingPathComponent(path), encoding: .utf8)
+        }
+        XCTAssertTrue(try source("Study/StudyPanel.swift").contains("localAIAvailable ? [(.chat"))
+        let settings = try source("Settings/SettingsView.swift")
+        XCTAssertTrue(settings.contains("if localAIAvailable { OCRModelsSection(group: .ai) }"))
+        XCTAssertTrue(settings.contains(".filter(\\.runsOnThisDevice)"))
+        XCTAssertTrue(try source("Settings/OCRModelsView.swift").contains("if localAIAvailable, let file = spec.mainDownload"))
+    }
+
     /// La liste demandée reste complète : un oubli dans `all` rendrait un style impossible à choisir.
     func testStylePickerContainsEveryRequestedStyle() throws {
         let file = URL(fileURLWithPath: #filePath).deletingLastPathComponent()

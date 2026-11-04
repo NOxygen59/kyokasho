@@ -149,7 +149,8 @@ struct OCRModelsSection: View {
             if let home = spec.homepage {
                 Link(destination: home) { Label(Self.short(home), systemImage: "link").font(.caption2) }
             }
-            if let file = spec.mainDownload {
+            // Mac (#55) : l'app télécharge elle-même ; pas de lien qui lance un téléchargement dans le navigateur.
+            if localAIAvailable, let file = spec.mainDownload {
                 Link(destination: file) { Label(Self.short(file), systemImage: "arrow.down.circle").font(.caption2).lineLimit(1) }
             }
             if let p = downloads.progress[spec.id] {

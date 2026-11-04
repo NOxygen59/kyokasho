@@ -56,8 +56,7 @@ struct StudyPanel: View {
                 .accessibilityLabel("Fermer le panneau d'étude")
             }
             PillTabs(items: [(Tab.text, "character.ja", String(localized: "Texte")), (.vocab, "character.book.closed.ja", String(localized: "Dico")),
-                             (.notes, "text.bubble", String(localized: "Notes")), (.marks, "bookmark", String(localized: "Repères")),
-                             (.chat, "bubble.left.and.bubble.right", String(localized: "Chat"))],
+                             (.notes, "text.bubble", String(localized: "Notes")), (.marks, "bookmark", String(localized: "Repères"))] + (localAIAvailable ? [(.chat, "bubble.left.and.bubble.right", String(localized: "Chat"))] : []),
                      selection: $tab, tint: tint)
             Group {
                 switch tab {

@@ -2949,6 +2949,22 @@
         }
       }
     },
+    "Active « OvisOCR2 par serveur local » dans Réglages → Modèles d'IA et outils.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn on “OvisOCR2 through a local server” in Settings → AI models and tools."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请在“设置 → AI 模型和工具”中开启“通过本地服务器使用 OvisOCR2”。"
+          }
+        }
+      }
+    },
     "Activité des IA": {
       "localizations": {
         "en": {

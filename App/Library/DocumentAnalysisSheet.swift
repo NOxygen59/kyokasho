@@ -114,7 +114,7 @@ struct DocumentAnalysisSheet: View {
                 Text("Chaque page est lue par ton OCR habituel **et** par \(readers.isEmpty ? String(localized: "aucun autre modèle") : readers.map(Self.name).joined(separator: String(localized: " et "))). Une ligne est confirmée quand deux lectures indépendantes donnent le même texte ; à la fin, une note de fiabilité et la liste des désaccords, avec un choix conseillé.")
                     .font(.footnote)
                 if readers.isEmpty {
-                    Text("Télécharge OvisOCR2 (et si tu veux GLM-OCR) dans Réglages → Modèles d'IA et outils.")
+                    Text(localAIAvailable ? "Télécharge OvisOCR2 (et si tu veux GLM-OCR) dans Réglages → Modèles d'IA et outils." : "Active « OvisOCR2 par serveur local » dans Réglages → Modèles d'IA et outils.")
                         .font(.footnote).foregroundStyle(.orange)
                 }
             }

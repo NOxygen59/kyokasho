@@ -223,7 +223,7 @@ struct DocumentSettingsSheet: View {
                 }
                 Section("OCR") {
                     OptionalPicker(String(localized: "Moteur"), value: $override.ocrEngine, defaultValue: d.ocrEngine,
-                                   options: OCREngineChoice.allCases.map { ($0, $0.label) })
+                                   options: OCREngineChoice.selectable.map { ($0, $0.label) })
                 }
                 Section {
                     Button("Revenir aux réglages généraux", role: .destructive) { override = ReaderSettingsOverride() }
@@ -386,19 +386,21 @@ struct OCRAdvancedSettingsView: View {
         Form {
             Section {
                 Picker("Moteur par défaut", selection: $model.readerDefaults.ocrEngine) {
-                    ForEach(OCREngineChoice.allCases, id: \.self) { Text($0.label).tag($0) }
+                    ForEach(OCREngineChoice.selectable, id: \.self) { Text($0.label).tag($0) }
                 }
             } header: {
                 Text("Moteur")
             } footer: {
                 Text("Auto : texte intégré au PDF quand il existe (exact et instantané). Sinon NDLOCR-Lite s'il est installé (livres japonais, vertical), puis PP-OCRv5, puis Apple Vision. Remplaçable par document. Un moteur choisi mais pas téléchargé renvoie une erreur.")
             }
-            Section {
-                Toggle("Relire les lignes douteuses avec GLM-OCR", isOn: $aiReread)
-            } header: {
-                Text("Relecture")
-            } footer: {
-                Text("Chaque page lue est relue avec ton dictionnaire : les caractères qui se ressemblent (未/末, 土/士, ロ/口…) sont corrigés quand ça forme un vrai mot, le reste est souligné en orange. Si GLM-OCR est installé, seules les lignes encore douteuses lui sont envoyées, en fond (rien ne part en ligne).")
+            if localAIAvailable {
+                Section {
+                    Toggle("Relire les lignes douteuses avec GLM-OCR", isOn: $aiReread)
+                } header: {
+                    Text("Relecture")
+                } footer: {
+                    Text("Chaque page lue est relue avec ton dictionnaire : les caractères qui se ressemblent (未/末, 土/士, ロ/口…) sont corrigés quand ça forme un vrai mot, le reste est souligné en orange. Si GLM-OCR est installé, seules les lignes encore douteuses lui sont envoyées, en fond (rien ne part en ligne).")
+                }
             }
             Section {
                 LayoutEnginePicker(selection: $layoutEngineRaw)
@@ -577,7 +579,7 @@ struct ModelsView: View {
             if !localAIAvailable {
                 // Version Mac (#55) : MLX absent ; OvisOCR2 (le même modèle, en GGUF) par un serveur llama.cpp local.
                 Section {
-                    Text("Sur Mac, Qwen et GLM-OCR ne fonctionnent pas. NDLOCR-Lite et PP-OCRv5 marchent, téléchargés ci-dessous. OvisOCR2 marche par un serveur llama.cpp lancé sur ce Mac (même modèle que sur l'iPad, converti en GGUF). L'OCR Apple Vision, les dictionnaires, les cartes et l'import de paquets .kyokasho marchent toujours.")
+                    Text("Sur ce Mac, le chat et les gros modèles d'IA sont désactivés. NDLOCR-Lite et PP-OCRv5 se téléchargent ci-dessous. OvisOCR2 marche par un serveur llama.cpp lancé sur ce Mac (même modèle que sur l'iPad, converti en GGUF). L'OCR Apple Vision, les dictionnaires, les cartes et l'import de paquets .kyokasho marchent toujours.")
                         .font(.footnote)
                     Toggle("OvisOCR2 par serveur local", isOn: $localVLM)
                     TextField("Adresse du serveur", text: $localVLMURL)
@@ -601,7 +603,7 @@ struct ModelsView: View {
                 Text("De petites pastilles indiquent ce que fait chaque IA. Elles deviennent plus discrètes quand un modèle reste simplement chargé en mémoire.")
             }
             Section {
-                ForEach([ModelSpec.ovisocr2, .qwen3vl4b, .qwen35chat4b, .glmocr, .ndlocr, .ppocr5]) { spec in
+                ForEach([ModelSpec.ovisocr2, .qwen3vl4b, .qwen35chat4b, .glmocr, .ndlocr, .ppocr5].filter(\.runsOnThisDevice)) { spec in
                     NavigationLink { AIModelDetailView(spec: spec) } label: { Text(spec.title) }
                 }
             } header: {
@@ -609,19 +611,28 @@ struct ModelsView: View {
             } footer: {
                 Text("État, mémoire, « Décharger », réglages propres et dernières tâches. Qwen3-VL et Qwen3.5 : conversation.")
             }
-            Section {
-                NavigationLink { AIChatSettingsView() } label: {
-                    Label("Consignes et paramètres du chat", systemImage: "slider.horizontal.3")
+            if localAIAvailable {
+                Section {
+                    NavigationLink { AIChatSettingsView() } label: {
+                        Label("Consignes et paramètres du chat", systemImage: "slider.horizontal.3")
+                    }
+                } footer: {
+                    Text("Pour chaque modèle de chat : consigne générale, préréglages (résumer, expliquer les formules, professeur de japonais, traduction mot à mot), température, longueur…")
                 }
-            } footer: {
-                Text("Pour chaque modèle de chat : consigne générale, préréglages (résumer, expliquer les formules, professeur de japonais, traduction mot à mot), température, longueur…")
             }
             OCRModelsSection(group: .ocr)
             MorphologySection()
-            OCRModelsSection(group: .ai)
+            if localAIAvailable { OCRModelsSection(group: .ai) }
             OCRModelsSection(group: .layout)
             OCRModelsSection(group: .sharpen)
         }
             .navigationTitle("Modèles d'IA et outils")
+    }
+}
+
+extension OCREngineChoice {
+    /// Moteurs proposés : GLM-OCR demande MLX, absent de la version Mac Intel (#55).
+    static var selectable: [OCREngineChoice] {
+        allCases.filter { localAIAvailable || $0 != .glmocr }
     }
 }

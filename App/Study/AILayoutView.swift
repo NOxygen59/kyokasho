@@ -460,8 +460,8 @@ struct AILayoutLanguageBar: View {
                 .foregroundStyle(Atelier.Tint.ai)
                 languageMenu
             }
-        } else {
-            // Sans Qwen3-VL ni traduction gardée : un message plutôt qu'une barre vide.
+        } else if localAIAvailable {
+            // Sans Qwen3-VL ni traduction gardée : un message plutôt qu'une barre vide. Mac Intel : Qwen3-VL est retiré.
             Label("Traduction hors ligne : télécharge Qwen3-VL dans Réglages → Modèles d'IA et outils.",
                   systemImage: "character.bubble")
                 .font(.caption)
