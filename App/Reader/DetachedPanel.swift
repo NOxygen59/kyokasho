@@ -108,9 +108,10 @@ struct DetachedPanel<Content: View>: View {
         let top = full ? gap : (stableGestures ? preview.minY : min(max(0, y + move.height), max(0, area.height - h)))
         return content()
             .frame(width: w, height: h)
+            .atelierShapeShadow(RoundedRectangle(cornerRadius: Atelier.radius, style: .continuous),
+                                opacity: floating ? 0.5 : 0, radius: 20, y: 8)
             .overlay(alignment: .top) { if floating { grip(base: base, left: left, top: top, w: w, h: h) } }
             .overlay(alignment: .bottomTrailing) { if floating { resizeHandle(base: base, w: w, h: h) } }
-            .atelierShadow(opacity: floating ? 0.5 : 0, radius: 20, y: 8)
             .offset(x: left, y: top)
             .opacity(mode == .minimized ? 0 : 1)
             .allowsHitTesting(mode != .minimized)

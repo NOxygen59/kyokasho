@@ -145,6 +145,12 @@ extension View {
         }
     }
 
+    /// Ombre d'une fenêtre ou d'une carte qui contient du texte : portée par une forme derrière le contenu. Posée sur le
+    /// contenu, l'ombre franche de certains styles dédouble chaque texte (fenêtre OCR, capture du 04/11/2026).
+    func atelierShapeShadow<S: Shape>(_ shape: S, opacity: Double, radius: CGFloat, y: CGFloat) -> some View {
+        background { shape.fill(Atelier.surface).atelierShadow(opacity: opacity, radius: radius, y: y) }
+    }
+
     func atelierPanel(padding: CGFloat = 0, radius: CGFloat = Atelier.radius) -> some View {
         modifier(AtelierPanel(padding: padding, radius: radius))
     }

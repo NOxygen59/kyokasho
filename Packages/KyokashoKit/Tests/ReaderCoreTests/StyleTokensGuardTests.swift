@@ -22,6 +22,19 @@ final class StyleTokensGuardTests: XCTestCase {
         XCTAssertTrue(library.contains("onDismiss: { themes.applyAppearance() }"), "Appliquer l'apparence à la fermeture des Réglages")
     }
 
+    /// Un `.sheet` posé sur une `Section` est recopié sur chaque ligne : sur Mac, ouvrir « Voir le résumé » fermait toute
+    /// la feuille Réglages (essai du 04/11/2026). Ces présentations doivent rester sur le `Form`.
+    func testSettingsSectionsDoNotOwnPresentations() throws {
+        let settings = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .appendingPathComponent("../../../../App/Settings").standardizedFileURL
+        let diagnostics = try String(contentsOf: settings.appendingPathComponent("Diagnostics.swift"), encoding: .utf8)
+        let section = try XCTUnwrap(diagnostics.range(of: "struct DiagnosticsSection: View"))
+        let next = try XCTUnwrap(diagnostics.range(of: "private struct OvisReadingExportView"))
+        XCTAssertFalse(diagnostics[section.upperBound..<next.lowerBound].contains(".sheet("))
+        let intro = try String(contentsOf: settings.appendingPathComponent("IntroViews.swift"), encoding: .utf8)
+        XCTAssertFalse(intro.contains("struct IntroSettingsSection"), "La feuille des nouveautés doit rester sur le Form")
+    }
+
     /// La liste demandée reste complète : un oubli dans `all` rendrait un style impossible à choisir.
     func testStylePickerContainsEveryRequestedStyle() throws {
         let file = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
@@ -90,6 +103,8 @@ final class StyleTokensGuardTests: XCTestCase {
     /// Lot 2b : ombres par `atelierShadow`, matières par `Atelier.material`, bordures par `Atelier.border`.
     func testInterfaceReliefAndBordersUseStyleTokens() throws {
         XCTAssertEqual(try count(#"\.shadow\("#), [:], "Ombre en dur : utiliser atelierShadow")
+        // Sur un contenu avec du texte, l'ombre franche le dédouble : passer par atelierShapeShadow.
+        XCTAssertEqual(try count(#"\.atelierShadow\("#), ["Design/Atelier.swift": 3, "Library/LibraryView.swift": 1])
         XCTAssertEqual(try count(#"\.background\(\.[A-Za-z]+Material"#), [:], "Matière en dur : utiliser Atelier.material")
         // Fond dessiné du thème (motifs) et trait posé sur la page.
         XCTAssertEqual(try count(#"lineWidth: [0-9]"#), ["Design/ThemeBackdrop.swift": 13, "Reader/ReaderScreen.swift": 1],
