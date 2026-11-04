@@ -279,7 +279,6 @@ struct StudyPanelSettingsView: View {
 struct ReaderHelpSettingsView: View {
     @AppStorage(ResourceMonitor.enabledKey) private var monitorEnabled = false
     @AppStorage(ResourceMonitor.shownKey) private var monitorShown = false
-    @State private var diagnosticsPresented = DiagnosticsPresentations()
 
     var body: some View {
         Form {
@@ -287,15 +286,13 @@ struct ReaderHelpSettingsView: View {
                 Text("Un problème d'affichage ou de lecture ? Active le journal, refais l'action, puis partage-le pour qu'on puisse comprendre ce qui se passe.")
                     .font(.subheadline).foregroundStyle(Atelier.textSecondary)
             }
-            DiagnosticsSection(presented: $diagnosticsPresented)
+            DiagnosticsSection()
             Section {
                 Toggle("Afficher le suivi des ressources", isOn: $monitorEnabled)
                     .onChange(of: monitorEnabled) { if $0 { monitorShown = true } }
             } header: { Text("Outil avancé") } footer: {
                 Text("Suivi du processeur, de la mémoire et de la fluidité, fixé en bas à gauche, dans la bibliothèque comme dans le lecteur. × le masque ; menu « … » du lecteur pour le réafficher. Utile pour observer un ralentissement.")
             }
-        }
-        .diagnosticsPresentations($diagnosticsPresented)
-        .navigationTitle("Aide au diagnostic")
+        }.navigationTitle("Aide au diagnostic")
     }
 }

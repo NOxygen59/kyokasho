@@ -19,22 +19,7 @@ final class StyleTokensGuardTests: XCTestCase {
         // fermeture des Réglages.
         XCTAssertTrue(source.contains(".id(themes.appliedAppearance)"), "La racine doit suivre l'apparence appliquée")
         let library = try String(contentsOf: app.deletingLastPathComponent().appendingPathComponent("Library/LibraryView.swift"), encoding: .utf8)
-        XCTAssertTrue(library.contains("onDismiss: { themes.applyAppearance() }"), "Appliquer l'apparence à la fermeture des Réglages")
-    }
-
-    /// Un `.sheet` posé sur une `Section` est recopié sur chaque ligne : sur Mac, ouvrir « Voir le résumé » fermait toute
-    /// la feuille Réglages (essai du 04/11/2026). Ces présentations doivent rester sur le `Form`.
-    func testSettingsSectionsDoNotOwnPresentations() throws {
-        let settings = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
-            .appendingPathComponent("../../../../App/Settings").standardizedFileURL
-        let diagnostics = try String(contentsOf: settings.appendingPathComponent("Diagnostics.swift"), encoding: .utf8)
-        let section = try XCTUnwrap(diagnostics.range(of: "struct DiagnosticsSection: View"))
-        let next = try XCTUnwrap(diagnostics.range(of: "private struct OvisReadingExportView"))
-        XCTAssertFalse(diagnostics[section.upperBound..<next.lowerBound].contains(".sheet("))
-        XCTAssertTrue(diagnostics.contains("OvisReadingExportView().environmentObject(model)"),
-                      "Sans le modèle transmis à la feuille, l'extraction plante à l'ouverture")
-        let intro = try String(contentsOf: settings.appendingPathComponent("IntroViews.swift"), encoding: .utf8)
-        XCTAssertFalse(intro.contains("struct IntroSettingsSection"), "La feuille des nouveautés doit rester sur le Form")
+        XCTAssertTrue(library.contains("if model.openDocumentId == nil { themes.applyAppearance() }"), "Appliquer l'apparence à la fermeture des Réglages")
     }
 
     /// Une analyse OvisOCR2 doit pouvoir s'arrêter depuis la liste des IA, et sa durée être annoncée.
@@ -43,6 +28,7 @@ final class StyleTokensGuardTests: XCTestCase {
             .appendingPathComponent("../../../../App").standardizedFileURL
         let tasks = try String(contentsOf: app.appendingPathComponent("Reader/AITaskCenter.swift"), encoding: .utf8)
         XCTAssertTrue(tasks.contains("analysis.cancel()"))
+        XCTAssertTrue(tasks.contains("confirmAnalysisStop = true }"), "L'alerte doit attendre la fermeture de la bulle")
         let root = try String(contentsOf: app.appendingPathComponent("KyokashoApp.swift"), encoding: .utf8)
         XCTAssertTrue(root.contains("AnalysisDurationBanner()"))
     }

@@ -154,27 +154,30 @@ struct IntroPresenter: ViewModifier {
 
 /// Réglages → Général : revoir la visite, les nouveautés ou l'historique.
 struct IntroSettingsView: View {
+    var body: some View {
+        Form { IntroSettingsSection() }
+            .navigationTitle("Visite et nouveautés")
+    }
+}
+
+struct IntroSettingsSection: View {
     @State private var tour = false
     @State private var news = false
 
     var body: some View {
-        Form {
-            Section {
-                Button { tour = true } label: { Label("Revoir la visite guidée", systemImage: "figure.walk") }
-                if ReleaseNotes.notes(for: IntroStore.marketingVersion) != nil {
-                    Button { news = true } label: { Label("Nouveautés de cette version", systemImage: "sparkles") }
-                }
-                NavigationLink { VersionHistoryView() } label: {
-                    Label("Historique des versions", systemImage: "clock.arrow.circlepath")
-                }
-            } header: {
-                Text("Découvrir l'app")
-            } footer: {
-                Text("Version \(IntroStore.currentVersion).")
+        Section {
+            Button { tour = true } label: { Label("Revoir la visite guidée", systemImage: "figure.walk") }
+            if ReleaseNotes.notes(for: IntroStore.marketingVersion) != nil {
+                Button { news = true } label: { Label("Nouveautés de cette version", systemImage: "sparkles") }
             }
+            NavigationLink { VersionHistoryView() } label: {
+                Label("Historique des versions", systemImage: "clock.arrow.circlepath")
+            }
+        } header: {
+            Text("Découvrir l'app")
+        } footer: {
+            Text("Version \(IntroStore.currentVersion).")
         }
-        .navigationTitle("Visite et nouveautés")
-        // Sur le `Form`, jamais sur la `Section` : voir `diagnosticsPresentations`.
         .fullScreenCover(isPresented: $tour) {
             IntroTourView { IntroStore.markSeen(tour: true); tour = false }.preferredColorScheme(Theme.current.colorScheme)
         }

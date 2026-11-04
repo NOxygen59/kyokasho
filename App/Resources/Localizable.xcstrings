@@ -4005,6 +4005,28 @@
         }
       }
     },
+    "Analyse d'un document : le bouton Arrêter fonctionne.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Document analysis: the Stop button works."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Analyse d'un document : le bouton Arrêter fonctionne."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文档分析：停止按钮可用。"
+          }
+        }
+      }
+    },
     "Analyse du document": {
       "localizations": {
         "en": {
@@ -8427,6 +8449,28 @@
         }
       }
     },
+    "Changement de style : fermer les Réglages en touchant à côté ne bloque plus l'ouverture des manuels.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Changing style: closing Settings by tapping outside no longer blocks opening textbooks."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Changement de style : fermer les Réglages en touchant à côté ne bloque plus l'ouverture des manuels."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更改样式：点按外部关闭设置后，不会再无法打开教材。"
+          }
+        }
+      }
+    },
     "Changer d'identifiant Google": {
       "localizations": {
         "en": {
@@ -10997,6 +11041,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "OvisOCR2 更正"
+          }
+        }
+      }
+    },
+    "Corrections de la recette 1.4.2": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fixes from the 1.4.2 test"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Corrections de la recette 1.4.2"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1.4.2 测试的修正"
           }
         }
       }
@@ -15331,6 +15397,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "提取 OvisOCR2 读取结果：每个文档都会显示已读取的页数。"
+          }
+        }
+      }
+    },
+    "Extraction des lectures OvisOCR2 : le partage ne gèle plus l'app.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OvisOCR2 reading extraction: sharing no longer freezes the app."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Extraction des lectures OvisOCR2 : le partage ne gèle plus l'app."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "提取 OvisOCR2 阅读内容：分享不会再让应用卡住。"
           }
         }
       }

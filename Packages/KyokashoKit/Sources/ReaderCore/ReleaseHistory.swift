@@ -10,6 +10,17 @@ import Foundation
 enum ReleaseHistory {
     static let past: [ReleaseNotes] = [
         // Candidates locales non publiées.
+        ReleaseNotes("1.4.2", "2026-11-04", published: false, String(localized: "Nouveautés et export plus clairs", bundle: .main), added: [
+            String(localized: "Export : le fichier se prépare d'abord, puis un message indique clairement quand il est prêt à être enregistré ou envoyé.", bundle: .main),
+            String(localized: "Extraction des lectures OvisOCR2 : le nombre de pages lues est affiché pour chaque document.", bundle: .main),
+            String(localized: "Lexique du design d'intérieur : version anglaise, choisie selon la langue de l'app.", bundle: .main),
+            String(localized: "Lecture OvisOCR2 : un bandeau annonce qu'elle sera longue, et l'analyse d'un document peut s'arrêter depuis la liste des IA.", bundle: .main),
+        ], fixed: [
+            String(localized: "Écran de correction : le bouton d'annulation s'affiche en entier.", bundle: .main),
+            String(localized: "Réglages : ouvrir le relevé de batterie ou une autre fenêtre de diagnostic ne ferme plus les Réglages.", bundle: .main),
+            String(localized: "Cette fenêtre ne montre plus que les changements de la version installée.", bundle: .main),
+            String(localized: "Fenêtre d'étude, notes et dictionnaire : le texte n'est plus dédoublé sur les styles à ombre franche.", bundle: .main),
+        ]),
         ReleaseNotes("1.4.1", "2026-11-04", published: false, String(localized: "Langue dans la visite, corrections annulables", bundle: .main),
                      added: [String(localized: "Choix de la langue dès la visite guidée.", bundle: .main), String(localized: "Correction du texte lu par OvisOCR2 sans relire la page, avec retour à la lecture d'origine.", bundle: .main), String(localized: "Mises à jour des dictionnaires annoncées par une notification qui reste jusqu'à ta réponse.", bundle: .main), String(localized: "Lexique du design d'intérieur enrichi avec le vocabulaire du métier et ses définitions en français.", bundle: .main)]),
         ReleaseNotes("1.4.0", "2026-11-04", published: false, String(localized: "L'app en anglais et en chinois", bundle: .main), added: [
