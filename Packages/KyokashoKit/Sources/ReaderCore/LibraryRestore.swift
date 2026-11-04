@@ -136,7 +136,10 @@ public enum LibraryRestore {
         // Emplacements : nom dans la sauvegarde → emplacement réel de l'app.
         var targets: [(String, URL)] = [("kyokasho", support.appendingPathComponent("Kyokasho", isDirectory: true)),
                                         ("analysis", analysis)]
+        // Ce fichier appartient à la bibliothèque même si celle sauvegardée n'en avait pas encore.
+        // L'inclure aussi en son absence évite de conserver les traductions de la bibliothèque remplacée.
         let supportFiles = Set(marker.staged.filter { $0.hasPrefix("support/") })
+            .union(["support/definition-translations.json"])
         for name in supportFiles.sorted() { targets.append((name, support.appendingPathComponent(String(name.dropFirst("support/".count))))) }
         for (name, live) in targets {
             let staged = staging.appendingPathComponent(name), aside = old.appendingPathComponent(name)
