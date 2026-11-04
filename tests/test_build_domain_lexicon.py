@@ -46,6 +46,49 @@ class LexiconTests(unittest.TestCase):
         ]
         self.assertEqual({row[0] for row in lexicon.term_rows([], pages)}, {"試験材", "天井"})
 
+    def test_french_definition_comes_first_with_its_source(self):
+        page = {"title": "試験材", "extract": "内装に使う材料。", "langlinks": {"fr": "Matériau d'essai", "en": "Test material"}}
+        enrichment = {"french": {"Matériau d'essai": "Un matériau d'essai sert aux tests. Il existe aussi autre chose."}}
+        row = lexicon.term_rows([], [page], enrichment)[0]
+        self.assertEqual(row[5][:2], ["Français : Matériau d'essai", "Un matériau d'essai sert aux tests."])
+        self.assertEqual(row[5][-2]["content"]["content"], "Source : Wikipédia en français")
+        self.assertEqual(row[4], 3)
+
+    def test_french_definition_ignores_disambiguation_and_cuts_long_text(self):
+        self.assertEqual(lexicon.french_definition("Le mot Essai peut désigner plusieurs choses."), "")
+        self.assertLessEqual(len(lexicon.french_definition("mot " * 200)), lexicon.FRENCH_LIMIT)
+
+    def test_nature_from_wikidata_removes_people_and_unrelated_species(self):
+        pages = [{"title": "試験人", "extract": "説明。"}, {"title": "試験草", "extract": "植物。"},
+                 {"title": "試験杉", "extract": "木材として使う。"}]
+        enrichment = {"items": {"試験人": {"natures": ["Q5"]}, "試験草": {"natures": ["Q16521"]},
+                                "試験杉": {"natures": ["Q16521"]}}}
+        self.assertEqual({r[0] for r in lexicon.term_rows([], pages, enrichment)}, {"試験杉"})
+
+    def test_wikidata_adds_only_missing_terms_with_its_source(self):
+        pages = [{"title": "試験材", "extract": "材料。"}]
+        extra = [{"term": "試験材", "french": "doublon", "item": "Q1"}, {"term": "試験扉", "french": "porte d'essai", "item": "Q2"}]
+        rows = {r[0]: r for r in lexicon.term_rows([], pages, {"extra": extra})}
+        self.assertNotIn("Français : doublon", rows["試験材"][5])
+        self.assertEqual(rows["試験扉"][5][0], "Français : porte d'essai")
+        self.assertEqual(rows["試験扉"][5][-1]["content"]["content"], "Source : Wikidata")
+
+    def test_wikidata_noise_is_left_out(self):
+        extra = [{"term": "試験24", "french": "x", "item": "Q1"}, {"term": "基質 (生物学)", "french": "x", "item": "Q2"},
+                 {"term": "試験素", "french": "x", "description": "isotope de x", "item": "Q3"}]
+        self.assertEqual(lexicon.term_rows([], [], {"extra": extra}), [])
+
+    def test_written_definitions_file_is_complete(self):
+        written = json.loads((Path(lexicon.__file__).with_name("lexique_definitions_fr.json")).read_text(encoding="utf-8"))
+        self.assertGreater(len(written), 50)
+        for term, entry in written.items():
+            self.assertTrue(entry["french"] and entry["definition"] and entry["reading"], term)
+
+    def test_written_definition_is_marked_as_written_by_ai(self):
+        written = {"試験材": {"french": "matériau d'essai", "definition": "Sert aux tests."}}
+        row = lexicon.term_rows([], [{"title": "試験材", "extract": "材料。"}], {"written": written})[0]
+        self.assertEqual(row[5][:3], ["Français : matériau d'essai", "Sert aux tests.", "Explication rédigée par une IA, à vérifier."])
+
     def test_other_spelling_gets_the_same_definition(self):
         page = {"title": "建蔽率", "extract": "敷地に対する割合。", "aliases": ["建ぺい率"]}
         rows = {row[0]: row for row in lexicon.term_rows([], [page])}
@@ -92,7 +135,7 @@ class LexiconTests(unittest.TestCase):
         board = rows[1]
         self.assertEqual(board[1], "しけんいた")
         self.assertEqual(board[5][:3], ["Français : Planche d'essai", "Anglais : Test board", "試験板（しけんいた）は、試験の板。"])
-        self.assertEqual(board[5][-1]["content"]["content"], "Source : Wikipédia")
+        self.assertEqual(board[5][-1]["content"]["content"], "Source : Wikipédia en japonais")
         self.assertTrue(board[5][-1]["content"]["href"].startswith("https://ja.wikipedia.org/wiki/"))
         self.assertTrue(rows[0][5][-1]["content"]["href"].startswith("https://fr.wiktionary.org/wiki/"))
 
@@ -102,7 +145,7 @@ class LexiconTests(unittest.TestCase):
             (raw / "wiktionary.json").write_text(json.dumps([{"title": "試験間", "wikitext": WIKTIONARY_PAGE}]), encoding="utf-8")
             (raw / "wikipedia.json").write_text("[]", encoding="utf-8")
             output = raw / "sortie" / "lexique.zip"
-            self.assertEqual(lexicon.build(raw, output, "2026-10-29"), 1)
+            self.assertEqual(lexicon.build(raw, output, "2026-10-29", written={}), 1)
             with zipfile.ZipFile(output) as archive:
                 self.assertEqual(sorted(archive.namelist()), ["index.json", "tag_bank_1.json", "term_bank_1.json"])
                 index = json.loads(archive.read("index.json"))

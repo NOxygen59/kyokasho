@@ -4,11 +4,13 @@
 
 """Petit dictionnaire Yomitan du design d'intérieur, tiré de sources ouvertes (#50, lot D4 piste B).
 
-Deux étapes, toujours sur le Mac et hors du dépôt (aucun dictionnaire n'est versionné) :
+Trois étapes, toujours sur le Mac et hors du dépôt (aucun dictionnaire n'est versionné) :
 
   fetch  : relève les pages de catégories choisies du Wiktionnaire français (sens en français) et de
            Wikipédia en japonais (première phrase, titres équivalents en français et en anglais) ;
            le brut est gardé dans un dossier de travail, pour reconstruire sans retélécharger.
+  enrich : ajoute les définitions de Wikipédia en français, les libellés et la nature des pages (Wikidata, CC0)
+           et des termes de Wikidata absents des catégories ;
   build  : fabrique le .zip Yomitan (index.json, tag_bank_1.json, term_bank_N.json) depuis ce brut.
 
 Sources sous licence CC BY-SA 4.0 : l'attribution est écrite dans index.json et chaque entrée renvoie
@@ -29,6 +31,9 @@ import zipfile
 USER_AGENT = "KyokashoLexiconBuilder/1.0 (https://github.com/NOxygen59/kyokasho)"
 WIKTIONARY = "https://fr.wiktionary.org"
 WIKIPEDIA = "https://ja.wikipedia.org"
+WIKIPEDIA_FR = "https://fr.wikipedia.org"
+WIKIDATA = "https://www.wikidata.org"
+WIKIDATA_SPARQL = "https://query.wikidata.org/sparql"
 
 # Pas de « Lexique du textile » : ses sous-catégories (habillement, couture) amenaient surtout des vêtements.
 WIKTIONARY_CATEGORIES = (
@@ -73,14 +78,27 @@ SEED_TERMS = tuple("""
 配管 配線 コンセント シックハウス症候群 ホルムアルデヒド
 """.split())
 
+# Élément d'architecture, matériau de construction, meuble : leurs sous-classes apportent des termes supplémentaires.
+WIKIDATA_CLASSES = ("Q391414", "Q206615", "Q14745")
+# Nature (P31) d'une page qui n'est pas un terme du métier : personne, organisation, lieu, œuvre.
+NOT_A_TERM = frozenset({"Q5", "Q43229", "Q4830453", "Q783794", "Q891723", "Q486972", "Q515", "Q3957", "Q532", "Q1115575",
+                        "Q3918", "Q38723", "Q571", "Q7725634", "Q11424", "Q5398426", "Q7889", "Q7366", "Q134556", "Q482994",
+                        "Q33506", "Q207694", "Q1190554", "Q2221906"})
+# Sous-classes de Wikidata sans intérêt ici : isotopes, précisions entre parenthèses, termes numérotés.
+WIKIDATA_NOISE = re.compile(r"isotope|[()（）]|\d")
+TAXON = "Q16521"
+USEFUL_TAXON = re.compile(r"木材|建材|建築|家具|内装")
+
 TITLE = "Lexique du design d'intérieur (Wikipédia, Wiktionnaire)"
 ATTRIBUTION = (
-    "Extraits du Wiktionnaire en français (fr.wiktionary.org) et de Wikipédia en japonais (ja.wikipedia.org), "
+    "Extraits du Wiktionnaire en français (fr.wiktionary.org) et de Wikipédia en français et en japonais "
+    "(fr.wikipedia.org, ja.wikipedia.org), "
     "sous licence CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/). Auteurs : contributeurs de "
-    "chaque page, dont l'adresse est donnée avec l'entrée. Assemblé avec tools/build_domain_lexicon.py (Kyōkasho)."
+    "chaque page, dont l'adresse est donnée avec l'entrée. Libellés de Wikidata (CC0). Assemblé avec tools/build_domain_lexicon.py (Kyōkasho)."
 )
 TERMS_PER_BANK = 2000
 EXCERPT_LIMIT = 160
+FRENCH_LIMIT = 320
 
 KANA = re.compile(r"^[ぁ-ゖァ-ヺー・ゝゞヽヾ]+$")
 HAS_JAPANESE = re.compile(r"[ぁ-ゖァ-ヺ㐀-鿿]")
@@ -167,6 +185,27 @@ def first_sentence(extract):
     return sentence if len(sentence) <= EXCERPT_LIMIT else sentence[: EXCERPT_LIMIT - 1] + "…"
 
 
+def french_definition(extract):
+    """Première phrase utile d'un article français ; rien pour une page d'homonymie."""
+    text = re.sub(r"\s+", " ", extract or "").strip()
+    if not text or re.search(r"peut (?:aussi )?(?:désigner|faire référence)|page d.homonymie", text[:160]):
+        return ""
+    # Fin de phrase : un point suivi d'une majuscule, pas une abréviation d'une lettre (« J. Dupont »).
+    match = re.search(r"(?<=[^\s.]{2})\.(?=\s+[A-ZÀ-Ý«])", text)
+    sentence = text[: match.end()] if match else text
+    if len(sentence) <= FRENCH_LIMIT:
+        return sentence
+    return sentence[: FRENCH_LIMIT - 1].rsplit(" ", 1)[0] + "…"
+
+
+def is_trade_term(item, extract):
+    """Faux pour une personne, un lieu, une organisation, une œuvre, ou une espèce sans rapport avec le bâtiment."""
+    natures = set((item or {}).get("natures", []))
+    if natures & NOT_A_TERM:
+        return False
+    return TAXON not in natures or bool(USEFUL_TAXON.search(extract or ""))
+
+
 def page_url(site, title):
     return f"{site}/wiki/{quote(title.replace(' ', '_'))}"
 
@@ -176,8 +215,11 @@ def source_link(name, url):
     return {"type": "structured-content", "content": {"tag": "a", "href": url, "content": f"Source : {name}"}}
 
 
-def term_rows(wiktionary_pages, wikipedia_pages):
+def term_rows(wiktionary_pages, wikipedia_pages, enrichment=None):
     """Lignes term_bank (format 3) : [terme, lecture, étiquettes, règles, score, sens, séquence, étiquettes du terme]."""
+    enrichment = enrichment or {}
+    items = enrichment.get("items", {})
+    french = enrichment.get("french", {})
     rows = []
     for page in sorted(wiktionary_pages, key=lambda p: p["title"]):
         for term, reading, _, senses in wiktionary_entries(page["title"], page.get("wikitext", "")):
@@ -193,46 +235,88 @@ def term_rows(wiktionary_pages, wikipedia_pages):
         chosen = term in SEED_TERMS or any(alias in SEED_TERMS for alias in page.get("aliases", []))
         if not chosen and PROPER_NOUN_TITLE.search(term):
             continue
-        links = page.get("langlinks", {})
-        glossary = [f"{label} : {links[code]}" for code, label in (("fr", "Français"), ("en", "Anglais")) if code in links]
+        item = items.get(page["title"], {})
         excerpt = first_sentence(page.get("extract", ""))
-        if not chosen and PROPER_NOUN.search(excerpt):
+        if not chosen and (PROPER_NOUN.search(excerpt) or not is_trade_term(item, page.get("extract", ""))):
             continue
+        links = page.get("langlinks", {})
+        french_title = links.get("fr") or item.get("label", "")
+        definition = french_definition(french.get(links.get("fr", ""), ""))
+        # Le français d'abord : c'est lui qui fait comprendre le terme ; le japonais reste pour l'étude.
+        glossary = [f"Français : {wikipedia_title(french_title)}"] if french_title else []
+        if definition:
+            glossary.append(definition)
+        elif item.get("description"):
+            glossary.append(item["description"])
+        if "en" in links:
+            glossary.append(f"Anglais : {links['en']}")
         if excerpt:
             glossary.append(excerpt)
         if not glossary:
             continue
-        glossary.append(source_link("Wikipédia", page_url(WIKIPEDIA, page["title"])))
+        if definition:
+            glossary.append(source_link("Wikipédia en français", page_url(WIKIPEDIA_FR, links["fr"])))
+        glossary.append(source_link("Wikipédia en japonais", page_url(WIKIPEDIA, page["title"])))
         reading = wikipedia_reading(term, page.get("extract", ""))
-        rows.append([term, reading, "wp", "", 1, glossary, 0, "interieur"])
+        score = 3 if definition else 1
+        rows.append([term, reading, "wp", "", score, glossary, 0, "interieur"])
         # Autre graphie qui mène à cette page : même définition, cherchée sous les deux formes.
         for alias in page.get("aliases", []):
             if alias != term and HAS_JAPANESE.search(alias):
-                rows.append([alias, "", "wp", "", 1, glossary, 0, "interieur"])
+                rows.append([alias, "", "wp", "", score, glossary, 0, "interieur"])
+    known = {row[0] for row in rows}
+    for extra in sorted(enrichment.get("extra", []), key=lambda e: e["term"]):
+        term = extra["term"]
+        if term in known or SKIPPED_TITLE.search(term) or not HAS_JAPANESE.search(term) or len(term) > 20:
+            continue
+        if WIKIDATA_NOISE.search(term) or WIKIDATA_NOISE.search(extra.get("description", "")):
+            continue
+        known.add(term)
+        glossary = [f"Français : {extra['french']}"]
+        if extra.get("description"):
+            glossary.append(extra["description"])
+        glossary.append(source_link("Wikidata", f"{WIKIDATA}/wiki/{extra['item']}"))
+        rows.append([term, term if is_kana(term) else "", "wd", "", 1, glossary, 0, "interieur"])
+    # Rédigé à la main pour des termes essentiels sans article français : signalé comme tel à l'écran.
+    written = {row[0]: row for row in rows if row[2] != "wikt"}
+    for term, entry in sorted(enrichment.get("written", {}).items()):
+        glossary = [f"Français : {entry['french']}", entry["definition"], "Explication rédigée par une IA, à vérifier."]
+        row = written.get(term)
+        if row:
+            row[5] = glossary + [g for g in row[5] if not (isinstance(g, str) and g.startswith("Français :"))]
+            row[4] = 3
+        else:
+            rows.append([term, entry.get("reading", ""), "wp", "", 3, glossary, 0, "interieur"])
     for sequence, row in enumerate(rows, start=1):
         row[6] = sequence
     return rows
 
 
-def build(raw, output, revision):
+def build(raw, output, revision, written=None):
     wiktionary = json.loads((raw / "wiktionary.json").read_text(encoding="utf-8"))
     wikipedia = json.loads((raw / "wikipedia.json").read_text(encoding="utf-8"))
-    rows = term_rows(wiktionary, wikipedia)
+    enrichment_file = raw / "enrichment.json"
+    enrichment = json.loads(enrichment_file.read_text(encoding="utf-8")) if enrichment_file.exists() else {}
+    if written is None:
+        written = json.loads(Path(__file__).with_name("lexique_definitions_fr.json").read_text(encoding="utf-8"))
+    enrichment["written"] = written
+    rows = term_rows(wiktionary, wikipedia, enrichment)
     index = {
         "title": TITLE,
         "revision": revision,
         "format": 3,
         "sequenced": True,
         "author": "Contributeurs du Wiktionnaire et de Wikipédia ; assemblé par NOxygen59",
-        "description": "Termes de l'architecture, de l'intérieur, du mobilier et des matériaux. Sens en français "
-                       "(Wiktionnaire) ; pour Wikipédia, titres équivalents en français et en anglais, et première phrase.",
+        "description": "Termes de l'architecture, de l'intérieur, du mobilier et des matériaux. Définitions en français "
+                       "(Wikipédia, Wiktionnaire), libellés de Wikidata et première phrase de l'article japonais.",
         "attribution": ATTRIBUTION,
         "sourceLanguage": "ja",
         "targetLanguage": "fr",
     }
     tags = [
         ["wikt", "source", 0, "Wiktionnaire en français, CC BY-SA 4.0", 0],
-        ["wp", "source", 0, "Wikipédia en japonais, CC BY-SA 4.0", 0],
+        ["wp", "source", 0, "Wikipédia en français et en japonais, CC BY-SA 4.0", 0],
+        ["wd", "source", 0, "Wikidata, CC0", 0],
         ["interieur", "domain", 0, "Design d'intérieur et architecture", 0],
     ]
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -328,12 +412,64 @@ def fetch_wikipedia(categories, depth, seeds=SEED_TERMS):
     return list(pages.values())
 
 
+def fetch_enrichment(wikipedia_pages):
+    """Définitions françaises, nature des pages, et termes de Wikidata absents des catégories."""
+    titles = [page["title"] for page in wikipedia_pages]
+    item_of = {}
+    for batch in batches(titles, 50):
+        for chunk in query_all(WIKIPEDIA, prop="pageprops", ppprop="wikibase_item", titles="|".join(batch)):
+            for page in chunk.get("pages", []):
+                identifier = page.get("pageprops", {}).get("wikibase_item")
+                if identifier:
+                    item_of[page["title"]] = identifier
+    entities = {}
+    for batch in batches(sorted(set(item_of.values())), 50):
+        data = api(WIKIDATA, action="wbgetentities", ids="|".join(batch), props="labels|descriptions|claims", languages="fr")
+        for identifier, entity in data.get("entities", {}).items():
+            natures = [claim["mainsnak"]["datavalue"]["value"]["id"] for claim in entity.get("claims", {}).get("P31", [])
+                       if claim.get("mainsnak", {}).get("datavalue")]
+            entities[identifier] = {"label": entity.get("labels", {}).get("fr", {}).get("value", ""),
+                                    "description": entity.get("descriptions", {}).get("fr", {}).get("value", ""),
+                                    "natures": natures}
+    items = {title: entities[identifier] for title, identifier in item_of.items() if identifier in entities}
+    french = {}
+    french_titles = sorted({page["langlinks"]["fr"] for page in wikipedia_pages if page.get("langlinks", {}).get("fr")})
+    for batch in batches(french_titles, 20):
+        for chunk in query_all(WIKIPEDIA_FR, prop="extracts", exintro="1", explaintext="1", exlimit="20", redirects="1",
+                               titles="|".join(batch)):
+            redirected = {r["to"]: r["from"] for r in chunk.get("redirects", [])}
+            for page in chunk.get("pages", []):
+                if page.get("extract"):
+                    french[page["title"]] = page["extract"]
+                    if page["title"] in redirected:
+                        french[redirected[page["title"]]] = page["extract"]
+    extra, seen = [], set()
+    for root in WIKIDATA_CLASSES:
+        query = (f"SELECT ?i ?ja ?fr ?d WHERE {{ ?i wdt:P279* wd:{root} . ?i rdfs:label ?ja . FILTER(LANG(?ja)='ja') "
+                 "?i rdfs:label ?fr . FILTER(LANG(?fr)='fr') "
+                 "OPTIONAL { ?i schema:description ?d . FILTER(LANG(?d)='fr') } }")
+        time.sleep(2)
+        result = subprocess.run(["curl", "-sS", "--fail", "-m", "90", "-A", USER_AGENT, "-H", "Accept: application/sparql-results+json",
+                                 "-G", WIKIDATA_SPARQL, "--data-urlencode", f"query={query}"], capture_output=True)
+        if result.returncode != 0:
+            raise RuntimeError(f"Wikidata ne répond pas : {root}")
+        for row in json.loads(result.stdout)["results"]["bindings"]:
+            term = row["ja"]["value"]
+            if term not in seen:
+                seen.add(term)
+                extra.append({"term": term, "french": row["fr"]["value"], "description": row.get("d", {}).get("value", ""),
+                              "item": row["i"]["value"].rsplit("/", 1)[-1]})
+    return {"items": items, "french": french, "extra": extra}
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     commands = parser.add_subparsers(dest="command", required=True)
     fetch = commands.add_parser("fetch", help="relever les pages (réseau)")
     fetch.add_argument("--raw", type=Path, required=True, help="dossier de travail, hors du dépôt")
     fetch.add_argument("--depth", type=int, default=1, help="profondeur des sous-catégories (1 par défaut)")
+    enrich = commands.add_parser("enrich", help="ajouter le français et Wikidata au relevé (réseau)")
+    enrich.add_argument("--raw", type=Path, required=True)
     make = commands.add_parser("build", help="fabriquer le .zip Yomitan")
     make.add_argument("--raw", type=Path, required=True)
     make.add_argument("--output", type=Path, required=True, help="fichier .zip, hors du dépôt")
@@ -345,6 +481,11 @@ def main():
                             ("wikipedia", fetch_wikipedia(WIKIPEDIA_CATEGORIES, arguments.depth))):
             (arguments.raw / f"{name}.json").write_text(json.dumps(pages, ensure_ascii=False, indent=1), encoding="utf-8")
             print(f"{name} : {len(pages)} pages")
+    elif arguments.command == "enrich":
+        wikipedia = json.loads((arguments.raw / "wikipedia.json").read_text(encoding="utf-8"))
+        enrichment = fetch_enrichment(wikipedia)
+        (arguments.raw / "enrichment.json").write_text(json.dumps(enrichment, ensure_ascii=False, indent=1), encoding="utf-8")
+        print({key: len(value) for key, value in enrichment.items()})
     else:
         print(f"{build(arguments.raw, arguments.output, arguments.revision)} entrées : {arguments.output}")
 
