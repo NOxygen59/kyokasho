@@ -44,8 +44,8 @@ let package = Package(
         // Code original (MIT) : moteurs OCR ONNX (PP-OCRv5, NDLOCR-Lite), modèles téléchargés à part.
         .target(name: "ONNXOCRKit", dependencies: [
             "OCRKit",
-            // ONNX Runtime n'existe pas pour Mac Catalyst (#55, version Mac Intel) : iOS et macOS (tests) seulement.
-            .product(name: "onnxruntime", package: "onnxruntime-swift-package-manager", condition: .when(platforms: [.iOS, .macOS])),
+            // Mac Catalyst : la tranche vient de tools/mac_onnx_catalyst_slice.sh, à lancer après la résolution des paquets.
+            .product(name: "onnxruntime", package: "onnxruntime-swift-package-manager"),
         ]),
         // Code original (MIT) : cartes, modèles, révisions FSRS, médias.
         .target(name: "ReviewKit", dependencies: [

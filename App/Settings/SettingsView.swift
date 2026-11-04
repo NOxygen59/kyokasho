@@ -577,7 +577,7 @@ struct ModelsView: View {
             if !localAIAvailable {
                 // Version Mac (#55) : MLX absent ; OvisOCR2 (le même modèle, en GGUF) par un serveur llama.cpp local.
                 Section {
-                    Text("Sur Mac, Qwen, GLM-OCR et NDLOCR ne fonctionnent pas. OvisOCR2 marche par un serveur llama.cpp lancé sur ce Mac (même modèle que sur l'iPad, converti en GGUF). L'OCR Apple Vision, les dictionnaires, les cartes et l'import de paquets .kyokasho marchent toujours.")
+                    Text("Sur Mac, Qwen et GLM-OCR ne fonctionnent pas. NDLOCR-Lite et PP-OCRv5 marchent, téléchargés ci-dessous. OvisOCR2 marche par un serveur llama.cpp lancé sur ce Mac (même modèle que sur l'iPad, converti en GGUF). L'OCR Apple Vision, les dictionnaires, les cartes et l'import de paquets .kyokasho marchent toujours.")
                         .font(.footnote)
                     Toggle("OvisOCR2 par serveur local", isOn: $localVLM)
                     TextField("Adresse du serveur", text: $localVLMURL)
