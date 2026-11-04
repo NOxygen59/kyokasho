@@ -1387,6 +1387,28 @@
         }
       }
     },
+    "%lld / %lld pages lues : prêt à extraire": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld / %2$lld pages read: ready to extract"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld / %lld pages lues : prêt à extraire"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已读取 %1$lld / %2$lld 页：可以提取"
+          }
+        }
+      }
+    },
     "%lld Mo + cache %lld Mo": {
       "localizations": {
         "en": {
@@ -5919,6 +5941,28 @@
         }
       }
     },
+    "Aucune page lue : rien à extraire": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No pages read: nothing to extract"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucune page lue : rien à extraire"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "尚未读取任何页面：没有可提取的内容"
+          }
+        }
+      }
+    },
     "Aucune tâche IA en cours.": {
       "localizations": {
         "en": {
@@ -8181,6 +8225,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "这些页面已被清除：无法恢复。"
+          }
+        }
+      }
+    },
+    "Cette fenêtre ne montre plus que les changements de la version installée.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This window now shows only the changes in the installed version."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cette fenêtre ne montre plus que les changements de la version installée."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此窗口现在只显示已安装版本的更改。"
           }
         }
       }
@@ -14411,6 +14477,28 @@
         }
       }
     },
+    "Enregistrer ou envoyer le fichier": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save or send the file"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enregistrer ou envoyer le fichier"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存或发送文件"
+          }
+        }
+      }
+    },
     "Enregistrés": {
       "localizations": {
         "en": {
@@ -14961,6 +15049,28 @@
         }
       }
     },
+    "Export : le fichier se prépare d'abord, puis un message indique clairement quand il est prêt à être enregistré ou envoyé.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export: the file is prepared first, then a message clearly shows when it is ready to save or send."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export : le fichier se prépare d'abord, puis un message indique clairement quand il est prêt à être enregistré ou envoyé."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导出：先准备文件，准备好后会明确提示可以保存或发送。"
+          }
+        }
+      }
+    },
     "Export impossible : %@": {
       "localizations": {
         "en": {
@@ -15133,6 +15243,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "导出内容、处理中的文件"
+          }
+        }
+      }
+    },
+    "Extraction des lectures OvisOCR2 : le nombre de pages lues est affiché pour chaque document.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OvisOCR2 reading extraction: the number of pages read is shown for each document."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Extraction des lectures OvisOCR2 : le nombre de pages lues est affiché pour chaque document."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "提取 OvisOCR2 读取结果：每个文档都会显示已读取的页数。"
           }
         }
       }
@@ -15837,6 +15969,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "文件无法读取（需要 UTF-8 或 Shift-JIS）。"
+          }
+        }
+      }
+    },
+    "Fichier prêt : %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "File ready: %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fichier prêt : %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文件已准备好：%@"
           }
         }
       }
@@ -17025,6 +17179,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "GPL-3.0（M. A. Souibgui、Y. Kessentini）— ONNX 转换：tools/degan_to_onnx.py"
+          }
+        }
+      }
+    },
+    "Garde cette fenêtre ouverte : la fermer annule la préparation.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep this window open: closing it cancels the preparation."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Garde cette fenêtre ouverte : la fermer annule la préparation."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "请保持此窗口打开：关闭窗口会取消准备。"
           }
         }
       }
@@ -20571,6 +20747,28 @@
         }
       }
     },
+    "Langue dans la visite, corrections annulables": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Language in the tour, corrections you can undo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Langue dans la visite, corrections annulables"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导览中选择语言，更正可撤销"
+          }
+        }
+      }
+    },
     "Langue de l'app": {
       "localizations": {
         "en": {
@@ -21161,6 +21359,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "导入的文件，保持原样。"
+          }
+        }
+      }
+    },
+    "Le fichier n'est pas encore enregistré : touche le bouton ci-dessus pour choisir où le mettre.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The file is not saved yet: tap the button above to choose where to put it."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le fichier n'est pas encore enregistré : touche le bouton ci-dessus pour choisir où le mettre."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文件尚未保存：请点按上方按钮选择保存位置。"
           }
         }
       }
@@ -25869,6 +26089,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ 的新功能"
+          }
+        }
+      }
+    },
+    "Nouveautés et export plus clairs": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clearer release notes and export"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nouveautés et export plus clairs"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更清晰的新功能说明和导出"
           }
         }
       }
@@ -30713,6 +30955,28 @@
         }
       }
     },
+    "Préparer le fichier": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prepare the file"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Préparer le fichier"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "准备文件"
+          }
+        }
+      }
+    },
     "Préréglages": {
       "localizations": {
         "en": {
@@ -33283,6 +33547,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "这里还没有内容"
+          }
+        }
+      }
+    },
+    "Rien n'est enregistré à cette étape. Un bouton apparaîtra ici quand le fichier sera prêt.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing is saved at this step. A button will appear here when the file is ready."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rien n'est enregistré à cette étape. Un bouton apparaîtra ici quand le fichier sera prêt."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此步骤不会保存任何内容。文件准备好后，这里会出现一个按钮。"
           }
         }
       }
@@ -38189,6 +38475,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "点按页面上要锚定笔记的词"
+          }
+        }
+      }
+    },
+    "Touche un document : le fichier se prépare, puis la fenêtre de partage s'ouvre pour l'enregistrer ou l'envoyer.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tap a document: the file is prepared, then the share window opens so you can save or send it."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Touche un document : le fichier se prépare, puis la fenêtre de partage s'ouvre pour l'enregistrer ou l'envoyer."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "点按文档：准备好文件后会打开共享窗口，可保存或发送。"
           }
         }
       }
@@ -44635,6 +44943,50 @@
           "stringUnit": {
             "state": "translated",
             "value": "异常项目（链接或特殊文件）：备份已停止。"
+          }
+        }
+      }
+    },
+    "Étape 1 sur 2 : préparer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Step 1 of 2: prepare"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Étape 1 sur 2 : préparer"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "第 1 步（共 2 步）：准备"
+          }
+        }
+      }
+    },
+    "Étape 2 sur 2 : enregistrer ou envoyer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Step 2 of 2: save or send"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Étape 2 sur 2 : enregistrer ou envoyer"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "第 2 步（共 2 步）：保存或发送"
           }
         }
       }

@@ -324,13 +324,26 @@ struct DocumentExportSheet: View {
                             Text("Préparation… \(working.done) / \(working.total)")
                         }
                     } else if let result {
+                        Label("Fichier prêt : \(result.lastPathComponent)", systemImage: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
                         ShareLink(item: result) {
-                            Label("Partager \(result.lastPathComponent)", systemImage: "square.and.arrow.up")
+                            Label("Enregistrer ou envoyer le fichier", systemImage: "square.and.arrow.up")
+                                .font(.headline)
                         }
                     } else {
-                        Button { start() } label: { Label("Exporter", systemImage: "square.and.arrow.up.on.square") }
+                        Button { start() } label: { Label("Préparer le fichier", systemImage: "doc.badge.gearshape") }
                     }
                     if let error { Text(error).font(.caption).foregroundStyle(.red) }
+                } header: {
+                    Text(verbatim: result == nil ? String(localized: "Étape 1 sur 2 : préparer") : String(localized: "Étape 2 sur 2 : enregistrer ou envoyer"))
+                } footer: {
+                    if working != nil {
+                        Text("Garde cette fenêtre ouverte : la fermer annule la préparation.")
+                    } else if result != nil {
+                        Text("Le fichier n'est pas encore enregistré : touche le bouton ci-dessus pour choisir où le mettre.")
+                    } else {
+                        Text("Rien n'est enregistré à cette étape. Un bouton apparaîtra ici quand le fichier sera prêt.")
+                    }
                 }
             }
             .navigationTitle("Exporter « \(document.title) »")

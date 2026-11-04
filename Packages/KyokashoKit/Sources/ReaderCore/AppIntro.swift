@@ -76,45 +76,13 @@ public struct ReleaseNotes: Equatable, Sendable, Identifiable {
     /// Du plus récent au plus ancien.
     public static let all: [ReleaseNotes] = [current] + ReleaseHistory.past
 
-    /// La version en cours de préparation (cumul de tout le lot ; c'est elle que montre la fenêtre « Nouveautés »).
-    public static let current = ReleaseNotes("1.4.1", "2026-11-04", published: false, String(localized: "L'app en anglais et en chinois", bundle: .main), added: [
-            String(localized: "Choix de la langue dès la visite guidée.", bundle: .main),
-            String(localized: "Correction du texte lu par OvisOCR2 sans relire la page, avec retour à la lecture d'origine.", bundle: .main),
-            String(localized: "Mises à jour des dictionnaires annoncées par une notification qui reste jusqu'à ta réponse.", bundle: .main),
-            String(localized: "Lexique du design d'intérieur enrichi avec le vocabulaire du métier et ses définitions en français.", bundle: .main),
-            String(localized: "Toute l'interface en français, en anglais et en chinois simplifié (Réglages → Général → Thèmes et couleurs).", bundle: .main),
-            String(localized: "Extraction des lectures OvisOCR2 d'un document, définitions françaises et légales dans le lexique, vérification hebdomadaire des dictionnaires.", bundle: .main),
-            String(localized: "Onglets en haut du lecteur pour passer d'un livre à l'autre ; une notification prévient quand beaucoup sont ouverts.", bundle: .main),
-            String(localized: "Accueil en sections Manuels et Livres, question « Livre ou manuel ? » à l'import, suppression de plusieurs documents.", bundle: .main),
-            String(localized: "Corbeille : un document supprimé reste 30 jours, restaurable.", bundle: .main),
-            String(localized: "Temps de lecture sur l'accueil, à la place de la progression en pages.", bundle: .main),
-            String(localized: "Surligneur sur le texte lu par l'OCR, avec gomme et annulation (⌘ Z).", bundle: .main),
-            String(localized: "Images (photo, PNG, HEIC) vers PDF.", bundle: .main),
-            String(localized: "Notes : heure de chaque note, groupées par jour, modifiables sur place ; export Markdown.", bundle: .main),
-            String(localized: "Analyse du document : conseil fondé d'abord sur OvisOCR2, annulation d'un choix, relance au choix, texte des images.", bundle: .main),
-            String(localized: "Chat IA : consignes et paramètres par modèle, préréglages, tâches rapides, partage, liste des conversations.", bundle: .main),
-            String(localized: "Moniteur de ressources intégré à la barre du lecteur ; journal des IA en clair.", bundle: .main),
-            String(localized: "Dictionnaires à télécharger dans l'app (catalogue, mises à jour, licences), langue en premier au choix, lexique du design d'intérieur fourni avec l'app.", bundle: .main),
-            String(localized: "Supprimer des pages (une, plusieurs, « de … à … »), restaurables 30 jours avec leurs notes, dessins et analyses ; historique des modifications des pages.", bundle: .main),
-            String(localized: "Traduction des pages en anglais, en plus du français ; suppression d'une traduction.", bundle: .main),
-            String(localized: "Paquet Kyōkasho : exporter un document complet et le réimporter tel quel ; un paquet touché dans Fichiers s'ouvre dans l'app.", bundle: .main),
-            String(localized: "Styles de l'app : Neo-Brutalism, Glassmorphism, Synthwave, Swiss Design, Wabi-Sabi, avec leurs palettes ; thèmes Clair et Sépia.", bundle: .main),
-            String(localized: "Pages supprimées : effacer leurs copies tout de suite ; la restauration libère la place d'elle-même.", bundle: .main),
-            String(localized: "Relevé de batterie (Aide au diagnostic) : ce que consomme chaque activité, par heure.", bundle: .main),
-            String(localized: "23 styles au choix, dont Claymorphism, Editorial, Cyberpunk, Pixel Art, Victorian ; fenêtres aux couleurs du style.", bundle: .main),
-            String(localized: "Sauvegarde complète de la bibliothèque dans un dossier de Fichiers (10 gardées) et restauration.", bundle: .main),
-            String(localized: "Fond « Sépia nuit », visite guidée et cette fenêtre de nouveautés.", bundle: .main),
-            String(localized: "Quatre icônes sobres au choix et Réglages rangés par usage.", bundle: .main),
+    /// La version en cours de préparation : seulement ce qu'elle change (décision de NOxygen59 du 04/11/2026). C'est
+    /// elle que montre la fenêtre « Nouveautés » ; les versions précédentes vont dans `ReleaseHistory`.
+    public static let current = ReleaseNotes("1.4.2", "2026-11-04", published: false, String(localized: "Nouveautés et export plus clairs", bundle: .main), added: [
+            String(localized: "Export : le fichier se prépare d'abord, puis un message indique clairement quand il est prêt à être enregistré ou envoyé.", bundle: .main),
+            String(localized: "Extraction des lectures OvisOCR2 : le nombre de pages lues est affiché pour chaque document.", bundle: .main),
         ], fixed: [
-            String(localized: "Les flèches du clavier tournent les pages sans rester bloquées sur le champ du numéro de page.", bundle: .main),
-            String(localized: "Le survol du dictionnaire avec Maj suit le curseur, même rapide.", bundle: .main),
-            String(localized: "La pastille du moteur OCR ne clignote plus en tournant les pages.", bundle: .main),
-            String(localized: "« Voir le journal » s'ouvre vite, même long.", bundle: .main),
-            String(localized: "Avertissement quand un brouillon de note n'a pas été ajouté.", bundle: .main),
-        ], removed: [
-            String(localized: "Fond « Sombre intelligent » (remplacé par « Sépia nuit »).", bundle: .main),
-            String(localized: "Fenêtre OCR « réduite en pastille » (le panneau se masque avec ×).", bundle: .main),
-            String(localized: "Grosses flèches sur les bords de la page (rangées à côté du numéro de page).", bundle: .main),
+            String(localized: "Cette fenêtre ne montre plus que les changements de la version installée.", bundle: .main),
         ])
 
     /// Notes de `version` (« 1.3.2 », sans le numéro de build) : la version elle-même, jamais une build de test.

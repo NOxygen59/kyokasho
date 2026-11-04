@@ -178,6 +178,8 @@ private struct OvisReadingExportView: View {
     @State private var working: String?
     @State private var message: String?
     @State private var file: SharedFile?
+    /// Pages lues par document, comptées à l'ouverture et hors du fil principal.
+    @State private var readCounts: [String: Int] = [:]
 
     var body: some View {
         NavigationStack {
@@ -185,16 +187,35 @@ private struct OvisReadingExportView: View {
                 if let message {
                     Label(message, systemImage: "info.circle").foregroundStyle(.secondary)
                 }
-                ForEach(model.documents) { document in
-                    Button { export(document) } label: {
-                        HStack {
-                            Text(document.title).foregroundStyle(Atelier.textPrimary)
-                            Spacer()
-                            if working == document.id { ProgressView() }
+                Section {
+                    ForEach(model.documents) { document in
+                        let read = readCounts[document.id]
+                        Button { export(document) } label: {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(document.title).foregroundStyle(read == 0 ? Atelier.textTertiary : Atelier.textPrimary)
+                                    if let read {
+                                        Text(read == 0 ? String(localized: "Aucune page lue : rien à extraire")
+                                                       : String(localized: "\(read) / \(document.pageCount) pages lues : prêt à extraire"))
+                                            .font(.caption).foregroundStyle(.secondary)
+                                    }
+                                }
+                                Spacer()
+                                if working == document.id { ProgressView() }
+                            }
                         }
+                        .disabled(working != nil || read == 0)
                     }
-                    .disabled(working != nil)
+                } footer: {
+                    Text("Touche un document : le fichier se prépare, puis la fenêtre de partage s'ouvre pour l'enregistrer ou l'envoyer.")
                 }
+            }
+            .task {
+                let ids = model.documents.map(\.id)
+                let reader = ModelSpec.ovisocr2.id
+                readCounts = await Task.detached(priority: .userInitiated) {
+                    Dictionary(uniqueKeysWithValues: ids.map { ($0, DocumentAITextStore.pageCount(documentId: $0, reader: reader)) })
+                }.value
             }
             .navigationTitle("Lectures OvisOCR2")
             .navigationBarTitleDisplayMode(.inline)

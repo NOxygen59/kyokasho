@@ -68,7 +68,11 @@ struct ReviewSettingsView: View {
                 Button { export(apkg: true) } label: { Label("Créer un paquet Anki (.apkg)", systemImage: "shippingbox") }
                 Button { export(apkg: false) } label: { Label("Créer un fichier CSV", systemImage: "tablecells") }
                 if let exportURL {
-                    ShareLink(item: exportURL) { Label("Partager \(exportURL.lastPathComponent)", systemImage: "square.and.arrow.up") }
+                    Label("Fichier prêt : \(exportURL.lastPathComponent)", systemImage: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                    ShareLink(item: exportURL) {
+                        Label("Enregistrer ou envoyer le fichier", systemImage: "square.and.arrow.up").font(.headline)
+                    }
                 }
             } header: {
                 Text("Exporter vers Anki")

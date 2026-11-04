@@ -21,6 +21,13 @@ enum DocumentAITextStore {
     /// même forme de nom, donc suivie par les décalages de pages, les sauvegardes et les paquets.
     static let correctedReader = "ovisedit"
 
+    /// Nombre de pages lues par ce modèle pour ce document.
+    static func pageCount(documentId: String, reader: String) -> Int {
+        let directory = folder.appendingPathComponent(documentId, isDirectory: true)
+        let names = (try? FileManager.default.contentsOfDirectory(atPath: directory.path)) ?? []
+        return names.filter { $0.hasPrefix(reader + "-") && $0.hasSuffix(".md") }.count
+    }
+
     static func hasCorrection(documentId: String, page: Int) -> Bool {
         FileManager.default.fileExists(atPath: url(documentId: documentId, reader: correctedReader, page: page).path)
     }
