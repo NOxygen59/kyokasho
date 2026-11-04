@@ -26,6 +26,7 @@ extension BackupRoundTripTests {
     static let storageInventory: [String: (role: String, components: Set<String>)] = [
         "App/AppModel.swift": ("persistant : Kyokasho/kyokasho.sqlite, Kyokasho/Documents/, Kyokasho/Bench/ ; cache : Caches/Thumbnails",
                                ["Bench", "Documents", "Kyokasho", "Thumbnails", "kyokasho.sqlite"]),
+        "App/Library/DocumentPicker.swift": ("temporaire : tmp/Picked-<UUID>/ (copie du fichier choisi, effacée après usage)", ["Picked-\\(UUID().uuidString)"]),
         "App/Review/ReviewModel.swift": ("persistant : Kyokasho/Review/", ["Kyokasho/Review"]),
         "Packages/KyokashoKit/Sources/ReviewKit/ReviewStore.swift": ("persistant : Review/review.sqlite, Review/Media/ ; temporaire : review-media-<UUID>",
                                                                      ["Media", "review-media-", "review.sqlite"]),

@@ -25,9 +25,9 @@ final class ModelDownloads: ObservableObject {
 
     func start(_ spec: ModelSpec) {
         guard tasks[spec.id] == nil else { return }
-        // Version Mac (#55) : ni MLX ni ONNX ; télécharger des Go de modèles inutilisables est refusé.
-        guard localAIAvailable else {
-            errors[spec.id] = "Sur Mac, les modèles ne fonctionnent pas : importe les documents en paquet .kyokasho avec leurs lectures."
+        // Version Mac (#55) : ONNX seulement, sans MLX ; télécharger des Go de modèles inutilisables est refusé.
+        guard spec.runsOnThisDevice else {
+            errors[spec.id] = "Sur Mac, seuls les modèles ONNX fonctionnent : pour celui-ci, importe les documents en paquet .kyokasho avec leurs lectures."
             return
         }
         errors[spec.id] = nil
@@ -165,7 +165,7 @@ struct OCRModelsSection: View {
                 Button { downloads.start(spec) } label: {
                     Label("Télécharger (\(size(spec.totalSize)))", systemImage: "arrow.down.circle")
                 }
-                .disabled(!localAIAvailable) // Mac (#55) : modèles inutilisables, téléchargement grisé
+                .disabled(!spec.runsOnThisDevice) // Mac (#55) : modèles MLX inutilisables, téléchargement grisé
                 .buttonStyle(.borderless)
             }
             if let error = downloads.errors[spec.id] {
@@ -211,4 +211,9 @@ private final class PercentGate: @unchecked Sendable {
             return true
         }
     }
+}
+
+extension ModelSpec {
+    /// MLX n'existe que sur iPad ; les modèles entièrement ONNX tournent partout, Mac compris (#55).
+    var runsOnThisDevice: Bool { localAIAvailable || files.allSatisfy { $0.name.hasSuffix(".onnx") } }
 }
