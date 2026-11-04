@@ -40,7 +40,9 @@ public struct GlossaryRenderer: Sendable {
     public func page(terms: [TermResult], dictionaries: [DictionaryInfo], query: String? = nil) -> String {
         var body = ""
         if terms.isEmpty {
-            body = "<div class=\"empty\">Aucun résultat\(query.map { " pour « \(escape($0)) »" } ?? "").</div>"
+            let empty = query.map { String(localized: "Aucun résultat pour « \(escape($0)) ».", bundle: .main) }
+                ?? String(localized: "Aucun résultat.", bundle: .main)
+            body = "<div class=\"empty\">\(empty)</div>"
         }
         for (i, term) in terms.enumerated() { body += renderTerm(term, index: i) }
         return document(body: body, dictionaries: dictionaries)
@@ -61,7 +63,7 @@ public struct GlossaryRenderer: Sendable {
             }
             html += "</section>"
         }
-        html += "<div class=\"hint\">Ordre des traits : non fourni par les dictionnaires de kanji habituels.</div></article>"
+        html += "<div class=\"hint\">\(String(localized: "Ordre des traits : non fourni par les dictionnaires de kanji habituels.", bundle: .main))</div></article>"
         return document(body: html, dictionaries: [])
     }
 
@@ -73,8 +75,8 @@ public struct GlossaryRenderer: Sendable {
         h += "<button class=\"btn audio\" data-term=\"\(attr(t.expression))\" data-reading=\"\(attr(t.reading))\" title=\"Prononciation\">▶︎</button>"
         if options.canAddCards {
             h += addedTermIds.contains(t.id)
-                ? "<button class=\"btn done\" title=\"Déjà dans tes cartes\">✓</button>"
-                : "<button class=\"btn card\" data-index=\"\(index)\" title=\"Créer une carte\">＋</button>"
+                ? "<button class=\"btn done\" title=\"\(String(localized: "Déjà dans tes cartes", bundle: .main))\">✓</button>"
+                : "<button class=\"btn card\" data-index=\"\(index)\" title=\"\(String(localized: "Créer une carte", bundle: .main))\">＋</button>"
         }
         h += "</div></header>"
         if !t.inflectionRules.isEmpty {

@@ -130,7 +130,7 @@ struct PageOrientationView: View {
             }
             .font(.subheadline)
             .disabled(working)
-            Text(selected.count == 1 ? "1 page sélectionnée" : "\(selected.count) pages sélectionnées")
+            Text(selected.count == 1 ? String(localized: "1 page sélectionnée") : String(localized: "\(selected.count) pages sélectionnées"))
                 .font(.footnote).foregroundStyle(Atelier.textSecondary)
         }
         .frame(maxWidth: .infinity)

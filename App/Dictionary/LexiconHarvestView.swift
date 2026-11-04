@@ -45,8 +45,8 @@ struct LexiconHarvestView: View {
                     }
                     Picker("IA", selection: $modelID) {
                         ForEach(TermExtractor.models, id: \.id) { spec in
-                            Text(spec.id == ModelSpec.qwen35chat4b.id ? "Qwen3.5 4B" : "Qwen3-VL 4B")
-                                + Text(TermExtractor.isAvailable(spec) ? "" : " (à télécharger)")
+                            Text(spec.id == ModelSpec.qwen35chat4b.id ? String(localized: "Qwen3.5 4B") : String(localized: "Qwen3-VL 4B"))
+                                + Text(TermExtractor.isAvailable(spec) ? "" : String(localized: " (à télécharger)"))
                         }
                     }
                     Picker("Sens en", selection: $languageRaw) {
@@ -57,7 +57,7 @@ struct LexiconHarvestView: View {
                     Button {
                         harvest()
                     } label: {
-                        Label(running ? "Relevé en cours… (\(pagesDone)/\(pagesTotal))" : "Relever les termes avec l'IA",
+                        Label(running ? String(localized: "Relevé en cours… (\(pagesDone)/\(pagesTotal))") : String(localized: "Relever les termes avec l'IA"),
                               systemImage: "sparkles")
                     }
                     .disabled(documentId == nil || running || !TermExtractor.isAvailable(chosenModel))
@@ -66,8 +66,8 @@ struct LexiconHarvestView: View {
                     Text("Depuis tes manuels")
                 } footer: {
                     Text(TermExtractor.isAvailable(chosenModel)
-                         ? "L'IA choisie lit les pages déjà lues par OvisOCR2 et propose les termes du métier, avec lecture et sens dans la langue choisie. Environ 20 à 40 s par page ; branche l'iPad pour un livre entier."
-                         : "Télécharge ce modèle dans Réglages → Modèles d'IA, ou choisis-en un autre.")
+                         ? String(localized: "L'IA choisie lit les pages déjà lues par OvisOCR2 et propose les termes du métier, avec lecture et sens dans la langue choisie. Environ 20 à 40 s par page ; branche l'iPad pour un livre entier.")
+                         : String(localized: "Télécharge ce modèle dans Réglages → Modèles d'IA, ou choisis-en un autre."))
                 }
                 Section {
                     Button { showImporter = true } label: { Label("Importer un glossaire (CSV, texte)", systemImage: "tablecells") }
@@ -97,7 +97,7 @@ struct LexiconHarvestView: View {
                         HStack {
                             Text("\(candidates.count) proposition(s)")
                             Spacer()
-                            Button(picked.count == candidates.count ? "Aucun" : "Tout") {
+                            Button(picked.count == candidates.count ? String(localized: "Aucun") : String(localized: "Tout")) {
                                 picked = picked.count == candidates.count ? [] : Set(candidates.map(\.term))
                             }
                         }
@@ -139,11 +139,11 @@ struct LexiconHarvestView: View {
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
         guard let data = try? Data(contentsOf: url),
               let text = String(data: data, encoding: .utf8) ?? String(data: data, encoding: .shiftJIS) else {
-            error = "Fichier illisible (UTF-8 ou Shift-JIS attendu)."
+            error = String(localized: "Fichier illisible (UTF-8 ou Shift-JIS attendu).")
             return
         }
         let found = LexiconCandidates.parse(text)
-        if found.isEmpty { error = "Aucun terme reconnu : une ligne par terme, « terme ; lecture ; sens »." }
+        if found.isEmpty { error = String(localized: "Aucun terme reconnu : une ligne par terme, « terme ; lecture ; sens ».") }
         merge(found)
     }
 
@@ -154,14 +154,14 @@ struct LexiconHarvestView: View {
         error = nil
         let pages = (0..<document.pageCount).filter { DocumentAITextStore.read(documentId: id, reader: ModelSpec.ovisocr2.id, page: $0) != nil }
         guard !pages.isEmpty else {
-            error = "Aucune page de ce livre n'a encore été lue par OvisOCR2."
+            error = String(localized: "Aucune page de ce livre n'a encore été lue par OvisOCR2.")
             return
         }
         pagesDone = 0
         pagesTotal = pages.count
         let known = lexicon.entries.map(\.term)
         let spec = chosenModel, language = language
-        center.run(Self.key, title: "Relevé des termes : \(document.title)", modelId: spec.id, activity: "lecture") { job in
+        center.run(Self.key, title: String(localized: "Relevé des termes : \(document.title)"), modelId: spec.id, activity: "lecture") { job in
             for page in pages {
                 try Task.checkCancellation()
                 guard let markdown = DocumentAITextStore.read(documentId: id, reader: ModelSpec.ovisocr2.id, page: page) else { continue }

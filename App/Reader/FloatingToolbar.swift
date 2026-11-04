@@ -41,7 +41,7 @@ struct FloatingToolbar<Items: View>: View {
             case .collapsed:
                 HStack(spacing: 2) {
                     grip(vertical: false).gesture(gesture)
-                    ToolButton(icon: "square.grid.2x2", label: "Ouvrir les outils", tint: Atelier.Tint.read) {
+                    ToolButton(icon: "square.grid.2x2", label: String(localized: "Ouvrir les outils"), tint: Atelier.Tint.read) {
                         setStyle(Style(rawValue: lastOpen) ?? .vertical)
                     }
                 }
@@ -84,9 +84,9 @@ struct FloatingToolbar<Items: View>: View {
     /// Forme de la barre : trois petits boutons directs (plus de menu à dérouler).
     private func styleButtons(vertical: Bool) -> some View {
         let buttons = Group {
-            styleButton(.vertical, icon: "rectangle.portrait", label: "Barre verticale", vertical: vertical)
-            styleButton(.horizontal, icon: "rectangle", label: "Barre horizontale", vertical: vertical)
-            styleButton(.collapsed, icon: "arrow.down.right.and.arrow.up.left", label: "Rétracter la barre", vertical: vertical)
+            styleButton(.vertical, icon: "rectangle.portrait", label: String(localized: "Barre verticale"), vertical: vertical)
+            styleButton(.horizontal, icon: "rectangle", label: String(localized: "Barre horizontale"), vertical: vertical)
+            styleButton(.collapsed, icon: "arrow.down.right.and.arrow.up.left", label: String(localized: "Rétracter la barre"), vertical: vertical)
         }
         return Group {
             if vertical { VStack(spacing: 2) { buttons } } else { HStack(spacing: 2) { buttons } }

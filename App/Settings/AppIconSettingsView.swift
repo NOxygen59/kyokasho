@@ -12,10 +12,10 @@ private enum AppIconChoice: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .ivory: return "Ivoire"
-        case .navy: return "Bleu nuit"
-        case .jade: return "Jade"
-        case .charcoal: return "Anthracite"
+        case .ivory: return String(localized: "Ivoire")
+        case .navy: return String(localized: "Bleu nuit")
+        case .jade: return String(localized: "Jade")
+        case .charcoal: return String(localized: "Anthracite")
         }
     }
 
@@ -101,13 +101,13 @@ struct AppIconSettingsView: View {
         )) {
             Button("OK", role: .cancel) { errorMessage = nil }
         } message: {
-            Text(errorMessage ?? "Erreur inconnue.")
+            Text(errorMessage ?? String(localized: "Erreur inconnue."))
         }
     }
 
     private func select(_ choice: AppIconChoice) {
         guard UIApplication.shared.supportsAlternateIcons else {
-            errorMessage = "Cette version d'iPadOS ne permet pas les icônes alternatives."
+            errorMessage = String(localized: "Cette version d'iPadOS ne permet pas les icônes alternatives.")
             return
         }
         changing = true

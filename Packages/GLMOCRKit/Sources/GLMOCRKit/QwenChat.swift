@@ -51,11 +51,11 @@ public final class QwenChat: @unchecked Sendable {
     public func start(history: [Message], grounded: Bool = false, settings: AIChatSettings = AIChatSettings()) async throws {
         guard session == nil else { return }
         guard model.id == ModelSpec.qwen3vl4b.id || model.id == ModelSpec.qwen35chat4b.id else {
-            throw OCRError.engineFailed("Ce modèle ne sait pas discuter.")
+            throw OCRError.engineFailed(String(localized: "Ce modèle ne sait pas discuter.", bundle: .main))
         }
         guard isAvailable else { throw OCRError.modelMissing(model.title) }
         if let free = PageVLMReader.availableMemory(), free < 3_800 * 1_048_576 {
-            throw OCRError.engineFailed("Pas assez de mémoire libre pour \(model.title) (\(free / 1_048_576) Mo libres). Ferme les autres apps et réessaie.")
+            throw OCRError.engineFailed(String(localized: "Pas assez de mémoire libre pour \(model.title) (\(free / 1_048_576) Mo libres). Ferme les autres apps et réessaie.", bundle: .main))
         }
         let container = try await GLMModel.shared.acquire(directory: store.directory(model), extraEOSTokens: [])
         holding = true
@@ -96,7 +96,7 @@ public final class QwenChat: @unchecked Sendable {
         var prompt = Self.hints(for: prompt, glossary: glossary, knownReadings: readings).map { prompt + "\n\n" + $0 } ?? prompt
         if let context { prompt += "\n\n" + context }
         guard let session else {
-            return AsyncThrowingStream { $0.finish(throwing: OCRError.engineFailed("Conversation pas démarrée.")) }
+            return AsyncThrowingStream { $0.finish(throwing: OCRError.engineFailed(String(localized: "Conversation pas démarrée.", bundle: .main))) }
         }
         return AsyncThrowingStream { continuation in
             let task = Task {

@@ -61,7 +61,7 @@ struct IntroTourView: View {
             Button {
                 if page < steps.count - 1 { withAnimation { page += 1 } } else { onFinish() }
             } label: {
-                Text(page < steps.count - 1 ? "Suivant" : "Commencer").frame(maxWidth: 280)
+                Text(page < steps.count - 1 ? String(localized: "Suivant") : String(localized: "Commencer")).frame(maxWidth: 280)
             }
             .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.read))
             .keyboardShortcut(.defaultAction)
@@ -79,9 +79,9 @@ struct WhatsNewView: View {
     var body: some View {
         NavigationStack {
             List {
-                section("Ajouté", icon: "plus.circle.fill", tint: .green, items: notes.added)
-                section("Corrigé", icon: "wrench.and.screwdriver.fill", tint: .orange, items: notes.fixed)
-                section("Retiré", icon: "minus.circle.fill", tint: .red, items: notes.removed)
+                section(String(localized: "Ajouté"), icon: "plus.circle.fill", tint: .green, items: notes.added)
+                section(String(localized: "Corrigé"), icon: "wrench.and.screwdriver.fill", tint: .orange, items: notes.fixed)
+                section(String(localized: "Retiré"), icon: "minus.circle.fill", tint: .red, items: notes.removed)
                 Section {
                     NavigationLink { VersionHistoryView() } label: {
                         Label("Toutes les versions depuis la 0.1.0", systemImage: "clock.arrow.circlepath")

@@ -31,27 +31,27 @@ public struct CatalogEntry: Equatable, Sendable, Identifiable {
 
 public enum DictionaryCatalog {
     public static let entries: [CatalogEntry] = [
-        CatalogEntry(id: "jitendex", name: "Jitendex", summary: "Dictionnaire japonais → anglais le plus complet, avec exemples (successeur de JMdict).",
+        CatalogEntry(id: "jitendex", name: String(localized: "Jitendex", bundle: .main), summary: String(localized: "Dictionnaire japonais → anglais le plus complet, avec exemples (successeur de JMdict).", bundle: .main),
                      role: .general, language: .english, indexURL: URL(string: "https://jitendex.org/static/yomitan.json")!,
-                     approxBytes: 39_000_000, license: "CC BY-SA 4.0 (JMdict, EDRDG ; Tatoeba)",
+                     approxBytes: 39_000_000, license: String(localized: "CC BY-SA 4.0 (JMdict, EDRDG ; Tatoeba)", bundle: .main),
                      titlePrefix: "Jitendex.org", recommended: true),
-        CatalogEntry(id: "jmdict-fr", name: "JMdict (français)", summary: "Sens en français de JMdict : moins de mots que l'anglais, mais dans ta langue.",
+        CatalogEntry(id: "jmdict-fr", name: String(localized: "JMdict (français)", bundle: .main), summary: String(localized: "Sens en français de JMdict : moins de mots que l'anglais, mais dans ta langue.", bundle: .main),
                      role: .general, language: .french,
                      indexURL: URL(string: "https://github.com/yomidevs/jmdict-yomitan/releases/latest/download/JMdict_french.json")!,
-                     approxBytes: 600_000, license: "Licence EDRDG (CC BY-SA 4.0) ; traductions françaises : droits de leurs auteurs, usage personnel",
+                     approxBytes: 600_000, license: String(localized: "Licence EDRDG (CC BY-SA 4.0) ; traductions françaises : droits de leurs auteurs, usage personnel", bundle: .main),
                      titlePrefix: "JMdict (French)", recommended: true),
-        CatalogEntry(id: "jmnedict", name: "JMnedict (noms propres)", summary: "Noms de personnes, de lieux et d'entreprises, avec leur lecture.",
+        CatalogEntry(id: "jmnedict", name: String(localized: "JMnedict (noms propres)", bundle: .main), summary: String(localized: "Noms de personnes, de lieux et d'entreprises, avec leur lecture.", bundle: .main),
                      role: .names, language: .english,
                      indexURL: URL(string: "https://github.com/yomidevs/jmdict-yomitan/releases/latest/download/JMnedict.json")!,
-                     approxBytes: 11_500_000, license: "CC BY-SA 4.0 (EDRDG)", titlePrefix: "JMnedict", recommended: false),
-        CatalogEntry(id: "kanjidic-fr", name: "KANJIDIC (français)", summary: "Fiche de chaque kanji : lectures on et kun, sens en français, traits.",
+                     approxBytes: 11_500_000, license: String(localized: "CC BY-SA 4.0 (EDRDG)", bundle: .main), titlePrefix: "JMnedict", recommended: false),
+        CatalogEntry(id: "kanjidic-fr", name: String(localized: "KANJIDIC (français)", bundle: .main), summary: String(localized: "Fiche de chaque kanji : lectures on et kun, sens en français, traits.", bundle: .main),
                      role: .kanji, language: .french,
                      indexURL: URL(string: "https://github.com/yomidevs/jmdict-yomitan/releases/latest/download/KANJIDIC_french.json")!,
                      approxBytes: 300_000, license: "CC BY-SA 4.0 (EDRDG)", titlePrefix: "KANJIDIC (French)", recommended: true),
-        CatalogEntry(id: "kanjidic-en", name: "KANJIDIC (anglais)", summary: "Fiche de chaque kanji, sens en anglais (plus complet que le français).",
+        CatalogEntry(id: "kanjidic-en", name: String(localized: "KANJIDIC (anglais)", bundle: .main), summary: String(localized: "Fiche de chaque kanji, sens en anglais (plus complet que le français).", bundle: .main),
                      role: .kanji, language: .english,
                      indexURL: URL(string: "https://github.com/yomidevs/jmdict-yomitan/releases/latest/download/KANJIDIC_english.json")!,
-                     approxBytes: 720_000, license: "CC BY-SA 4.0 (EDRDG)", titlePrefix: "KANJIDIC", recommended: false),
+                     approxBytes: 720_000, license: String(localized: "CC BY-SA 4.0 (EDRDG)", bundle: .main), titlePrefix: "KANJIDIC", recommended: false),
     ]
 
     /// « Jitendex.org [2026-10-03] » → « Jitendex.org » : le titre sans la date de version.
@@ -118,9 +118,9 @@ public enum DictionaryUpdateSchedule {
 public enum BundledLexicon {
     public static let resource = "lexique-interieur"
     public static let title = "Lexique du design d'intérieur (Wikipédia, Wiktionnaire)"
-    public static let name = "Lexique du design d'intérieur"
-    public static let summary = "Termes de l'architecture, de l'intérieur, du mobilier et des matériaux : sens en français (Wiktionnaire), titres français et anglais et première phrase (Wikipédia)."
-    public static let license = "CC BY-SA 4.0 (contributeurs du Wiktionnaire et de Wikipédia)"
+    public static let name = String(localized: "Lexique du design d'intérieur", bundle: .main)
+    public static let summary = String(localized: "Termes de l'architecture, de l'intérieur, du mobilier et des matériaux : sens en français (Wiktionnaire), titres français et anglais et première phrase (Wikipédia).", bundle: .main)
+    public static let license = String(localized: "CC BY-SA 4.0 (contributeurs du Wiktionnaire et de Wikipédia)", bundle: .main)
 
     /// Le fichier dans le paquet de l'app, s'il y a été ajouté au build.
     public static func url(in bundle: Bundle = .main) -> URL? {

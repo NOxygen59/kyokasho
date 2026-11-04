@@ -219,13 +219,13 @@ public enum MarkdownExporter {
         formatter.dateStyle = .long
         formatter.timeStyle = .none
 
-        var out = "# \(title)\n\n_Notes exportées le \(formatter.string(from: date))._\n"
+        var out = String(localized: "# \(title)\n\n_Notes exportées le \(formatter.string(from: date))._\n", bundle: .main)
         let pages = Set(comments.map(\.pageIndex)).union(highlights.map(\.pageIndex)).union(bookmarks.map(\.pageIndex)).sorted()
         if pages.isEmpty {
-            return out + "\nAucune note.\n"
+            return out + String(localized: "\nAucune note.\n", bundle: .main)
         }
         for page in pages {
-            out += "\n## Page \(page + 1)\n"
+            out += String(localized: "\n## Page \(page + 1)\n", bundle: .main)
             for bookmark in bookmarks where bookmark.pageIndex == page {
                 out += "\n🔖 \(bookmark.title)\n"
             }

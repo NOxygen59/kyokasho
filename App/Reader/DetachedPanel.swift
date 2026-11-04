@@ -47,12 +47,12 @@ struct StudyWindowButtons: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            if mode != .floating { button("macwindow", "Détacher le panneau en fenêtre") { mode = .floating } }
-            if mode != .docked { button("sidebar.trailing", "Ancrer le panneau à droite") { mode = .docked } }
+            if mode != .floating { button("macwindow", String(localized: "Détacher le panneau en fenêtre")) { mode = .floating } }
+            if mode != .docked { button("sidebar.trailing", String(localized: "Ancrer le panneau à droite")) { mode = .docked } }
             if mode != .full {
-                button("arrow.up.left.and.arrow.down.right", "Panneau en plein écran") { mode = .full }
+                button("arrow.up.left.and.arrow.down.right", String(localized: "Panneau en plein écran")) { mode = .full }
             } else {
-                button("arrow.down.right.and.arrow.up.left", "Quitter le plein écran") { mode = .floating }
+                button("arrow.down.right.and.arrow.up.left", String(localized: "Quitter le plein écran")) { mode = .floating }
             }
         }
     }

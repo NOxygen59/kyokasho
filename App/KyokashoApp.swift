@@ -87,7 +87,7 @@ struct RootView: View {
                             let id = PageShift.pendingDocumentId
                             PageShift.reconcile(model)
                             if model.storageRecoveryError == nil, let id {
-                                model.storageRecoveryError = "Finalisation de la reprise…"
+                                model.storageRecoveryError = String(localized: "Finalisation de la reprise…")
                                 await model.ocr.endPageMutation(documentId: id)
                                 model.storageRecoveryError = nil
                             }

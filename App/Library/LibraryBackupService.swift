@@ -84,15 +84,15 @@ enum LibraryBackupService {
     /// partager). Refusée pendant une modification des pages, une lecture IA ou une analyse.
     @MainActor
     static func backup(_ model: AppModel) async throws -> Result {
-        guard !inProgress else { throw fail("Une sauvegarde est déjà en cours.") }
+        guard !inProgress else { throw fail(String(localized: "Une sauvegarde est déjà en cours.")) }
         guard PageShift.pendingDocumentId == nil, model.storageRecoveryError == nil else {
-            throw fail("Une modification des pages doit être reprise avant de sauvegarder.")
+            throw fail(String(localized: "Une modification des pages doit être reprise avant de sauvegarder."))
         }
         guard AITaskCenter.shared.jobs.isEmpty, DocumentAnalysisService.shared.progress == nil else {
-            throw fail("Une lecture IA ou une analyse est en cours : sauvegarde possible après sa fin.")
+            throw fail(String(localized: "Une lecture IA ou une analyse est en cours : sauvegarde possible après sa fin."))
         }
         guard !model.libraryMutationInProgress else {
-            throw fail("Un import, une suppression ou une orientation est en cours : sauvegarde possible après sa fin.")
+            throw fail(String(localized: "Un import, une suppression ou une orientation est en cours : sauvegarde possible après sa fin."))
         }
         inProgress = true
         defer { inProgress = false }
@@ -165,7 +165,7 @@ enum LibraryBackupService {
             marker = found
         } catch {
             restoreBlocked = true
-            restoreMessage = "Restauration inachevée : rien n'a été effacé. Ferme puis rouvre l'app. (\(error.localizedDescription))"
+            restoreMessage = String(localized: "Restauration inachevée : rien n'a été effacé. Ferme puis rouvre l'app. (\(error.localizedDescription))")
             Diagnostics.error("restauration : \(error.localizedDescription)", "sauvegarde")
             return
         }
@@ -176,7 +176,7 @@ enum LibraryBackupService {
             let outcome = try LibraryRestore.apply(support: support, analysis: DocumentAnalysisService.folder) { domain in
                 UserDefaults.standard.setPersistentDomain(mergedPreferences(restored: domain, current: current), forName: bundle)
             }
-            restoreMessage = "Restauration terminée : « \(marker.backupName) »."
+            restoreMessage = String(localized: "Restauration terminée : « \(marker.backupName) ».")
             UserDefaults.standard.set(marker.backupName, forKey: "backup.lastRestoreName")
             if case .cleanupPending = outcome {
                 Diagnostics.error("restauration : copies mises de côté non effacées, nouvel essai au prochain lancement", "sauvegarde")
@@ -184,7 +184,7 @@ enum LibraryBackupService {
             Diagnostics.write("[sauvegarde] restauration terminée", sync: true)
         } catch {
             restoreBlocked = true
-            restoreMessage = "Restauration inachevée : rien n'a été effacé. Ferme puis rouvre l'app pour la reprendre. (\(error.localizedDescription))"
+            restoreMessage = String(localized: "Restauration inachevée : rien n'a été effacé. Ferme puis rouvre l'app pour la reprendre. (\(error.localizedDescription))")
             Diagnostics.error("restauration : \(error.localizedDescription)", "sauvegarde")
         }
     }
@@ -195,7 +195,7 @@ enum LibraryBackupService {
     @MainActor
     static func verifyRestore(from file: URL) async throws -> Prepared {
         guard !FileManager.default.fileExists(atPath: LibraryRestore.markerURL(support: support).path) else {
-            throw fail("Une restauration est déjà prête : ferme puis rouvre l'app.")
+            throw fail(String(localized: "Une restauration est déjà prête : ferme puis rouvre l'app."))
         }
         let id = UUID().uuidString
         let staging = LibraryRestore.stagingURL(support: support, id: id)
@@ -219,7 +219,7 @@ enum LibraryBackupService {
     static func confirmRestore(_ model: AppModel, _ prepared: Prepared) async throws -> Result {
         let staging = LibraryRestore.stagingURL(support: support, id: prepared.id)
         do {
-            guard folder != nil else { throw fail("Choisis d'abord un dossier de sauvegarde : la copie de sécurité y sera écrite.") }
+            guard folder != nil else { throw fail(String(localized: "Choisis d'abord un dossier de sauvegarde : la copie de sécurité y sera écrite.")) }
             let safety = try await backup(model)
             _ = try LibraryRestore.writeMarker(support: support, id: prepared.id, backupName: prepared.name)
             Diagnostics.log("sauvegarde : restauration de \(prepared.name) prête, sécurité \(safety.url.lastPathComponent)", "sauvegarde")
@@ -259,7 +259,7 @@ struct BackupSettingsView: View {
                 Button {
                     Task { await run() }
                 } label: {
-                    Label(working ? "Sauvegarde en cours…" : "Sauvegarder maintenant", systemImage: "externaldrive.badge.checkmark")
+                    Label(working ? String(localized: "Sauvegarde en cours…") : String(localized: "Sauvegarder maintenant"), systemImage: "externaldrive.badge.checkmark")
                 }
                 .disabled(working)
                 if let message { Text(message).font(.footnote).foregroundStyle(Atelier.textSecondary) }
@@ -280,8 +280,8 @@ struct BackupSettingsView: View {
                 Text("La sauvegarde est vérifiée sans rien toucher, puis tu confirmes. Une sauvegarde de sécurité de ta bibliothèque actuelle est faite d'abord dans ton dossier ; la restauration s'applique au prochain lancement de l'app. Les modèles d'IA de l'iPad sont gardés.")
             }
             Section {
-                LabeledContent("Dossier", value: folderName ?? "aucun")
-                Button(folderName == nil ? "Choisir le dossier de sauvegarde…" : "Changer de dossier…") { choosing = true }
+                LabeledContent("Dossier", value: folderName ?? String(localized: "aucun"))
+                Button(folderName == nil ? String(localized: "Choisir le dossier de sauvegarde…") : String(localized: "Changer de dossier…")) { choosing = true }
             } footer: {
                 Text("Choisis une fois un dossier dans Fichiers (sur l'iPad, iCloud Drive ou Google Drive). Les \(LibraryBackupService.keep) dernières sauvegardes y sont gardées ; seules les plus anciennes sauvegardes de Kyōkasho sont effacées, jamais tes autres fichiers.")
             }
@@ -295,7 +295,7 @@ struct BackupSettingsView: View {
                 do {
                     try LibraryBackupService.setFolder(url)
                     folderName = LibraryBackupService.folder?.lastPathComponent
-                } catch { message = "Dossier refusé : \(error.localizedDescription)" }
+                } catch { message = String(localized: "Dossier refusé : \(error.localizedDescription)") }
             }
             .ignoresSafeArea()
         }
@@ -333,13 +333,13 @@ struct BackupSettingsView: View {
         do {
             let result = try await LibraryBackupService.backup(model)
             if result.inChosenFolder {
-                message = "Sauvegarde écrite dans « \(folderName ?? "") »" + (result.removed > 0 ? " ; \(result.removed) ancienne(s) effacée(s)." : ".")
+                message = String(localized: "Sauvegarde écrite dans « \(folderName ?? "") »") + (result.removed > 0 ? String(localized: " ; \(result.removed) ancienne(s) effacée(s).") : ".")
             } else {
-                message = "Sauvegarde prête : choisis où l'enregistrer."
+                message = String(localized: "Sauvegarde prête : choisis où l'enregistrer.")
                 shareURL = result.url
             }
         } catch {
-            message = "Sauvegarde impossible : \(error.localizedDescription)"
+            message = String(localized: "Sauvegarde impossible : \(error.localizedDescription)")
         }
         working = false
     }
@@ -348,7 +348,7 @@ struct BackupSettingsView: View {
         working = true
         message = nil
         do { prepared = try await LibraryBackupService.verifyRestore(from: url); confirming = true }
-        catch { message = "Sauvegarde refusée : \(error.localizedDescription)" }
+        catch { message = String(localized: "Sauvegarde refusée : \(error.localizedDescription)") }
         working = false
     }
 
@@ -357,10 +357,10 @@ struct BackupSettingsView: View {
         working = true
         do {
             let safety = try await LibraryBackupService.confirmRestore(model, p)
-            message = "Sauvegarde de sécurité écrite : \(safety.url.lastPathComponent)."
+            message = String(localized: "Sauvegarde de sécurité écrite : \(safety.url.lastPathComponent).")
             restoreReady = true
         } catch {
-            message = "Restauration annulée : \(error.localizedDescription)"
+            message = String(localized: "Restauration annulée : \(error.localizedDescription)")
         }
         working = false
     }

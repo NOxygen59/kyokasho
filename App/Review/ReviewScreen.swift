@@ -60,24 +60,24 @@ struct ReviewScreen: View {
 
     private var header: some View {
         HStack(spacing: 12) {
-            CapsuleButton(icon: "xmark", label: "Fermer") { dismiss() }
+            CapsuleButton(icon: "xmark", label: String(localized: "Fermer")) { dismiss() }
                 .keyboardShortcut(.escape, modifiers: [])
-            AtelierLabel("Révisions", tint: Atelier.Tint.japanese)
+            AtelierLabel(String(localized: "Révisions"), tint: Atelier.Tint.japanese)
             Spacer()
             countsView
-            CapsuleButton(icon: "arrow.uturn.backward", label: "Annuler") { undo() }
+            CapsuleButton(icon: "arrow.uturn.backward", label: String(localized: "Annuler")) { undo() }
                 .keyboardShortcut("z", modifiers: .command)
                 .disabled(undoStack.isEmpty)
                 .opacity(undoStack.isEmpty ? 0.4 : 1)
-            CapsuleButton(icon: "rectangle.stack", label: "Cartes") { showBrowser = true }
+            CapsuleButton(icon: "rectangle.stack", label: String(localized: "Cartes")) { showBrowser = true }
         }
     }
 
     private var countsView: some View {
         HStack(spacing: 14) {
             count(review.counts.new, "nouvelles", Atelier.Tint.cloud)
-            count(review.counts.learning, "en cours", Atelier.Tint.japanese)
-            count(review.counts.review, "à revoir", Atelier.Tint.read)
+            count(review.counts.learning, String(localized: "en cours"), Atelier.Tint.japanese)
+            count(review.counts.review, String(localized: "à revoir"), Atelier.Tint.read)
         }
         .padding(.horizontal, 14).padding(.vertical, 8)
         .atelierPanel(radius: 20)
@@ -121,7 +121,7 @@ struct ReviewScreen: View {
                 Text("Une carte en apprentissage revient bientôt. Tu peux laisser cet écran ouvert.")
                     .foregroundStyle(Atelier.textSecondary)
             } else {
-                Text(reviewed == 0 ? "Rien à réviser pour l'instant" : "Séance finie")
+                Text(reviewed == 0 ? String(localized: "Rien à réviser pour l'instant") : String(localized: "Séance finie"))
                     .font(Atelier.display(26)).foregroundStyle(Atelier.textPrimary)
                 if reviewed == 0 {
                     Text("Ajoute des cartes avec ＋ dans le popup du dictionnaire.").foregroundStyle(Atelier.textSecondary)

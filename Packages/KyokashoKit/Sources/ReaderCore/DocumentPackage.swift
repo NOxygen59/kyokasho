@@ -62,7 +62,7 @@ public enum DocumentPackage {
                              report: URL?, drafts: [Int: String], preferences: [String: String],
                              dictionaries: [String], at date: Date = Date()) throws {
         guard try matches(pdf: pdf, rows: rows, documentId: documentId) else {
-            throw PackageError("Le PDF ne correspond plus au document : export annulé.")
+            throw PackageError(String(localized: "Le PDF ne correspond plus au document : export annulé.", bundle: .main))
         }
         let fm = FileManager.default
         if fm.fileExists(atPath: zip.path) { try fm.removeItem(at: zip) }
@@ -110,13 +110,13 @@ public enum DocumentPackage {
     public static func open(_ zip: URL, into folder: URL) throws -> Contents {
         let fm = FileManager.default
         let archive: Archive
-        do { archive = try Archive(url: zip, accessMode: .read) } catch { throw PackageError("Ce fichier n'est pas un paquet Kyōkasho.") }
+        do { archive = try Archive(url: zip, accessMode: .read) } catch { throw PackageError(String(localized: "Ce fichier n'est pas un paquet Kyōkasho.", bundle: .main)) }
         try fm.createDirectory(at: folder, withIntermediateDirectories: true)
         var extracted: [String: URL] = [:]
         for entry in archive {
             let path = entry.path
             guard entry.type == .file, allowedPath(path), extracted[path] == nil else {
-                throw PackageError("Paquet invalide : élément inattendu « \(path) ».")
+                throw PackageError(String(localized: "Paquet invalide : élément inattendu « \(path) ».", bundle: .main))
             }
             let target = folder.appendingPathComponent(path.replacingOccurrences(of: "/", with: "__"))
             _ = try archive.extract(entry, to: target, skipCRC32: false)
@@ -124,31 +124,31 @@ public enum DocumentPackage {
         }
         guard let manifestURL = extracted["manifest.json"],
               let manifest = try? JSONDecoder().decode(Manifest.self, from: Data(contentsOf: manifestURL)) else {
-            throw PackageError("Paquet invalide : fiche absente ou illisible.")
+            throw PackageError(String(localized: "Paquet invalide : fiche absente ou illisible.", bundle: .main))
         }
         guard manifest.formatVersion <= formatVersion else {
-            throw PackageError("Ce paquet vient d'une version plus récente de Kyōkasho : mets l'app à jour.")
+            throw PackageError(String(localized: "Ce paquet vient d'une version plus récente de Kyōkasho : mets l'app à jour.", bundle: .main))
         }
         var listed = extracted
         listed["manifest.json"] = nil
         guard Set(listed.keys) == Set(manifest.files.keys) else {
-            throw PackageError("Paquet incomplet ou modifié : fichiers différents de sa fiche.")
+            throw PackageError(String(localized: "Paquet incomplet ou modifié : fichiers différents de sa fiche.", bundle: .main))
         }
         for (path, url) in listed where try DocumentImporter.sha256(of: url) != manifest.files[path] {
-            throw PackageError("Paquet modifié : « \(path) » ne correspond pas à son empreinte.")
+            throw PackageError(String(localized: "Paquet modifié : « \(path) » ne correspond pas à son empreinte.", bundle: .main))
         }
         guard let pdf = listed["document.pdf"], let database = listed["database.json"], let drafts = listed["drafts.json"],
               let preferences = listed["preferences.json"] else {
-            throw PackageError("Paquet incomplet : PDF ou données du document absents.")
+            throw PackageError(String(localized: "Paquet incomplet : PDF ou données du document absents.", bundle: .main))
         }
         let rows = try JSONDecoder().decode([String: [[String: AppDatabase.ArchivedValue]]].self, from: Data(contentsOf: database))
         guard try matches(pdf: pdf, rows: rows, documentId: manifest.documentId) else {
-            throw PackageError("Paquet incohérent : le PDF ne correspond pas à la fiche du document.")
+            throw PackageError(String(localized: "Paquet incohérent : le PDF ne correspond pas à la fiche du document.", bundle: .main))
         }
         let draftPages = try JSONDecoder().decode([String: String].self, from: Data(contentsOf: drafts))
         var draftValues: [Int: String] = [:]
         for (key, text) in draftPages {
-            guard let page = Int(key), page >= 0, page < manifest.pageCount else { throw PackageError("Paquet invalide : brouillon hors du document.") }
+            guard let page = Int(key), page >= 0, page < manifest.pageCount else { throw PackageError(String(localized: "Paquet invalide : brouillon hors du document.", bundle: .main)) }
             draftValues[page] = text
         }
         var analysis: [String: URL] = [:]
@@ -190,7 +190,7 @@ extension AppDatabase {
                     Dictionary(uniqueKeysWithValues: row.columnNames.map { ($0, ArchivedValue(row[$0] as DatabaseValue)) })
                 }
             }
-            guard out["document"]?.count == 1 else { throw DocumentPackage.PackageError("Document introuvable.") }
+            guard out["document"]?.count == 1 else { throw DocumentPackage.PackageError(String(localized: "Document introuvable.", bundle: .main)) }
             return out
         }
     }
@@ -201,10 +201,10 @@ extension AppDatabase {
     public func installPackage(documentId: String, rows: [String: [[String: ArchivedValue]]], replacing: Bool) throws {
         try writer.write { db in
             guard Set(rows.keys).isSubset(of: DocumentPackage.tables), rows["document"]?.count == 1 else {
-                throw DocumentPackage.PackageError("Données du paquet invalides.")
+                throw DocumentPackage.PackageError(String(localized: "Données du paquet invalides.", bundle: .main))
             }
             if try LibraryDocument.exists(db, key: documentId) {
-                guard replacing else { throw DocumentPackage.PackageError("Ce document est déjà dans la bibliothèque.") }
+                guard replacing else { throw DocumentPackage.PackageError(String(localized: "Ce document est déjà dans la bibliothèque.", bundle: .main)) }
                 _ = try LibraryDocument.deleteOne(db, key: documentId) // Cascade : annotations, OCR, identités, opérations.
             }
             for table in DocumentPackage.tables {
@@ -212,10 +212,10 @@ extension AppDatabase {
                 let key = table == "document" ? "id" : "documentId"
                 for values in rows[table] ?? [] {
                     guard values[key] == .text(documentId) else {
-                        throw DocumentPackage.PackageError("Le paquet contient des données d'un autre document.")
+                        throw DocumentPackage.PackageError(String(localized: "Le paquet contient des données d'un autre document.", bundle: .main))
                     }
                     guard Set(values.keys).isSubset(of: known) else {
-                        throw DocumentPackage.PackageError("Ce paquet vient d'une version plus récente de Kyōkasho : mets l'app à jour.")
+                        throw DocumentPackage.PackageError(String(localized: "Ce paquet vient d'une version plus récente de Kyōkasho : mets l'app à jour.", bundle: .main))
                     }
                     let names = values.keys.sorted()
                     try db.execute(sql: "INSERT INTO \(table) (\(names.joined(separator: ", "))) VALUES (\(names.map { _ in "?" }.joined(separator: ", ")))",

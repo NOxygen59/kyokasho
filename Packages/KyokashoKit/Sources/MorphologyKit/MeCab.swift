@@ -22,7 +22,7 @@ public final class MeCab: @unchecked Sendable {
 
     public enum Failure: LocalizedError {
         case load(String)
-        public var errorDescription: String? { if case .load(let m) = self { return "MeCab : \(m)" }; return nil }
+        public var errorDescription: String? { if case .load(let m) = self { return String(localized: "MeCab : \(m)", bundle: .main) }; return nil }
     }
 
     private let model: OpaquePointer
@@ -37,11 +37,11 @@ public final class MeCab: @unchecked Sendable {
         var cArgs = args.map { strdup($0) }
         defer { cArgs.forEach { free($0) } }
         guard let model = cArgs.withUnsafeMutableBufferPointer({ mecab_model_new(Int32(args.count), $0.baseAddress) }) else {
-            throw Failure.load("dictionnaire illisible (\(dictionary.lastPathComponent))")
+            throw Failure.load(String(localized: "dictionnaire illisible (\(dictionary.lastPathComponent))", bundle: .main))
         }
         guard let tagger = mecab_model_new_tagger(model), let lattice = mecab_model_new_lattice(model) else {
             mecab_model_destroy(model)
-            throw Failure.load("analyseur non créé")
+            throw Failure.load(String(localized: "analyseur non créé", bundle: .main))
         }
         self.model = model
         self.tagger = tagger

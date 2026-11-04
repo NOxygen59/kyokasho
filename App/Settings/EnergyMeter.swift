@@ -114,7 +114,7 @@ struct EnergySummaryView: View {
                     Section {
                         ForEach(rows, id: \.activity) { row in
                             VStack(alignment: .leading, spacing: 3) {
-                                Text(row.activity).font(.subheadline.weight(.semibold))
+                                Text(ui: row.activity).font(.subheadline.weight(.semibold))
                                 Text(details(row)).font(.caption).foregroundStyle(.secondary)
                             }
                         }
@@ -143,7 +143,7 @@ struct EnergySummaryView: View {
 
     private func details(_ row: EnergyLog.Row) -> String {
         let minutes = Int(row.seconds / 60)
-        let battery = row.batteryPerHour.map { String(format: "%.0f %% de batterie par heure", $0) } ?? "durée trop courte pour la batterie"
-        return "\(minutes) min · \(battery) · CPU \(Int(row.cpuPercent)) % · chaleur \(EnergyLog.thermalName(row.maxThermal))"
+        let battery = row.batteryPerHour.map { String(format: String(localized: "%.0f %% de batterie par heure"), $0) } ?? String(localized: "durée trop courte pour la batterie")
+        return String(localized: "\(minutes) min · \(battery) · CPU \(Int(row.cpuPercent)) % · chaleur \(EnergyLog.thermalName(row.maxThermal))")
     }
 }

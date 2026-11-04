@@ -42,7 +42,7 @@ struct PageAdditionHistorySection: View {
                         Text(entry.date.formatted(date: .abbreviated, time: .shortened))
                             .font(.caption).foregroundStyle(.secondary)
                     }
-                    Text("\(entry.totalAfter) pages ensuite" + (entry.sources.isEmpty ? "" : " · " + entry.sources.joined(separator: ", ")))
+                    Text(String(localized: "\(entry.totalAfter) pages ensuite") + (entry.sources.isEmpty ? "" : " · " + entry.sources.joined(separator: ", ")))
                         .font(.caption).foregroundStyle(.secondary).lineLimit(2)
                 }
             }

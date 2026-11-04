@@ -43,7 +43,7 @@ struct AddPagesView: View {
                             Image(systemName: item.url == nil ? "book.closed.fill" : "doc.richtext")
                                 .foregroundStyle(item.url == nil ? Atelier.Tint.read : Atelier.Tint.cloud)
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(item.url == nil ? "\(item.name) (document actuel)" : item.name).lineLimit(1)
+                                Text(item.url == nil ? String(localized: "\(item.name) (document actuel)") : item.name).lineLimit(1)
                                 Text("\(item.pages) page\(item.pages > 1 ? "s" : "")").font(.caption).foregroundStyle(.secondary)
                             }
                             Spacer()
@@ -69,7 +69,7 @@ struct AddPagesView: View {
                     Button { Task { await apply() } } label: {
                         HStack {
                             if working { ProgressView() }
-                            Text(done ? "Pages ajoutées" : working ? "Ajout…" : "Ajouter \(added) page\(added > 1 ? "s" : "")")
+                            Text(done ? String(localized: "Pages ajoutées") : working ? String(localized: "Ajout…") : String(localized: "Ajouter \(added) page\(added > 1 ? "s" : "")"))
                         }
                     }
                     .disabled(added == 0 || working || done)
@@ -80,7 +80,7 @@ struct AddPagesView: View {
             .environment(\.editMode, .constant(.active))
             .navigationTitle("Ajouter des pages")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .confirmationAction) { Button(done ? "OK" : "Fermer") { dismiss() } } }
+            .toolbar { ToolbarItem(placement: .confirmationAction) { Button(done ? "OK" : String(localized: "Fermer")) { dismiss() } } }
             .sheet(isPresented: $showPicker) { DocumentPicker { add($0) }.ignoresSafeArea() }
             .onAppear {
                 if items.isEmpty { items = [Item(url: nil, name: document.title, pages: document.pageCount)] }
@@ -106,7 +106,7 @@ struct AddPagesView: View {
             // Ajout à la fin d'office (cas le plus courant : la suite du manuel).
             items.append(Item(url: target, name: url.lastPathComponent, pages: doc.pageCount))
         }
-        if !refused.isEmpty { error = "Ignorés (illisibles ou protégés par mot de passe) : " + refused.joined(separator: ", ") }
+        if !refused.isEmpty { error = String(localized: "Ignorés (illisibles ou protégés par mot de passe) : ") + refused.joined(separator: ", ") }
     }
 
     private func remove(_ item: Item) {
@@ -119,7 +119,7 @@ struct AddPagesView: View {
         // Une lecture IA en cours écrit des fichiers par numéro de page : attendre qu'elle finisse.
         if AITaskCenter.shared.jobs.contains(where: { $0.key.contains(id) })
             || DocumentAnalysisService.shared.progress?.documentId == id {
-            error = "Une lecture IA de ce document est en cours : attends qu'elle finisse (ou arrête-la), puis réessaie."
+            error = String(localized: "Une lecture IA de ce document est en cours : attends qu'elle finisse (ou arrête-la), puis réessaie.")
             return
         }
         working = true
@@ -143,20 +143,20 @@ struct AddPagesView: View {
             return out.pageCount > 0 && out.write(to: merged) ? out.pageCount : nil
         }.value
         guard let pageCount else {
-            error = "L'ajout a échoué (un des PDF n'a pas pu être lu). Le document n'a pas changé."
+            error = String(localized: "L'ajout a échoué (un des PDF n'a pas pu être lu). Le document n'a pas changé.")
             return
         }
         // La fusion a suspendu le MainActor : une tâche IA a pu démarrer entre-temps.
         guard !AITaskCenter.shared.jobs.contains(where: { $0.key.contains(id) }),
               DocumentAnalysisService.shared.progress?.documentId != id else {
-            error = "Une lecture IA a démarré pendant la fusion : attends sa fin, puis réessaie. Le document n'a pas changé."
+            error = String(localized: "Une lecture IA a démarré pendant la fusion : attends sa fin, puis réessaie. Le document n'a pas changé.")
             return
         }
         do {
             let warnings = try await PageShift.apply(model, document: document, merged: merged, offset: offset, newCount: pageCount)
             if !warnings.isEmpty { error = warnings.joined(separator: "\n") }
         } catch {
-            self.error = "L'ajout a été interrompu : \(error.localizedDescription). Une reprise peut être nécessaire avant de continuer."
+            self.error = String(localized: "L'ajout a été interrompu : \(error.localizedDescription). Une reprise peut être nécessaire avant de continuer.")
             return
         }
         // Caches par numéro de page : refaits à la demande.

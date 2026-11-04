@@ -39,17 +39,17 @@ struct AIModelDetailView: View {
         Form {
             Section {
                 Text(spec.summary).font(.callout)
-                LabeledContent("Installé", value: installed ? "oui" : "non")
+                LabeledContent("Installé", value: installed ? String(localized: "oui") : String(localized: "non"))
                 if let diskSize, diskSize > 0 { LabeledContent("Place sur l'iPad", value: StorageUsage.format(diskSize)) }
             }
             if isMLX {
                 Section {
                     LabeledContent("État") {
-                        Text(isLoaded ? (status?.inUse == true ? "chargé, en cours d'utilisation" : "chargé")
-                             : status?.loading == directory ? "en chargement…" : "pas chargé")
+                        Text(isLoaded ? (status?.inUse == true ? String(localized: "chargé, en cours d'utilisation") : String(localized: "chargé"))
+                             : status?.loading == directory ? String(localized: "en chargement…") : String(localized: "pas chargé"))
                     }
                     if isLoaded, let status {
-                        LabeledContent("Mémoire du GPU (MLX)", value: "\(status.gpuActiveMB) Mo + cache \(status.gpuCacheMB) Mo")
+                        LabeledContent("Mémoire du GPU (MLX)", value: String(localized: "\(status.gpuActiveMB) Mo + cache \(status.gpuCacheMB) Mo"))
                     }
                     LabeledContent("Dernier usage") {
                         if let date = status?.lastUse[directory] {
@@ -141,6 +141,8 @@ struct QwenChatView: View {
     /// Base de l'app, pour suivre les pages citées après une modification des pages (#49, R4).
     var database: AppDatabase? = nil
     private struct Conversation: Codable, Identifiable {
+        /// Titre par défaut gardé en français dans le fichier : c'est lui qu'on reconnaît pour le remplacer.
+        var shownTitle: String { title == "Nouveau chat" ? String(localized: "Nouveau chat") : title }
         var id = UUID()
         var title: String
         var modelID = ModelSpec.qwen3vl4b.id
@@ -192,8 +194,8 @@ struct QwenChatView: View {
                     LazyVStack(alignment: .leading, spacing: 12) {
                         if messages.isEmpty, !loading {
                             Text(document == nil
-                                 ? "Pose une question sur un mot japonais, une phrase ou un sujet qui t'intéresse. Tout reste sur l'iPad."
-                                 : "Pose une question sur ce livre. Je chercherai les passages lus par OvisOCR2 et indiquerai les pages utilisées.")
+                                 ? String(localized: "Pose une question sur un mot japonais, une phrase ou un sujet qui t'intéresse. Tout reste sur l'iPad.")
+                                 : String(localized: "Pose une question sur ce livre. Je chercherai les passages lus par OvisOCR2 et indiquerai les pages utilisées."))
                                 .font(.footnote).foregroundStyle(.secondary)
                             if ready { suggestions }
                         }
@@ -217,7 +219,7 @@ struct QwenChatView: View {
                     .foregroundStyle(.red)
                     .disabled(answering != nil || loading || storageError || (messages.isEmpty && (document == nil || conversations.count < 2)))
                     .accessibilityLabel("Supprimer cette conversation")
-                TextField(loading ? "Chargement du modèle…" : ready ? "Ta question" : "Modèle indisponible", text: $draft, axis: .vertical)
+                TextField(loading ? String(localized: "Chargement du modèle…") : ready ? String(localized: "Ta question") : String(localized: "Modèle indisponible"), text: $draft, axis: .vertical)
                     .lineLimit(1...5)
                     .textFieldStyle(.roundedBorder)
                     .disabled(!ready)
@@ -234,7 +236,7 @@ struct QwenChatView: View {
             }
             .padding()
         }
-        .navigationTitle(embedded ? "" : document.map { "Discuter · " + $0.title } ?? "Chat IA")
+        .navigationTitle(embedded ? "" : document.map { String(localized: "Discuter · ") + $0.title } ?? String(localized: "Chat IA"))
         .toolbar {
             if document != nil && !embedded {
                 ToolbarItem(placement: .cancellationAction) { Button("Fermer") { dismiss() } }
@@ -260,7 +262,7 @@ struct QwenChatView: View {
             }
             if storageError { loading = false; return }
             if let document, !DocumentKnowledge.isReady(document) {
-                error = "Attends la fin de la lecture OvisOCR2 : \(DocumentKnowledge.readCount(document))/\(document.pageCount) pages."
+                error = String(localized: "Attends la fin de la lecture OvisOCR2 : \(DocumentKnowledge.readCount(document))/\(document.pageCount) pages.")
                 loading = false
                 return
             }
@@ -282,12 +284,12 @@ struct QwenChatView: View {
         }
         // Fenêtre de confirmation centrée dans le chat (recette 1.3.2 (63), point 17) : la feuille d'iOS se plaçait
         // mal dans la fenêtre OCR ; celle-ci reste au milieu du panneau, à droite, en fenêtre ou en plein écran.
-        .centeredConfirmation(isPresented: $confirmDelete, title: "Supprimer cette conversation ?",
-                              message: "Ses messages seront effacés de l'iPad. Les autres conversations sont gardées.",
-                              confirm: "Supprimer") { deleteConversation() }
+        .centeredConfirmation(isPresented: $confirmDelete, title: String(localized: "Supprimer cette conversation ?"),
+                              message: String(localized: "Ses messages seront effacés de l'iPad. Les autres conversations sont gardées."),
+                              confirm: String(localized: "Supprimer")) { deleteConversation() }
         .sheet(isPresented: $showConversations) {
             ConversationListSheet(
-                items: conversations.map { ($0.id, $0.title, $0.messages.count) },
+                items: conversations.map { ($0.id, $0.shownTitle, $0.messages.count) },
                 selected: selectedConversation,
                 onOpen: { id in showConversations = false; switchConversation(to: id) },
                 onRename: { id in
@@ -320,14 +322,14 @@ struct QwenChatView: View {
         HStack(spacing: 8) {
             // Liste des conversations en feuille (recette 62) : choisir, renommer, en supprimer plusieurs.
             Button { showConversations = true } label: {
-                Label(conversations.first(where: { $0.id == selectedConversation })?.title ?? "Conversation", systemImage: "bubble.left")
+                Label(conversations.first(where: { $0.id == selectedConversation })?.shownTitle ?? String(localized: "Conversation"), systemImage: "bubble.left")
                     .lineLimit(1)
             }
             .disabled(answering != nil || loading || storageError)
             Spacer(minLength: 0)
             Menu {
-                modelOption(.qwen3vl4b, title: "Qwen3-VL 4B")
-                modelOption(.qwen35chat4b, title: "Qwen3.5 4B")
+                modelOption(.qwen3vl4b, title: String(localized: "Qwen3-VL 4B"))
+                modelOption(.qwen35chat4b, title: String(localized: "Qwen3.5 4B"))
             } label: {
                 Label(selectedSpec.id == ModelSpec.qwen35chat4b.id ? "Qwen3.5" : "Qwen3-VL", systemImage: "cpu")
                     .lineLimit(1)
@@ -370,12 +372,12 @@ struct QwenChatView: View {
 
     /// Tâches rapides (#37) : une question type écrite dans le champ, à compléter ou envoyer telle quelle.
     private var tasksMenu: some View {
-        let page = focusPage.map { "la page \($0)" } ?? "ce passage"
+        let page = focusPage.map { String(localized: "la page \($0)") } ?? String(localized: "ce passage")
         return Menu {
-            Button("Résumer \(page)") { draft = "Résume \(page) : de quoi parle-t-elle, puis les points clés." }
-            Button("Expliquer les formules de \(page)") { draft = "Explique pas à pas chaque formule de \(page), avec un exemple chiffré." }
-            Button("Vocabulaire de \(page)") { draft = "Liste les mots techniques japonais de \(page) avec lecture et sens." }
-            Button("Traduire mot à mot") { draft = "Traduis mot à mot, puis naturellement : " }
+            Button("Résumer \(page)") { draft = String(localized: "Résume \(page) : de quoi parle-t-elle, puis les points clés.") }
+            Button("Expliquer les formules de \(page)") { draft = String(localized: "Explique pas à pas chaque formule de \(page), avec un exemple chiffré.") }
+            Button("Vocabulaire de \(page)") { draft = String(localized: "Liste les mots techniques japonais de \(page) avec lecture et sens.") }
+            Button("Traduire mot à mot") { draft = String(localized: "Traduis mot à mot, puis naturellement : ") }
         } label: { Image(systemName: "list.bullet.rectangle") }
         .disabled(!ready || answering != nil)
         .accessibilityLabel("Tâches rapides")
@@ -407,7 +409,7 @@ struct QwenChatView: View {
         guard let bookFile else { return }
         if let data = try? Data(contentsOf: bookFile) {
             guard let stored = try? JSONDecoder().decode([Conversation].self, from: data), !stored.isEmpty else {
-                error = "Impossible de lire les conversations enregistrées. Elles n'ont pas été modifiées."
+                error = String(localized: "Impossible de lire les conversations enregistrées. Elles n'ont pas été modifiées.")
                 storageError = true
                 return
             }
@@ -432,7 +434,7 @@ struct QwenChatView: View {
         error = nil
         let spec = selectedSpec
         guard downloads.installed.contains(spec.id) else {
-            error = "Télécharge \(spec.title) depuis le menu Modèle pour discuter."
+            error = String(localized: "Télécharge \(spec.title) depuis le menu Modèle pour discuter.")
             loading = false
             return
         }
@@ -555,7 +557,7 @@ struct QwenChatView: View {
                     .accessibilityLabel("Relancer la réponse")
             }
             if let saveToNotes {
-                Button { saveToNotes(m.text); show("Ajouté aux notes de la page") } label: { Image(systemName: "note.text.badge.plus") }
+                Button { saveToNotes(m.text); show(String(localized: "Ajouté aux notes de la page")) } label: { Image(systemName: "note.text.badge.plus") }
                     .accessibilityLabel("Ajouter aux notes de la page")
             }
             Button { speak(m.text) } label: { Image(systemName: Self.speaker.isSpeaking ? "stop.circle" : "speaker.wave.2") }
@@ -571,10 +573,10 @@ struct QwenChatView: View {
 
     /// Questions types quand la conversation est vide (#37) : un toucher les envoie.
     private var suggestions: some View {
-        let page = focusPage.map { "la page \($0)" } ?? "ce passage"
+        let page = focusPage.map { String(localized: "la page \($0)") } ?? String(localized: "ce passage")
         let list = document == nil
-            ? ["Explique la différence entre は et が", "Comment lire 天井 ?", "Donne 5 mots du bâtiment en japonais"]
-            : ["Résume \(page)", "Explique les formules de \(page)", "Quels mots techniques apprendre dans \(page) ?"]
+            ? [String(localized: "Explique la différence entre は et が"), String(localized: "Comment lire 天井 ?"), String(localized: "Donne 5 mots du bâtiment en japonais")]
+            : [String(localized: "Résume \(page)"), String(localized: "Explique les formules de \(page)"), String(localized: "Quels mots techniques apprendre dans \(page) ?")]
         return VStack(alignment: .leading, spacing: 6) {
             ForEach(list, id: \.self) { text in
                 Button { draft = text; send() } label: {
@@ -591,15 +593,15 @@ struct QwenChatView: View {
         return ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 6) {
                 if let page {
-                    chip("Insérer \(page)", "text.insert") {
+                    chip(String(localized: "Insérer \(page)"), "text.insert") {
                         if !draft.contains(page) { draft = draft.isEmpty ? page + " : " : page + " : " + draft }
                     }
                 }
-                chip("Résumer", "text.alignleft") { draft = "Résume \(page ?? "ce passage") : de quoi parle-t-elle, puis les points clés." }
-                chip("Formules", "function") { draft = "Explique pas à pas chaque formule de \(page ?? "ce passage"), avec un exemple chiffré." }
-                chip("Vocabulaire", "character.book.closed.ja") { draft = "Liste les mots techniques japonais de \(page ?? "ce passage") avec lecture et sens." }
-                chip("Plus simple", "tortoise") { draft = "Réexplique ta dernière réponse plus simplement, avec un exemple." }
-                chip("Plus court", "scissors") { draft = "Résume ta dernière réponse en trois lignes." }
+                chip(String(localized: "Résumer"), "text.alignleft") { draft = String(localized: "Résume \(page ?? String(localized: "ce passage")) : de quoi parle-t-elle, puis les points clés.") }
+                chip(String(localized: "Formules"), "function") { draft = String(localized: "Explique pas à pas chaque formule de \(page ?? String(localized: "ce passage")), avec un exemple chiffré.") }
+                chip(String(localized: "Vocabulaire"), "character.book.closed.ja") { draft = String(localized: "Liste les mots techniques japonais de \(page ?? String(localized: "ce passage")) avec lecture et sens.") }
+                chip(String(localized: "Plus simple"), "tortoise") { draft = String(localized: "Réexplique ta dernière réponse plus simplement, avec un exemple.") }
+                chip(String(localized: "Plus court"), "scissors") { draft = String(localized: "Résume ta dernière réponse en trois lignes.") }
             }
             .padding(.horizontal, 12)
         }
@@ -619,10 +621,10 @@ struct QwenChatView: View {
     private var statusLine: some View {
         let name = selectedSpec.id == ModelSpec.qwen35chat4b.id ? "Qwen3.5" : "Qwen3-VL"
         let settings = AIChatSettingsStore.load(selectedModelID)
-        var parts = [loading ? "Chargement de \(name)…" : ready ? "\(name) prêt" : "\(name) indisponible"]
-        if settings.instructions != nil { parts.append("consigne perso") }
-        if answering != nil { parts.append("réponse en cours…") }
-        else if let lastDuration { parts.append("dernière réponse en \(Int(lastDuration.rounded())) s") }
+        var parts = [loading ? String(localized: "Chargement de \(name)…") : ready ? String(localized: "\(name) prêt") : "\(name) indisponible"]
+        if settings.instructions != nil { parts.append(String(localized: "consigne perso")) }
+        if answering != nil { parts.append(String(localized: "réponse en cours…")) }
+        else if let lastDuration { parts.append(String(localized: "dernière réponse en \(Int(lastDuration.rounded())) s")) }
         return Text(parts.joined(separator: " · "))
             .font(.caption2).foregroundStyle(.secondary)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -636,7 +638,7 @@ struct QwenChatView: View {
 
     private func copy(_ text: String) {
         UIPasteboard.general.string = text
-        show("Copié")
+        show(String(localized: "Copié"))
     }
 
     private func speak(_ text: String) {
@@ -716,18 +718,20 @@ struct QwenChatView: View {
         if let pages = m.pages, let version = m.layoutVersion {
             guard version != current else { return (pages, nil) }
             guard let mapping = try? database?.pageMapping(documentId: document.id, fromVersion: version) else {
-                return ([], "Le document a été remplacé depuis cette réponse : liens des pages retirés.")
+                return ([], String(localized: "Le document a été remplacé depuis cette réponse : liens des pages retirés."))
             }
             let followed = pages.compactMap(mapping.target(of:))
-            return (followed, followed.count < pages.count ? "Certaines pages citées ont été supprimées depuis." : nil)
+            return (followed, followed.count < pages.count ? String(localized: "Certaines pages citées ont été supprimées depuis.") : nil)
         }
         // Message enregistré avant le suivi des pages : ses numéros ne valent que si rien n'a changé depuis.
-        guard current == 0 else { return ([], "Pages modifiées depuis cette réponse : liens retirés.") }
+        guard current == 0 else { return ([], String(localized: "Pages modifiées depuis cette réponse : liens retirés.")) }
         return (citedPages(in: m.text, document: document), nil)
     }
 
     private func citedPages(in answer: String, document: LibraryDocument) -> [Int] {
-        guard let range = answer.range(of: "Pages consultées : ", options: .backwards) else { return [] }
+        // Les réponses déjà enregistrées gardent le libellé de la langue de l'époque.
+        let markers = ["Pages consultées : ", String(localized: "Pages consultées : ")]
+        guard let range = markers.lazy.compactMap({ answer.range(of: $0, options: .backwards) }).first else { return [] }
         return answer[range.upperBound...].split(separator: ",").compactMap { part in
             let label = part.trimmingCharacters(in: .whitespacesAndNewlines)
                 .replacingOccurrences(of: "p. ", with: "")
@@ -772,8 +776,8 @@ struct QwenChatView: View {
                     }
                     if passages.isEmpty {
                         messages[index].text = requestedPages.isEmpty
-                            ? "Je n'ai trouvé aucun passage pertinent dans les pages lues de ce livre. Essaie un terme japonais ou indique un numéro de page."
-                            : "La page demandée n'a pas encore de lecture OvisOCR2 disponible. Relance sa lecture dans l'onglet Texte, puis réessaie."
+                            ? String(localized: "Je n'ai trouvé aucun passage pertinent dans les pages lues de ce livre. Essaie un terme japonais ou indique un numéro de page.")
+                            : String(localized: "La page demandée n'a pas encore de lecture OvisOCR2 disponible. Relance sa lecture dans l'onglet Texte, puis réessaie.")
                     } else {
                         let report = DocumentAnalysisService.shared.report(for: document.id)
                         let sources = passages.map { passage in
@@ -793,21 +797,21 @@ struct QwenChatView: View {
                         let dialogue = followUp ? previous.map { ($0.role == .user ? "Utilisateur : " : "Assistant : ") + $0.text }.joined(separator: "\n").prefix(800) : ""
                         let question = dialogue.isEmpty ? prompt : "Dernier échange (contexte, pas une source) :\n\(dialogue)\nQuestion actuelle : \(prompt)"
                         for try await chunk in chat.stream(question, context: context) { messages[index].text += chunk }
-                        messages[index].text += "\n\nPages consultées : " + passages.map { "p. \(document.pageLabel($0.page))" }.joined(separator: ", ")
+                        messages[index].text += "\n\n" + String(localized: "Pages consultées : ") + passages.map { "p. \(document.pageLabel($0.page))" }.joined(separator: ", ")
                         messages[index].pages = passages.map(\.page)
                         messages[index].layoutVersion = (try? database?.layoutVersion(documentId: document.id)) ?? 0
                     }
                 } else {
                     for try await chunk in chat.stream(prompt) { messages[index].text += chunk }
                 }
-                Diagnostics.remember("chat", "✓ réponse en \(String(format: "%.1f", Date().timeIntervalSince(start))) s")
+                Diagnostics.remember("chat", String(localized: "✓ réponse en \(String(format: "%.1f", Date().timeIntervalSince(start))) s"))
                 lastDuration = Date().timeIntervalSince(start)
             } catch is CancellationError {
             } catch {
                 self.error = error.localizedDescription
-                Diagnostics.remember("chat", "✗ réponse : \(error.localizedDescription)")
+                Diagnostics.remember("chat", String(localized: "✗ réponse : \(error.localizedDescription)"))
             }
-            if messages[index].text.isEmpty { messages[index].text = "(pas de réponse)" }
+            if messages[index].text.isEmpty { messages[index].text = String(localized: "(pas de réponse)") }
             answering = nil
             save()
         }
@@ -905,7 +909,7 @@ struct ConversationListSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(editMode == .active ? "Terminé" : "Sélectionner") {
+                    Button(editMode == .active ? String(localized: "Terminé") : String(localized: "Sélectionner")) {
                         withAnimation { editMode = editMode == .active ? .inactive : .active }
                         picked = []
                     }
@@ -920,8 +924,8 @@ struct ConversationListSheet: View {
                 }
             }
             .centeredConfirmation(isPresented: $confirm,
-                                  title: pending.count > 1 ? "Supprimer \(pending.count) conversations ?" : "Supprimer cette conversation ?",
-                                  message: "Leurs messages seront effacés de l'iPad.", confirm: "Supprimer") {
+                                  title: pending.count > 1 ? String(localized: "Supprimer \(pending.count) conversations ?") : String(localized: "Supprimer cette conversation ?"),
+                                  message: String(localized: "Leurs messages seront effacés de l'iPad."), confirm: String(localized: "Supprimer")) {
                 onDelete(pending)
                 picked.subtract(pending)
                 pending = []

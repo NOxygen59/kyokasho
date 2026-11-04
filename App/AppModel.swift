@@ -94,7 +94,7 @@ final class AppModel: ObservableObject {
         do {
             guard !LibraryBackupService.restoreBlocked else {
                 throw NSError(domain: "Kyokasho.Backup", code: 2,
-                              userInfo: [NSLocalizedDescriptionKey: LibraryBackupService.restoreMessage ?? "Restauration inachevée."])
+                              userInfo: [NSLocalizedDescriptionKey: LibraryBackupService.restoreMessage ?? String(localized: "Restauration inachevée.")])
             }
             database = try AppDatabase.open(at: support.appendingPathComponent("kyokasho.sqlite"))
             persistentStorageAvailable = true
@@ -102,7 +102,7 @@ final class AppModel: ObservableObject {
             // Dernier recours : l'app reste utilisable (sans persistance) plutôt que de planter.
             database = try! AppDatabase.inMemory()
             persistentStorageAvailable = false
-            lastError = "Base de données inaccessible : \(error.localizedDescription)"
+            lastError = String(localized: "Base de données inaccessible : \(error.localizedDescription)")
         }
         storage = DocumentStorage(root: support.appendingPathComponent("Documents", isDirectory: true))
         importer = DocumentImporter(storage: storage, database: database)
@@ -177,7 +177,7 @@ final class AppModel: ObservableObject {
                      language: OCRTargetLanguage = .japanese) {
         guard storageRecoveryError == nil else { return }
         guard !LibraryBackupService.inProgress else {
-            lastError = "Sauvegarde en cours : réessaie après sa fin."
+            lastError = String(localized: "Sauvegarde en cours : réessaie après sa fin.")
             return
         }
         guard !urls.isEmpty else { return }
@@ -331,12 +331,12 @@ final class AppModel: ObservableObject {
 
     func delete(_ document: LibraryDocument) {
         guard !LibraryBackupService.inProgress else {
-            lastError = "Sauvegarde en cours : réessaie après sa fin."
+            lastError = String(localized: "Sauvegarde en cours : réessaie après sa fin.")
             return
         }
         // Avant la cascade SQL : réparer l'association UUID → document des copies d'avant remplacement Drive.
         do { try PageShift.synchronizeCopyOwners(database) }
-        catch { lastError = "Suppression impossible : \(error.localizedDescription)"; return }
+        catch { lastError = String(localized: "Suppression impossible : \(error.localizedDescription)"); return }
         let importer = importer
         let thumbnails = thumbnails
         // Retiré de la liste tout de suite ; remis (avec le message d'erreur) si l'effacement échoue.
@@ -363,7 +363,7 @@ final class AppModel: ObservableObject {
             } catch {
                 Task { @MainActor in
                     self.deletingIds.remove(document.id)
-                    self.lastError = "Suppression impossible : \(error.localizedDescription)"
+                    self.lastError = String(localized: "Suppression impossible : \(error.localizedDescription)")
                     self.documents = (try? self.database.allDocuments()) ?? self.documents
                 }
             }
@@ -404,11 +404,11 @@ final class AppModel: ObservableObject {
 
     /// Raison pour laquelle l'orientation est refusée maintenant, affichée dès l'ouverture de l'écran (RET-062).
     func pageRotationBlockReason(for document: LibraryDocument) -> String? {
-        if LibraryBackupService.inProgress { return "Une sauvegarde est en cours. L'orientation sera possible à sa fin." }
-        if pageRotationInProgress { return "Une orientation est déjà en cours d'application." }
+        if LibraryBackupService.inProgress { return String(localized: "Une sauvegarde est en cours. L'orientation sera possible à sa fin.") }
+        if pageRotationInProgress { return String(localized: "Une orientation est déjà en cours d'application.") }
         if AITaskCenter.shared.jobs.contains(where: { $0.key.contains(document.id) })
             || DocumentAnalysisService.shared.progress?.documentId == document.id {
-            return "Une analyse ou une lecture IA de ce document est en cours. L'orientation sera possible à sa fin."
+            return String(localized: "Une analyse ou une lecture IA de ce document est en cours. L'orientation sera possible à sa fin.")
         }
         return nil
     }
@@ -437,7 +437,7 @@ final class AppModel: ObservableObject {
                 try DocumentAITextStore.removePages(documentId: document.id, pages: pages)
             } catch {
                 Diagnostics.error("rotation : lectures IA non effacées : \(error.localizedDescription)", "lecteur")
-                lastError = "Orientation appliquée, mais d'anciennes lectures IA n'ont pas pu être effacées."
+                lastError = String(localized: "Orientation appliquée, mais d'anciennes lectures IA n'ont pas pu être effacées.")
             }
             for page in pages { DocumentAnalysisService.shared.invalidatePage(page, documentId: document.id) }
             await ocr.endPageMutation(documentId: document.id)

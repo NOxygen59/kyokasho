@@ -9,22 +9,22 @@ enum SettingsArea: String, Identifiable {
     var id: String { rawValue }
     var title: String {
         switch self {
-        case .general: return "Général"
-        case .reading: return "Lecture"
-        case .aiText: return "IA et texte des pages"
-        case .japaneseReview: return "Japonais et révision"
-        case .data: return "Données"
-        case .help: return "Aide"
+        case .general: return String(localized: "Général")
+        case .reading: return String(localized: "Lecture")
+        case .aiText: return String(localized: "IA et texte des pages")
+        case .japaneseReview: return String(localized: "Japonais et révision")
+        case .data: return String(localized: "Données")
+        case .help: return String(localized: "Aide")
         }
     }
     var subtitle: String {
         switch self {
-        case .general: return "Apparence, icône, visite et nouveautés"
-        case .reading: return "Pages, gestes, fenêtre OCR et Apple Pencil"
-        case .aiText: return "Modèles, reconnaissance OCR et traduction"
-        case .japaneseReview: return "Dictionnaires, lexique et cartes de révision"
-        case .data: return "Sauvegarde, stockage et Google Drive"
-        case .help: return "Diagnostic, version, mises à jour et crédits"
+        case .general: return String(localized: "Apparence, icône, visite et nouveautés")
+        case .reading: return String(localized: "Pages, gestes, fenêtre OCR et Apple Pencil")
+        case .aiText: return String(localized: "Modèles, reconnaissance OCR et traduction")
+        case .japaneseReview: return String(localized: "Dictionnaires, lexique et cartes de révision")
+        case .data: return String(localized: "Sauvegarde, stockage et Google Drive")
+        case .help: return String(localized: "Diagnostic, version, mises à jour et crédits")
         }
     }
     var icon: String {
@@ -64,65 +64,65 @@ enum SettingsRoute: String, Identifiable, CaseIterable {
     var id: String { rawValue }
     var title: String {
         switch self {
-        case .theme: return "Thèmes et couleurs"
-        case .appIcon: return "Icône de l'app"
-        case .intro: return "Visite guidée et nouveautés"
-        case .reading: return "Pages et gestes"
-        case .panel: return "Fenêtre texte OCR"
-        case .pencil: return "Apple Pencil et annotations"
-        case .dictionaries: return "Dictionnaires"
-        case .lexicon: return "Lexique personnel"
-        case .ocr: return "Reconnaître le texte des pages"
-        case .translation: return "Traduction en ligne"
-        case .models: return "IA et outils hors ligne"
-        case .cards: return "Cartes de révision"
-        case .storage: return "Espace de stockage"
-        case .backup: return "Sauvegarde"
-        case .drive: return "Google Drive"
-        case .diagnostics: return "Aide au diagnostic"
-        case .about: return "À propos et mises à jour"
+        case .theme: return String(localized: "Thèmes et couleurs")
+        case .appIcon: return String(localized: "Icône de l'app")
+        case .intro: return String(localized: "Visite guidée et nouveautés")
+        case .reading: return String(localized: "Pages et gestes")
+        case .panel: return String(localized: "Fenêtre texte OCR")
+        case .pencil: return String(localized: "Apple Pencil et annotations")
+        case .dictionaries: return String(localized: "Dictionnaires")
+        case .lexicon: return String(localized: "Lexique personnel")
+        case .ocr: return String(localized: "Reconnaître le texte des pages")
+        case .translation: return String(localized: "Traduction en ligne")
+        case .models: return String(localized: "IA et outils hors ligne")
+        case .cards: return String(localized: "Cartes de révision")
+        case .storage: return String(localized: "Espace de stockage")
+        case .backup: return String(localized: "Sauvegarde")
+        case .drive: return String(localized: "Google Drive")
+        case .diagnostics: return String(localized: "Aide au diagnostic")
+        case .about: return String(localized: "À propos et mises à jour")
         }
     }
     var subtitle: String {
         switch self {
-        case .theme: return "Choisir l'ambiance et les motifs de fond"
-        case .appIcon: return "Choisir l'apparence de Kyōkasho sur l'écran d'accueil"
-        case .intro: return "Revoir la visite, les nouveautés et l'historique"
-        case .reading: return "Une ou deux pages, sens de lecture et zoom"
-        case .panel: return "Choisir sa position et conserver le zoom du livre"
-        case .pencil: return "Dessiner, surligner ou chercher un mot avec le Pencil"
-        case .dictionaries: return "Ajouter les dictionnaires des fiches de mots"
-        case .lexicon: return "Tes termes, leurs lectures et leurs sens"
-        case .ocr: return "Lecture automatique des scans et présentation du texte"
-        case .translation: return "Configurer DeepL pour les traductions à la demande"
-        case .models: return "Voir les outils conseillés et gérer leurs téléchargements"
-        case .cards: return "Rythme de révision, modèles de cartes et export Anki"
-        case .storage: return "Voir ce qui prend de la place et nettoyer les caches"
-        case .backup: return "Sauvegarder toute la bibliothèque dans un dossier de Fichiers"
-        case .drive: return "Connecter ton compte pour retrouver tes fichiers"
-        case .diagnostics: return "Journal d'erreurs et suivi de la mémoire"
-        case .about: return "Version de l'app, GitHub et crédits"
+        case .theme: return String(localized: "Choisir l'ambiance et les motifs de fond")
+        case .appIcon: return String(localized: "Choisir l'apparence de Kyōkasho sur l'écran d'accueil")
+        case .intro: return String(localized: "Revoir la visite, les nouveautés et l'historique")
+        case .reading: return String(localized: "Une ou deux pages, sens de lecture et zoom")
+        case .panel: return String(localized: "Choisir sa position et conserver le zoom du livre")
+        case .pencil: return String(localized: "Dessiner, surligner ou chercher un mot avec le Pencil")
+        case .dictionaries: return String(localized: "Ajouter les dictionnaires des fiches de mots")
+        case .lexicon: return String(localized: "Tes termes, leurs lectures et leurs sens")
+        case .ocr: return String(localized: "Lecture automatique des scans et présentation du texte")
+        case .translation: return String(localized: "Configurer DeepL pour les traductions à la demande")
+        case .models: return String(localized: "Voir les outils conseillés et gérer leurs téléchargements")
+        case .cards: return String(localized: "Rythme de révision, modèles de cartes et export Anki")
+        case .storage: return String(localized: "Voir ce qui prend de la place et nettoyer les caches")
+        case .backup: return String(localized: "Sauvegarder toute la bibliothèque dans un dossier de Fichiers")
+        case .drive: return String(localized: "Connecter ton compte pour retrouver tes fichiers")
+        case .diagnostics: return String(localized: "Journal d'erreurs et suivi de la mémoire")
+        case .about: return String(localized: "Version de l'app, GitHub et crédits")
         }
     }
     var keywords: String {
         switch self {
-        case .theme: return "apparence couleur sombre motifs fond"
-        case .appIcon: return "apparence icone logo accueil ivoire bleu nuit jade anthracite"
-        case .intro: return "visite guidee nouveautes versions historique découvrir"
-        case .reading: return "double page portrait paysage marges rognage navigation défilement préchargement aperçus miniatures"
-        case .panel: return "panneau étude fixe ancré flottant détacher texte OCR zoom"
-        case .pencil: return "stylet doigt dessin encre notes"
-        case .dictionaries: return "Yomitan vocabulaire kanji fiches"
-        case .lexicon: return "glossaire domaine mots personnels"
-        case .ocr: return "OCR moteur scans Vision NDLOCR PP-OCR Ovis lecture IA automatique cache police interligne furigana"
-        case .translation: return "DeepL français traduction internet"
-        case .models: return "IA locale modèles OvisOCR Qwen GLM MeCab UniDic téléchargement chat furigana nettoyage netteté"
-        case .cards: return "Anki révisions cartes FSRS export"
-        case .storage: return "cache place disque mémoire fichiers"
-        case .backup: return "sauvegarde restauration copie dossier fichiers icloud drive"
-        case .drive: return "Google Drive compte connexion import"
-        case .diagnostics: return "diagnostic bugs journal erreurs moniteur CPU RAM FPS performance"
-        case .about: return "GitHub compte connexion version mise à jour installation crédits licences"
+        case .theme: return String(localized: "apparence couleur sombre motifs fond langue")
+        case .appIcon: return String(localized: "apparence icone logo accueil ivoire bleu nuit jade anthracite")
+        case .intro: return String(localized: "visite guidee nouveautes versions historique découvrir")
+        case .reading: return String(localized: "double page portrait paysage marges rognage navigation défilement préchargement aperçus miniatures")
+        case .panel: return String(localized: "panneau étude fixe ancré flottant détacher texte OCR zoom")
+        case .pencil: return String(localized: "stylet doigt dessin encre notes")
+        case .dictionaries: return String(localized: "Yomitan vocabulaire kanji fiches")
+        case .lexicon: return String(localized: "glossaire domaine mots personnels")
+        case .ocr: return String(localized: "OCR moteur scans Vision NDLOCR PP-OCR Ovis lecture IA automatique cache police interligne furigana")
+        case .translation: return String(localized: "DeepL français traduction internet")
+        case .models: return String(localized: "IA locale modèles OvisOCR Qwen GLM MeCab UniDic téléchargement chat furigana nettoyage netteté")
+        case .cards: return String(localized: "Anki révisions cartes FSRS export")
+        case .storage: return String(localized: "cache place disque mémoire fichiers")
+        case .backup: return String(localized: "sauvegarde restauration copie dossier fichiers icloud drive")
+        case .drive: return String(localized: "Google Drive compte connexion import")
+        case .diagnostics: return String(localized: "diagnostic bugs journal erreurs moniteur CPU RAM FPS performance")
+        case .about: return String(localized: "GitHub compte connexion version mise à jour installation crédits licences")
         }
     }
     func matches(_ query: String) -> Bool {

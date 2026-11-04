@@ -56,9 +56,9 @@ public struct DictionaryInfo: Codable, Identifiable, Hashable, Sendable, Fetchab
     public mutating func didInsert(_ inserted: InsertionSuccess) { id = inserted.rowID }
 
     public var kind: String {
-        if termCount > 0 { return "Termes" }
-        if kanjiCount > 0 { return "Kanji" }
-        if termMetaCount > 0 || kanjiMetaCount > 0 { return "Fréquence / accent" }
+        if termCount > 0 { return String(localized: "Termes", bundle: .main) }
+        if kanjiCount > 0 { return String(localized: "Kanji", bundle: .main) }
+        if termMetaCount > 0 || kanjiMetaCount > 0 { return String(localized: "Fréquence / accent", bundle: .main) }
         return "—"
     }
 }

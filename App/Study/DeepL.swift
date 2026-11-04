@@ -21,11 +21,11 @@ final class DeepLService: ObservableObject {
 
         var errorDescription: String? {
             switch self {
-            case .noKey: return "Ajoute ta clé DeepL dans Réglages → Traduction."
-            case .http(403): return "Clé DeepL refusée (vérifie-la dans Réglages → Traduction)."
-            case .http(456): return "Quota DeepL du mois atteint."
-            case .http(let code): return "Erreur DeepL (\(code))."
-            case .badResponse: return "Réponse inattendue de DeepL."
+            case .noKey: return String(localized: "Ajoute ta clé DeepL dans Réglages → Traduction.")
+            case .http(403): return String(localized: "Clé DeepL refusée (vérifie-la dans Réglages → Traduction).")
+            case .http(456): return String(localized: "Quota DeepL du mois atteint.")
+            case .http(let code): return String(localized: "Erreur DeepL (\(code)).")
+            case .badResponse: return String(localized: "Réponse inattendue de DeepL.")
             }
         }
     }
@@ -84,7 +84,7 @@ final class DeepLService: ObservableObject {
         f.numberStyle = .decimal
         f.locale = Locale(identifier: "fr_FR")
         func n(_ v: Int) -> String { f.string(from: NSNumber(value: v)) ?? "\(v)" }
-        return "\(n(u.used)) / \(n(u.limit)) caractères ce mois-ci"
+        return String(localized: "\(n(u.used)) / \(n(u.limit)) caractères ce mois-ci")
     }
 
     /// Quota du mois (caractères utilisés / limite).

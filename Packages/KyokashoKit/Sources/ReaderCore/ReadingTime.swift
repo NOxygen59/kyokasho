@@ -38,10 +38,10 @@ public struct ReadingClock: Equatable, Sendable {
     public static func format(_ seconds: TimeInterval) -> String {
         let minutes = Int(seconds / 60)
         let hours = minutes / 60, days = hours / 24, months = days / 30
-        if months > 0 { return days % 30 > 0 ? "\(months) mois \(days % 30) j" : "\(months) mois" }
-        if days > 0 { return hours % 24 > 0 ? "\(days) j \(hours % 24) h" : "\(days) j" }
-        if hours > 0 { return String(format: "%d h %02d", hours, minutes % 60) }
-        return "\(minutes) min"
+        if months > 0 { return days % 30 > 0 ? String(localized: "\(months) mois \(days % 30) j", bundle: .main) : "\(months) mois" }
+        if days > 0 { return hours % 24 > 0 ? String(localized: "\(days) j \(hours % 24) h", bundle: .main) : String(localized: "\(days) j", bundle: .main) }
+        if hours > 0 { return String(format: String(localized: "%d h %02d", bundle: .main), hours, minutes % 60) }
+        return String(localized: "\(minutes) min", bundle: .main)
     }
 }
 

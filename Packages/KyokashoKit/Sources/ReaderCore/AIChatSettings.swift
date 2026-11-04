@@ -65,21 +65,21 @@ public enum AIChatPreset: String, CaseIterable, Identifiable, Sendable {
 
     public var title: String {
         switch self {
-        case .standard: return "Consigne de l'app"
-        case .summary: return "Résumer"
-        case .formulas: return "Expliquer les formules"
-        case .teacher: return "Professeur de japonais"
-        case .translation: return "Traduction mot à mot"
+        case .standard: return String(localized: "Consigne de l'app", bundle: .main)
+        case .summary: return String(localized: "Résumer", bundle: .main)
+        case .formulas: return String(localized: "Expliquer les formules", bundle: .main)
+        case .teacher: return String(localized: "Professeur de japonais", bundle: .main)
+        case .translation: return String(localized: "Traduction mot à mot", bundle: .main)
         }
     }
 
     public var summary: String {
         switch self {
-        case .standard: return "Réponses brèves, appuyées sur les pages, sans invention."
-        case .summary: return "Résumé structuré d'une page ou d'un passage, points clés en liste."
-        case .formulas: return "Chaque formule expliquée pas à pas : symboles, unités, exemple chiffré."
-        case .teacher: return "Lectures, sens, grammaire et exemples, adaptés à un francophone."
-        case .translation: return "Phrase découpée, chaque mot traduit, puis une traduction naturelle."
+        case .standard: return String(localized: "Réponses brèves, appuyées sur les pages, sans invention.", bundle: .main)
+        case .summary: return String(localized: "Résumé structuré d'une page ou d'un passage, points clés en liste.", bundle: .main)
+        case .formulas: return String(localized: "Chaque formule expliquée pas à pas : symboles, unités, exemple chiffré.", bundle: .main)
+        case .teacher: return String(localized: "Lectures, sens, grammaire et exemples, adaptés à un francophone.", bundle: .main)
+        case .translation: return String(localized: "Phrase découpée, chaque mot traduit, puis une traduction naturelle.", bundle: .main)
         }
     }
 

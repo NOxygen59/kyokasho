@@ -41,9 +41,9 @@ struct StudyPanel: View {
                         }
                     }
                 } else if tab == .vocab || tab == .chat {
-                    AtelierLabel(tab == .chat ? "Chat du livre" : "Dictionnaire", tint: tab == .chat ? Atelier.Tint.ai : Atelier.Tint.japanese)
+                    AtelierLabel(tab == .chat ? String(localized: "Chat du livre") : String(localized: "Dictionnaire"), tint: tab == .chat ? Atelier.Tint.ai : Atelier.Tint.japanese)
                 } else {
-                    AtelierLabel("Étude · page \(reader.document.pageLabel(reader.focusSource))", tint: Atelier.textSecondary)
+                    AtelierLabel(String(localized: "Étude · page \(reader.document.pageLabel(reader.focusSource))"), tint: Atelier.textSecondary)
                 }
                 Spacer()
                 StudyWindowButtons()
@@ -55,9 +55,9 @@ struct StudyPanel: View {
                 .padding(.leading, 6)
                 .accessibilityLabel("Fermer le panneau d'étude")
             }
-            PillTabs(items: [(Tab.text, "character.ja", "Texte"), (.vocab, "character.book.closed.ja", "Dico"),
-                             (.notes, "text.bubble", "Notes"), (.marks, "bookmark", "Repères"),
-                             (.chat, "bubble.left.and.bubble.right", "Chat")],
+            PillTabs(items: [(Tab.text, "character.ja", String(localized: "Texte")), (.vocab, "character.book.closed.ja", String(localized: "Dico")),
+                             (.notes, "text.bubble", String(localized: "Notes")), (.marks, "bookmark", String(localized: "Repères")),
+                             (.chat, "bubble.left.and.bubble.right", String(localized: "Chat"))],
                      selection: $tab, tint: tint)
             Group {
                 switch tab {
@@ -80,7 +80,7 @@ struct StudyPanel: View {
                                          openPage: { reader.go(toSource: $0) },
                                          saveToNotes: { text in
                                              reader.saveNote(PageComment(documentId: reader.document.id, pageIndex: reader.focusSource,
-                                                                         body: "Chat IA :\n" + text))
+                                                                         body: String(localized: "Chat IA :\n") + text))
                                          }, database: model.database)
                 }
             }
@@ -272,7 +272,7 @@ struct StudyTextTab: View {
                     }
                     showVerify = true
                 } label: {
-                    Label(count > 0 ? "Corrections IA (\(count))" : "Corrections IA",
+                    Label(count > 0 ? String(localized: "Corrections IA (\(count))") : String(localized: "Corrections IA"),
                           systemImage: "checkmark.seal")
                 }
                 Button {
@@ -399,7 +399,7 @@ struct StudyTextTab: View {
         guard formatted, reader.ocrPage != nil, engine != .geometry else { regions = []; return }
         guard engine.isAvailable() else {
             regions = []
-            layoutError = "\(engine.title) n'est pas téléchargé (Réglages → Modèles) : mise en page par géométrie."
+            layoutError = String(localized: "\(engine.title) n'est pas téléchargé (Réglages → Modèles) : mise en page par géométrie.")
             return
         }
         let key = "\(reader.document.id)-\(reader.focusSource)-\(engine.rawValue)"
@@ -421,7 +421,7 @@ struct StudyTextTab: View {
             regions = found
         case .failure(let error):
             regions = []
-            layoutError = "Mise en page : \(error.localizedDescription) (géométrie utilisée)."
+            layoutError = String(localized: "Mise en page : \(error.localizedDescription) (géométrie utilisée).")
         }
     }
 
@@ -449,7 +449,7 @@ struct StudyTextTab: View {
                         reader.verifyShownPages()
                         showVerify = true
                     } label: {
-                        Label(reader.shownSources.count > 1 ? "Vérifier la double page (OvisOCR2)" : "Vérifier la page (OvisOCR2)",
+                        Label(reader.shownSources.count > 1 ? String(localized: "Vérifier la double page (OvisOCR2)") : String(localized: "Vérifier la page (OvisOCR2)"),
                               systemImage: "checkmark.seal")
                     }
                 }
@@ -495,7 +495,7 @@ struct StudyTextTab: View {
                 UIPasteboard.general.string = formatted ? OCRLayout.markdown(page) : page.text
             } label: { Image(systemName: "doc.on.doc") }
                 .disabled(reader.ocrPage == nil)
-                .accessibilityLabel(formatted ? "Copier en Markdown" : "Copier le texte")
+                .accessibilityLabel(formatted ? String(localized: "Copier en Markdown") : String(localized: "Copier le texte"))
         }
         .foregroundStyle(Atelier.textPrimary)
     }
@@ -530,7 +530,7 @@ struct StudyTextTab: View {
         } else if !lines.isEmpty {
             HStack(spacing: 8) {
                 Image(systemName: "exclamationmark.triangle").foregroundStyle(.orange)
-                Text(count > 0 ? "\(count) caractère\(count > 1 ? "s" : "") douteux" : "\(lines.count) ligne\(lines.count > 1 ? "s" : "") peu sûre\(lines.count > 1 ? "s" : "")")
+                Text(count > 0 ? String(localized: "\(count) caractère\(count > 1 ? "s" : "") douteux") : String(localized: "\(lines.count) ligne\(lines.count > 1 ? "s" : "") peu sûre\(lines.count > 1 ? "s" : "")"))
                     .font(.caption)
                 Spacer()
                 if GLMOCREngine().isAvailable {
@@ -550,7 +550,7 @@ struct StudyTextTab: View {
     @ViewBuilder
     private func translationBlock(for text: String) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            AtelierLabel("Traduction", tint: Atelier.Tint.ai)
+            AtelierLabel(String(localized: "Traduction"), tint: Atelier.Tint.ai)
             if let translation {
                 Text(translation)
                     .font(Atelier.font(15))
@@ -618,7 +618,7 @@ enum LayoutEngineMenu {
 extension LayoutDetector.Engine {
     var shortTitle: String {
         switch self {
-        case .geometry: return "Géo"
+        case .geometry: return String(localized: "Géo")
         case .ppDocLayout: return "PP"
         case .docLayoutYOLO: return "YOLO"
         }
@@ -632,7 +632,7 @@ struct LayoutEnginePicker: View {
     var body: some View {
         Picker("Mise en page", selection: $selection) {
             ForEach(LayoutDetector.Engine.allCases, id: \.rawValue) { engine in
-                Text(engine.isAvailable() ? engine.title : "\(engine.title) — à télécharger (Modèles)")
+                Text(engine.isAvailable() ? engine.title : String(localized: "\(engine.title) — à télécharger (Modèles)"))
                     .tag(engine.rawValue)
                     .disabled(!engine.isAvailable())
             }
@@ -746,7 +746,7 @@ struct StudyNotesTab: View {
                     if here.isEmpty { Text("Aucune note sur cette page.").font(.footnote).foregroundStyle(Atelier.textTertiary) }
                     dayGroups(here, showPage: false)
                     if !others.isEmpty {
-                        AtelierLabel("Autres pages").padding(.top, 6)
+                        AtelierLabel(String(localized: "Autres pages")).padding(.top, 6)
                         dayGroups(others, showPage: true)
                     }
                 }
@@ -764,15 +764,15 @@ struct StudyNotesTab: View {
     /// Petit avertissement d'un brouillon non ajouté ; toucher celui d'une autre page y mène.
     private func pendingWarning(_ pending: Int) -> some View {
         Button { if pending != page { reader.go(toSource: pending) } } label: {
-            Label(pending == page ? "Brouillon non ajouté sur cette page"
-                                  : "Brouillon non ajouté · p. \(reader.document.pageLabel(pending))",
+            Label(pending == page ? String(localized: "Brouillon non ajouté sur cette page")
+                                  : String(localized: "Brouillon non ajouté · p. \(reader.document.pageLabel(pending))"),
                   systemImage: "exclamationmark.triangle.fill")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.orange)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
         .buttonStyle(.plain)
-        .accessibilityHint(pending == page ? "Touche Ajouter pour créer la note" : "Ouvre la page du brouillon")
+        .accessibilityHint(pending == page ? String(localized: "Touche Ajouter pour créer la note") : String(localized: "Ouvre la page du brouillon"))
     }
 
     /// Affiche le brouillon de `page`. Celui de la page quittée est déjà sur disque (écrit à chaque frappe).
@@ -822,7 +822,7 @@ struct StudyNotesTab: View {
                     if comment.drawing != nil { Image(systemName: "scribble").font(.caption).foregroundStyle(Atelier.textTertiary) }
                     if comment.anchorRect != nil {
                         Button { reader.goToAnchor(comment) } label: {
-                            Text("＊ \(comment.anchorText ?? "ancre")").font(.caption.weight(.semibold)).foregroundStyle(Atelier.Tint.annotate)
+                            Text("＊ \(comment.anchorText ?? String(localized: "ancre"))").font(.caption.weight(.semibold)).foregroundStyle(Atelier.Tint.annotate)
                         }
                         .buttonStyle(.plain)
                     }
@@ -844,7 +844,7 @@ struct StudyNotesTab: View {
                             .keyboardShortcut(.cancelAction)
                     }
                 } else {
-                    Text(comment.body.isEmpty ? "(note sans texte)" : comment.body)
+                    Text(comment.body.isEmpty ? String(localized: "(note sans texte)") : comment.body)
                         .foregroundStyle(comment.body.isEmpty ? Atelier.textTertiary : Atelier.textPrimary)
                         .lineLimit(4)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -910,7 +910,7 @@ struct StudyMarksTab: View {
                         .background(Atelier.surfaceHigh, in: RoundedRectangle(cornerRadius: Atelier.smallRadius, style: .continuous))
                 }
                 .foregroundStyle(Atelier.textPrimary)
-                AtelierLabel("Signets · \(reader.bookmarks.count)", tint: Atelier.Tint.read)
+                AtelierLabel(String(localized: "Signets · \(reader.bookmarks.count)"), tint: Atelier.Tint.read)
                 if reader.bookmarks.isEmpty {
                     // Même symbole que le bouton « Signet » de la barre du haut (`bookmark`), pas une étoile (RET-028, #43).
                     Text("Touche \(Image(systemName: "bookmark")) en haut pour marquer une page.")
@@ -920,7 +920,7 @@ struct StudyMarksTab: View {
                 ForEach(reader.bookmarks) { b in
                     row(icon: "bookmark.fill", tint: Atelier.Tint.read, title: b.title, page: b.pageIndex)
                 }
-                AtelierLabel("Surlignages · \(reader.allHighlights.count)", tint: Atelier.Tint.annotate)
+                AtelierLabel(String(localized: "Surlignages · \(reader.allHighlights.count)"), tint: Atelier.Tint.annotate)
                 ForEach(reader.allHighlights) { h in
                     row(icon: "highlighter", tint: Color(h.color.uiColor), title: h.text.isEmpty ? "—" : h.text, page: h.pageIndex)
                 }

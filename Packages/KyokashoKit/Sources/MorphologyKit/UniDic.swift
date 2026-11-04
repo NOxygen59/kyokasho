@@ -23,9 +23,9 @@ public enum UniDic {
         case notGzip, inflate, truncated
         public var errorDescription: String? {
             switch self {
-            case .notGzip: return "Archive UniDic inattendue (pas un .tar.gz)."
-            case .inflate: return "Décompression d'UniDic impossible."
-            case .truncated: return "Archive UniDic incomplète : relance le téléchargement."
+            case .notGzip: return String(localized: "Archive UniDic inattendue (pas un .tar.gz).", bundle: .main)
+            case .inflate: return String(localized: "Décompression d'UniDic impossible.", bundle: .main)
+            case .truncated: return String(localized: "Archive UniDic incomplète : relance le téléchargement.", bundle: .main)
             }
         }
     }

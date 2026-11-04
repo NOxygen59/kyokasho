@@ -125,7 +125,7 @@ struct RemovePagesView: View {
                         .background(Atelier.material(.regularMaterial), in: RoundedRectangle(cornerRadius: Atelier.corner(14)))
                 }
             }
-            .alert("Supprimer \(selected.count == 1 ? "cette page" : "ces \(selected.count) pages") ?", isPresented: $confirming) {
+            .alert(selected.count == 1 ? String(localized: "Supprimer cette page ?") : String(localized: "Supprimer ces \(selected.count) pages ?"), isPresented: $confirming) {
                 Button("Annuler", role: .cancel) {}
                 Button("Supprimer", role: .destructive) { remove() }
             } message: {
@@ -179,10 +179,10 @@ struct RemovePagesView: View {
         switch edit.kind {
         case .insertion:
             let count = edit.mapping.inserted.count
-            return "Ajout de \(count) page\(count > 1 ? "s" : "")"
+            return String(localized: "Ajout de \(count) page\(count > 1 ? "s" : "")")
         case .restoration:
             let count = edit.mapping.inserted.count
-            return "Restauration de \(count) page\(count > 1 ? "s" : "")"
+            return String(localized: "Restauration de \(count) page\(count > 1 ? "s" : "")")
         case .removal:
             let count = edit.mapping.removed.count
             let identities = ((try? model.database.archivedRows(editId: edit.id)) ?? []).filter { $0.tableName == "pageIdentity" }
@@ -192,40 +192,40 @@ struct RemovePagesView: View {
                 if case .integer(let p)? = row.columns["position"] { return "(\(p + 1))" }
                 return nil
             }
-            let pages = numbers.count == count ? " : p. " + numbers.prefix(12).joined(separator: ", ") + (count > 12 ? "…" : "") : ""
-            return "Suppression de \(count) page\(count > 1 ? "s" : "")\(pages)"
+            let pages = numbers.count == count ? String(localized: " : p. ") + numbers.prefix(12).joined(separator: ", ") + (count > 12 ? "…" : "") : ""
+            return String(localized: "Suppression de \(count) page\(count > 1 ? "s" : "")\(pages)")
         }
     }
 
     private func state(_ edit: AppDatabase.PageEdit) -> String {
         let date = edit.appliedAt.formatted(date: .abbreviated, time: .shortened)
         guard edit.kind == .removal else { return date }
-        if edit.restoredBy != nil { return date + " · restaurées" }
-        if edit.purgedAt != nil { return date + " · effacées" }
-        return date + " · restaurables"
+        if edit.restoredBy != nil { return date + String(localized: " · restaurées") }
+        if edit.purgedAt != nil { return date + String(localized: " · effacées") }
+        return date + String(localized: " · restaurables")
     }
 
     private func remove() {
         let pages = selected
-        run(success: "\(pages.count) page\(pages.count > 1 ? "s" : "") supprimée\(pages.count > 1 ? "s" : ""). Restaurable\(pages.count > 1 ? "s" : "") pendant 30 jours.") {
+        run(success: String(localized: "\(pages.count) page\(pages.count > 1 ? "s" : "") supprimée\(pages.count > 1 ? "s" : ""). Restaurable\(pages.count > 1 ? "s" : "") pendant 30 jours.")) {
             try await PageShift.removePages(model, document: document, pages: pages)
         }
     }
 
     private func restore(_ edit: AppDatabase.PageEdit) {
-        run(success: "Pages restaurées.") {
+        run(success: String(localized: "Pages restaurées.")) {
             try await PageShift.restorePages(model, document: document, archiveId: edit.id)
         }
     }
 
     private func discard(_ edit: AppDatabase.PageEdit) {
-        run(success: "Pages effacées.") {
+        run(success: String(localized: "Pages effacées.")) {
             try PageShift.discardCopy(model, editId: edit.id, documentId: document.id)
         }
     }
 
     private func discardAll() {
-        run(success: "Copies effacées.") {
+        run(success: String(localized: "Copies effacées.")) {
             try PageShift.discardCopies(model, documentId: document.id)
         }
     }
@@ -276,7 +276,7 @@ private struct PageChoice: View {
             }
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("Page \(document.pageLabel(page))\(selected ? ", choisie" : "")")
+        .accessibilityLabel("Page \(document.pageLabel(page))\(selected ? String(localized: ", choisie") : "")")
         .onAppear {
             model.thumbnails.thumbnail(documentId: document.id, fileURL: model.storage.url(for: document.id),
                                        page: page, width: 168) { image = $0 }

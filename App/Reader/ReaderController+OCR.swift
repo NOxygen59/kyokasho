@@ -359,8 +359,8 @@ extension ReaderController {
         let key = rereadKey(source) + String(page.hashValue)
         guard !AITaskCenter.shared.isRunning(key) else { return }
         AITaskCenter.shared.cancel(prefix: rereadKey(source))
-        AITaskCenter.shared.run(key, title: "Relecture GLM-OCR p. \(source + 1)", modelId: ModelSpec.glmocr.id, activity: "relecture") { [weak self] id in
-            AITaskCenter.shared.log(id, "GLM-OCR relit \(lines.count) ligne(s) douteuse(s) de la page \(source + 1)…")
+        AITaskCenter.shared.run(key, title: String(localized: "Relecture GLM-OCR p. \(source + 1)"), modelId: ModelSpec.glmocr.id, activity: "relecture") { [weak self] id in
+            AITaskCenter.shared.log(id, String(localized: "GLM-OCR relit \(lines.count) ligne(s) douteuse(s) de la page \(source + 1)…"))
             let rotation = await service.additionalRotation(documentId: documentId, pageIndex: source)
             let read = try await Diagnostics.measure("GLM-OCR relit \(lines.count) ligne(s) p. \(source)", "relecture") {
                 try await engine.reread(page, lines: lines,
@@ -371,10 +371,10 @@ extension ReaderController {
             let shown = self.flatMap { $0.focusSource == source && !$0.closed ? $0.ocrPage : nil }
             let current = shown == nil ? await service.cached(documentId: documentId, pageIndex: source, engine: page.engine) : shown
             guard current == nil || current == page else {
-                AITaskCenter.shared.log(id, "Page modifiée entre-temps : relecture jetée")
+                AITaskCenter.shared.log(id, String(localized: "Page modifiée entre-temps : relecture jetée"))
                 return
             }
-            AITaskCenter.shared.log(id, "Relecture enregistrée")
+            AITaskCenter.shared.log(id, String(localized: "Relecture enregistrée"))
             try? await service.store(read, documentId: documentId, pageIndex: source)
             guard let self, !self.closed else { return }
             self.showOCR(read, source: source)

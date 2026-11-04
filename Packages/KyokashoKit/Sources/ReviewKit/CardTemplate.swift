@@ -31,9 +31,9 @@ public struct CardTemplate: Sendable, Equatable {
 
         public var description: String {
             switch self {
-            case .unclosed(let n): return "Bloc « \(n) » jamais fermé."
-            case .unexpectedClose(let n): return "Fermeture « \(n) » sans ouverture."
-            case .unterminatedTag: return "Accolades {{ … }} pas fermées."
+            case .unclosed(let n): return String(localized: "Bloc « \(n) » jamais fermé.", bundle: .main)
+            case .unexpectedClose(let n): return String(localized: "Fermeture « \(n) » sans ouverture.", bundle: .main)
+            case .unterminatedTag: return String(localized: "Accolades {{ … }} pas fermées.", bundle: .main)
             }
         }
     }

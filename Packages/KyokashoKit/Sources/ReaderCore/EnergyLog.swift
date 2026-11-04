@@ -103,6 +103,6 @@ public enum EnergyLog {
     }
 
     public static func thermalName(_ value: Int) -> String {
-        ["normale", "tiède", "chaud", "critique"][min(max(value, 0), 3)]
+        ["normale", String(localized: "tiède", bundle: .main), "chaud", "critique"][min(max(value, 0), 3)]
     }
 }

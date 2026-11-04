@@ -79,7 +79,7 @@ struct ReviewSettingsView: View {
             Section {
                 Button("Nettoyer les médias inutilisés") {
                     let n = (try? review.store.removeUnusedMedia()) ?? 0
-                    message = n == 0 ? "Aucun fichier inutile." : "\(n) fichier\(n > 1 ? "s" : "") supprimé\(n > 1 ? "s" : "")."
+                    message = n == 0 ? String(localized: "Aucun fichier inutile.") : String(localized: "\(n) fichier\(n > 1 ? "s" : "") supprimé\(n > 1 ? "s" : "").")
                 }
             } footer: {
                 Text("Supprime les images et sons que plus aucune carte n'utilise.")
@@ -96,7 +96,7 @@ struct ReviewSettingsView: View {
                     review.settings.defaultDeckId = deck.id
                     review.refresh()
                 } else {
-                    message = "Un paquet porte déjà ce nom."
+                    message = String(localized: "Un paquet porte déjà ce nom.")
                 }
             }
         }
@@ -109,7 +109,7 @@ struct ReviewSettingsView: View {
         guard let template = review.defaultTemplate, let templateId = template.id else { return }
         let deckName = review.decks.first { $0.id == review.defaultDeckId }?.name ?? "Kyōkasho"
         let cards = ((try? review.store.cards(limit: 1_000_000)) ?? []).filter { $0.templateId == templateId }
-        guard !cards.isEmpty else { message = "Aucune carte à exporter."; return }
+        guard !cards.isEmpty else { message = String(localized: "Aucune carte à exporter."); return }
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent("Export", isDirectory: true)
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         let url = folder.appendingPathComponent("Kyokasho.\(apkg ? "apkg" : "csv")")
@@ -124,7 +124,7 @@ struct ReviewSettingsView: View {
             }
             exportURL = url
         } catch {
-            message = "Export impossible : \(error.localizedDescription)"
+            message = String(localized: "Export impossible : \(error.localizedDescription)")
         }
     }
 }
@@ -142,7 +142,7 @@ struct TemplateEditorView: View {
             return card.fields
         }
         return ["Mot": "食べる", "Lecture": "たべる", "Furigana": "食[た]べる", "Sens": "<ol><li>manger</li></ol>",
-                "Phrase": "パンを<b>食べた</b>。", "Accent": "[2]", "Source": "Exemple · p. 1"]
+                "Phrase": "パンを<b>食べた</b>。", "Accent": "[2]", "Source": String(localized: "Exemple · p. 1")]
     }
 
     var body: some View {
@@ -163,7 +163,7 @@ struct TemplateEditorView: View {
                     Label(error, systemImage: "exclamationmark.triangle.fill").font(.footnote).foregroundStyle(.orange)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                Text("Champs : " + template.fieldNames.map { "{{\($0)}}" }.joined(separator: " "))
+                Text(String(localized: "Champs : ") + template.fieldNames.map { "{{\($0)}}" }.joined(separator: " "))
                     .font(.caption.monospaced()).foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }

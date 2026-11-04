@@ -10,8 +10,8 @@ public enum DocumentCategory: String, Codable, CaseIterable, Sendable {
 
     public var title: String {
         switch self {
-        case .book: return "Livre"
-        case .textbook: return "Manuel"
+        case .book: return String(localized: "Livre", bundle: .main)
+        case .textbook: return String(localized: "Manuel", bundle: .main)
         }
     }
 }
@@ -315,16 +315,16 @@ public struct AIPrompt: Codable, Identifiable, Hashable, Sendable {
     }
 
     public static let defaults: [AIPrompt] = [
-        AIPrompt(title: "Expliquer la slide",
+        AIPrompt(title: String(localized: "Expliquer la slide", bundle: .main),
                  body: "Explique cette slide en français, simplement. Ajoute les furigana aux kanji et propose un petit schéma si ça aide.",
                  position: 0),
-        AIPrompt(title: "Traduire la page",
+        AIPrompt(title: String(localized: "Traduire la page", bundle: .main),
                  body: "Traduis cette page de cours en français, en gardant la mise en forme. Mets les furigana aux kanji difficiles.",
                  position: 1),
-        AIPrompt(title: "Vocabulaire",
+        AIPrompt(title: String(localized: "Vocabulaire", bundle: .main),
                  body: "Liste le vocabulaire important de cette page : mot, lecture en hiragana, sens en français, et une phrase d'exemple.",
                  position: 2),
-        AIPrompt(title: "Questions de révision",
+        AIPrompt(title: String(localized: "Questions de révision", bundle: .main),
                  body: "À partir de cette page, écris 5 questions de révision avec leurs réponses, en français.",
                  position: 3),
     ]

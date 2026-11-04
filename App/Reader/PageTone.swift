@@ -17,11 +17,11 @@ enum PageTone: String, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .normal: return "Blanc (d'origine)"
-        case .cream: return "Crème"
-        case .dim: return "Tamisé"
-        case .dark: return "Sombre (inversé)"
-        case .sepiaNight: return "Sépia nuit"
+        case .normal: return String(localized: "Blanc (d'origine)")
+        case .cream: return String(localized: "Crème")
+        case .dim: return String(localized: "Tamisé")
+        case .dark: return String(localized: "Sombre (inversé)")
+        case .sepiaNight: return String(localized: "Sépia nuit")
         }
     }
 

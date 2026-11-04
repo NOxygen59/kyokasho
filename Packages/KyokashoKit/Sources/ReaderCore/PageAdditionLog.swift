@@ -26,8 +26,8 @@ public struct PageAddition: Codable, Equatable, Sendable {
     public var summary: String {
         let after = added - insertedBefore
         var parts: [String] = []
-        if insertedBefore > 0 { parts.append("\(Self.pages(insertedBefore)) ajoutée\(insertedBefore > 1 ? "s" : "") au début") }
-        if after > 0 { parts.append(insertedBefore > 0 ? "\(Self.pages(after)) à la fin" : "\(Self.pages(after)) ajoutée\(after > 1 ? "s" : "") à la fin") }
+        if insertedBefore > 0 { parts.append(String(localized: "\(Self.pages(insertedBefore)) ajoutée\(insertedBefore > 1 ? "s" : "") au début", bundle: .main)) }
+        if after > 0 { parts.append(insertedBefore > 0 ? String(localized: "\(Self.pages(after)) à la fin", bundle: .main) : String(localized: "\(Self.pages(after)) ajoutée\(after > 1 ? "s" : "") à la fin", bundle: .main)) }
         return parts.joined(separator: " · ")
     }
 

@@ -77,7 +77,7 @@ public enum LibraryBackup {
         let archive = try Archive(url: zip, accessMode: .create)
         var hashes: [String: String] = [:]
         func add(_ path: String, file: URL) throws {
-            guard safePath(path), hashes[path] == nil else { throw BackupError("Chemin de sauvegarde invalide : \(path)") }
+            guard safePath(path), hashes[path] == nil else { throw BackupError(String(localized: "Chemin de sauvegarde invalide : \(path)", bundle: .main)) }
             hashes[path] = try DocumentImporter.sha256(of: file)
             try archive.addEntry(with: path, fileURL: file, compressionMethod: path.hasSuffix(".pdf") ? .none : .deflate)
         }
@@ -122,7 +122,7 @@ public enum LibraryBackup {
     private static func checkRegular(_ url: URL) throws {
         let values = try url.resourceValues(forKeys: [.isSymbolicLinkKey, .isRegularFileKey])
         guard values.isSymbolicLink != true, values.isRegularFile == true else {
-            throw BackupError("Élément inattendu (lien ou fichier spécial) : sauvegarde arrêtée.")
+            throw BackupError(String(localized: "Élément inattendu (lien ou fichier spécial) : sauvegarde arrêtée.", bundle: .main))
         }
     }
 
@@ -134,7 +134,7 @@ public enum LibraryBackup {
         var out: [(String, URL)] = []
         func visit(_ url: URL, _ relative: String) throws {
             let values = try url.resourceValues(forKeys: [.isSymbolicLinkKey, .isDirectoryKey, .isRegularFileKey])
-            guard values.isSymbolicLink != true else { throw BackupError("Lien symbolique dans « \(relative) » : sauvegarde arrêtée.") }
+            guard values.isSymbolicLink != true else { throw BackupError(String(localized: "Lien symbolique dans « \(relative) » : sauvegarde arrêtée.", bundle: .main)) }
             if values.isDirectory == true {
                 for child in try fm.contentsOfDirectory(at: url, includingPropertiesForKeys: nil).sorted(by: { $0.lastPathComponent < $1.lastPathComponent })
                     where !child.lastPathComponent.hasPrefix(".") {
@@ -143,7 +143,7 @@ public enum LibraryBackup {
             } else if values.isRegularFile == true {
                 out.append((relative, url))
             } else {
-                throw BackupError("Fichier spécial dans « \(relative) » : sauvegarde arrêtée.")
+                throw BackupError(String(localized: "Fichier spécial dans « \(relative) » : sauvegarde arrêtée.", bundle: .main))
             }
         }
         try visit(folder, "")
@@ -190,13 +190,13 @@ public enum LibraryBackup {
     public static func open(_ zip: URL, into folder: URL) throws -> Manifest {
         let fm = FileManager.default
         let archive: Archive
-        do { archive = try Archive(url: zip, accessMode: .read) } catch { throw BackupError("Ce fichier n'est pas une sauvegarde Kyōkasho.") }
+        do { archive = try Archive(url: zip, accessMode: .read) } catch { throw BackupError(String(localized: "Ce fichier n'est pas une sauvegarde Kyōkasho.", bundle: .main)) }
         try fm.createDirectory(at: folder, withIntermediateDirectories: true)
         var extracted: [String: URL] = [:]
         for entry in archive {
             let path = entry.path
             guard entry.type == .file, safePath(path), extracted[path] == nil else {
-                throw BackupError("Sauvegarde invalide : élément inattendu « \(path) ».")
+                throw BackupError(String(localized: "Sauvegarde invalide : élément inattendu « \(path) ».", bundle: .main))
             }
             let url = folder.appendingPathComponent(path)
             try fm.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
@@ -207,16 +207,16 @@ public enum LibraryBackup {
         decoder.dateDecodingStrategy = .iso8601
         guard let manifestURL = extracted.removeValue(forKey: "manifest.json"),
               let manifest = try? decoder.decode(Manifest.self, from: Data(contentsOf: manifestURL)) else {
-            throw BackupError("Sauvegarde invalide : fiche absente ou illisible.")
+            throw BackupError(String(localized: "Sauvegarde invalide : fiche absente ou illisible.", bundle: .main))
         }
         guard manifest.formatVersion <= formatVersion else {
-            throw BackupError("Cette sauvegarde vient d'une version plus récente de Kyōkasho : mets l'app à jour.")
+            throw BackupError(String(localized: "Cette sauvegarde vient d'une version plus récente de Kyōkasho : mets l'app à jour.", bundle: .main))
         }
         guard Set(extracted.keys) == Set(manifest.files.keys), Set(manifest.databases).isSubset(of: extracted.keys) else {
-            throw BackupError("Sauvegarde incomplète ou modifiée : fichiers différents de sa fiche.")
+            throw BackupError(String(localized: "Sauvegarde incomplète ou modifiée : fichiers différents de sa fiche.", bundle: .main))
         }
         for (path, url) in extracted where try DocumentImporter.sha256(of: url) != manifest.files[path] {
-            throw BackupError("Sauvegarde modifiée : « \(path) » ne correspond pas à son empreinte.")
+            throw BackupError(String(localized: "Sauvegarde modifiée : « \(path) » ne correspond pas à son empreinte.", bundle: .main))
         }
         for path in manifest.databases {
             var readOnly = Configuration()
@@ -224,7 +224,7 @@ public enum LibraryBackup {
             let ok = try? DatabaseQueue(path: extracted[path]!.path, configuration: readOnly).read { db in
                 try String.fetchOne(db, sql: "PRAGMA integrity_check") == "ok"
             }
-            guard ok == true else { throw BackupError("Base « \(path) » abîmée dans la sauvegarde.") }
+            guard ok == true else { throw BackupError(String(localized: "Base « \(path) » abîmée dans la sauvegarde.", bundle: .main)) }
         }
         return manifest
     }

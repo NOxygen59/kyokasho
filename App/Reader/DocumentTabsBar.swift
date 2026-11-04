@@ -195,7 +195,7 @@ struct TabStripView: UIViewRepresentable {
             closeConfig.baseForegroundColor = ink
             closeConfig.contentInsets = NSDirectionalEdgeInsets(top: 6, leading: 6, bottom: 6, trailing: 10)
             let close = UIButton(configuration: closeConfig, primaryAction: UIAction { [weak self] _ in self?.onClose(tab.id) })
-            close.accessibilityLabel = "Fermer l'onglet \(tab.title)"
+            close.accessibilityLabel = String(localized: "Fermer l'onglet \(tab.title)")
 
             let row = UIStackView(arrangedSubviews: [title, close])
             row.axis = .horizontal

@@ -36,7 +36,7 @@ extension ReaderController {
         verifications = []
         verifyState = .running(done: 0, total: sources.count)
         // Tâche de l'app : continue si on change de page ou ferme le lecteur (le Markdown lu reste gardé).
-        AITaskCenter.shared.run(verifyKey, title: "Vérification OvisOCR2", modelId: ModelSpec.ovisocr2.id, activity: "vérification") { [weak self] id in
+        AITaskCenter.shared.run(verifyKey, title: String(localized: "Vérification OvisOCR2"), modelId: ModelSpec.ovisocr2.id, activity: "vérification") { [weak self] id in
             defer { if let self, case .running = self.verifyState { self.verifyState = Task.isCancelled ? .idle : .done } }
             for (k, source) in sources.enumerated() {
                 AITaskCenter.shared.setProgress(id, done: k, total: sources.count)
@@ -59,9 +59,9 @@ extension ReaderController {
                         if !force, let known = DocumentAITextStore.read(documentId: documentId, reader: ModelSpec.ovisocr2.id, page: source), !known.isEmpty {
                             markdown = known
                             Diagnostics.log("OvisOCR2 page \(source) : déjà lue (\(markdown.count) caractères)", "verif")
-                            AITaskCenter.shared.log(id, "p. \(source + 1) : lecture OvisOCR2 déjà faite, réutilisée")
+                            AITaskCenter.shared.log(id, String(localized: "p. \(source + 1) : lecture OvisOCR2 déjà faite, réutilisée"))
                         } else {
-                            AITaskCenter.shared.log(id, "p. \(source + 1) : OvisOCR2 lit la page (≈ 20 à 40 s)…")
+                            AITaskCenter.shared.log(id, String(localized: "p. \(source + 1) : OvisOCR2 lit la page (≈ 20 à 40 s)…"))
                             let rotation = await service.additionalRotation(documentId: documentId, pageIndex: source)
                             markdown = try await Diagnostics.measure("OvisOCR2 page \(source)", "verif") {
                                 try await OvisOCR2Reader(language: OCRTargetLanguage.forDocument(documentId))
@@ -79,14 +79,14 @@ extension ReaderController {
                         }
                         result.suggestions = OCRReferenceDiff.suggestions(ocr, reference: markdown)
                         Diagnostics.log("page \(source) : \(result.suggestions.count) différence(s)", "verif")
-                        AITaskCenter.shared.log(id, "p. \(source + 1) : comparée à l'OCR, \(result.suggestions.count) différence(s)")
+                        AITaskCenter.shared.log(id, String(localized: "p. \(source + 1) : comparée à l'OCR, \(result.suggestions.count) différence(s)"))
                     } catch {
                         result.error = error.localizedDescription
-                        AITaskCenter.shared.log(id, "p. \(source + 1) : erreur — \(error.localizedDescription)")
+                        AITaskCenter.shared.log(id, String(localized: "p. \(source + 1) : erreur — \(error.localizedDescription)"))
                     }
                 } else {
-                    result.error = "Page pas encore lue par l'OCR."
-                    AITaskCenter.shared.log(id, "p. \(source + 1) : pas encore lue par l'OCR, ignorée")
+                    result.error = String(localized: "Page pas encore lue par l'OCR.")
+                    AITaskCenter.shared.log(id, String(localized: "p. \(source + 1) : pas encore lue par l'OCR, ignorée"))
                 }
                 guard !Task.isCancelled else { break }
                 self?.verifications.append(result)
@@ -125,7 +125,7 @@ extension ReaderController {
             do {
                 try await service.store(page, documentId: documentId, pageIndex: source)
             } catch {
-                self.loadError = "Correction non enregistrée : \(error.localizedDescription)"
+                self.loadError = String(localized: "Correction non enregistrée : \(error.localizedDescription)")
                 return
             }
             self.showOCR(page, source: source)

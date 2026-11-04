@@ -134,15 +134,15 @@ struct AILayoutView: View {
         let budget = reader.ocrPage.map(DocumentAnalysisService.tokenBudget) ?? 2048
         let source = source, url = reader.fileURL, documentId = reader.document.id
         let service = reader.model.ocr
-        center.run(layoutKey, title: "Mise en page IA p. \(source + 1)", modelId: ModelSpec.ovisocr2.id, activity: "mise en page") { id in
-            center.log(id, "OvisOCR2 lit l'image de la page \(source + 1) (au plus \(budget) jetons, ≈ 30 s)…")
+        center.run(layoutKey, title: String(localized: "Mise en page IA p. \(source + 1)"), modelId: ModelSpec.ovisocr2.id, activity: "mise en page") { id in
+            center.log(id, String(localized: "OvisOCR2 lit l'image de la page \(source + 1) (au plus \(budget) jetons, ≈ 30 s)…"))
             let rotation = await service.additionalRotation(documentId: documentId, pageIndex: source)
             let text = try await Diagnostics.measure("mise en page IA p. \(source)", "miseenpage") {
                 try await OvisOCR2Reader(language: OCRTargetLanguage.forDocument(documentId))
                     .read(.pdfPage(url: url, index: source, additionalRotation: rotation), maxTokens: budget)
             }
             try Task.checkCancellation()
-            center.log(id, "\(text.count) caractères mis en forme ; gardés pour cette page")
+            center.log(id, String(localized: "\(text.count) caractères mis en forme ; gardés pour cette page"))
             try DocumentAITextStore.write(text, documentId: documentId, reader: ModelSpec.ovisocr2.id, page: source)
             DocumentAnalysisService.shared.invalidatePage(source, documentId: documentId)
             NotificationCenter.default.post(name: .aiPageRead, object: DocumentScan.PageRead(documentId: documentId, page: source))
@@ -436,7 +436,7 @@ struct AILayoutLanguageBar: View {
         } else if Qwen3VLReader().isAvailable {
             HStack {
                 Button { translate() } label: {
-                    Label(target == .french ? "Traduire en français (hors ligne)" : "Traduire en anglais (hors ligne)",
+                    Label(target == .french ? String(localized: "Traduire en français (hors ligne)") : String(localized: "Traduire en anglais (hors ligne)"),
                           systemImage: "character.bubble")
                 }
                 .font(.footnote.weight(.semibold))
@@ -472,14 +472,14 @@ struct AILayoutLanguageBar: View {
         let source = source, documentId = reader.document.id, target = target
         // Le lexique du domaine donne des sens en français : imposé seulement pour une traduction française.
         let glossary = target == .french ? DomainLexicon.shared.glossary : []
-        center.run(translateKey, title: "Traduction Qwen3-VL p. \(source + 1)", modelId: ModelSpec.qwen3vl4b.id, activity: "traduction") { id in
-            center.log(id, "Qwen3-VL traduit en \(target.title) \(markdown.count) caractères de la page \(source + 1) (glossaire : \(glossary.count) terme(s))…")
+        center.run(translateKey, title: String(localized: "Traduction Qwen3-VL p. \(source + 1)"), modelId: ModelSpec.qwen3vl4b.id, activity: "traduction") { id in
+            center.log(id, String(localized: "Qwen3-VL traduit en \(target.title) \(markdown.count) caractères de la page \(source + 1) (glossaire : \(glossary.count) terme(s))…"))
             let translated = try await Diagnostics.measure("traduction (\(target.rawValue)) p. \(source)", "traduction") {
                 try await Qwen3VLReader().translate(markdown: markdown, into: target, glossary: glossary)
             }
             // Arrêtée : la génération rend un texte partiel, jamais gardé.
             try Task.checkCancellation()
-            center.log(id, "Traduction reçue : \(translated.count) caractères")
+            center.log(id, String(localized: "Traduction reçue : \(translated.count) caractères"))
             try DocumentAITextStore.write(translated, documentId: documentId, reader: target.rawValue, page: source)
             UserDefaults.standard.set(true, forKey: "study.aiLayoutFrench")
         }

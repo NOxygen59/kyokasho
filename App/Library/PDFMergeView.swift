@@ -57,7 +57,7 @@ struct PDFMergeView: View {
                     .onDelete { offsets in offsets.map { items[$0] }.forEach(remove) }
                     Button { showPicker = true } label: { Label("Ajouter des PDF", systemImage: "plus") }
                 } header: {
-                    Text(items.isEmpty ? "Fichiers" : "Fichiers · \(totalPages) pages en tout")
+                    Text(items.isEmpty ? String(localized: "Fichiers") : String(localized: "Fichiers · \(totalPages) pages en tout"))
                 }
                 Section("Nom du PDF fusionné") {
                     TextField(defaultName, text: $outputName)
@@ -66,14 +66,14 @@ struct PDFMergeView: View {
                     Button { Task { await merge() } } label: {
                         HStack {
                             if merging { ProgressView() }
-                            Text(merging ? "Fusion…" : "Fusionner")
+                            Text(merging ? String(localized: "Fusion…") : String(localized: "Fusionner"))
                         }
                     }
                     .disabled(items.count < 2 || merging)
                     if let result {
                         Button { showExporter = true } label: { Label("Enregistrer dans Fichiers", systemImage: "folder") }
                         Button { importResult(result) } label: {
-                            Label(imported ? "Importé dans la bibliothèque" : "Importer dans Kyōkasho",
+                            Label(imported ? String(localized: "Importé dans la bibliothèque") : String(localized: "Importer dans Kyōkasho"),
                                   systemImage: imported ? "checkmark.circle" : "books.vertical")
                         }
                         .disabled(imported)
@@ -103,7 +103,7 @@ struct PDFMergeView: View {
     }
 
     private var defaultName: String {
-        "Fusion — " + (items.first.map { ($0.name as NSString).deletingPathExtension } ?? "PDF")
+        String(localized: "Fusion — ") + (items.first.map { ($0.name as NSString).deletingPathExtension } ?? "PDF")
     }
 
     /// Copies choisies (le sélecteur donne des copies temporaires) rangées dans le dossier de la fusion.
@@ -125,7 +125,7 @@ struct PDFMergeView: View {
         }
         result = nil
         imported = false
-        if !refused.isEmpty { error = "Ignorés (illisibles ou protégés par mot de passe) : " + refused.joined(separator: ", ") }
+        if !refused.isEmpty { error = String(localized: "Ignorés (illisibles ou protégés par mot de passe) : ") + refused.joined(separator: ", ") }
     }
 
     private func remove(_ item: Item) {
@@ -162,7 +162,7 @@ struct PDFMergeView: View {
             result = target
             showChoice = true
         } else {
-            error = "La fusion a échoué (un des PDF n'a pas pu être lu)."
+            error = String(localized: "La fusion a échoué (un des PDF n'a pas pu être lu).")
         }
     }
 
@@ -170,7 +170,7 @@ struct PDFMergeView: View {
         // Copie : le fichier de la fenêtre est effacé à sa fermeture ; l'import travaille sur la sienne.
         let copy = FileManager.default.temporaryDirectory.appendingPathComponent(url.lastPathComponent)
         try? FileManager.default.removeItem(at: copy)
-        guard (try? FileManager.default.copyItem(at: url, to: copy)) != nil else { error = "Import impossible."; return }
+        guard (try? FileManager.default.copyItem(at: url, to: copy)) != nil else { error = String(localized: "Import impossible."); return }
         imported = true
         // Fenêtre fermée d'abord, import ensuite : la question « Livre ou manuel ? » s'affiche sur la bibliothèque.
         // Posée pendant que cette fenêtre était ouverte, l'alerte ne pouvait pas paraître et restait en attente,

@@ -64,7 +64,7 @@ final class AITaskCenter: ObservableObject {
         jobs.append(job)
         errors[key] = nil
         // Début et fin écrits pour toutes les tâches, même celles qui ne journalisent rien d'autre (#47).
-        log(job.id, "Démarrée" + (modelId.map { " avec \(Self.modelName($0))" } ?? "")
+        log(job.id, String(localized: "Démarrée") + (modelId.map { " avec \(Self.modelName($0))" } ?? "")
             + (activity.map { " : \(AIActivityText.explain($0))" } ?? ""))
         tasks[job.id] = Task { [weak self] in
             var failure: String?
@@ -132,7 +132,7 @@ final class AITaskCenter: ObservableObject {
     func cancel(prefix: String) {
         for job in jobs where job.key.hasPrefix(prefix) {
             cancel(job.id)
-            finish(job.id, "Remplacée par une demande plus récente")
+            finish(job.id, String(localized: "Remplacée par une demande plus récente"))
         }
     }
 
@@ -203,7 +203,7 @@ struct AITaskPill: View {
                         HStack(spacing: 5) {
                             Circle().fill(badge.active ? Atelier.Tint.ai : Atelier.textSecondary)
                                 .frame(width: 5, height: 5)
-                            Text("\(badge.name) · \(badge.activity)")
+                            Text("\(badge.name) · \(AIActivityText.label(badge.activity))")
                                 .font(Atelier.font(11, weight: .medium))
                                 .lineLimit(1)
                         }
@@ -213,7 +213,7 @@ struct AITaskPill: View {
                         .opacity(badge.active ? 0.82 : 0.48)
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel("\(badge.name), \(badge.activity)")
+                    .accessibilityLabel("\(badge.name), \(AIActivityText.label(badge.activity))")
                     // Sort de la gauche (du moniteur, #47) ; fondu seul si « Réduire les animations ».
                     .transition(reduceMotion ? .opacity : .move(edge: .leading).combined(with: .opacity))
                 }
@@ -247,7 +247,7 @@ struct AITaskPill: View {
     }
 
     private var stopTitle: String {
-        stopAll ? "Arrêter toutes les tâches IA ?" : "Arrêter « \(stopping?.title ?? "") » ?"
+        stopAll ? String(localized: "Arrêter toutes les tâches IA ?") : String(localized: "Arrêter « \(stopping?.title ?? "") » ?")
     }
 
     private struct Badge: Identifiable {
@@ -268,10 +268,10 @@ struct AITaskPill: View {
             let jobs = center.jobs.filter { $0.modelId == spec.id }
             let phase = analysis.progress?.phase ?? ""
             let analysisActivity: String? = switch spec.id {
-            case ModelSpec.ovisocr2.id where phase == "Lecture OvisOCR2": "analyse"
-            case ModelSpec.glmocr.id where phase == "Lecture GLM-OCR": "analyse"
-            case ModelSpec.qwen3vl4b.id where phase == "Lecture Qwen3-VL-4B": "analyse"
-            case ModelSpec.qwen3vl4b.id where phase == "Traduction (Qwen3-VL)": "traduction"
+            case ModelSpec.ovisocr2.id where phase == String(localized: "Lecture OvisOCR2"): "analyse"
+            case ModelSpec.glmocr.id where phase == String(localized: "Lecture GLM-OCR"): "analyse"
+            case ModelSpec.qwen3vl4b.id where phase == String(localized: "Lecture Qwen3-VL-4B"): "analyse"
+            case ModelSpec.qwen3vl4b.id where phase == String(localized: "Traduction (Qwen3-VL)"): "traduction"
             default: nil
             }
             if monitor.status?.loading == url { return Badge(id: spec.id, name: name, activity: "chargement", active: true) }
@@ -307,7 +307,7 @@ struct AITaskPill: View {
                 // L'analyse du document entier n'est pas une tâche de la liste : la montrer quand même.
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Analyse du document entier").font(.subheadline.weight(.semibold))
-                    Text("\(p.phase) · page \(p.done) sur \(p.total) · étape commencée il y a \(AIActivityText.duration(Date().timeIntervalSince(p.phaseStarted)))\(p.cancelling ? " · arrêt demandé" : "")")
+                    Text("\(p.phase) · page \(p.done) sur \(p.total) · étape commencée il y a \(AIActivityText.duration(Date().timeIntervalSince(p.phaseStarted)))\(p.cancelling ? String(localized: " · arrêt demandé") : "")")
                         .font(.caption).foregroundStyle(.secondary)
                 }
             }
@@ -386,8 +386,8 @@ struct AITaskPill: View {
 
     private func detail(_ job: AITaskCenter.Job) -> String {
         let minutes = Int(Date().timeIntervalSince(job.started) / 60)
-        var text = minutes < 1 ? "Démarrée il y a moins d'une minute" : "Démarrée il y a \(minutes) min"
-        if let p = job.progress { text += " · \(p.done) sur \(p.total)" }
+        var text = minutes < 1 ? String(localized: "Démarrée il y a moins d'une minute") : String(localized: "Démarrée il y a \(minutes) min")
+        if let p = job.progress { text += String(localized: " · \(p.done) sur \(p.total)") }
         return text
     }
 

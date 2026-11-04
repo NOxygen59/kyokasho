@@ -28,8 +28,8 @@ public enum ImportError: LocalizedError, Equatable {
 
     public var errorDescription: String? {
         switch self {
-        case .notAPDF: return "Ce fichier n'est pas un PDF lisible."
-        case .unreadable(let reason): return "Lecture du fichier impossible : \(reason)"
+        case .notAPDF: return String(localized: "Ce fichier n'est pas un PDF lisible.", bundle: .main)
+        case .unreadable(let reason): return String(localized: "Lecture du fichier impossible : \(reason)", bundle: .main)
         }
     }
 }
@@ -124,7 +124,7 @@ public struct DocumentImporter: Sendable {
     /// annotations, signets, commentaires et position de lecture.
     @discardableResult
     public func replace(documentId oldId: String, withFileAt source: URL, driveRevision: String? = nil) throws -> LibraryDocument {
-        guard var old = try database.document(id: oldId) else { throw ImportError.unreadable("document inconnu") }
+        guard var old = try database.document(id: oldId) else { throw ImportError.unreadable(String(localized: "document inconnu", bundle: .main)) }
         let hash = try Self.sha256(of: source)
         if hash == oldId {
             if let driveRevision { old.driveRevision = driveRevision; try database.save(old) }

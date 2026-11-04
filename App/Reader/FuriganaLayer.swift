@@ -22,12 +22,12 @@ enum FuriganaLayer {
         var id: String { rawValue }
         var title: String {
             switch self {
-            case .red: return "Rouge"
-            case .blue: return "Bleu"
-            case .green: return "Vert"
-            case .purple: return "Violet"
-            case .orange: return "Orange"
-            case .black: return "Noir"
+            case .red: return String(localized: "Rouge")
+            case .blue: return String(localized: "Bleu")
+            case .green: return String(localized: "Vert")
+            case .purple: return String(localized: "Violet")
+            case .orange: return String(localized: "Orange")
+            case .black: return String(localized: "Noir")
             }
         }
         /// Sur la page (papier clair).

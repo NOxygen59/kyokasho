@@ -51,7 +51,7 @@ struct SettingsView: View {
             }
             .scrollContentBackground(.hidden)
             .background(Atelier.canvas)
-            .searchable(text: $query, prompt: "Chercher un réglage")
+            .searchable(text: $query, prompt: String(localized: "Chercher un réglage"))
             .navigationTitle("Réglages")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Terminé") { dismiss() } } }
@@ -196,32 +196,32 @@ struct DocumentSettingsSheet: View {
                     }
                 }
                 Section {
-                    OptionalPicker("Pages", value: $override.layout, defaultValue: d.layout, options: [
-                        (.auto, "Automatique selon l'orientation"), (.single, "Page simple"), (.double, "Double page")])
-                    OptionalPicker("Défilement", value: $override.scrollMode, defaultValue: d.scrollMode, options: [
-                        (.paginated, "Paginé"), (.continuous, "Continu")])
-                    OptionalPicker("Sens de lecture", value: $override.direction, defaultValue: d.direction, options: [
-                        (.leftToRight, "Gauche → droite"), (.rightToLeft, "Droite → gauche")])
-                    OptionalBool("Première page seule", value: $override.firstPageAlone, defaultValue: d.firstPageAlone)
-                    OptionalPicker("Transition", value: $override.transition, defaultValue: d.transition, options: [
-                        (.slide, "Glissement"), (.none, "Aucune")])
+                    OptionalPicker(String(localized: "Pages"), value: $override.layout, defaultValue: d.layout, options: [
+                        (.auto, String(localized: "Automatique selon l'orientation")), (.single, String(localized: "Page simple")), (.double, String(localized: "Double page"))])
+                    OptionalPicker(String(localized: "Défilement"), value: $override.scrollMode, defaultValue: d.scrollMode, options: [
+                        (.paginated, String(localized: "Paginé")), (.continuous, String(localized: "Continu"))])
+                    OptionalPicker(String(localized: "Sens de lecture"), value: $override.direction, defaultValue: d.direction, options: [
+                        (.leftToRight, String(localized: "Gauche → droite")), (.rightToLeft, String(localized: "Droite → gauche"))])
+                    OptionalBool(String(localized: "Première page seule"), value: $override.firstPageAlone, defaultValue: d.firstPageAlone)
+                    OptionalPicker(String(localized: "Transition"), value: $override.transition, defaultValue: d.transition, options: [
+                        (.slide, String(localized: "Glissement")), (.none, String(localized: "Aucune"))])
                 } header: {
                     Text("Lecture")
                 } footer: {
                     Text("Ces choix valent pour ce document seulement (les autres gardent les leurs). « Par défaut » suit les réglages généraux.")
                 }
                 Section("Pages") {
-                    OptionalPicker("Fond", value: $override.background, defaultValue: d.background, options: [
-                        (.black, "Noir"), (.darkGray, "Gris foncé"), (.gray, "Gris"), (.white, "Blanc"), (.sepia, "Sépia")])
-                    OptionalBool("Rogner les marges", value: $override.autoCrop, defaultValue: d.autoCrop)
-                    OptionalBool("Couper les doubles pages", value: $override.splitWidePages, defaultValue: d.splitWidePages)
+                    OptionalPicker(String(localized: "Fond"), value: $override.background, defaultValue: d.background, options: [
+                        (.black, String(localized: "Noir")), (.darkGray, String(localized: "Gris foncé")), (.gray, String(localized: "Gris")), (.white, String(localized: "Blanc")), (.sepia, String(localized: "Sépia"))])
+                    OptionalBool(String(localized: "Rogner les marges"), value: $override.autoCrop, defaultValue: d.autoCrop)
+                    OptionalBool(String(localized: "Couper les doubles pages"), value: $override.splitWidePages, defaultValue: d.splitWidePages)
                 }
                 Section("Gestes") {
-                    OptionalBool("Double tap zoom", value: $override.doubleTapZoom, defaultValue: d.doubleTapZoom)
-                    OptionalBool("Masquer les barres", value: $override.hideBarsOnScroll, defaultValue: d.hideBarsOnScroll)
+                    OptionalBool(String(localized: "Double tap zoom"), value: $override.doubleTapZoom, defaultValue: d.doubleTapZoom)
+                    OptionalBool(String(localized: "Masquer les barres"), value: $override.hideBarsOnScroll, defaultValue: d.hideBarsOnScroll)
                 }
                 Section("OCR") {
-                    OptionalPicker("Moteur", value: $override.ocrEngine, defaultValue: d.ocrEngine,
+                    OptionalPicker(String(localized: "Moteur"), value: $override.ocrEngine, defaultValue: d.ocrEngine,
                                    options: OCREngineChoice.allCases.map { ($0, $0.label) })
                 }
                 Section {
@@ -288,19 +288,19 @@ struct OptionalBool: View {
     }
 
     var body: some View {
-        OptionalPicker(title, value: $value, defaultValue: defaultValue, options: [(true, "Oui"), (false, "Non")])
+        OptionalPicker(title, value: $value, defaultValue: defaultValue, options: [(true, String(localized: "Oui")), (false, String(localized: "Non"))])
     }
 }
 
 extension OCREngineChoice {
     var label: String {
         switch self {
-        case .auto: return "Auto"
-        case .pdfText: return "Texte du PDF"
-        case .vision: return "Apple Vision"
+        case .auto: return String(localized: "Auto")
+        case .pdfText: return String(localized: "Texte du PDF")
+        case .vision: return String(localized: "Apple Vision")
         case .ndlocr: return "NDLOCR-Lite"
         case .ppocr5: return "PP-OCRv5"
-        case .glmocr: return "GLM-OCR (IA)"
+        case .glmocr: return String(localized: "GLM-OCR (IA)")
         }
     }
 }
@@ -481,37 +481,37 @@ struct AboutView: View {
             Section("Bibliothèques utilisées") {
                 credit("GRDB.swift", "Gwendal Roué", "MIT", "https://github.com/groue/GRDB.swift")
                 credit("ZIPFoundation", "Thomas Zoechling", "MIT", "https://github.com/weichsel/ZIPFoundation")
-                credit("Yomitan (déconjugaison, texte japonais)", "yomidevs", "GPL-3.0", "https://github.com/yomidevs/yomitan")
-                credit("swift-fsrs (calcul des révisions)", "Ben Smiley", "MIT", "https://github.com/open-spaced-repetition/swift-fsrs")
+                credit(String(localized: "Yomitan (déconjugaison, texte japonais)"), "yomidevs", "GPL-3.0", "https://github.com/yomidevs/yomitan")
+                credit(String(localized: "swift-fsrs (calcul des révisions)"), "Ben Smiley", "MIT", "https://github.com/open-spaced-repetition/swift-fsrs")
             }
             Section("IA locale (MLX)") {
-                credit("MLX / mlx-swift-lm (fork iOS 16)", "Apple · NOxygen59", "MIT", "https://github.com/NOxygen59/mlx-swift-lm")
-                credit("swift-transformers (tokenizers)", "Hugging Face", "Apache-2.0", "https://github.com/huggingface/swift-transformers")
-                credit("OvisOCR2 (modèle téléchargé)", "ATH-MaaS · conversion MLX tokimoa", "Apache-2.0", "https://huggingface.co/ATH-MaaS/OvisOCR2")
-                credit("Qwen3.5-4B (chat, modèle téléchargé)", "Alibaba Qwen · conversion mlx-community", "Apache-2.0", "https://huggingface.co/Qwen/Qwen3.5-4B")
+                credit(String(localized: "MLX / mlx-swift-lm (fork iOS 16)"), "Apple · NOxygen59", "MIT", "https://github.com/NOxygen59/mlx-swift-lm")
+                credit(String(localized: "swift-transformers (tokenizers)"), "Hugging Face", "Apache-2.0", "https://github.com/huggingface/swift-transformers")
+                credit(String(localized: "OvisOCR2 (modèle téléchargé)"), "ATH-MaaS · conversion MLX tokimoa", "Apache-2.0", "https://huggingface.co/ATH-MaaS/OvisOCR2")
+                credit(String(localized: "Qwen3.5-4B (chat, modèle téléchargé)"), "Alibaba Qwen · conversion mlx-community", "Apache-2.0", "https://huggingface.co/Qwen/Qwen3.5-4B")
             }
             Section("Analyseur japonais") {
                 credit("MeCab", "Taku Kudo · NTT", "BSD", "https://github.com/taku910/mecab")
-                credit("UniDic (dictionnaire téléchargé)", "UniDic Consortium", "BSD", "https://clrd.ninjal.ac.jp/unidic/")
+                credit(String(localized: "UniDic (dictionnaire téléchargé)"), "UniDic Consortium", "BSD", "https://clrd.ninjal.ac.jp/unidic/")
                 credit("unidic-lite", "Paul McCann", "MIT", "https://github.com/polm/unidic-lite")
             }
             Section("OCR") {
-                credit("ONNX Runtime", "Microsoft", "MIT", "https://github.com/microsoft/onnxruntime-swift-package-manager")
-                credit("PP-OCRv5 (modèles téléchargés)", "PaddlePaddle · RapidAI", "Apache-2.0", "https://github.com/PaddlePaddle/PaddleOCR")
-                credit("NDLOCR-Lite (modèles téléchargés)", "国立国会図書館 (National Diet Library)", "CC-BY-4.0", "https://github.com/ndl-lab/ndlocr-lite")
-                credit("PP-DocLayout v3 (mise en page, modèle téléchargé)", "PaddlePaddle · conversion RapidAI", "Apache-2.0", "https://github.com/RapidAI/RapidLayout")
-                credit("DocLayout-YOLO (mise en page de MinerU, modèle téléchargé)", "OpenDataLab · conversion RapidAI", "AGPL-3.0", "https://github.com/opendatalab/DocLayout-YOLO")
-                credit("DE-GAN (netteté des scans, modèle téléchargé)", "M. A. Souibgui, Y. Kessentini", "GPL-3.0", "https://github.com/dali92002/DE-GAN")
-                credit("GLM-OCR (modèle téléchargé)", "Zhipu AI · conversion mlx-community", "MIT", "https://huggingface.co/zai-org/GLM-OCR")
-                credit("MLX Swift, mlx-swift-lm (GLM-OCR porté)", "ml-explore (Apple)", "MIT", "https://github.com/ml-explore/mlx-swift-lm")
-                credit("swift-transformers (tokenizer)", "Hugging Face", "Apache-2.0", "https://github.com/huggingface/swift-transformers")
+                credit(String(localized: "ONNX Runtime"), "Microsoft", "MIT", "https://github.com/microsoft/onnxruntime-swift-package-manager")
+                credit(String(localized: "PP-OCRv5 (modèles téléchargés)"), "PaddlePaddle · RapidAI", "Apache-2.0", "https://github.com/PaddlePaddle/PaddleOCR")
+                credit(String(localized: "NDLOCR-Lite (modèles téléchargés)"), "国立国会図書館 (National Diet Library)", "CC-BY-4.0", "https://github.com/ndl-lab/ndlocr-lite")
+                credit(String(localized: "PP-DocLayout v3 (mise en page, modèle téléchargé)"), "PaddlePaddle · conversion RapidAI", "Apache-2.0", "https://github.com/RapidAI/RapidLayout")
+                credit(String(localized: "DocLayout-YOLO (mise en page de MinerU, modèle téléchargé)"), "OpenDataLab · conversion RapidAI", "AGPL-3.0", "https://github.com/opendatalab/DocLayout-YOLO")
+                credit(String(localized: "DE-GAN (netteté des scans, modèle téléchargé)"), "M. A. Souibgui, Y. Kessentini", "GPL-3.0", "https://github.com/dali92002/DE-GAN")
+                credit(String(localized: "GLM-OCR (modèle téléchargé)"), "Zhipu AI · conversion mlx-community", "MIT", "https://huggingface.co/zai-org/GLM-OCR")
+                credit(String(localized: "MLX Swift, mlx-swift-lm (GLM-OCR porté)"), "ml-explore (Apple)", "MIT", "https://github.com/ml-explore/mlx-swift-lm")
+                credit(String(localized: "swift-transformers (tokenizer)"), "Hugging Face", "Apache-2.0", "https://github.com/huggingface/swift-transformers")
             }
             Section("Format de fichier") {
-                credit("genanki (format .apkg d'Anki, aucun code copié)", "Kerrick Staley", "MIT", "https://github.com/kerrickstaley/genanki")
+                credit(String(localized: "genanki (format .apkg d'Anki, aucun code copié)"), "Kerrick Staley", "MIT", "https://github.com/kerrickstaley/genanki")
             }
             Section("Inspirations (comportement)") {
-                credit("Aidoku", "Aidoku", "GPL-3.0", "https://github.com/Aidoku/Aidoku")
-                credit("Yomitan", "yomidevs", "GPL-3.0", "https://github.com/yomidevs/yomitan")
+                credit(String(localized: "Aidoku"), String(localized: "Aidoku"), "GPL-3.0", "https://github.com/Aidoku/Aidoku")
+                credit(String(localized: "Yomitan"), "yomidevs", "GPL-3.0", "https://github.com/yomidevs/yomitan")
             }
         }
         .navigationTitle("À propos")
@@ -559,7 +559,7 @@ struct TranslationSettingsSection: View {
         guard deepl.hasKey else { return }
         Task {
             if let u = try? await deepl.usage() {
-                usage = "\(u.used.formatted()) / \(u.limit.formatted()) caractères"
+                usage = String(localized: "\(u.used.formatted()) / \(u.limit.formatted()) caractères")
             }
         }
     }

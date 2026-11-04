@@ -124,12 +124,12 @@ public struct ReviewScheduler: Sendable {
     /// « 10 min », « 3 j », « 2 mois »… pour les boutons.
     public static func intervalLabel(from now: Date, to due: Date) -> String {
         let s = max(0, due.timeIntervalSince(now))
-        if s < 60 { return "< 1 min" }
+        if s < 60 { return String(localized: "< 1 min", bundle: .main) }
         if s < 3600 { return "\(Int((s / 60).rounded())) min" }
         if s < 86400 { return "\(Int((s / 3600).rounded())) h" }
         let days = s / 86400
         if days < 30 { return "\(Int(days.rounded())) j" }
-        if days < 365 { return String(format: "%.1f mois", days / 30).replacingOccurrences(of: ".0", with: "") }
-        return String(format: "%.1f an", days / 365).replacingOccurrences(of: ".0", with: "")
+        if days < 365 { return String(format: String(localized: "%.1f mois", bundle: .main), days / 30).replacingOccurrences(of: ".0", with: "") }
+        return String(format: String(localized: "%.1f an", bundle: .main), days / 365).replacingOccurrences(of: ".0", with: "")
     }
 }

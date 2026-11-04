@@ -59,6 +59,6 @@ final class LibraryRestoreLaunchTests: XCTestCase {
         let service = try source("Library/LibraryBackupService.swift")
         XCTAssertTrue(service.contains("guard !model.libraryMutationInProgress"))
         XCTAssertTrue(model.contains("var libraryMutationInProgress: Bool { importProgress != nil || !deletingIds.isEmpty || pageRotationInProgress }"))
-        XCTAssertTrue(model.contains("if LibraryBackupService.inProgress { return \"Une sauvegarde est en cours."))
+        XCTAssertTrue(model.contains("if LibraryBackupService.inProgress { return String(localized: \"Une sauvegarde est en cours."))
     }
 }

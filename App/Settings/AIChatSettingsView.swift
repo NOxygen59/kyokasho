@@ -26,7 +26,7 @@ enum AIChatSettingsStore {
         }
     }
 
-    static func name(_ modelID: String) -> String { modelID == ModelSpec.qwen35chat4b.id ? "Qwen3.5 4B" : "Qwen3-VL 4B" }
+    static func name(_ modelID: String) -> String { modelID == ModelSpec.qwen35chat4b.id ? String(localized: "Qwen3.5 4B") : String(localized: "Qwen3-VL 4B") }
 }
 
 /// Consigne générale et paramètres de chaque modèle de chat (#37, #45), à la manière de Locally : tout est modifiable,
@@ -80,15 +80,15 @@ struct AIChatSettingsView: View {
                     get: { settings.temperature == nil },
                     set: { settings.temperature = $0 ? nil : settings.effectiveTemperature(grounded: false) }))
                 if let t = settings.temperature {
-                    slider("Température", value: Binding(get: { t }, set: { settings.temperature = $0 }),
+                    slider(String(localized: "Température"), value: Binding(get: { t }, set: { settings.temperature = $0 }),
                            range: AIChatSettings.temperatureRange, format: "%.2f")
                 }
                 Text("Créativité. 0 : toujours la réponse la plus probable (fiable, répétitive) ; 0,7 et plus : plus varié mais plus d'erreurs. Automatique : 0 sur un livre, 0,3 en discussion libre.")
                     .font(.caption).foregroundStyle(.secondary)
-                slider("Top-p", value: $settings.topP, range: AIChatSettings.topPRange, format: "%.2f")
+                slider(String(localized: "Top-p"), value: $settings.topP, range: AIChatSettings.topPRange, format: "%.2f")
                 Text("Ne garde que les mots les plus probables dont la somme atteint cette part. 1 : aucun filtre ; 0,9 : écarte les choix improbables.")
                     .font(.caption).foregroundStyle(.secondary)
-                Stepper("Top-k : \(settings.topK == 0 ? "sans limite" : "\(settings.topK)")", value: $settings.topK,
+                Stepper("Top-k : \(settings.topK == 0 ? String(localized: "sans limite") : "\(settings.topK)")", value: $settings.topK,
                         in: AIChatSettings.topKRange, step: 10)
                 Text("Nombre de mots candidats à chaque pas. 0 : sans limite ; 40 : réponses plus sages.")
                     .font(.caption).foregroundStyle(.secondary)
@@ -104,7 +104,7 @@ struct AIChatSettingsView: View {
                     get: { settings.repetitionPenalty != nil },
                     set: { settings.repetitionPenalty = $0 ? 1.1 : nil }))
                 if let r = settings.repetitionPenalty {
-                    slider("Force", value: Binding(get: { r }, set: { settings.repetitionPenalty = $0 }),
+                    slider(String(localized: "Force"), value: Binding(get: { r }, set: { settings.repetitionPenalty = $0 }),
                            range: AIChatSettings.repetitionRange, format: "%.2f")
                 }
                 Text("Évite qu'il boucle sur la même phrase. 1,1 suffit en général ; trop fort, il évite aussi les mots utiles.")

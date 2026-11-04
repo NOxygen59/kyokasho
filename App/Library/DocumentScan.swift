@@ -33,7 +33,7 @@ enum DocumentScan {
         let pages = (0..<document.pageCount).filter { !FileManager.default.fileExists(atPath: file(id, $0).path) }
         guard !pages.isEmpty else { return }
         let language = OCRTargetLanguage.forDocument(id)
-        AITaskCenter.shared.run(key(id), title: "Lecture IA de « \(document.title) »", modelId: ModelSpec.ovisocr2.id, activity: "lecture") { job in
+        AITaskCenter.shared.run(key(id), title: String(localized: "Lecture IA de « \(document.title) »"), modelId: ModelSpec.ovisocr2.id, activity: "lecture") { job in
             let center = AITaskCenter.shared
             center.log(job, "\(pages.count) page(s) à lire sur \(document.pageCount)")
             // Une lecture de document à la fois (import de plusieurs PDF) : un seul modèle, pas de va-et-vient.
@@ -80,7 +80,7 @@ enum DocumentScan {
             }
             try Task.checkCancellation()
             center.setProgress(job, done: pages.count, total: pages.count)
-            center.log(job, failures == 0 ? "Terminé." : "Terminé, \(failures) page(s) en erreur (relancées à la prochaine ouverture).")
+            center.log(job, failures == 0 ? String(localized: "Terminé.") : String(localized: "Terminé, \(failures) page(s) en erreur (relancées à la prochaine ouverture)."))
         }
     }
 

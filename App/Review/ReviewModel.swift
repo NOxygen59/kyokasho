@@ -75,7 +75,7 @@ final class ReviewModel: ObservableObject {
         let key = StudyCard.key(expression: term.expression, reading: term.reading)
         if keys.contains(key) || pending.contains(key) || (try? store.card(key: key)) != nil {
             keys.insert(key)
-            return "Déjà dans tes cartes"
+            return String(localized: "Déjà dans tes cartes")
         }
         pending.insert(key)
         let wantsAudio = settings.includeAudio
@@ -93,7 +93,7 @@ final class ReviewModel: ObservableObject {
     func addPageCards(_ fields: [[String: String]], documentId: String, page: Int) async throws -> Int {
         guard let deckId = defaultDeckId, let templateId = defaultTemplate?.id else {
             throw NSError(domain: "Kyokasho.Cartes", code: 1,
-                          userInfo: [NSLocalizedDescriptionKey: "Choisis un paquet et un modèle dans les réglages des cartes."])
+                          userInfo: [NSLocalizedDescriptionKey: String(localized: "Choisis un paquet et un modèle dans les réglages des cartes.")])
         }
         let cards = fields.map { fields in
             StudyCard(deckId: deckId, templateId: templateId,

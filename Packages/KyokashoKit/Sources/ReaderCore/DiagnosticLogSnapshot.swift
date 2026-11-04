@@ -8,11 +8,11 @@ public enum DiagnosticLogSnapshot {
     public static func read(from url: URL) -> String {
         do {
             let data = try Data(contentsOf: url)
-            return data.isEmpty ? "Journal vide." : String(decoding: data, as: UTF8.self)
+            return data.isEmpty ? String(localized: "Journal vide.", bundle: .main) : String(decoding: data, as: UTF8.self)
         } catch let error as NSError where error.domain == NSCocoaErrorDomain && error.code == NSFileReadNoSuchFileError {
-            return "Aucun journal enregistré."
+            return String(localized: "Aucun journal enregistré.", bundle: .main)
         } catch {
-            return "Impossible de lire le journal : \(error.localizedDescription)"
+            return String(localized: "Impossible de lire le journal : \(error.localizedDescription)", bundle: .main)
         }
     }
 
@@ -38,18 +38,18 @@ public enum DiagnosticLogSnapshot {
         }
         // `FileHandle` ne renvoie pas le même code d'erreur que `Data(contentsOf:)` pour un fichier absent.
         guard FileManager.default.fileExists(atPath: url.path) else {
-            return Tail(lines: ["Aucun journal enregistré."], omittedBytes: 0)
+            return Tail(lines: [String(localized: "Aucun journal enregistré.", bundle: .main)], omittedBytes: 0)
         }
         let handle: FileHandle
         do {
             handle = try FileHandle(forReadingFrom: url)
         } catch {
-            return Tail(lines: ["Impossible de lire le journal : \(error.localizedDescription)"], omittedBytes: 0)
+            return Tail(lines: [String(localized: "Impossible de lire le journal : \(error.localizedDescription)", bundle: .main)], omittedBytes: 0)
         }
         defer { try? handle.close() }
         do {
             let size = Int(try handle.seekToEnd())
-            if size == 0 { return Tail(lines: ["Journal vide."], omittedBytes: 0) }
+            if size == 0 { return Tail(lines: [String(localized: "Journal vide.", bundle: .main)], omittedBytes: 0) }
             let start = max(0, size - maxBytes)
             try handle.seek(toOffset: UInt64(start))
             let data = try handle.readToEnd() ?? Data()
@@ -66,7 +66,7 @@ public enum DiagnosticLogSnapshot {
             }
             return Tail(lines: lines, omittedBytes: omitted)
         } catch {
-            return Tail(lines: ["Impossible de lire le journal : \(error.localizedDescription)"], omittedBytes: 0)
+            return Tail(lines: [String(localized: "Impossible de lire le journal : \(error.localizedDescription)", bundle: .main)], omittedBytes: 0)
         }
     }
 }

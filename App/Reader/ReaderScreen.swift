@@ -433,7 +433,7 @@ struct ReaderScreen: View {
 
     private var titleCapsule: some View {
         HStack(spacing: 4) {
-            CapsuleButton(icon: "chevron.left", label: "Bibliothèque") { dismiss() }
+            CapsuleButton(icon: "chevron.left", label: String(localized: "Bibliothèque")) { dismiss() }
             VStack(alignment: .leading, spacing: 1) {
                 Text(reader.document.title).font(Atelier.font(15, weight: .semibold)).lineLimit(1)
                     .foregroundStyle(Atelier.textPrimary)
@@ -487,10 +487,10 @@ struct ReaderScreen: View {
                 .accessibilityLabel("Aller à la page")
                 .padding(.horizontal, 4)
             pageArrow(left: false)
-            CapsuleButton(icon: "magnifyingglass", label: "Rechercher") { sheet = .search }
-            CapsuleButton(icon: reader.isCurrentPageBookmarked ? "bookmark.fill" : "bookmark", label: "Signet",
+            CapsuleButton(icon: "magnifyingglass", label: String(localized: "Rechercher")) { sheet = .search }
+            CapsuleButton(icon: reader.isCurrentPageBookmarked ? "bookmark.fill" : "bookmark", label: String(localized: "Signet"),
                           active: reader.isCurrentPageBookmarked) { reader.toggleBookmark() }
-            CapsuleButton(icon: "character.ja", label: furigana ? "Masquer les furigana de la page" : "Afficher les furigana de la page",
+            CapsuleButton(icon: "character.ja", label: furigana ? String(localized: "Masquer les furigana de la page") : String(localized: "Afficher les furigana de la page"),
                           active: furigana, tint: Atelier.Tint.japanese) {
                 furigana.toggle()
                 reader.setFurigana(furigana)
@@ -519,7 +519,7 @@ struct ReaderScreen: View {
                     }
                     .pickerStyle(.menu)
                     Button { reader.setShowOCRBoxes(!showOCRBoxes) } label: {
-                        Label(showOCRBoxes ? "Masquer les zones OCR" : "Montrer les zones OCR",
+                        Label(showOCRBoxes ? String(localized: "Masquer les zones OCR") : String(localized: "Montrer les zones OCR"),
                               systemImage: "rectangle.dashed")
                     }
                 } label: {
@@ -533,7 +533,7 @@ struct ReaderScreen: View {
                         Label("Orientation des pages…", systemImage: "rotate.right")
                     }
                     Button { reader.toggleSplitCurrentPage() } label: {
-                        Label(reader.isCurrentPageSplit ? "Ne plus couper la page" : "Couper la page en deux",
+                        Label(reader.isCurrentPageSplit ? String(localized: "Ne plus couper la page") : String(localized: "Couper la page en deux"),
                               systemImage: "rectangle.split.2x1")
                     }
                     Button { reader.setFirstPage(reader.currentSourcePage) } label: {
@@ -555,7 +555,7 @@ struct ReaderScreen: View {
                 if deepl.hasKey {
                     // Information seulement (mise à jour à l'ouverture du livre et après chaque traduction).
                     Button { Task { await deepl.refreshUsage() } } label: {
-                        Label(deepl.usageText.map { "DeepL : \($0)" } ?? "DeepL : quota inconnu (toucher pour actualiser)",
+                        Label(deepl.usageText.map { String(localized: "DeepL : \($0)") } ?? String(localized: "DeepL : quota inconnu (toucher pour actualiser)"),
                               systemImage: "character.bubble")
                     }
                 }
@@ -568,7 +568,7 @@ struct ReaderScreen: View {
                     .frame(width: 40, height: 40).foregroundStyle(Atelier.textPrimary)
             }
             Rectangle().fill(Atelier.hairline).frame(width: 1, height: 22).padding(.horizontal, 4)
-            CapsuleButton(icon: "sidebar.trailing", label: "Panneau d'étude", active: side == .study,
+            CapsuleButton(icon: "sidebar.trailing", label: String(localized: "Panneau d'étude"), active: side == .study,
                           tint: Atelier.Tint.japanese) {
                 // Panneau réduit en pastille : le bouton le rouvre au lieu de le fermer.
                 if studyMode == .minimized {
@@ -590,10 +590,10 @@ struct ReaderScreen: View {
     /// Outils, une couleur par fonction : lecture, annotation, japonais, IA.
     @ViewBuilder
     private func toolItems(vertical: Bool) -> some View {
-            ToolButton(icon: "hand.point.up.left", label: "Lire", tint: Atelier.Tint.read, active: !reader.isDrawing) {
+            ToolButton(icon: "hand.point.up.left", label: String(localized: "Lire"), tint: Atelier.Tint.read, active: !reader.isDrawing) {
                 if reader.isDrawing { reader.setDrawing(false) }
             }
-            ToolButton(icon: "pencil.tip", label: "Dessiner (Apple Pencil)", tint: Atelier.Tint.annotate,
+            ToolButton(icon: "pencil.tip", label: String(localized: "Dessiner (Apple Pencil)"), tint: Atelier.Tint.annotate,
                        active: reader.isDrawing) {
                 reader.setDrawing(!reader.isDrawing)
             }
@@ -614,14 +614,14 @@ struct ReaderScreen: View {
             .accessibilityLabel("Dictionnaire au toucher")
             // Survol au curseur : visible dès que la page a du texte (intégré ou analysé par l'OCR).
             if reader.pageHasText {
-                ToolButton(icon: "cursorarrow.rays", label: "Dictionnaire au survol (curseur)",
+                ToolButton(icon: "cursorarrow.rays", label: String(localized: "Dictionnaire au survol (curseur)"),
                            tint: Atelier.Tint.japanese, active: reader.hoverLookup) {
                     reader.hoverLookup.toggle()
                     if !reader.hoverLookup { reader.endLookup() }
                 }
             }
             // Surligner en glissant sur les zones de l'OCR (#23) ; appui long : couleur.
-            ToolButton(icon: "highlighter", label: "Surligner l'OCR en glissant", tint: Color(ocrHighlightColor.uiColor),
+            ToolButton(icon: "highlighter", label: String(localized: "Surligner l'OCR en glissant"), tint: Color(ocrHighlightColor.uiColor),
                        active: reader.ocrHighlightMode) {
                 reader.setOCRHighlightMode(!reader.ocrHighlightMode)
             }
@@ -632,20 +632,20 @@ struct ReaderScreen: View {
             }
             // Pencil → dictionnaire : seulement si l'option est activée dans les réglages.
             if pencilOption {
-                ToolButton(icon: "applepencil", label: "Le Pencil cherche dans le dictionnaire",
+                ToolButton(icon: "applepencil", label: String(localized: "Le Pencil cherche dans le dictionnaire"),
                            tint: Atelier.Tint.japanese, active: reader.pencilLookup) {
                     reader.pencilLookup.toggle()
                     if reader.pencilLookup, reader.isDrawing { reader.setDrawing(false) }
                 }
             }
             railDivider(vertical)
-            ToolButton(icon: "character.ja", label: "Texte de la page", tint: Atelier.Tint.japanese,
+            ToolButton(icon: "character.ja", label: String(localized: "Texte de la page"), tint: Atelier.Tint.japanese,
                        active: side == .study && studyTab == .text) { openStudy(.text) }
-            ToolButton(icon: "character.book.closed.ja", label: "Dictionnaire", tint: Atelier.Tint.japanese,
+            ToolButton(icon: "character.book.closed.ja", label: String(localized: "Dictionnaire"), tint: Atelier.Tint.japanese,
                        active: side == .study && studyTab == .vocab) { openStudy(.vocab) }
             railDivider(vertical)
-            ToolButton(icon: "sparkles", label: "Page vers IA", tint: Atelier.Tint.ai) { sheet = .ai }
-            ToolButton(icon: "globe", label: "Navigateur à côté", tint: Atelier.Tint.ai, active: side == .web) {
+            ToolButton(icon: "sparkles", label: String(localized: "Page vers IA"), tint: Atelier.Tint.ai) { sheet = .ai }
+            ToolButton(icon: "globe", label: String(localized: "Navigateur à côté"), tint: Atelier.Tint.ai, active: side == .web) {
                 side = side == .web ? nil : .web
             }
     }
@@ -654,18 +654,18 @@ struct ReaderScreen: View {
     private func pageArrow(left: Bool) -> some View {
         let forward = (reader.settings.direction == .rightToLeft) == left
         return CapsuleButton(icon: left ? "chevron.left" : "chevron.right",
-                             label: forward ? "Page suivante" : "Page précédente") {
+                             label: forward ? String(localized: "Page suivante") : String(localized: "Page précédente")) {
             forward ? reader.next() : reader.previous()
         }
     }
 
     static func colorName(_ color: HighlightColor) -> String {
         switch color {
-        case .yellow: return "Jaune"
-        case .green: return "Vert"
-        case .blue: return "Bleu"
-        case .pink: return "Rose"
-        case .orange: return "Orange"
+        case .yellow: return String(localized: "Jaune")
+        case .green: return String(localized: "Vert")
+        case .blue: return String(localized: "Bleu")
+        case .pink: return String(localized: "Rose")
+        case .orange: return String(localized: "Orange")
         }
     }
 
@@ -954,11 +954,11 @@ struct HighlightMenu: View {
 extension HighlightColor {
     var frenchName: String {
         switch self {
-        case .yellow: return "jaune"
-        case .green: return "vert"
-        case .blue: return "bleu"
-        case .pink: return "rose"
-        case .orange: return "orange"
+        case .yellow: return String(localized: "jaune")
+        case .green: return String(localized: "vert")
+        case .blue: return String(localized: "bleu")
+        case .pink: return String(localized: "rose")
+        case .orange: return String(localized: "orange")
         }
     }
 }

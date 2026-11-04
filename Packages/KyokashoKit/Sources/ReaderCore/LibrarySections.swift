@@ -25,9 +25,9 @@ public enum LibrarySections {
 
     public static func title(_ category: DocumentCategory?) -> String {
         switch category {
-        case .textbook: return "Manuels"
-        case .book: return "Livres"
-        case nil: return "Non classés"
+        case .textbook: return String(localized: "Manuels", bundle: .main)
+        case .book: return String(localized: "Livres", bundle: .main)
+        case nil: return String(localized: "Non classés", bundle: .main)
         }
     }
 }

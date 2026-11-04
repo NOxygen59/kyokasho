@@ -83,15 +83,15 @@ enum DefinitionTranslationHTML {
         if let entry {
             let liked = entry.status == .liked || entry.status == .edited
             h += "<span class=\"fr-text\">\(esc(entry.text))</span><span class=\"fr-act\">"
-            h += "<button data-fr=\"like\" class=\"\(liked ? "on" : "")\" title=\"Bonne traduction\">👍</button>"
-            h += "<button data-fr=\"dislike\" class=\"\(entry.status == .disliked ? "on" : "")\" title=\"Mauvaise : corriger\">👎</button>"
-            h += "<button data-fr=\"edit\" title=\"Modifier\">✏️</button></span>"
+            h += "<button data-fr=\"like\" class=\"\(liked ? "on" : "")\" title=\"\(String(localized: "Bonne traduction"))\">👍</button>"
+            h += "<button data-fr=\"dislike\" class=\"\(entry.status == .disliked ? "on" : "")\" title=\"\(String(localized: "Mauvaise : corriger"))\">👎</button>"
+            h += "<button data-fr=\"edit\" title=\"\(String(localized: "Modifier"))\">✏️</button></span>"
         } else if busy {
-            h += "<span class=\"fr-text dim\">Traduction…</span>"
+            h += "<span class=\"fr-text dim\">\(String(localized: "Traduction…"))</span>"
         } else if hasKey {
-            h += "<button data-fr=\"translate\" class=\"fr-go\">Traduire en français</button>"
+            h += "<button data-fr=\"translate\" class=\"fr-go\">\(String(localized: "Traduire en français"))</button>"
         } else {
-            h += "<span class=\"fr-text dim\">Ajoute ta clé DeepL (Réglages → Traduction) pour la traduction française.</span>"
+            h += "<span class=\"fr-text dim\">\(String(localized: "Ajoute ta clé DeepL (Réglages → Traduction) pour la traduction française."))</span>"
         }
         if let error { h += "<div class=\"fr-text dim\">\(esc(error))</div>" }
         return h + "</div>"

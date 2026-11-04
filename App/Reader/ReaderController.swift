@@ -499,7 +499,7 @@ final class ReaderController: NSObject, ObservableObject {
         // Page tournée pendant la construction : on reste où l'utilisateur est allé.
         let target = pdf == nil ? source : currentSourcePage
         guard let built else {
-            loadError = "Impossible d'ouvrir ce PDF."
+            loadError = String(localized: "Impossible d'ouvrir ce PDF.")
             return
         }
         originalBoxes = built.boxes
@@ -956,7 +956,7 @@ final class ReaderPDFView: PDFView {
     override func buildMenu(with builder: UIMenuBuilder) {
         super.buildMenu(with: builder)
         guard let onLookupSelection, currentSelection?.string?.isEmpty == false else { return }
-        let action = UIAction(title: "Dictionnaire", image: UIImage(systemName: "character.book.closed.ja")) { _ in
+        let action = UIAction(title: String(localized: "Dictionnaire"), image: UIImage(systemName: "character.book.closed.ja")) { _ in
             onLookupSelection()
         }
         builder.insertSibling(UIMenu(options: .displayInline, children: [action]), beforeMenu: .standardEdit)

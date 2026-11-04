@@ -150,7 +150,7 @@ final class DocumentAnalysisService: ObservableObject {
             $0.recordRun(.init(date: Date(), engines: readers, firstPage: range.lowerBound, lastPage: range.upperBound,
                                reread: reread))
         }
-        progress = Progress(documentId: id, phase: "Lecture OCR", done: 0, total: pages.count, phaseStarted: Date())
+        progress = Progress(documentId: id, phase: String(localized: "Lecture OCR"), done: 0, total: pages.count, phaseStarted: Date())
         UIApplication.shared.isIdleTimerDisabled = true
         Diagnostics.log("analyse \(document.title) : pages \(range.lowerBound + 1)–\(range.upperBound + 1), lecteurs \(readers)\(reread ? ", relecture" : "")", "analyse")
 
@@ -166,13 +166,13 @@ final class DocumentAnalysisService: ObservableObject {
                 guard !Task.isCancelled, let self else { return }
                 let engine = await Task.detached { OCRService.resolve(choice, url: url, pageIndex: p) }.value
                 do { base[p] = try await service.page(documentId: id, url: url, pageIndex: p, engine: engine) }
-                catch { errors[p] = "OCR : \(error.localizedDescription)" }
+                catch { errors[p] = String(localized: "OCR : \(error.localizedDescription)") }
                 self.step(done: p + 1)
             }
             // 2. Chaque modèle lit toutes les pages, l'un après l'autre (un seul modèle en mémoire).
             for reader in readers {
                 guard let self, !Task.isCancelled else { return }
-                self.phase("Lecture \(Self.name(reader))", total: pages.count)
+                self.phase(String(localized: "Lecture \(Self.name(reader))"), total: pages.count)
                 for p in pages {
                     guard !Task.isCancelled else { break }
                     let file = Self.rawURL(id, reader, p)
@@ -195,7 +195,7 @@ final class DocumentAnalysisService: ObservableObject {
             }
             // 3. Vote (calcul lourd : hors du fil principal).
             guard let self, !Task.isCancelled else { return }
-            self.phase("Vote", total: pages.count)
+            self.phase(String(localized: "Vote"), total: pages.count)
             for p in pages {
                 guard !Task.isCancelled else { return }
                 var page: DocumentAnalysis.Page
@@ -252,7 +252,7 @@ final class DocumentAnalysisService: ObservableObject {
                 && !FileManager.default.fileExists(atPath: Self.rawURL(id, language.rawValue, $0).path)
         }
         guard !pages.isEmpty else { return }
-        progress = Progress(documentId: id, phase: "Traduction (Qwen3-VL)", done: 0, total: pages.count, phaseStarted: Date())
+        progress = Progress(documentId: id, phase: String(localized: "Traduction (Qwen3-VL)"), done: 0, total: pages.count, phaseStarted: Date())
         UIApplication.shared.isIdleTimerDisabled = true
         task = Task { [weak self] in
             defer {
@@ -269,7 +269,7 @@ final class DocumentAnalysisService: ObservableObject {
                     }
                     try? DocumentAITextStore.write(translated, documentId: id, reader: language.rawValue, page: p)
                 } catch {
-                    self?.lastError = "Traduction page \(p + 1) : \(error.localizedDescription)"
+                    self?.lastError = String(localized: "Traduction page \(p + 1) : \(error.localizedDescription)")
                 }
                 self?.step(done: k + 1)
             }
@@ -369,7 +369,7 @@ final class DocumentAnalysisService: ObservableObject {
         let ocr = model.ocr
         correctionsDone = nil
         lastError = nil
-        progress = Progress(documentId: id, phase: "Corrections OvisOCR2", done: 0,
+        progress = Progress(documentId: id, phase: String(localized: "Corrections OvisOCR2"), done: 0,
                             total: document.pageCount, phaseStarted: Date())
         Diagnostics.log("Corrections OvisOCR2 : début de \(document.pageCount) pages", "analyse")
         task = Task { [weak self] in
@@ -406,8 +406,8 @@ final class DocumentAnalysisService: ObservableObject {
                     total += changed
                     self.invalidatePage(source, documentId: id)
                 } catch {
-                    self.lastError = "Page \(document.pageLabel(source)) : \(error.localizedDescription)"
-                    Diagnostics.error(error.localizedDescription, "corrections OvisOCR2 p. \(document.pageLabel(source))")
+                    self.lastError = String(localized: "Page \(document.pageLabel(source)) : \(error.localizedDescription)")
+                    Diagnostics.error(error.localizedDescription, String(localized: "corrections OvisOCR2 p. \(document.pageLabel(source))"))
                 }
             }
             self?.correctionsDone = total

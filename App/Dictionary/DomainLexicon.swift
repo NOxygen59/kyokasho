@@ -118,7 +118,7 @@ struct DomainLexiconView: View {
                 Button("Remettre les termes de départ manquants") { lexicon.restoreStarter() }
             }
         }
-        .searchable(text: $search, prompt: "Chercher un terme")
+        .searchable(text: $search, prompt: String(localized: "Chercher un terme"))
         .navigationTitle("Lexique du domaine")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
@@ -141,7 +141,7 @@ private struct LexiconEntryEditor: View {
                 TextField("Lecture en kana (ex. のぶち)", text: $entry.reading)
                 TextField("Sens en français (ex. tasseau de plafond)", text: $entry.meaning, axis: .vertical)
             }
-            .navigationTitle(entry.term.isEmpty ? "Nouveau terme" : entry.term)
+            .navigationTitle(entry.term.isEmpty ? String(localized: "Nouveau terme") : entry.term)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Annuler") { dismiss() } }

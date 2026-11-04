@@ -23,10 +23,10 @@ public struct DictionaryImporter: Sendable {
 
         public var errorDescription: String? {
             switch self {
-            case .notADictionary: return "Ce fichier n'est pas un dictionnaire Yomitan (index.json manquant)."
-            case .unsupportedFormat(let f): return "Format de dictionnaire non pris en charge (\(f))."
-            case .alreadyImported(let title, let revision): return "« \(title) » (\(revision)) est déjà importé."
-            case .cancelled: return "Import annulé."
+            case .notADictionary: return String(localized: "Ce fichier n'est pas un dictionnaire Yomitan (index.json manquant).", bundle: .main)
+            case .unsupportedFormat(let f): return String(localized: "Format de dictionnaire non pris en charge (\(f)).", bundle: .main)
+            case .alreadyImported(let title, let revision): return String(localized: "« \(title) » (\(revision)) est déjà importé.", bundle: .main)
+            case .cancelled: return String(localized: "Import annulé.", bundle: .main)
             }
         }
     }
@@ -64,7 +64,7 @@ public struct DictionaryImporter: Sendable {
         var replacedPriority: Int?
         if let existing = try database.dictionary(title: index.title) {
             guard replaceExisting else { throw ImportError.alreadyImported(index.title, index.revision) }
-            progress(Progress(step: "Suppression de l'ancienne version", fraction: 0))
+            progress(Progress(step: String(localized: "Suppression de l'ancienne version", bundle: .main), fraction: 0))
             replacedPriority = existing.priority
             try database.deleteDictionary(id: existing.id!)
         }
@@ -104,7 +104,7 @@ public struct DictionaryImporter: Sendable {
 
             for entry in tagBanks {
                 try Task.checkCancellation()
-                report("Étiquettes")
+                report(String(localized: "Étiquettes", bundle: .main))
                 try importRows(entry, archive: archive, sql: "INSERT INTO tag (dictionaryId, name, category, sortOrder, notes, score) VALUES (?,?,?,?,?,?)") { row in
                     guard row.count >= 5 else { return nil }
                     return [dictionaryId, str(row[0]), str(row[1]), int(row[2]), str(row[3]), int(row[4])]
@@ -115,7 +115,7 @@ public struct DictionaryImporter: Sendable {
 
             for entry in termBanks {
                 try Task.checkCancellation()
-                report("Termes · \(entry.path)")
+                report(String(localized: "Termes · \(entry.path)", bundle: .main))
                 counts.terms += try importRows(entry, archive: archive,
                     sql: "INSERT INTO term (dictionaryId, expression, reading, definitionTags, rules, score, glossary, sequence, termTags) VALUES (?,?,?,?,?,?,?,?,?)") { row in
                     guard row.count >= 5 else { return nil }
@@ -141,7 +141,7 @@ public struct DictionaryImporter: Sendable {
 
             for entry in termMetaBanks {
                 try Task.checkCancellation()
-                report("Fréquences et accents")
+                report(String(localized: "Fréquences et accents", bundle: .main))
                 counts.termMeta += try importRows(entry, archive: archive,
                     sql: "INSERT INTO termMeta (dictionaryId, expression, mode, data) VALUES (?,?,?,?)") { row in
                     guard row.count >= 3 else { return nil }
@@ -152,7 +152,7 @@ public struct DictionaryImporter: Sendable {
 
             for entry in kanjiBanks {
                 try Task.checkCancellation()
-                report("Kanji")
+                report(String(localized: "Kanji", bundle: .main))
                 counts.kanji += try importRows(entry, archive: archive,
                     sql: "INSERT INTO kanji (dictionaryId, character, onyomi, kunyomi, tags, meanings, stats) VALUES (?,?,?,?,?,?,?)") { row in
                     guard row.count >= 4 else { return nil }
@@ -174,7 +174,7 @@ public struct DictionaryImporter: Sendable {
 
             for entry in kanjiMetaBanks {
                 try Task.checkCancellation()
-                report("Fréquences des kanji")
+                report(String(localized: "Fréquences des kanji", bundle: .main))
                 counts.kanjiMeta += try importRows(entry, archive: archive,
                     sql: "INSERT INTO kanjiMeta (dictionaryId, character, mode, data) VALUES (?,?,?,?)") { row in
                     guard row.count >= 3 else { return nil }
@@ -184,7 +184,7 @@ public struct DictionaryImporter: Sendable {
             }
 
             if !media.isEmpty {
-                report("Images (\(media.count))")
+                report(String(localized: "Images (\(media.count))", bundle: .main))
                 let folder = database.mediaRoot.appendingPathComponent(String(dictionaryId), isDirectory: true)
                 for entry in media {
                     try Task.checkCancellation()
@@ -206,7 +206,7 @@ public struct DictionaryImporter: Sendable {
             let final = info
             try database.writer.write { db in try final.update(db) }
             database.clearCaches()
-            progress(Progress(step: "Terminé", fraction: 1))
+            progress(Progress(step: String(localized: "Terminé", bundle: .main), fraction: 1))
             return final
         } catch {
             // Import incomplet : on ne laisse pas un dictionnaire à moitié rempli.

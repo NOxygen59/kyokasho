@@ -64,15 +64,15 @@ struct TrashView: View {
     @ViewBuilder
     private var confirmation: some View {
         if let doc = forever {
-            card(title: "Supprimer définitivement « \(doc.title) » ?",
-                 message: "Le PDF, ses notes, surlignages, dessins et le texte lu par l'OCR seront effacés de l'iPad. Impossible de revenir en arrière.",
-                 confirm: "Supprimer", cancel: { forever = nil }) { model.deleteForever(doc); forever = nil }
+            card(title: String(localized: "Supprimer définitivement « \(doc.title) » ?"),
+                 message: String(localized: "Le PDF, ses notes, surlignages, dessins et le texte lu par l'OCR seront effacés de l'iPad. Impossible de revenir en arrière."),
+                 confirm: String(localized: "Supprimer"), cancel: { forever = nil }) { model.deleteForever(doc); forever = nil }
         } else if emptyStep == 1 {
-            card(title: "Vider la corbeille ?", message: "\(model.trashedDocuments.count) document(s) seront effacés de l'iPad.",
-                 confirm: "Continuer", cancel: { emptyStep = 0 }) { emptyStep = 2 }
+            card(title: String(localized: "Vider la corbeille ?"), message: String(localized: "\(model.trashedDocuments.count) document(s) seront effacés de l'iPad."),
+                 confirm: String(localized: "Continuer"), cancel: { emptyStep = 0 }) { emptyStep = 2 }
         } else if emptyStep == 2 {
-            card(title: "Effacer définitivement ?", message: "Dernière confirmation : impossible de revenir en arrière.",
-                 confirm: "Effacer tout", cancel: { emptyStep = 0 }) { model.emptyTrash(); emptyStep = 0 }
+            card(title: String(localized: "Effacer définitivement ?"), message: String(localized: "Dernière confirmation : impossible de revenir en arrière."),
+                 confirm: String(localized: "Effacer tout"), cancel: { emptyStep = 0 }) { model.emptyTrash(); emptyStep = 0 }
         }
     }
 
@@ -104,6 +104,6 @@ struct TrashView: View {
 
     private func remaining(_ document: LibraryDocument) -> String {
         guard let days = model.trash.daysLeft(document.id) else { return "" }
-        return days == 0 ? "Effacé au prochain lancement" : "Effacé dans \(days) jour\(days > 1 ? "s" : "")"
+        return days == 0 ? String(localized: "Effacé au prochain lancement") : String(localized: "Effacé dans \(days) jour\(days > 1 ? "s" : "")")
     }
 }

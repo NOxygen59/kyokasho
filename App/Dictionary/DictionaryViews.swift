@@ -52,7 +52,7 @@ struct DictionarySearchView: View {
                         shelf = item
                         session.clear()
                     } label: {
-                        Text(item.rawValue)
+                        Text(ui: item.rawValue)
                             .font(Atelier.font(compact ? 12 : 14, weight: .semibold))
                             .lineLimit(1)
                             .frame(maxWidth: .infinity)
@@ -127,7 +127,7 @@ struct DictionarySearchView: View {
     private var searchField: some View {
         HStack(spacing: 8) {
             Image(systemName: "magnifyingglass").foregroundStyle(Atelier.Tint.japanese)
-            TextField(shelf == .kanji ? "Chercher un kanji" : "Mot ou lecture en japonais", text: $query)
+            TextField(shelf == .kanji ? String(localized: "Chercher un kanji") : String(localized: "Mot ou lecture en japonais"), text: $query)
                 .focused($focused)
                 .font(.custom("HiraginoSans-W3", size: compact ? 15 : 19))
                 .submitLabel(.search)
@@ -152,24 +152,24 @@ struct DictionarySearchView: View {
     private var wordShelf: some View {
         Group {
             if !dictionaryModel.hasTermDictionaries {
-                emptyState("Aucun dictionnaire de mots",
-                           "Importe un dictionnaire Yomitan dans Réglages → Japonais → Dictionnaires.")
+                emptyState(String(localized: "Aucun dictionnaire de mots"),
+                           String(localized: "Importe un dictionnaire Yomitan dans Réglages → Japonais → Dictionnaires."))
             } else if !query.isEmpty {
-                AtelierLabel("Mots trouvés · \(suggestions.count)", tint: Atelier.Tint.japanese)
+                AtelierLabel(String(localized: "Mots trouvés · \(suggestions.count)"), tint: Atelier.Tint.japanese)
                 if suggestions.isEmpty && !searching {
-                    emptyState("Aucun mot à ce début", "Essaie la forme de base ou une lecture en kana.")
+                    emptyState(String(localized: "Aucun mot à ce début"), String(localized: "Essaie la forme de base ou une lecture en kana."))
                 }
                 ForEach(suggestions) { word in
                     wordRow(word.expression, reading: word.reading, gloss: word.gloss)
                 }
             } else {
                 if !dictionaryModel.notebook.saved.filter({ $0.kind == .word }).isEmpty {
-                    AtelierLabel("Mots enregistrés", tint: Atelier.Tint.japanese)
+                    AtelierLabel(String(localized: "Mots enregistrés"), tint: Atelier.Tint.japanese)
                     ForEach(dictionaryModel.notebook.saved.filter { $0.kind == .word }.prefix(8)) { entry in
                         wordRow(entry.expression, reading: entry.reading)
                     }
                 }
-                AtelierLabel("Récemment consultés", tint: Atelier.Tint.japanese)
+                AtelierLabel(String(localized: "Récemment consultés"), tint: Atelier.Tint.japanese)
                 let recent = dictionaryModel.notebook.recent.filter { $0.kind == .word }
                 if recent.isEmpty {
                     Text("Cherche un mot pour commencer. Les dernières recherches apparaîtront ici.")
@@ -189,7 +189,7 @@ struct DictionarySearchView: View {
                 (0x3400...0x9FFF).contains($0.value)
             } })).sorted()
             if !characters.isEmpty {
-                AtelierLabel("Kanji saisis", tint: Atelier.Tint.japanese)
+                AtelierLabel(String(localized: "Kanji saisis"), tint: Atelier.Tint.japanese)
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 58))], spacing: 8) {
                     ForEach(characters, id: \.self) { character in
                         Button { openKanji(String(character)) } label: {
@@ -202,7 +202,7 @@ struct DictionarySearchView: View {
                     }
                 }
             }
-            AtelierLabel("Kanji enregistrés", tint: Atelier.Tint.japanese)
+            AtelierLabel(String(localized: "Kanji enregistrés"), tint: Atelier.Tint.japanese)
             let saved = dictionaryModel.notebook.saved.filter { $0.kind == .kanji }
             if saved.isEmpty {
                 Text("Saisis un kanji ou touche-en un dans une fiche pour voir ses lectures et ses sens.")
@@ -228,11 +228,11 @@ struct DictionarySearchView: View {
                 query.isEmpty || $0.expression.localizedCaseInsensitiveContains(query)
                     || $0.reading.localizedCaseInsensitiveContains(query)
             }
-            AtelierLabel("Ma liste · \(saved.count)", tint: Atelier.Tint.japanese)
+            AtelierLabel(String(localized: "Ma liste · \(saved.count)"), tint: Atelier.Tint.japanese)
             if saved.isEmpty {
-                emptyState(query.isEmpty ? "Ta liste est vide" : "Aucun élément trouvé",
-                           query.isEmpty ? "Touche l'étoile d'une fiche ou d'un mot pour l'enregistrer ici."
-                                         : "Essaie un autre mot ou une autre lecture.")
+                emptyState(query.isEmpty ? String(localized: "Ta liste est vide") : String(localized: "Aucun élément trouvé"),
+                           query.isEmpty ? String(localized: "Touche l'étoile d'une fiche ou d'un mot pour l'enregistrer ici.")
+                                         : String(localized: "Essaie un autre mot ou une autre lecture."))
             } else {
                 ForEach(saved) { entry in
                     if entry.kind == .kanji {
@@ -242,7 +242,7 @@ struct DictionarySearchView: View {
                     }
                 }
             }
-            AtelierLabel("Lexique personnel · \(lexicon.entries.count)", tint: Atelier.Tint.japanese)
+            AtelierLabel(String(localized: "Lexique personnel · \(lexicon.entries.count)"), tint: Atelier.Tint.japanese)
             Text("Tes termes spécialisés, leurs lectures et leurs sens en français.")
                 .font(.subheadline).foregroundStyle(Atelier.textSecondary)
             ForEach(lexicon.entries.prefix(compact ? 4 : 8)) { entry in
@@ -299,7 +299,7 @@ struct DictionarySearchView: View {
                     .foregroundStyle(Atelier.Tint.japanese).frame(width: 32, height: 32)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(dictionaryModel.isSaved(entry) ? "Retirer de ma liste" : "Enregistrer")
+            .accessibilityLabel(dictionaryModel.isSaved(entry) ? String(localized: "Retirer de ma liste") : String(localized: "Enregistrer"))
         }
         .padding(.horizontal, 10).padding(.vertical, 8)
         .background(Atelier.surfaceHigh.opacity(0.65),
@@ -465,7 +465,7 @@ struct DictionaryManagerView: View {
         var parts: [String] = []
         if d.termCount > 0 { parts.append("\(d.termCount.formatted()) termes") }
         if d.kanjiCount > 0 { parts.append("\(d.kanjiCount.formatted()) kanji") }
-        if d.termMetaCount > 0 { parts.append("\(d.termMetaCount.formatted()) méta") }
+        if d.termMetaCount > 0 { parts.append(String(localized: "\(d.termMetaCount.formatted()) méta")) }
         if d.mediaCount > 0 { parts.append("\(d.mediaCount) images") }
         return parts.joined(separator: ", ")
     }
@@ -488,7 +488,7 @@ struct ProfileSettings: View {
                 Button("Créer") {
                     var copy = dictionaryModel.profile
                     copy.id = UUID().uuidString
-                    copy.name = newName.isEmpty ? "Profil" : newName
+                    copy.name = newName.isEmpty ? String(localized: "Profil") : newName
                     dictionaryModel.profiles.profiles.append(copy)
                     dictionaryModel.profiles.activeId = copy.id
                     newName = ""
@@ -535,7 +535,7 @@ struct AudioSettings: View {
                 TextField("URL avec {term} et {reading}", text: $template)
                 Button("Annuler", role: .cancel) {}
                 Button("Ajouter") {
-                    dictionaryModel.profile.audioSources.append(AudioSource(name: name.isEmpty ? "Source" : name, kind: .url, template: template))
+                    dictionaryModel.profile.audioSources.append(AudioSource(name: name.isEmpty ? String(localized: "Source") : name, kind: .url, template: template))
                     name = ""
                     template = "https://"
                 }

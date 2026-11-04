@@ -32,7 +32,7 @@ public final class ReviewStore: @unchecked Sendable {
             for (id, page) in pages {
                 try db.execute(sql: "UPDATE card SET sourcePage = ? WHERE id = ? AND sourceDocumentId = ?", arguments: [page, id, documentId])
                 guard db.changesCount == 1 else {
-                    throw NSError(domain: "Kyokasho.PageShift", code: 3, userInfo: [NSLocalizedDescriptionKey: "Carte absente ou associée à un autre document."])
+                    throw NSError(domain: "Kyokasho.PageShift", code: 3, userInfo: [NSLocalizedDescriptionKey: String(localized: "Carte absente ou associée à un autre document.", bundle: .main)])
                 }
             }
         }

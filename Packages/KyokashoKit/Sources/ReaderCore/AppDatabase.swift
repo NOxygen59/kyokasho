@@ -423,7 +423,7 @@ extension AppDatabase {
                 let current = try LibraryDocument.fetchOne(db, key: documentId)?.pageCount
                 if current == pageCount { return } // Effet déjà commis, journal encore présent.
                 guard current == expectedPageCount else {
-                    throw NSError(domain: "Kyokasho.PageShift", code: 2, userInfo: [NSLocalizedDescriptionKey: "Nombre de pages inattendu en base."])
+                    throw NSError(domain: "Kyokasho.PageShift", code: 2, userInfo: [NSLocalizedDescriptionKey: String(localized: "Nombre de pages inattendu en base.", bundle: .main)])
                 }
             }
             if offset != 0 {

@@ -36,10 +36,10 @@ struct SearchSheet: View {
                     .buttonStyle(.plain)
                 }
             }
-            .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Mot ou phrase")
+            .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: String(localized: "Mot ou phrase"))
             .onSubmit(of: .search) { reader.search(query) }
             .onChange(of: query) { if $0.isEmpty { reader.search("") } }
-            .navigationTitle(reader.searchResults.isEmpty ? "Rechercher" : "\(reader.searchResults.count) résultat(s)")
+            .navigationTitle(reader.searchResults.isEmpty ? String(localized: "Rechercher") : String(localized: "\(reader.searchResults.count) résultat(s)"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("OK") { close() } } }
         }
@@ -62,7 +62,7 @@ struct AIPageSheet: View {
 
     private var pageTitle: String {
         let labels = chosen.map { reader.document.pageLabel($0) }
-        return labels.count > 1 ? "Pages \(labels.joined(separator: " et "))" : "Page \(labels.first ?? reader.document.pageLabel(reader.currentSourcePage))"
+        return labels.count > 1 ? String(localized: "Pages \(labels.joined(separator: " et "))") : String(localized: "Page \(labels.first ?? reader.document.pageLabel(reader.currentSourcePage))")
     }
 
     var body: some View {
@@ -151,7 +151,7 @@ struct AIPageSheet: View {
     private func copyImage() {
         guard let image else { return }
         UIPasteboard.general.image = image
-        flash("image de la page")
+        flash(String(localized: "image de la page"))
     }
 
     private func copy(_ text: String, label: String) {
@@ -164,7 +164,7 @@ struct AIPageSheet: View {
     private func copyBoth(_ prompt: AIPrompt) {
         guard let image, let png = image.pngData() else { return }
         UIPasteboard.general.setItems([[UTType.png.identifier: png], [UTType.utf8PlainText.identifier: prompt.body]])
-        flash("image + « \(prompt.title) »")
+        flash(String(localized: "image + « \(prompt.title) »"))
     }
 
     private func deletePrompt(_ prompt: AIPrompt) {
@@ -231,7 +231,7 @@ struct WebPanel: View {
                     Button { if state.loading { state.view.stopLoading() } else { state.view.reload() } } label: {
                         Image(systemName: state.loading ? "xmark" : "arrow.clockwise")
                     }
-                    .accessibilityLabel(state.loading ? "Arrêter" : "Recharger")
+                    .accessibilityLabel(state.loading ? String(localized: "Arrêter") : String(localized: "Recharger"))
                     Button { if let url = state.url { openURL(url) } } label: { Image(systemName: "safari") }
                         .accessibilityLabel("Ouvrir dans Safari")
                     Button(action: onClose) { Image(systemName: "xmark.circle.fill") }.accessibilityLabel("Fermer")

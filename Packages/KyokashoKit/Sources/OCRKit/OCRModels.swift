@@ -212,11 +212,11 @@ public enum OCREngineID {
 
     public static func displayName(_ id: String) -> String {
         switch id {
-        case pdfText: return "Texte du PDF"
-        case vision: return "Apple Vision"
+        case pdfText: return String(localized: "Texte du PDF", bundle: .main)
+        case vision: return String(localized: "Apple Vision", bundle: .main)
         case ppocr5: return "PP-OCRv5"
         case ndlocr: return "NDLOCR-Lite"
-        case glmocr: return "GLM-OCR (IA)"
+        case glmocr: return String(localized: "GLM-OCR (IA)", bundle: .main)
         default: return id
         }
     }
@@ -232,11 +232,11 @@ public enum OCRError: LocalizedError, Equatable {
 
     public var errorDescription: String? {
         switch self {
-        case .pageUnavailable: return "Page introuvable dans le PDF."
-        case .noTextLayer: return "Cette page n'a pas de texte intégré (c'est probablement une image) : utilise Apple Vision."
-        case .renderFailed: return "Impossible de préparer l'image de la page."
-        case .cancelled: return "OCR annulé."
-        case .modelMissing(let name): return "Modèle « \(name) » pas téléchargé : Réglages → Modèles d'IA et outils."
+        case .pageUnavailable: return String(localized: "Page introuvable dans le PDF.", bundle: .main)
+        case .noTextLayer: return String(localized: "Cette page n'a pas de texte intégré (c'est probablement une image) : utilise Apple Vision.", bundle: .main)
+        case .renderFailed: return String(localized: "Impossible de préparer l'image de la page.", bundle: .main)
+        case .cancelled: return String(localized: "OCR annulé.", bundle: .main)
+        case .modelMissing(let name): return String(localized: "Modèle « \(name) » pas téléchargé : Réglages → Modèles d'IA et outils.", bundle: .main)
         case .engineFailed(let message): return message
         }
     }

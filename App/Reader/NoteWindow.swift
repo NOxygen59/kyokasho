@@ -76,7 +76,7 @@ struct NoteWindow: View {
                 Image(systemName: fingerDraws ? "hand.draw.fill" : "hand.draw")
                     .foregroundStyle(fingerDraws ? Atelier.Tint.annotate : Atelier.textSecondary)
             }
-            .accessibilityLabel(fingerDraws ? "Le doigt écrit du texte" : "Dessiner au doigt ou à la souris")
+            .accessibilityLabel(fingerDraws ? String(localized: "Le doigt écrit du texte") : String(localized: "Dessiner au doigt ou à la souris"))
             anchorButton
             Button { reader.openNote = nil } label: { Image(systemName: "xmark").foregroundStyle(Atelier.textSecondary) }
                 .accessibilityLabel("Fermer la note")

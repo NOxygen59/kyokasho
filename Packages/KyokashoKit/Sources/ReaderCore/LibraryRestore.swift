@@ -66,7 +66,7 @@ public enum LibraryRestore {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         do { return try decoder.decode(Marker.self, from: Data(contentsOf: url)) } catch {
-            throw RestoreError("Marqueur de restauration illisible : restauration arrêtée, fichiers gardés.")
+            throw RestoreError(String(localized: "Marqueur de restauration illisible : restauration arrêtée, fichiers gardés.", bundle: .main))
         }
     }
 
@@ -86,7 +86,7 @@ public enum LibraryRestore {
         for name in (try? fm.contentsOfDirectory(atPath: staging.appendingPathComponent("support").path)) ?? [] where !name.hasPrefix(".") {
             staged.append("support/" + name)
         }
-        guard staged.contains("kyokasho") else { throw RestoreError("Sauvegarde sans bibliothèque : restauration refusée.") }
+        guard staged.contains("kyokasho") else { throw RestoreError(String(localized: "Sauvegarde sans bibliothèque : restauration refusée.", bundle: .main)) }
         let marker = Marker(id: id, createdAt: date, backupName: backupName, staged: staged.sorted())
         try save(marker, support: support)
         return marker
@@ -145,9 +145,9 @@ public enum LibraryRestore {
             let stagedExists = fm.fileExists(atPath: staged.path)
             if wasStaged {
                 // Déjà installé (rejeu après une coupure) : rien à faire.
-                if !stagedExists { guard liveExists else { throw RestoreError("Restauration incohérente pour « \(name) ».") }; continue }
+                if !stagedExists { guard liveExists else { throw RestoreError(String(localized: "Restauration incohérente pour « \(name) ».", bundle: .main)) }; continue }
                 if liveExists {
-                    guard !asideExists else { throw RestoreError("Restauration incohérente pour « \(name) » : fichiers gardés.") }
+                    guard !asideExists else { throw RestoreError(String(localized: "Restauration incohérente pour « \(name) » : fichiers gardés.", bundle: .main)) }
                     try fm.moveItem(at: live, to: aside)
                     try hit("aside.\(name)")
                 }

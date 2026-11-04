@@ -17,10 +17,10 @@ enum ScanSharpening {
         var id: String { rawValue }
         var title: String {
             switch self {
-            case .off: return "Aucun"
-            case .color: return "Papier blanc (couleurs gardées)"
-            case .mono: return "Noir et blanc net"
-            case .degan: return "DE-GAN (modèle)"
+            case .off: return String(localized: "Aucun")
+            case .color: return String(localized: "Papier blanc (couleurs gardées)")
+            case .mono: return String(localized: "Noir et blanc net")
+            case .degan: return String(localized: "DE-GAN (modèle)")
             }
         }
     }

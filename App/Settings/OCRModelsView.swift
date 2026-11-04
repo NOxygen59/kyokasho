@@ -75,17 +75,17 @@ struct OCRModelsSection: View {
         Section {
             switch group {
             case .ocr:
-                row(.ndlocr, badge: "Recommandé")
-                row(.ppocr5, badge: "Optionnel")
+                row(.ndlocr, badge: String(localized: "Recommandé"))
+                row(.ppocr5, badge: String(localized: "Optionnel"))
             case .ai:
-                row(.glmocr, badge: "Optionnel")
-                row(.ovisocr2, badge: "Optionnel")
-                row(.qwen3vl4b, badge: "Optionnel · lourd")
-                row(.qwen35chat4b, badge: "Optionnel · chat")
+                row(.glmocr, badge: String(localized: "Optionnel"))
+                row(.ovisocr2, badge: String(localized: "Optionnel"))
+                row(.qwen3vl4b, badge: String(localized: "Optionnel · lourd"))
+                row(.qwen35chat4b, badge: String(localized: "Optionnel · chat"))
             case .layout:
-                ForEach(ModelSpec.layoutModels) { spec in row(spec, badge: "Optionnel") }
+                ForEach(ModelSpec.layoutModels) { spec in row(spec, badge: String(localized: "Optionnel")) }
             case .sharpen:
-                row(.degan, badge: "Optionnel")
+                row(.degan, badge: String(localized: "Optionnel"))
             }
         } header: {
             Text(ui: header)
@@ -102,23 +102,23 @@ struct OCRModelsSection: View {
 
     private var header: String {
         switch group {
-        case .ocr: return "1 · Lire le texte des scans (OCR)"
-        case .ai: return "3 · Relire et vérifier avec l'IA"
-        case .layout: return "4 · Mise en forme du texte extrait"
-        case .sharpen: return "5 · Nettoyer les scans"
+        case .ocr: return String(localized: "1 · Lire le texte des scans (OCR)")
+        case .ai: return String(localized: "3 · Relire et vérifier avec l'IA")
+        case .layout: return String(localized: "4 · Mise en forme du texte extrait")
+        case .sharpen: return String(localized: "5 · Nettoyer les scans")
         }
     }
 
     private var footer: String {
         switch group {
         case .ocr:
-            return "Sans modèle, Apple Vision lit déjà le japonais (moins bien). NDLOCR-Lite est fait pour les livres japonais (colonnes verticales). PP-OCRv5 sert aussi à placer chaque caractère pour le dictionnaire. Choix du moteur : Réglages → Lecture des scans, ou le bouton du moteur dans le panneau Texte."
+            return String(localized: "Sans modèle, Apple Vision lit déjà le japonais (moins bien). NDLOCR-Lite est fait pour les livres japonais (colonnes verticales). PP-OCRv5 sert aussi à placer chaque caractère pour le dictionnaire. Choix du moteur : Réglages → Lecture des scans, ou le bouton du moteur dans le panneau Texte.")
         case .ai:
-            return "GLM-OCR relit les lignes douteuses ; OvisOCR2 lit chaque page du livre. Qwen3-VL participe à l'analyse et peut discuter. Qwen3.5-4B est réservé au chat du livre (≈ 3,1 Go à télécharger). Un seul modèle IA est chargé à la fois ; tout reste sur l'iPad."
+            return String(localized: "GLM-OCR relit les lignes douteuses ; OvisOCR2 lit chaque page du livre. Qwen3-VL participe à l'analyse et peut discuter. Qwen3.5-4B est réservé au chat du livre (≈ 3,1 Go à télécharger). Un seul modèle IA est chargé à la fois ; tout reste sur l'iPad.")
         case .layout:
-            return "Sans modèle, la mise en forme se fait par la géométrie des lignes. Avec un modèle : titres, colonnes, tableaux, légendes repérés sur l'image ; en-têtes et pieds de page écartés. Choix : panneau Texte, mode « Mis en forme » (bouton Géo / PP / YOLO)."
+            return String(localized: "Sans modèle, la mise en forme se fait par la géométrie des lignes. Avec un modèle : titres, colonnes, tableaux, légendes repérés sur l'image ; en-têtes et pieds de page écartés. Choix : panneau Texte, mode « Mis en forme » (bouton Géo / PP / YOLO).")
         case .sharpen:
-            return "Sans modèle, « Papier blanc » et « Noir et blanc net » marchent déjà. DE-GAN rend les caractères noirs et nets sur les vieux scans (moins bon sur les photos). Dans le lecteur : menu « … » → Affichage → Nettoyage des scans."
+            return String(localized: "Sans modèle, « Papier blanc » et « Noir et blanc net » marchent déjà. DE-GAN rend les caractères noirs et nets sur les vieux scans (moins bon sur les photos). Dans le lecteur : menu « … » → Affichage → Nettoyage des scans.")
         }
     }
 
@@ -129,8 +129,8 @@ struct OCRModelsSection: View {
                 if let badge {
                     Text(badge).font(.caption2.bold())
                         .padding(.horizontal, 6).padding(.vertical, 2)
-                        .foregroundStyle(badge == "Recommandé" ? Atelier.onAccentInk : Color.secondary)
-                        .background(badge == "Recommandé" ? Color.green : Color.secondary.opacity(0.2), in: Capsule())
+                        .foregroundStyle(badge == String(localized: "Recommandé") ? Atelier.onAccentInk : Color.secondary)
+                        .background(badge == String(localized: "Recommandé") ? Color.green : Color.secondary.opacity(0.2), in: Capsule())
                 }
                 Spacer()
                 if downloads.installed.contains(spec.id) {

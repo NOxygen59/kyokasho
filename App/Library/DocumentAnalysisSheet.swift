@@ -60,16 +60,16 @@ struct DocumentAnalysisSheet: View {
             } message: {
                 Text("Seules les pages déjà lues par OvisOCR2 sont utilisées. Les lignes corrigées à la main et celles qui ressemblent à des formules sont conservées. La comparaison reste automatique : vérifie ensuite les passages importants sur la page originale.")
             }
-            .confirmationDialog(removingTranslation.map { "Supprimer la traduction en \($0 == .french ? "français" : "anglais") ?" } ?? "",
+            .confirmationDialog(removingTranslation.map { $0 == .french ? String(localized: "Supprimer la traduction en français ?") : String(localized: "Supprimer la traduction en anglais ?") } ?? "",
                                 isPresented: Binding(get: { removingTranslation != nil }, set: { if !$0 { removingTranslation = nil } }),
                                 titleVisibility: .visible) {
                 Button("Supprimer", role: .destructive) {
                     guard let language = removingTranslation else { return }
                     do {
                         let count = try DocumentAITextStore.removeTranslation(documentId: document.id, reader: language.rawValue)
-                        translationMessage = "\(count) page(s) de traduction supprimée(s)."
+                        translationMessage = String(localized: "\(count) page(s) de traduction supprimée(s).")
                     } catch {
-                        translationMessage = "Suppression interrompue : \(error.localizedDescription)"
+                        translationMessage = String(localized: "Suppression interrompue : \(error.localizedDescription)")
                     }
                 }
             } message: {
@@ -111,7 +111,7 @@ struct DocumentAnalysisSheet: View {
         let minutes = max(1, document.pageCount * readers.count * 45 / 60)
         return Group {
             Section {
-                Text("Chaque page est lue par ton OCR habituel **et** par \(readers.isEmpty ? "aucun autre modèle" : readers.map(Self.name).joined(separator: " et ")). Une ligne est confirmée quand deux lectures indépendantes donnent le même texte ; à la fin, une note de fiabilité et la liste des désaccords, avec un choix conseillé.")
+                Text("Chaque page est lue par ton OCR habituel **et** par \(readers.isEmpty ? String(localized: "aucun autre modèle") : readers.map(Self.name).joined(separator: String(localized: " et "))). Une ligne est confirmée quand deux lectures indépendantes donnent le même texte ; à la fin, une note de fiabilité et la liste des désaccords, avec un choix conseillé.")
                     .font(.footnote)
                 if readers.isEmpty {
                     Text("Télécharge OvisOCR2 (et si tu veux GLM-OCR) dans Réglages → Modèles d'IA et outils.")
@@ -127,7 +127,7 @@ struct DocumentAnalysisSheet: View {
             }
             Section {
                 LabeledContent("Pages", value: "\(document.pageCount)")
-                LabeledContent("Durée estimée", value: minutes >= 60 ? "≈ \(minutes / 60) h \(minutes % 60) min" : "≈ \(minutes) min")
+                LabeledContent("Durée estimée", value: minutes >= 60 ? String(localized: "≈ \(minutes / 60) h \(minutes % 60) min") : String(localized: "≈ \(minutes) min"))
                 Button {
                     service.start(document, model: model)
                 } label: {
@@ -150,7 +150,7 @@ struct DocumentAnalysisSheet: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text(p.phase).font(.headline)
                 ProgressView(value: fraction)
-                Text("Page \(p.done) sur \(p.total)\(p.done > 0 ? " · encore ≈ \(Int(left / 60) + 1) min pour cette étape" : "")")
+                Text("Page \(p.done) sur \(p.total)\(p.done > 0 ? String(localized: " · encore ≈ \(Int(left / 60) + 1) min pour cette étape") : "")")
                     .font(.caption).foregroundStyle(.secondary)
             }
             if p.cancelling {
@@ -195,7 +195,7 @@ struct DocumentAnalysisSheet: View {
             }
             if let last = undoStack.last, let first = last.first {
                 Button { undoLast() } label: {
-                    Label(last.count > 1 ? "Annuler les \(last.count) derniers choix" : "Annuler le dernier choix (p. \(document.pageLabel(first.source)), ligne \(first.line + 1))",
+                    Label(last.count > 1 ? String(localized: "Annuler les \(last.count) derniers choix") : String(localized: "Annuler le dernier choix (p. \(document.pageLabel(first.source)), ligne \(first.line + 1))"),
                           systemImage: "arrow.uturn.backward")
                 }
                 .font(.subheadline)
@@ -206,7 +206,7 @@ struct DocumentAnalysisSheet: View {
                 // Une ligne par langue : chaque traduction a ses fichiers ; l'anglais en plus du français.
                 ForEach(TranslationLanguage.allCases) { language in
                     let t = DocumentAnalysisService.translationCount(document, in: language)
-                    let name = language == .french ? "français" : "anglais"
+                    let name = language == .french ? String(localized: "français") : String(localized: "anglais")
                     if t.total > t.done {
                         Button { service.translateAll(document, into: language) } label: {
                             Label("Traduire tout le document en \(name) (\(t.total - t.done) page(s), hors ligne)", systemImage: "character.bubble")
@@ -329,8 +329,8 @@ struct DocumentAnalysisSheet: View {
 
     /// « Dernière analyse : 28 oct. 21:40 · OvisOCR2, GLM-OCR · pages 1 à 120 ».
     static func describe(_ run: DocumentAnalysis.Run, document: LibraryDocument) -> String {
-        let engines = run.engines.isEmpty ? "OCR seul" : run.engines.map(name).joined(separator: ", ")
-        return "Dernière analyse : \(run.date.formatted(date: .abbreviated, time: .shortened)) · \(engines) · pages \(document.pageLabel(run.firstPage)) à \(document.pageLabel(run.lastPage))\(run.reread ? " · relues" : "")"
+        let engines = run.engines.isEmpty ? String(localized: "OCR seul") : run.engines.map(name).joined(separator: ", ")
+        return String(localized: "Dernière analyse : \(run.date.formatted(date: .abbreviated, time: .shortened)) · \(engines) · pages \(document.pageLabel(run.firstPage)) à \(document.pageLabel(run.lastPage))\(run.reread ? String(localized: " · relues") : "")")
     }
 
     // MARK: Relance au choix (#41)

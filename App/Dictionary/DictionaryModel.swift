@@ -93,7 +93,7 @@ final class DictionaryModel: ObservableObject {
                 let scoped = url.startAccessingSecurityScopedResource()
                 defer { if scoped { url.stopAccessingSecurityScopedResource() } }
                 let name = url.lastPathComponent
-                await MainActor.run { self?.importState = ImportState(fileName: name, step: "Ouverture", fraction: 0) }
+                await MainActor.run { self?.importState = ImportState(fileName: name, step: String(localized: "Ouverture"), fraction: 0) }
                 var lastReport = Date.distantPast
                 do {
                     try DictionaryImporter(database: database).importDictionary(at: url) { p in
@@ -120,7 +120,7 @@ final class DictionaryModel: ObservableObject {
 
     func delete(_ dictionary: DictionaryInfo) {
         guard let database, let id = dictionary.id else { return }
-        importState = ImportState(fileName: dictionary.title, step: "Suppression", fraction: 0)
+        importState = ImportState(fileName: dictionary.title, step: String(localized: "Suppression"), fraction: 0)
         Task.detached(priority: .userInitiated) { [weak self] in
             try? database.deleteDictionary(id: id)
             await MainActor.run {

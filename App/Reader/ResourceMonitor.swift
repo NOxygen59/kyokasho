@@ -25,7 +25,7 @@ final class ResourceMonitor: ObservableObject {
         case cpu, ram, fps
         var id: String { rawValue }
         var title: String { self == .cpu ? "CPU" : self == .ram ? "RAM" : "FPS" }
-        var unit: String { self == .cpu ? "%" : self == .ram ? "Mo" : "i/s" }
+        var unit: String { self == .cpu ? "%" : self == .ram ? String(localized: "Mo") : "i/s" }
         func value(_ s: Sample) -> Double { self == .cpu ? s.cpu : self == .ram ? s.ramMB : s.fps }
     }
 
@@ -156,7 +156,7 @@ struct ResourceMonitorPanel: View {
             Image(systemName: "gauge.with.dots.needle.33percent").foregroundStyle(Atelier.Tint.read)
             if let s = monitor.last {
                 value(.cpu, String(format: "%.0f %%", s.cpu))
-                value(.ram, String(format: "%.0f Mo", s.ramMB))
+                value(.ram, String(format: String(localized: "%.0f Mo"), s.ramMB))
                 value(.fps, String(format: "%.0f", s.fps))
             } else {
                 Text("Mesure…").foregroundStyle(Atelier.textTertiary)
@@ -166,7 +166,7 @@ struct ResourceMonitorPanel: View {
                 Image(systemName: "chevron.down")
                     .rotationEffect(.degrees((detailed ? 180 : 0) + (expandsDown ? 0 : 180)))
             }
-            .accessibilityLabel(detailed ? "Replier le graphique" : "Dérouler le graphique")
+            .accessibilityLabel(detailed ? String(localized: "Replier le graphique") : String(localized: "Dérouler le graphique"))
             Button { shown = false } label: { Image(systemName: "xmark") }
                 .accessibilityLabel("Fermer le moniteur")
         }

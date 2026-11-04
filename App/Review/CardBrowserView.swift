@@ -20,8 +20,8 @@ struct CardBrowserView: View {
                     Section {
                         HStack(spacing: 0) {
                             stat("\(stats.totalCards)", "cartes")
-                            stat("\(stats.matureCards)", "mûres (≥ 21 j)")
-                            stat("\(stats.reviewsPerDay.values.reduce(0, +))", "réponses / 30 j")
+                            stat("\(stats.matureCards)", String(localized: "mûres (≥ 21 j)"))
+                            stat("\(stats.reviewsPerDay.values.reduce(0, +))", String(localized: "réponses / 30 j"))
                             stat(stats.retention.map { "\(Int(($0 * 100).rounded())) %" } ?? "—", "retenues")
                         }
                     }
@@ -36,7 +36,7 @@ struct CardBrowserView: View {
                     }
                 }
             }
-            .searchable(text: $query, prompt: "Chercher dans les cartes")
+            .searchable(text: $query, prompt: String(localized: "Chercher dans les cartes"))
             .navigationTitle("Cartes")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -71,7 +71,7 @@ struct CardBrowserView: View {
         return HStack {
             VStack(alignment: .leading, spacing: 2) {
                 Text(card.title(fieldNames: names)).font(.custom("HiraginoSans-W6", size: 17))
-                Text(card.suspended ? "Suspendue" : card.state.label)
+                Text(card.suspended ? String(localized: "Suspendue") : card.state.label)
                     .font(.caption).foregroundStyle(card.suspended ? .orange : .secondary)
             }
             Spacer()
@@ -114,7 +114,7 @@ struct CardEditor: View {
             Section {
                 Toggle("Suspendue (ne revient plus en révision)", isOn: $card.suspended)
                 LabeledContent("État", value: card.state.label)
-                LabeledContent("Révisions", value: "\(card.reps) · oublis \(card.lapses)")
+                LabeledContent("Révisions", value: String(localized: "\(card.reps) · oublis \(card.lapses)"))
             }
             Section {
                 Button("Supprimer la carte", role: .destructive) { confirmDelete = true }

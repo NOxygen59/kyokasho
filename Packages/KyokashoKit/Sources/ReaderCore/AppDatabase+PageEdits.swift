@@ -144,17 +144,17 @@ extension AppDatabase {
                       done.versionBefore == expectedVersion, let current,
                       current["layoutVersion"] as Int == done.versionAfter, current["pageCount"] as Int == mapping.newCount,
                       current["fileSize"] as Int64 == fileSize else {
-                    throw PageEditError("Opération déjà enregistrée avec d'autres valeurs : reprise arrêtée sans modification.")
+                    throw PageEditError(String(localized: "Opération déjà enregistrée avec d'autres valeurs : reprise arrêtée sans modification.", bundle: .main))
                 }
                 // F2 : les cartes sont installées APRÈS cette transaction. Le journal rejoué ne peut donc pas
                 // substituer un autre plan : le reconstruire depuis l'archive et les identités déjà réinsérées.
                 guard (kind == .restoration) == (restoring != nil), kind == .removal || detachedCards.isEmpty else {
-                    throw PageEditError("Métadonnées de reprise incohérentes.")
+                    throw PageEditError(String(localized: "Métadonnées de reprise incohérentes.", bundle: .main))
                 }
                 if let restoring {
                     guard let archive = try Self.fetchEdit(db, id: restoring.archiveId),
                           archive.documentId == documentId, archive.restoredBy == editId, archive.kind == .removal,
-                          archive.purgedAt == nil else { throw PageEditError("Archive de reprise incohérente.") }
+                          archive.purgedAt == nil else { throw PageEditError(String(localized: "Archive de reprise incohérente.", bundle: .main)) }
                     let identities = try PageIdentity.filter(Column("documentId") == documentId).fetchAll(db)
                     let removed = Set(archive.removedPageIds)
                     let positions = Dictionary(uniqueKeysWithValues: identities.filter { removed.contains($0.pageId) }.map { ($0.pageId, $0.position) })
@@ -162,32 +162,32 @@ extension AppDatabase {
                         originalIndices: Dictionary(uniqueKeysWithValues: archive.removedPageIds.map { ($0, archive.pageOrder.firstIndex(of: $0)!) }),
                         cards: try Self.restoredCards(db, archiveId: archive.id, positions: positions))
                     guard positions.count == removed.count, restoring == expected else {
-                        throw PageEditError("Plan de restauration altéré : reprise arrêtée.")
+                        throw PageEditError(String(localized: "Plan de restauration altéré : reprise arrêtée.", bundle: .main))
                     }
                 }
                 if kind == .removal {
                     let positions = Dictionary(uniqueKeysWithValues: done.removedPageIds.map { ($0, done.pageOrder.firstIndex(of: $0)!) })
                     guard try detachedCards == Self.restoredCards(db, archiveId: done.id, positions: positions) else {
-                        throw PageEditError("Cartes détachées altérées : reprise arrêtée.")
+                        throw PageEditError(String(localized: "Cartes détachées altérées : reprise arrêtée.", bundle: .main))
                     }
                 }
                 return false
             }
             guard let row = try Row.fetchOne(db, sql: """
                 SELECT pageCount, layoutVersion, lastPageIndex, firstPageIndex FROM document WHERE id = ?
-                """, arguments: [documentId]) else { throw PageEditError("Document introuvable.") }
+                """, arguments: [documentId]) else { throw PageEditError(String(localized: "Document introuvable.", bundle: .main)) }
             guard row["layoutVersion"] as Int == expectedVersion, row["pageCount"] as Int == mapping.oldCount else {
-                throw PageEditError("Le document a changé depuis la préparation : aucune modification des pages.")
+                throw PageEditError(String(localized: "Le document a changé depuis la préparation : aucune modification des pages.", bundle: .main))
             }
             guard (kind == .restoration) == (restoring != nil), restoring.map({ $0.mapping == mapping }) ?? true,
                   kind == .removal || detachedCards.isEmpty,
                   detachedCards.values.allSatisfy({ mapping.target(of: $0) == nil && $0 < mapping.oldCount }) else {
-                throw PageEditError("Opération de pages incohérente : aucune modification.")
+                throw PageEditError(String(localized: "Opération de pages incohérente : aucune modification.", bundle: .main))
             }
             if let restoring {
                 // L'état a pu changer depuis la préparation : le plan doit être exactement celui d'aujourd'hui.
                 guard try Self.plan(db, documentId: documentId, archiveId: restoring.archiveId) == restoring else {
-                    throw PageEditError("Le document a changé depuis la préparation de la restauration : rien n'est modifié.")
+                    throw PageEditError(String(localized: "Le document a changé depuis la préparation de la restauration : rien n'est modifié.", bundle: .main))
                 }
             }
             let identities = try Self.identities(db, documentId: documentId, pageCount: mapping.oldCount,
@@ -342,19 +342,19 @@ extension AppDatabase {
 
     private static func plan(_ db: Database, documentId: String, archiveId: String) throws -> RestorationPlan {
         guard let archive = try fetchEdit(db, id: archiveId), archive.documentId == documentId, archive.kind == .removal else {
-            throw PageEditError("Suppression introuvable pour ce document.")
+            throw PageEditError(String(localized: "Suppression introuvable pour ce document.", bundle: .main))
         }
-        guard archive.restoredBy == nil else { throw PageEditError("Ces pages ont déjà été restaurées.") }
-        guard archive.purgedAt == nil else { throw PageEditError("Ces pages ont été effacées : restauration impossible.") }
+        guard archive.restoredBy == nil else { throw PageEditError(String(localized: "Ces pages ont déjà été restaurées.", bundle: .main)) }
+        guard archive.purgedAt == nil else { throw PageEditError(String(localized: "Ces pages ont été effacées : restauration impossible.", bundle: .main)) }
         guard let row = try Row.fetchOne(db, sql: "SELECT pageCount, layoutVersion FROM document WHERE id = ?", arguments: [documentId]),
               try chain(db, documentId: documentId, from: archive.versionAfter, to: row["layoutVersion"]) != nil else {
             // Remplacement du PDF depuis (Drive) : d'autres pages ; ne jamais y réinsérer une ancienne archive.
-            throw PageEditError("Le document a été remplacé depuis cette suppression : restauration impossible.")
+            throw PageEditError(String(localized: "Le document a été remplacé depuis cette suppression : restauration impossible.", bundle: .main))
         }
         let current = try PageIdentity.filter(Column("documentId") == documentId).order(Column("position")).fetchAll(db).map(\.pageId)
         let removed = archive.removedPageIds
         guard current.count == row["pageCount"] as Int, Set(current).isDisjoint(with: removed) else {
-            throw PageEditError("Identités des pages incohérentes : restauration impossible.")
+            throw PageEditError(String(localized: "Identités des pages incohérentes : restauration impossible.", bundle: .main))
         }
         // F1 : les instantanés des suppressions ultérieures ont des trous. Reconstituer l'ordre de la même
         // génération de PDF, en gardant les identités absentes et en y insérant seulement les nouvelles pages.
@@ -378,12 +378,12 @@ extension AppDatabase {
         }
         let live = Set(current)
         guard canonical.filter({ live.contains($0) }) == current else {
-            throw PageEditError("Ordre des pages incohérent avec l'historique : restauration arrêtée.")
+            throw PageEditError(String(localized: "Ordre des pages incohérent avec l'historique : restauration arrêtée.", bundle: .main))
         }
         let wanted = live.union(removed)
         let order = canonical.filter { wanted.contains($0) }
         guard order.count == current.count + removed.count else {
-            throw PageEditError("Historique des pages incomplet : restauration arrêtée.")
+            throw PageEditError(String(localized: "Historique des pages incomplet : restauration arrêtée.", bundle: .main))
         }
         let mapping = try PageMapping(oldCount: current.count, newCount: order.count, targets: current.map { order.firstIndex(of: $0) })
         let positions = Dictionary(uniqueKeysWithValues: removed.map { ($0, order.firstIndex(of: $0)!) })
@@ -432,7 +432,7 @@ extension AppDatabase {
             return created
         }
         guard existing.map(\.position) == Array(0..<pageCount) else {
-            throw PageEditError("Identités des pages incohérentes : aucune modification des pages.")
+            throw PageEditError(String(localized: "Identités des pages incohérentes : aucune modification des pages.", bundle: .main))
         }
         return existing
     }

@@ -33,7 +33,7 @@ private struct DriveHome: View {
     var body: some View {
         List {
             Section {
-                NavigationLink { DriveFolderView(location: .folder(id: "root", name: "Mon Drive")) } label: {
+                NavigationLink { DriveFolderView(location: .folder(id: "root", name: String(localized: "Mon Drive"))) } label: {
                     Label("Mon Drive", systemImage: "externaldrive")
                 }
                 NavigationLink { DriveFolderView(location: .sharedWithMe) } label: {
@@ -44,7 +44,7 @@ private struct DriveHome: View {
                 NavigationLink("Mises à jour et compte") { DriveAccountView() }
             }
         }
-        .searchable(text: $search, prompt: "Chercher dans Drive")
+        .searchable(text: $search, prompt: String(localized: "Chercher dans Drive"))
         .navigationDestination(isPresented: Binding(get: { !submitted.isEmpty }, set: { if !$0 { submitted = "" } })) {
             DriveFolderView(location: .search(submitted))
         }
@@ -68,7 +68,7 @@ struct DriveFolderView: View {
     private var title: String {
         switch location {
         case .folder(_, let name): return name
-        case .sharedWithMe: return "Partagés avec moi"
+        case .sharedWithMe: return String(localized: "Partagés avec moi")
         case .search(let text): return "« \(text) »"
         }
     }
@@ -145,7 +145,7 @@ struct DriveFolderView: View {
             if let progress = downloading[file.id] {
                 ProgressView(value: progress).frame(width: 80)
             } else if let imported {
-                Text(imported.driveRevision == file.revision ? "Importé" : "Mise à jour")
+                Text(imported.driveRevision == file.revision ? String(localized: "Importé") : String(localized: "Mise à jour"))
                     .font(.caption.bold())
                     .foregroundStyle(imported.driveRevision == file.revision ? Color.secondary : Color.accentColor)
             } else {
@@ -213,13 +213,13 @@ struct DriveSetupHelp: View {
     @State private var done: Set<Int> = []
 
     private let steps: [(String, String, String)] = [
-        ("Crée un projet", "Nom : Kyokasho. Un seul projet suffit, c'est gratuit.",
+        (String(localized: "Crée un projet"), String(localized: "Nom : Kyokasho. Un seul projet suffit, c'est gratuit."),
          "https://console.cloud.google.com/projectcreate"),
-        ("Active l'API Google Drive", "Bouton « Activer ».",
+        (String(localized: "Active l'API Google Drive"), String(localized: "Bouton « Activer »."),
          "https://console.cloud.google.com/apis/library/drive.googleapis.com"),
-        ("Écran de connexion", "Nom de l'app : Kyokasho, ton e-mail. Audience : Externe, puis « Publier l'application » (sinon Google te déconnecte tous les 7 jours).",
+        (String(localized: "Écran de connexion"), String(localized: "Nom de l'app : Kyokasho, ton e-mail. Audience : Externe, puis « Publier l'application » (sinon Google te déconnecte tous les 7 jours)."),
          "https://console.cloud.google.com/auth/branding"),
-        ("Crée l'identifiant", "Type : iOS. ID de bundle : fr.noxygen59.kyokasho. Copie l'« ID client ».",
+        (String(localized: "Crée l'identifiant"), String(localized: "Type : iOS. ID de bundle : fr.noxygen59.kyokasho. Copie l'« ID client »."),
          "https://console.cloud.google.com/auth/clients/create"),
     ]
 
@@ -227,7 +227,7 @@ struct DriveSetupHelp: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 VStack(alignment: .leading, spacing: 6) {
-                    AtelierLabel("Google Drive · une seule fois", tint: Atelier.Tint.cloud)
+                    AtelierLabel(String(localized: "Google Drive · une seule fois"), tint: Atelier.Tint.cloud)
                     Text("Relie ton Drive en 5 minutes").font(Atelier.display(26)).foregroundStyle(Atelier.textPrimary)
                     Text("Google demande que chaque app ait son identifiant. Ouvre chaque étape, fais-la, coche, puis colle l'identifiant en bas.")
                         .foregroundStyle(Atelier.textSecondary)
@@ -263,7 +263,7 @@ struct DriveSetupHelp: View {
                     .background(Atelier.surfaceHigh.opacity(0.5), in: RoundedRectangle(cornerRadius: Atelier.corner(14), style: .continuous))
                 }
                 VStack(alignment: .leading, spacing: 10) {
-                    AtelierLabel("5 · Colle l'identifiant", tint: Atelier.Tint.cloud)
+                    AtelierLabel(String(localized: "5 · Colle l'identifiant"), tint: Atelier.Tint.cloud)
                     HStack {
                         TextField("xxxx.apps.googleusercontent.com", text: $pasted)
                             .textInputAutocapitalization(.never)
@@ -307,7 +307,7 @@ struct DriveAccountView: View {
                 if !drive.isConfigured {
                     NavigationLink("Configurer Google Drive") { DriveSetupHelp() }
                 } else if drive.isSignedIn {
-                    LabeledContent("Connecté", value: drive.accountEmail ?? "compte Google")
+                    LabeledContent("Connecté", value: drive.accountEmail ?? String(localized: "compte Google"))
                     Button("Se déconnecter", role: .destructive) { drive.signOut() }
                     NavigationLink("Changer d'identifiant Google") { DriveSetupHelp() }
                 } else {
@@ -369,7 +369,7 @@ extension AppModel {
     /// Compare chaque document importé de Drive avec sa version en ligne, télécharge ceux qui ont changé.
     func checkDriveUpdates() async -> String {
         let linked = documents.filter { $0.driveFileId != nil }
-        guard !linked.isEmpty else { return "Aucun document importé depuis Google Drive." }
+        guard !linked.isEmpty else { return String(localized: "Aucun document importé depuis Google Drive.") }
         var updated: [String] = []
         var failures: [String] = []
         for document in linked {
@@ -385,8 +385,8 @@ extension AppModel {
             }
         }
         var lines: [String] = []
-        lines.append(updated.isEmpty ? "Tout est à jour (\(linked.count) document(s))." : "Mis à jour : " + updated.joined(separator: ", "))
-        if !failures.isEmpty { lines.append("Erreurs : " + failures.joined(separator: " ; ")) }
+        lines.append(updated.isEmpty ? String(localized: "Tout est à jour (\(linked.count) document(s)).") : String(localized: "Mis à jour : ") + updated.joined(separator: ", "))
+        if !failures.isEmpty { lines.append(String(localized: "Erreurs : ") + failures.joined(separator: " ; ")) }
         return lines.joined(separator: "\n")
     }
 }

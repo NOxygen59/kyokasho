@@ -25,9 +25,9 @@ public enum NoteDayGroups {
     }
 
     public static func title(for day: Date, now: Date, calendar: Calendar) -> String {
-        if calendar.isDate(day, inSameDayAs: now) { return "Aujourd'hui" }
+        if calendar.isDate(day, inSameDayAs: now) { return String(localized: "Aujourd'hui", bundle: .main) }
         if let yesterday = calendar.date(byAdding: .day, value: -1, to: now), calendar.isDate(day, inSameDayAs: yesterday) {
-            return "Hier"
+            return String(localized: "Hier", bundle: .main)
         }
         let sameYear = calendar.component(.year, from: day) == calendar.component(.year, from: now)
         return formatter(sameYear ? "d MMM" : "d MMM y", calendar).string(from: day)

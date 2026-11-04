@@ -69,7 +69,7 @@ struct LibraryView: View {
                 let pending = try await model.openPackage(url)
                 if pending.exists { pendingPackage = pending } else { install(pending, replacing: false) }
             } catch {
-                packageMessage = "Paquet refusé : \(error.localizedDescription)"
+                packageMessage = String(localized: "Paquet refusé : \(error.localizedDescription)")
             }
             // Copie déposée par iOS dans Inbox (« Ouvrir dans ») : à nous, effacée une fois lue. Un fichier ouvert
             // sur place depuis Fichiers n'est jamais touché.
@@ -89,14 +89,14 @@ struct LibraryView: View {
         Task {
             do {
                 let safety = try await model.installPackage(pending, replacing: replacing)
-                var text = "« \(pending.contents.manifest.title) » importé avec ses notes, OCR, lectures IA, traductions et analyse."
-                if let safety { text += " Ancienne version gardée : Paquets de sécurité/\(safety.deletingLastPathComponent().lastPathComponent)." }
+                var text = String(localized: "« \(pending.contents.manifest.title) » importé avec ses notes, OCR, lectures IA, traductions et analyse.")
+                if let safety { text += String(localized: " Ancienne version gardée : Paquets de sécurité/\(safety.deletingLastPathComponent().lastPathComponent).") }
                 if !pending.missingDictionaries.isEmpty {
-                    text += " Dictionnaires à télécharger (Réglages → Dictionnaires → Catalogue) : " + pending.missingDictionaries.joined(separator: ", ") + "."
+                    text += String(localized: " Dictionnaires à télécharger (Réglages → Dictionnaires → Catalogue) : ") + pending.missingDictionaries.joined(separator: ", ") + "."
                 }
                 packageMessage = text
             } catch {
-                packageMessage = "Import impossible : \(error.localizedDescription)"
+                packageMessage = String(localized: "Import impossible : \(error.localizedDescription)")
             }
         }
     }
@@ -291,30 +291,30 @@ struct LibraryView: View {
                 }
             }
             VStack(alignment: .leading, spacing: 4) {
-                AtelierLabel("Bibliothèque").padding(.bottom, 4)
-                sideRow(.all, icon: "square.grid.2x2", title: "Tous les documents", count: model.documents.count)
-                sideRow(.inProgress, icon: "book", title: "En cours",
+                AtelierLabel(String(localized: "Bibliothèque")).padding(.bottom, 4)
+                sideRow(.all, icon: "square.grid.2x2", title: String(localized: "Tous les documents"), count: model.documents.count)
+                sideRow(.inProgress, icon: "book", title: String(localized: "En cours"),
                         count: model.documents.filter { $0.lastPageIndex > 0 && $0.lastPageIndex < $0.pageCount - 1 }.count)
-                sideRow(.drive, icon: "externaldrive.badge.icloud", title: "Depuis Drive",
+                sideRow(.drive, icon: "externaldrive.badge.icloud", title: String(localized: "Depuis Drive"),
                         count: model.documents.filter { $0.driveFileId != nil }.count)
             }
             VStack(alignment: .leading, spacing: 4) {
-                AtelierLabel("Importer").padding(.bottom, 4)
-                actionRow(icon: "folder", title: "Fichiers", tint: Atelier.Tint.cloud) { showImportOptions = true }
-                actionRow(icon: "externaldrive.badge.icloud", title: "Google Drive", tint: Atelier.Tint.cloud) { showDrive = true }
+                AtelierLabel(String(localized: "Importer")).padding(.bottom, 4)
+                actionRow(icon: "folder", title: String(localized: "Fichiers"), tint: Atelier.Tint.cloud) { showImportOptions = true }
+                actionRow(icon: "externaldrive.badge.icloud", title: String(localized: "Google Drive"), tint: Atelier.Tint.cloud) { showDrive = true }
             }
             VStack(alignment: .leading, spacing: 4) {
-                AtelierLabel("Outils").padding(.bottom, 4)
-                actionRow(icon: "rectangle.stack.badge.play", title: "Révisions", tint: Atelier.Tint.japanese,
+                AtelierLabel(String(localized: "Outils")).padding(.bottom, 4)
+                actionRow(icon: "rectangle.stack.badge.play", title: String(localized: "Révisions"), tint: Atelier.Tint.japanese,
                           count: review.counts.total) { showReview = true }
-                actionRow(icon: "character.book.closed.ja", title: "Dictionnaire", tint: Atelier.Tint.japanese,
+                actionRow(icon: "character.book.closed.ja", title: String(localized: "Dictionnaire"), tint: Atelier.Tint.japanese,
                           count: model.dictionary.notebook.saved.count) { showDictionary = true }
-                actionRow(icon: "doc.on.doc", title: "Fusionner des PDF", tint: Atelier.Tint.cloud) { showMerge = true }
-                actionRow(icon: "photo.on.rectangle.angled", title: "Images vers PDF", tint: Atelier.Tint.cloud) { showImagesToPDF = true }
-                actionRow(icon: "gauge.with.dots.needle.33percent", title: "Banc d'essai OCR", tint: Atelier.Tint.japanese) { showBench = true }
-                actionRow(icon: "trash", title: "Corbeille", tint: Atelier.textSecondary,
+                actionRow(icon: "doc.on.doc", title: String(localized: "Fusionner des PDF"), tint: Atelier.Tint.cloud) { showMerge = true }
+                actionRow(icon: "photo.on.rectangle.angled", title: String(localized: "Images vers PDF"), tint: Atelier.Tint.cloud) { showImagesToPDF = true }
+                actionRow(icon: "gauge.with.dots.needle.33percent", title: String(localized: "Banc d'essai OCR"), tint: Atelier.Tint.japanese) { showBench = true }
+                actionRow(icon: "trash", title: String(localized: "Corbeille"), tint: Atelier.textSecondary,
                           count: model.trashedDocuments.count) { showTrash = true }
-                actionRow(icon: "gearshape", title: "Réglages", tint: Atelier.textSecondary) { showSettings = true }
+                actionRow(icon: "gearshape", title: String(localized: "Réglages"), tint: Atelier.textSecondary) { showSettings = true }
             }
             // Avertissement de l'IA locale (RET-018) : dans la partie qui défile, au-dessus du temps de lecture fixé.
             LocalAIEnergyCard()
@@ -364,7 +364,7 @@ struct LibraryView: View {
     /// Temps de lecture active, à la place de « Progression XX/XX pages » (RET-037, #52).
     private var statsCard: some View {
         VStack(alignment: .leading, spacing: 8) {
-            AtelierLabel("Temps de lecture")
+            AtelierLabel(String(localized: "Temps de lecture"))
             Text(ReadingClock.format(readingTime.clock.elapsed(at: Date())))
                 .font(Atelier.display(30)).foregroundStyle(Atelier.textPrimary)
             Text("livre ouvert à l'écran").font(Atelier.font(13)).foregroundStyle(Atelier.textSecondary)
@@ -384,10 +384,10 @@ struct LibraryView: View {
                 Text("Drive").tag(Filter.drive)
             }
             .pickerStyle(.segmented).frame(width: 260)
-            CapsuleButton(icon: "plus", label: "Importer") { showImportOptions = true }
-            CapsuleButton(icon: "externaldrive.badge.icloud", label: "Google Drive") { showDrive = true }
-            CapsuleButton(icon: "character.book.closed.ja", label: "Dictionnaire") { showDictionary = true }
-            CapsuleButton(icon: "gearshape", label: "Réglages") { showSettings = true }
+            CapsuleButton(icon: "plus", label: String(localized: "Importer")) { showImportOptions = true }
+            CapsuleButton(icon: "externaldrive.badge.icloud", label: String(localized: "Google Drive")) { showDrive = true }
+            CapsuleButton(icon: "character.book.closed.ja", label: String(localized: "Dictionnaire")) { showDictionary = true }
+            CapsuleButton(icon: "gearshape", label: String(localized: "Réglages")) { showSettings = true }
         }
         .padding(10)
         .atelierPanel()
@@ -422,7 +422,7 @@ struct LibraryView: View {
                     Button {
                         selecting.toggle()
                         if !selecting { batch = BatchDeletion() }
-                    } label: { Label(selecting ? "Terminé" : "Sélectionner", systemImage: selecting ? "checkmark" : "checklist") }
+                    } label: { Label(selecting ? String(localized: "Terminé") : String(localized: "Sélectionner"), systemImage: selecting ? "checkmark" : "checklist") }
                         .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.annotate))
                 }
                 Button { showImportOptions = true } label: { Label("Importer", systemImage: "plus") }
@@ -522,7 +522,7 @@ struct LibraryView: View {
             .foregroundStyle(on ? Atelier.Tint.annotate : Atelier.textPrimary)
             .background(Circle().fill(Atelier.surface.opacity(0.8)))
             .padding(10)
-            .accessibilityLabel(on ? "Sélectionné" : "Non sélectionné")
+            .accessibilityLabel(on ? String(localized: "Sélectionné") : String(localized: "Non sélectionné"))
     }
 
     /// Barre de la sélection : tout sélectionner, supprimer (première des deux confirmations).
@@ -548,14 +548,14 @@ struct LibraryView: View {
     private var batchTitles: String {
         let titles = model.documents.filter { batch.selected.contains($0.id) }.map(\.title)
         let shown = titles.prefix(5).map { "« \($0) »" }.joined(separator: "\n")
-        return titles.count > 5 ? shown + "\n… et \(titles.count - 5) autre\(titles.count - 5 > 1 ? "s" : "")" : shown
+        return titles.count > 5 ? shown + String(localized: "\n… et \(titles.count - 5) autre\(titles.count - 5 > 1 ? "s" : "")") : shown
     }
 
     private var filterTitle: String {
         switch filter {
-        case .all: return "Tous les documents"
-        case .inProgress: return "En cours"
-        case .drive: return "Depuis Google Drive"
+        case .all: return String(localized: "Tous les documents")
+        case .inProgress: return String(localized: "En cours")
+        case .drive: return String(localized: "Depuis Google Drive")
         }
     }
 
@@ -606,7 +606,7 @@ struct LibraryView: View {
     private var emptyState: some View {
         VStack(spacing: 16) {
             Text("教").font(.custom("HiraMinProN-W6", size: 64)).foregroundStyle(Atelier.Tint.japanese.opacity(0.8))
-            Text(filter == .all ? "Ta bibliothèque est vide" : "Rien ici pour l'instant")
+            Text(filter == .all ? String(localized: "Ta bibliothèque est vide") : String(localized: "Rien ici pour l'instant"))
                 .font(Atelier.display(24)).foregroundStyle(Atelier.textPrimary)
             Text("Importe un cours ou un manuel en PDF, depuis Fichiers ou Google Drive.")
                 .foregroundStyle(Atelier.textSecondary)

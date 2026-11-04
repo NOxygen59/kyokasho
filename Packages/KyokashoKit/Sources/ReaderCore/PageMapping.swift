@@ -25,10 +25,10 @@ public struct PageMapping: Codable, Equatable, Sendable {
 
         public var errorDescription: String? {
             switch self {
-            case .emptySelection: return "Aucune page choisie."
-            case .pageOutOfRange(let page): return "La page \(page + 1) n'existe pas dans ce document."
-            case .removesEverything: return "Impossible de supprimer toutes les pages d'un document."
-            case .invalidTargets: return "Correspondance de pages invalide : aucune modification effectuée."
+            case .emptySelection: return String(localized: "Aucune page choisie.", bundle: .main)
+            case .pageOutOfRange(let page): return String(localized: "La page \(page + 1) n'existe pas dans ce document.", bundle: .main)
+            case .removesEverything: return String(localized: "Impossible de supprimer toutes les pages d'un document.", bundle: .main)
+            case .invalidTargets: return String(localized: "Correspondance de pages invalide : aucune modification effectuée.", bundle: .main)
             }
         }
     }

@@ -193,7 +193,7 @@ struct LookupPopup: View {
                         Image(systemName: dictionaryModel.isSaved(entry) ? "star.fill" : "star")
                             .foregroundStyle(Atelier.Tint.japanese)
                     }
-                    .accessibilityLabel(dictionaryModel.isSaved(entry) ? "Retirer des mots enregistrés" : "Enregistrer")
+                    .accessibilityLabel(dictionaryModel.isSaved(entry) ? String(localized: "Retirer des mots enregistrés") : String(localized: "Enregistrer"))
                 }
                 Button(action: close) { Image(systemName: "xmark") }.accessibilityLabel("Fermer")
             }

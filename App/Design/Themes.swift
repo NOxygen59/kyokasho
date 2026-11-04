@@ -41,23 +41,23 @@ struct Theme: Identifiable, Equatable {
 
     var atmosphere: String {
         switch id {
-        case "atelier": return "Graphite profond · menthe patinée"
-        case "clair": return "Papier blanc · encre graphite"
-        case "sepia": return "Papier ancien · encre brune"
-        case "brutal": return "Crème et encre · couleurs franches"
-        case "swiss": return "Blanc, noir · rouge suisse"
-        case "synthwave": return "Nuit violette · cyan et rose néon"
-        case "terre": return "Argile et lin · mousse et rouille"
-        case "foret": return "Sous-bois · sauge et rouge argile"
-        case "braise": return "Prune veloutée · cuivre doux"
-        case "sable": return "Sable chaud · crème et terre cuite"
-        case "lagon": return "Ardoise marine · jaune solaire"
-        case "washi": return "Papier fibreux · encre et céladon"
-        case "architecte": return "Bleu de Prusse · traits de craie"
-        case "interieur": return "Chêne fumé · lignes d'intérieur"
-        case "soir": return "Prune nocturne · lumière ambrée"
-        case "encre": return "Encre de charbon · laiton brossé"
-        case "sakura": return "Rose poudré · nuit de printemps"
+        case "atelier": return String(localized: "Graphite profond · menthe patinée")
+        case "clair": return String(localized: "Papier blanc · encre graphite")
+        case "sepia": return String(localized: "Papier ancien · encre brune")
+        case "brutal": return String(localized: "Crème et encre · couleurs franches")
+        case "swiss": return String(localized: "Blanc, noir · rouge suisse")
+        case "synthwave": return String(localized: "Nuit violette · cyan et rose néon")
+        case "terre": return String(localized: "Argile et lin · mousse et rouille")
+        case "foret": return String(localized: "Sous-bois · sauge et rouge argile")
+        case "braise": return String(localized: "Prune veloutée · cuivre doux")
+        case "sable": return String(localized: "Sable chaud · crème et terre cuite")
+        case "lagon": return String(localized: "Ardoise marine · jaune solaire")
+        case "washi": return String(localized: "Papier fibreux · encre et céladon")
+        case "architecte": return String(localized: "Bleu de Prusse · traits de craie")
+        case "interieur": return String(localized: "Chêne fumé · lignes d'intérieur")
+        case "soir": return String(localized: "Prune nocturne · lumière ambrée")
+        case "encre": return String(localized: "Encre de charbon · laiton brossé")
+        case "sakura": return String(localized: "Rose poudré · nuit de printemps")
         default: return ""
         }
     }
@@ -65,42 +65,42 @@ struct Theme: Identifiable, Equatable {
     enum Backdrop: Equatable { case grid, washi, blueprint, floorplan, dusk, ink, sakura }
 
     static let atelier = Theme(
-        id: "atelier", name: "Atelier (graphite)",
+        id: "atelier", name: String(localized: "Atelier (graphite)"),
         canvas: Color(hex: 0x101619), surface: Color(hex: 0x1C252A), surfaceHigh: Color(hex: 0x2A353C),
         ink: Color(hex: 0xEFF4F2),
         read: Color(hex: 0x81D8CB), annotate: Color(hex: 0xF0C775), japanese: Color(hex: 0xFA9A8D),
         ai: Color(hex: 0xBFB0EF), cloud: Color(hex: 0x91BDEC))
 
     static let foret = Theme(
-        id: "foret", name: "Forêt (rouge et vert)",
+        id: "foret", name: String(localized: "Forêt (rouge et vert)"),
         canvas: Color(hex: 0x101B17), surface: Color(hex: 0x1B2B24), surfaceHigh: Color(hex: 0x2A3B32),
         ink: Color(hex: 0xEFF4E9),
         read: Color(hex: 0x97CCA3), annotate: Color(hex: 0xE6C883), japanese: Color(hex: 0xF29587),
         ai: Color(hex: 0xC0BDD9), cloud: Color(hex: 0x94CBCD))
 
     static let braise = Theme(
-        id: "braise", name: "Braise (prune et rouille)",
+        id: "braise", name: String(localized: "Braise (prune et rouille)"),
         canvas: Color(hex: 0x1C151C), surface: Color(hex: 0x2C212B), surfaceHigh: Color(hex: 0x3D2E3B),
         ink: Color(hex: 0xF8EFEE),
         read: Color(hex: 0xF0A18C), annotate: Color(hex: 0xEEC481), japanese: Color(hex: 0xFFAAA1),
         ai: Color(hex: 0xCFADD6), cloud: Color(hex: 0xA6BCD9))
 
     static let sable = Theme(
-        id: "sable", name: "Sable (orange et crème)",
+        id: "sable", name: String(localized: "Sable (orange et crème)"),
         canvas: Color(hex: 0x1C1914), surface: Color(hex: 0x2C261F), surfaceHigh: Color(hex: 0x3D342A),
         ink: Color(hex: 0xF8F1E5),
         read: Color(hex: 0xDEC39B), annotate: Color(hex: 0xE9C06C), japanese: Color(hex: 0xF2AE80),
         ai: Color(hex: 0xCDB9DE), cloud: Color(hex: 0xA8C8D4))
 
     static let lagon = Theme(
-        id: "lagon", name: "Lagon (jaune et ardoise)",
+        id: "lagon", name: String(localized: "Lagon (jaune et ardoise)"),
         canvas: Color(hex: 0x111D21), surface: Color(hex: 0x1D2D33), surfaceHigh: Color(hex: 0x2C3F46),
         ink: Color(hex: 0xEBF4F2),
         read: Color(hex: 0x99C7CB), annotate: Color(hex: 0xE3C990), japanese: Color(hex: 0xEAD66F),
         ai: Color(hex: 0xBEB9E4), cloud: Color(hex: 0x9ACAE6))
 
     static let washi = Theme(
-        id: "washi", name: "Washi (papier et encre)",
+        id: "washi", name: String(localized: "Washi (papier et encre)"),
         canvas: Color(hex: 0x1D1C18), surface: Color(hex: 0x2C2A24), surfaceHigh: Color(hex: 0x3C3930),
         ink: Color(hex: 0xF5EFE1),
         read: Color(hex: 0xB8CCAA), annotate: Color(hex: 0xE1C38B), japanese: Color(hex: 0xEBA493),
@@ -108,35 +108,35 @@ struct Theme: Identifiable, Equatable {
 
     /// Grille d'architecte : le thème du manuel.
     static let architecte = Theme(
-        id: "architecte", name: "Architecte (plan bleu)",
+        id: "architecte", name: String(localized: "Architecte (plan bleu)"),
         canvas: Color(hex: 0x101E30), surface: Color(hex: 0x1D3046), surfaceHigh: Color(hex: 0x2B435D),
         ink: Color(hex: 0xEFF6FC),
         read: Color(hex: 0xA0D6F1), annotate: Color(hex: 0xEED39A), japanese: Color(hex: 0xF5A294),
         ai: Color(hex: 0xC6BDF1), cloud: Color(hex: 0xA3D8D0), backdrop: .blueprint)
 
     static let interieur = Theme(
-        id: "interieur", name: "Intérieur (plan et chêne)",
+        id: "interieur", name: String(localized: "Intérieur (plan et chêne)"),
         canvas: Color(hex: 0x1C1D1B), surface: Color(hex: 0x2B2C27), surfaceHigh: Color(hex: 0x3B3C34),
         ink: Color(hex: 0xF4F0E5),
         read: Color(hex: 0xD9BC93), annotate: Color(hex: 0xE7CF9D), japanese: Color(hex: 0xE9A58D),
         ai: Color(hex: 0xC4BDDC), cloud: Color(hex: 0xABC8CB), backdrop: .floorplan)
 
     static let soir = Theme(
-        id: "soir", name: "Lumière du soir",
+        id: "soir", name: String(localized: "Lumière du soir"),
         canvas: Color(hex: 0x201A29), surface: Color(hex: 0x302639), surfaceHigh: Color(hex: 0x41344C),
         ink: Color(hex: 0xFCF0E7),
         read: Color(hex: 0xF2BF94), annotate: Color(hex: 0xEBD299), japanese: Color(hex: 0xF7A7A3),
         ai: Color(hex: 0xD0B9ED), cloud: Color(hex: 0xAFC9E8), backdrop: .dusk)
 
     static let encre = Theme(
-        id: "encre", name: "Encre et or",
+        id: "encre", name: String(localized: "Encre et or"),
         canvas: Color(hex: 0x101211), surface: Color(hex: 0x20221F), surfaceHigh: Color(hex: 0x30332D),
         ink: Color(hex: 0xF4F0E4),
         read: Color(hex: 0xD9C28C), annotate: Color(hex: 0xEDDAAB), japanese: Color(hex: 0xEBA496),
         ai: Color(hex: 0xCBBFE2), cloud: Color(hex: 0xB2C7D0), backdrop: .ink)
 
     static let sakura = Theme(
-        id: "sakura", name: "Sakura (nuit de printemps)",
+        id: "sakura", name: String(localized: "Sakura (nuit de printemps)"),
         canvas: Color(hex: 0x211921), surface: Color(hex: 0x302530), surfaceHigh: Color(hex: 0x423440),
         ink: Color(hex: 0xFBEFF3),
         read: Color(hex: 0xB9D1BF), annotate: Color(hex: 0xE9D0A8), japanese: Color(hex: 0xF1B1CB),
@@ -144,7 +144,7 @@ struct Theme: Identifiable, Equatable {
 
     /// Variante claire de la planche du 29/10/2026 : teintes de fonction foncées (texte blanc dessus, 4,5:1).
     static let clair = Theme(
-        id: "clair", name: "Clair (papier blanc)",
+        id: "clair", name: String(localized: "Clair (papier blanc)"),
         canvas: Color(hex: 0xF4F2EE), surface: Color(hex: 0xFFFFFF), surfaceHigh: Color(hex: 0xECE8E1),
         ink: Color(hex: 0x1B2226),
         read: Color(hex: 0x0F7466), annotate: Color(hex: 0x8A5A00), japanese: Color(hex: 0xB3372A),
@@ -154,7 +154,7 @@ struct Theme: Identifiable, Equatable {
 
     /// Variante sépia de la planche du 29/10/2026.
     static let sepia = Theme(
-        id: "sepia", name: "Sépia (papier ancien)",
+        id: "sepia", name: String(localized: "Sépia (papier ancien)"),
         canvas: Color(hex: 0xEFE4D0), surface: Color(hex: 0xF8F0E1), surfaceHigh: Color(hex: 0xE6D8BE),
         ink: Color(hex: 0x3B2A1A),
         read: Color(hex: 0x1C6457), annotate: Color(hex: 0x845000), japanese: Color(hex: 0xA53A24),
@@ -164,7 +164,7 @@ struct Theme: Identifiable, Equatable {
 
     // Palettes proposées par les styles du premier lot (S2, 29/10/2026).
     static let brutal = Theme(
-        id: "brutal", name: "Brutal (crème et encre)",
+        id: "brutal", name: String(localized: "Brutal (crème et encre)"),
         canvas: Color(hex: 0xFFF4D6), surface: Color(hex: 0xFFFFFF), surfaceHigh: Color(hex: 0xFFEFB0),
         ink: Color(hex: 0x111111),
         read: Color(hex: 0x0050C8), annotate: Color(hex: 0x8A4B00), japanese: Color(hex: 0xB0154F),
@@ -173,7 +173,7 @@ struct Theme: Identifiable, Equatable {
         secondaryLevel: 0.82, tertiaryLevel: 0.72)
 
     static let swiss = Theme(
-        id: "swiss", name: "Suisse (blanc et rouge)",
+        id: "swiss", name: String(localized: "Suisse (blanc et rouge)"),
         canvas: Color(hex: 0xF2F2F2), surface: Color(hex: 0xFFFFFF), surfaceHigh: Color(hex: 0xE6E6E6),
         ink: Color(hex: 0x111111),
         read: Color(hex: 0xC01F14), annotate: Color(hex: 0x8A5A00), japanese: Color(hex: 0x9E1B32),
@@ -182,14 +182,14 @@ struct Theme: Identifiable, Equatable {
         secondaryLevel: 0.82, tertiaryLevel: 0.72)
 
     static let synthwave = Theme(
-        id: "synthwave", name: "Synthwave (néon)",
+        id: "synthwave", name: String(localized: "Synthwave (néon)"),
         canvas: Color(hex: 0x140A26), surface: Color(hex: 0x221238), surfaceHigh: Color(hex: 0x321C4E),
         ink: Color(hex: 0xF6EEFF),
         read: Color(hex: 0x5CF2E6), annotate: Color(hex: 0xFFD166), japanese: Color(hex: 0xFF6EC7),
         ai: Color(hex: 0xB69CFF), cloud: Color(hex: 0x7FB7FF), backdrop: .dusk)
 
     static let terre = Theme(
-        id: "terre", name: "Terre (wabi-sabi)",
+        id: "terre", name: String(localized: "Terre (wabi-sabi)"),
         canvas: Color(hex: 0xE9E2D6), surface: Color(hex: 0xF3EEE5), surfaceHigh: Color(hex: 0xDDD3C3),
         ink: Color(hex: 0x2E2A24),
         read: Color(hex: 0x3F5A2E), annotate: Color(hex: 0x7A4A12), japanese: Color(hex: 0x8E3B2A),
@@ -280,7 +280,7 @@ struct ThemePickerView: View {
     /// relancement comme le prévoit iOS. Vide = langue du système.
     @State private var appLanguage = (UserDefaults.standard.array(forKey: "AppleLanguages") as? [String])
         .flatMap { UserDefaults.standard.persistentDomain(forName: Bundle.main.bundleIdentifier ?? "")?["AppleLanguages"] != nil ? $0.first : nil }
-        .map { $0.hasPrefix("en") ? "en" : "fr" } ?? ""
+        .map { $0.hasPrefix("zh") ? "zh-Hans" : $0.hasPrefix("en") ? "en" : "fr" } ?? ""
     @State private var languageChanged = false
 
     var body: some View {
@@ -297,6 +297,7 @@ struct ThemePickerView: View {
                         Text("Système").tag("")
                         Text("Français").tag("fr")
                         Text("English").tag("en")
+                        Text("简体中文").tag("zh-Hans")
                     }
                     .pickerStyle(.segmented)
                     .onChange(of: appLanguage) { value in
@@ -318,7 +319,7 @@ struct ThemePickerView: View {
                         Button { themes.select(style: style) } label: { styleCard(style) }
                             .buttonStyle(PressScale())
                             .accessibilityLabel(style.name)
-                            .accessibilityValue(themes.style == style ? "Sélectionné" : style.summary)
+                            .accessibilityValue(themes.style == style ? String(localized: "Sélectionné") : style.summary)
                             .accessibilityAddTraits(themes.style == style ? .isSelected : [])
                     }
                 }
@@ -328,7 +329,7 @@ struct ThemePickerView: View {
                         Button { themes.select(theme) } label: { card(theme) }
                             .buttonStyle(PressScale())
                             .accessibilityLabel(theme.name)
-                            .accessibilityValue(themes.theme == theme ? "Sélectionné" : theme.atmosphere)
+                            .accessibilityValue(themes.theme == theme ? String(localized: "Sélectionné") : theme.atmosphere)
                             .accessibilityAddTraits(themes.theme == theme ? .isSelected : [])
                     }
                 }

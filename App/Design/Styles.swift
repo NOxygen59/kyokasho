@@ -45,75 +45,75 @@ struct AppStyle: Identifiable, Equatable {
     /// Voile derrière une fenêtre au premier plan (les encres claires ou foncées viennent de la palette, `Theme`).
     var scrim: Color = .black
 
-    static let atelier = AppStyle(id: "atelier", name: "Atelier", summary: "Panneaux flottants, arrondis doux")
+    static let atelier = AppStyle(id: "atelier", name: String(localized: "Atelier"), summary: String(localized: "Panneaux flottants, arrondis doux"))
 
     // Premier lot de styles (S2, 29/10/2026) : cinq styles très différents pour éprouver les jetons.
-    static let brutalism = AppStyle(id: "brutalism", name: "Neo-Brutalism", summary: "Angles droits, traits épais, ombres dures",
+    static let brutalism = AppStyle(id: "brutalism", name: "Neo-Brutalism", summary: String(localized: "Angles droits, traits épais, ombres dures"),
                                     defaultTheme: "brutal", cornerScale: 0, fontDesign: .monospaced,
                                     shadowKind: .hard(offset: 5), borderScale: 2.5, usesMaterials: false, panelEdge: .ink)
-    static let glass = AppStyle(id: "glass", name: "Glassmorphism", summary: "Verre flouté, formes arrondies",
+    static let glass = AppStyle(id: "glass", name: String(localized: "Glassmorphism"), summary: String(localized: "Verre flouté, formes arrondies"),
                                 defaultTheme: "soir", cornerScale: 1.2, panelFill: .glass)
-    static let synthwave = AppStyle(id: "synthwave", name: "Synthwave", summary: "Nuit violette, bords néon",
+    static let synthwave = AppStyle(id: "synthwave", name: String(localized: "Synthwave"), summary: String(localized: "Nuit violette, bords néon"),
                                     defaultTheme: "synthwave", cornerScale: 0.5, fontDesign: .rounded,
                                     usesMaterials: false, panelEdge: .glow)
-    static let swiss = AppStyle(id: "swiss", name: "Swiss Design", summary: "Grille nette, angles droits, sans ombre",
+    static let swiss = AppStyle(id: "swiss", name: String(localized: "Swiss Design"), summary: String(localized: "Grille nette, angles droits, sans ombre"),
                                 defaultTheme: "swiss", cornerScale: 0, shadowKind: .none, usesMaterials: false)
-    static let wabiSabi = AppStyle(id: "wabisabi", name: "Wabi-Sabi", summary: "Tons de terre, serif, formes douces",
+    static let wabiSabi = AppStyle(id: "wabisabi", name: "Wabi-Sabi", summary: String(localized: "Tons de terre, serif, formes douces"),
                                    defaultTheme: "terre", cornerScale: 1.35, fontDesign: .serif)
 
     // S3 à S5 : styles doux, typographiques, numériques et artisanaux. Ils réemploient les jetons éprouvés ; les
     // ornements dessinés et la disposition Bento restent des lots séparés afin de ne pas mêler apparence et structure.
-    static let clay = AppStyle(id: "clay", name: "Claymorphism", summary: "Volumes pastel, formes généreuses",
+    static let clay = AppStyle(id: "clay", name: String(localized: "Claymorphism"), summary: String(localized: "Volumes pastel, formes généreuses"),
                                defaultTheme: "clair", cornerScale: 1.6, fontDesign: .rounded,
                                borderScale: 0.7, usesMaterials: false)
-    static let neumorphism = AppStyle(id: "neumorphism", name: "Neumorphism", summary: "Relief doux, surfaces ton sur ton",
+    static let neumorphism = AppStyle(id: "neumorphism", name: String(localized: "Neumorphism"), summary: String(localized: "Relief doux, surfaces ton sur ton"),
                                       defaultTheme: "clair", cornerScale: 1.3, borderScale: 0.5, usesMaterials: false)
-    static let ethereal = AppStyle(id: "ethereal", name: "Ethereal", summary: "Verre léger, courbes aériennes",
+    static let ethereal = AppStyle(id: "ethereal", name: String(localized: "Ethereal"), summary: String(localized: "Verre léger, courbes aériennes"),
                                    defaultTheme: "sakura", cornerScale: 1.5, fontDesign: .serif,
                                    borderScale: 0.6, panelFill: .glass)
-    static let minimalism = AppStyle(id: "minimalism", name: "Minimalism", summary: "Formes sobres, aucun relief superflu",
+    static let minimalism = AppStyle(id: "minimalism", name: String(localized: "Minimalism"), summary: String(localized: "Formes sobres, aucun relief superflu"),
                                      defaultTheme: "clair", cornerScale: 0.6, shadowKind: .none,
                                      borderScale: 0.6, usesMaterials: false)
 
-    static let editorial = AppStyle(id: "editorial", name: "Editorial Design", summary: "Hiérarchie nette, serif éditoriale",
+    static let editorial = AppStyle(id: "editorial", name: String(localized: "Editorial Design"), summary: String(localized: "Hiérarchie nette, serif éditoriale"),
                                     defaultTheme: "clair", cornerScale: 0.2, fontDesign: .serif,
                                     shadowKind: .none, borderScale: 0.7, usesMaterials: false)
-    static let luxury = AppStyle(id: "luxury", name: "Luxury Typography", summary: "Encre et or, typographie élégante",
+    static let luxury = AppStyle(id: "luxury", name: String(localized: "Luxury Typography"), summary: String(localized: "Encre et or, typographie élégante"),
                                  defaultTheme: "encre", cornerScale: 0.3, fontDesign: .serif,
                                  shadowKind: .none, borderScale: 1.2, usesMaterials: false, panelEdge: .ink)
-    static let victorian = AppStyle(id: "victorian", name: "Victorian", summary: "Sépia, cadres d'encre, serif classique",
+    static let victorian = AppStyle(id: "victorian", name: String(localized: "Victorian"), summary: String(localized: "Sépia, cadres d'encre, serif classique"),
                                     defaultTheme: "sepia", cornerScale: 0.2, fontDesign: .serif,
                                     borderScale: 1.5, usesMaterials: false, panelEdge: .ink)
-    static let maximalism = AppStyle(id: "maximalism", name: "Maximalism", summary: "Couleurs fortes, relief et bord lumineux",
+    static let maximalism = AppStyle(id: "maximalism", name: String(localized: "Maximalism"), summary: String(localized: "Couleurs fortes, relief et bord lumineux"),
                                      defaultTheme: "braise", cornerScale: 1.2, fontDesign: .rounded,
                                      borderScale: 2, usesMaterials: false, panelEdge: .glow)
 
-    static let cybercore = AppStyle(id: "cybercore", name: "Cybercore", summary: "Terminal sombre, lignes techniques",
+    static let cybercore = AppStyle(id: "cybercore", name: String(localized: "Cybercore"), summary: String(localized: "Terminal sombre, lignes techniques"),
                                     defaultTheme: "foret", cornerScale: 0.3, fontDesign: .monospaced,
                                     borderScale: 1.4, usesMaterials: false, panelEdge: .glow)
-    static let cyberpunk = AppStyle(id: "cyberpunk", name: "Cyberpunk", summary: "Angles vifs, néon et ombres franches",
+    static let cyberpunk = AppStyle(id: "cyberpunk", name: String(localized: "Cyberpunk"), summary: String(localized: "Angles vifs, néon et ombres franches"),
                                     defaultTheme: "synthwave", cornerScale: 0.2, fontDesign: .monospaced,
                                     shadowKind: .hard(offset: 4), borderScale: 1.7, usesMaterials: false, panelEdge: .glow)
-    static let y2k = AppStyle(id: "y2k", name: "Y2K Aesthetic", summary: "Bulles chromées, verre et couleur",
+    static let y2k = AppStyle(id: "y2k", name: String(localized: "Y2K Aesthetic"), summary: String(localized: "Bulles chromées, verre et couleur"),
                              defaultTheme: "lagon", cornerScale: 1.4, fontDesign: .rounded,
                              borderScale: 1.2, panelFill: .glass, panelEdge: .glow)
-    static let pixel = AppStyle(id: "pixel", name: "Pixel Art", summary: "Angles carrés, grille et ombres décalées",
+    static let pixel = AppStyle(id: "pixel", name: String(localized: "Pixel Art"), summary: String(localized: "Angles carrés, grille et ombres décalées"),
                                defaultTheme: "foret", cornerScale: 0, fontDesign: .monospaced,
                                shadowKind: .hard(offset: 4), borderScale: 2, usesMaterials: false, panelEdge: .ink)
 
-    static let scrapbook = AppStyle(id: "scrapbook", name: "Scrapbook", summary: "Papier découpé, couches et contraste",
+    static let scrapbook = AppStyle(id: "scrapbook", name: String(localized: "Scrapbook"), summary: String(localized: "Papier découpé, couches et contraste"),
                                     defaultTheme: "sepia", cornerScale: 0.6, fontDesign: .serif,
                                     shadowKind: .hard(offset: 3), borderScale: 1.5, usesMaterials: false)
-    static let sketch = AppStyle(id: "sketch", name: "Conceptual Sketch", summary: "Trait d'étude, papier clair, chasse fixe",
+    static let sketch = AppStyle(id: "sketch", name: String(localized: "Conceptual Sketch"), summary: String(localized: "Trait d'étude, papier clair, chasse fixe"),
                                 defaultTheme: "clair", cornerScale: 0.4, fontDesign: .monospaced,
                                 shadowKind: .none, borderScale: 1.5, usesMaterials: false, panelEdge: .ink)
-    static let bohemian = AppStyle(id: "bohemian", name: "Bohemian", summary: "Terre chaude, serif et formes libres",
+    static let bohemian = AppStyle(id: "bohemian", name: String(localized: "Bohemian"), summary: String(localized: "Terre chaude, serif et formes libres"),
                                    defaultTheme: "terre", cornerScale: 1.2, fontDesign: .serif,
                                    shadowKind: .hard(offset: 2), borderScale: 0.8, usesMaterials: false)
-    static let surrealism = AppStyle(id: "surrealism", name: "Surrealism", summary: "Courbes oniriques et profondeur vitrée",
+    static let surrealism = AppStyle(id: "surrealism", name: String(localized: "Surrealism"), summary: String(localized: "Courbes oniriques et profondeur vitrée"),
                                      defaultTheme: "soir", cornerScale: 1.5, fontDesign: .serif,
                                      borderScale: 0.8, panelFill: .glass)
-    static let bento = AppStyle(id: "bento", name: "Bento Grid", summary: "Tuiles claires et panneaux compacts",
+    static let bento = AppStyle(id: "bento", name: String(localized: "Bento Grid"), summary: String(localized: "Tuiles claires et panneaux compacts"),
                                defaultTheme: "clair", cornerScale: 1.1, shadowKind: .none,
                                borderScale: 0.8, usesMaterials: false)
 

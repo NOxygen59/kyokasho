@@ -69,7 +69,7 @@ struct ImagesToPDFView: View {
                     Button { showFiles = true } label: { Label("Depuis Fichiers", systemImage: "folder") }
                     if loading { HStack { ProgressView(); Text("Ajout des images…") } }
                 } header: {
-                    Text(items.isEmpty ? "Images" : "Images · \(items.count) page\(items.count > 1 ? "s" : "")")
+                    Text(items.isEmpty ? String(localized: "Images") : String(localized: "Images · \(items.count) page\(items.count > 1 ? "s" : "")"))
                 }
                 Section("Nom du PDF") {
                     TextField(defaultName, text: $outputName)
@@ -78,14 +78,14 @@ struct ImagesToPDFView: View {
                     Button { Task { await build() } } label: {
                         HStack {
                             if building { ProgressView() }
-                            Text(building ? "Création…" : "Créer le PDF")
+                            Text(building ? String(localized: "Création…") : String(localized: "Créer le PDF"))
                         }
                     }
                     .disabled(items.isEmpty || building || loading)
                     if let result {
                         Button { showExporter = true } label: { Label("Enregistrer dans Fichiers", systemImage: "folder") }
                         Button { importResult(result) } label: {
-                            Label(imported ? "Importé dans la bibliothèque" : "Importer dans Kyōkasho",
+                            Label(imported ? String(localized: "Importé dans la bibliothèque") : String(localized: "Importer dans Kyōkasho"),
                                   systemImage: imported ? "checkmark.circle" : "books.vertical")
                         }
                         .disabled(imported)
@@ -120,7 +120,7 @@ struct ImagesToPDFView: View {
     }
 
     private var defaultName: String {
-        "Images — " + (items.first.map { ($0.name as NSString).deletingPathExtension } ?? "PDF")
+        String(localized: "Images — ") + (items.first.map { ($0.name as NSString).deletingPathExtension } ?? "PDF")
     }
 
     /// Copie dans le dossier de la conversion ; une image illisible est refusée tout de suite.
@@ -157,7 +157,7 @@ struct ImagesToPDFView: View {
         for photo in picked {
             // Données d'origine (HEIC compris), pas une version recompressée.
             guard let data = try? await photo.loadTransferable(type: Data.self),
-                  let item = keep(data, name: "Photo \(items.count + 1)", ext: photo.supportedContentTypes.first?.preferredFilenameExtension ?? "img") else {
+                  let item = keep(data, name: String(localized: "Photo \(items.count + 1)"), ext: photo.supportedContentTypes.first?.preferredFilenameExtension ?? "img") else {
                 refused += 1
                 continue
             }
@@ -169,7 +169,7 @@ struct ImagesToPDFView: View {
     private func changed(refused: [String]) {
         result = nil
         imported = false
-        if !refused.isEmpty { error = "Ignorées (illisibles) : " + refused.joined(separator: ", ") }
+        if !refused.isEmpty { error = String(localized: "Ignorées (illisibles) : ") + refused.joined(separator: ", ") }
     }
 
     private func remove(_ item: Item) {
@@ -195,7 +195,7 @@ struct ImagesToPDFView: View {
             result = target
             showChoice = true
         } else {
-            error = "La création a échoué (une image n'a pas pu être lue)."
+            error = String(localized: "La création a échoué (une image n'a pas pu être lue).")
         }
     }
 
@@ -232,7 +232,7 @@ struct ImagesToPDFView: View {
         // Copie : le fichier de la fenêtre est effacé à sa fermeture ; l'import travaille sur la sienne.
         let copy = FileManager.default.temporaryDirectory.appendingPathComponent(url.lastPathComponent)
         try? FileManager.default.removeItem(at: copy)
-        guard (try? FileManager.default.copyItem(at: url, to: copy)) != nil else { error = "Import impossible."; return }
+        guard (try? FileManager.default.copyItem(at: url, to: copy)) != nil else { error = String(localized: "Import impossible."); return }
         imported = true
         // Fenêtre fermée d'abord, import ensuite : la question « Livre ou manuel ? » s'affiche sur la bibliothèque.
         // Posée pendant que cette fenêtre était ouverte, l'alerte ne pouvait pas paraître et restait en attente,

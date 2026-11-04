@@ -21,17 +21,17 @@ extension DocumentAnalysisService {
     func apply(_ choices: [(source: Int, line: Int, text: String)], documentId: String, service: OCRService) async -> [AppliedChoice] {
         setCorrectionError(nil)
         guard let report = report(for: documentId) else {
-            setCorrectionError("Analyse indisponible. Relance l’analyse avant de choisir.")
+            setCorrectionError(String(localized: "Analyse indisponible. Relance l’analyse avant de choisir."))
             return []
         }
         var applied: [AppliedChoice] = []
         for source in Set(choices.map(\.source)).sorted() {
             guard let info = report.pages[source] else {
-                setCorrectionError("Page \(source + 1) absente de l’analyse. Relance l’analyse avant de choisir.")
+                setCorrectionError(String(localized: "Page \(source + 1) absente de l’analyse. Relance l’analyse avant de choisir."))
                 continue
             }
             guard var page = await service.cached(documentId: documentId, pageIndex: source, engine: info.baseEngine) else {
-                setCorrectionError("Texte OCR de la page \(source + 1) indisponible. Relis la page puis relance l’analyse. Aucun choix n’a été enregistré pour cette page.")
+                setCorrectionError(String(localized: "Texte OCR de la page \(source + 1) indisponible. Relis la page puis relance l’analyse. Aucun choix n’a été enregistré pour cette page."))
                 continue
             }
             var done: [Int] = []
@@ -39,7 +39,7 @@ extension DocumentAnalysisService {
             for c in choices where c.source == source {
                 guard let vote = info.disagreements.first(where: { $0.line == c.line }), !vote.settled else { continue }
                 guard page.lines.indices.contains(c.line), page.lines[c.line].text == vote.base else {
-                    setCorrectionError("Page \(source + 1), ligne \(c.line + 1) : le texte a changé depuis l’analyse. Ta version est conservée ; relance l’analyse avant de choisir.")
+                    setCorrectionError(String(localized: "Page \(source + 1), ligne \(c.line + 1) : le texte a changé depuis l’analyse. Ta version est conservée ; relance l’analyse avant de choisir."))
                     continue
                 }
                 let previous = page.lines[c.line]
@@ -51,7 +51,7 @@ extension DocumentAnalysisService {
             do {
                 try await service.store(page, documentId: documentId, pageIndex: source)
             } catch {
-                setCorrectionError("Page \(source + 1) non enregistrée : \(error.localizedDescription)")
+                setCorrectionError(String(localized: "Page \(source + 1) non enregistrée : \(error.localizedDescription)"))
                 continue
             }
             update(documentId) { r in
@@ -75,13 +75,13 @@ extension DocumentAnalysisService {
         for source in Set(choices.map(\.source)).sorted() {
             guard let info = report.pages[source],
                   var page = await service.cached(documentId: documentId, pageIndex: source, engine: info.baseEngine) else {
-                setCorrectionError("Page \(source + 1) : texte indisponible, annulation impossible.")
+                setCorrectionError(String(localized: "Page \(source + 1) : texte indisponible, annulation impossible."))
                 continue
             }
             var done: [Int] = []
             for c in choices where c.source == source {
                 guard page.lines.indices.contains(c.line), page.lines[c.line].text == c.applied else {
-                    setCorrectionError("Page \(source + 1), ligne \(c.line + 1) : le texte a changé depuis le choix, il est gardé.")
+                    setCorrectionError(String(localized: "Page \(source + 1), ligne \(c.line + 1) : le texte a changé depuis le choix, il est gardé."))
                     continue
                 }
                 page.lines[c.line] = c.previous
@@ -91,7 +91,7 @@ extension DocumentAnalysisService {
             do {
                 try await service.store(page, documentId: documentId, pageIndex: source)
             } catch {
-                setCorrectionError("Page \(source + 1) non enregistrée : \(error.localizedDescription)")
+                setCorrectionError(String(localized: "Page \(source + 1) non enregistrée : \(error.localizedDescription)"))
                 continue
             }
             update(documentId) { r in

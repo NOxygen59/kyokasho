@@ -99,12 +99,12 @@ extension AppModel {
     func installPackage(_ pending: DocumentPackageService.Pending, replacing: Bool) async throws -> URL? {
         let contents = pending.contents, id = contents.manifest.documentId
         defer { discardPackage(pending) }
-        guard storageRecoveryError == nil else { throw packageError("Une reprise est en attente : réessaie après.") }
-        guard !LibraryBackupService.inProgress else { throw packageError("Sauvegarde en cours : réessaie après sa fin.") }
+        guard storageRecoveryError == nil else { throw packageError(String(localized: "Une reprise est en attente : réessaie après.")) }
+        guard !LibraryBackupService.inProgress else { throw packageError(String(localized: "Sauvegarde en cours : réessaie après sa fin.")) }
         guard openDocumentId != id, !PageShift.isBusy(id) else {
-            throw packageError("Ferme le document (et attends la fin d'une modification de ses pages) avant de l'importer.")
+            throw packageError(String(localized: "Ferme le document (et attends la fin d'une modification de ses pages) avant de l'importer."))
         }
-        guard !pending.exists || replacing else { throw packageError("Ce document est déjà dans la bibliothèque.") }
+        guard !pending.exists || replacing else { throw packageError(String(localized: "Ce document est déjà dans la bibliothèque.")) }
         await drainWrites()
         var safety: URL?
         if pending.exists, let current = try database.document(id: id) {

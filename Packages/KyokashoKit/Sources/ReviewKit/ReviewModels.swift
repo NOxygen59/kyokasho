@@ -71,10 +71,10 @@ public enum MemoryState: Int, Codable, Sendable, CaseIterable {
 
     public var label: String {
         switch self {
-        case .new: return "Nouvelle"
-        case .learning: return "En apprentissage"
-        case .review: return "À réviser"
-        case .relearning: return "Réapprentissage"
+        case .new: return String(localized: "Nouvelle", bundle: .main)
+        case .learning: return String(localized: "En apprentissage", bundle: .main)
+        case .review: return String(localized: "À réviser", bundle: .main)
+        case .relearning: return String(localized: "Réapprentissage", bundle: .main)
         }
     }
 }
@@ -87,10 +87,10 @@ public enum Grade: Int, Codable, Sendable, CaseIterable, Identifiable {
 
     public var label: String {
         switch self {
-        case .again: return "À revoir"
-        case .hard: return "Difficile"
-        case .good: return "Bien"
-        case .easy: return "Facile"
+        case .again: return String(localized: "À revoir", bundle: .main)
+        case .hard: return String(localized: "Difficile", bundle: .main)
+        case .good: return String(localized: "Bien", bundle: .main)
+        case .easy: return String(localized: "Facile", bundle: .main)
         }
     }
 }

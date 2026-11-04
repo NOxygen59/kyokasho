@@ -223,9 +223,9 @@ private struct OvisReadingExportView: View {
             working = nil
             switch result {
             case .success(let url?): file = SharedFile(url: url)
-            case .success(nil): message = "OvisOCR2 n'a encore lu aucune page de « \(document.title) »."
+            case .success(nil): message = String(localized: "OvisOCR2 n'a encore lu aucune page de « \(document.title) ».")
             case .failure(let error):
-                message = "Extraction impossible : \(error.localizedDescription)"
+                message = String(localized: "Extraction impossible : \(error.localizedDescription)")
                 Diagnostics.error("extraction des lectures : \(error.localizedDescription)", "diagnostic")
             }
         }

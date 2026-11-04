@@ -10,8 +10,8 @@ public enum OCRTargetLanguage: String, CaseIterable, Sendable {
 
     public var title: String {
         switch self {
-        case .japanese: "Japonais"
-        case .automatic: "Automatique (documents mixtes)"
+        case .japanese: String(localized: "Japonais", bundle: .main)
+        case .automatic: String(localized: "Automatique (documents mixtes)", bundle: .main)
         }
     }
 
