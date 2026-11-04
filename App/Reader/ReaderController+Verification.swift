@@ -164,11 +164,9 @@ extension ReaderController {
     func correctOCRLines(_ corrections: [Int: String]) {
         guard var page = ocrPage else { return }
         var changed = false
-        var replaced: [(old: String, new: String)] = []
         for (index, text) in corrections where page.lines.indices.contains(index) {
             let new = text.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !new.isEmpty else { continue }
-            if page.lines[index].text != new { replaced.append((page.lines[index].text, new)) }
             page.lines[index] = page.lines[index].acceptingCorrection(new)
             changed = true
         }
@@ -178,19 +176,6 @@ extension ReaderController {
         wordStartMemo.removeAll()
         let source = focusSource, documentId = document.id, service = model.ocr
         Task { try? await service.store(page, documentId: documentId, pageIndex: source) }
-        propagateToOvis(replaced, source: source)
-    }
-
-    /// Une ligne corrigée présente une seule fois, telle quelle, dans la lecture OvisOCR2 y est corrigée aussi, sans
-    /// relancer le modèle. Plusieurs occurrences : on ne devine pas laquelle, l'onglet « Lecture OvisOCR2 » reste là.
-    private func propagateToOvis(_ replaced: [(old: String, new: String)], source: Int) {
-        guard !replaced.isEmpty,
-              var text = DocumentAITextStore.read(documentId: document.id, reader: ModelSpec.ovisocr2.id, page: source) else { return }
-        let before = text
-        for (old, new) in replaced where old.count >= 2 && text.components(separatedBy: old).count == 2 {
-            text = text.replacingOccurrences(of: old, with: new)
-        }
-        if text != before { saveOvisCorrection(text, source: source) }
     }
 
     /// Enregistre à côté de la lecture d'OvisOCR2, jamais à sa place, et rafraîchit l'affichage sans relancer le modèle.

@@ -1017,8 +1017,15 @@ private struct OCRLineEditor: View {
                         .font(Atelier.jp)
                     }
                 }
+            }
+            // Hors de la liste, en barre fixe : dans la liste, ce bouton s'affichait coupé (recette 1.4.1, essai 2.3).
+            .safeAreaInset(edge: .bottom, spacing: 0) {
                 if reader.hasCorrections {
                     Button("Annuler mes corrections de cette page", role: .destructive) { confirmingUndo = true }
+                        .buttonStyle(.bordered)
+                        .frame(maxWidth: .infinity)
+                        .padding(12)
+                        .background(.bar)
                 }
             }
             .navigationTitle("Corriger le texte")
