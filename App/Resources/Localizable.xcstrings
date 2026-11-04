@@ -8449,24 +8449,24 @@
         }
       }
     },
-    "Changement de style : fermer les Réglages en touchant à côté ne bloque plus l'ouverture des manuels.": {
+    "Changement de page ou fermeture d'un manuel : les calculs de furigana en cours s'arrêtent.": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Changing style: closing Settings by tapping outside no longer blocks opening textbooks."
+            "value": "Turning the page or closing a textbook: furigana calculations in progress now stop."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Changement de style : fermer les Réglages en touchant à côté ne bloque plus l'ouverture des manuels."
+            "value": "Changement de page ou fermeture d'un manuel : les calculs de furigana en cours s'arrêtent."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "更改样式：点按外部关闭设置后，不会再无法打开教材。"
+            "value": "翻页或关闭课本时：正在进行的注音计算会停止。"
           }
         }
       }
@@ -28861,6 +28861,50 @@
           "stringUnit": {
             "state": "translated",
             "value": "页面已添加"
+          }
+        }
+      }
+    },
+    "Pages avec texte OCR : les mots déjà cherchés ne sont plus recalculés.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pages with OCR text: words already looked up are no longer recalculated."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pages avec texte OCR : les mots déjà cherchés ne sont plus recalculés."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "含 OCR 文本的页面：已查过的词不再重新计算。"
+          }
+        }
+      }
+    },
+    "Pages avec texte OCR allégées": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lighter pages with OCR text"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pages avec texte OCR allégées"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "减轻含 OCR 文本页面的负担"
           }
         }
       }

@@ -78,10 +78,9 @@ public struct ReleaseNotes: Equatable, Sendable, Identifiable {
 
     /// La version en cours de préparation : seulement ce qu'elle change (décision de NOxygen59 du 04/11/2026). C'est
     /// elle que montre la fenêtre « Nouveautés » ; les versions précédentes vont dans `ReleaseHistory`.
-    public static let current = ReleaseNotes("1.4.3", "2026-11-04", published: false, String(localized: "Corrections de la recette 1.4.2", bundle: .main), added: [], fixed: [
-            String(localized: "Extraction des lectures OvisOCR2 : le partage ne gèle plus l'app.", bundle: .main),
-            String(localized: "Analyse d'un document : le bouton Arrêter fonctionne.", bundle: .main),
-            String(localized: "Changement de style : fermer les Réglages en touchant à côté ne bloque plus l'ouverture des manuels.", bundle: .main),
+    public static let current = ReleaseNotes("1.4.4", "2026-11-05", published: false, String(localized: "Pages avec texte OCR allégées", bundle: .main), added: [], fixed: [
+            String(localized: "Pages avec texte OCR : les mots déjà cherchés ne sont plus recalculés.", bundle: .main),
+            String(localized: "Changement de page ou fermeture d'un manuel : les calculs de furigana en cours s'arrêtent.", bundle: .main),
         ])
 
     /// Notes de `version` (« 1.3.2 », sans le numéro de build) : la version elle-même, jamais une build de test.
