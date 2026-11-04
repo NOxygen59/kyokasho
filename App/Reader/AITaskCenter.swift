@@ -317,7 +317,11 @@ struct AITaskPill: View {
                         Text("Analyse du document entier").font(.subheadline.weight(.semibold))
                         Spacer()
                         // Elle n'est pas dans `center.jobs` : sans ce bouton, rien ne l'arrêtait depuis cette liste.
-                        Button("Arrêter", role: .destructive) { confirmAnalysisStop = true }
+                        Button("Arrêter", role: .destructive) {
+                            showList = false
+                            // Popover fermé avant l'alerte (sinon iOS 16 n'affiche rien, recette 1.4.2, essai 4.4).
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { confirmAnalysisStop = true }
+                        }
                     }
                     Text("\(p.phase) · page \(p.done) sur \(p.total) · étape commencée il y a \(AIActivityText.duration(Date().timeIntervalSince(p.phaseStarted)))\(p.cancelling ? String(localized: " · arrêt demandé") : "")")
                         .font(.caption).foregroundStyle(.secondary)

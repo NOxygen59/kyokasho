@@ -52,6 +52,18 @@ LEXIQUE="${KYOKASHO_LEXIQUE:-$ROOT/../dictionnaires-construits/lexique-interieur
 python3 "$ROOT/tools/copy_bundled_lexicons.py" --source "${LEXIQUE:h}" \
   --french "$LEXIQUE" --app "$BUILD/Payload/Kyokasho.app" --platform ios
 
+# Pas de chinois sur iPad (décision de NOxygen59, 04/11/2026) : le catalogue commun le produit, le paquet le retire.
+find "$BUILD/Payload/Kyokasho.app" -type d -name 'zh-Hans.lproj' -prune -print0 | xargs -0 -r trash
+/usr/libexec/PlistBuddy -c "Print :CFBundleLocalizations" "$BUILD/Payload/Kyokasho.app/Info.plist" | grep -q zh-Hans && python3 -I - "$BUILD/Payload/Kyokasho.app/Info.plist" <<'PY'
+import plistlib, sys
+with open(sys.argv[1], "rb") as source:
+    info = plistlib.load(source)
+info["CFBundleLocalizations"] = [code for code in info["CFBundleLocalizations"] if code != "zh-Hans"]
+with open(sys.argv[1], "wb") as target:
+    plistlib.dump(info, target)
+PY
+python3 "$ROOT/tools/check_ipad_package.py" "$BUILD/Payload/Kyokasho.app"
+
 print "==> 4/5 Pseudo-signature (ldid)"
 # Frameworks embarqués d'abord (s'il y en a), puis l'app avec ses entitlements.
 for fw in "$BUILD/Payload/Kyokasho.app/Frameworks/"*(N); do ldid -S "$fw"; done

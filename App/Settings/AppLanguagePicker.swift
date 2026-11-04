@@ -12,7 +12,11 @@ struct AppLanguagePicker: View {
     private static var stored: String {
         let domain = UserDefaults.standard.persistentDomain(forName: Bundle.main.bundleIdentifier ?? "")
         guard let first = (domain?["AppleLanguages"] as? [String])?.first else { return "" }
+        #if targetEnvironment(macCatalyst)
         return first.hasPrefix("zh") ? "zh-Hans" : first.hasPrefix("en") ? "en" : "fr"
+        #else
+        return first.hasPrefix("en") ? "en" : "fr"
+        #endif
     }
 
     var body: some View {

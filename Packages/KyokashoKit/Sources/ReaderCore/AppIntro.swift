@@ -78,13 +78,10 @@ public struct ReleaseNotes: Equatable, Sendable, Identifiable {
 
     /// La version en cours de préparation : seulement ce qu'elle change (décision de NOxygen59 du 04/11/2026). C'est
     /// elle que montre la fenêtre « Nouveautés » ; les versions précédentes vont dans `ReleaseHistory`.
-    public static let current = ReleaseNotes("1.4.2", "2026-11-04", published: false, String(localized: "Nouveautés et export plus clairs", bundle: .main), added: [
-            String(localized: "Export : le fichier se prépare d'abord, puis un message indique clairement quand il est prêt à être enregistré ou envoyé.", bundle: .main),
-            String(localized: "Extraction des lectures OvisOCR2 : le nombre de pages lues est affiché pour chaque document.", bundle: .main),
-        ], fixed: [
-            String(localized: "Mac : ouvrir le relevé de batterie ne ferme plus les Réglages.", bundle: .main),
-            String(localized: "Cette fenêtre ne montre plus que les changements de la version installée.", bundle: .main),
-            String(localized: "Fenêtre d'étude, notes et dictionnaire : le texte n'est plus dédoublé sur les styles à ombre franche.", bundle: .main),
+    public static let current = ReleaseNotes("1.4.3", "2026-11-04", published: false, String(localized: "Corrections de la recette 1.4.2", bundle: .main), added: [], fixed: [
+            String(localized: "Extraction des lectures OvisOCR2 : le partage ne gèle plus l'app.", bundle: .main),
+            String(localized: "Analyse d'un document : le bouton Arrêter fonctionne.", bundle: .main),
+            String(localized: "Changement de style : fermer les Réglages en touchant à côté ne bloque plus l'ouverture des manuels.", bundle: .main),
         ])
 
     /// Notes de `version` (« 1.3.2 », sans le numéro de build) : la version elle-même, jamais une build de test.

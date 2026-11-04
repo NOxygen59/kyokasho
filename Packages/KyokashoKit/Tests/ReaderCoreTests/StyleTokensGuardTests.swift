@@ -19,7 +19,7 @@ final class StyleTokensGuardTests: XCTestCase {
         // fermeture des Réglages.
         XCTAssertTrue(source.contains(".id(themes.appliedAppearance)"), "La racine doit suivre l'apparence appliquée")
         let library = try String(contentsOf: app.deletingLastPathComponent().appendingPathComponent("Library/LibraryView.swift"), encoding: .utf8)
-        XCTAssertTrue(library.contains("onDismiss: { themes.applyAppearance() }"), "Appliquer l'apparence à la fermeture des Réglages")
+        XCTAssertTrue(library.contains("if model.openDocumentId == nil { themes.applyAppearance() }"), "Appliquer l'apparence à la fermeture des Réglages")
     }
 
     /// Un `.sheet` posé sur une `Section` est recopié sur chaque ligne : sur Mac, ouvrir « Voir le résumé » fermait toute
@@ -60,6 +60,7 @@ final class StyleTokensGuardTests: XCTestCase {
             .appendingPathComponent("../../../../App").standardizedFileURL
         let tasks = try String(contentsOf: app.appendingPathComponent("Reader/AITaskCenter.swift"), encoding: .utf8)
         XCTAssertTrue(tasks.contains("analysis.cancel()"))
+        XCTAssertTrue(tasks.contains("confirmAnalysisStop = true }"), "L'alerte doit attendre la fermeture de la bulle")
         let root = try String(contentsOf: app.appendingPathComponent("KyokashoApp.swift"), encoding: .utf8)
         XCTAssertTrue(root.contains("AnalysisDurationBanner()"))
     }
