@@ -12,7 +12,7 @@ struct SettingsView: View {
     @State private var query = ""
 
     private var matches: [SettingsRoute] {
-        SettingsRoute.allCases.filter { $0.matches(query) }
+        SettingsRoute.allCases.filter { $0.isAvailable && $0.matches(query) }
     }
 
     var body: some View {

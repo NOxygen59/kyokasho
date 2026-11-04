@@ -19,7 +19,12 @@ enum SettingsArea: String, Identifiable {
     }
     var subtitle: String {
         switch self {
-        case .general: return String(localized: "Apparence, icône, visite et nouveautés")
+        case .general:
+            #if targetEnvironment(macCatalyst)
+            return String(localized: "Apparence, visite et nouveautés")
+            #else
+            return String(localized: "Apparence, icône, visite et nouveautés")
+            #endif
         case .reading: return String(localized: "Pages, gestes, fenêtre OCR et Apple Pencil")
         case .aiText: return String(localized: "Modèles, reconnaissance OCR et traduction")
         case .japaneseReview: return String(localized: "Dictionnaires, lexique et cartes de révision")
@@ -49,7 +54,7 @@ enum SettingsArea: String, Identifiable {
     }
     var routes: [SettingsRoute] {
         switch self {
-        case .general: return [.theme, .appIcon, .intro]
+        case .general: return [.theme, .appIcon, .intro].filter(\.isAvailable)
         case .reading: return [.reading, .panel, .pencil]
         case .aiText: return [.models, .ocr, .translation]
         case .japaneseReview: return [.dictionaries, .lexicon, .cards]
@@ -60,6 +65,15 @@ enum SettingsArea: String, Identifiable {
 }
 
 enum SettingsRoute: String, Identifiable, CaseIterable {
+    /// Mac : pas d'icônes alternatives (le système les refuse), la page est retirée des Réglages et de la recherche.
+    var isAvailable: Bool {
+        #if targetEnvironment(macCatalyst)
+        return self != .appIcon
+        #else
+        return true
+        #endif
+    }
+
     case theme, appIcon, intro, reading, panel, pencil, models, ocr, translation, dictionaries, lexicon, cards, backup, storage, drive, diagnostics, about
     var id: String { rawValue }
     var title: String {
