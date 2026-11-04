@@ -30,6 +30,7 @@ struct KyokashoApp: App {
                 // Reconstruit toute l'interface quand une nouvelle apparence est appliquée, c'est-à-dire à la fermeture
                 // des Réglages : la page Thèmes reste ouverte pendant le choix et tout est à jour en sortant.
                 .id(themes.appliedAppearance)
+                .macInitialWindowFrame()
                 .environmentObject(themes)
                 .environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review)
                 .preferredColorScheme(themes.theme.colorScheme)
@@ -155,3 +156,30 @@ struct RootView: View {
         Task { await GLMOCREngine.unloadIfIdle() }
     }
 }
+
+private extension View {
+    /// Version Mac : fenêtre en 10:9 à l'ouverture. Rien sur iPad.
+    @ViewBuilder
+    func macInitialWindowFrame() -> some View {
+        #if targetEnvironment(macCatalyst)
+        task { MacInitialWindow.applyOnce() }
+        #else
+        self
+        #endif
+    }
+}
+
+#if targetEnvironment(macCatalyst)
+@MainActor
+private enum MacInitialWindow {
+    /// Une seule fois par lancement : la racine est reconstruite à chaque changement d'apparence, et ce ne doit pas
+    /// redimensionner une fenêtre que l'utilisateur a déjà ajustée.
+    private static var applied = false
+
+    static func applyOnce() {
+        guard !applied, let scene = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }).first else { return }
+        applied = true
+        scene.requestGeometryUpdate(.Mac(systemFrame: MacWindowFrame.initial(screen: scene.screen.bounds)))
+    }
+}
+#endif
