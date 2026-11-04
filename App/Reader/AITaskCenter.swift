@@ -193,6 +193,7 @@ struct AITaskPill: View {
     @State private var stopAll = false
     @State private var confirm1 = false
     @State private var confirm2 = false
+    @State private var confirmAnalysisStop = false
 
     var body: some View {
         // Conteneur permanent : la dernière tâche peut finir pendant la confirmation.
@@ -233,6 +234,12 @@ struct AITaskPill: View {
                 // Laisser la 1re alerte se fermer avant la 2e.
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { confirm2 = true }
             }
+        } message: {
+            Text("Le travail déjà fait sur la page en cours sera perdu.")
+        }
+        .alert("Arrêter l'analyse du document ?", isPresented: $confirmAnalysisStop) {
+            Button("Continuer", role: .cancel) {}
+            Button("Arrêter", role: .destructive) { analysis.cancel() }
         } message: {
             Text("Le travail déjà fait sur la page en cours sera perdu.")
         }
@@ -306,7 +313,12 @@ struct AITaskPill: View {
             if let p = analysis.progress {
                 // L'analyse du document entier n'est pas une tâche de la liste : la montrer quand même.
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Analyse du document entier").font(.subheadline.weight(.semibold))
+                    HStack {
+                        Text("Analyse du document entier").font(.subheadline.weight(.semibold))
+                        Spacer()
+                        // Elle n'est pas dans `center.jobs` : sans ce bouton, rien ne l'arrêtait depuis cette liste.
+                        Button("Arrêter", role: .destructive) { confirmAnalysisStop = true }
+                    }
                     Text("\(p.phase) · page \(p.done) sur \(p.total) · étape commencée il y a \(AIActivityText.duration(Date().timeIntervalSince(p.phaseStarted)))\(p.cancelling ? String(localized: " · arrêt demandé") : "")")
                         .font(.caption).foregroundStyle(.secondary)
                 }
