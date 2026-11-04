@@ -147,11 +147,14 @@ struct OCRModelsSection: View {
             Text("Licence : \(spec.license)").font(.caption2).foregroundStyle(.tertiary)
             // Liens sous chaque modèle : projet d'origine et fichier téléchargé.
             if let home = spec.homepage {
+                // Style explicite : sans lui, un clic n'importe où sur la ligne suit le lien, même sur un bouton grisé.
                 Link(destination: home) { Label(Self.short(home), systemImage: "link").font(.caption2) }
+                    .buttonStyle(.borderless)
             }
             // Mac (#55) : l'app télécharge elle-même ; pas de lien qui lance un téléchargement dans le navigateur.
             if localAIAvailable, let file = spec.mainDownload {
                 Link(destination: file) { Label(Self.short(file), systemImage: "arrow.down.circle").font(.caption2).lineLimit(1) }
+                    .buttonStyle(.borderless)
             }
             if let p = downloads.progress[spec.id] {
                 HStack {
@@ -215,6 +218,7 @@ private final class PercentGate: @unchecked Sendable {
 }
 
 extension ModelSpec {
-    /// MLX n'existe que sur iPad ; les modèles entièrement ONNX tournent partout, Mac compris (#55).
-    var runsOnThisDevice: Bool { localAIAvailable || files.allSatisfy { $0.name.hasSuffix(".onnx") } }
+    /// MLX n'existe que sur iPad ; les modèles ONNX tournent partout, Mac compris (#55). Ils peuvent avoir des fichiers
+    /// annexes (`dict.txt`, `NDLmoji.yaml`) : la présence d'un `.onnx` décide, pas la totalité des fichiers.
+    var runsOnThisDevice: Bool { localAIAvailable || files.contains { $0.name.hasSuffix(".onnx") } }
 }

@@ -2597,6 +2597,22 @@
         }
       }
     },
+    "3 · OvisOCR2 (serveur local)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "3 · OvisOCR2 (local server)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "3 · OvisOCR2（本地服务器）"
+          }
+        }
+      }
+    },
     "3 · Relire et vérifier avec l'IA": {
       "localizations": {
         "en": {
