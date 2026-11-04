@@ -116,15 +116,53 @@ public enum DictionaryUpdateSchedule {
 /// n'est jamais dans le dépôt ; une app construite sans lui le signale. L'installer l'importe depuis le paquet, sans
 /// réseau ; le titre ne porte pas de date, donc une nouvelle version remplace l'ancienne à la même place.
 public enum BundledLexicon {
-    public static let resource = "lexique-interieur"
-    public static let title = "Lexique du design d'intérieur (Wikipédia, Wiktionnaire)"
+    public enum Language: String, CaseIterable, Sendable {
+        case french = "fr", english = "en", chinese = "zh-Hans"
+
+        public var resource: String { self == .french ? "lexique-interieur" : "lexique-interieur-" + rawValue }
+        public var title: String {
+            switch self {
+            case .french: return "Lexique du design d'intérieur (Wikipédia, Wiktionnaire)"
+            case .english: return "Interior design lexicon (Wikipedia, Wiktionary) [en]"
+            case .chinese: return "室内设计词典（维基百科、维基词典）[zh-Hans]"
+            }
+        }
+    }
+
+    /// Utiliser la localisation appliquée par Bundle, pas AppleLanguages modifié en attendant le relancement.
+    public static func language(preferredLocalizations: [String], supportsChinese: Bool) -> Language {
+        let code = preferredLocalizations.first ?? "fr"
+        if code.hasPrefix("en") { return .english }
+        if supportsChinese && code.hasPrefix("zh") { return .chinese }
+        return .french
+    }
+
+    public static var selectedLanguage: Language {
+        #if os(macOS) || targetEnvironment(macCatalyst)
+        let supportsChinese = true
+        #else
+        let supportsChinese = false
+        #endif
+        return language(preferredLocalizations: Bundle.main.preferredLocalizations, supportsChinese: supportsChinese)
+    }
+    public static var resource: String { selectedLanguage.resource }
+    public static var title: String { selectedLanguage.title }
+    public static func language(forTitle title: String) -> Language? { Language.allCases.first { $0.title == title } }
+
+    /// Filtrage de recherche uniquement : ne change ni activation globale, ni ordre, ni profils enregistrés.
+    public static func excludedDictionaryIds(in dictionaries: [DictionaryInfo], language: Language) -> Set<Int64> {
+        Set(dictionaries.filter { info in
+            guard let variant = self.language(forTitle: info.title) else { return false }
+            return variant != language
+        }.compactMap(\.id))
+    }
     public static let name = String(localized: "Lexique du design d'intérieur", bundle: .main)
-    public static let summary = String(localized: "Termes de l'architecture, de l'intérieur, du mobilier et des matériaux : sens en français (Wiktionnaire), titres français et anglais et première phrase (Wikipédia).", bundle: .main)
+    public static let summary = String(localized: "Termes de l'architecture, de l'intérieur, du mobilier et des matériaux, dans la langue de l'app. Sources conservées ; traductions automatiques à vérifier.", bundle: .main)
     public static let license = String(localized: "CC BY-SA 4.0 (contributeurs du Wiktionnaire et de Wikipédia)", bundle: .main)
 
     /// Le fichier dans le paquet de l'app, s'il y a été ajouté au build.
-    public static func url(in bundle: Bundle = .main) -> URL? {
-        bundle.url(forResource: resource, withExtension: "zip")
+    public static func url(in bundle: Bundle = .main, language: Language = selectedLanguage) -> URL? {
+        bundle.url(forResource: language.resource, withExtension: "zip")
     }
 
     /// Version du fichier (`revision` de son `index.json`), lue sans importer.
