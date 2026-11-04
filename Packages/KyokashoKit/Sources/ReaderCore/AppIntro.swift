@@ -83,6 +83,7 @@ public struct ReleaseNotes: Equatable, Sendable, Identifiable {
             String(localized: "Extraction des lectures OvisOCR2 : le nombre de pages lues est affiché pour chaque document.", bundle: .main),
         ], fixed: [
             String(localized: "Cette fenêtre ne montre plus que les changements de la version installée.", bundle: .main),
+            String(localized: "Fenêtre d'étude, notes et dictionnaire : le texte n'est plus dédoublé sur les styles à ombre franche.", bundle: .main),
         ])
 
     /// Notes de `version` (« 1.3.2 », sans le numéro de build) : la version elle-même, jamais une build de test.

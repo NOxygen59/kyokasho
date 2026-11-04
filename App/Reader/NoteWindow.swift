@@ -54,7 +54,7 @@ struct NoteWindow: View {
         .overlay(RoundedRectangle(cornerRadius: Atelier.radius, style: .continuous)
             .strokeBorder(Atelier.Tint.annotate.opacity(0.45), lineWidth: Atelier.border(1)))
         .overlay(alignment: .bottomTrailing) { resizeHandle(w: w, h: h) }
-        .atelierShadow(opacity: 0.5, radius: 20, y: 8)
+        .atelierShapeShadow(RoundedRectangle(cornerRadius: Atelier.radius, style: .continuous), opacity: 0.5, radius: 20, y: 8)
         .offset(x: left, y: top)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .transaction { if move != .zero || resize != .zero { $0.animation = nil } }

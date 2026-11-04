@@ -15533,6 +15533,28 @@
         }
       }
     },
+    "Fenêtre d'étude, notes et dictionnaire : le texte n'est plus dédoublé sur les styles à ombre franche.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Study window, notes and dictionary: text is no longer doubled on styles with hard shadows."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fenêtre d'étude, notes et dictionnaire : le texte n'est plus dédoublé sur les styles à ombre franche."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "学习窗口、笔记和词典：在硬阴影样式下，文字不再重影。"
+          }
+        }
+      }
+    },
     "Fenêtre déplaçable": {
       "localizations": {
         "en": {

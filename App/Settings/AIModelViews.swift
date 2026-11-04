@@ -968,7 +968,7 @@ private struct CenteredConfirmation: ViewModifier {
                     .padding(20)
                     .frame(maxWidth: 320)
                     .background(Atelier.material(.regularMaterial), in: RoundedRectangle(cornerRadius: Atelier.radius, style: .continuous))
-                    .atelierShadow(opacity: 0.3, radius: 16, y: 6)
+                    .atelierShapeShadow(RoundedRectangle(cornerRadius: Atelier.radius, style: .continuous), opacity: 0.3, radius: 16, y: 6)
                     .padding(16)
                     .transition(reduceMotion ? .opacity : .scale(scale: 0.92).combined(with: .opacity))
                     .accessibilityAddTraits(.isModal)
