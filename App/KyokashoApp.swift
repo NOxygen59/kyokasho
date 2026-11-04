@@ -54,6 +54,9 @@ struct KyokashoApp: App {
                     }
                 }
                 #endif
+                .onReceive(NotificationCenter.default.publisher(for: UIApplication.willTerminateNotification)) { _ in
+                    LocalServerVLM.stopAtTermination()
+                }
                 .onReceive(NotificationCenter.default.publisher(for: UIApplication.didReceiveMemoryWarningNotification)) { _ in
                     model.thumbnails.trim()
                     ONNXEngines.unload()

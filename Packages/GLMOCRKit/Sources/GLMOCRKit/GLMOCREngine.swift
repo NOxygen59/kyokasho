@@ -265,8 +265,13 @@ actor GLMModel {
     func unload(directory: URL) {}
     func unloadIfIdle() {}
     func release() {}
-    func status() -> AIModelStatus {
-        AIModelStatus(loaded: nil, loading: nil, inUse: false, lastUse: [:], gpuActiveMB: 0, gpuCacheMB: 0)
+    /// Mac : le moteur llama.cpp tient lieu de modèle chargé, sous l'identité d'OvisOCR2. Sans cela, la liste des IA
+    /// affichait « attend son tour » alors qu'il lisait.
+    func status() async -> AIModelStatus {
+        let engine = await LocalServerVLM.process.status
+        let directory = ModelStore.shared.directory(.ovisocr2)
+        return AIModelStatus(loaded: engine.running ? directory : nil, loading: engine.starting ? directory : nil,
+                      inUse: engine.inUse, lastUse: [:], gpuActiveMB: 0, gpuCacheMB: 0)
     }
 }
 #endif

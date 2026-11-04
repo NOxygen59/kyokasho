@@ -52,6 +52,8 @@ final class StyleTokensGuardTests: XCTestCase {
         let models = try source("Settings/OCRModelsView.swift")
         XCTAssertTrue(models.contains("if localAIAvailable, let file = spec.mainDownload"))
         XCTAssertTrue(models.contains("files.contains { $0.name.hasSuffix(\".onnx\")"), "NDLOCR et PP-OCR ont des fichiers annexes")
+    }
+
     /// Une analyse OvisOCR2 doit pouvoir s'arrêter depuis la liste des IA, et sa durée être annoncée.
     func testOvisAnalysisCanBeStoppedAndAnnouncesItsDuration() throws {
         let app = URL(fileURLWithPath: #filePath).deletingLastPathComponent()

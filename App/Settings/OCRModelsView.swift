@@ -60,6 +60,7 @@ final class ModelDownloads: ObservableObject {
     func cancel(_ spec: ModelSpec) { tasks[spec.id]?.cancel() }
 
     func delete(_ spec: ModelSpec) {
+        if spec == .ovisocr2GGUF { Task { await LocalServerVLM.stop() } }
         ONNXEngines.unload()
         Task { await GLMOCREngine.unload() }
         try? store.delete(spec)

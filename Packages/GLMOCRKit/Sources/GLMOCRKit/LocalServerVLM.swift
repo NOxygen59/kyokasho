@@ -10,15 +10,35 @@ import UniformTypeIdentifiers
 /// Version Mac (#55, demande de NOxygen59 du 30/10/2026 : « l'app devient inutile sans Ovis ») : MLX n'existe pas sur
 /// Mac Intel, mais le **même** modèle OvisOCR2 existe en GGUF pour llama.cpp. L'app embarque `llama-server` : il se lance
 /// à la première lecture, reste un processus à part (sa mémoire est rendue d'un coup, 8 Go sur la machine visée) et
-/// s'arrête après 5 minutes sans lecture. Rien ne sort du Mac : seule l'adresse locale est appelée.
+/// s'arrête après 5 minutes sans lecture. Rien ne sort du Mac : seule une adresse locale est appelée, sans redirection.
 public enum LocalServerVLM {
     public static var isInstalled: Bool { ModelStore.shared.isInstalled(.ovisocr2GGUF) }
+
+    static let process = LocalEngineProcess(driver: .init(
+        launch: { try LocalOvisEngine.launch() },
+        isAlive: { LocalOvisEngine.isAlive($0) },
+        terminate: { LocalOvisEngine.terminate($0) },
+        isReady: { await LocalOvisEngine.isReady($0) },
+        startTimeout: 300, idleDelay: 300))
+
+    /// Pour le bouton Supprimer et le changement de modèle.
+    public static func stop() async { await process.stop() }
+
+    /// À la fermeture de l'app, où rien d'asynchrone n'a le temps de finir.
+    public static func stopAtTermination() { LocalOvisEngine.killRecordedProcess() }
 
     /// Lecture d'une page : consigne d'OvisOCR2 et image JPEG, réponse Markdown.
     static func read(prompt: String, image: CGImage, maxTokens: Int) async throws -> String {
         guard let jpeg = jpegData(image) else { throw OCRError.renderFailed }
-        try await LocalOvisServer.shared.beginRead()
-        defer { Task { await LocalOvisServer.shared.endRead() } }
+        let engine: LocalEngineProcess.Instance
+        do {
+            engine = try await process.beginRead()
+        } catch LocalEngineProcess.Failure.exitedDuringStart {
+            throw OCRError.engineFailed("Le moteur OvisOCR2 s'est arrêté au démarrage. Voir le fichier llama-server.log du dossier temporaire de l'app.")
+        } catch LocalEngineProcess.Failure.startTimedOut {
+            throw OCRError.engineFailed("Le moteur OvisOCR2 n'a pas démarré à temps.")
+        }
+        defer { Task { await process.endRead() } }
         let body: [String: Any] = [
             "temperature": 0,
             "max_tokens": maxTokens,
@@ -28,11 +48,11 @@ public enum LocalServerVLM {
             ]]],
         ]
         // Une page peut durer longtemps sur un processeur Intel à 1,4 GHz.
-        var request = URLRequest(url: LocalOvisServer.base.appendingPathComponent("v1/chat/completions"), timeoutInterval: 3600)
+        var request = LocalOvisEngine.request(engine, path: "v1/chat/completions", timeout: 3600)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await LocalOnlyHTTP.session.data(for: request)
         guard (response as? HTTPURLResponse)?.statusCode == 200,
               let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
               let choices = json["choices"] as? [[String: Any]],
@@ -51,86 +71,95 @@ public enum LocalServerVLM {
     }
 }
 
-/// Cycle de vie du processus `llama-server`. `Process` n'existe pas sous Mac Catalyst, d'où `posix_spawn`. Le binaire est
-/// signé pour hériter du bac à sable de l'app (`App/LlamaServer-Mac.entitlements`).
-actor LocalOvisServer {
-    static let shared = LocalOvisServer()
-    /// Port propre à l'app, pour ne pas croiser un autre serveur llama.cpp du Mac.
-    static let base = URL(string: "http://127.0.0.1:18765")!
-    private static let idleStop: UInt64 = 300_000_000_000
-    private static let startTimeout: TimeInterval = 300
-
-    private var pid: pid_t?
-    private var reads = 0
-    private var idleTask: Task<Void, Never>?
-
-    func beginRead() async throws {
-        idleTask?.cancel()
-        reads += 1
-        do { try await ensureRunning() } catch { reads -= 1; throw error }
-    }
-
-    func endRead() {
-        reads -= 1
-        guard reads == 0 else { return }
-        idleTask = Task { [weak self] in
-            try? await Task.sleep(nanoseconds: Self.idleStop)
-            guard !Task.isCancelled else { return }
-            await self?.stopIfIdle()
-        }
-    }
-
-    private func stopIfIdle() { if reads == 0 { stop() } }
-
-    func stop() {
-        guard let pid else { return }
-        kill(pid, SIGTERM)
-        var status: Int32 = 0
-        waitpid(pid, &status, 0)
-        self.pid = nil
-    }
-
-    private func ensureRunning() async throws {
-        if let pid, waitpid(pid, nil, WNOHANG) == pid { self.pid = nil }
-        if await Self.isHealthy() { return }
-        if pid == nil { pid = try Self.spawn() }
-        let deadline = Date().addingTimeInterval(Self.startTimeout)
-        while Date() < deadline {
-            if let pid, waitpid(pid, nil, WNOHANG) == pid {
-                self.pid = nil
-                throw OCRError.engineFailed("Le moteur OvisOCR2 s'est arrêté au démarrage. Journal : \(Self.logFile.lastPathComponent)")
-            }
-            if await Self.isHealthy() { return }
-            try await Task.sleep(nanoseconds: 1_000_000_000)
-        }
-        stop()
-        throw OCRError.engineFailed("Le moteur OvisOCR2 n'a pas démarré à temps.")
-    }
-
-    private static func isHealthy() async -> Bool {
-        var request = URLRequest(url: base.appendingPathComponent("health"), timeoutInterval: 2)
-        request.httpMethod = "GET"
-        guard let (_, response) = try? await URLSession.shared.data(for: request) else { return false }
-        return (response as? HTTPURLResponse)?.statusCode == 200
-    }
-
-    private static var logFile: URL {
-        FileManager.default.temporaryDirectory.appendingPathComponent("llama-server.log")
-    }
+/// Lancement réel de `llama-server`. `Process` n'existe pas sous Mac Catalyst, d'où `posix_spawn`. Le binaire est signé
+/// pour hériter du bac à sable de l'app (`App/LlamaServer-Mac.entitlements`). Port libre et jeton tirés à chaque lancement :
+/// la lecture ne peut viser qu'une instance que l'app a lancée elle-même.
+enum LocalOvisEngine {
+    private static var logFile: URL { FileManager.default.temporaryDirectory.appendingPathComponent("llama-server.log") }
+    private static var pidFile: URL { FileManager.default.temporaryDirectory.appendingPathComponent("llama-server.pid") }
 
     /// Fils de calcul : les cœurs physiques, soit la moitié des cœurs logiques sur un Intel à hyperthreading.
-    static func arguments(model: String, vision: String, logicalCores: Int) -> [String] {
-        ["llama-server", "-m", model, "--mmproj", vision, "--host", "127.0.0.1", "--port", "18765",
+    static func arguments(model: String, vision: String, port: Int, token: String, logicalCores: Int) -> [String] {
+        ["llama-server", "-m", model, "--mmproj", vision, "--host", "127.0.0.1", "--port", String(port), "--api-key", token,
          "-t", String(max(1, logicalCores / 2)), "-c", "8192", "-ngl", "0"]
     }
 
-    private static func spawn() throws -> pid_t {
+    static func request(_ engine: LocalEngineProcess.Instance, path: String, timeout: TimeInterval) -> URLRequest {
+        var request = URLRequest(url: URL(string: "http://127.0.0.1:\(engine.port)/\(path)")!, timeoutInterval: timeout)
+        request.setValue("Bearer \(engine.token)", forHTTPHeaderField: "Authorization")
+        return request
+    }
+
+    static func isReady(_ engine: LocalEngineProcess.Instance) async -> Bool {
+        guard let (_, response) = try? await LocalOnlyHTTP.session.data(for: request(engine, path: "v1/models", timeout: 2)) else { return false }
+        return (response as? HTTPURLResponse)?.statusCode == 200
+    }
+
+    static func isAlive(_ pid: Int32) -> Bool { waitpid(pid, nil, WNOHANG) == 0 }
+
+    static func terminate(_ pid: Int32) {
+        kill(pid, SIGTERM)
+        try? FileManager.default.removeItem(at: pidFile)
+        // Essai du 04/11/2026 : un moteur en plein travail peut ignorer SIGTERM et garder 2 Go ; il est alors forcé.
+        DispatchQueue.global(qos: .utility).async {
+            for _ in 0..<50 {
+                if waitpid(pid, nil, WNOHANG) != 0 { return }
+                usleep(100_000)
+            }
+            kill(pid, SIGKILL)
+            waitpid(pid, nil, 0)
+        }
+    }
+
+    /// Fermeture normale de l'app, ou reste d'un plantage : le moteur ne garde pas 2 Go en mémoire sans parent.
+    static func killRecordedProcess() {
+        guard let text = try? String(contentsOf: pidFile, encoding: .utf8), let pid = Int32(text),
+              commandName(pid) == "llama-server" else { return }
+        // Pas de `waitpid` possible sur le reste d'un ancien lancement : arrêt forcé, le travail en cours est déjà perdu.
+        kill(pid, SIGKILL)
+        try? FileManager.default.removeItem(at: pidFile)
+    }
+
+    /// Nom du processus, pour ne jamais tuer un autre programme qui aurait repris ce numéro.
+    private static func commandName(_ pid: Int32) -> String? {
+        var info = kinfo_proc()
+        var size = MemoryLayout<kinfo_proc>.stride
+        var mib: [Int32] = [CTL_KERN, KERN_PROC, KERN_PROC_PID, pid]
+        guard sysctl(&mib, 4, &info, &size, nil, 0) == 0, size > 0 else { return nil }
+        return withUnsafePointer(to: &info.kp_proc.p_comm) {
+            $0.withMemoryRebound(to: CChar.self, capacity: Int(MAXCOMLEN) + 1) { String(cString: $0) }
+        }
+    }
+
+    private static func freePort() throws -> Int {
+        let socket = Darwin.socket(AF_INET, SOCK_STREAM, 0)
+        guard socket >= 0 else { throw OCRError.engineFailed("Aucun port local disponible pour le moteur OvisOCR2.") }
+        defer { close(socket) }
+        var address = sockaddr_in()
+        address.sin_family = sa_family_t(AF_INET)
+        address.sin_addr.s_addr = inet_addr("127.0.0.1")
+        address.sin_port = 0
+        var size = socklen_t(MemoryLayout<sockaddr_in>.size)
+        let bound = withUnsafePointer(to: &address) {
+            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) { bind(socket, $0, size) }
+        }
+        let named = withUnsafeMutablePointer(to: &address) {
+            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) { getsockname(socket, $0, &size) }
+        }
+        guard bound == 0, named == 0 else { throw OCRError.engineFailed("Aucun port local disponible pour le moteur OvisOCR2.") }
+        return Int(UInt16(bigEndian: address.sin_port))
+    }
+
+    static func launch() throws -> LocalEngineProcess.Instance {
+        killRecordedProcess()
         guard let binary = Bundle.main.url(forAuxiliaryExecutable: "llama-server") else {
             throw OCRError.engineFailed("Moteur OvisOCR2 absent de l'app.")
         }
+        let port = try freePort()
+        let token = UUID().uuidString
         let store = ModelStore.shared, spec = ModelSpec.ovisocr2GGUF
         let arguments = arguments(model: store.url(spec, "model.gguf").path, vision: store.url(spec, "mmproj.gguf").path,
-                                  logicalCores: ProcessInfo.processInfo.activeProcessorCount)
+                                  port: port, token: token, logicalCores: ProcessInfo.processInfo.activeProcessorCount)
         var actions: posix_spawn_file_actions_t?
         posix_spawn_file_actions_init(&actions)
         defer { posix_spawn_file_actions_destroy(&actions) }
@@ -143,6 +172,7 @@ actor LocalOvisServer {
         guard result == 0 else {
             throw OCRError.engineFailed("Lancement du moteur OvisOCR2 impossible : \(String(cString: strerror(result)))")
         }
-        return child
+        try? String(child).write(to: pidFile, atomically: true, encoding: .utf8)
+        return .init(pid: child, port: port, token: token)
     }
 }

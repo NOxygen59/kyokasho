@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 NOxygen59
 
+import ReaderCore
 import SwiftUI
 import UIKit
 import UniformTypeIdentifiers
@@ -43,7 +44,7 @@ struct DocumentPicker: UIViewControllerRepresentable {
 enum PickedFile {
     static func keep(_ url: URL) -> URL? {
         // Déjà une copie privée (ex. passée par `documentPicker` sur Mac) : la garder telle quelle.
-        if url.deletingLastPathComponent().lastPathComponent.hasPrefix("Picked-") { return url }
+        if PickedFileOwnership.isPrivateCopy(url, privateRoot: FileManager.default.temporaryDirectory) { return url }
         let fm = FileManager.default
         let folder = fm.temporaryDirectory.appendingPathComponent("Picked-\(UUID().uuidString)", isDirectory: true)
         let access = url.startAccessingSecurityScopedResource()
@@ -61,9 +62,8 @@ enum PickedFile {
     }
 
     static func discard(_ url: URL) {
-        let folder = url.deletingLastPathComponent()
-        guard folder.lastPathComponent.hasPrefix("Picked-") else { return }
-        try? FileManager.default.removeItem(at: folder)
+        guard PickedFileOwnership.isPrivateCopy(url, privateRoot: FileManager.default.temporaryDirectory) else { return }
+        try? FileManager.default.removeItem(at: url.deletingLastPathComponent())
     }
 }
 
