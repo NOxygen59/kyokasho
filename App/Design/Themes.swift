@@ -297,7 +297,10 @@ struct ThemePickerView: View {
                         Text("Système").tag("")
                         Text("Français").tag("fr")
                         Text("English").tag("en")
+                        // Chinois réservé à la version Mac (décision de NOxygen59 du 04/11/2026).
+                        #if targetEnvironment(macCatalyst)
                         Text("简体中文").tag("zh-Hans")
+                        #endif
                     }
                     .pickerStyle(.segmented)
                     .onChange(of: appLanguage) { value in

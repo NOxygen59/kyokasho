@@ -75,7 +75,7 @@ struct ReviewScreen: View {
 
     private var countsView: some View {
         HStack(spacing: 14) {
-            count(review.counts.new, "nouvelles", Atelier.Tint.cloud)
+            count(review.counts.new, String(localized: "nouvelles"), Atelier.Tint.cloud)
             count(review.counts.learning, String(localized: "en cours"), Atelier.Tint.japanese)
             count(review.counts.review, String(localized: "à revoir"), Atelier.Tint.read)
         }

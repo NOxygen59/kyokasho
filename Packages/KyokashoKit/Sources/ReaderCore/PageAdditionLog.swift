@@ -31,7 +31,7 @@ public struct PageAddition: Codable, Equatable, Sendable {
         return parts.joined(separator: " · ")
     }
 
-    private static func pages(_ n: Int) -> String { "\(n) page\(n > 1 ? "s" : "")" }
+    private static func pages(_ n: Int) -> String { String(localized: "\(n) page\(n > 1 ? "s" : "")", bundle: .main) }
 }
 
 /// Historique des ajouts de pages d'un document, le plus récent en dernier. Il part de cette version : les ajouts

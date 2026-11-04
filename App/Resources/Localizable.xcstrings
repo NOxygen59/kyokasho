@@ -798,7 +798,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ added%@ at the start"
+            "value": "%1$@ added at the start"
           }
         },
         "fr": {
@@ -820,7 +820,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ added%@ at the end"
+            "value": "%1$@ added at the end"
           }
         },
         "fr": {
@@ -833,6 +833,50 @@
           "stringUnit": {
             "state": "translated",
             "value": "末尾添加了 %1$@"
+          }
+        }
+      }
+    },
+    "%@ indisponible": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ unavailable"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ indisponible"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 不可用"
+          }
+        }
+      }
+    },
+    "%@ kanji": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ kanji"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ kanji"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 个汉字"
           }
         }
       }
@@ -965,6 +1009,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ 将回到原位，并带回其笔记、绘图和分析。之后所做的更改都会保留。"
+          }
+        }
+      }
+    },
+    "%@ termes": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ terms"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ termes"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 个术语"
           }
         }
       }
@@ -1524,7 +1590,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld file%@ deleted%@."
+            "value": "%1$lld file%2$@ deleted."
           }
         },
         "fr": {
@@ -1559,6 +1625,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld 小时"
+          }
+        }
+      }
+    },
+    "%lld images": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld images"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld images"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 张图片"
           }
         }
       }
@@ -1607,12 +1695,34 @@
         }
       }
     },
+    "%lld ligne%@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld line%@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld ligne%@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld 行"
+          }
+        }
+      }
+    },
     "%lld ligne%@ peu sûre%@": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld uncertain line%@%@"
+            "value": "%1$lld uncertain line%2$@"
           }
         },
         "fr": {
@@ -1717,6 +1827,28 @@
         }
       }
     },
+    "%lld mois": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld mo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld mois"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 个月"
+          }
+        }
+      }
+    },
     "%lld mois %lld j": {
       "localizations": {
         "en": {
@@ -1788,7 +1920,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld page%@ deleted%@. Restorable%@ for 30 days."
+            "value": "%1$lld page%2$@ deleted. Restorable for 30 days."
           }
         },
         "fr": {
@@ -2025,12 +2157,34 @@
         }
       }
     },
+    "%lld s": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld s"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld s"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 秒"
+          }
+        }
+      }
+    },
     "%lld sélectionné%@": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld selected%@"
+            "value": "%1$lld selected"
           }
         },
         "fr": {
@@ -41647,6 +41801,28 @@
         }
       }
     },
+    "cartes": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "cards"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "cartes"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "卡片"
+          }
+        }
+      }
+    },
     "ce passage": {
       "localizations": {
         "en": {
@@ -41801,6 +41977,28 @@
         }
       }
     },
+    "chaud": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "hot"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "chaud"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "较热"
+          }
+        }
+      }
+    },
     "choisir": {
       "localizations": {
         "en": {
@@ -41929,6 +42127,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "OvisOCR2 更正 第 %@ 页"
+          }
+        }
+      }
+    },
+    "critique": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "critical"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "critique"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "过热"
           }
         }
       }
@@ -42615,6 +42835,50 @@
         }
       }
     },
+    "normale": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "normal"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "normale"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正常"
+          }
+        }
+      }
+    },
+    "nouvelles": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "new"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "nouvelles"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新卡片"
+          }
+        }
+      }
+    },
     "orange": {
       "localizations": {
         "en": {
@@ -43029,6 +43293,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "留在内存中等待下次请求，不进行计算"
+          }
+        }
+      }
+    },
+    "retenues": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "remembered"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "retenues"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已记住"
           }
         }
       }

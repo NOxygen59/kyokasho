@@ -42,6 +42,13 @@ class CatalogTests(unittest.TestCase):
                 else:
                     self.assertEqual([kind for _, kind in found], source, (key, language))
 
+    def test_french_agreements_are_not_reused_on_english_words_that_do_not_take_them(self):
+        # « 2 pages addeds », « 2 uncertain liness » : revue Codex de la 1.4.0.
+        wrong = re.compile(r"(added|deleted|selected|Restorable)%(?:\\d\\$)?@|line%(?:\\d\\$)?@%(?:\\d\\$)?@")
+        for key, entry in self.strings.items():
+            if re.search(r"[a-zé]%@", key):
+                self.assertIsNone(wrong.search(entry["localizations"]["en"]["stringUnit"]["value"]), key)
+
     def test_info_plist_declares_the_three_languages(self):
         with (ROOT / "App/Info.plist").open("rb") as stream:
             self.assertEqual(set(plistlib.load(stream)["CFBundleLocalizations"]), set(LANGUAGES))

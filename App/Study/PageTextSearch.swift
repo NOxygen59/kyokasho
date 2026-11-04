@@ -121,7 +121,7 @@ struct PageSearchResults: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text(matches.isEmpty ? String(localized: "Rien trouvé dans cette page.") : "\(matches.count) ligne\(matches.count > 1 ? "s" : "")")
+            Text(matches.isEmpty ? String(localized: "Rien trouvé dans cette page.") : String(localized: "\(matches.count) ligne\(matches.count > 1 ? "s" : "")"))
                 .font(.caption).foregroundStyle(Atelier.textTertiary)
             ForEach(matches) { match in
                 VStack(alignment: .leading, spacing: 2) {

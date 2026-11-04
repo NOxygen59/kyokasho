@@ -19,10 +19,10 @@ struct CardBrowserView: View {
                 if let stats {
                     Section {
                         HStack(spacing: 0) {
-                            stat("\(stats.totalCards)", "cartes")
+                            stat("\(stats.totalCards)", String(localized: "cartes"))
                             stat("\(stats.matureCards)", String(localized: "mûres (≥ 21 j)"))
                             stat("\(stats.reviewsPerDay.values.reduce(0, +))", String(localized: "réponses / 30 j"))
-                            stat(stats.retention.map { "\(Int(($0 * 100).rounded())) %" } ?? "—", "retenues")
+                            stat(stats.retention.map { "\(Int(($0 * 100).rounded())) %" } ?? "—", String(localized: "retenues"))
                         }
                     }
                 }

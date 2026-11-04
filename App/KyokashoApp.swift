@@ -120,7 +120,13 @@ struct RootView: View {
         }
         // Retour à la bibliothèque ou app en arrière-plan : les IA rendent leur mémoire.
         .onChange(of: model.openDocumentId) { if $0 == nil { Self.releaseAI() } }
-        .onChange(of: scenePhase) { if $0 == .background { Self.releaseAI() } }
+        .onChange(of: scenePhase) { phase in
+            if phase == .background { Self.releaseAI() }
+            // Au retour dans l'app : le Wi-Fi a pu revenir ou la semaine être passée. La garde hebdomadaire reste.
+            if phase == .active, !LibraryBackupService.inProgress {
+                Task { await dictionaryUpdates.checkAutomaticallyIfDue(model: model.dictionary) }
+            }
+        }
         .task {
             // Après le chargement de la bibliothèque, et jamais par-dessus une sauvegarde en cours.
             guard !LibraryBackupService.inProgress else { return }

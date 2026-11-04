@@ -26,6 +26,8 @@ final class DictionaryCatalogService: ObservableObject {
     private var task: Task<Void, Never>?
     private var queue: [String] = []
     private static let lastAutomaticCheckKey = "dictionaries.lastAutomaticCheck"
+    /// Version du lexique fourni déjà proposée : « Plus tard » ne redemande pas à chaque retour dans l'app.
+    private static let bundledOfferedKey = "dictionaries.bundledOfferedRevision"
 
     func installed(_ entry: CatalogEntry, in model: DictionaryModel) -> DictionaryInfo? {
         model.dictionaries.first { DictionaryCatalog.baseTitle($0.title) == entry.titlePrefix }
@@ -143,14 +145,18 @@ final class DictionaryCatalogService: ObservableObject {
               DictionaryUpdateSchedule.isDue(lastCheck: defaults.object(forKey: Self.lastAutomaticCheckKey) as? Date) else { return }
         checking = true
         defer { checking = false }
-        var names = bundledUpdateAvailable(in: model) ? [BundledLexicon.name] : []
+        var names: [String] = []
+        if bundledUpdateAvailable(in: model), defaults.string(forKey: Self.bundledOfferedKey) != Self.bundledRevision {
+            names.append(BundledLexicon.name)
+            defaults.set(Self.bundledRevision, forKey: Self.bundledOfferedKey)
+        }
         if await Self.isOnWiFi() {
             let (found, reached) = await publishedUpdates(model: model)
             updates = found
             names += DictionaryCatalog.entries.filter { found[$0.id] != nil }.map(\.name)
             if reached { defaults.set(Date(), forKey: Self.lastAutomaticCheckKey) }
         }
-        offeredUpdates = names
+        if !names.isEmpty { offeredUpdates = names }
     }
 
     /// Réponse de l'utilisateur à la proposition : les mises à jour s'installent l'une après l'autre.

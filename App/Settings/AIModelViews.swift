@@ -621,7 +621,7 @@ struct QwenChatView: View {
     private var statusLine: some View {
         let name = selectedSpec.id == ModelSpec.qwen35chat4b.id ? "Qwen3.5" : "Qwen3-VL"
         let settings = AIChatSettingsStore.load(selectedModelID)
-        var parts = [loading ? String(localized: "Chargement de \(name)…") : ready ? String(localized: "\(name) prêt") : "\(name) indisponible"]
+        var parts = [loading ? String(localized: "Chargement de \(name)…") : ready ? String(localized: "\(name) prêt") : String(localized: "\(name) indisponible")]
         if settings.instructions != nil { parts.append(String(localized: "consigne perso")) }
         if answering != nil { parts.append(String(localized: "réponse en cours…")) }
         else if let lastDuration { parts.append(String(localized: "dernière réponse en \(Int(lastDuration.rounded())) s")) }

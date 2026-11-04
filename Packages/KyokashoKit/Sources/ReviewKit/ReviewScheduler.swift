@@ -125,10 +125,10 @@ public struct ReviewScheduler: Sendable {
     public static func intervalLabel(from now: Date, to due: Date) -> String {
         let s = max(0, due.timeIntervalSince(now))
         if s < 60 { return String(localized: "< 1 min", bundle: .main) }
-        if s < 3600 { return "\(Int((s / 60).rounded())) min" }
-        if s < 86400 { return "\(Int((s / 3600).rounded())) h" }
+        if s < 3600 { return String(localized: "\(Int((s / 60).rounded())) min", bundle: .main) }
+        if s < 86400 { return String(localized: "\(Int((s / 3600).rounded())) h", bundle: .main) }
         let days = s / 86400
-        if days < 30 { return "\(Int(days.rounded())) j" }
+        if days < 30 { return String(localized: "\(Int(days.rounded())) j", bundle: .main) }
         if days < 365 { return String(format: String(localized: "%.1f mois", bundle: .main), days / 30).replacingOccurrences(of: ".0", with: "") }
         return String(format: String(localized: "%.1f an", bundle: .main), days / 365).replacingOccurrences(of: ".0", with: "")
     }

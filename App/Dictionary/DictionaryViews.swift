@@ -463,10 +463,10 @@ struct DictionaryManagerView: View {
 
     private func counts(_ d: DictionaryInfo) -> String {
         var parts: [String] = []
-        if d.termCount > 0 { parts.append("\(d.termCount.formatted()) termes") }
-        if d.kanjiCount > 0 { parts.append("\(d.kanjiCount.formatted()) kanji") }
+        if d.termCount > 0 { parts.append(String(localized: "\(d.termCount.formatted()) termes")) }
+        if d.kanjiCount > 0 { parts.append(String(localized: "\(d.kanjiCount.formatted()) kanji")) }
         if d.termMetaCount > 0 { parts.append(String(localized: "\(d.termMetaCount.formatted()) méta")) }
-        if d.mediaCount > 0 { parts.append("\(d.mediaCount) images") }
+        if d.mediaCount > 0 { parts.append(String(localized: "\(d.mediaCount) images")) }
         return parts.joined(separator: ", ")
     }
 }

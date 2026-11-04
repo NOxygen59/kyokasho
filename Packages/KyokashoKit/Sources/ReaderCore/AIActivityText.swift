@@ -51,7 +51,7 @@ public enum AIActivityText {
     /// « 45 s », « 2 min 05 s », « 1 h 03 min ».
     public static func duration(_ seconds: TimeInterval) -> String {
         let s = max(0, Int(seconds.rounded()))
-        if s < 60 { return "\(s) s" }
+        if s < 60 { return String(localized: "\(s) s", bundle: .main) }
         if s < 3600 { return String(format: String(localized: "%d min %02d s", bundle: .main), s / 60, s % 60) }
         return String(format: String(localized: "%d h %02d min", bundle: .main), s / 3600, s % 3600 / 60)
     }
