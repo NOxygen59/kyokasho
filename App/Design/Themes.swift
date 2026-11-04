@@ -276,12 +276,6 @@ extension Color {
 struct ThemePickerView: View {
     @EnvironmentObject private var themes: ThemeManager
     @AppStorage("appearance.themePatterns") private var patternsEnabled = true
-    /// Langue de l'interface (demande de NOxygen59 du 30/10/2026) : « AppleLanguages » propre à l'app, appliquée au
-    /// relancement comme le prévoit iOS. Vide = langue du système.
-    @State private var appLanguage = (UserDefaults.standard.array(forKey: "AppleLanguages") as? [String])
-        .flatMap { UserDefaults.standard.persistentDomain(forName: Bundle.main.bundleIdentifier ?? "")?["AppleLanguages"] != nil ? $0.first : nil }
-        .map { $0.hasPrefix("zh") ? "zh-Hans" : $0.hasPrefix("en") ? "en" : "fr" } ?? ""
-    @State private var languageChanged = false
 
     var body: some View {
         ScrollView {
@@ -293,29 +287,7 @@ struct ThemePickerView: View {
                         .font(.subheadline).foregroundStyle(Atelier.textSecondary)
                     Toggle("Motifs de fond", isOn: $patternsEnabled)
                         .font(.subheadline).tint(Atelier.Tint.read).padding(.top, 8)
-                    Picker("Langue de l'app", selection: $appLanguage) {
-                        Text("Système").tag("")
-                        Text("Français").tag("fr")
-                        Text("English").tag("en")
-                        // Chinois réservé à la version Mac (décision de NOxygen59 du 04/11/2026).
-                        #if targetEnvironment(macCatalyst)
-                        Text("简体中文").tag("zh-Hans")
-                        #endif
-                    }
-                    .pickerStyle(.segmented)
-                    .onChange(of: appLanguage) { value in
-                        if value.isEmpty { UserDefaults.standard.removeObject(forKey: "AppleLanguages") }
-                        else { UserDefaults.standard.set([value], forKey: "AppleLanguages") }
-                        languageChanged = true
-                    }
-                    if languageChanged {
-                        Text("Relance l'app pour appliquer la langue (ferme-la puis rouvre-la).")
-                            .font(.footnote).foregroundStyle(Atelier.textSecondary)
-                        #if targetEnvironment(macCatalyst)
-                        // Mac : fermer la fenêtre ne quitte pas l'app, la langue ne changeait donc pas (essai du 30/10/2026).
-                        Button("Quitter pour appliquer") { exit(0) }
-                        #endif
-                    }
+                    AppLanguagePicker()
                 }
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 220), spacing: 14)], spacing: 14) {
                     ForEach(AppStyle.all) { style in

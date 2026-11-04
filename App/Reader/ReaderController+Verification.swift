@@ -150,28 +150,26 @@ extension ReaderController {
     /// réordonner des lignes, et le même numéro désignerait alors un autre texte (revue Codex de la 75).
     @discardableResult
     func correctOCRLines(_ corrections: [Int: String], ifStill original: OCRPage, source: Int) -> Bool {
-        guard source == focusSource, let current = ocrPage, current.engine == original.engine,
-              current.lines.map(\.text) == original.lines.map(\.text) else { return false }
+        guard ocrUnchanged(since: original, source: source) else { return false }
         correctOCRLines(corrections)
         return true
+    }
+
+    func ocrUnchanged(since original: OCRPage, source: Int) -> Bool {
+        guard source == focusSource, let current = ocrPage, current.engine == original.engine else { return false }
+        return current.lines.map(\.text) == original.lines.map(\.text)
     }
 
     /// Plusieurs lignes en une seule écriture : des écritures séparées pourraient se terminer dans le désordre.
     func correctOCRLines(_ corrections: [Int: String]) {
         guard var page = ocrPage else { return }
         var changed = false
+        var replaced: [(old: String, new: String)] = []
         for (index, text) in corrections where page.lines.indices.contains(index) {
             let new = text.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !new.isEmpty else { continue }
-            var line = page.lines[index]
-            if new.count != line.charBoxes.count {
-                line.charBoxes = CharacterLayout.proportional(new, in: line.box, vertical: line.vertical)
-                line.measuredCharBoxes = false
-            }
-            line.text = new
-            line.edited = true
-            line.doubt = []
-            page.lines[index] = line
+            if page.lines[index].text != new { replaced.append((page.lines[index].text, new)) }
+            page.lines[index] = page.lines[index].acceptingCorrection(new)
             changed = true
         }
         guard changed else { return }
@@ -180,5 +178,48 @@ extension ReaderController {
         wordStartMemo.removeAll()
         let source = focusSource, documentId = document.id, service = model.ocr
         Task { try? await service.store(page, documentId: documentId, pageIndex: source) }
+        propagateToOvis(replaced, source: source)
+    }
+
+    /// Une ligne corrigée présente une seule fois, telle quelle, dans la lecture OvisOCR2 y est corrigée aussi, sans
+    /// relancer le modèle. Plusieurs occurrences : on ne devine pas laquelle, l'onglet « Lecture OvisOCR2 » reste là.
+    private func propagateToOvis(_ replaced: [(old: String, new: String)], source: Int) {
+        guard !replaced.isEmpty,
+              var text = DocumentAITextStore.read(documentId: document.id, reader: ModelSpec.ovisocr2.id, page: source) else { return }
+        let before = text
+        for (old, new) in replaced where old.count >= 2 && text.components(separatedBy: old).count == 2 {
+            text = text.replacingOccurrences(of: old, with: new)
+        }
+        if text != before { saveOvisCorrection(text, source: source) }
+    }
+
+    /// Enregistre à côté de la lecture d'OvisOCR2, jamais à sa place, et rafraîchit l'affichage sans relancer le modèle.
+    func saveOvisCorrection(_ text: String, source: Int) {
+        do {
+            try DocumentAITextStore.writeCorrection(text, documentId: document.id, page: source)
+            NotificationCenter.default.post(name: .aiPageRead, object: DocumentScan.PageRead(documentId: document.id, page: source))
+        } catch {
+            model.lastError = String(localized: "Correction non enregistrée : \(error.localizedDescription)")
+        }
+    }
+
+    var hasCorrections: Bool {
+        DocumentAITextStore.hasCorrection(documentId: document.id, page: focusSource)
+            || ocrPage?.lines.contains { $0.originalText != nil } == true
+    }
+
+    /// Retour à ce que l'OCR et OvisOCR2 avaient lu sur la page affichée, sans rien relancer.
+    func undoCorrections() {
+        let source = focusSource
+        if var page = ocrPage, page.lines.contains(where: { $0.originalText != nil }) {
+            page.lines = page.lines.map(\.revertingCorrection)
+            ocrPage = page
+            showOCR(page, source: source)
+            wordStartMemo.removeAll()
+            let documentId = document.id, service = model.ocr
+            Task { try? await service.store(page, documentId: documentId, pageIndex: source) }
+        }
+        DocumentAITextStore.removeCorrection(documentId: document.id, page: source)
+        NotificationCenter.default.post(name: .aiPageRead, object: DocumentScan.PageRead(documentId: document.id, page: source))
     }
 }

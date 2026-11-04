@@ -33,6 +33,7 @@ struct AILayoutView: View {
     @State private var frenchMarkdown: String?
     /// Page construite avec les deux langues (`#langs`) : la bascule passe par `RubyWebView.language`.
     @State private var combined = false
+    @State private var confirmingRedo = false
 
     private var source: Int { reader.focusSource }
 
@@ -60,7 +61,9 @@ struct AILayoutView: View {
                             language: combined ? french : nil, onLookup: onLookup)
                     .frame(height: height)
                     .modifier(OCRScrollDiagnostics())
-                Button { read() } label: {
+                Button {
+                    if DocumentAITextStore.hasCorrection(documentId: reader.document.id, page: source) { confirmingRedo = true } else { read() }
+                } label: {
                     Label("Refaire la mise en page", systemImage: "arrow.clockwise").font(.caption)
                 }
                 .foregroundStyle(Atelier.textTertiary)
@@ -71,6 +74,18 @@ struct AILayoutView: View {
         // Japonais et français dans la même page : la vue web bascule sans recharger et garde la position de
         // lecture (recette 1.3.2 (55)). Sinon (pas de traduction, texte vertical) : reconstruction comme avant.
         .onChange(of: french) { _ in if !combined { Task { await load() } } }
+        // Texte corrigé à la main : affichage rafraîchi, sans relancer OvisOCR2.
+        .onReceive(NotificationCenter.default.publisher(for: .aiPageRead)) { note in
+            if let read = note.object as? DocumentScan.PageRead, read.documentId == reader.document.id, read.page == source {
+                Task { await load() }
+            }
+        }
+        .alert("Refaire la mise en page ?", isPresented: $confirmingRedo) {
+            Button("Refaire", role: .destructive) { read() }
+            Button("Annuler", role: .cancel) {}
+        } message: {
+            Text("OvisOCR2 relira la page et ses corrections manuelles seront remplacées.")
+        }
     }
 
     private func load() async {
@@ -143,6 +158,8 @@ struct AILayoutView: View {
             }
             try Task.checkCancellation()
             center.log(id, String(localized: "\(text.count) caractères mis en forme ; gardés pour cette page"))
+            // « Refaire la mise en page » est explicite et confirmé : la nouvelle lecture remplace les corrections.
+            DocumentAITextStore.removeCorrection(documentId: documentId, page: source)
             try DocumentAITextStore.write(text, documentId: documentId, reader: ModelSpec.ovisocr2.id, page: source)
             DocumentAnalysisService.shared.invalidatePage(source, documentId: documentId)
             NotificationCenter.default.post(name: .aiPageRead, object: DocumentScan.PageRead(documentId: documentId, page: source))

@@ -52,11 +52,22 @@ public struct OCRLine: Codable, Hashable, Sendable {
     public var doubt: [Int]?
     /// Ligne corrigée à la main (jamais retouchée ensuite par la relecture automatique).
     public var edited: Bool?
+    /// État d'avant la première correction, pour pouvoir y revenir sans relancer l'OCR.
+    public var originalText: String?
+    public var originalCharBoxes: [NormBox]?
+    public var originalMeasuredCharBoxes: Bool?
+    public var originalDoubt: [Int]?
 
     /// Choix explicite de l'utilisateur, y compris « Garder tel quel » : persiste l'acceptation.
     /// Les positions mesurées restent utilisables si la longueur ne change pas.
     public func acceptingCorrection(_ text: String) -> OCRLine {
         var line = self
+        if line.originalText == nil, text != line.text {
+            line.originalText = line.text
+            line.originalCharBoxes = line.charBoxes
+            line.originalMeasuredCharBoxes = line.measuredCharBoxes
+            line.originalDoubt = line.doubt
+        }
         if text.count != line.charBoxes.count {
             line.charBoxes = CharacterLayout.proportional(text, in: line.box, vertical: line.vertical)
             line.measuredCharBoxes = false
@@ -64,6 +75,22 @@ public struct OCRLine: Codable, Hashable, Sendable {
         line.text = text
         line.edited = true
         line.doubt = []
+        return line
+    }
+
+    /// La ligne telle que l'OCR l'avait lue, ou elle-même si elle n'a pas été corrigée.
+    public var revertingCorrection: OCRLine {
+        guard let originalText else { return self }
+        var line = self
+        line.text = originalText
+        line.charBoxes = originalCharBoxes ?? CharacterLayout.proportional(originalText, in: box, vertical: vertical)
+        line.measuredCharBoxes = originalMeasuredCharBoxes ?? false
+        line.originalText = nil
+        line.originalCharBoxes = nil
+        line.originalMeasuredCharBoxes = nil
+        line.doubt = originalDoubt
+        line.originalDoubt = nil
+        line.edited = nil
         return line
     }
 
@@ -160,6 +187,7 @@ public extension OCRPage {
             var line = source
             line.box = rotate(line.box)
             line.charBoxes = line.charBoxes.map(rotate)
+            line.originalCharBoxes = line.originalCharBoxes?.map(rotate)
             if rotation == 90 || rotation == 270 { line.vertical.toggle() }
             return line
         }

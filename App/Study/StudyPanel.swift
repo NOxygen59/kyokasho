@@ -963,21 +963,31 @@ final class LayoutRegionsCache {
 /// Identité d'objet : `sheet(item:)` présente la session elle-même (RET-009).
 extension LookupSession: Identifiable {}
 
-/// Correction du texte de l'OCR, ligne par ligne. Écran à part : dans le panneau, l'appui long sur une ligne
-/// sélectionnable est pris par la sélection de texte et le menu « Corriger cette ligne » n'apparaît pas.
-/// Travaille sur le résultat présent à l'ouverture : les numéros de ligne ne valent que pour lui.
+/// Correction du texte de la page : lignes de l'OCR, ou lecture OvisOCR2 entière. Écran à part : dans le panneau,
+/// l'appui long sur une ligne sélectionnable est pris par la sélection de texte et le menu « Corriger cette ligne »
+/// n'apparaît pas. Travaille sur le résultat présent à l'ouverture : les numéros de ligne ne valent que pour lui.
 private struct OCRLineEditor: View {
+    private enum Source: Hashable { case ocr, ovis }
+
     @ObservedObject var reader: ReaderController
     @Environment(\.dismiss) private var dismiss
     private let original: OCRPage?
     private let source: Int
+    private let ovisOriginal: String?
     @State private var drafts: [Int: String] = [:]
+    @State private var ovisDraft: String
+    @State private var kind: Source
     @State private var outdated = false
+    @State private var confirmingUndo = false
 
     init(reader: ReaderController) {
         self.reader = reader
         original = reader.ocrPage
         source = reader.focusSource
+        let ovis = DocumentAITextStore.read(documentId: reader.document.id, reader: ModelSpec.ovisocr2.id, page: reader.focusSource)
+        ovisOriginal = ovis
+        _ovisDraft = State(initialValue: ovis ?? "")
+        _kind = State(initialValue: ovis == nil ? .ocr : .ovis)
     }
 
     var body: some View {
@@ -988,12 +998,27 @@ private struct OCRLineEditor: View {
                           systemImage: "exclamationmark.triangle.fill")
                         .foregroundStyle(.orange)
                 }
-                ForEach(Array((original?.lines ?? []).enumerated()), id: \.offset) { index, line in
-                    TextField("Texte de la ligne", text: Binding(
-                        get: { drafts[index] ?? line.text },
-                        set: { drafts[index] = $0 }
-                    ), axis: .vertical)
-                    .font(Atelier.jp)
+                if ovisOriginal != nil, original != nil {
+                    Picker("Texte", selection: $kind) {
+                        Text("Lecture OvisOCR2").tag(Source.ovis)
+                        Text("Lignes de l'OCR").tag(Source.ocr)
+                    }
+                    .pickerStyle(.segmented)
+                }
+                switch kind {
+                case .ovis:
+                    TextEditor(text: $ovisDraft).font(Atelier.jp).frame(minHeight: 320)
+                case .ocr:
+                    ForEach(Array((original?.lines ?? []).enumerated()), id: \.offset) { index, line in
+                        TextField("Texte de la ligne", text: Binding(
+                            get: { drafts[index] ?? line.text },
+                            set: { drafts[index] = $0 }
+                        ), axis: .vertical)
+                        .font(Atelier.jp)
+                    }
+                }
+                if reader.hasCorrections {
+                    Button("Annuler mes corrections de cette page", role: .destructive) { confirmingUndo = true }
                 }
             }
             .navigationTitle("Corriger le texte")
@@ -1004,12 +1029,32 @@ private struct OCRLineEditor: View {
                     Button("Garder") { save() }.disabled(outdated)
                 }
             }
+            .alert("Annuler les corrections ?", isPresented: $confirmingUndo) {
+                Button("Annuler les corrections", role: .destructive) {
+                    reader.undoCorrections()
+                    dismiss()
+                }
+                Button("Retour", role: .cancel) {}
+            } message: {
+                Text("La page revient à ce que l'OCR et OvisOCR2 avaient lu, sans rien relancer.")
+            }
         }
     }
 
     private func save() {
-        guard let original else { return dismiss() }
-        let changes = drafts.filter { original.lines.indices.contains($0.key) && original.lines[$0.key].text != $0.value }
-        if reader.correctOCRLines(changes, ifStill: original, source: source) { dismiss() } else { outdated = true }
+        // Contrôle d'abord : le message « rien n'a été enregistré » doit rester vrai.
+        if let original, !reader.ocrUnchanged(since: original, source: source) {
+            outdated = true
+            return
+        }
+        if let ovisOriginal, ovisDraft != ovisOriginal,
+           !ovisDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            reader.saveOvisCorrection(ovisDraft, source: source)
+        }
+        if let original {
+            let changes = drafts.filter { original.lines.indices.contains($0.key) && original.lines[$0.key].text != $0.value }
+            reader.correctOCRLines(changes, ifStill: original, source: source)
+        }
+        dismiss()
     }
 }

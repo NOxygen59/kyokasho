@@ -97,7 +97,12 @@ struct RootView: View {
             } else {
                 NavigationStack {
                     LibraryView()
-                        .safeAreaInset(edge: .top, spacing: 0) { UpdateBanner() }
+                        .safeAreaInset(edge: .top, spacing: 0) {
+                            VStack(spacing: 0) {
+                                UpdateBanner()
+                                DictionaryUpdateBanner().environmentObject(model.dictionary)
+                            }
+                        }
                 }
             }
         }
@@ -131,15 +136,6 @@ struct RootView: View {
             // Après le chargement de la bibliothèque, et jamais par-dessus une sauvegarde en cours.
             guard !LibraryBackupService.inProgress else { return }
             await dictionaryUpdates.checkAutomaticallyIfDue(model: model.dictionary)
-        }
-        .alert("Dictionnaires à mettre à jour", isPresented: Binding(
-            get: { !dictionaryUpdates.offeredUpdates.isEmpty && model.openDocumentId == nil && !LibraryBackupService.inProgress },
-            set: { if !$0 { dictionaryUpdates.offeredUpdates = [] } }
-        )) {
-            Button("Mettre à jour") { dictionaryUpdates.installOfferedUpdates(model: model.dictionary) }
-            Button("Plus tard", role: .cancel) {}
-        } message: {
-            Text("Une nouvelle version est disponible : \(dictionaryUpdates.offeredUpdates.joined(separator: ", ")).")
         }
         .alert("Erreur", isPresented: Binding(get: { model.lastError != nil }, set: { if !$0 { model.lastError = nil } })) {
             Button("OK", role: .cancel) {}

@@ -37,6 +37,20 @@ struct IntroTourView: View {
                 Button("Passer") { onFinish() }.font(.subheadline)
             }
             TabView(selection: $page) {
+                // Première page : la langue, avant de lire le reste. Quitter ici ne marque pas la visite comme vue :
+                // elle reprend dans la bonne langue au lancement suivant.
+                VStack(spacing: 18) {
+                    Image(systemName: "globe")
+                        .font(Atelier.font(54, weight: .light))
+                        .foregroundStyle(Atelier.Tint.read)
+                        .frame(height: 70)
+                    Text("Langue de l'app").font(Atelier.display(28)).foregroundStyle(Atelier.textPrimary)
+                    AppLanguagePicker().frame(maxWidth: 520)
+                    Text("Tu pourras la changer plus tard dans Réglages → Général → Thèmes et couleurs.")
+                        .font(.footnote).foregroundStyle(Atelier.textSecondary).multilineTextAlignment(.center)
+                }
+                .padding(.horizontal, 24)
+                .tag(0)
                 ForEach(Array(steps.enumerated()), id: \.offset) { index, step in
                     VStack(spacing: 18) {
                         Image(systemName: step.icon)
@@ -53,15 +67,15 @@ struct IntroTourView: View {
                         .frame(maxWidth: 520, alignment: .leading)
                     }
                     .padding(.horizontal, 24)
-                    .tag(index)
+                    .tag(index + 1)
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .always))
             .indexViewStyle(.page(backgroundDisplayMode: .always))
             Button {
-                if page < steps.count - 1 { withAnimation { page += 1 } } else { onFinish() }
+                if page < steps.count { withAnimation { page += 1 } } else { onFinish() }
             } label: {
-                Text(page < steps.count - 1 ? String(localized: "Suivant") : String(localized: "Commencer")).frame(maxWidth: 280)
+                Text(page < steps.count ? String(localized: "Suivant") : String(localized: "Commencer")).frame(maxWidth: 280)
             }
             .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.read))
             .keyboardShortcut(.defaultAction)

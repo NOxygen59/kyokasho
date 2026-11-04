@@ -90,4 +90,19 @@ final class OCRCorrectionNotificationTests: XCTestCase {
         } catch {}
         await fulfillment(of: [updated], timeout: 0.1)
     }
+
+    func testCorrectionCanBeRevertedWithoutRereading() {
+        let box = NormBox(x: 0, y: 0, w: 1, h: 1)
+        let original = OCRLine(text: "相对湿度", box: box, charBoxes: Array(repeating: box, count: 4),
+                               measuredCharBoxes: true, vertical: false, confidence: 0.9)
+        let corrected = original.acceptingCorrection("相対湿度計")
+        XCTAssertEqual(corrected.originalText, "相对湿度")
+        XCTAssertFalse(corrected.measuredCharBoxes)
+        // Une deuxième correction garde le texte de l'OCR, pas la première correction.
+        XCTAssertEqual(corrected.acceptingCorrection("相対湿度").originalText, "相对湿度")
+        let reverted = corrected.revertingCorrection
+        XCTAssertEqual(reverted, original)
+        // « Garder tel quel » n'est pas une correction : rien à annuler.
+        XCTAssertNil(original.acceptingCorrection("相对湿度").originalText)
+    }
 }

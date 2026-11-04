@@ -17,7 +17,30 @@ enum DocumentAITextStore {
             .appendingPathComponent("\(reader)-\(page).md")
     }
 
+    /// Lecture OvisOCR2 corrigée par l'utilisateur, à côté du fichier du modèle, qui n'est jamais réécrit :
+    /// même forme de nom, donc suivie par les décalages de pages, les sauvegardes et les paquets.
+    static let correctedReader = "ovisedit"
+
+    static func hasCorrection(documentId: String, page: Int) -> Bool {
+        FileManager.default.fileExists(atPath: url(documentId: documentId, reader: correctedReader, page: page).path)
+    }
+
+    static func writeCorrection(_ text: String, documentId: String, page: Int) throws {
+        let target = url(documentId: documentId, reader: correctedReader, page: page)
+        try FileManager.default.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try text.write(to: target, atomically: true, encoding: .utf8)
+    }
+
+    /// Retour à la lecture d'OvisOCR2, sans rien relancer.
+    static func removeCorrection(documentId: String, page: Int) {
+        try? FileManager.default.removeItem(at: url(documentId: documentId, reader: correctedReader, page: page))
+    }
+
     static func read(documentId: String, reader: String, page: Int) -> String? {
+        if reader == ModelSpec.ovisocr2.id,
+           let corrected = try? String(contentsOf: url(documentId: documentId, reader: correctedReader, page: page), encoding: .utf8) {
+            return corrected
+        }
         guard let text = try? String(contentsOf: url(documentId: documentId, reader: reader, page: page), encoding: .utf8) else { return nil }
         // Une traduction (français, anglais) n'est pas du japonais : jamais normalisée comme tel.
         return !AIPageFile.translationReaders.contains(reader) && OCRTargetLanguage.forDocument(documentId) == .japanese
@@ -42,7 +65,8 @@ enum DocumentAITextStore {
         let directory = folder.appendingPathComponent(documentId, isDirectory: true)
         guard let names = try? FileManager.default.contentsOfDirectory(atPath: directory.path) else { return }
         let suffixes = pages.map { "-\($0).md" }
-        for name in names where suffixes.contains(where: name.hasSuffix) {
+        // Les corrections de l'utilisateur ne se recalculent pas : elles restent, comme celles de l'OCR.
+        for name in names where suffixes.contains(where: name.hasSuffix) && !name.hasPrefix(correctedReader + "-") {
             try FileManager.default.removeItem(at: directory.appendingPathComponent(name))
         }
     }

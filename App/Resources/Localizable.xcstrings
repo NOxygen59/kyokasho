@@ -4555,6 +4555,72 @@
         }
       }
     },
+    "Annuler les corrections": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Undo corrections"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Annuler les corrections"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "撤销更正"
+          }
+        }
+      }
+    },
+    "Annuler les corrections ?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Undo corrections?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Annuler les corrections ?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要撤销更正吗？"
+          }
+        }
+      }
+    },
+    "Annuler mes corrections de cette page": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Undo my corrections on this page"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Annuler mes corrections de cette page"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "撤销本页的更正"
+          }
+        }
+      }
+    },
     "Anthracite": {
       "localizations": {
         "en": {
@@ -9285,6 +9351,28 @@
         }
       }
     },
+    "Choix de la langue dès la visite guidée.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Language choice right from the guided tour."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choix de la langue dès la visite guidée."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导览开始时即可选择语言。"
+          }
+        }
+      }
+    },
     "Choix du moteur, vérification des caractères, mise en page et textes enregistrés. Tu peux garder les valeurs actuelles pour commencer.": {
       "localizations": {
         "en": {
@@ -10667,6 +10755,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "修复启动时崩溃"
+          }
+        }
+      }
+    },
+    "Correction du texte lu par OvisOCR2 sans relire la page, avec retour à la lecture d'origine.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Correct the text read by OvisOCR2 without rereading the page, and go back to the original reading."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Correction du texte lu par OvisOCR2 sans relire la page, avec retour à la lecture d'origine."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无需重新识别即可修改 OvisOCR2 读取的文字，并可恢复原始结果。"
           }
         }
       }
@@ -18129,6 +18239,28 @@
         }
       }
     },
+    "Ignorer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ignore"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ignorer"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "忽略"
+          }
+        }
+      }
+    },
     "Ignorées (illisibles) : ": {
       "localizations": {
         "en": {
@@ -20219,6 +20351,28 @@
         }
       }
     },
+    "La page revient à ce que l'OCR et OvisOCR2 avaient lu, sans rien relancer.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The page goes back to what OCR and OvisOCR2 read, without running anything again."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La page revient à ce que l'OCR et OvisOCR2 avaient lu, sans rien relancer."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "页面将恢复为 OCR 和 OvisOCR2 读取的内容，不会重新识别。"
+          }
+        }
+      }
+    },
     "La pastille du moteur OCR ne clignote plus en tournant les pages.": {
       "localizations": {
         "en": {
@@ -22265,6 +22419,28 @@
         }
       }
     },
+    "Lexique du design d'intérieur enrichi avec le vocabulaire du métier et ses définitions en français.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Interior design lexicon expanded with trade vocabulary and French definitions."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lexique du design d'intérieur enrichi avec le vocabulaire du métier et ses définitions en français."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "室内设计词库新增行业词汇及法语释义。"
+          }
+        }
+      }
+    },
     "Lexique du domaine": {
       "localizations": {
         "en": {
@@ -22503,6 +22679,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "AI 识别结果中有异常符号链接。"
+          }
+        }
+      }
+    },
+    "Lignes de l'OCR": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OCR lines"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lignes de l'OCR"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OCR 行"
           }
         }
       }
@@ -23717,6 +23915,28 @@
         }
       }
     },
+    "Mise à jour des dictionnaires…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Updating dictionaries…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mise à jour des dictionnaires…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在更新词典…"
+          }
+        }
+      }
+    },
     "Mise à jour par TrollStore": {
       "localizations": {
         "en": {
@@ -23735,6 +23955,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "通过 TrollStore 更新"
+          }
+        }
+      }
+    },
+    "Mises à jour des dictionnaires annoncées par une notification qui reste jusqu'à ta réponse.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dictionary updates shown in a notification that stays until you respond."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mises à jour des dictionnaires annoncées par une notification qui reste jusqu'à ta réponse."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "词典更新通知会一直显示，直到你作出选择。"
           }
         }
       }
@@ -27233,6 +27475,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "通过本地服务器使用 OvisOCR2"
+          }
+        }
+      }
+    },
+    "OvisOCR2 relira la page et ses corrections manuelles seront remplacées.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OvisOCR2 will reread the page and your manual corrections will be replaced."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OvisOCR2 relira la page et ses corrections manuelles seront remplacées."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OvisOCR2 将重新读取此页，手动更正将被替换。"
           }
         }
       }
@@ -31307,6 +31571,28 @@
         }
       }
     },
+    "Refaire": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Redo"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Refaire"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重做"
+          }
+        }
+      }
+    },
     "Refaire la mise en page": {
       "localizations": {
         "en": {
@@ -31325,6 +31611,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "重新排版"
+          }
+        }
+      }
+    },
+    "Refaire la mise en page ?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Redo the layout?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Refaire la mise en page ?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要重做排版吗？"
           }
         }
       }
@@ -38959,6 +39267,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "也可从阅读器添加页面：“文本”按钮 → 仪表图标。然后更正参考文本。"
+          }
+        }
+      }
+    },
+    "Tu pourras la changer plus tard dans Réglages → Général → Thèmes et couleurs.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You can change it later in Settings → General → Themes and colors."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tu pourras la changer plus tard dans Réglages → Général → Thèmes et couleurs."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "之后可在“设置 → 通用 → 主题和颜色”中更改。"
           }
         }
       }

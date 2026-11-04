@@ -21,11 +21,15 @@ final class DictionaryCatalogService: ObservableObject {
     /// Versions publiées plus récentes que celles installées (après « Rechercher des mises à jour »).
     @Published private(set) var updates: [String: YomitanIndex] = [:]
     @Published private(set) var checking = false
-    /// Noms des dictionnaires à proposer après la vérification automatique ; rien n'est installé sans accord.
-    @Published var offeredUpdates: [String] = []
+    /// Dictionnaires à proposer (identifiants du catalogue, ou celui du lexique fourni) : gardés d'un lancement
+    /// à l'autre jusqu'à la réponse de l'utilisateur. Rien n'est installé sans son accord.
+    @Published private(set) var offeredUpdates: [String] = UserDefaults.standard.stringArray(forKey: offeredKey) ?? [] {
+        didSet { UserDefaults.standard.set(offeredUpdates, forKey: Self.offeredKey) }
+    }
+    private static let offeredKey = "dictionaries.offeredUpdates"
     private var task: Task<Void, Never>?
     private var queue: [String] = []
-    private static let lastAutomaticCheckKey = "dictionaries.lastAutomaticCheck"
+    private static let lastAutomaticCheckKey = "dictionaries.lastUpdateCheck"
     /// Version du lexique fourni déjà proposée : « Plus tard » ne redemande pas à chaque retour dans l'app.
     private static let bundledOfferedKey = "dictionaries.bundledOfferedRevision"
 
@@ -36,6 +40,7 @@ final class DictionaryCatalogService: ObservableObject {
     func install(_ entry: CatalogEntry, model: DictionaryModel) {
         guard working == nil, let database = model.database else { return }
         errors[entry.id] = nil
+        offeredUpdates.removeAll { $0 == entry.id } // Installé par ailleurs : plus rien à proposer.
         let previous = installed(entry, in: model)
         working = (entry.id, .index)
         task = Task { [weak self] in
@@ -106,6 +111,7 @@ final class DictionaryCatalogService: ObservableObject {
         guard working == nil, let database = model.database, let zip = BundledLexicon.url() else { return }
         let id = BundledLexicon.resource
         errors[id] = nil
+        offeredUpdates.removeAll { $0 == id }
         working = (id, .importing(0))
         task = Task { [weak self] in
             do {
@@ -141,39 +147,58 @@ final class DictionaryCatalogService: ObservableObject {
     /// La date n'est notée qu'après une réponse d'un site : une coupure ne repousse pas la vérification d'une semaine.
     func checkAutomaticallyIfDue(model: DictionaryModel) async {
         let defaults = UserDefaults.standard
-        guard !checking, working == nil,
-              DictionaryUpdateSchedule.isDue(lastCheck: defaults.object(forKey: Self.lastAutomaticCheckKey) as? Date) else { return }
+        guard !checking, working == nil else { return }
+        // Le lexique fourni arrive avec l'app, sans réseau : il n'attend pas la vérification de la semaine.
+        var ids: [String] = []
+        if bundledUpdateAvailable(in: model), defaults.string(forKey: Self.bundledOfferedKey) != Self.bundledRevision {
+            ids.append(BundledLexicon.resource)
+            defaults.set(Self.bundledRevision, forKey: Self.bundledOfferedKey)
+            Diagnostics.log("dictionnaires : nouveau lexique fourni proposé", "dictionnaire")
+        }
+        guard DictionaryUpdateSchedule.isDue(lastCheck: defaults.object(forKey: Self.lastAutomaticCheckKey) as? Date) else {
+            offeredUpdates += ids.filter { !offeredUpdates.contains($0) }
+            return
+        }
         checking = true
         defer { checking = false }
-        var names: [String] = []
-        if bundledUpdateAvailable(in: model), defaults.string(forKey: Self.bundledOfferedKey) != Self.bundledRevision {
-            names.append(BundledLexicon.name)
-            defaults.set(Self.bundledRevision, forKey: Self.bundledOfferedKey)
-        }
         if await Self.isOnWiFi() {
             let (found, reached) = await publishedUpdates(model: model)
             updates = found
-            names += DictionaryCatalog.entries.filter { found[$0.id] != nil }.map(\.name)
+            ids += DictionaryCatalog.entries.filter { found[$0.id] != nil }.map(\.id)
             if reached { defaults.set(Date(), forKey: Self.lastAutomaticCheckKey) }
+            Diagnostics.log("dictionnaires : vérification, \(found.count) mise(s) à jour, site joint : \(reached)", "dictionnaire")
+        } else {
+            Diagnostics.log("dictionnaires : vérification reportée, pas de Wi-Fi", "dictionnaire")
         }
-        if !names.isEmpty { offeredUpdates = names }
+        // Ce qui attend déjà une réponse reste proposé.
+        offeredUpdates = offeredUpdates + ids.filter { !offeredUpdates.contains($0) }
     }
 
     /// Réponse de l'utilisateur à la proposition : les mises à jour s'installent l'une après l'autre.
     func installOfferedUpdates(model: DictionaryModel) {
+        queue = offeredUpdates
         offeredUpdates = []
-        queue = DictionaryCatalog.entries.filter { updates[$0.id] != nil }.map(\.id)
-        if bundledUpdateAvailable(in: model) { queue.insert(BundledLexicon.resource, at: 0) }
         installNextQueued(model: model)
+    }
+
+    func dismissOfferedUpdates() { offeredUpdates = [] }
+
+    func offeredNames(in model: DictionaryModel) -> [String] {
+        offeredUpdates.map { id in
+            id == BundledLexicon.resource ? BundledLexicon.name : DictionaryCatalog.entries.first { $0.id == id }?.name ?? id
+        }
     }
 
     private func installNextQueued(model: DictionaryModel) {
         guard working == nil, !queue.isEmpty else { return }
         let id = queue.removeFirst()
-        if id == BundledLexicon.resource {
+        // Supprimé entre la proposition et la réponse : on ne le réinstalle pas.
+        if id == BundledLexicon.resource, installedBundled(in: model) != nil {
             installBundled(model: model)
-        } else if let entry = DictionaryCatalog.entries.first(where: { $0.id == id }) {
+        } else if let entry = DictionaryCatalog.entries.first(where: { $0.id == id }), installed(entry, in: model) != nil {
             install(entry, model: model)
+        } else {
+            installNextQueued(model: model)
         }
     }
 

@@ -77,7 +77,11 @@ public struct ReleaseNotes: Equatable, Sendable, Identifiable {
     public static let all: [ReleaseNotes] = [current] + ReleaseHistory.past
 
     /// La version en cours de préparation (cumul de tout le lot ; c'est elle que montre la fenêtre « Nouveautés »).
-    public static let current = ReleaseNotes("1.4.0", "2026-11-04", published: false, String(localized: "L'app en anglais et en chinois", bundle: .main), added: [
+    public static let current = ReleaseNotes("1.4.1", "2026-11-04", published: false, String(localized: "L'app en anglais et en chinois", bundle: .main), added: [
+            String(localized: "Choix de la langue dès la visite guidée.", bundle: .main),
+            String(localized: "Correction du texte lu par OvisOCR2 sans relire la page, avec retour à la lecture d'origine.", bundle: .main),
+            String(localized: "Mises à jour des dictionnaires annoncées par une notification qui reste jusqu'à ta réponse.", bundle: .main),
+            String(localized: "Lexique du design d'intérieur enrichi avec le vocabulaire du métier et ses définitions en français.", bundle: .main),
             String(localized: "Toute l'interface en français, en anglais et en chinois simplifié (Réglages → Général → Thèmes et couleurs).", bundle: .main),
             String(localized: "Extraction des lectures OvisOCR2 d'un document, définitions françaises et légales dans le lexique, vérification hebdomadaire des dictionnaires.", bundle: .main),
             String(localized: "Onglets en haut du lecteur pour passer d'un livre à l'autre ; une notification prévient quand beaucoup sont ouverts.", bundle: .main),
