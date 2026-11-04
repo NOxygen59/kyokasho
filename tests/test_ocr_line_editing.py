@@ -30,7 +30,7 @@ class LegacyLineCorrectionTests(unittest.TestCase):
         source = (ROOT / "App/Reader/ReaderController+Verification.swift").read_text(encoding="utf-8")
         start = source.index("    func correctOCRLine(")
         end = source.index("\n    }", start)
-        self.assertIn("loadError = String(localized:", source[start:end])
+        self.assertIn("model.lastError = String(localized:", source[start:end])
 
 
 if __name__ == "__main__":

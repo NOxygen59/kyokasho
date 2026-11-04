@@ -146,9 +146,9 @@ extension ReaderController {
     /// Ancien dialogue de correction : même garde de session que l'éditeur complet, sur le MainActor.
     /// Une page ou une lecture remplacée pendant la saisie ne reçoit jamais un index devenu périmé.
     func correctOCRLine(_ index: Int, text: String, original: OCRPage, source: Int) {
-        guard correctOCRLines([index: text], ifStill: original, source: source) else {
-            loadError = String(localized: "Le texte de cette page a changé pendant ta correction : rien n'a été enregistré. Ferme cet écran et recommence.")
-            return
+        // Alerte qu'on referme : `loadError` resterait affiché sur la page jusqu'à la fermeture du livre.
+        if !correctOCRLines([index: text], ifStill: original, source: source) {
+            model.lastError = String(localized: "Le texte de cette page a changé pendant ta correction : rien n'a été enregistré. Ferme cet écran et recommence.")
         }
     }
 
