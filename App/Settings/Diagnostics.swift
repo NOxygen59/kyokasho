@@ -125,18 +125,33 @@ enum Diagnostics {
     }
 }
 
+/// Fenêtres ouvertes depuis la page de diagnostic.
+struct DiagnosticsPresentations {
+    var log = false
+    var energy = false
+    var readingExport = false
+}
+
+extension View {
+    /// À poser sur le `Form`, jamais sur une `Section` : SwiftUI recopie un modificateur de `Section` sur chaque ligne,
+    /// et cliquer sur « Voir le résumé » fermait toute la feuille Réglages sur Mac (essai du 04/11/2026).
+    func diagnosticsPresentations(_ presented: Binding<DiagnosticsPresentations>) -> some View {
+        sheet(isPresented: presented.log) { DiagnosticLogView() }
+            .sheet(isPresented: presented.energy) { EnergySummaryView() }
+            .sheet(isPresented: presented.readingExport) { OvisReadingExportView() }
+    }
+}
+
 /// Réglages → Aide et informations → Aide au diagnostic.
 struct DiagnosticsSection: View {
     @AppStorage(Diagnostics.enabledKey) private var enabled = false
     @AppStorage(EnergyMeter.enabledKey) private var energy = false
-    @State private var showLog = false
-    @State private var showEnergy = false
-    @State private var showReadingExport = false
+    @Binding var presented: DiagnosticsPresentations
 
     var body: some View {
         Section {
             Toggle("Mode diagnostic", isOn: $enabled)
-            Button { showLog = true } label: {
+            Button { presented.log = true } label: {
                 Label("Voir le journal", systemImage: "doc.text.magnifyingglass")
             }
             ShareLink(item: Diagnostics.file) { Label("Partager le journal", systemImage: "square.and.arrow.up") }
@@ -146,20 +161,18 @@ struct DiagnosticsSection: View {
         } footer: {
             Text("Note dans un journal ce que fait l'app (chargement des modèles, durées, mémoire, erreurs) pour aider à corriger un bug. Les erreurs sont toujours notées. Le journal reste sur l'iPad (app Fichiers → Kyōkasho → Diagnostics) ; partage-le quand on te le demande. Rien ne part tout seul.")
         }
-        .sheet(isPresented: $showLog) { DiagnosticLogView() }
         Section {
             Toggle("Relevé de batterie", isOn: $energy)
                 .onChange(of: energy) { EnergyMeter.shared.setEnabled($0) }
-            Button { showEnergy = true } label: { Label("Voir le résumé", systemImage: "battery.75") }
+            Button { presented.energy = true } label: { Label("Voir le résumé", systemImage: "battery.75") }
             Button("Effacer le relevé", role: .destructive) { EnergyFile.erase() }
         } header: {
             Text("Batterie")
         } footer: {
             Text("Note chaque minute le niveau de batterie, la chaleur et ce que fait l'app (lecture, IA, analyse), pour savoir quelle fonction consomme. Pour une mesure utile : luminosité fixe, iPad débranché, au moins 15 minutes par activité. Le fichier reste sur l'iPad (Fichiers → Kyōkasho → Diagnostics → energie.csv).")
         }
-        .sheet(isPresented: $showEnergy) { EnergySummaryView() }
         Section {
-            Button { showReadingExport = true } label: {
+            Button { presented.readingExport = true } label: {
                 Label("Extraire les lectures OvisOCR2 d'un document", systemImage: "doc.plaintext")
             }
         } header: {
@@ -167,7 +180,6 @@ struct DiagnosticsSection: View {
         } footer: {
             Text("Crée un seul fichier texte avec tout ce qu'OvisOCR2 a lu dans le document choisi. Le fichier contient le texte de ton livre : ne le publie pas.")
         }
-        .sheet(isPresented: $showReadingExport) { OvisReadingExportView() }
     }
 }
 

@@ -23365,6 +23365,22 @@
         }
       }
     },
+    "Mac : ouvrir le relevé de batterie ne ferme plus les Réglages.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mac: opening the battery log no longer closes Settings."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mac：打开电池记录不会再关闭设置。"
+          }
+        }
+      }
+    },
     "Manuel": {
       "localizations": {
         "en": {
