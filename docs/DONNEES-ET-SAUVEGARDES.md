@@ -13,7 +13,7 @@ Les chemins ci-dessous sont relatifs au conteneur de l'app sur iPad. Ils ne dés
 | Bibliothèque, OCR, notes, repères, encre, réglages de base | `Application Support/Kyokasho/kyokasho.sqlite`, `AppDatabase` | Donnée persistante ; ne pas assimiler les retouches à un cache |
 | Cartes et médias | `ReviewStore`, `review.sqlite` et dossier `Media`, racine fournie par `ReviewModel` | Sauvegarder base et médias ensemble |
 | Dictionnaires | `Application Support/Kyokasho/Dictionaries`, `DictionaryDatabase` | Base SQLite des dictionnaires ; profils et carnet dans la base de l'app. Ceux du catalogue (#50) se retéléchargent : `tools/backup_container.py --omit-dictionaries` les laisse de côté (option explicite, car un dictionnaire importé à la main ne se retélécharge pas). Téléchargement temporaire : `tmp/DictionaryDownload-<UUID>/`, effacé après import |
-| Audio des dictionnaires | `Documents/Audio`, `DictionaryModel` | Copié par la sauvegarde mais non vérifié : non essentiel (décision de NOxygen59, 28/10/2026) |
+| Audio des dictionnaires | `Documents/Audio`, `DictionaryModel` | Copié par l'outil Python de conteneur, non inclus dans la sauvegarde de l'app : non essentiel (décision de NOxygen59, 28/10/2026) |
 | Traductions de définitions | `Application Support/definition-translations.json`, `DefinitionTranslations` | Traductions françaises et votes 👍/👎 ; donnée personnelle |
 | Brouillons de notes | `Application Support/Kyokasho/NoteDrafts/<id>.json`, `NoteDraftStore` | Brouillons non encore ajoutés (RET-008) ; donnée personnelle |
 | Modèles et UniDic | `ModelStore.root`, sous `Application Support/Kyokasho/Models` (UniDic : `Models/unidic`) | Retéléchargeables si source/version encore disponibles ; coûteux |
@@ -47,11 +47,16 @@ Les chemins précis de chaque sous-système restent définis par le code. Depuis
 
 ## Sauvegarde actuelle : ce qui est prouvé et ce qui manque
 
-L'app propose des exports PDF, Markdown, images et Anki. Le code examiné ne démontre pas une fonction de sauvegarde/restauration intégrale et cohérente du conteneur. Aucun export isolé n'est donc présenté comme une assurance de récupération de toutes les données.
+Deux mécanismes existent et leurs preuves ne sont pas interchangeables :
 
-Avant une opération risquée : exporter les PDF utiles, notes et cartes par les parcours disponibles ; ouvrir les exports ailleurs ; garder les PDF sources ; noter version/build et modèles. Ne pas désinstaller l'app. Une sauvegarde de conteneur par un outil disponible sur l'appareil demande une procédure propre à cet environnement, à vérifier avec NOxygen59 ; ne pas inventer une commande universelle TrollStore.
+- **Dans l'app**, Réglages → Fichiers et comptes → Sauvegarde crée une archive `.kyokasho-sauvegarde`. Les trois bases utilisent l'API SQLite de sauvegarde, même ouvertes. Sont inclus `Application Support/Kyokasho/` (sauf modèles et transaction de pages), `Analysis/`, `definition-translations.json` et les préférences ; les fichiers de `Documents/` (diagnostics, audio, paquets de sécurité) et les caches n'en font pas partie. La restauration vérifie les empreintes et l'intégrité SQLite, exige une copie de sécurité dans le dossier choisi, puis s'applique au prochain lancement avant l'ouverture des bases. Les modèles locaux sont conservés ; les réglages propres à l'appareil (comptes, signet de sauvegarde, diagnostic, etc.) restent ceux de l'appareil. Aucun identifiant du Trousseau n'est exporté.
+- **Sur Mac**, `tools/backup_container.py` copie un conteneur dont l'app source est arrêtée. Il couvre aussi `Documents/` et `Library/Preferences/` ; ses exclusions sont des options explicites. Procédure et limites : [PHASE2-SAUVEGARDE.md](PHASE2-SAUVEGARDE.md). Ses tests seuls ne prouvent pas le parcours de restauration de l'app.
 
-Pour une future sauvegarde intégrale, mettre les écritures au repos, utiliser l'API de sauvegarde SQLite adaptée plutôt qu'une copie isolée du `.sqlite` pendant des écritures WAL, et inclure médias, fichiers IA, lexique et préférences. Si l'on copie un conteneur arrêté, traiter ensemble les éventuels fichiers SQLite annexes et vérifier la cohérence après restauration. Ne pas remplacer une base en fonctionnement.
+Depuis le chantier du 04/11, un test du **format applicatif** remplit les vrais `AppDatabase`, `ReviewStore` et `DictionaryDatabase`, sauvegarde leurs bases ouvertes, restaure dans un dossier temporaire puis compare les données et rouvre les bases en écriture. Il couvre PDF, notes ancrées/dessins, repères, surlignages, OCR marqué corrigé, cartes et historique FSRS, média de carte, dictionnaire importé, brouillons et fichiers IA/lexique/conversation. Les fichiers sont comparés ; leur rendu iPad n'est pas testé par cette preuve. Détail, commandes et recette : [SAUVEGARDE-RESTAURATION-2026-11-04.md](SAUVEGARDE-RESTAURATION-2026-11-04.md).
+
+Une bibliothèque sauvegardée sans `definition-translations.json` ne doit pas garder celui de la bibliothèque remplacée. Ce cas est désormais traité, avec reprise après interruption ; les autres fichiers de support restent intacts. Les tests antérieurs de reprise à chaque étape et de nettoyage différé restent applicables.
+
+Avant une opération risquée, garder une copie vérifiée des données et les PDF sources ; noter version/build et modèles. Ne pas désinstaller l'app. Ne jamais remplacer une base en fonctionnement. Le parcours SwiftUI, les fournisseurs Fichiers et la restauration réelle sur iPad restent à qualifier ; aucune commande universelle TrollStore n'est supposée.
 
 ## Protocole de restauration à qualifier
 
@@ -61,7 +66,7 @@ Pour une future sauvegarde intégrale, mettre les écritures au repos, utiliser 
 4. Ouvrir chaque document, vérifier ancrages et pages, modifier puis rouvrir une note, réviser une carte et consulter les médias, conversations et retouches.
 5. Comparer les inventaires et noter toute donnée exclue volontairement, notamment les connexions à rétablir.
 
-Le test n'est réussi qu'après lecture fonctionnelle, pas parce qu'une archive ZIP existe. La première preuve de restauration complète reste à produire.
+La preuve automatisée Mac du format applicatif comprend maintenant la relecture fonctionnelle des bases et l'écriture après restauration. La recette réelle sur iPad, le rendu des dessins et les connexions restent distincts et non confirmés dans ce chantier.
 
 ## Migrations et retour arrière
 

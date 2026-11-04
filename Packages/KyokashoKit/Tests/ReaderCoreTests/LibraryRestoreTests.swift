@@ -143,4 +143,30 @@ final class LibraryRestoreTests: XCTestCase {
         XCTAssertEqual(try String(contentsOf: support.appendingPathComponent("Kyokasho/Documents/b.pdf")), "pdf actuel")
         XCTAssertFalse(FileManager.default.fileExists(atPath: support.appendingPathComponent("RestoreStaging").path + "/x"))
     }
+
+    /// Une bibliothèque sans traductions ni lectures IA doit effacer celles de la bibliothèque remplacée,
+    /// y compris si l'app s'arrête après leur mise de côté. Les autres fichiers de support restent intacts.
+    func testAbsentOptionalDataDoesNotLeakFromReplacedLibrary() throws {
+        for cut in [nil, "aside.support/definition-translations.json"] as [String?] {
+            let support = root.appendingPathComponent(UUID().uuidString)
+            _ = try prepare(support)
+            let marker = try XCTUnwrap(LibraryRestore.pending(support: support))
+            let staging = LibraryRestore.stagingURL(support: support, id: marker.id)
+            try FileManager.default.removeItem(at: staging.appendingPathComponent("support/definition-translations.json"))
+            try FileManager.default.removeItem(at: staging.appendingPathComponent("analysis"))
+            _ = try LibraryRestore.writeMarker(support: support, id: marker.id, backupName: marker.backupName)
+            try put("hors bibliothèque", support.appendingPathComponent("unrelated.txt"))
+            if let cut {
+                LibraryRestore.checkpoint = { if $0 == cut { throw CocoaError(.fileWriteUnknown) } }
+                XCTAssertThrowsError(try LibraryRestore.apply(support: support, analysis: support.appendingPathComponent("Analysis")) { _ in })
+                LibraryRestore.checkpoint = nil
+            }
+            try LibraryRestore.apply(support: support, analysis: support.appendingPathComponent("Analysis")) { _ in }
+            XCTAssertFalse(FileManager.default.fileExists(atPath: support.appendingPathComponent("definition-translations.json").path))
+            XCTAssertFalse(FileManager.default.fileExists(atPath: support.appendingPathComponent("Analysis").path))
+            XCTAssertEqual(try String(contentsOf: support.appendingPathComponent("unrelated.txt")), "hors bibliothèque")
+            XCTAssertEqual(try String(contentsOf: support.appendingPathComponent("Kyokasho/Models/ovis/poids.bin")), "poids")
+            XCTAssertNil(try LibraryRestore.pending(support: support))
+        }
+    }
 }
