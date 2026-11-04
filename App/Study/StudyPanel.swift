@@ -142,7 +142,13 @@ struct StudyTextTab: View {
     @State private var showCompare = false
     @State private var query = ""
     @State private var matches: [PageTextSearch.Match] = []
-    @State private var editingLine: Int?
+    /// Les indices de lignes ne valent que pour cet OCR et cette page, capturés à l'ouverture du dialogue.
+    private struct LineCorrectionDraft {
+        let index: Int
+        let page: OCRPage
+        let source: Int
+    }
+    @State private var editingLine: LineCorrectionDraft?
     @State private var showVerify = false
     @State private var showLineEditor = false
     @State private var lineDraft = ""
@@ -187,7 +193,10 @@ struct StudyTextTab: View {
                                         .textSelection(.enabled)
                                         .frame(maxWidth: .infinity, alignment: .leading)
                                         .contextMenu {
-                                            Button { lineDraft = line.text; editingLine = index } label: {
+                                            Button {
+                                                lineDraft = line.text
+                                                editingLine = LineCorrectionDraft(index: index, page: page, source: reader.focusSource)
+                                            } label: {
                                                 Label("Corriger cette ligne", systemImage: "pencil")
                                             }
                                         }
@@ -248,7 +257,10 @@ struct StudyTextTab: View {
             TextField("Texte de la ligne", text: $lineDraft)
             Button("Annuler", role: .cancel) { editingLine = nil }
             Button("Garder") {
-                if let editingLine { reader.correctOCRLine(editingLine, text: lineDraft) }
+                if let editingLine {
+                    reader.correctOCRLine(editingLine.index, text: lineDraft,
+                                          original: editingLine.page, source: editingLine.source)
+                }
                 editingLine = nil
             }
         } message: {

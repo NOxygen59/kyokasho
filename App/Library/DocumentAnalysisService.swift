@@ -68,18 +68,6 @@ final class DocumentAnalysisService: ObservableObject {
         save(r)
     }
 
-    /// Pages insérées avant celles du document (`PageShift`) : rapport renuméroté de `offset`.
-    func shiftReport(_ id: String, by offset: Int) {
-        guard offset != 0 else { return }
-        update(id) { r in
-            r.pages = Dictionary(uniqueKeysWithValues: r.pages.map { page, value in
-                var value = value
-                value.source = page + offset
-                return (page + offset, value)
-            })
-        }
-    }
-
     /// Le protocole PageShift installe un rapport final sur disque : oublier uniquement son cache.
     func reloadAfterPageShift(_ id: String) {
         cache[id] = nil

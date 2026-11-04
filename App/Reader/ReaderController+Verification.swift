@@ -143,8 +143,14 @@ extension ReaderController {
         line.acceptingCorrection(text)
     }
 
-    /// Correction à la main d'une ligne (gardée : la relecture automatique n'y touche plus).
-    func correctOCRLine(_ index: Int, text: String) { correctOCRLines([index: text]) }
+    /// Ancien dialogue de correction : même garde de session que l'éditeur complet, sur le MainActor.
+    /// Une page ou une lecture remplacée pendant la saisie ne reçoit jamais un index devenu périmé.
+    func correctOCRLine(_ index: Int, text: String, original: OCRPage, source: Int) {
+        guard correctOCRLines([index: text], ifStill: original, source: source) else {
+            loadError = String(localized: "Le texte de cette page a changé pendant ta correction : rien n'a été enregistré. Ferme cet écran et recommence.")
+            return
+        }
+    }
 
     /// Refuse si la page affichée ou son résultat OCR a changé depuis `original` : une relecture peut insérer ou
     /// réordonner des lignes, et le même numéro désignerait alors un autre texte (revue Codex de la 75).
