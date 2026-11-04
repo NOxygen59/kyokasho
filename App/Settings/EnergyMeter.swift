@@ -108,8 +108,14 @@ struct EnergySummaryView: View {
             List {
                 if let rows {
                     if rows.isEmpty {
-                        Text("Pas encore assez de mesures sur batterie. Laisse le relevé allumé, iPad débranché, au moins 10 minutes par activité.")
-                            .foregroundStyle(.secondary)
+                        Group {
+                            #if targetEnvironment(macCatalyst)
+                            Text("Pas encore assez de mesures sur batterie. Laisse le relevé allumé, MacBook débranché, au moins 10 minutes par activité.")
+                            #else
+                            Text("Pas encore assez de mesures sur batterie. Laisse le relevé allumé, iPad débranché, au moins 10 minutes par activité.")
+                            #endif
+                        }
+                        .foregroundStyle(.secondary)
                     }
                     Section {
                         ForEach(rows, id: \.activity) { row in

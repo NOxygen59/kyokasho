@@ -31,6 +31,8 @@ final class StyleTokensGuardTests: XCTestCase {
         let section = try XCTUnwrap(diagnostics.range(of: "struct DiagnosticsSection: View"))
         let next = try XCTUnwrap(diagnostics.range(of: "private struct OvisReadingExportView"))
         XCTAssertFalse(diagnostics[section.upperBound..<next.lowerBound].contains(".sheet("))
+        XCTAssertTrue(diagnostics.contains("OvisReadingExportView().environmentObject(model)"),
+                      "Sans le modèle transmis à la feuille, l'extraction plante à l'ouverture")
         let intro = try String(contentsOf: settings.appendingPathComponent("IntroViews.swift"), encoding: .utf8)
         XCTAssertFalse(intro.contains("struct IntroSettingsSection"), "La feuille des nouveautés doit rester sur le Form")
     }
