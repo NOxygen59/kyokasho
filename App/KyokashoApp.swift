@@ -159,7 +159,7 @@ private extension View {
     @ViewBuilder
     func macInitialWindowFrame() -> some View {
         #if targetEnvironment(macCatalyst)
-        task { MacInitialWindow.applyOnce() }
+        task { await MacInitialWindow.applyOnce() }
         #else
         self
         #endif
@@ -173,10 +173,26 @@ private enum MacInitialWindow {
     /// redimensionner une fenêtre que l'utilisateur a déjà ajustée.
     private static var applied = false
 
-    static func applyOnce() {
-        guard !applied, let scene = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }).first else { return }
+    static func applyOnce() async {
+        guard !applied else { return }
         applied = true
-        scene.requestGeometryUpdate(.Mac(systemFrame: MacWindowFrame.initial(screen: scene.screen.bounds)))
+        // Au tout premier affichage, le système ignore la demande (essai du 04/11/2026) : la scène doit être installée.
+        try? await Task.sleep(nanoseconds: 300_000_000)
+        guard let scene = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }).first,
+              let restrictions = scene.sizeRestrictions else { return }
+        let frame = MacWindowFrame.initial(screen: scene.screen.bounds)
+        let minimum = restrictions.minimumSize, maximum = restrictions.maximumSize
+        // Taille imposée le temps du changement, puis rendue : la fenêtre reste redimensionnable.
+        // Ces limites se comptent en points de l'app, affichés à 77 % sur Mac ; `systemFrame`, en points de l'écran.
+        let appSize = CGSize(width: frame.width / 0.77, height: frame.height / 0.77)
+        restrictions.minimumSize = appSize
+        restrictions.maximumSize = appSize
+        scene.requestGeometryUpdate(.Mac(systemFrame: frame)) { error in
+            Diagnostics.error("fenêtre Mac : \(error.localizedDescription)", "app")
+        }
+        try? await Task.sleep(nanoseconds: 500_000_000)
+        restrictions.minimumSize = minimum
+        restrictions.maximumSize = maximum
     }
 }
 #endif
