@@ -68,6 +68,7 @@ struct KyokashoApp: App {
 
 struct RootView: View {
     @EnvironmentObject private var model: AppModel
+    @ObservedObject private var dictionaryUpdates = DictionaryCatalogService.shared
     @Environment(\.scenePhase) private var scenePhase
     @State private var retryingStorage = false
 
@@ -120,6 +121,20 @@ struct RootView: View {
         // Retour à la bibliothèque ou app en arrière-plan : les IA rendent leur mémoire.
         .onChange(of: model.openDocumentId) { if $0 == nil { Self.releaseAI() } }
         .onChange(of: scenePhase) { if $0 == .background { Self.releaseAI() } }
+        .task {
+            // Après le chargement de la bibliothèque, et jamais par-dessus une sauvegarde en cours.
+            guard !LibraryBackupService.inProgress else { return }
+            await dictionaryUpdates.checkAutomaticallyIfDue(model: model.dictionary)
+        }
+        .alert("Dictionnaires à mettre à jour", isPresented: Binding(
+            get: { !dictionaryUpdates.offeredUpdates.isEmpty && model.openDocumentId == nil && !LibraryBackupService.inProgress },
+            set: { if !$0 { dictionaryUpdates.offeredUpdates = [] } }
+        )) {
+            Button("Mettre à jour") { dictionaryUpdates.installOfferedUpdates(model: model.dictionary) }
+            Button("Plus tard", role: .cancel) {}
+        } message: {
+            Text("Une nouvelle version est disponible : \(dictionaryUpdates.offeredUpdates.joined(separator: ", ")).")
+        }
         .alert("Erreur", isPresented: Binding(get: { model.lastError != nil }, set: { if !$0 { model.lastError = nil } })) {
             Button("OK", role: .cancel) {}
         } message: {

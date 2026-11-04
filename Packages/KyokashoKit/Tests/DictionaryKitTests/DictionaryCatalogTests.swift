@@ -5,6 +5,20 @@
 import XCTest
 
 /// #50 : catalogue des dictionnaires téléchargeables (sans aucun vrai dictionnaire : index d'exemple seulement).
+final class DictionaryUpdateScheduleTests: XCTestCase {
+    func testCheckIsDueOnceAWeek() {
+        let now = Date(timeIntervalSince1970: 1_000_000_000)
+        XCTAssertTrue(DictionaryUpdateSchedule.isDue(lastCheck: nil, now: now))
+        XCTAssertFalse(DictionaryUpdateSchedule.isDue(lastCheck: now.addingTimeInterval(-6 * 24 * 3600), now: now))
+        XCTAssertTrue(DictionaryUpdateSchedule.isDue(lastCheck: now.addingTimeInterval(-7 * 24 * 3600), now: now))
+    }
+
+    func testClockMovedBackDoesNotStopChecking() {
+        let now = Date(timeIntervalSince1970: 1_000_000_000)
+        XCTAssertTrue(DictionaryUpdateSchedule.isDue(lastCheck: now.addingTimeInterval(3600), now: now))
+    }
+}
+
 final class DictionaryCatalogTests: XCTestCase {
     func testBaseTitleAndMatching() {
         XCTAssertEqual(DictionaryCatalog.baseTitle("JMdict (French) [2026-10-28]"), "JMdict (French)")

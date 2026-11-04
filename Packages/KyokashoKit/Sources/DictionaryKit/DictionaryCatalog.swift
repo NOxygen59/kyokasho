@@ -99,6 +99,18 @@ public struct YomitanIndex: Decodable, Equatable, Sendable {
     }
 }
 
+/// Rythme de la vérification automatique des mises à jour : la licence EDRDG demande de tenir les données à jour,
+/// sans que l'app interroge les sites à chaque lancement.
+public enum DictionaryUpdateSchedule {
+    public static let interval: TimeInterval = 7 * 24 * 3600
+
+    public static func isDue(lastCheck: Date?, now: Date = Date()) -> Bool {
+        guard let lastCheck else { return true }
+        // Horloge de l'iPad reculée : mieux vaut vérifier une fois de trop que ne plus jamais vérifier.
+        return lastCheck > now || now.timeIntervalSince(lastCheck) >= interval
+    }
+}
+
 /// Dictionnaire **fourni avec l'app** (#50, D4 piste B ; décision de NOxygen59 du 29/10/2026) : le lexique du design
 /// d'intérieur, construit sur le Mac par `tools/build_domain_lexicon.py` et ajouté au paquet par `build_ipa.sh`. Il
 /// n'est jamais dans le dépôt ; une app construite sans lui le signale. L'installer l'importe depuis le paquet, sans

@@ -3,6 +3,7 @@
 
 import DictionaryKit
 import Foundation
+import Network
 import SwiftUI
 
 /// Télécharge, importe et met à jour les dictionnaires du catalogue (#50). Étapes : lire l'index publié par le
@@ -20,7 +21,11 @@ final class DictionaryCatalogService: ObservableObject {
     /// Versions publiées plus récentes que celles installées (après « Rechercher des mises à jour »).
     @Published private(set) var updates: [String: YomitanIndex] = [:]
     @Published private(set) var checking = false
+    /// Noms des dictionnaires à proposer après la vérification automatique ; rien n'est installé sans accord.
+    @Published var offeredUpdates: [String] = []
     private var task: Task<Void, Never>?
+    private var queue: [String] = []
+    private static let lastAutomaticCheckKey = "dictionaries.lastAutomaticCheck"
 
     func installed(_ entry: CatalogEntry, in model: DictionaryModel) -> DictionaryInfo? {
         model.dictionaries.first { DictionaryCatalog.baseTitle($0.title) == entry.titlePrefix }
@@ -77,10 +82,14 @@ final class DictionaryCatalogService: ObservableObject {
             model.applyFirstLanguage()
             self?.working = nil
             self?.task = nil
+            self?.installNextQueued(model: model)
         }
     }
 
-    func cancel() { task?.cancel() }
+    func cancel() {
+        queue = []
+        task?.cancel()
+    }
 
     /// Version du lexique fourni dans le paquet (`nil` : app construite sans lui). Lue une fois.
     static let bundledRevision: String? = BundledLexicon.url().flatMap { try? BundledLexicon.revision(of: $0) }
@@ -116,7 +125,75 @@ final class DictionaryCatalogService: ObservableObject {
             model.applyFirstLanguage()
             self?.working = nil
             self?.task = nil
+            self?.installNextQueued(model: model)
         }
+    }
+
+    /// Lexique fourni plus récent que celui installé : proposé sans réseau, il est déjà dans le paquet.
+    private func bundledUpdateAvailable(in model: DictionaryModel) -> Bool {
+        guard let bundled = Self.bundledRevision, let installed = installedBundled(in: model) else { return false }
+        return installed.revision != bundled
+    }
+
+    /// Une fois par semaine au plus, en Wi-Fi : cherche de nouvelles versions et les propose. N'installe rien.
+    /// La date n'est notée qu'après une réponse d'un site : une coupure ne repousse pas la vérification d'une semaine.
+    func checkAutomaticallyIfDue(model: DictionaryModel) async {
+        let defaults = UserDefaults.standard
+        guard !checking, working == nil,
+              DictionaryUpdateSchedule.isDue(lastCheck: defaults.object(forKey: Self.lastAutomaticCheckKey) as? Date) else { return }
+        checking = true
+        defer { checking = false }
+        var names = bundledUpdateAvailable(in: model) ? [BundledLexicon.name] : []
+        if await Self.isOnWiFi() {
+            let (found, reached) = await publishedUpdates(model: model)
+            updates = found
+            names += DictionaryCatalog.entries.filter { found[$0.id] != nil }.map(\.name)
+            if reached { defaults.set(Date(), forKey: Self.lastAutomaticCheckKey) }
+        }
+        offeredUpdates = names
+    }
+
+    /// Réponse de l'utilisateur à la proposition : les mises à jour s'installent l'une après l'autre.
+    func installOfferedUpdates(model: DictionaryModel) {
+        offeredUpdates = []
+        queue = DictionaryCatalog.entries.filter { updates[$0.id] != nil }.map(\.id)
+        if bundledUpdateAvailable(in: model) { queue.insert(BundledLexicon.resource, at: 0) }
+        installNextQueued(model: model)
+    }
+
+    private func installNextQueued(model: DictionaryModel) {
+        guard working == nil, !queue.isEmpty else { return }
+        let id = queue.removeFirst()
+        if id == BundledLexicon.resource {
+            installBundled(model: model)
+        } else if let entry = DictionaryCatalog.entries.first(where: { $0.id == id }) {
+            install(entry, model: model)
+        }
+    }
+
+    private nonisolated static func isOnWiFi() async -> Bool {
+        await withCheckedContinuation { continuation in
+            let monitor = NWPathMonitor(requiredInterfaceType: .wifi)
+            monitor.pathUpdateHandler = { path in
+                monitor.cancel()
+                continuation.resume(returning: path.status == .satisfied && !path.isExpensive)
+            }
+            monitor.start(queue: DispatchQueue(label: "dictionnaires.wifi"))
+        }
+    }
+
+    /// Index publiés des dictionnaires installés ; `reached` : au moins un site a répondu.
+    private func publishedUpdates(model: DictionaryModel) async -> (found: [String: YomitanIndex], reached: Bool) {
+        var found: [String: YomitanIndex] = [:]
+        var reached = false
+        for entry in DictionaryCatalog.entries {
+            guard let installed = installed(entry, in: model),
+                  let (data, _) = try? await URLSession.shared.data(from: entry.indexURL),
+                  let index = try? YomitanIndex.decode(data) else { continue }
+            reached = true
+            if index.isNewer(thanInstalledTitle: installed.title, revision: installed.revision) { found[entry.id] = index }
+        }
+        return (found, reached)
     }
 
     /// Lit les index publiés des dictionnaires installés depuis le catalogue (sur demande seulement).
@@ -124,15 +201,7 @@ final class DictionaryCatalogService: ObservableObject {
         guard !checking else { return }
         checking = true
         Task {
-            var found: [String: YomitanIndex] = [:]
-            for entry in DictionaryCatalog.entries {
-                guard let installed = installed(entry, in: model),
-                      let (data, _) = try? await URLSession.shared.data(from: entry.indexURL),
-                      let index = try? YomitanIndex.decode(data),
-                      index.isNewer(thanInstalledTitle: installed.title, revision: installed.revision) else { continue }
-                found[entry.id] = index
-            }
-            updates = found
+            updates = await publishedUpdates(model: model).found
             checking = false
         }
     }
@@ -175,7 +244,7 @@ struct DictionaryCatalogView: View {
             Section {
                 ForEach(DictionaryCatalog.entries) { entry in row(entry) }
             } footer: {
-                Text("Téléchargés depuis le site officiel de chaque projet, puis importés sur l'iPad. Rien d'autre ne part en ligne. Les dictionnaires ne sont pas dans la sauvegarde : on les retélécharge.")
+                Text("Téléchargés depuis le site officiel de chaque projet, puis importés sur l'iPad. Rien d'autre ne part en ligne. Une fois par semaine en Wi-Fi, l'app regarde si une version plus récente existe et te la propose ; rien ne s'installe sans ton accord. Les dictionnaires ne sont pas dans la sauvegarde : on les retélécharge.")
             }
             Section {
                 NavigationLink { DictionaryLicensesView() } label: {
