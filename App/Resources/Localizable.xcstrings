@@ -25757,6 +25757,22 @@
         }
       }
     },
+    "Note chaque minute le niveau de batterie, la chaleur et ce que fait l'app (lecture, IA, analyse), pour savoir quelle fonction consomme. Pour une mesure utile : luminosité fixe, MacBook débranché, au moins 15 minutes par activité. Le fichier reste sur ce MacBook.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Records every minute the battery level, heat and what the app is doing (reading, AI, analysis), to find out which feature uses power. For a useful measurement: fixed brightness, MacBook unplugged, at least 15 minutes per activity. The file stays on this MacBook."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每分钟记录电量、发热和应用正在做的事（阅读、AI、分析），以了解哪项功能耗电。如需有效测量：亮度固定，MacBook 不接电源，每项活动至少 15 分钟。文件保留在这台 MacBook 上。"
+          }
+        }
+      }
+    },
     "Note chaque minute le niveau de batterie, la chaleur et ce que fait l'app (lecture, IA, analyse), pour savoir quelle fonction consomme. Pour une mesure utile : luminosité fixe, iPad débranché, au moins 15 minutes par activité. Le fichier reste sur l'iPad (Fichiers → Kyōkasho → Diagnostics → energie.csv).": {
       "localizations": {
         "en": {
@@ -25775,6 +25791,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "每分钟记录电量、发热和应用正在做的事（阅读、AI、分析），以了解哪项功能耗电。如需有效测量：亮度固定，iPad 不接电源，每项活动至少 15 分钟。文件保留在 iPad 上（文件 → Kyōkasho → Diagnostics → energie.csv）。"
+          }
+        }
+      }
+    },
+    "Note dans un journal ce que fait l'app (chargement des modèles, durées, mémoire, erreurs) pour aider à corriger un bug. Les erreurs sont toujours notées. Le journal reste sur ce MacBook ; partage-le quand on te le demande. Rien ne part tout seul.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Writes to a log what the app does (model loading, durations, memory, errors) to help fix a bug. Errors are always recorded. The log stays on this MacBook; share it when asked. Nothing is sent on its own."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "将应用的操作（模型加载、耗时、内存、错误）写入日志，以帮助修复错误。错误总会被记录。日志保留在这台 MacBook 上；需要时再分享。不会自动发送任何内容。"
           }
         }
       }
@@ -29779,6 +29811,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "没有回答 — 请重试"
+          }
+        }
+      }
+    },
+    "Pas encore assez de mesures sur batterie. Laisse le relevé allumé, MacBook débranché, au moins 10 minutes par activité.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not enough battery measurements yet. Leave the record on, MacBook unplugged, at least 10 minutes per activity."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "电量测量还不够。请保持记录开启，MacBook 不接电源，每项活动至少 10 分钟。"
           }
         }
       }

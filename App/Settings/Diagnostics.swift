@@ -136,9 +136,21 @@ extension View {
     /// À poser sur le `Form`, jamais sur une `Section` : SwiftUI recopie un modificateur de `Section` sur chaque ligne,
     /// et cliquer sur « Voir le résumé » fermait toute la feuille Réglages sur Mac (essai du 04/11/2026).
     func diagnosticsPresentations(_ presented: Binding<DiagnosticsPresentations>) -> some View {
-        sheet(isPresented: presented.log) { DiagnosticLogView() }
-            .sheet(isPresented: presented.energy) { EnergySummaryView() }
-            .sheet(isPresented: presented.readingExport) { OvisReadingExportView() }
+        modifier(DiagnosticsPresentationsModifier(presented: presented))
+    }
+}
+
+private struct DiagnosticsPresentationsModifier: ViewModifier {
+    @EnvironmentObject private var model: AppModel
+    @Binding var presented: DiagnosticsPresentations
+
+    func body(content: Content) -> some View {
+        content
+            .sheet(isPresented: $presented.log) { DiagnosticLogView() }
+            .sheet(isPresented: $presented.energy) { EnergySummaryView() }
+            // Modèle transmis à la main, comme les autres feuilles de l'app : sans lui, l'ouverture plantait sur Mac
+            // (`EnvironmentObject` absent, rapport du 04/11/2026).
+            .sheet(isPresented: $presented.readingExport) { OvisReadingExportView().environmentObject(model) }
     }
 }
 
@@ -159,7 +171,11 @@ struct DiagnosticsSection: View {
         } header: {
             Text("Diagnostic")
         } footer: {
+            #if targetEnvironment(macCatalyst)
+            Text("Note dans un journal ce que fait l'app (chargement des modèles, durées, mémoire, erreurs) pour aider à corriger un bug. Les erreurs sont toujours notées. Le journal reste sur ce MacBook ; partage-le quand on te le demande. Rien ne part tout seul.")
+            #else
             Text("Note dans un journal ce que fait l'app (chargement des modèles, durées, mémoire, erreurs) pour aider à corriger un bug. Les erreurs sont toujours notées. Le journal reste sur l'iPad (app Fichiers → Kyōkasho → Diagnostics) ; partage-le quand on te le demande. Rien ne part tout seul.")
+            #endif
         }
         Section {
             Toggle("Relevé de batterie", isOn: $energy)
@@ -169,7 +185,11 @@ struct DiagnosticsSection: View {
         } header: {
             Text("Batterie")
         } footer: {
+            #if targetEnvironment(macCatalyst)
+            Text("Note chaque minute le niveau de batterie, la chaleur et ce que fait l'app (lecture, IA, analyse), pour savoir quelle fonction consomme. Pour une mesure utile : luminosité fixe, MacBook débranché, au moins 15 minutes par activité. Le fichier reste sur ce MacBook.")
+            #else
             Text("Note chaque minute le niveau de batterie, la chaleur et ce que fait l'app (lecture, IA, analyse), pour savoir quelle fonction consomme. Pour une mesure utile : luminosité fixe, iPad débranché, au moins 15 minutes par activité. Le fichier reste sur l'iPad (Fichiers → Kyōkasho → Diagnostics → energie.csv).")
+            #endif
         }
         Section {
             Button { presented.readingExport = true } label: {
