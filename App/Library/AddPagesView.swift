@@ -81,7 +81,7 @@ struct AddPagesView: View {
             .navigationTitle("Ajouter des pages")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button(done ? "OK" : String(localized: "Fermer")) { dismiss() } } }
-            .sheet(isPresented: $showPicker) { DocumentPicker { add($0) }.ignoresSafeArea() }
+            .documentPicker(isPresented: $showPicker) { add($0) }
             .onAppear {
                 if items.isEmpty { items = [Item(url: nil, name: document.title, pages: document.pageCount)] }
             }

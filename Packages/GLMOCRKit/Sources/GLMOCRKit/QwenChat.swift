@@ -2,8 +2,10 @@
 // Copyright (c) 2026 NOxygen59
 
 import Foundation
+#if canImport(MLXVLM)
 import MLX
 import MLXLMCommon
+#endif
 import OCRKit
 import ReaderCore
 
@@ -37,7 +39,11 @@ public final class QwenChat: @unchecked Sendable {
 
     private let store: ModelStore
     private let model: ModelSpec
+    #if canImport(MLXVLM)
     private var session: ChatSession?
+    #else
+    private var session: Never?
+    #endif
     private var holding = false
 
     public init(store: ModelStore = .shared, model: ModelSpec = .qwen3vl4b) {
@@ -57,6 +63,7 @@ public final class QwenChat: @unchecked Sendable {
         if let free = PageVLMReader.availableMemory(), free < 3_800 * 1_048_576 {
             throw OCRError.engineFailed(String(localized: "Pas assez de mémoire libre pour \(model.title) (\(free / 1_048_576) Mo libres). Ferme les autres apps et réessaie.", bundle: .main))
         }
+        #if canImport(MLXVLM)
         let container = try await GLMModel.shared.acquire(directory: store.directory(model), extraEOSTokens: [])
         holding = true
         let past: [Chat.Message] = history.map { $0.role == .user ? .user($0.text) : .assistant($0.text) }
@@ -67,6 +74,10 @@ public final class QwenChat: @unchecked Sendable {
         session = ChatSession(container, instructions: settings.effectiveInstructions(default: Self.instructions), history: past,
                               generateParameters: parameters,
                               additionalContext: model.id == ModelSpec.qwen35chat4b.id ? ["enable_thinking": settings.thinking] : nil)
+        #else
+        _ = history
+        throw localAIUnavailableOnMac
+        #endif
     }
 
     /// Aide fiable ajoutée à la question (le modèle de 4 milliards invente souvent les lectures, ex. 天井 « あまね ») :
@@ -98,6 +109,7 @@ public final class QwenChat: @unchecked Sendable {
         guard let session else {
             return AsyncThrowingStream { $0.finish(throwing: OCRError.engineFailed(String(localized: "Conversation pas démarrée.", bundle: .main))) }
         }
+        #if canImport(MLXVLM)
         return AsyncThrowingStream { continuation in
             let task = Task {
                 do {
@@ -114,10 +126,18 @@ public final class QwenChat: @unchecked Sendable {
             }
             continuation.onTermination = { _ in task.cancel() }
         }
+        #else
+        _ = (session, prompt)
+        return AsyncThrowingStream { $0.finish(throwing: localAIUnavailableOnMac) }
+        #endif
     }
 
     /// Nouvelle conversation (le modèle reste chargé).
-    public func reset() async { await session?.clear() }
+    public func reset() async {
+        #if canImport(MLXVLM)
+        await session?.clear()
+        #endif
+    }
 
     /// Écran quitté : modèle rendu et déchargé (la mémoire revient à l'iPad).
     public func stop() async {

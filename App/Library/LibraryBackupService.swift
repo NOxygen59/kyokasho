@@ -25,16 +25,25 @@ enum LibraryBackupService {
     static var folder: URL? {
         guard let data = UserDefaults.standard.data(forKey: bookmarkKey) else { return nil }
         var stale = false
-        guard let url = try? URL(resolvingBookmarkData: data, bookmarkDataIsStale: &stale) else { return nil }
-        if stale, let fresh = try? url.bookmarkData() { UserDefaults.standard.set(fresh, forKey: bookmarkKey) }
+        guard let url = try? URL(resolvingBookmarkData: data, options: bookmarkResolution, bookmarkDataIsStale: &stale) else { return nil }
+        if stale, let fresh = try? url.bookmarkData(options: bookmarkCreation) { UserDefaults.standard.set(fresh, forKey: bookmarkKey) }
         return url
     }
 
     static func setFolder(_ url: URL) throws {
         let access = url.startAccessingSecurityScopedResource()
         defer { if access { url.stopAccessingSecurityScopedResource() } }
-        UserDefaults.standard.set(try url.bookmarkData(), forKey: bookmarkKey)
+        UserDefaults.standard.set(try url.bookmarkData(options: bookmarkCreation), forKey: bookmarkKey)
     }
+
+    /// Mac (bac à sable, #55) : le signet doit porter la portée de sécurité pour rouvrir le dossier après relance.
+    #if targetEnvironment(macCatalyst)
+    private static let bookmarkCreation: URL.BookmarkCreationOptions = .withSecurityScope
+    private static let bookmarkResolution: URL.BookmarkResolutionOptions = .withSecurityScope
+    #else
+    private static let bookmarkCreation: URL.BookmarkCreationOptions = []
+    private static let bookmarkResolution: URL.BookmarkResolutionOptions = []
+    #endif
 
     static var lastBackup: Date? { UserDefaults.standard.object(forKey: lastBackupKey) as? Date }
 
@@ -289,25 +298,19 @@ struct BackupSettingsView: View {
         .scrollContentBackground(.hidden)
         .background(Atelier.canvas)
         .navigationTitle("Sauvegarde")
-        .sheet(isPresented: $choosing) {
-            DocumentPicker(types: [.folder], multiple: false, asCopy: false) { urls in
-                guard let url = urls.first else { return }
-                do {
-                    try LibraryBackupService.setFolder(url)
-                    folderName = LibraryBackupService.folder?.lastPathComponent
-                } catch { message = String(localized: "Dossier refusé : \(error.localizedDescription)") }
-            }
-            .ignoresSafeArea()
+        .documentPicker(isPresented: $choosing, types: [.folder], multiple: false, asCopy: false) { urls in
+            guard let url = urls.first else { return }
+            do {
+                try LibraryBackupService.setFolder(url)
+                folderName = LibraryBackupService.folder?.lastPathComponent
+            } catch { message = String(localized: "Dossier refusé : \(error.localizedDescription)") }
         }
         .sheet(item: Binding(get: { shareURL.map(SharedFile.init) }, set: { if $0 == nil { shareURL = nil } })) { file in
             ActivityShareSheet(url: file.url)
         }
-        .sheet(isPresented: $pickingBackup) {
-            DocumentPicker(types: [UTType(filenameExtension: LibraryBackup.fileExtension) ?? .data, .data], multiple: false) { urls in
-                guard let url = urls.first else { return }
-                Task { await verify(url) }
-            }
-            .ignoresSafeArea()
+        .documentPicker(isPresented: $pickingBackup, types: [UTType(filenameExtension: LibraryBackup.fileExtension) ?? .data, .data], multiple: false) { urls in
+            guard let url = urls.first, let kept = PickedFile.keep(url) else { return }
+            Task { await verify(kept); PickedFile.discard(kept) }
         }
         // La sauvegarde vérifiée est passée aux boutons (`presenting`) : la fermeture de l'alerte ne peut pas l'effacer
         // avant l'action. Annuler efface le dossier de préparation.

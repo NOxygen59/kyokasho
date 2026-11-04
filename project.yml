@@ -69,4 +69,10 @@ targets:
         CODE_SIGN_IDENTITY: "-"
         DEVELOPMENT_TEAM: ""
         CODE_SIGN_ENTITLEMENTS: App/Kyokasho.entitlements
-        SUPPORTS_MACCATALYST: NO
+        # Mac Catalyst (#55) : version Mac Intel sans IA locale (MLX seulement sur iOS, voir GLMOCRKit). macOS 13 minimum
+        # (déduit d'iOS 16). L'iPad ne change pas.
+        SUPPORTS_MACCATALYST: YES
+        DERIVE_MACCATALYST_PRODUCT_BUNDLE_IDENTIFIER: NO
+        # Mac : identifiant et conteneur à part (jamais mêlés à l'app iPad lancée sur Mac), bac à sable.
+        "PRODUCT_BUNDLE_IDENTIFIER[sdk=macosx*]": fr.noxygen59.kyokasho.mac
+        "CODE_SIGN_ENTITLEMENTS[sdk=macosx*]": App/Kyokasho-Mac.entitlements

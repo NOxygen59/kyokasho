@@ -276,6 +276,12 @@ extension Color {
 struct ThemePickerView: View {
     @EnvironmentObject private var themes: ThemeManager
     @AppStorage("appearance.themePatterns") private var patternsEnabled = true
+    /// Langue de l'interface (demande de NOxygen59 du 30/10/2026) : « AppleLanguages » propre à l'app, appliquée au
+    /// relancement comme le prévoit iOS. Vide = langue du système.
+    @State private var appLanguage = (UserDefaults.standard.array(forKey: "AppleLanguages") as? [String])
+        .flatMap { UserDefaults.standard.persistentDomain(forName: Bundle.main.bundleIdentifier ?? "")?["AppleLanguages"] != nil ? $0.first : nil }
+        .map { $0.hasPrefix("en") ? "en" : "fr" } ?? ""
+    @State private var languageChanged = false
 
     var body: some View {
         ScrollView {

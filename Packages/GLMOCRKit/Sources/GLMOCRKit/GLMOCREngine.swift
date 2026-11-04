@@ -4,9 +4,11 @@
 import CoreGraphics
 import CoreImage
 import Foundation
+#if canImport(MLXVLM)
 import MLX
 import MLXLMCommon
 import MLXVLM
+#endif
 import OCRKit
 import ONNXOCRKit
 
@@ -37,6 +39,10 @@ public struct GLMOCREngine: OCREngine {
         let base = detector.isAvailable ? try await detector.recognize(.image(image))
                                         : try await VisionOCREngine().recognize(.image(image))
         // 2. Relecture de chaque ligne par l'IA.
+        #if !canImport(MLXVLM)
+        _ = (base, start)
+        throw localAIUnavailableOnMac
+        #else
         let lines: [OCRLine] = try await GLMModel.using(directory: store.directory(.glmocr)) { model in
         var lines: [OCRLine] = []
         // FDR-7 : une génération par ligne → grouper 3-5 lignes voisines par image, découper la réponse par \n. Voir § 6 étape 7.
@@ -54,6 +60,7 @@ public struct GLMOCREngine: OCREngine {
         return lines
         }
         return OCRPage(engine: id, lines: lines, durationMs: Int(Date().timeIntervalSince(start) * 1000))
+        #endif
     }
 
     /// Relit par l'IA **seulement** les lignes données d'un résultat existant (lignes douteuses) ; les autres
@@ -66,6 +73,10 @@ public struct GLMOCREngine: OCREngine {
             image = try PageRenderer.render(url: url, pageIndex: index, longSide: 3000, additionalRotation: rotation)
         case .image(let cg): image = cg
         }
+        #if !canImport(MLXVLM)
+        _ = (page, image)
+        throw localAIUnavailableOnMac
+        #else
         return try await GLMModel.using(directory: store.directory(.glmocr)) { model in
         var page = page
         for i in indices where page.lines.indices.contains(i) {
@@ -86,6 +97,7 @@ public struct GLMOCREngine: OCREngine {
         page.reread = true
         return page
         }
+        #endif
     }
 
     /// Ligne découpée avec une marge (l'IA lit mieux avec de l'air autour ; plus large pour les colonnes).
@@ -135,6 +147,7 @@ public struct AIModelStatus: Sendable {
     public let gpuCacheMB: Int
 }
 
+#if canImport(MLXVLM)
 /// Modèle chargé à la demande (chargement ≈ quelques secondes), libéré après `idleDelay` sans lecture.
 actor GLMModel {
     static let shared = GLMModel()
@@ -244,3 +257,16 @@ actor GLMModel {
         } }
     }
 }
+#else
+/// Mac Catalyst : aucun modèle chargé, rien à décharger (les appels du reste de l'app restent valides).
+actor GLMModel {
+    static let shared = GLMModel()
+    func unload() {}
+    func unload(directory: URL) {}
+    func unloadIfIdle() {}
+    func release() {}
+    func status() -> AIModelStatus {
+        AIModelStatus(loaded: nil, loading: nil, inUse: false, lastUse: [:], gpuActiveMB: 0, gpuCacheMB: 0)
+    }
+}
+#endif

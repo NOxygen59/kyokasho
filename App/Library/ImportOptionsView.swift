@@ -45,21 +45,16 @@ struct ImportOptionsView: View {
             .navigationTitle("Importer")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Annuler") { dismiss() } } }
-            .sheet(isPresented: $showPicker) {
-                DocumentPicker { urls in
-                    guard !urls.isEmpty else { return }
-                    onImport(urls, language)
-                    dismiss()
-                }
-                .ignoresSafeArea()
+            .documentPicker(isPresented: $showPicker) { urls in
+                guard !urls.isEmpty else { return }
+                onImport(urls, language)
+                dismiss()
             }
-            .sheet(isPresented: $showPackagePicker) {
-                DocumentPicker(types: [DocumentPackageService.contentType, .zip, .data], multiple: false) { urls in
-                    guard let url = urls.first else { return }
-                    onPackage?(url)
-                    dismiss()
-                }
-                .ignoresSafeArea()
+            .documentPicker(isPresented: $showPackagePicker, types: [DocumentPackageService.contentType, .zip, .data],
+                            multiple: false) { urls in
+                guard let url = urls.first else { return }
+                onPackage?(url)
+                dismiss()
             }
         }
     }
