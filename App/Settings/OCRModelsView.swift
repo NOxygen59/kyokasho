@@ -20,7 +20,7 @@ final class ModelDownloads: ObservableObject {
     private init() { refresh() }
 
     func refresh() {
-        installed = Set((ModelSpec.all + [.degan] + ModelSpec.layoutModels).filter { store.isInstalled($0) }.map(\.id))
+        installed = Set((ModelSpec.all + [.degan, .ovisocr2GGUF] + ModelSpec.layoutModels).filter { store.isInstalled($0) }.map(\.id))
     }
 
     func start(_ spec: ModelSpec) {
@@ -83,10 +83,14 @@ struct OCRModelsSection: View {
                 row(.ndlocr, badge: String(localized: "Recommandé"))
                 row(.ppocr5, badge: String(localized: "Optionnel"))
             case .ai:
-                row(.glmocr, badge: String(localized: "Optionnel"))
-                row(.ovisocr2, badge: String(localized: "Optionnel"))
-                row(.qwen3vl4b, badge: String(localized: "Optionnel · lourd"))
-                row(.qwen35chat4b, badge: String(localized: "Optionnel · chat"))
+                if localAIAvailable {
+                    row(.glmocr, badge: String(localized: "Optionnel"))
+                    row(.ovisocr2, badge: String(localized: "Optionnel"))
+                    row(.qwen3vl4b, badge: String(localized: "Optionnel · lourd"))
+                    row(.qwen35chat4b, badge: String(localized: "Optionnel · chat"))
+                } else {
+                    row(.ovisocr2GGUF, badge: String(localized: "Optionnel"))
+                }
             case .layout:
                 ForEach(ModelSpec.layoutModels) { spec in row(spec, badge: String(localized: "Optionnel")) }
             case .sharpen:
@@ -108,7 +112,7 @@ struct OCRModelsSection: View {
     private var header: String {
         switch group {
         case .ocr: return String(localized: "1 · Lire le texte des scans (OCR)")
-        case .ai: return String(localized: "3 · Relire et vérifier avec l'IA")
+        case .ai: return localAIAvailable ? String(localized: "3 · Relire et vérifier avec l'IA") : String(localized: "3 · Lire les pages avec l'IA")
         case .layout: return String(localized: "4 · Mise en forme du texte extrait")
         case .sharpen: return String(localized: "5 · Nettoyer les scans")
         }
@@ -119,6 +123,7 @@ struct OCRModelsSection: View {
         case .ocr:
             return String(localized: "Sans modèle, Apple Vision lit déjà le japonais (moins bien). NDLOCR-Lite est fait pour les livres japonais (colonnes verticales). PP-OCRv5 sert aussi à placer chaque caractère pour le dictionnaire. Choix du moteur : Réglages → Lecture des scans, ou le bouton du moteur dans le panneau Texte.")
         case .ai:
+            if !localAIAvailable { return String(localized: "Sur ce Mac, le chat et les gros modèles d'IA sont désactivés.") }
             return String(localized: "GLM-OCR relit les lignes douteuses ; OvisOCR2 lit chaque page du livre. Qwen3-VL participe à l'analyse et peut discuter. Qwen3.5-4B est réservé au chat du livre (≈ 3,1 Go à télécharger). Un seul modèle IA est chargé à la fois ; tout reste sur l'iPad.")
         case .layout:
             return String(localized: "Sans modèle, la mise en forme se fait par la géométrie des lignes. Avec un modèle : titres, colonnes, tableaux, légendes repérés sur l'image ; en-têtes et pieds de page écartés. Choix : panneau Texte, mode « Mis en forme » (bouton Géo / PP / YOLO).")
@@ -220,5 +225,5 @@ private final class PercentGate: @unchecked Sendable {
 extension ModelSpec {
     /// MLX n'existe que sur iPad ; les modèles ONNX tournent partout, Mac compris (#55). Ils peuvent avoir des fichiers
     /// annexes (`dict.txt`, `NDLmoji.yaml`) : la présence d'un `.onnx` décide, pas la totalité des fichiers.
-    var runsOnThisDevice: Bool { localAIAvailable || files.contains { $0.name.hasSuffix(".onnx") } }
+    var runsOnThisDevice: Bool { localAIAvailable || files.contains { $0.name.hasSuffix(".onnx") || $0.name.hasSuffix(".gguf") } }
 }

@@ -2597,6 +2597,22 @@
         }
       }
     },
+    "3 · Lire les pages avec l'IA": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "3 · Read pages with AI"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "3 · 用 AI 阅读页面"
+          }
+        }
+      }
+    },
     "3 · OvisOCR2 (serveur local)": {
       "localizations": {
         "en": {
@@ -4693,6 +4709,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "炭灰"
+          }
+        }
+      }
+    },
+    "Apache-2.0 (ATH-MaaS) — conversion GGUF : bartowski ; moteur llama.cpp (MIT)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apache-2.0 (ATH-MaaS) — GGUF conversion: bartowski; llama.cpp engine (MIT)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apache-2.0（ATH-MaaS）— GGUF 转换：bartowski；llama.cpp 引擎（MIT）"
           }
         }
       }
@@ -23171,6 +23203,22 @@
         }
       }
     },
+    "Lit chaque page du livre avec l'IA. Après le téléchargement, tout est automatique : le moteur se lance à la première lecture et s'arrête tout seul ensuite. Lent sur ce Mac : compte plusieurs minutes par page.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reads each page of the book with AI. After the download, everything is automatic: the engine starts at the first reading and stops by itself afterwards. Slow on this Mac: expect several minutes per page."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "用 AI 阅读书中的每一页。下载后一切自动：引擎在首次阅读时启动，之后自行停止。在这台 Mac 上较慢：每页需要几分钟。"
+          }
+        }
+      }
+    },
     "Livre": {
       "localizations": {
         "en": {
@@ -27615,6 +27663,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "在标签页中打开其他文档"
+          }
+        }
+      }
+    },
+    "OvisOCR2": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OvisOCR2"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OvisOCR2"
           }
         }
       }
@@ -36519,6 +36583,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "在 Mac 上，Qwen、GLM-OCR 和 NDLOCR 无法运行。OvisOCR2 可通过在此 Mac 上运行的 llama.cpp 服务器使用（与 iPad 相同的模型，转换为 GGUF）。Apple Vision OCR、词典、卡片和 .kyokasho 包导入仍可使用。"
+          }
+        }
+      }
+    },
+    "Sur ce Mac, le chat et les gros modèles d'IA sont désactivés.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On this Mac, chat and large AI models are turned off."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在这台 Mac 上，聊天和大型 AI 模型已停用。"
           }
         }
       }

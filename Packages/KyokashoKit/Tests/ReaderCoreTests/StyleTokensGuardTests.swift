@@ -46,11 +46,12 @@ final class StyleTokensGuardTests: XCTestCase {
         }
         XCTAssertTrue(try source("Study/StudyPanel.swift").contains("localAIAvailable ? [(.chat"))
         let settings = try source("Settings/SettingsView.swift")
-        XCTAssertTrue(settings.contains("Text(\"3 · OvisOCR2 (serveur local)\")"), "OvisOCR2 reste visible sur Mac")
+        XCTAssertFalse(settings.contains("llama-server -hf"), "OvisOCR2 ne doit plus demander le Terminal")
+        XCTAssertTrue(try source("Settings/OCRModelsView.swift").contains("row(.ovisocr2GGUF"), "OvisOCR2 garde son bouton sur Mac")
         XCTAssertTrue(settings.contains(".filter(\\.runsOnThisDevice)"))
         let models = try source("Settings/OCRModelsView.swift")
         XCTAssertTrue(models.contains("if localAIAvailable, let file = spec.mainDownload"))
-        XCTAssertTrue(models.contains("files.contains { $0.name.hasSuffix(\".onnx\") }"), "NDLOCR et PP-OCR ont des fichiers annexes")
+        XCTAssertTrue(models.contains("files.contains { $0.name.hasSuffix(\".onnx\")"), "NDLOCR et PP-OCR ont des fichiers annexes")
     }
 
     /// La liste demandée reste complète : un oubli dans `all` rendrait un style impossible à choisir.

@@ -28,7 +28,7 @@ public struct ModelSpec: Identifiable, Sendable, Equatable {
         case "ppocr5": return URL(string: "https://github.com/PaddlePaddle/PaddleOCR")
         case "ndlocr": return URL(string: "https://github.com/ndl-lab/ndlocr-lite")
         case "glmocr": return URL(string: "https://huggingface.co/zai-org/GLM-OCR")
-        case "ovisocr2": return URL(string: "https://huggingface.co/ATH-MaaS/OvisOCR2")
+        case "ovisocr2", "ovisocr2-gguf": return URL(string: "https://huggingface.co/ATH-MaaS/OvisOCR2")
         case "qwen3vl4b": return URL(string: "https://huggingface.co/Qwen/Qwen3-VL-4B-Instruct")
         case "qwen35chat4b": return URL(string: "https://huggingface.co/Qwen/Qwen3.5-4B")
         case "degan": return URL(string: "https://github.com/dali92002/DE-GAN")
@@ -92,6 +92,18 @@ public extension ModelSpec {
     /// OvisOCR2 (ATH-MaaS, Apache-2.0, 0,9 milliard de paramètres, famille Qwen3.5), conversion MLX 8 bits
     /// par tokimoa (vérifiée sur des documents japonais). Lit une page entière en Markdown, dans l'ordre de lecture.
     /// Seulement à la demande (« Vérifier la double page ») : lent et ≈ 1,5 Go de mémoire pendant la lecture.
+    /// OvisOCR2 pour la version Mac (#55) : le même modèle en GGUF, lu par le moteur llama.cpp embarqué.
+    static let ovisocr2GGUF = ModelSpec(
+        id: "ovisocr2-gguf", title: String(localized: "OvisOCR2", bundle: .main),
+        summary: String(localized: "Lit chaque page du livre avec l'IA. Après le téléchargement, tout est automatique : le moteur se lance à la première lecture et s'arrête tout seul ensuite. Lent sur ce Mac : compte plusieurs minutes par page.", bundle: .main),
+        license: String(localized: "Apache-2.0 (ATH-MaaS) — conversion GGUF : bartowski ; moteur llama.cpp (MIT)", bundle: .main),
+        files: [
+            File(name: "model.gguf", url: URL(string: "https://huggingface.co/bartowski/ATH-MaaS_OvisOCR2-GGUF/resolve/main/ATH-MaaS_OvisOCR2-Q4_K_M.gguf")!,
+                 size: 557867136, sha256: "3786d230ceb8f217abdfb8ea8adba975827595053ad5087cb5502898d6a8a68e"),
+            File(name: "mmproj.gguf", url: URL(string: "https://huggingface.co/bartowski/ATH-MaaS_OvisOCR2-GGUF/resolve/main/mmproj-ATH-MaaS_OvisOCR2-f16.gguf")!,
+                 size: 204987040, sha256: "4e0e9cb9d79dd0f423ba152a51816aa82a1f1a9d1a0190b6f67b2cd4cc5dd681"),
+        ])
+
     static let ovisocr2 = ModelSpec(
         id: "ovisocr2", title: String(localized: "OvisOCR2 (IA, vérification de page)", bundle: .main),
         summary: String(localized: "Modèle IA spécialisé japonais (0,9 milliard de paramètres) qui relit une page entière. Sert à vérifier le texte de la double page, à la demande : compte quelques dizaines de secondes par page.", bundle: .main),

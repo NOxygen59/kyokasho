@@ -27,8 +27,8 @@ public struct PageVLMReader: Sendable {
         #if canImport(MLXVLM)
         return store.isInstalled(spec)
         #else
-        // Mac : OvisOCR2 seulement, par le serveur llama.cpp local (LocalServerVLM).
-        return spec.id == ModelSpec.ovisocr2.id && LocalServerVLM.enabled
+        // Mac : OvisOCR2 seulement, par le moteur llama.cpp embarqué (LocalServerVLM).
+        return spec.id == ModelSpec.ovisocr2.id && LocalServerVLM.isInstalled
         #endif
     }
 
