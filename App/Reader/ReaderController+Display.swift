@@ -130,10 +130,16 @@ extension ReaderController {
             }
             Diagnostics.log("Furigana p. \(source + 1) : \(ocr.engine), \(ocr.lines.count) lignes OCR, "
                             + "texte Ovis \(reference?.count ?? 0) caractères, \(marks.count) lectures", "furigana")
-            guard await self?.furiganaGeneration[source] == generation else { return }
-            FuriganaLayer.set(marks, for: key)
-            await self?.pdfView.redrawVisiblePages()
+            await self?.publishPageFurigana(marks, key: key, source: source, generation: generation)
         }
+    }
+
+    /// Contrôle et publication d'un seul tenant sur le fil principal : rien ne peut s'intercaler. Un calcul annulé
+    /// (fermeture, remplacement) a pu rendre des lectures de secours : elles ne doivent pas entrer dans le cache.
+    private func publishPageFurigana(_ marks: [FuriganaLayer.Mark], key: String, source: Int, generation: Int) {
+        guard !closed, !Task.isCancelled, furiganaGeneration[source] == generation else { return }
+        FuriganaLayer.set(marks, for: key)
+        pdfView.redrawVisiblePages()
     }
 
 

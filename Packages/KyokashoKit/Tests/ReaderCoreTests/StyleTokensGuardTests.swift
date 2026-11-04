@@ -22,6 +22,18 @@ final class StyleTokensGuardTests: XCTestCase {
         XCTAssertTrue(library.contains("onDismiss: { themes.applyAppearance() }"), "Appliquer l'apparence à la fermeture des Réglages")
     }
 
+    /// Revue Codex de 40952cf : un calcul de furigana annulé à la fermeture ne doit pas être publié. Contrôle du source :
+    /// le contrôleur dépend de PDFKit et n'a pas de test d'exécution ici.
+    func testCancelledPageFuriganaIsNotPublished() throws {
+        let reader = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .appendingPathComponent("../../../../App/Reader").standardizedFileURL
+        let display = try String(contentsOf: reader.appendingPathComponent("ReaderController+Display.swift"), encoding: .utf8)
+        XCTAssertTrue(display.contains("guard !closed, !Task.isCancelled, furiganaGeneration[source] == generation else { return }"))
+        XCTAssertEqual(display.components(separatedBy: "FuriganaLayer.set(marks, for: key)").count, 3, "publication de showOCR et de scheduleFurigana, pas d'autre")
+        let close = try String(contentsOf: reader.appendingPathComponent("ReaderController+OCR.swift"), encoding: .utf8)
+        XCTAssertTrue(close.contains("for page in furiganaGeneration.keys { furiganaGeneration[page, default: 0] += 1 }"))
+    }
+
     /// Une analyse OvisOCR2 doit pouvoir s'arrêter depuis la liste des IA, et sa durée être annoncée.
     func testOvisAnalysisCanBeStoppedAndAnnouncesItsDuration() throws {
         let app = URL(fileURLWithPath: #filePath).deletingLastPathComponent()

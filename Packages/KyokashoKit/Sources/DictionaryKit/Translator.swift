@@ -119,8 +119,14 @@ public final class Translator: @unchecked Sendable {
     /// Formes de base d'un texte : calcul pur, le plus coûteux de la recherche. Bornes basses : l'iPad doit garder sa
     /// mémoire pour les modèles d'IA, et `NSCache` se vide seul sous pression.
     private let deinflectionMemo = Memo<[Deinflection]>(limit: 2000)
-    /// Mot retenu à une position du texte, par réglages : refaire une page déjà lue ne coûte plus rien.
+    /// Mot retenu à une position du texte, par réglages et par génération : refaire une page déjà lue ne coûte plus
+    /// rien. Sans glossaire, inutile au découpage : le mémo reste léger.
     private let segmentMemo = Memo<TermResult?>(limit: 2000)
+    /// Tests seulement : entre la fin d'une recherche et son écriture, le moment où une invalidation peut survenir.
+    var beforeSegmentMemoWrite: (() -> Void)?
+    /// Avancée par `invalidate()`, sous `lock`, en même temps que `dictionaryCache` est vidé. Elle entre dans la clé du
+    /// mémo : une recherche lancée avant l'invalidation écrit sous une clé que plus personne ne lit.
+    private var memoGeneration = 0
 
     public init(database: DictionaryDatabase, transformer: LanguageTransformer = .japanese) {
         self.database = database
@@ -131,6 +137,7 @@ public final class Translator: @unchecked Sendable {
     public func invalidate() {
         lock.lock()
         dictionaryCache = nil
+        memoGeneration += 1
         lock.unlock()
         segmentMemo.removeAll()
         database.clearCaches()
@@ -380,12 +387,14 @@ public final class Translator: @unchecked Sendable {
         public let term: TermResult?
     }
 
-    /// Découpe un texte en mots (plus long mot à chaque position) : vocabulaire d'une page.
+    /// Découpe un texte en mots (plus long mot à chaque position) : vocabulaire d'une page. Les mots rendus ne portent
+    /// ni définitions ni fréquences : `findTerms` les donne.
     // FDR-6.1 : mémo des positions déjà cherchées pendant un appel (une recherche par caractère non trouvé). Voir § 6 étape 6.
     public func segment(_ text: String, options: LookupOptions = LookupOptions()) throws -> [Segment] {
         var opts = options
         opts.maxResults = 1
-        let optionsKey = "\(opts.scanLength)|\(opts.partsOfSpeechFilter)|\(opts.excludedDictionaryIds.sorted())|"
+        let generation = lock.withLock { memoGeneration }
+        let optionsKey = "\(generation)|\(opts.scanLength)|\(opts.partsOfSpeechFilter)|\(opts.excludedDictionaryIds.sorted())|"
         let chars = Array(text)
         var segments: [Segment] = []
         var i = 0
@@ -404,7 +413,11 @@ public final class Translator: @unchecked Sendable {
             if let known = segmentMemo[key] {
                 found = known
             } else {
-                found = try search(rest, options: opts, withMeta: false).first
+                found = try search(rest, options: opts, withMeta: false).first.map {
+                    TermResult(expression: $0.expression, reading: $0.reading, matchedText: $0.matchedText,
+                               inflectionRules: $0.inflectionRules, definitions: [], frequencies: [], pitches: [], ipa: [])
+                }
+                beforeSegmentMemoWrite?()
                 segmentMemo[key] = .some(found)
             }
             if let best = found {

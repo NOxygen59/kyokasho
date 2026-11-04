@@ -148,6 +148,20 @@ final class DictionaryKitTests: XCTestCase {
         XCTAssertTrue(try translator.segment(text).allSatisfy { $0.term == nil })
     }
 
+    /// Revue Codex de 40952cf : une recherche lancée avant l'invalidation finit après elle. Son résultat ne doit pas
+    /// ressortir pour les appels suivants, alors que le dictionnaire est désactivé.
+    func testSegmentationStartedBeforeInvalidateIsNotReused() throws {
+        let text = "照明"
+        let ids = try db.dictionaries().compactMap(\.id)
+        translator.beforeSegmentMemoWrite = { [translator, db] in
+            translator!.beforeSegmentMemoWrite = nil
+            for id in ids { try? db!.setEnabled(false, dictionaryId: id) }
+            translator!.invalidate()
+        }
+        XCTAssertFalse(try translator.segment(text).compactMap(\.term).isEmpty, "calcul commencé avant la désactivation")
+        XCTAssertTrue(try translator.segment(text).allSatisfy { $0.term == nil }, "résultat périmé repris du mémo")
+    }
+
     /// Le découpage ne charge pas les fréquences ; une recherche directe du même texte les garde.
     func testFindTermsStillAttachesMetaAfterSegmentation() throws {
         let before = try translator.findTerms("照明")

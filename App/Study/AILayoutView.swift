@@ -197,6 +197,7 @@ struct AILayoutView: View {
                 switch part {
                 case .formula(let source): result += FormulaMarkup.html(source)
                 case .prose(let prose):
+                    guard !Task.isCancelled else { return result } // Page quittée : `load` jettera ce HTML.
                     let segments = await dictionary.segment(prose, cancellable: true)
                     let rubies = furigana ? TextFurigana.rubies(prose, segments: segments) : []
                     result += FuriganaTextView.markup(prose, rubies: rubies,
