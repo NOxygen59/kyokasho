@@ -114,7 +114,7 @@ final class StyleTokensGuardTests: XCTestCase {
     func testInterfaceReliefAndBordersUseStyleTokens() throws {
         XCTAssertEqual(try count(#"\.shadow\("#), [:], "Ombre en dur : utiliser atelierShadow")
         // Sur un contenu avec du texte, l'ombre franche le dédouble : passer par atelierShapeShadow.
-        XCTAssertEqual(try count(#"\.atelierShadow\("#), ["Design/Atelier.swift": 3, "Library/LibraryView.swift": 1])
+        XCTAssertEqual(try count(#"\.atelierShadow\("#), ["Design/Atelier.swift": 3, "Design/ThemePreview.swift": 1, "Library/LibraryView.swift": 1])
         XCTAssertEqual(try count(#"\.background\(\.[A-Za-z]+Material"#), [:], "Matière en dur : utiliser Atelier.material")
         // Fond dessiné du thème (motifs) et trait posé sur la page.
         XCTAssertEqual(try count(#"lineWidth: [0-9]"#), ["Design/ThemeBackdrop.swift": 13, "Reader/ReaderScreen.swift": 1],

@@ -3,6 +3,9 @@
 
 # Styles de l'app : jetons et inventaire
 
+**05/11/2026 — sélection resserrée sur décision de NOxygen59 :** huit univers principaux, 23 identifiants conservés pour compatibilité. Motifs, aperçus et silhouettes de panneaux retravaillés ; voir [la refonte des thèmes](REFONTE-THEMES-2026-11-05.md). Les tableaux historiques ci-dessous ne décrivent pas tous le nouveau sélecteur.
+
+
 Référence du chantier des styles (plan local `PLAN-THEMES-STYLES.md`, décisions de NOxygen59 du 29/10/2026).
 Un **jeton** est une valeur visuelle nommée par son rôle (« texte sur couleur de fonction »), jamais par sa valeur
 (« noir »). Les vues lisent les jetons ; seuls `Themes.swift` (palettes) et `Styles.swift` (styles) contiennent des
@@ -135,3 +138,7 @@ flou n'est utilisé hors des styles dont le principe repose sur le verre.
   isolé dans S6.
 
 Les palettes claires sont vérifiées par `ThemeContrastTests` (4,5:1).
+
+## Refonte des huit univers (05/11/2026)
+
+`AppStyle.featured` sélectionne les huit choix de l'interface ; `all` conserve les anciens réglages. `panelShape` choisit une silhouette arrondie, organique ou biseautée (`StyledPanelShape`), `panelEdge.doubleLine` donne le double filet d'Encre et or. `Atelier.display` distingue les graisses de titres sans toucher au texte des pages. `ThemeBackdrop` associe le motif à l'univers, `ThemePreview` représente ses propres valeurs explicites. Les couleurs secondaires restent indépendantes et repliées. Le lot d'ornements est réalisé pour cette sélection ; aucun changement structurel Bento de la bibliothèque n'est inclus.

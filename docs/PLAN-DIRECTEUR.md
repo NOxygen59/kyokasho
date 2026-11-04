@@ -3,6 +3,8 @@
 
 # Plan directeur — professionnalisation de Kyōkasho
 
+**05/11 — refonte visuelle demandée par NOxygen59 :** huit univers distincts sur branche locale `codex/identite-themes`, base `57deec9`. Identifiants historiques conservés ; [preuves, limites et revue Claude ciblée](REFONTE-THEMES-2026-11-05.md). Aucun accord de fusion, candidate ou validation iPad déduit.
+
 > **Lot local lexique du 04/11/2026 :** [livraison multilingue et revue ciblée](LEXIQUE-LANGUES-REPRISE.md), `codex/lexique-langues`, base `15f18a3`. Archives EN et chinois court hors dépôt, 3 836 entrées chacune ; anglais 8 121/8 121 textes. Vrai import/réouverture et filtre vérifiés, 432 Swift réussis / 7 ignorés, 67 Python, compilation iOS Release générique réussie. Revue Claude, raccordement au paquet Mac et recettes Mac/iPad restent à faire. Aucune fusion/push/version/candidate autorisée par cette note.
 
 > **Lot local du 04/11/2026 — MAINT-01 / QA-03 :** [nettoyage ciblé](NETTOYAGE-CIBLE-2026-11-04.md) sur `codex/nettoyage-cible`, base `a7ee0e8` : test des variables de traduction réparé, ancien dialogue OCR protégé, seule méthode interne `shiftReport` sans appel retirée. Lot autorisé par NOxygen59, vérification et revue séparées ; aucune fusion, nouvelle candidate ou preuve iPad ne découle de cette note. Les états historiques ci-dessous sont conservés.
