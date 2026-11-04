@@ -2,6 +2,7 @@
 // Copyright (c) 2026 NOxygen59
 
 import Foundation
+import OCRKit
 import MLX
 import ReaderCore
 import SwiftUI
@@ -130,6 +131,7 @@ struct DiagnosticsSection: View {
     @AppStorage(EnergyMeter.enabledKey) private var energy = false
     @State private var showLog = false
     @State private var showEnergy = false
+    @State private var showReadingExport = false
 
     var body: some View {
         Section {
@@ -156,6 +158,77 @@ struct DiagnosticsSection: View {
             Text("Note chaque minute le niveau de batterie, la chaleur et ce que fait l'app (lecture, IA, analyse), pour savoir quelle fonction consomme. Pour une mesure utile : luminosité fixe, iPad débranché, au moins 15 minutes par activité. Le fichier reste sur l'iPad (Fichiers → Kyōkasho → Diagnostics → energie.csv).")
         }
         .sheet(isPresented: $showEnergy) { EnergySummaryView() }
+        Section {
+            Button { showReadingExport = true } label: {
+                Label("Extraire les lectures OvisOCR2 d'un document", systemImage: "doc.plaintext")
+            }
+        } header: {
+            Text("Lectures IA")
+        } footer: {
+            Text("Crée un seul fichier texte avec tout ce qu'OvisOCR2 a lu dans le document choisi. Le fichier contient le texte de ton livre : ne le publie pas.")
+        }
+        .sheet(isPresented: $showReadingExport) { OvisReadingExportView() }
+    }
+}
+
+/// Choix du document, puis fichier texte de ses lectures OvisOCR2, à partager.
+private struct OvisReadingExportView: View {
+    @EnvironmentObject private var model: AppModel
+    @Environment(\.dismiss) private var dismiss
+    @State private var working: String?
+    @State private var message: String?
+    @State private var file: SharedFile?
+
+    var body: some View {
+        NavigationStack {
+            List {
+                if let message {
+                    Label(message, systemImage: "info.circle").foregroundStyle(.secondary)
+                }
+                ForEach(model.documents) { document in
+                    Button { export(document) } label: {
+                        HStack {
+                            Text(document.title).foregroundStyle(Atelier.textPrimary)
+                            Spacer()
+                            if working == document.id { ProgressView() }
+                        }
+                    }
+                    .disabled(working != nil)
+                }
+            }
+            .navigationTitle("Lectures OvisOCR2")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) { Button("Fermer") { dismiss() } }
+            }
+        }
+        .sheet(item: $file) { ActivityShareSheet(url: $0.url) }
+    }
+
+    private func export(_ document: LibraryDocument) {
+        working = document.id
+        message = nil
+        let reader = ModelSpec.ovisocr2.id
+        Task {
+            // Hors du fil principal : un gros manuel, c'est des centaines de fichiers à lire.
+            let result = await Task.detached(priority: .userInitiated) { () -> Result<URL?, Error> in
+                let pages = (0..<document.pageCount).compactMap { page -> AIReadingExport.Page? in
+                    DocumentAITextStore.read(documentId: document.id, reader: reader, page: page)
+                        .map { AIReadingExport.Page(label: document.pageLabel(page), text: $0) }
+                }
+                guard !pages.isEmpty else { return .success(nil) }
+                let text = AIReadingExport.text(title: document.title, reader: reader, totalPages: document.pageCount, pages: pages)
+                return Result { try AIReadingExport.write(text, title: document.title, reader: reader) }
+            }.value
+            working = nil
+            switch result {
+            case .success(let url?): file = SharedFile(url: url)
+            case .success(nil): message = "OvisOCR2 n'a encore lu aucune page de « \(document.title) »."
+            case .failure(let error):
+                message = "Extraction impossible : \(error.localizedDescription)"
+                Diagnostics.error("extraction des lectures : \(error.localizedDescription)", "diagnostic")
+            }
+        }
     }
 }
 

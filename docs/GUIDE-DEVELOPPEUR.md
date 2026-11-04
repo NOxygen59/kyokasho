@@ -111,6 +111,8 @@ Le code original est MIT ; cela ne remplace pas les licences des composants port
 
 ```bash
 python3 tools/build_domain_lexicon.py fetch --raw <dossier-hors-dépôt>/brut
+python3 tools/build_domain_lexicon.py enrich --raw <dossier-hors-dépôt>/brut   # Wikipédia en français, Wikidata
+python3 tools/build_domain_lexicon.py laws --raw <dossier-hors-dépôt>/brut     # définitions légales, e-Gov
 python3 tools/build_domain_lexicon.py build --raw <dossier-hors-dépôt>/brut --output <dossier-hors-dépôt>/lexique-interieur.zip
 ```
 

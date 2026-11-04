@@ -70,6 +70,7 @@ extension BackupRoundTripTests {
         "App/Dictionary/DictionaryCatalogService.swift": ("temporaire : tmp/DictionaryDownload-<UUID>/ (dictionnaire téléchargé, effacé après import)",
                                                           ["DictionaryDownload-\\(UUID().uuidString)", "\\(entry.id).zip"]),
         "App/Library/DocumentExport.swift": ("temporaire : tmp/Export/", ["Export"]),
+        "Packages/KyokashoKit/Sources/ReaderCore/AIReadingExport.swift": ("temporaire : tmp/partage-lectures-<UUID>/<titre> - lectures <modèle>.txt (partage)", ["\\(base) - lectures \\(reader).txt", "partage-lectures-"]),
         "Packages/KyokashoKit/Sources/ReaderCore/MarkdownShareFile.swift": ("temporaire : tmp/partage-markdown-<UUID>/<titre>.md (partage)", ["partage-markdown-"]),
         "App/Review/ReviewSettingsView.swift": ("temporaire : tmp/Export/", ["Export", "Kyokasho.\\(apkg ? "]),
         "Packages/KyokashoKit/Sources/ReviewKit/Exporters.swift": ("temporaire : tmp/apkg-<UUID>/", ["apkg-", "collection.anki2"]),

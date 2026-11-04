@@ -84,6 +84,25 @@ class LexiconTests(unittest.TestCase):
         for term, entry in written.items():
             self.assertTrue(entry["french"] and entry["definition"] and entry["reading"], term)
 
+    def test_law_definitions_are_read_from_two_columns_and_keep_their_article(self):
+        xml = """<law><Article Num="2"><Paragraph>
+          <Item Num="4"><ItemTitle>四</ItemTitle><ItemSentence><Column><Sentence>試験室</Sentence></Column>
+            <Column><Sentence>試験に使う室をいう。</Sentence></Column></ItemSentence></Item>
+          <Item Num="5"><ItemTitle>五</ItemTitle><ItemSentence><Column><Sentence>対象外</Sentence></Column>
+            <Column><Sentence>読まない。</Sentence></Column></ItemSentence></Item>
+        </Paragraph></Article></law>"""
+        definitions = lexicon.law_definitions(xml, "ID", "試験法", "2", ("4",))
+        self.assertEqual(definitions, [{"term": "試験室", "text": "試験に使う室をいう。", "source": "試験法 第2条第四号",
+                                        "url": "https://laws.e-gov.go.jp/law/ID"}])
+
+    def test_law_text_is_added_to_an_existing_entry_or_makes_a_new_one(self):
+        laws = [{"term": "試験材", "text": "材料をいう。", "source": "試験法 第2条第四号", "url": "https://x"},
+                {"term": "試験室", "text": "室をいう。", "source": "試験法 第2条第五号", "url": "https://y"}]
+        rows = {r[0]: r for r in lexicon.term_rows([], [{"title": "試験材", "extract": "材料。"}], {"laws": laws})}
+        self.assertIn("Définition légale (試験法 第2条第四号) : 材料をいう。", rows["試験材"][5])
+        self.assertEqual(rows["試験室"][2], "law")
+        self.assertEqual(rows["試験室"][5][-1]["content"]["content"], "Source : e-Gov 法令検索")
+
     def test_written_definition_is_marked_as_written_by_ai(self):
         written = {"試験材": {"french": "matériau d'essai", "definition": "Sert aux tests."}}
         row = lexicon.term_rows([], [{"title": "試験材", "extract": "材料。"}], {"written": written})[0]

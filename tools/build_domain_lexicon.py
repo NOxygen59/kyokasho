@@ -11,6 +11,7 @@ Trois étapes, toujours sur le Mac et hors du dépôt (aucun dictionnaire n'est 
            le brut est gardé dans un dossier de travail, pour reconstruire sans retélécharger.
   enrich : ajoute les définitions de Wikipédia en français, les libellés et la nature des pages (Wikidata, CC0)
            et des termes de Wikidata absents des catégories ;
+  laws   : relève les définitions légales de e-Gov 法令検索 (loi et décret sur les normes de construction) ;
   build  : fabrique le .zip Yomitan (index.json, tag_bank_1.json, term_bank_N.json) depuis ce brut.
 
 Sources sous licence CC BY-SA 4.0 : l'attribution est écrite dans index.json et chaque entrée renvoie
@@ -25,6 +26,7 @@ import re
 import subprocess
 import time
 from urllib.parse import quote, urlencode
+import xml.etree.ElementTree as ElementTree
 import zipfile
 
 
@@ -89,12 +91,21 @@ WIKIDATA_NOISE = re.compile(r"isotope|[()（）]|\d")
 TAXON = "Q16521"
 USEFUL_TAXON = re.compile(r"木材|建材|建築|家具|内装")
 
+# (identifiant e-Gov, nom court, article, numéros retenus) : définitions utiles au métier, sans l'urbanisme ni le droit des plans.
+LAW_DEFINITIONS = (
+    ("325AC0000000201", "建築基準法", "2", ("1", "2", "3", "4", "5", "6", "7", "7_2", "8", "9", "9_2", "9_3", "12", "13", "14", "15")),
+    ("325CO0000000338", "建築基準法施行令", "1", ("1", "2", "3", "4", "5", "6")),
+)
+EGOV_API = "https://laws.e-gov.go.jp/api/2/law_data"
+EGOV_LAW = "https://laws.e-gov.go.jp/law"
+LAW_TEXT_LIMIT = 300
+
 TITLE = "Lexique du design d'intérieur (Wikipédia, Wiktionnaire)"
 ATTRIBUTION = (
     "Extraits du Wiktionnaire en français (fr.wiktionary.org) et de Wikipédia en français et en japonais "
     "(fr.wikipedia.org, ja.wikipedia.org), "
     "sous licence CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/). Auteurs : contributeurs de "
-    "chaque page, dont l'adresse est donnée avec l'entrée. Libellés de Wikidata (CC0). Assemblé avec tools/build_domain_lexicon.py (Kyōkasho)."
+    "chaque page, dont l'adresse est donnée avec l'entrée. Libellés de Wikidata (CC0). Textes de loi japonais tirés de e-Gov 法令検索. Assemblé avec tools/build_domain_lexicon.py (Kyōkasho)."
 )
 TERMS_PER_BANK = 2000
 EXCERPT_LIMIT = 160
@@ -206,6 +217,27 @@ def is_trade_term(item, extract):
     return TAXON not in natures or bool(USEFUL_TAXON.search(extract or ""))
 
 
+def law_definitions(xml_text, law_id, law_name, article, numbers):
+    """Définitions d'un article à deux colonnes (terme, définition) du XML officiel des lois japonaises."""
+    root = ElementTree.fromstring(xml_text)
+    definitions = []
+    for element in root.iter("Article"):
+        if element.get("Num") != article:
+            continue
+        for item in element.iter("Item"):
+            columns = item.find("ItemSentence")
+            columns = columns.findall("Column") if columns is not None else []
+            if item.get("Num") not in numbers or len(columns) != 2:
+                continue
+            term, text = ("".join(column.itertext()).strip() for column in columns)
+            # Le reste de l'article complète souvent la définition (sous-points イ, ロ) : on garde le début de l'énoncé.
+            title = item.findtext("ItemTitle", "").strip()
+            definitions.append({"term": re.sub(r"\s+", "", term), "text": re.sub(r"\s+", "", text),
+                                "source": f"{law_name} 第{article}条第{title}号", "url": f"{EGOV_LAW}/{law_id}"})
+        break
+    return definitions
+
+
 def page_url(site, title):
     return f"{site}/wiki/{quote(title.replace(' ', '_'))}"
 
@@ -287,6 +319,16 @@ def term_rows(wiktionary_pages, wikipedia_pages, enrichment=None):
             row[4] = 3
         else:
             rows.append([term, entry.get("reading", ""), "wp", "", 3, glossary, 0, "interieur"])
+    # Texte officiel : ajouté à l'entrée existante du terme, avec son article.
+    latest = {row[0]: row for row in rows if row[2] != "wikt"}
+    for law in enrichment.get("laws", []):
+        text = law["text"] if len(law["text"]) <= LAW_TEXT_LIMIT else law["text"][: LAW_TEXT_LIMIT - 1] + "…"
+        lines = [f"Définition légale ({law['source']}) : {text}", source_link("e-Gov 法令検索", law["url"])]
+        row = latest.get(law["term"])
+        if row:
+            row[5] = row[5] + lines
+        else:
+            rows.append([law["term"], "", "law", "", 2, lines, 0, "interieur"])
     for sequence, row in enumerate(rows, start=1):
         row[6] = sequence
     return rows
@@ -300,6 +342,9 @@ def build(raw, output, revision, written=None):
     if written is None:
         written = json.loads(Path(__file__).with_name("lexique_definitions_fr.json").read_text(encoding="utf-8"))
     enrichment["written"] = written
+    laws_file = raw / "laws.json"
+    if laws_file.exists():
+        enrichment["laws"] = json.loads(laws_file.read_text(encoding="utf-8"))
     rows = term_rows(wiktionary, wikipedia, enrichment)
     index = {
         "title": TITLE,
@@ -317,6 +362,7 @@ def build(raw, output, revision, written=None):
         ["wikt", "source", 0, "Wiktionnaire en français, CC BY-SA 4.0", 0],
         ["wp", "source", 0, "Wikipédia en français et en japonais, CC BY-SA 4.0", 0],
         ["wd", "source", 0, "Wikidata, CC0", 0],
+        ["law", "source", 0, "Textes de loi japonais, e-Gov 法令検索", 0],
         ["interieur", "domain", 0, "Design d'intérieur et architecture", 0],
     ]
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -462,6 +508,18 @@ def fetch_enrichment(wikipedia_pages):
     return {"items": items, "french": french, "extra": extra}
 
 
+def fetch_laws():
+    definitions = []
+    for law_id, name, article, numbers in LAW_DEFINITIONS:
+        time.sleep(1)
+        result = subprocess.run(["curl", "-sS", "--fail", "-m", "90", "-A", USER_AGENT,
+                                 f"{EGOV_API}/{law_id}?response_format=xml&law_full_text_format=xml"], capture_output=True)
+        if result.returncode != 0:
+            raise RuntimeError(f"e-Gov ne répond pas : {law_id}")
+        definitions += law_definitions(result.stdout, law_id, name, article, numbers)
+    return definitions
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     commands = parser.add_subparsers(dest="command", required=True)
@@ -470,6 +528,8 @@ def main():
     fetch.add_argument("--depth", type=int, default=1, help="profondeur des sous-catégories (1 par défaut)")
     enrich = commands.add_parser("enrich", help="ajouter le français et Wikidata au relevé (réseau)")
     enrich.add_argument("--raw", type=Path, required=True)
+    laws = commands.add_parser("laws", help="relever les définitions légales (réseau)")
+    laws.add_argument("--raw", type=Path, required=True)
     make = commands.add_parser("build", help="fabriquer le .zip Yomitan")
     make.add_argument("--raw", type=Path, required=True)
     make.add_argument("--output", type=Path, required=True, help="fichier .zip, hors du dépôt")
@@ -481,6 +541,10 @@ def main():
                             ("wikipedia", fetch_wikipedia(WIKIPEDIA_CATEGORIES, arguments.depth))):
             (arguments.raw / f"{name}.json").write_text(json.dumps(pages, ensure_ascii=False, indent=1), encoding="utf-8")
             print(f"{name} : {len(pages)} pages")
+    elif arguments.command == "laws":
+        definitions = fetch_laws()
+        (arguments.raw / "laws.json").write_text(json.dumps(definitions, ensure_ascii=False, indent=1), encoding="utf-8")
+        print(f"{len(definitions)} définitions légales")
     elif arguments.command == "enrich":
         wikipedia = json.loads((arguments.raw / "wikipedia.json").read_text(encoding="utf-8"))
         enrichment = fetch_enrichment(wikipedia)
