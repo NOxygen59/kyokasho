@@ -52,6 +52,14 @@ final class StyleTokensGuardTests: XCTestCase {
         let models = try source("Settings/OCRModelsView.swift")
         XCTAssertTrue(models.contains("if localAIAvailable, let file = spec.mainDownload"))
         XCTAssertTrue(models.contains("files.contains { $0.name.hasSuffix(\".onnx\")"), "NDLOCR et PP-OCR ont des fichiers annexes")
+    /// Une analyse OvisOCR2 doit pouvoir s'arrêter depuis la liste des IA, et sa durée être annoncée.
+    func testOvisAnalysisCanBeStoppedAndAnnouncesItsDuration() throws {
+        let app = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .appendingPathComponent("../../../../App").standardizedFileURL
+        let tasks = try String(contentsOf: app.appendingPathComponent("Reader/AITaskCenter.swift"), encoding: .utf8)
+        XCTAssertTrue(tasks.contains("analysis.cancel()"))
+        let root = try String(contentsOf: app.appendingPathComponent("KyokashoApp.swift"), encoding: .utf8)
+        XCTAssertTrue(root.contains("AnalysisDurationBanner()"))
     }
 
     /// La liste demandée reste complète : un oubli dans `all` rendrait un style impossible à choisir.

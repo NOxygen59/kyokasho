@@ -102,6 +102,7 @@ struct RootView: View {
                             VStack(spacing: 0) {
                                 UpdateBanner()
                                 DictionaryUpdateBanner().environmentObject(model.dictionary)
+                                AnalysisDurationBanner()
                             }
                         }
                 }

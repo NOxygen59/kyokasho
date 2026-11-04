@@ -4891,6 +4891,12 @@
             "value": "Appearance, tour and what's new"
           }
         },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apparence, visite et nouveautés"
+          }
+        },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
@@ -5313,6 +5319,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "停止（稍后继续）"
+          }
+        }
+      }
+    },
+    "Arrêter l'analyse du document ?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop the document analysis?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arrêter l'analyse du document ?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要停止文档分析吗？"
           }
         }
       }
@@ -10021,6 +10049,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "账户"
+          }
+        }
+      }
+    },
+    "Compte plusieurs minutes par page sur un Mac Intel. Le processeur tourne à fond et les ventilateurs s'entendent : c'est normal. Pour arrêter, touche la pastille OvisOCR2 en bas à gauche.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Expect several minutes per page on an Intel Mac. The processor runs flat out and you will hear the fans: this is normal. To stop, tap the OvisOCR2 pill at the bottom left."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compte plusieurs minutes par page sur un Mac Intel. Le processeur tourne à fond et les ventilateurs s'entendent : c'est normal. Pour arrêter, touche la pastille OvisOCR2 en bas à gauche."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在 Intel Mac 上每页需要几分钟。处理器全速运行，风扇声音会很大，这是正常的。要停止，请点按左下角的 OvisOCR2 标签。"
           }
         }
       }
@@ -22103,6 +22153,28 @@
         }
       }
     },
+    "Lecture OvisOCR2 en cours : ça va prendre beaucoup de temps": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OvisOCR2 is reading: this will take a long time"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lecture OvisOCR2 en cours : ça va prendre beaucoup de temps"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OvisOCR2 正在阅读：这会花很长时间"
+          }
+        }
+      }
+    },
     "Lecture Qwen3-VL-4B": {
       "localizations": {
         "en": {
@@ -23469,6 +23541,12 @@
             "value": "Mac: opening the battery log no longer closes Settings."
           }
         },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mac : ouvrir le relevé de batterie ne ferme plus les Réglages."
+          }
+        },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
@@ -23583,6 +23661,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "恢复标记无法读取：恢复已停止，文件已保留。"
+          }
+        }
+      }
+    },
+    "Masquer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hide"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Masquer"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "隐藏"
           }
         }
       }
@@ -25861,6 +25961,12 @@
             "value": "Records every minute the battery level, heat and what the app is doing (reading, AI, analysis), to find out which feature uses power. For a useful measurement: fixed brightness, MacBook unplugged, at least 15 minutes per activity. The file stays on this MacBook."
           }
         },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Note chaque minute le niveau de batterie, la chaleur et ce que fait l'app (lecture, IA, analyse), pour savoir quelle fonction consomme. Pour une mesure utile : luminosité fixe, MacBook débranché, au moins 15 minutes par activité. Le fichier reste sur ce MacBook."
+          }
+        },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
@@ -25897,6 +26003,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Writes to a log what the app does (model loading, durations, memory, errors) to help fix a bug. Errors are always recorded. The log stays on this MacBook; share it when asked. Nothing is sent on its own."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Note dans un journal ce que fait l'app (chargement des modèles, durées, mémoire, erreurs) pour aider à corriger un bug. Les erreurs sont toujours notées. Le journal reste sur ce MacBook ; partage-le quand on te le demande. Rien ne part tout seul."
           }
         },
         "zh-Hans": {
@@ -29933,6 +30045,12 @@
           "stringUnit": {
             "state": "translated",
             "value": "Not enough battery measurements yet. Leave the record on, MacBook unplugged, at least 10 minutes per activity."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pas encore assez de mesures sur batterie. Laisse le relevé allumé, MacBook débranché, au moins 10 minutes par activité."
           }
         },
         "zh-Hans": {
@@ -40427,6 +40545,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "正在导入、删除或调整方向：完成后才能备份。"
+          }
+        }
+      }
+    },
+    "Un livre entier peut prendre des heures et l'iPad chauffe : c'est normal. Branche-le et laisse l'app ouverte. Pour arrêter, touche la pastille OvisOCR2 en bas à gauche.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A whole book can take hours and the iPad gets warm: this is normal. Plug it in and leave the app open. To stop, tap the OvisOCR2 pill at the bottom left."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un livre entier peut prendre des heures et l'iPad chauffe : c'est normal. Branche-le et laisse l'app ouverte. Pour arrêter, touche la pastille OvisOCR2 en bas à gauche."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "整本书可能需要几个小时，iPad 会发热，这是正常的。请接上电源并保持应用打开。要停止，请点按左下角的 OvisOCR2 标签。"
           }
         }
       }
