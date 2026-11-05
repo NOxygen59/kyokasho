@@ -46,16 +46,12 @@ struct ThemeBackdrop: View {
         .accessibilityHidden(true)
     }
 
-    /// Un style numérique ne récupère pas les feuilles ou les vagues de sa palette couleur.
-    /// Les palettes seules (style nil) gardent leur motif ; aucune préférence enregistrée n'est réécrite.
+    /// La palette garde son motif (Sakura reste Sakura) et le style ajoute sa signature. Seuls les styles dont l'identité
+    /// tient au fond l'imposent : le verre reste nu, et les styles numériques ne récupèrent ni feuilles ni vagues.
+    /// Aucune préférence enregistrée n'est réécrite.
     private var effectiveBackdrop: Theme.Backdrop {
         switch style?.id {
-        case "atelier", "cybercore", "cyberpunk", "pixel": return .grid
-        case "wabisabi": return .earth
-        case "swiss": return .swiss
-        case "brutalism": return .blocks
-        case "synthwave": return .neon
-        case "luxury": return .ink
+        case "cybercore", "cyberpunk", "pixel": return .grid
         case "glass": return .plain
         case "minimalism", "editorial", "clay", "neumorphism": return .plain
         case "scrapbook": return .paper

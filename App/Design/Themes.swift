@@ -75,7 +75,7 @@ struct Theme: Identifiable, Equatable {
         case "sepia": return "book.closed"
         case "brutal": return "square.stack.3d.up.fill"
         case "swiss": return "square.grid.3x3"
-        case "synthwave": return "sun.horizon"
+        case "synthwave": return "sunset" // `sun.horizon` n'existe qu'à partir d'iOS 17.
         case "terre": return "circle.hexagongrid"
         case "foret": return "leaf"
         case "braise": return "flame"

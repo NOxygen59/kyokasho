@@ -30,7 +30,8 @@ struct StyledPanelShape: InsettableShape {
         case .rounded:
             return RoundedRectangle(cornerRadius: r, style: .continuous).path(in: box)
         case .chamfered:
-            let cut = min(max(0, 12 - insetAmount), limit)
+            // Bord intérieur parallèle : une diagonale à 45° recule de (2 - √2) × l'inset le long des côtés.
+            let cut = min(max(0, 12 - insetAmount * (2 - 2.0.squareRoot())), limit)
             var p = Path()
             p.move(to: CGPoint(x: box.minX + cut, y: box.minY))
             p.addLine(to: CGPoint(x: box.maxX - cut, y: box.minY))
