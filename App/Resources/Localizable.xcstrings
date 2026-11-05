@@ -1431,6 +1431,28 @@
         }
       }
     },
+    "%lld Mo": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld MB"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Mo"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld MB"
+          }
+        }
+      }
+    },
     "%lld Mo + cache %lld Mo": {
       "localizations": {
         "en": {
@@ -1449,6 +1471,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld MB + 缓存 %lld MB"
+          }
+        }
+      }
+    },
+    "%lld Mo mesurés": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld MB measured"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Mo mesurés"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已测得 %lld MB"
           }
         }
       }
@@ -5193,6 +5237,28 @@
         }
       }
     },
+    "Après une conversion, l'app propose de mettre les CBZ à la corbeille.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "After a conversion, the app offers to move the CBZ files to the trash."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Après une conversion, l'app propose de mettre les CBZ à la corbeille."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "转换后，应用会询问是否将 CBZ 移到废纸篓。"
+          }
+        }
+      }
+    },
     "Architecte (plan bleu)": {
       "localizations": {
         "en": {
@@ -6179,6 +6245,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "没有运行中的 AI 任务。"
+          }
+        }
+      }
+    },
+    "Aucune tâche coûteuse en cours": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No costly task running"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucune tâche coûteuse en cours"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没有耗资源的任务"
           }
         }
       }
@@ -7433,6 +7521,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "镀铬气泡、玻璃和色彩"
+          }
+        }
+      }
+    },
+    "CBZ déjà présent : un message prévient que l'import est annulé.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CBZ already present: a message says the import was cancelled."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CBZ déjà présent : un message prévient que l'import est annulé."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CBZ 已存在时：会提示已取消导入。"
           }
         }
       }
@@ -10821,6 +10931,116 @@
           "stringUnit": {
             "state": "translated",
             "value": "对话"
+          }
+        }
+      }
+    },
+    "Conversion %lld / %lld": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conversion %1$lld / %2$lld"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conversion %lld / %lld"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "转换 %1$lld / %2$lld"
+          }
+        }
+      }
+    },
+    "Conversion annulée. Les PDF déjà créés restent.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conversion cancelled. PDFs already created are kept."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conversion annulée. Les PDF déjà créés restent."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "转换已取消。已创建的 PDF 会保留。"
+          }
+        }
+      }
+    },
+    "Conversion de CBZ en PDF": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Converting CBZ to PDF"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conversion de CBZ en PDF"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在将 CBZ 转换为 PDF"
+          }
+        }
+      }
+    },
+    "Conversion des CBZ : elle suit l'ordre de sélection, s'annule, et ne lance plus de lecture IA.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CBZ conversion: it follows the selection order, can be cancelled, and no longer starts an AI reading."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conversion des CBZ : elle suit l'ordre de sélection, s'annule, et ne lance plus de lecture IA."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CBZ 转换：按选择顺序进行，可取消，不再启动 AI 阅读。"
+          }
+        }
+      }
+    },
+    "Conversion mieux guidée et moniteur détaillé": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Better guided conversion and a detailed monitor"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conversion mieux guidée et moniteur détaillé"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更完善的转换引导与详细监视器"
           }
         }
       }
@@ -19449,6 +19669,50 @@
         }
       }
     },
+    "Import de CBZ": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importing CBZ"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import de CBZ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在导入 CBZ"
+          }
+        }
+      }
+    },
+    "Import de documents": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importing documents"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import de documents"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在导入文档"
+          }
+        }
+      }
+    },
     "Import impossible : %@": {
       "localizations": {
         "en": {
@@ -20699,6 +20963,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "Kyōkasho %@ 可用"
+          }
+        }
+      }
+    },
+    "Kyōkasho — non attribué": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kyōkasho — unattributed"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kyōkasho — non attribué"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kyōkasho — 未归属"
           }
         }
       }
@@ -23409,6 +23695,28 @@
         }
       }
     },
+    "Leur conversion a réussi. Le PDF garde sa propre progression, et les CBZ restent récupérables dans la corbeille.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Their conversion succeeded. The PDF keeps its own progress, and the CBZ files can be recovered from the trash."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leur conversion a réussi. Le PDF garde sa propre progression, et les CBZ restent récupérables dans la corbeille."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "转换成功。PDF 保留自己的阅读进度，CBZ 可从废纸篓恢复。"
+          }
+        }
+      }
+    },
     "Leurs messages seront effacés de l'iPad.": {
       "localizations": {
         "en": {
@@ -24311,6 +24619,28 @@
         }
       }
     },
+    "Manuels %@ · Livres %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Textbooks %1$@ · Books %2$@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manuels %@ · Livres %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "教材 %1$@ · 书籍 %2$@"
+          }
+        }
+      }
+    },
     "Marges horizontales : %lld pt": {
       "localizations": {
         "en": {
@@ -24597,6 +24927,28 @@
         }
       }
     },
+    "Mettre %lld CBZ à la corbeille ?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Move %lld CBZ to the trash?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mettre %lld CBZ à la corbeille ?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "将 %lld 个 CBZ 移到废纸篓？"
+          }
+        }
+      }
+    },
     "Mettre %lld à la corbeille": {
       "localizations": {
         "en": {
@@ -24791,6 +25143,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "明朝体"
+          }
+        }
+      }
+    },
+    "Miniatures": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thumbnails"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Miniatures"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "缩略图"
           }
         }
       }
@@ -25411,6 +25785,28 @@
         }
       }
     },
+    "Modèle IA chargé": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI model loaded"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modèle IA chargé"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已加载 AI 模型"
+          }
+        }
+      }
+    },
     "Modèle IA spécialisé japonais (0,9 milliard de paramètres) qui relit une page entière. Sert à vérifier le texte de la double page, à la demande : compte quelques dizaines de secondes par page.": {
       "localizations": {
         "en": {
@@ -25649,6 +26045,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "监视器"
+          }
+        }
+      }
+    },
+    "Moniteur de l'accueil, panneau déplié : les activités en cours et la mémoire du modèle IA.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Home monitor, expanded panel: running activities and the AI model's memory."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moniteur de l'accueil, panneau déplié : les activités en cours et la mémoire du modèle IA."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "主页监视器展开面板：显示进行中的活动和 AI 模型内存。"
           }
         }
       }
@@ -38369,6 +38787,28 @@
         }
       }
     },
+    "Temps de lecture séparé entre Livres & Manuels et Manga.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reading time split between Books & Textbooks and Manga."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Temps de lecture séparé entre Livres & Manuels et Manga."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "阅读时间按书籍与教材、漫画分开统计。"
+          }
+        }
+      }
+    },
     "Température": {
       "localizations": {
         "en": {
@@ -43341,6 +43781,28 @@
         }
       }
     },
+    "actif %lld %%": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "active %lld %%"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "actif %lld %%"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "活动 %lld %%"
+          }
+        }
+      }
+    },
     "analyse": {
       "localizations": {
         "en": {
@@ -45691,6 +46153,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "%2$@ 的“%1$@”：%3$lld 个文档、%4$lld 条笔记、%5$lld 张卡片。你当前的书库将被替换，替换前会在你的文件夹中创建安全备份。"
+          }
+        }
+      }
+    },
+    "« %@ » est déjà dans la bibliothèque : import annulé.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@” is already in the library: import cancelled."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "« %@ » est déjà dans la bibliothèque : import annulé."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "《%@》已在资料库中：已取消导入。"
           }
         }
       }

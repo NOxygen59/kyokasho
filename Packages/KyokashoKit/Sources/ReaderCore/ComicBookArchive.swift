@@ -67,6 +67,7 @@ public enum ComicBookArchive {
         defer { try? FileManager.default.removeItem(at: pageFile) }
         var pages = 0, skipped = 0
         for name in names {
+            try ensureRoom(in: directory)
             guard let entry = entries[name], entry.uncompressedSize <= maximumPageBytes else { skipped += 1; continue }
             // Une page à la fois, sur disque puis lue par ImageIO : ni l'archive ni le fichier ne restent en mémoire.
             let drawn: Bool = autoreleasepool {
@@ -94,6 +95,8 @@ public enum ComicBookArchive {
             throw ImportError.unreadable(String(localized: "Ce fichier CBZ n'a pas pu être converti.", bundle: .main))
         }
         for index in 1...document.numberOfPages {
+            try Task.checkCancellation()
+            try ensureRoom(in: output.deletingLastPathComponent())
             autoreleasepool {
                 guard let page = document.page(at: index) else { return }
                 var box = page.getBoxRect(.mediaBox)
@@ -103,6 +106,18 @@ public enum ComicBookArchive {
             }
         }
         context.closePDF()
+    }
+
+    /// Réserve gardée libre pendant l'écriture : la taille d'un PDF issu de PNG ou de WebP ne se prévoit pas, seule la place
+    /// restante le permet. Vérifiée en cours de route, elle interrompt la conversion avant de remplir l'iPad.
+    static let minimumFreeBytes: Int64 = 300 * 1_048_576
+
+    static func ensureRoom(in directory: URL) throws {
+        let free = (try? directory.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey]))?
+            .volumeAvailableCapacityForImportantUsage ?? .max
+        guard free >= minimumFreeBytes else {
+            throw ImportError.unreadable(String(localized: "Pas assez d'espace libre pour convertir ce fichier CBZ.", bundle: .main))
+        }
     }
 
     /// Dimensions lues avant tout décodage. Image normale : reprise telle quelle. Trop grande ou tournée (EXIF) : passe par
@@ -188,7 +203,7 @@ extension DocumentImporter {
 
     private static let comicConversionsKey = "comics.converted"
 
-    /// Ordre de conversion des CBZ sélectionnés : tome 2 avant tome 10.
+    /// « Tout sélectionner » : tome 2 avant tome 10. Sinon, la conversion suit l'ordre des touchers.
     public static func conversionOrder(_ documents: [LibraryDocument]) -> [LibraryDocument] {
         documents.filter(\.isComicArchive).sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
     }

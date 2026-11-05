@@ -100,6 +100,13 @@ public struct ReaderSettingsOverride: Codable, Equatable, Sendable {
     public init() {}
 
     public var isEmpty: Bool { self == ReaderSettingsOverride() }
+
+    /// Y a-t-il un choix de lecture à réinitialiser ? L'espace Manga est un rangement, pas un réglage.
+    public var hasReaderOverrides: Bool {
+        var settings = self
+        settings.mangaSpace = nil
+        return !settings.isEmpty
+    }
 }
 
 /// Thème de l'interface.

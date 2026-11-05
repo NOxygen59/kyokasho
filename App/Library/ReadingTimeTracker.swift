@@ -41,6 +41,11 @@ final class ReadingTimeTracker: ObservableObject {
         update()
     }
 
+    /// Secondes lues dans ces documents, d'après le journal des séances.
+    func seconds(in ids: Set<String>) -> TimeInterval {
+        TimeInterval(log.sessions.reduce(0) { ids.contains($1.documentId) ? $0 + $1.seconds : $0 })
+    }
+
     /// Document supprimé : ses séances restent dans les jours lus, sans lien avec lui.
     func forget(documentId: String) {
         log.forget(documentId: documentId)

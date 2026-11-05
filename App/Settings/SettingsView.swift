@@ -235,7 +235,7 @@ struct DocumentSettingsSheet: View {
                         fresh.mangaSpace = override.mangaSpace
                         override = fresh
                     }
-                        .disabled(override.isEmpty)
+                        .disabled(!override.hasReaderOverrides)
                 } footer: {
                     Text("Réinitialise les choix de lecture et le moteur OCR propres à ce livre.")
                 }

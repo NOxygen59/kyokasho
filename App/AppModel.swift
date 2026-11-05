@@ -83,7 +83,27 @@ final class AppModel: ObservableObject {
         var done: Int
         var total: Int
         var currentName: String
+        var isConversion = false
     }
+
+    /// Message bref en haut de l'accueil, qui repart seul.
+    @Published private(set) var notice: String?
+    private var noticeTask: Task<Void, Never>?
+    /// CBZ convertis avec succès : l'accueil propose de les mettre à la corbeille.
+    @Published var convertedComics: [LibraryDocument] = []
+    private var conversionTask: Task<Void, Never>?
+
+    func showNotice(_ text: String) {
+        notice = text
+        noticeTask?.cancel()
+        noticeTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 4_000_000_000)
+            guard !Task.isCancelled else { return }
+            self?.notice = nil
+        }
+    }
+
+    func cancelConversion() { conversionTask?.cancel() }
 
     init() {
         // Restauration préparée (#51) : avant d'ouvrir la moindre base, quel que soit l'ordre de création par SwiftUI.
@@ -202,8 +222,10 @@ final class AppModel: ObservableObject {
                     self.importProgress = ImportProgress(done: index, total: urls.count, currentName: url.lastPathComponent)
                 }
                 let scoped = url.startAccessingSecurityScopedResource()
+                let isComic = url.pathExtension.lowercased() == ComicBookArchive.fileExtension
+                let activity = ActivityCenter.shared.begin(isComic ? .comicImport : .importing, detail: url.lastPathComponent)
+                defer { ActivityCenter.shared.end(activity) }
                 do {
-                    let isComic = url.pathExtension.lowercased() == ComicBookArchive.fileExtension
                     let result = isComic ? try importer.importComicArchive(at: url, displayName: url.lastPathComponent)
                         : try importer.importFile(at: url, displayName: url.lastPathComponent)
                     if result.isNew {
@@ -213,7 +235,15 @@ final class AppModel: ObservableObject {
                             errors.append(String(localized: "\(url.lastPathComponent) : \(result.skippedPages) page(s) illisible(s) ou trop lourde(s) ignorée(s)."))
                         }
                     }
-                    lastImported = result.document.id
+                    if isComic, !result.isNew {
+                        // Déjà là : import annulé, sans ouvrir le document par surprise.
+                        let title = result.document.title
+                        await MainActor.run {
+                            self.showNotice(String(localized: "« \(title) » est déjà dans la bibliothèque : import annulé."))
+                        }
+                    } else {
+                        lastImported = result.document.id
+                    }
                     imported.append(result.document)
                 } catch {
                     errors.append("\(url.lastPathComponent) : \(error.localizedDescription)")
@@ -327,7 +357,7 @@ final class AppModel: ObservableObject {
     @Published var pageEditRequest: PageEditRequest?
 
     func requestPageEdit(documentId: String, page: Int) {
-        guard documents.first(where: { $0.id == documentId })?.capabilities.pageEditing != false else { return }
+        guard documents.first(where: { $0.id == documentId })?.capabilities.pageEditing == true else { return }
         pageEditRequest = PageEditRequest(documentId: documentId, page: page)
         openDocumentId = nil
     }
@@ -426,39 +456,45 @@ final class AppModel: ObservableObject {
         answerCategory(nil)
     }
 
-    /// Crée un PDF avec OCR pour chaque CBZ sélectionné, dans l'ordre des tomes. Les CBZ restent en place.
+    /// Crée un PDF avec OCR pour chaque CBZ, dans l'ordre donné. Les CBZ restent en place : l'accueil propose ensuite de
+    /// mettre à la corbeille ceux qui ont réussi. Aucune lecture IA lancée : l'OCR se fait page par page, à la demande.
     func convertComics(_ documents: [LibraryDocument]) {
-        let comics = DocumentImporter.conversionOrder(documents)
+        let comics = documents.filter(\.isComicArchive)
         guard storageRecoveryError == nil, importProgress == nil, let first = comics.first else { return }
         guard !LibraryBackupService.inProgress else {
             lastError = String(localized: "Sauvegarde en cours : réessaie après sa fin.")
             return
         }
-        importProgress = ImportProgress(done: 0, total: comics.count, currentName: first.title)
+        importProgress = ImportProgress(done: 0, total: comics.count, currentName: first.title, isConversion: true)
         let importer = importer
-        Task.detached(priority: .userInitiated) {
-            var created: [LibraryDocument] = []
+        conversionTask = Task.detached(priority: .userInitiated) {
+            var succeeded: [LibraryDocument] = []
             var errors: [String] = []
-            for (index, comic) in comics.enumerated() {
+            for (index, comic) in comics.enumerated() where !Task.isCancelled {
                 await MainActor.run {
-                    self.importProgress = ImportProgress(done: index, total: comics.count, currentName: comic.title)
+                    self.importProgress = ImportProgress(done: index, total: comics.count, currentName: comic.title, isConversion: true)
                 }
+                let activity = ActivityCenter.shared.begin(.comicConversion, detail: comic.title)
+                defer { ActivityCenter.shared.end(activity) }
                 do {
                     let result = try importer.convertComicToPDF(comic)
-                    if result.isNew {
-                        OCRTargetLanguage.set(.japanese, forDocument: result.document.id)
-                        created.append(result.document)
-                    }
+                    if result.isNew { OCRTargetLanguage.set(.japanese, forDocument: result.document.id) }
+                    succeeded.append(comic)
+                } catch is CancellationError {
+                    break
                 } catch {
                     errors.append("\(comic.title) : \(error.localizedDescription)")
                 }
             }
+            let cancelled = Task.isCancelled
+            let finished = succeeded
+            let problems = errors
             await MainActor.run {
                 self.importProgress = nil
-                for document in created {
-                    DocumentScan.start(document, url: self.storage.url(for: document.id), ocr: self.ocr)
-                }
-                if !errors.isEmpty { self.lastError = errors.joined(separator: "\n") }
+                self.conversionTask = nil
+                if cancelled { self.showNotice(String(localized: "Conversion annulée. Les PDF déjà créés restent.")) }
+                if !problems.isEmpty { self.lastError = problems.joined(separator: "\n") }
+                self.convertedComics = finished
             }
         }
     }

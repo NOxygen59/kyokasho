@@ -20,18 +20,27 @@ public struct BatchDeletion: Equatable, Sendable {
     }
 
     public private(set) var selected: Set<String> = []
+    /// Ordre des touchers : la conversion des CBZ le suit.
+    public private(set) var order: [String] = []
     public private(set) var step: Step = .selecting
 
     public init() {}
 
     public mutating func toggle(_ id: String) {
         guard step == .selecting else { return }
-        if selected.contains(id) { selected.remove(id) } else { selected.insert(id) }
+        if selected.contains(id) {
+            selected.remove(id)
+            order.removeAll { $0 == id }
+        } else {
+            selected.insert(id)
+            order.append(id)
+        }
     }
 
     public mutating func selectAll(_ ids: [String]) {
         guard step == .selecting else { return }
         selected = Set(ids)
+        order = ids
     }
 
     /// « Supprimer (N) » : première question, seulement s'il y a une sélection.
@@ -52,6 +61,7 @@ public struct BatchDeletion: Equatable, Sendable {
         guard step == .secondConfirmation else { return [] }
         let ids = selected.intersection(existing).sorted()
         selected = []
+        order = []
         step = .selecting
         return ids
     }

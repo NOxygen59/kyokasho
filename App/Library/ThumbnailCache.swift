@@ -59,6 +59,8 @@ final class ThumbnailCache: @unchecked Sendable {
     }
 
     private func load(k: String, fileURL: URL, page: Int, width: Int) -> UIImage? {
+        let activity = ActivityCenter.shared.begin(.thumbnails)
+        defer { ActivityCenter.shared.end(activity) }
         let diskURL = directory.appendingPathComponent(k).appendingPathExtension("jpg")
         if let data = try? Data(contentsOf: diskURL), let image = UIImage(data: data) {
             return image.preparingForDisplay() ?? image

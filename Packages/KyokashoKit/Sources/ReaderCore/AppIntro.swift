@@ -78,16 +78,13 @@ public struct ReleaseNotes: Equatable, Sendable, Identifiable {
 
     /// La version en cours de préparation : seulement ce qu'elle change (décision de NOxygen59 du 04/11/2026). C'est
     /// elle que montre la fenêtre « Nouveautés » ; les versions précédentes vont dans `ReleaseHistory`.
-    public static let current = ReleaseNotes("1.4.6", "2026-11-05", published: false, String(localized: "Espace Manga et accueil plus pratique", bundle: .main), added: [
-            String(localized: "Espace Manga, sur son propre onglet : mangas PDF avec toutes les fonctions.", bundle: .main),
-            String(localized: "Fichiers .cbz, à titre expérimental : images seules, sans OCR ni IA, et conversion en PDF avec OCR.", bundle: .main),
-            String(localized: "Accueil : les onglets ouverts sont listés, avec une croix pour les fermer.", bundle: .main),
-            String(localized: "Appui long sur un document : choisir Manuel, Livre, Manga ou Non classé.", bundle: .main),
+    public static let current = ReleaseNotes("1.4.7", "2026-11-05", published: false, String(localized: "Conversion mieux guidée et moniteur détaillé", bundle: .main), added: [
+            String(localized: "Moniteur de l'accueil, panneau déplié : les activités en cours et la mémoire du modèle IA.", bundle: .main),
+            String(localized: "Temps de lecture séparé entre Livres & Manuels et Manga.", bundle: .main),
+            String(localized: "Après une conversion, l'app propose de mettre les CBZ à la corbeille.", bundle: .main),
         ], fixed: [
-            String(localized: "Fenêtre de correction : elle reste ouverte quand l'iPad tourne ou que le clavier apparaît, et demande confirmation avant de perdre une saisie.", bundle: .main),
-            String(localized: "Dictionnaire : les furigana sont lisibles sur les thèmes clairs.", bundle: .main),
-            String(localized: "Livres verticaux : les colonnes de deux parties d'une page ne se mélangent plus.", bundle: .main),
-            String(localized: "Langue : le bouton de relance n'apparaît que s'il sert.", bundle: .main),
+            String(localized: "Conversion des CBZ : elle suit l'ordre de sélection, s'annule, et ne lance plus de lecture IA.", bundle: .main),
+            String(localized: "CBZ déjà présent : un message prévient que l'import est annulé.", bundle: .main),
         ])
 
     /// Notes de `version` (« 1.3.2 », sans le numéro de build) : la version elle-même, jamais une build de test.

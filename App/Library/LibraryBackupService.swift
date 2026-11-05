@@ -95,7 +95,11 @@ enum LibraryBackupService {
             throw fail(String(localized: "Un import, une suppression ou une orientation est en cours : sauvegarde possible après sa fin."))
         }
         inProgress = true
-        defer { inProgress = false }
+        let activity = ActivityCenter.shared.begin(.backup)
+        defer {
+            inProgress = false
+            ActivityCenter.shared.end(activity)
+        }
         // Écritures en file terminées (notes, encre, position, réglages). Brouillons, conversations, lexique et
         // traductions sont écrits d'un bloc (écriture atomique) : la copie voit l'ancienne ou la nouvelle version,
         // jamais un fichier coupé.

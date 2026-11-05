@@ -212,4 +212,67 @@ final class ComicBookArchiveTests: XCTestCase {
         for url in abandoned { XCTAssertFalse(FileManager.default.fileExists(atPath: url.path)) }
         for url in kept + [directory] { XCTAssertTrue(FileManager.default.fileExists(atPath: url.path), url.lastPathComponent) }
     }
+
+    /// Revue Codex de d350047 : la conversion ne doit pas gonfler un CBZ en JPEG, images reprises sans recompression.
+    func testConvertedPDFKeepsJPEGCompressionAndSize() throws {
+        let database = try AppDatabase.inMemory()
+        let storage = DocumentStorage(root: folder.appendingPathComponent("Docs"))
+        let importer = DocumentImporter(storage: storage, database: database)
+        let pages = try (0..<6).map { ("\($0).jpg", try noisyJPEG(side: 600 + $0)) }
+        let comic = try importer.importComicArchive(at: try archive(pages)).document
+        let converted = try importer.convertComicToPDF(comic).document
+        let data = try Data(contentsOf: storage.url(for: converted.id))
+        XCTAssertNotNil(data.range(of: Data("DCTDecode".utf8)))
+        XCTAssertLessThan(Double(converted.fileSize), Double(comic.fileSize) * 1.05 + 4096,
+                          "CBZ \(comic.fileSize) octets, PDF \(converted.fileSize) octets")
+    }
+
+    /// Image difficile à compresser : un écart de taille se verrait.
+    private func noisyJPEG(side: Int) throws -> Data {
+        let context = try XCTUnwrap(CGContext(data: nil, width: side, height: side, bitsPerComponent: 8, bytesPerRow: 0,
+                                              space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue))
+        var generator = SystemRandomNumberGenerator()
+        let pixels = try XCTUnwrap(context.data).bindMemory(to: UInt8.self, capacity: context.bytesPerRow * side)
+        for index in 0..<(context.bytesPerRow * side) { pixels[index] = UInt8.random(in: 0...255, using: &generator) }
+        let data = NSMutableData()
+        let destination = try XCTUnwrap(CGImageDestinationCreateWithData(data, UTType.jpeg.identifier as CFString, 1, nil))
+        CGImageDestinationAddImage(destination, try XCTUnwrap(context.makeImage()), [kCGImageDestinationLossyCompressionQuality: 0.6] as CFDictionary)
+        XCTAssertTrue(CGImageDestinationFinalize(destination))
+        return data as Data
+    }
+
+    func testResetIgnoresTheMangaSpace() {
+        var settings = ReaderSettingsOverride()
+        settings.mangaSpace = true
+        XCTAssertFalse(settings.hasReaderOverrides)
+        settings.direction = .rightToLeft
+        XCTAssertTrue(settings.hasReaderOverrides)
+    }
+
+    func testSelectionKeepsTouchOrder() {
+        var batch = BatchDeletion()
+        for id in ["c", "a", "b"] { batch.toggle(id) }
+        batch.toggle("a")
+        XCTAssertEqual(batch.order, ["c", "b"])
+    }
+
+    /// Part de temps active : pas de valeur après la fin, fin en double sans effet, tri par activité.
+    func testActivityLedgerReportsBusyShareOnly() {
+        var ledger = ActivityLedger()
+        let start = Date(timeIntervalSince1970: 1000)
+        XCTAssertEqual(ledger.snapshot(at: start), [])
+        let one = UUID(), two = UUID()
+        ledger.begin(one, kind: "a", detail: "x", at: start)
+        ledger.begin(two, kind: "b", detail: nil, at: start.addingTimeInterval(1.5))
+        var rows = ledger.snapshot(at: start.addingTimeInterval(2))
+        XCTAssertEqual(rows.map(\.kind), ["a", "b"])
+        XCTAssertEqual(rows[0].busyShare, 1, accuracy: 0.001)
+        XCTAssertEqual(rows[1].busyShare, 0.25, accuracy: 0.001)
+        XCTAssertEqual(rows[0].detail, "x")
+        ledger.end(one, at: start.addingTimeInterval(3))
+        ledger.end(one, at: start.addingTimeInterval(3))
+        rows = ledger.snapshot(at: start.addingTimeInterval(4))
+        XCTAssertEqual(rows.first { $0.kind == "a" }?.busyShare ?? -1, 0.5, accuracy: 0.001)
+        XCTAssertEqual(ledger.snapshot(at: start.addingTimeInterval(5)).map(\.kind), ["b"])
+    }
 }

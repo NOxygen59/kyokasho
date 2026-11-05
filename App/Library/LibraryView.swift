@@ -67,11 +67,23 @@ struct LibraryView: View {
     }
 
     private var selectedComics: [LibraryDocument] {
-        model.documents.filter { batch.selected.contains($0.id) && $0.isComicArchive }
+        batch.order.compactMap { id in model.documents.first { $0.id == id && $0.isComicArchive } }
     }
 
     private var conversionSizeText: String {
         ByteCountFormatter.string(fromByteCount: convertingComics.reduce(0) { $0 + $1.fileSize }, countStyle: .file)
+    }
+
+    @ViewBuilder
+    private var noticeBanner: some View {
+        if let notice = model.notice {
+            Text(ui: notice).font(Atelier.font(14, weight: .medium)).foregroundStyle(Atelier.textPrimary)
+                .padding(.horizontal, 18).padding(.vertical, 12)
+                .background(Atelier.material(.regularMaterial), in: Capsule())
+                .atelierShapeShadow(Capsule(), opacity: 0.3, radius: 12, y: 4)
+                .padding(.top, 12)
+                .transition(.opacity)
+        }
     }
 
     private var spaceTitle: String { space == .manga ? "Aidoku (2)" : "Kyōkasho" }
@@ -128,6 +140,16 @@ struct LibraryView: View {
     }
 
     var body: some View {
+        // Hors de `screen` : sa chaîne de fenêtres est à la limite de ce que le compilateur vérifie.
+        screen
+            .modifier(ComicConversionAlerts(comics: convertingComics, sizeText: conversionSizeText, confirming: $showConvertConfirmation) {
+                selecting = false
+                batch = BatchDeletion()
+            })
+            .overlay(alignment: .top) { noticeBanner }
+    }
+
+    private var screen: some View {
         GeometryReader { geo in
             let landscape = geo.size.width > geo.size.height
             ZStack {
@@ -150,7 +172,7 @@ struct LibraryView: View {
         .toolbar(.hidden, for: .navigationBar)
         .overlay(alignment: .bottom) {
             if let progress = model.importProgress {
-                ImportBanner(progress: progress).padding(.bottom, 28)
+                ImportBanner(progress: progress, cancel: { model.cancelConversion() }).padding(.bottom, 28)
             }
         }
         // « Livre ou manuel ? » après chaque import (RET-039, #54). Une alerte ne se ferme pas par un toucher à côté :
@@ -256,16 +278,6 @@ struct LibraryView: View {
             Text("Numéro de la page du fichier PDF où ton manuel imprime « 1 ». Plus simple : ouvre le livre sur cette page, puis menu ••• → « Cette page est la page 1 ».")
         }
         // Double confirmation de la suppression multiple : rien n'est effacé avant « Effacer » (`BatchDeletion`).
-        .alert("Convertir \(convertingComics.count) CBZ en PDF ?", isPresented: $showConvertConfirmation) {
-            Button("Convertir") {
-                model.convertComics(convertingComics)
-                selecting = false
-                batch = BatchDeletion()
-            }
-            Button("Annuler", role: .cancel) {}
-        } message: {
-            Text("Un PDF par CBZ, avec les fonctions OCR de l'app. Les CBZ restent en place. Place nécessaire : environ \(conversionSizeText).")
-        }
         .alert("Supprimer \(batch.selected.count) document\(batch.selected.count > 1 ? "s" : "") ?", isPresented: $showBatchFirst) {
             Button("Annuler", role: .cancel) { batch.cancel() }
             Button("Continuer", role: .destructive) {
@@ -402,8 +414,15 @@ struct LibraryView: View {
     private var statsCard: some View {
         VStack(alignment: .leading, spacing: 8) {
             AtelierLabel(String(localized: "Temps de lecture"))
-            Text(ReadingClock.format(readingTime.clock.elapsed(at: Date())))
+            // Séparé par espace, d'après le journal des séances. Le reste du total, plus ancien que ce journal, reste
+            // compté dans Livres & Manuels.
+            let manga = readingTime.seconds(in: Set(model.documents.filter(\.isInMangaSpace).map(\.id)))
+            Text(ReadingClock.format(space == .manga ? manga : max(0, readingTime.clock.elapsed(at: Date()) - manga)))
                 .font(Atelier.display(30)).foregroundStyle(Atelier.textPrimary)
+            if space == .study {
+                Text("Manuels \(ReadingClock.format(categorySeconds(.textbook))) · Livres \(ReadingClock.format(categorySeconds(.book)))")
+                    .font(Atelier.font(12)).foregroundStyle(Atelier.textSecondary)
+            }
             Text("livre ouvert à l'écran").font(Atelier.font(13)).foregroundStyle(Atelier.textSecondary)
         }
         .padding(14)
@@ -562,7 +581,7 @@ struct LibraryView: View {
                 // et le défilement saccadait pendant l'animation (recette 1.3.2 (65), point 6). Seul le moniteur s'anime.
                 .transaction { $0.animation = nil }
                 if monitorVisible {
-                    ResourceMonitorPanel(expandsDown: true, fillsWidth: monitorDetailed)
+                    ResourceMonitorPanel(expandsDown: true, fillsWidth: monitorDetailed, showsActivities: model.openDocumentId == nil)
                         .frame(width: monitorDetailed ? Self.monitorWidth : nil)
                         .transition(reduceMotion ? .opacity
                                     : .asymmetric(insertion: .opacity.combined(with: .offset(x: 24)),
@@ -578,6 +597,10 @@ struct LibraryView: View {
     }
 
     /// Pastille Livre/Manuel, rendue par la grille depuis la catégorie publiée la plus récente.
+    private func categorySeconds(_ category: DocumentCategory) -> TimeInterval {
+        readingTime.seconds(in: Set(model.documents.filter { $0.category == category && !$0.isInMangaSpace }.map(\.id)))
+    }
+
     private func categoryMark(_ category: DocumentCategory) -> some View {
         Text(category.title).font(Atelier.font(11, weight: .semibold))
             .padding(.horizontal, 8).padding(.vertical, 4)
@@ -618,7 +641,10 @@ struct LibraryView: View {
                 }
                 .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.japanese))
             }
-            Button("Tout sélectionner") { batch.selectAll(filtered.map(\.id)) }
+            Button("Tout sélectionner") {
+                let comics = DocumentImporter.conversionOrder(filtered)
+                batch.selectAll(comics.map(\.id) + filtered.filter { !$0.isComicArchive }.map(\.id))
+            }
                 .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.read))
             Button(role: .destructive) {
                 batch.requestDeletion()
@@ -815,16 +841,51 @@ struct DocumentCard: View {
     }
 }
 
+/// Questions de la conversion des CBZ. À part : la vue de l'accueil porte déjà trop de fenêtres pour le compilateur.
+private struct ComicConversionAlerts: ViewModifier {
+    @EnvironmentObject private var model: AppModel
+    let comics: [LibraryDocument]
+    let sizeText: String
+    @Binding var confirming: Bool
+    let started: () -> Void
+
+    func body(content: Content) -> some View {
+        content
+            .alert("Convertir \(comics.count) CBZ en PDF ?", isPresented: $confirming) {
+                Button("Convertir") {
+                    model.convertComics(comics)
+                    started()
+                }
+                Button("Annuler", role: .cancel) {}
+            } message: {
+                Text("Un PDF par CBZ, avec les fonctions OCR de l'app. Les CBZ restent en place. Place nécessaire : environ \(sizeText).")
+            }
+            .alert("Mettre \(model.convertedComics.count) CBZ à la corbeille ?", isPresented: Binding(
+                get: { !model.convertedComics.isEmpty }, set: { if !$0 { model.convertedComics = [] } })) {
+                Button("Mettre à la corbeille", role: .destructive) {
+                    model.convertedComics.forEach(model.moveToTrash)
+                    model.convertedComics = []
+                }
+                Button("Garder", role: .cancel) { model.convertedComics = [] }
+            } message: {
+                Text("Leur conversion a réussi. Le PDF garde sa propre progression, et les CBZ restent récupérables dans la corbeille.")
+            }
+    }
+}
+
 struct ImportBanner: View {
     let progress: AppModel.ImportProgress
+    let cancel: () -> Void
 
     var body: some View {
         HStack(spacing: 12) {
             ProgressView().tint(Atelier.Tint.cloud)
             VStack(alignment: .leading) {
-                Text("Import \(progress.done + 1) / \(progress.total)").font(.subheadline.bold())
+                Text(progress.isConversion ? String(localized: "Conversion \(progress.done + 1) / \(progress.total)")
+                     : String(localized: "Import \(progress.done + 1) / \(progress.total)")).font(.subheadline.bold())
                 Text(progress.currentName).font(.caption).foregroundStyle(Atelier.textSecondary).lineLimit(1)
             }
+            if progress.isConversion { Button("Annuler", action: cancel).font(.subheadline.weight(.semibold)) }
         }
         .foregroundStyle(Atelier.textPrimary)
         .padding(.horizontal, 18).padding(.vertical, 12)

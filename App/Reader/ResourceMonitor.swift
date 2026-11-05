@@ -4,6 +4,8 @@
 import Charts
 import Darwin
 import QuartzCore
+import GLMOCRKit
+import ReaderCore
 import SwiftUI
 
 /// Mesures de l'app (pas du système entier) : CPU des fils de l'app, mémoire comptée par iOS (`phys_footprint`,
@@ -117,6 +119,8 @@ struct ResourceMonitorPanel: View {
     var fillsWidth = false
     /// Dans la capsule d'actions du lecteur : pas de fond ni de bord à lui, la capsule s'allonge.
     var embedded = false
+    /// Accueil seulement : la liste des activités, relevée tant que le panneau reste déplié.
+    var showsActivities = false
     @ObservedObject private var monitor = ResourceMonitor.shared
     @AppStorage(ResourceMonitor.shownKey) private var shown = false
     @AppStorage("monitor.detailed") private var detailed = false
@@ -128,6 +132,7 @@ struct ResourceMonitorPanel: View {
             if detailed && !expandsDown { chart }
             header
             if detailed && expandsDown { chart }
+            if detailed && showsActivities { MonitorActivityList() }
         }
         .font(.system(size: 11, weight: .semibold, design: .monospaced))
         .foregroundStyle(Atelier.textPrimary)
@@ -229,5 +234,62 @@ private struct MonitorBackground: ViewModifier {
     let embedded: Bool
     func body(content: Content) -> some View {
         if embedded { content } else { content.atelierPanel(radius: 14) }
+    }
+}
+
+/// Détail du panneau déplié de l'accueil. Le total CPU et mémoire reste celui de toute l'app, en tête du panneau : ces lignes
+/// disent ce qui tourne, et ne s'additionnent pas en un total. Mis à jour au rythme du moniteur, une fois par seconde.
+private struct MonitorActivityList: View {
+    @ObservedObject private var monitor = ResourceMonitor.shared
+    @ObservedObject private var tasks = AITaskCenter.shared
+    @State private var rows: [ActivityLedger.Row] = []
+    @State private var modelMB: Int?
+    @State private var modelName: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            if rows.isEmpty && tasks.jobs.isEmpty && modelName == nil {
+                Text("Aucune tâche coûteuse en cours").foregroundStyle(Atelier.textSecondary)
+            }
+            ForEach(rows, id: \.kind) { row in
+                line(ActivityCenter.Kind(rawValue: row.kind)?.title ?? row.kind,
+                     detail: row.detail, value: String(localized: "actif \(Int(row.busyShare * 100)) %"))
+            }
+            ForEach(tasks.jobs) { job in
+                line(job.title, detail: job.activity, value: job.progress.map { "\($0.done)/\($0.total)" } ?? String(localized: "en cours"))
+            }
+            if let modelName {
+                line(String(localized: "Modèle IA chargé"), detail: modelName,
+                     value: modelMB.map { String(localized: "\($0) Mo mesurés") } ?? String(localized: "chargé"))
+            }
+            if let total = monitor.last?.ramMB {
+                let rest = max(0, Int(total) - (modelMB ?? 0))
+                line(String(localized: "Kyōkasho — non attribué"), detail: nil, value: String(localized: "\(rest) Mo"))
+            }
+        }
+        .font(Atelier.font(11))
+        .foregroundStyle(Atelier.textPrimary)
+        .onAppear(perform: refresh)
+        .onChange(of: monitor.last?.id) { _ in refresh() }
+    }
+
+    private func refresh() {
+        rows = ActivityCenter.shared.snapshot()
+        Task {
+            let status = await GLMOCREngine.status()
+            modelName = status.loaded?.lastPathComponent
+            modelMB = status.loaded == nil ? nil : status.gpuActiveMB
+        }
+    }
+
+    private func line(_ title: String, detail: String?, value: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+            VStack(alignment: .leading, spacing: 0) {
+                Text(ui: title).lineLimit(1)
+                if let detail { Text(ui: detail).foregroundStyle(Atelier.textTertiary).lineLimit(1) }
+            }
+            Spacer(minLength: 4)
+            Text(ui: value).foregroundStyle(Atelier.textSecondary).lineLimit(1)
+        }
     }
 }

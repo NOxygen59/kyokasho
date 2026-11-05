@@ -84,13 +84,9 @@ final class VerticalJapaneseTests: XCTestCase {
                 let a = groups.firstIndex { $0.contains(i) }!, b = groups.firstIndex { $0.contains(j) }!
                 if a != b { groups[a] += groups[b]; groups.remove(at: b) }
             } }
-            let reference = groups.map { Set($0.map { lines[$0].text }) }
-            let order = OCRLayout.verticalReadingOrder(page(lines)).map(\.text)
-            // Chaque bloc de référence occupe des positions contiguës dans l'ordre de lecture.
-            for block in reference {
-                let positions = order.indices.filter { block.contains(order[$0]) }
-                XCTAssertEqual((positions.last ?? 0) - (positions.first ?? 0) + 1, positions.count, "bloc coupé : \(block)")
-            }
+            let reference = Set(groups.map { Set($0.map { lines[$0].text }) })
+            let sweep = Set(OCRLayout.readingGroups(lines).values.map { Set($0.map(\.text)) })
+            XCTAssertEqual(sweep, reference)
         }
     }
 }

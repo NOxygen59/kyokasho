@@ -10,6 +10,17 @@ import Foundation
 enum ReleaseHistory {
     static let past: [ReleaseNotes] = [
         // Candidates locales non publiées.
+        ReleaseNotes("1.4.6", "2026-11-05", published: false, String(localized: "Espace Manga et accueil plus pratique", bundle: .main), added: [
+            String(localized: "Espace Manga, sur son propre onglet : mangas PDF avec toutes les fonctions.", bundle: .main),
+            String(localized: "Fichiers .cbz, à titre expérimental : images seules, sans OCR ni IA, et conversion en PDF avec OCR.", bundle: .main),
+            String(localized: "Accueil : les onglets ouverts sont listés, avec une croix pour les fermer.", bundle: .main),
+            String(localized: "Appui long sur un document : choisir Manuel, Livre, Manga ou Non classé.", bundle: .main),
+        ], fixed: [
+            String(localized: "Fenêtre de correction : elle reste ouverte quand l'iPad tourne ou que le clavier apparaît, et demande confirmation avant de perdre une saisie.", bundle: .main),
+            String(localized: "Dictionnaire : les furigana sont lisibles sur les thèmes clairs.", bundle: .main),
+            String(localized: "Livres verticaux : les colonnes de deux parties d'une page ne se mélangent plus.", bundle: .main),
+            String(localized: "Langue : le bouton de relance n'apparaît que s'il sert.", bundle: .main),
+        ]),
         ReleaseNotes("1.4.5", "2026-11-05", published: false, String(localized: "Lecteur allégé et huit univers", bundle: .main), added: [
             String(localized: "Thèmes : huit univers très différents, avec un aperçu complet. Les palettes se choisissent à part et gardent leur motif.", bundle: .main),
         ], fixed: [
