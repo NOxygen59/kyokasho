@@ -27,6 +27,7 @@ extension BackupRoundTripTests {
         "App/AppModel.swift": ("persistant : Kyokasho/kyokasho.sqlite, Kyokasho/Documents/, Kyokasho/Bench/ ; cache : Caches/Thumbnails",
                                ["Bench", "Documents", "Kyokasho", "Thumbnails", "kyokasho.sqlite"]),
         "App/Review/ReviewModel.swift": ("persistant : Kyokasho/Review/", ["Kyokasho/Review"]),
+        "Packages/KyokashoKit/Sources/ReaderCore/ComicBookArchive.swift": ("temporaire : tmp/<UUID>.pdf, PDF converti le temps de l'import", []),
         "Packages/KyokashoKit/Sources/ReviewKit/ReviewStore.swift": ("persistant : Review/review.sqlite, Review/Media/ ; temporaire : review-media-<UUID>",
                                                                      ["Media", "review-media-", "review.sqlite"]),
         "App/Dictionary/DictionaryModel.swift": ("persistant : Kyokasho/Dictionaries/ ; non essentiel (NOxygen59, 28/10) : Documents/Audio/",

@@ -7965,6 +7965,94 @@
         }
       }
     },
+    "Ce fichier CBZ est trop volumineux pour être converti.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This CBZ file is too large to convert."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce fichier CBZ est trop volumineux pour être converti."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此 CBZ 文件太大，无法转换。"
+          }
+        }
+      }
+    },
+    "Ce fichier CBZ n'a pas pu être converti.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This CBZ file could not be converted."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce fichier CBZ n'a pas pu être converti."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法转换此 CBZ 文件。"
+          }
+        }
+      }
+    },
+    "Ce fichier CBZ n'est pas une archive lisible.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This CBZ file is not a readable archive."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce fichier CBZ n'est pas une archive lisible."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此 CBZ 文件不是可读取的压缩包。"
+          }
+        }
+      }
+    },
+    "Ce fichier CBZ ne contient aucune page lisible.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This CBZ file has no readable page."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce fichier CBZ ne contient aucune page lisible."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此 CBZ 文件没有可读取的页面。"
+          }
+        }
+      }
+    },
     "Ce fichier n'est pas un PDF lisible.": {
       "localizations": {
         "en": {
@@ -9787,6 +9875,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "粘贴"
+          }
+        }
+      }
+    },
+    "Comics": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comics"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comics"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "漫画"
           }
         }
       }
@@ -13201,6 +13311,28 @@
         }
       }
     },
+    "Documents ouverts": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open documents"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Documents ouverts"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已打开的文档"
+          }
+        }
+      }
+    },
     "Donne 5 mots du bâtiment en japonais": {
       "localizations": {
         "en": {
@@ -15947,6 +16079,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "关闭学习面板"
+          }
+        }
+      }
+    },
+    "Fermer « %@ »": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Close “%@”"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fermer « %@ »"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "关闭“%@”"
           }
         }
       }
@@ -22635,6 +22789,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "从此文档创建的复习卡片。"
+          }
+        }
+      }
+    },
+    "Les comics .cbz sont acceptés aussi, à titre expérimental : lecture des images seules, sans OCR ni IA.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comic .cbz files are also accepted, as an experiment: images only, without OCR or AI."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les comics .cbz sont acceptés aussi, à titre expérimental : lecture des images seules, sans OCR ni IA."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "也可导入 .cbz 漫画（实验功能）：仅显示图片，不含 OCR 和 AI。"
           }
         }
       }

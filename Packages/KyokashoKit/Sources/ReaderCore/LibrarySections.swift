@@ -13,7 +13,7 @@ public enum LibrarySections {
         public var documents: [LibraryDocument]
     }
 
-    public static let order: [DocumentCategory?] = [.textbook, .book, nil]
+    public static let order: [DocumentCategory?] = [.textbook, .book, .comics, nil]
 
     public static func group(_ documents: [LibraryDocument]) -> [Section] {
         order.compactMap { category in
@@ -27,6 +27,7 @@ public enum LibrarySections {
         switch category {
         case .textbook: return String(localized: "Manuels", bundle: .main)
         case .book: return String(localized: "Livres", bundle: .main)
+        case .comics: return String(localized: "Comics", bundle: .main)
         case nil: return String(localized: "Non classés", bundle: .main)
         }
     }

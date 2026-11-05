@@ -206,7 +206,7 @@ struct ReaderScreen: View {
                 reservedSide = docked
                 reader.adaptLayout(portrait: !landscape)
                 // Paysage (taille réelle de la vue, pas l'orientation de la scène) : panneau d'étude ouvert d'office.
-                if landscape, !autoOpenedSide { autoOpenedSide = true; side = .study }
+                if landscape, !autoOpenedSide, !reader.document.isComic { autoOpenedSide = true; side = .study }
             }
             .overlay(alignment: .trailing) {
                 // En portrait seulement, le panneau reste flottant sur la page.
@@ -649,14 +649,16 @@ struct ReaderScreen: View {
                 }
             }
             railDivider(vertical)
-            ToolButton(icon: "character.ja", label: String(localized: "Texte de la page"), tint: Atelier.Tint.japanese,
-                       active: side == .study && studyTab == .text) { openStudy(.text) }
-            ToolButton(icon: "character.book.closed.ja", label: String(localized: "Dictionnaire"), tint: Atelier.Tint.japanese,
-                       active: side == .study && studyTab == .vocab) { openStudy(.vocab) }
-            railDivider(vertical)
-            ToolButton(icon: "sparkles", label: String(localized: "Page vers IA"), tint: Atelier.Tint.ai) { sheet = .ai }
-            ToolButton(icon: "globe", label: String(localized: "Navigateur à côté"), tint: Atelier.Tint.ai, active: side == .web) {
-                side = side == .web ? nil : .web
+            if !reader.document.isComic {
+                ToolButton(icon: "character.ja", label: String(localized: "Texte de la page"), tint: Atelier.Tint.japanese,
+                           active: side == .study && studyTab == .text) { openStudy(.text) }
+                ToolButton(icon: "character.book.closed.ja", label: String(localized: "Dictionnaire"), tint: Atelier.Tint.japanese,
+                           active: side == .study && studyTab == .vocab) { openStudy(.vocab) }
+                railDivider(vertical)
+                ToolButton(icon: "sparkles", label: String(localized: "Page vers IA"), tint: Atelier.Tint.ai) { sheet = .ai }
+                ToolButton(icon: "globe", label: String(localized: "Navigateur à côté"), tint: Atelier.Tint.ai, active: side == .web) {
+                    side = side == .web ? nil : .web
+                }
             }
     }
 

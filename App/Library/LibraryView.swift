@@ -131,7 +131,8 @@ struct LibraryView: View {
         // chaque document reçoit une réponse, « Plus tard » compris.
         .alert("Livre ou manuel ?", isPresented: Binding(get: { !model.categoryQuestions.isEmpty }, set: { _ in }),
                presenting: model.categoryQuestions.first) { _ in
-            ForEach(DocumentCategory.allCases, id: \.self) { category in
+            // Comics : au long press sur la carte, ou d'office pour un .cbz. La question reste « Livre ou manuel ? ».
+            ForEach(DocumentCategory.allCases.filter { $0 != .comics }, id: \.self) { category in
                 Button(category.title) { model.answerCategory(category) }
             }
             Button("Plus tard", role: .cancel) { model.answerCategory(nil) }
@@ -428,6 +429,7 @@ struct LibraryView: View {
                 Button { showImportOptions = true } label: { Label("Importer", systemImage: "plus") }
                     .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.cloud))
             }
+            OpenDocumentsStrip()
             ZStack(alignment: .topTrailing) {
                 VStack(alignment: .leading, spacing: Atelier.gap) {
                     if filtered.isEmpty {
@@ -511,8 +513,16 @@ struct LibraryView: View {
         Text(category.title).font(Atelier.font(11, weight: .semibold))
             .padding(.horizontal, 8).padding(.vertical, 4)
             .foregroundStyle(Atelier.onAccentInk.opacity(0.8))
-            .background(category == .textbook ? Atelier.Tint.read : Atelier.Tint.annotate, in: Capsule())
+            .background(categoryTint(category), in: Capsule())
             .padding(8)
+    }
+
+    private func categoryTint(_ category: DocumentCategory) -> Color {
+        switch category {
+        case .textbook: return Atelier.Tint.read
+        case .book: return Atelier.Tint.annotate
+        case .comics: return Atelier.Tint.japanese
+        }
     }
 
     /// Case de sélection sur la couverture.
@@ -575,17 +585,26 @@ struct LibraryView: View {
             newTitle = document.title
             renaming = document
         } label: { Label("Renommer", systemImage: "pencil") }
+        Picker(selection: Binding(get: { document.category }, set: { model.setCategory(document.id, $0) })) {
+            ForEach(DocumentCategory.allCases, id: \.self) { Text($0.title).tag(DocumentCategory?.some($0)) }
+            Text("Non classé").tag(DocumentCategory?.none)
+        } label: {
+            Label("Catégorie", systemImage: "tag")
+        }
+        .pickerStyle(.menu)
         Button {
             pageOneText = String(document.firstPageIndex + 1)
             settingPageOne = document
         } label: { Label("Définir la page 1…", systemImage: "1.circle") }
-        Button {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { analyzing = document }
-        } label: {
-            if let r = DocumentAnalysisService.shared.report(for: document.id), !r.pages.isEmpty {
-                Label("Analyse : fiabilité \(Int(r.reliability * 100)) %", systemImage: "checkmark.seal")
-            } else {
-                Label("Analyser le document entier", systemImage: "checkmark.seal")
+        if !document.isComic {
+            Button {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { analyzing = document }
+            } label: {
+                if let r = DocumentAnalysisService.shared.report(for: document.id), !r.pages.isEmpty {
+                    Label("Analyse : fiabilité \(Int(r.reliability * 100)) %", systemImage: "checkmark.seal")
+                } else {
+                    Label("Analyser le document entier", systemImage: "checkmark.seal")
+                }
             }
         }
         Button {

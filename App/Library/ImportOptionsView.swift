@@ -31,6 +31,8 @@ struct ImportOptionsView: View {
                     Button { showPicker = true } label: {
                         Label("Choisir des PDF", systemImage: "doc.badge.plus")
                     }
+                } footer: {
+                    Text("Les comics .cbz sont acceptés aussi, à titre expérimental : lecture des images seules, sans OCR ni IA.")
                 }
                 if onPackage != nil {
                     Section {
@@ -46,7 +48,7 @@ struct ImportOptionsView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Annuler") { dismiss() } } }
             .sheet(isPresented: $showPicker) {
-                DocumentPicker { urls in
+                DocumentPicker(types: [.pdf, DocumentPicker.comicArchive]) { urls in
                     guard !urls.isEmpty else { return }
                     onImport(urls, language)
                     dismiss()

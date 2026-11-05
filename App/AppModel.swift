@@ -194,10 +194,12 @@ final class AppModel: ObservableObject {
                 }
                 let scoped = url.startAccessingSecurityScopedResource()
                 do {
-                    let result = try importer.importFile(at: url, displayName: url.lastPathComponent)
+                    let isComic = url.pathExtension.lowercased() == ComicBookArchive.fileExtension
+                    let result = isComic ? try importer.importComicArchive(at: url, displayName: url.lastPathComponent)
+                        : try importer.importFile(at: url, displayName: url.lastPathComponent)
                     if result.isNew {
                         OCRTargetLanguage.set(language, forDocument: result.document.id)
-                        newDocuments.append(result.document)
+                        if !isComic { newDocuments.append(result.document) } // La catégorie d'un comics est connue.
                     }
                     lastImported = result.document.id
                     imported.append(result.document)
@@ -209,7 +211,7 @@ final class AppModel: ObservableObject {
             }
             await MainActor.run {
                 self.importProgress = nil
-                for document in imported {
+                for document in imported where !document.isComic {
                     DocumentScan.start(document, url: self.storage.url(for: document.id), ocr: self.ocr)
                 }
                 if !errors.isEmpty { self.lastError = errors.joined(separator: "\n") }
