@@ -112,17 +112,6 @@ extension ReaderController {
         let additionalRotation = transforms[source]?.rotation ?? 0
         pageFuriganaTasks[source]?.cancel()
         pageFuriganaTasks[source] = Task.detached(priority: .utility) { [weak self] in
-            let reference = DocumentAITextStore.read(documentId: documentId, reader: ModelSpec.ovisocr2.id, page: source)
-            // Page revue ou simple glissement : mêmes données, mêmes lectures, ni calcul ni redessin.
-            var hasher = Hasher()
-            hasher.combine(ocr)
-            hasher.combine(reference)
-            hasher.combine(additionalRotation)
-            hasher.combine(translator?.cacheGeneration)
-            hasher.combine(lookupOptions)
-            hasher.combine(Furigana.analyzer != nil)
-            let signature = hasher.finalize()
-            guard FuriganaLayer.signature(for: key) != signature else { return }
             // `PDFPool` lit le fichier d'origine, sans l'orientation choisie ; les boîtes OCR, elles, en tiennent compte.
             let frame: PageFrame? = (try? PDFPool.withDocument(url) { doc -> PageFrame? in
                 doc.page(at: source).map {
@@ -131,6 +120,22 @@ extension ReaderController {
                 }
             }) ?? nil
             guard let frame else { return }
+            let reference = DocumentAITextStore.read(documentId: documentId, reader: ModelSpec.ovisocr2.id, page: source)
+            // Page revue ou simple glissement : mêmes données, mêmes lectures, ni calcul ni redessin. L'empreinte couvre tout
+            // ce dont dépendent les lectures, cadre du PDF compris (PDF remplacé sous le même identifiant).
+            var hasher = Hasher()
+            hasher.combine(ocr)
+            hasher.combine(reference)
+            hasher.combine(frame.box.origin.x)
+            hasher.combine(frame.box.origin.y)
+            hasher.combine(frame.box.width)
+            hasher.combine(frame.box.height)
+            hasher.combine(frame.rotation)
+            hasher.combine(translator?.cacheGeneration)
+            hasher.combine(lookupOptions)
+            hasher.combine(Furigana.analyzer != nil)
+            let signature = hasher.finalize()
+            guard FuriganaLayer.signature(for: key) != signature else { return }
             // Même choix de lectures que dans le panneau OCR : MeCab si présent, sinon le dictionnaire.
             // Une page scannée sans couche texte doit bénéficier des mots déjà reconnus dans le panneau.
             let marks = FuriganaLayer.marks(from: ocr, reference: reference, frame: frame) { text in
@@ -140,15 +145,17 @@ extension ReaderController {
             }
             Diagnostics.log("Furigana p. \(source + 1) : \(ocr.engine), \(ocr.lines.count) lignes OCR, "
                             + "texte Ovis \(reference?.count ?? 0) caractères, \(marks.count) lectures", "furigana")
-            await self?.publishPageFurigana(marks, key: key, signature: signature, source: source, generation: generation)
+            // Préparée ici : la publication, sur le fil principal, n'a plus qu'à la ranger.
+            let page = FuriganaLayer.PreparedPage(marks, signature: signature)
+            await self?.publishPageFurigana(page, key: key, source: source, generation: generation)
         }
     }
 
     /// Contrôle et publication d'un seul tenant sur le fil principal : rien ne peut s'intercaler. Un calcul annulé
     /// (fermeture, remplacement) a pu rendre des lectures de secours : elles ne doivent pas entrer dans le cache.
-    private func publishPageFurigana(_ marks: [FuriganaLayer.Mark], key: String, signature: Int, source: Int, generation: Int) {
+    private func publishPageFurigana(_ page: FuriganaLayer.PreparedPage, key: String, source: Int, generation: Int) {
         guard !closed, !Task.isCancelled, furiganaGeneration[source] == generation else { return }
-        FuriganaLayer.set(marks, for: key, signature: signature)
+        FuriganaLayer.set(page, for: key)
         pdfView.requestRedraw()
     }
 

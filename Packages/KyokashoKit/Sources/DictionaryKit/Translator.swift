@@ -210,48 +210,54 @@ public final class Translator: @unchecked Sendable {
         return try rank(forms(chars, lengths: stride(from: chars.count, through: 1, by: -1)), options: options, full: full)
     }
 
-    /// Mot le plus long au début de `chars`, pour le découpage. Le classement met d'abord le texte reconnu le plus long :
-    /// les mots d'un seul caractère ne servent que si aucun plus long n'existe. Leurs lectures sont les plus chargées
-    /// du dictionnaire (の, は…) : ils sont cherchés à part, seulement alors, et mémorisés par caractère.
+    /// Mot retenu au début de `chars` pour le découpage : le même que la recherche complète, sans lire les entrées qui ne
+    /// peuvent pas peser. Le classement met d'abord le texte reconnu le plus long. Les formes d'un seul caractère, les
+    /// plus chargées du dictionnaire (の, は…), ne comptent donc que si aucun mot plus long n'existe, ou pour les entrées
+    /// d'un groupe déjà trouvé, dont la priorité et le score départagent les mots (`wordFromLongForms`).
     private func longestWord(_ chars: [Character], options: LookupOptions, optionsKey: String) throws -> TermResult? {
-        if chars.count > 1,
-           let long = try rank(forms(chars, lengths: stride(from: chars.count, through: 2, by: -1)), options: options, full: false).first {
-            return long
+        let short = forms(chars, lengths: stride(from: 1, through: 1, by: -1))
+        if chars.count > 1 {
+            let long = forms(chars, lengths: stride(from: chars.count, through: 2, by: -1))
+            if let word = try wordFromLongForms(long, short: short, options: options) { return word }
         }
         guard let first = chars.first else { return nil }
+        // Sans mot plus long, le résultat ne dépend que de ce caractère.
         let key = optionsKey + String(first)
         if let known = oneCharacterMemo[key] { return known }
-        let found = try rank(forms(chars, lengths: stride(from: 1, through: 1, by: -1)), options: options, full: false).first
+        let found = try rank(short, options: options, full: false).first
         oneCharacterMemo[key] = .some(found)
         return found
     }
 
-    /// 1. Toutes les formes de base candidates, pour chaque longueur demandée.
-    private func forms(_ chars: [Character], lengths: StrideThrough<Int>) -> [String: [Deinflection]] {
-        var byText: [String: [Deinflection]] = [:]
-        for length in lengths {
-            let raw = String(chars[0..<length])
-            // Pas de mot qui commence ou finit par une ponctuation / espace.
-            if let first = raw.first, first.isWhitespace || first.isPunctuation { break }
-            for d in deinflections(of: raw) { byText[d.text, default: []].append(d) }
-        }
-        return byText
+    /// `nil` si aucun mot de deux caractères ou plus ne correspond. Sinon, classement comme la recherche complète : mêmes
+    /// groupes, avec les entrées de ces groupes qui ne correspondent qu'à une forme courte.
+    private func wordFromLongForms(_ long: [String: [Deinflection]], short: [String: [Deinflection]],
+                                   options: LookupOptions) throws -> TermResult? {
+        guard !long.isEmpty, let enabled = try searchScope(options)?.enabled else { return nil }
+        let rows = try database.terms(matching: Array(long.keys), dictionaryIds: enabled, withGlossary: false)
+        let found = matches(rows, byText: long, options: options)
+        guard !found.isEmpty else { return nil }
+        let groups = Set(found.map { Self.groupKey($0.row) })
+        let known = Set(rows.map(\.id))
+        let relatives = try database.terms(matching: Array(Set(found.map(\.row.expression))), dictionaryIds: enabled, withGlossary: false)
+            .filter { !known.contains($0.id) && groups.contains(Self.groupKey($0)) && (short[$0.expression] != nil || short[$0.reading] != nil) }
+        return try rank(long.merging(short) { $0 + $1 }, rows: rows + relatives, options: options, full: false).first
     }
 
-    /// `full == false`, pour le découpage : ni glossaires, ni étiquettes, ni fréquences, accents et API. Seuls comptent
-    /// le mot et son classement, qui ne dépend pas de ces données.
-    private func rank(_ byText: [String: [Deinflection]], options: LookupOptions, full: Bool) throws -> [TermResult] {
-        guard !byText.isEmpty else { return [] }
+    private static func groupKey(_ row: TermRow) -> String { row.expression + "\u{1}" + row.reading }
+
+    /// Dictionnaires consultés pour ces réglages, `nil` s'il n'y en a aucun.
+    private func searchScope(_ options: LookupOptions) throws -> (dictionaries: [Int64: DictionaryInfo], enabled: Set<Int64>)? {
         let dictionaries = try dictionaries()
         let enabled = Set(dictionaries.values.filter { $0.enabled && $0.termCount > 0 }.compactMap(\.id))
             .subtracting(options.excludedDictionaryIds)
-        guard !enabled.isEmpty else { return [] }
+        return enabled.isEmpty ? nil : (dictionaries, enabled)
+    }
 
-        // 2. Une requête pour toutes les formes.
-        let rows = try database.terms(matching: Array(byText.keys), dictionaryIds: enabled, withGlossary: full)
+    private struct Match { let row: TermRow; let d: Deinflection }
 
-        // 3. Associe chaque entrée à sa meilleure déconjugaison (plus long texte, moins de règles).
-        struct Match { let row: TermRow; let d: Deinflection }
+    /// 3. Associe chaque entrée à sa meilleure déconjugaison (plus long texte, moins de règles).
+    private func matches(_ rows: [TermRow], byText: [String: [Deinflection]], options: LookupOptions) -> [Match] {
         var matches: [Match] = []
         var flagsByRules: [String: UInt32] = [:] // Peu de combinaisons différentes, beaucoup d'entrées.
         for row in rows {
@@ -273,11 +279,35 @@ public final class Translator: @unchecked Sendable {
             }
             if let best { matches.append(Match(row: row, d: best)) }
         }
+        return matches
+    }
+
+    /// 1. Toutes les formes de base candidates, pour chaque longueur demandée.
+    private func forms(_ chars: [Character], lengths: StrideThrough<Int>) -> [String: [Deinflection]] {
+        var byText: [String: [Deinflection]] = [:]
+        for length in lengths {
+            let raw = String(chars[0..<length])
+            // Pas de mot qui commence ou finit par une ponctuation / espace.
+            if let first = raw.first, first.isWhitespace || first.isPunctuation { break }
+            for d in deinflections(of: raw) { byText[d.text, default: []].append(d) }
+        }
+        return byText
+    }
+
+    /// `full == false`, pour le découpage : ni glossaires, ni étiquettes, ni fréquences, accents et API. Seuls comptent
+    /// le mot et son classement, qui ne dépend pas de ces données.
+    private func rank(_ byText: [String: [Deinflection]], rows known: [TermRow]? = nil,
+                      options: LookupOptions, full: Bool) throws -> [TermResult] {
+        guard !byText.isEmpty, let (dictionaries, enabled) = try searchScope(options) else { return [] }
+
+        // 2. Une requête pour toutes les formes.
+        let rows = try known ?? database.terms(matching: Array(byText.keys), dictionaryIds: enabled, withGlossary: full)
+        let matches = matches(rows, byText: byText, options: options)
 
         // 4. Regroupement par (expression, lecture).
         var groups: [String: (row: TermRow, d: Deinflection, defs: [Match])] = [:]
         for m in matches {
-            let key = m.row.expression + "\u{1}" + m.row.reading
+            let key = Self.groupKey(m.row)
             if var g = groups[key] {
                 g.defs.append(m)
                 if m.d.matchedText.count > g.d.matchedText.count { g.d = m.d }

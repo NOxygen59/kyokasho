@@ -29,7 +29,7 @@ final class StyleTokensGuardTests: XCTestCase {
             .appendingPathComponent("../../../../App/Reader").standardizedFileURL
         let display = try String(contentsOf: reader.appendingPathComponent("ReaderController+Display.swift"), encoding: .utf8)
         XCTAssertTrue(display.contains("guard !closed, !Task.isCancelled, furiganaGeneration[source] == generation else { return }"))
-        XCTAssertEqual(display.components(separatedBy: "FuriganaLayer.set(marks, for: key").count, 3, "publication de showOCR et de scheduleFurigana, pas d'autre")
+        XCTAssertEqual(display.components(separatedBy: "FuriganaLayer.set(").count, 3, "publication de showOCR et de scheduleFurigana, pas d'autre")
         let close = try String(contentsOf: reader.appendingPathComponent("ReaderController+OCR.swift"), encoding: .utf8)
         XCTAssertTrue(close.contains("for page in furiganaGeneration.keys { furiganaGeneration[page, default: 0] += 1 }"))
     }
@@ -42,8 +42,14 @@ final class StyleTokensGuardTests: XCTestCase {
         let display = try String(contentsOf: reader.appendingPathComponent("ReaderController+Display.swift"), encoding: .utf8)
         XCTAssertFalse(display.contains("await self?.pdfView.redrawVisiblePages()"))
         XCTAssertTrue(display.contains("guard FuriganaLayer.signature(for: key) != signature else { return }"))
+        XCTAssertTrue(display.contains("hasher.combine(frame.box.width)"), "PDF remplacé : l'empreinte doit suivre le cadre")
+        let package = try String(contentsOf: reader.appendingPathComponent("../Library/DocumentPackageService.swift").standardizedFileURL, encoding: .utf8)
+        XCTAssertTrue(package.contains("FuriganaLayer.clearMemory()"))
         let layer = try String(contentsOf: reader.appendingPathComponent("FuriganaLayer.swift"), encoding: .utf8)
         XCTAssertFalse(layer.contains("CTFontCreateWithName(\"HiraginoSans-W5\" as CFString, size, nil)"), "pas de police par lecture au dessin")
+        // Revue Codex de 502383c : les fils de dessin ne partagent pas de ligne Core Text, réservée à un seul fil.
+        XCTAssertFalse(layer.contains("CTLineDraw("))
+        XCTAssertFalse(layer.contains("(line: CTLine"), "pas de ligne gardée dans la page préparée")
     }
 
     /// Une analyse OvisOCR2 doit pouvoir s'arrêter depuis la liste des IA, et sa durée être annoncée.

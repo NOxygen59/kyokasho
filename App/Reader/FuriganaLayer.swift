@@ -107,9 +107,10 @@ enum FuriganaLayer {
     /// Empreinte des données d'où viennent les lectures en cache : identique, le calcul est inutile.
     static func signature(for key: String) -> Int? { lock.withLock { pages[key]?.signature } }
 
-    /// Prépare le dessin ici, hors du verrou et du fil principal : les fils de PDFKit n'ont plus qu'à poser le texte.
-    static func set(_ list: [Mark], for key: String, signature: Int? = nil) {
-        let page = PreparedPage(list, signature: signature)
+    /// À appeler hors du fil principal : prépare le dessin (`PreparedPage`).
+    static func set(_ list: [Mark], for key: String) { set(PreparedPage(list, signature: nil), for: key) }
+
+    static func set(_ page: PreparedPage, for key: String) {
         lock.withLock {
             pages[key] = page
             order.removeAll { $0 == key }
@@ -305,25 +306,33 @@ enum FuriganaLayer {
         for mark in page.marks where mark.strip.insetBy(dx: -mark.size, dy: -mark.size).intersects(visible) {
             let size = mark.size, strip = mark.strip
             for (i, kana) in mark.kana.enumerated() {
-                if mark.vertical {
-                    context.textPosition = CGPoint(x: strip.minX + (size - kana.width) / 2, y: strip.maxY - CGFloat(i + 1) * size + size * 0.14)
-                } else {
-                    context.textPosition = CGPoint(x: strip.minX + CGFloat(i) * size + (size - kana.width) / 2, y: strip.minY + size * 0.14)
+                let origin = mark.vertical
+                    ? CGPoint(x: strip.minX + (size - kana.width) / 2, y: strip.maxY - CGFloat(i + 1) * size + size * 0.14)
+                    : CGPoint(x: strip.minX + CGFloat(i) * size + (size - kana.width) / 2, y: strip.minY + size * 0.14)
+                for run in kana.runs {
+                    let positions = run.positions.map { CGPoint(x: origin.x + $0.x, y: origin.y + $0.y) }
+                    CTFontDrawGlyphs(run.font, run.glyphs, positions, run.glyphs.count, context)
                 }
-                CTLineDraw(kana.line, context)
             }
         }
         context.restoreGState()
     }
 
-    /// Lectures d'une page prêtes à poser : mise en place (`layout`) et lignes Core Text calculées une seule fois, au
-    /// lieu de l'être à chaque morceau dessiné, sur plusieurs fils. Immuable, donc lue sans verrou par ces fils.
+    /// Lectures d'une page prêtes à poser : mise en place (`layout`) et glyphes calculés une seule fois, au lieu de l'être à
+    /// chaque morceau dessiné. Plusieurs fils de PDFKit lisent ces données en même temps : elles ne gardent que des
+    /// valeurs et des `CTFont`, partageables d'après Apple. Jamais de `CTLine`, réservée à un seul fil (revue Codex de 502383c).
     struct PreparedPage: @unchecked Sendable {
+        struct Run {
+            let font: CTFont
+            let glyphs: [CGGlyph]
+            let positions: [CGPoint]
+        }
+
         struct PreparedMark {
             let vertical: Bool
             let size: CGFloat
             let strip: CGRect
-            let kana: [(line: CTLine, width: CGFloat)]
+            let kana: [(runs: [Run], width: CGFloat)]
         }
 
         let marks: [PreparedMark]
@@ -335,15 +344,26 @@ enum FuriganaLayer {
             marks = FuriganaLayer.layout(list).map { placed in
                 let font = fonts[placed.size] ?? CTFontCreateWithName("HiraginoSans-W5" as CFString, placed.size, nil)
                 fonts[placed.size] = font
-                let attributes: [NSAttributedString.Key: Any] = [
-                    NSAttributedString.Key(kCTFontAttributeName as String): font,
-                    NSAttributedString.Key(kCTForegroundColorFromContextAttributeName as String): true,
-                ]
-                let kana = placed.reading.map { character -> (line: CTLine, width: CGFloat) in
+                let attributes: [NSAttributedString.Key: Any] = [NSAttributedString.Key(kCTFontAttributeName as String): font]
+                let kana = placed.reading.map { character -> (runs: [Run], width: CGFloat) in
+                    // La ligne ne vit qu'ici, le temps d'en lire les glyphes et la police de secours éventuelle.
                     let line = CTLineCreateWithAttributedString(NSAttributedString(string: String(character), attributes: attributes))
-                    return (line, CGFloat(CTLineGetTypographicBounds(line, nil, nil, nil)))
+                    return (Self.runs(of: line, fallback: font), CGFloat(CTLineGetTypographicBounds(line, nil, nil, nil)))
                 }
                 return PreparedMark(vertical: placed.vertical, size: placed.size, strip: placed.strip, kana: kana)
+            }
+        }
+
+        private static func runs(of line: CTLine, fallback: CTFont) -> [Run] {
+            (CTLineGetGlyphRuns(line) as? [CTRun] ?? []).map { run in
+                let count = CTRunGetGlyphCount(run)
+                var glyphs = [CGGlyph](repeating: 0, count: count)
+                var positions = [CGPoint](repeating: .zero, count: count)
+                CTRunGetGlyphs(run, CFRange(location: 0, length: count), &glyphs)
+                CTRunGetPositions(run, CFRange(location: 0, length: count), &positions)
+                let attributes = CTRunGetAttributes(run) as NSDictionary
+                let font = attributes[kCTFontAttributeName] as! CTFont? ?? fallback
+                return Run(font: font, glyphs: glyphs, positions: positions)
             }
         }
     }

@@ -180,6 +180,28 @@ final class DictionaryKitTests: XCTestCase {
         }
     }
 
+    /// Revue Codex de 502383c : une entrée trouvée seulement par une forme courte pèse quand même sur le classement de son
+    /// groupe. Le découpage choisit donc le même mot que la recherche complète.
+    func testSegmentationKeepsShortFormEntriesInTheirGroup() throws {
+        let database = try DictionaryDatabase.inMemory()
+        try database.writer.write { connection in
+            for (title, priority, expression, reading, rules, score) in [
+                ("A-low", 5, "する", "し", "vs", 100), ("A-high", 0, "する", "し", "n", 500), ("B-mid", 2, "為る", "する", "vs", 200),
+            ] {
+                try DictionaryInfo(title: title, revision: "1", format: 3, priority: priority, termCount: 1).insert(connection)
+                try connection.execute(sql: """
+                    INSERT INTO term(dictionaryId,expression,reading,definitionTags,rules,score,glossary,sequence,termTags)
+                    VALUES (?,?,?,'',?,?,'[]',1,'')
+                    """, arguments: [connection.lastInsertedRowID, expression, reading, rules, score])
+            }
+        }
+        let translator = Translator(database: database)
+        let direct = try XCTUnwrap(translator.findTerms("した").first)
+        XCTAssertEqual([direct.expression, direct.reading], ["する", "し"])
+        let term = try XCTUnwrap(translator.segment("した").first?.term)
+        XCTAssertEqual([term.expression, term.reading, term.matchedText], [direct.expression, direct.reading, direct.matchedText])
+    }
+
     func testTermsWithoutGlossaryKeepEverythingElse() throws {
         let ids = Set(try db.dictionaries().compactMap(\.id))
         let full = try db.terms(matching: ["照明"], dictionaryIds: ids).sorted { $0.id < $1.id }
