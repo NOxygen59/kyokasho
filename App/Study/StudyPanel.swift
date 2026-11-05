@@ -17,6 +17,8 @@ struct StudyPanel: View {
     @ObservedObject var reader: ReaderController
     @Binding var tab: Tab
     var openSearch: () -> Void
+    /// Présentée par `ReaderScreen` : ce panneau est recréé quand l'iPad tourne, et la fenêtre fermée avec lui.
+    var openLineEditor: () -> Void
     var close: () -> Void
     /// Colonne de droite : largeur fixe ; fenêtre ou plein écran (`DetachedPanel`) : toute la place donnée.
     var fixedWidth = true
@@ -61,7 +63,7 @@ struct StudyPanel: View {
                      selection: $tab, tint: tint)
             Group {
                 switch tab {
-                case .text: StudyTextTab(reader: reader)
+                case .text: StudyTextTab(reader: reader, openLineEditor: openLineEditor)
                 case .vocab:
                     DictionarySearchView(dictionary: model.dictionary, added: model.review.keys, compact: true) { term in
                         let sentence = reader.ocrPage?.lines.first { $0.text.contains(term.matchedText) }?.text
@@ -107,6 +109,7 @@ struct StudyPanel: View {
 struct StudyTextTab: View {
     @EnvironmentObject private var model: AppModel
     @ObservedObject var reader: ReaderController
+    var openLineEditor: () -> Void
     /// `reader.rereading` vient d'ici.
     @ObservedObject private var aiTasks = AITaskCenter.shared
     @ObservedObject private var deepl = DeepLService.shared
@@ -150,7 +153,6 @@ struct StudyTextTab: View {
     }
     @State private var editingLine: LineCorrectionDraft?
     @State private var showVerify = false
-    @State private var showLineEditor = false
     @State private var lineDraft = ""
 
     var body: some View {
@@ -267,7 +269,6 @@ struct StudyTextTab: View {
             Text("Ta correction est gardée ; la relecture automatique n'y touchera plus.")
         }
         .sheet(isPresented: $showVerify) { VerifySheet(reader: reader).preferredColorScheme(Theme.current.colorScheme) }
-        .sheet(isPresented: $showLineEditor) { OCRLineEditor(reader: reader).preferredColorScheme(Theme.current.colorScheme) }
         .sheet(isPresented: $showCompare) { CompareEnginesView(reader: reader).environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review) }
     }
 
@@ -301,7 +302,7 @@ struct StudyTextTab: View {
                 .font(.caption2).foregroundStyle(Atelier.textTertiary)
         }
         // Hors de la condition : corriger le texte ne dépend d'aucun modèle.
-        Button { showLineEditor = true } label: {
+        Button { openLineEditor() } label: {
             Label("Corriger le texte", systemImage: "pencil")
         }
         .font(.caption.weight(.semibold))
@@ -978,7 +979,7 @@ extension LookupSession: Identifiable {}
 /// Correction du texte de la page : lignes de l'OCR, ou lecture OvisOCR2 entière. Écran à part : dans le panneau,
 /// l'appui long sur une ligne sélectionnable est pris par la sélection de texte et le menu « Corriger cette ligne »
 /// n'apparaît pas. Travaille sur le résultat présent à l'ouverture : les numéros de ligne ne valent que pour lui.
-private struct OCRLineEditor: View {
+struct OCRLineEditor: View {
     private enum Source: Hashable { case ocr, ovis }
 
     @ObservedObject var reader: ReaderController
@@ -1030,8 +1031,9 @@ private struct OCRLineEditor: View {
                     }
                 }
             }
-            // Hors de la liste, en barre fixe : dans la liste, ce bouton s'affichait coupé (recette 1.4.1, essai 2.3).
-            .safeAreaInset(edge: .bottom, spacing: 0) {
+            // Barre fixe en haut : dans la liste il s'affichait coupé (recette 1.4.1, 2.3), en bas la barre du clavier le
+            // cachait (recette 1.4.5, 5.1).
+            .safeAreaInset(edge: .top, spacing: 0) {
                 if reader.hasCorrections {
                     Button("Annuler mes corrections de cette page", role: .destructive) { confirmingUndo = true }
                         .buttonStyle(.bordered)

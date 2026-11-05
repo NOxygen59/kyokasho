@@ -65,11 +65,12 @@ struct ReaderScreen: View {
     @Environment(\.scenePhase) private var scenePhase
 
     enum Sheet: String, Identifiable {
-        case search, ai, settings, pageCards, pageOrientation
+        case search, ai, settings, pageCards, pageOrientation, lineEditor
         var id: String { rawValue }
     }
 
     enum Side: Equatable { case study, web }
+    @State private var keyboardFreeSize = CGSize.zero
 
     init(document: LibraryDocument, model: AppModel) {
         self.model = model
@@ -101,7 +102,10 @@ struct ReaderScreen: View {
 
     var body: some View {
         GeometryReader { geo in
-            let landscape = geo.size.width > geo.size.height
+            // Taille sans le clavier : le clavier virtuel en portrait réduit la hauteur, et la page passait pour un paysage
+            // (panneau recréé, fenêtre de correction fermée, disposition recalculée).
+            let measured = keyboardFreeSize == .zero ? geo.size : keyboardFreeSize
+            let landscape = measured.width > measured.height
             let reservesSide = reservedSide == .web || (reservedSide == .study && landscape)
             let panelWidth: CGFloat = (reservedSide ?? docked) == .web ? 440 : Atelier.panelWidth
             let inset: CGFloat = reservesSide ? Atelier.gap : 0
@@ -220,7 +224,7 @@ struct ReaderScreen: View {
                 ZStack {
                     if side == .study, studyMode != .docked {
                         DetachedPanel(area: geo.size) {
-                            StudyPanel(reader: reader, tab: $studyTab, openSearch: { sheet = .search },
+                            StudyPanel(reader: reader, tab: $studyTab, openSearch: { sheet = .search }, openLineEditor: { sheet = .lineEditor },
                                        close: { self.side = nil }, fixedWidth: false)
                         }
                         .transition(.opacity)
@@ -293,12 +297,18 @@ struct ReaderScreen: View {
                        NSNumber(value: UITouch.TouchType.indirectPointer.rawValue)]
             }
         }
+        .background {
+            GeometryReader { Color.clear.preference(key: KeyboardFreeSizeKey.self, value: $0.size) }
+                .ignoresSafeArea(.keyboard)
+        }
+        .onPreferenceChange(KeyboardFreeSizeKey.self) { keyboardFreeSize = $0 }
         .sheet(item: $sheet) { sheet in
             Group {
                 switch sheet {
                 case .search: SearchSheet(reader: reader, close: { self.sheet = nil })
                 case .ai: AIPageSheet(reader: reader, openWeb: { self.sheet = nil; side = .web })
                 case .settings: DocumentSettingsSheet(reader: reader)
+                case .lineEditor: OCRLineEditor(reader: reader)
                 case .pageCards: PageCardsView(reader: reader)
                 case .pageOrientation:
                     PageOrientationView(document: reader.document, selectedPage: reader.currentSourcePage,
@@ -753,7 +763,7 @@ struct ReaderScreen: View {
     private func sidePanel(_ side: Side) -> some View {
         switch side {
         case .study:
-            StudyPanel(reader: reader, tab: $studyTab, openSearch: { sheet = .search }, close: { self.side = nil })
+            StudyPanel(reader: reader, tab: $studyTab, openSearch: { sheet = .search }, openLineEditor: { sheet = .lineEditor }, close: { self.side = nil })
         case .web:
             WebPanel(onClose: { self.side = nil })
                 .frame(width: 440)
@@ -1086,4 +1096,10 @@ final class ReaderTabHandoff {
         defer { pending = nil }
         return pending
     }
+}
+
+/// Taille du lecteur en ignorant le clavier (voir `ReaderScreen.body`).
+private struct KeyboardFreeSizeKey: PreferenceKey {
+    static var defaultValue: CGSize { .zero }
+    static func reduce(value: inout CGSize, nextValue: () -> CGSize) { value = nextValue() }
 }
