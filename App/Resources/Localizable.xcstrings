@@ -21913,6 +21913,50 @@
         }
       }
     },
+    "Lecteur : les furigana se dessinent sans refaire tout le calcul, et une page déjà vue n'est pas recalculée.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reader: furigana are drawn without redoing the whole calculation, and a page already seen is not recalculated."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lecteur : les furigana se dessinent sans refaire tout le calcul, et une page déjà vue n'est pas recalculée."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "阅读器：绘制注音时无需重新计算全部内容，已看过的页面也不会重新计算。"
+          }
+        }
+      }
+    },
+    "Lecteur allégé et huit univers": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lighter reader and eight visual worlds"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lecteur allégé et huit univers"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更轻量的阅读器与八种视觉风格"
+          }
+        }
+      }
+    },
     "Lecteur de texte": {
       "localizations": {
         "en": {
@@ -38519,6 +38563,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "主题"
+          }
+        }
+      }
+    },
+    "Thèmes : huit univers très différents, avec un aperçu complet. Les palettes se choisissent à part et gardent leur motif.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Themes: eight very different visual worlds, with a full preview. Palettes are chosen separately and keep their pattern."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thèmes : huit univers très différents, avec un aperçu complet. Les palettes se choisissent à part et gardent leur motif."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "主题：八种风格迥异的视觉世界，并提供完整预览。配色可单独选择，并保留各自的图案。"
           }
         }
       }

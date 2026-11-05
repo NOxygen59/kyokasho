@@ -78,9 +78,10 @@ public struct ReleaseNotes: Equatable, Sendable, Identifiable {
 
     /// La version en cours de préparation : seulement ce qu'elle change (décision de NOxygen59 du 04/11/2026). C'est
     /// elle que montre la fenêtre « Nouveautés » ; les versions précédentes vont dans `ReleaseHistory`.
-    public static let current = ReleaseNotes("1.4.4", "2026-11-05", published: false, String(localized: "Pages avec texte OCR allégées", bundle: .main), added: [], fixed: [
-            String(localized: "Pages avec texte OCR : les mots déjà cherchés ne sont plus recalculés.", bundle: .main),
-            String(localized: "Changement de page ou fermeture d'un manuel : les calculs de furigana en cours s'arrêtent.", bundle: .main),
+    public static let current = ReleaseNotes("1.4.5", "2026-11-05", published: false, String(localized: "Lecteur allégé et huit univers", bundle: .main), added: [
+            String(localized: "Thèmes : huit univers très différents, avec un aperçu complet. Les palettes se choisissent à part et gardent leur motif.", bundle: .main),
+        ], fixed: [
+            String(localized: "Lecteur : les furigana se dessinent sans refaire tout le calcul, et une page déjà vue n'est pas recalculée.", bundle: .main),
         ])
 
     /// Notes de `version` (« 1.3.2 », sans le numéro de build) : la version elle-même, jamais une build de test.
