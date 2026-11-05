@@ -97,3 +97,10 @@ Non exécutée. Utiliser une installation/bibliothèque de test distincte autori
 7. Les essais iCloud/Drive et de grosse bibliothèque se feront séparément ; noter durée, espace disponible et erreurs. Ne pas simuler de coupure en manipulant les fichiers du conteneur personnel.
 
 Noter chaque étape comme réussie/échouée/non faite avec version et capture si utile. Restent non prouvés par Mac : accès au dossier Fichiers/signets, copie de sécurité dans le vrai parcours UI, filtrage effectif des réglages de compte sur appareil, démarrage iPad, rendu Pencil/OCR, interruption réelle, capacité/disque plein et volumes importants.
+
+## Essais sur une bibliothèque séparée
+
+`tools/make_test_tipa.sh <paquet.tipa>` produit une app « Kyōkasho Test », installable à côté de la vraie : autre identifiant, donc autre conteneur et autre bibliothèque. Elle sert à essayer la sauvegarde, la restauration et le retour vers une version antérieure sans toucher aux vraies données.
+
+Retour arrière vérifié sur Mac le 05/11/2026, avec la vraie `AppDatabase` des deux versions, sur une base contenant un PDF, un CBZ et un manga PDF : la 1.4.5 lit les trois documents ; si elle réenregistre les réglages d'un manga PDF, ce document perd sa place dans l'espace Manga au retour, sans autre perte ; le CBZ reste reconnu. Il reste à le refaire sur iPad.
+
