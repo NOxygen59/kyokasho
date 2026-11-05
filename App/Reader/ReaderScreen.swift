@@ -1062,30 +1062,17 @@ enum PopupPlacement {
 struct OCRHighlightDragLayer: View {
     @ObservedObject var reader: ReaderController
     let color: HighlightColor
-    @State private var started = false
 
     var body: some View {
+        // Dessin seul : les gestes sont sur la vue PDF (`handleHighlightPan`), pour garder le zoom à deux doigts.
         Canvas { context, _ in
             for r in reader.ocrHighlightPreview where r.width > 0 {
                 context.fill(Path(roundedRect: r.insetBy(dx: -1, dy: -1), cornerRadius: 2),
                              with: .color(Color(color.uiColor).opacity(0.45)))
             }
         }
-        .contentShape(Rectangle())
-        .gesture(DragGesture(minimumDistance: 0)
-            .onChanged { value in
-                if !started {
-                    started = true
-                    Task { await reader.ocrHighlightBegan(at: value.startLocation) }
-                } else {
-                    reader.ocrHighlightMoved(to: value.location)
-                }
-            }
-            .onEnded { _ in
-                started = false
-                reader.ocrHighlightEnded(color: color)
-            })
-        .accessibilityLabel("Zone de surlignage : glisser sur le texte de la page")
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
     }
 }
 

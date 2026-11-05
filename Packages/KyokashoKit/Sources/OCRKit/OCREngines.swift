@@ -151,6 +151,10 @@ public struct VisionOCREngine: OCREngine {
         // Du vertical sur la page : colonnes de droite à gauche, bloc par bloc, même à côté de lignes horizontales. La recherche au
         // dictionnaire enchaîne les lignes suivantes, elle lirait sinon les colonnes à l'envers.
         if lines.contains(where: \.vertical) {
+            // Page de manga : Vision y lit aussi des bouts de dessin, un caractère à la fois.
+            if lines.filter(\.vertical).count * 2 > lines.count {
+                lines.removeAll { $0.hasPrintedRuby == nil && $0.text.count == 1 && !$0.text.allSatisfy(\.isNumber) }
+            }
             return OCRLayout.verticalReadingOrder(OCRPage(engine: "vision", lines: lines, durationMs: 0))
         }
         // Ordre de lecture approximatif : de haut en bas, puis de gauche à droite.

@@ -52,6 +52,8 @@ public struct OCRLine: Codable, Hashable, Sendable {
     public var doubt: [Int]?
     /// Ligne corrigée à la main (jamais retouchée ensuite par la relecture automatique).
     public var edited: Bool?
+    /// Furigana déjà imprimés à côté de cette ligne (manga) : l'app n'en ajoute pas par-dessus.
+    public var hasPrintedRuby: Bool?
     /// État d'avant la première correction, pour pouvoir y revenir sans relancer l'OCR.
     public var originalText: String?
     public var originalCharBoxes: [NormBox]?

@@ -4,6 +4,7 @@
 // Anneau repris de DuoBar, sous licence MIT : https://github.com/Mikeli7666/DuoBar — Copyright (c) 2026 Mike Li.
 // Voir THIRD_PARTY_NOTICES.md.
 
+import Network
 import ReaderCore
 import SwiftUI
 import UIKit
@@ -20,17 +21,19 @@ struct ReaderStatusBadge: View {
     var body: some View {
         VStack(spacing: 2) {
             ring
+                .padding(3)
+                .background(.black.opacity(0.5), in: Circle())
             TimelineView(.everyMinute) { context in
                 Text(context.date, format: .dateTime.hour().minute())
                     .font(Atelier.font(9, weight: .semibold).monospacedDigit())
                     .foregroundStyle(.white)
                     .lineLimit(1)
                     .fixedSize()
+                    .padding(.horizontal, 3)
+                    .padding(.vertical, 1)
+                    .background(.black.opacity(0.5), in: RoundedRectangle(cornerRadius: Atelier.corner(3), style: .continuous))
             }
         }
-        .padding(.horizontal, 6)
-        .padding(.vertical, 5)
-        .background(.black.opacity(0.5), in: RoundedRectangle(cornerRadius: Atelier.corner(10), style: .continuous))
         .padding(.leading, 8)
         .padding(.top, 6)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -39,6 +42,28 @@ struct ReaderStatusBadge: View {
         .accessibilityLabel(Text("Batterie \(Int(battery.ring.progress * 100)) %"))
         .onAppear { battery.start() }
         .onDisappear { battery.stop() }
+    }
+
+    /// Dans l'ouverture de l'anneau : les points s'il y a du Wi-Fi, le logo du partage de connexion à la même place.
+    /// iPadOS ne donne pas la force du signal aux apps : les points disent seulement connecté ou non.
+    @ViewBuilder
+    private var gapIndicator: some View {
+        let diameter = Self.diameter
+        if battery.hotspot {
+            Image(systemName: "personalhotspot")
+                .font(Atelier.font(diameter * 0.26, weight: .bold))
+                .foregroundStyle(.white)
+                .offset(y: diameter * 0.4)
+        } else {
+            let dot = diameter * DuoBatteryRing.dotDiameterRatio
+            ForEach(Array(DuoBatteryRing.dotOffsets.enumerated()), id: \.offset) { _, offset in
+                Circle()
+                    .fill(.white)
+                    .opacity(battery.wifi ? 1 : 0.3)
+                    .frame(width: dot, height: dot)
+                    .offset(x: offset.x * diameter, y: offset.y * diameter)
+            }
+        }
     }
 
     private var tint: Color {
@@ -75,6 +100,7 @@ struct ReaderStatusBadge: View {
             if battery.ring.showsBolt {
                 bolt.foregroundStyle(tint).offset(y: -radius)
             }
+            gapIndicator
         }
         .frame(width: diameter, height: diameter)
     }
@@ -104,9 +130,13 @@ private struct DuoRingArc: Shape {
 @MainActor
 private final class BatteryWatcher: ObservableObject {
     @Published private(set) var ring = DuoBatteryRing(level: -1, charging: false, full: false, lowPowerMode: false)
+    @Published private(set) var wifi = false
+    @Published private(set) var hotspot = false
     private var observers: [NSObjectProtocol] = []
+    private var path: NWPathMonitor?
 
     func start() {
+        startNetwork()
         UIDevice.current.isBatteryMonitoringEnabled = true
         refresh()
         guard observers.isEmpty else { return }
@@ -119,7 +149,29 @@ private final class BatteryWatcher: ObservableObject {
         }
     }
 
+    /// Wi-Fi « coûteux » : iOS marque ainsi un réseau qui passe par un partage de connexion, celui d'un iPhone notamment.
+    /// C'est une indication du système, pas une preuve : un réseau Wi-Fi ordinaire peut aussi être marqué coûteux.
+    private func startNetwork() {
+        guard path == nil else { return }
+        let monitor = NWPathMonitor()
+        monitor.pathUpdateHandler = { [weak self] update in
+            let connected = update.status == .satisfied && update.usesInterfaceType(.wifi)
+            let shared = connected && update.isExpensive
+            DispatchQueue.main.async {
+                guard let self else { return }
+                MainActor.assumeIsolated {
+                    self.wifi = connected
+                    self.hotspot = shared
+                }
+            }
+        }
+        monitor.start(queue: .global(qos: .utility))
+        path = monitor
+    }
+
     func stop() {
+        path?.cancel()
+        path = nil
         observers.forEach(NotificationCenter.default.removeObserver)
         observers = []
         UIDevice.current.isBatteryMonitoringEnabled = false

@@ -78,16 +78,15 @@ public struct ReleaseNotes: Equatable, Sendable, Identifiable {
 
     /// La version en cours de préparation : seulement ce qu'elle change (décision de NOxygen59 du 04/11/2026). C'est
     /// elle que montre la fenêtre « Nouveautés » ; les versions précédentes vont dans `ReleaseHistory`.
-    public static let current = ReleaseNotes("1.4.8", "2026-11-05", published: false, String(localized: "Tableau de bord, texte vertical et batterie", bundle: .main), added: [
-            String(localized: "Tableau de bord : touche le temps de lecture sur l'accueil pour voir ta lecture, tes révisions, ta bibliothèque et les performances.", bundle: .main),
-            String(localized: "Le temps de lecture repart de zéro, avec les pages vues et les mots cherchés.", bundle: .main),
-            String(localized: "Lecteur, interface cachée : batterie de l'iPhone Duo et heure en haut à gauche, et une petite flèche pour faire revenir l'interface.", bundle: .main),
-            String(localized: "Moniteur : le temps de calcul mesuré pour le dessin des pages, le texte, le nettoyage, la teinte et les furigana.", bundle: .main),
+    public static let current = ReleaseNotes("1.4.9", "2026-11-06", published: false, String(localized: "Sélection, zoom en surlignage et petits réglages", bundle: .main), added: [
+            String(localized: "Catalogue des dictionnaires : un bouton pour tout installer.", bundle: .main),
+            String(localized: "Accueil : une petite barre montre l'avancée de l'analyse sous le document.", bundle: .main),
+            String(localized: "Badge du lecteur : Wi-Fi et partage de connexion dans l'anneau.", bundle: .main),
         ], fixed: [
-            String(localized: "Interface du lecteur : un toucher dans le blanc la cache ou la rappelle, même en mode dictionnaire.", bundle: .main),
-            String(localized: "Texte vertical : la lecture Apple Vision lit désormais les colonnes de manga. Relance la lecture des pages déjà lues.", bundle: .main),
-            String(localized: "CBZ : conversion bien plus légère en mémoire, un gros fichier ne doit plus fermer l'app.", bundle: .main),
-            String(localized: "Conversion d'un CBZ en PDF : quasi immédiate, sans recopier les images.", bundle: .main),
+            String(localized: "Tout sélectionner ne prend plus que les pages affichées.", bundle: .main),
+            String(localized: "Le zoom à deux doigts marche en mode surlignage.", bundle: .main),
+            String(localized: "Mangas : chat IA retiré, furigana mieux contenus.", bundle: .main),
+            String(localized: "Boutons du moniteur plus grands.", bundle: .main),
         ])
 
     /// Notes de `version` (« 1.3.2 », sans le numéro de build) : la version elle-même, jamais une build de test.

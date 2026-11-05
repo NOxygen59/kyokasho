@@ -64,19 +64,30 @@ enum VerticalTextReader {
         let width = max(1, Int(Double(image.width) * scale)), height = max(1, Int(Double(image.height) * scale))
         guard let bitmap = grayBitmap(image, width: width, height: height) else { return [] }
         var lines: [OCRLine] = []
-        for column in try columns(in: bitmap, skipping: known).prefix(maximumColumns) {
+        let found = try detect(in: bitmap, skipping: known)
+        for column in found.columns.prefix(maximumColumns) {
             try Task.checkCancellation()
             let box = normalized(column, in: bitmap)
             guard !known.contains(where: { overlapShare(box, $0) > 0.3 }) else { continue }
             let cells = characterCells(of: column, in: bitmap)
             guard cells.count >= minimumCharacters, let strip = strip(cells, column: column, bitmap: bitmap),
-                  let (text, confidence) = recognize(strip), let cleaned = cleaned(text), confidence >= minimumConfidence else { continue }
-            let count = cleaned.count
-            // Autant de cases que de caractères : leurs positions sont bonnes. Sinon, partage régulier de la colonne.
-            let charBoxes = cells.count == count ? cells.map { normalized($0, in: bitmap) }
-                : CharacterLayout.proportional(cleaned, in: box, vertical: true)
-            lines.append(OCRLine(text: cleaned, box: box, charBoxes: charBoxes, measuredCharBoxes: cells.count == count,
-                                 vertical: true, confidence: Double(confidence)))
+                  let reading = recognize(strip, cellCount: cells.count), reading.confidence >= minimumConfidence,
+                  let cleaned = cleaned(reading.characters) else { continue }
+            let text = String(cleaned.map(\.character))
+            let charBoxes = cleaned.map { character -> NormBox in
+                var union = cells[character.cells.lowerBound]
+                for index in character.cells { union.formUnion(cells[index]) }
+                return normalized(union, in: bitmap)
+            }
+            // Furigana imprimés dans la bande à droite de la colonne. Deux traits au moins : un seul peut être une poussière.
+            let ruby = found.small.filter { small in
+                small.minX >= column.maxX - 2 && small.minX <= column.maxX + column.width
+                    && small.maxY >= column.minY && small.minY <= column.maxY
+            }.count >= 2
+            var line = OCRLine(text: text, box: box, charBoxes: charBoxes, measuredCharBoxes: true,
+                               vertical: true, confidence: Double(reading.confidence))
+            line.hasPrintedRuby = ruby ? true : nil
+            lines.append(line)
         }
         return lines
     }
@@ -84,7 +95,15 @@ enum VerticalTextReader {
     static let minimumCharacters = 2
     static let minimumConfidence: Float = 0.3
 
-    private static func recognize(_ strip: CGImage) -> (String, Float)? {
+    /// Un caractère lu et la case de la colonne où Vision l'a vu.
+    struct ReadCharacter: Equatable {
+        var character: Character
+        var cells: ClosedRange<Int>
+    }
+
+    /// Vision dit où il a lu chaque caractère dans la bande : c'est ce qui relie le texte aux vraies cases. Compter les
+    /// caractères ne suffit pas : un seul oublié décalait tout le reste, et le toucher tombait sur le mauvais mot.
+    private static func recognize(_ strip: CGImage, cellCount: Int) -> (characters: [ReadCharacter], confidence: Float)? {
         let request = VNRecognizeTextRequest()
         request.recognitionLevel = .accurate
         request.recognitionLanguages = ["ja-JP"]
@@ -92,26 +111,75 @@ enum VerticalTextReader {
         guard (try? VNImageRequestHandler(cgImage: strip, options: [:]).perform([request])) != nil else { return nil }
         let candidates = (request.results ?? []).compactMap { $0.topCandidates(1).first }
         guard !candidates.isEmpty else { return nil }
-        return (candidates.map(\.string).joined(), candidates.map(\.confidence).max() ?? 0)
+        var characters: [ReadCharacter] = []
+        for candidate in candidates {
+            let text = candidate.string
+            var index = text.startIndex
+            var order = characters.count
+            while index < text.endIndex {
+                let next = text.index(after: index)
+                let box = (try? candidate.boundingBox(for: index..<next))?.boundingBox
+                characters.append(ReadCharacter(character: text[index], cells: {
+                    let cell = box.map { cellIndex(midX: $0.midX, stripWidth: strip.width, cellCount: cellCount) }
+                        ?? min(order, cellCount - 1)
+                    return cell...cell
+                }()))
+                order += 1
+                index = next
+            }
+        }
+        return (characters, candidates.map(\.confidence).max() ?? 0)
     }
+
+    /// Case sous une position de la bande, de 0 à 1 sur sa largeur.
+    static func cellIndex(midX: Double, stripWidth: Int, cellCount: Int) -> Int {
+        let cellSide = Double(stripWidth - stripMargin * 2) / Double(max(cellCount, 1))
+        return min(max(0, Int((midX * Double(stripWidth) - Double(stripMargin)) / cellSide)), cellCount - 1)
+    }
+
+    static let stripMargin = 16
 
     /// Les points de suspension verticaux sont lus comme des deux-points ou des points médians. Sans vrai caractère japonais,
     /// c'est un bout de dessin : rien.
-    static func cleaned(_ text: String) -> String? {
-        let dots = try? NSRegularExpression(pattern: "[：:・･.．。]{2,}|[：:]")
-        let range = NSRange(text.startIndex..., in: text)
-        let result = dots?.stringByReplacingMatches(in: text, range: range, withTemplate: "…") ?? text
-        let japanese = result.unicodeScalars.filter {
+    static func cleaned(_ characters: [ReadCharacter]) -> [ReadCharacter]? {
+        let dots: Set<Character> = ["：", ":", "・", "･", ".", "．", "。", "…", "⋯", "•"]
+        var result: [ReadCharacter] = []
+        var index = 0
+        while index < characters.count {
+            var end = index
+            while end + 1 < characters.count, dots.contains(characters[index].character), dots.contains(characters[end + 1].character) { end += 1 }
+            let current = characters[index].character
+            if end > index || current == "：" || current == ":" {
+                // Vision peut placer deux caractères voisins dans le désordre : l'étendue se calcule sans supposer l'ordre.
+                let cells = characters[index...end].map(\.cells)
+                let first = cells.map(\.lowerBound).min() ?? 0, last = cells.map(\.upperBound).max() ?? first
+                result.append(ReadCharacter(character: "…", cells: first...last))
+            } else {
+                result.append(characters[index])
+            }
+            index = end + 1
+        }
+        let japanese = result.filter { $0.character.unicodeScalars.contains {
             (0x3041...0x30FF).contains($0.value) || (0x3400...0x9FFF).contains($0.value)
-        }.count
+        } }.count
         return japanese >= 2 ? result : nil
+    }
+
+    /// Forme texte, pour les tests.
+    static func cleaned(_ text: String) -> String? {
+        cleaned(text.enumerated().map { ReadCharacter(character: $0.element, cells: $0.offset...$0.offset) })
+            .map { String($0.map(\.character)) }
     }
 
     // MARK: Colonnes
 
-    /// De droite à gauche, ordre de lecture japonais. Les zones déjà lues sont écartées dès le départ : une page horizontale
-    /// ne laisse presque rien à regrouper, sans empêcher de lire une colonne ailleurs sur la même page.
     static func columns(in bitmap: Bitmap, skipping known: [NormBox] = []) throws -> [Box] {
+        try detect(in: bitmap, skipping: known).columns
+    }
+
+    /// Colonnes de droite à gauche, ordre de lecture japonais, et petits groupes écartés (furigana imprimés). Les zones déjà lues sont écartées dès le départ : une page horizontale
+    /// ne laisse presque rien à regrouper, sans empêcher de lire une colonne ailleurs sur la même page.
+    static func detect(in bitmap: Bitmap, skipping known: [NormBox] = []) throws -> (columns: [Box], small: [Box]) {
         let largest = Int(Double(bitmap.height) * largestCharacter)
         var groups = strokes(in: bitmap).filter { $0.width <= largest && $0.height <= largest && $0.width * $0.height >= 4 }
         // Zones déjà lues d'abord : le texte qu'elles contiennent ne doit pas compter comme de la trame.
@@ -119,7 +187,10 @@ enum VerticalTextReader {
             let box = normalized(stroke, in: bitmap)
             return !known.contains { overlapShare(box, $0) > 0.5 }
         }
-        groups = removingScreentone(groups).filter { whiteShare(around: $0, in: bitmap) > minimumWhiteAround }
+        groups = removingScreentone(groups)
+        // Avant le filtre du blanc : un furigana serré contre son kanji n'a pas de blanc autour de lui.
+        let strokesBeforeWhite = groups
+        groups = groups.filter { whiteShare(around: $0, in: bitmap) > minimumWhiteAround }
         // Regroupement répété jusqu'à stabilité : deux morceaux peuvent ne se rejoindre qu'à travers un troisième.
         // Grille en X et en Y : seuls les voisins sont comparés, même si la page compte des dizaines de milliers de traits.
         let cell = max(1, largest)
@@ -160,7 +231,9 @@ enum VerticalTextReader {
         // Furigana imprimés : colonnes bien plus étroites que le texte. Le dictionnaire s'appuie sur le texte, pas sur eux.
         let widths = tall.map(\.width).sorted()
         let typical = widths.isEmpty ? 0 : widths[widths.count / 2]
-        return tall.filter { Double($0.width) >= Double(typical) * 0.55 }.sorted { $0.midX > $1.midX }
+        let limit = Double(typical) * 0.55
+        return (tall.filter { Double($0.width) >= limit }.sorted { $0.midX > $1.midX },
+                strokesBeforeWhite.filter { Double($0.width) < limit && Double($0.height) < limit })
     }
 
     static let minimumColumnWidth = 8
@@ -267,7 +340,7 @@ enum VerticalTextReader {
     static func strip(_ cells: [Box], column: Box, bitmap: Bitmap) -> CGImage? {
         let zoom = 2
         let cellSide = max(column.width, cells.map(\.height).max() ?? column.width, 20) * zoom + 8
-        let margin = 16
+        let margin = stripMargin
         let width = cellSide * cells.count + margin * 2, height = cellSide + margin * 2
         var output = [UInt8](repeating: 255, count: width * height)
         for (index, cell) in cells.enumerated() {

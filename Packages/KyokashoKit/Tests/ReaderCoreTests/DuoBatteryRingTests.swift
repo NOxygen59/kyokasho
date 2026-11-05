@@ -40,4 +40,17 @@ final class DuoBatteryRingTests: XCTestCase {
         XCTAssertEqual(ring(-1).progress, 0)
         XCTAssertEqual(ring(-1).tint, .normal)
     }
+
+    /// Les points sont dans l'ouverture, en bas, jamais sur l'arc.
+    func testDotsSitInTheGap() {
+        let offsets = DuoBatteryRing.dotOffsets
+        XCTAssertEqual(offsets.count, 4)
+        XCTAssertEqual(offsets.map(\.x), offsets.map(\.x).sorted())
+        for offset in offsets {
+            XCTAssertGreaterThan(offset.y, 0)
+            let degrees = atan2(offset.y, offset.x) * 180 / .pi
+            XCTAssertGreaterThan(degrees, 90 - DuoBatteryRing.gapDegrees / 2)
+            XCTAssertLessThan(degrees, 90 + DuoBatteryRing.gapDegrees / 2)
+        }
+    }
 }

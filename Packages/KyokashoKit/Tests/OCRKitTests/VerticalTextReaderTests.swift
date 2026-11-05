@@ -70,6 +70,47 @@ final class VerticalTextReaderTests: XCTestCase {
         XCTAssertEqual(try VerticalTextReader.read(image, languages: ["ja-JP"], skipping: [known]), [])
     }
 
+    /// Recette 1.4.8 : le toucher tombait sur le mauvais mot. Un point de suspension garde ses cases, et ce qui suit reste en face.
+    func testCleaningKeepsEachCharacterOnItsCell() throws {
+        let read: [VerticalTextReader.ReadCharacter] = [("：", 0), ("・", 1), ("そ", 2), ("の", 3), ("様", 4), ("子", 5)]
+            .map { .init(character: $0.0, cells: $0.1...$0.1) }
+        let cleaned = try XCTUnwrap(VerticalTextReader.cleaned(read))
+        XCTAssertEqual(String(cleaned.map(\.character)), "…その様子")
+        XCTAssertEqual(cleaned[0].cells, 0...1)
+        XCTAssertEqual(cleaned[3].cells, 4...4)
+    }
+
+    /// Sur le vrai chapitre, Vision a rendu des positions dans le désordre : l'étendue inversée faisait planter l'app.
+    func testCleaningSurvivesCharactersOutOfOrder() throws {
+        let read: [VerticalTextReader.ReadCharacter] = [("そ", 0), ("：", 4), ("・", 2), ("の", 3), ("様", 5)]
+            .map { .init(character: $0.0, cells: $0.1...$0.1) }
+        let cleaned = try XCTUnwrap(VerticalTextReader.cleaned(read))
+        XCTAssertEqual(cleaned[1].cells, 2...4)
+    }
+
+    func testCellIndexFollowsStripPosition() {
+        // Marges de 16 de part et d'autre, 3 cases de 100.
+        let width = 332
+        XCTAssertEqual(VerticalTextReader.cellIndex(midX: 66.0 / 332, stripWidth: width, cellCount: 3), 0)
+        XCTAssertEqual(VerticalTextReader.cellIndex(midX: 166.0 / 332, stripWidth: width, cellCount: 3), 1)
+        XCTAssertEqual(VerticalTextReader.cellIndex(midX: 0.99, stripWidth: width, cellCount: 3), 2)
+        XCTAssertEqual(VerticalTextReader.cellIndex(midX: 0, stripWidth: width, cellCount: 3), 0)
+    }
+
+    /// Une lecture ajoutée par l'app ne doit pas recouvrir des furigana déjà imprimés.
+    func testPrintedRubyIsDetectedBesideColumn() throws {
+        var pixels = [UInt8](repeating: 255, count: 400 * 400)
+        func fill(_ x: Int, _ y: Int, _ w: Int, _ h: Int) {
+            for row in y..<(y + h) { for col in x..<(x + w) { pixels[row * 400 + col] = 0 } }
+        }
+        for k in 0..<6 { fill(200, 40 + k * 26, 20, 20) }
+        for x in [260, 320] { for k in 0..<6 { fill(x, 40 + k * 26, 20, 20) } }
+        for k in 0..<3 { fill(224, 40 + k * 10, 8, 8) }
+        let found = try VerticalTextReader.detect(in: .init(width: 400, height: 400, pixels: pixels))
+        XCTAssertEqual(found.columns.map(\.minX), [320, 260, 200])
+        XCTAssertTrue(found.small.contains { $0.minX >= 219 && $0.minX <= 240 })
+    }
+
     func testCleaningKeepsTextAndDropsNoise() {
         XCTAssertEqual(VerticalTextReader.cleaned("まあまあ：・"), "まあまあ…")
         XCTAssertEqual(VerticalTextReader.cleaned("分析しておかないと："), "分析しておかないと…")
@@ -171,7 +212,7 @@ final class VerticalTextReaderTests: XCTestCase {
             before += lines.count - vertical
             after += lines.count
             print("PAGE \(file) lignes \(lines.count)")
-            if ProcessInfo.processInfo.environment["KYOKASHO_MANGA_TEXT"] == file { lines.forEach { print("  ", $0.vertical ? "V" : "H", String(format: "%.2f", $0.confidence), $0.text) } }
+            if ProcessInfo.processInfo.environment["KYOKASHO_MANGA_TEXT"] == file { lines.forEach { print("  ", $0.vertical ? "V" : "H", $0.hasPrintedRuby == true ? "R" : "-", String(format: "%.2f %.2f,%.2f", $0.confidence, $0.box.x, $0.box.y), $0.text, $0.charBoxes.count) } }
         }
         print("BILAN \(files.count) pages, \(after) lignes, \(Date().timeIntervalSince(start)) s")
     }

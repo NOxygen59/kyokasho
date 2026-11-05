@@ -40,6 +40,50 @@ extension ReaderController {
             // OCR des pages affichées, pour que le premier glisser trouve déjà ses zones.
             ensureOCR(shownSources)
         }
+        applyHighlightGestures(on)
+    }
+
+    /// Un doigt surligne, deux doigts restent à PDFKit : pincer pour zoomer, glisser pour se déplacer. Ce geste est posé sur la
+    /// vue PDF plutôt que sur une couche par-dessus, qui avalait tous les touchers et empêchait le zoom.
+    private func applyHighlightGestures(_ on: Bool) {
+        if ocrHighlightPan == nil {
+            let pan = UIPanGestureRecognizer(target: self, action: #selector(handleHighlightPan(_:)))
+            pan.maximumNumberOfTouches = 1
+            pan.cancelsTouchesInView = false
+            pan.delegate = self
+            pdfView.addGestureRecognizer(pan)
+            ocrHighlightPan = pan
+        }
+        ocrHighlightPan?.isEnabled = on
+        pdfInnerScrollView?.panGestureRecognizer.minimumNumberOfTouches = on ? 2 : 1
+        if on {
+            swipeLeft.isEnabled = false
+            swipeRight.isEnabled = false
+            singleTap.isEnabled = false
+            doubleTap.isEnabled = false
+        } else {
+            applyDisplaySettings()
+        }
+    }
+
+    @objc func handleHighlightPan(_ gesture: UIPanGestureRecognizer) {
+        switch gesture.state {
+        case .began:
+            // Le glisser part du point d'appui, pas de l'endroit où iOS l'a reconnu, une dizaine de points plus loin.
+            let translation = gesture.translation(in: pdfView)
+            let location = gesture.location(in: pdfView)
+            let start = CGPoint(x: location.x - translation.x, y: location.y - translation.y)
+            Task { await ocrHighlightBegan(at: start) }
+        case .changed:
+            ocrHighlightMoved(to: gesture.location(in: pdfView))
+        case .ended:
+            // Couleur choisie dans la barre d'outils (`highlight.ocrColor`).
+            let stored = UserDefaults.standard.string(forKey: "highlight.ocrColor").flatMap(HighlightColor.init(rawValue:))
+            ocrHighlightEnded(color: stored ?? .yellow)
+        default:
+            ocrHighlightDrag = nil
+            ocrHighlightPreview = []
+        }
     }
 
     func ocrHighlightBegan(at point: CGPoint) async {

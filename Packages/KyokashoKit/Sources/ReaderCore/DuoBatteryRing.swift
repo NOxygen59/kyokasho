@@ -4,6 +4,7 @@
 // Géométrie, proportions et règle de couleur reprises de DuoBar, sous licence MIT :
 // https://github.com/Mikeli7666/DuoBar — Copyright (c) 2026 Mike Li. Voir THIRD_PARTY_NOTICES.md.
 
+import CoreGraphics
 import Foundation
 
 /// Anneau de batterie de l'iPhone Duo, sans SwiftUI pour être testé sur Mac.
@@ -46,6 +47,16 @@ public struct DuoBatteryRing: Equatable, Sendable {
         } else {
             tint = .normal
             showsBolt = false
+        }
+    }
+
+    /// Les quatre points dans l'ouverture de l'anneau, à gauche puis à droite : décalage depuis le centre pour un anneau de
+    /// diamètre 1, y vers le bas. Mesures de DuoBar.
+    public static let dotDiameterRatio = 0.096502
+    public static var dotOffsets: [CGPoint] {
+        [-32.273, -10.813, 10.813, 32.273].map { degrees in
+            let radians = degrees * .pi / 180
+            return CGPoint(x: sin(radians) * 0.45545, y: cos(radians) * 0.45545)
         }
     }
 

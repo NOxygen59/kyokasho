@@ -3169,6 +3169,28 @@
         }
       }
     },
+    "Accueil : une petite barre montre l'avancée de l'analyse sous le document.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Home screen: a small bar shows analysis progress under the document."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accueil : une petite barre montre l'avancée de l'analyse sous le document."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "主页：文档下方的小进度条显示分析进度。"
+          }
+        }
+      }
+    },
     "Accueil en sections Manuels et Livres, question « Livre ou manuel ? » à l'import, suppression de plusieurs documents.": {
       "localizations": {
         "en": {
@@ -4287,6 +4309,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "发生意外错误。"
+          }
+        }
+      }
+    },
+    "Analyse : %lld sur %lld": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Analysis: %lld of %lld"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Analyse : %lld sur %lld"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "分析：%lld / %lld"
           }
         }
       }
@@ -6821,6 +6865,28 @@
         }
       }
     },
+    "Badge du lecteur : Wi-Fi et partage de connexion dans l'anneau.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reader badge: Wi-Fi and hotspot in the ring."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Badge du lecteur : Wi-Fi et partage de connexion dans l'anneau."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "阅读器徽标：圆环中显示 Wi-Fi 和个人热点。"
+          }
+        }
+      }
+    },
     "Balayage du trackpad en double page dézoomée.": {
       "localizations": {
         "en": {
@@ -7565,6 +7631,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "翻页按钮，新图标"
+          }
+        }
+      }
+    },
+    "Boutons du moniteur plus grands.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Larger monitor buttons."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Boutons du moniteur plus grands."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "监视器按钮更大。"
           }
         }
       }
@@ -8423,6 +8511,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "目录：下载词典"
+          }
+        }
+      }
+    },
+    "Catalogue des dictionnaires : un bouton pour tout installer.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dictionary catalog: a button to install everything."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Catalogue des dictionnaires : un bouton pour tout installer."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "词典目录：一键全部安装。"
           }
         }
       }
@@ -15753,6 +15863,28 @@
         }
       }
     },
+    "Environ %@ à télécharger, plus la place une fois installés.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "About %@ to download, and more space once installed."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Environ %@ à télécharger, plus la place une fois installés."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "约需下载 %@，安装后占用更多空间。"
+          }
+        }
+      }
+    },
     "Environ 1 jeton = 1 caractère japonais ou ¾ de mot français. Plus long = plus de mémoire et de batterie ; au-delà de 2 048, risque de manque de mémoire sur l'iPad.": {
       "localizations": {
         "en": {
@@ -20813,6 +20945,28 @@
         }
       }
     },
+    "Installer tout le catalogue ?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Install the whole catalog?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Installer tout le catalogue ?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "安装整个目录？"
+          }
+        }
+      }
+    },
     "Installé": {
       "localizations": {
         "en": {
@@ -23409,6 +23563,28 @@
         }
       }
     },
+    "Le zoom à deux doigts marche en mode surlignage.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Two-finger zoom works in highlight mode."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le zoom à deux doigts marche en mode surlignage."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "高亮模式下可双指缩放。"
+          }
+        }
+      }
+    },
     "Lecteur : les furigana se dessinent sans refaire tout le calcul, et une page déjà vue n'est pas recalculée.": {
       "localizations": {
         "en": {
@@ -24197,6 +24373,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "两者"
+          }
+        }
+      }
+    },
+    "Les dictionnaires se téléchargent l'un après l'autre. Reste sur cet écran ou dans l'app, de préférence en Wi-Fi.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dictionaries download one after another. Stay on this screen or in the app, preferably on Wi-Fi."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les dictionnaires se téléchargent l'un après l'autre. Reste sur cet écran ou dans l'app, de préférence en Wi-Fi."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "词典将逐个下载。请留在此界面或应用内，最好使用 Wi-Fi。"
           }
         }
       }
@@ -25231,6 +25429,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "漫画"
+          }
+        }
+      }
+    },
+    "Mangas : chat IA retiré, furigana mieux contenus.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manga: AI chat removed, furigana better contained."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mangas : chat IA retiré, furigana mieux contenus."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "漫画：移除 AI 聊天，假名显示更克制。"
           }
         }
       }
@@ -39447,6 +39667,28 @@
         }
       }
     },
+    "Sélection, zoom en surlignage et petits réglages": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Selection, highlight zoom and small adjustments"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sélection, zoom en surlignage et petits réglages"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选择、高亮缩放和小调整"
+          }
+        }
+      }
+    },
     "Sélectionner": {
       "localizations": {
         "en": {
@@ -41779,6 +42021,50 @@
         }
       }
     },
+    "Tout installer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Install all"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tout installer"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全部安装"
+          }
+        }
+      }
+    },
+    "Tout installer (%lld)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Install all (%lld)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tout installer (%lld)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全部安装（%lld）"
+          }
+        }
+      }
+    },
     "Tout le document": {
       "localizations": {
         "en": {
@@ -41863,6 +42149,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "全选"
+          }
+        }
+      }
+    },
+    "Tout sélectionner ne prend plus que les pages affichées.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select All now takes only the pages shown."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tout sélectionner ne prend plus que les pages affichées."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全选现在只选择显示的页面。"
           }
         }
       }

@@ -10,6 +10,9 @@ public struct DocumentCapabilities: Equatable, Sendable {
     public var textAnalysis: Bool
     /// IA, traduction, chat, analyse du document, panneau d'étude et cartes.
     public var study: Bool
+    /// Chat avec l'IA. Coupé sur les mangas (décision de NOxygen59, 05/11/2026) : seule exception où l'espace décide. L'OCR,
+    /// le dictionnaire et le panneau d'étude d'un manga PDF restent là.
+    public var chat: Bool
     /// Dessin, surlignage et notes.
     public var annotations: Bool
     /// Ajout, retrait, rotation et coupe de pages, numérotation.
@@ -23,6 +26,7 @@ public struct DocumentCapabilities: Equatable, Sendable {
         let full = !document.isComicArchive
         textAnalysis = full
         study = full
+        chat = full && !document.isInMangaSpace
         annotations = full
         pageEditing = full
         export = full

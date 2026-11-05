@@ -180,6 +180,14 @@ extension ReaderController {
         applyPencilLookupGestures()
         hover = UIHoverGestureRecognizer(target: self, action: #selector(handleHover(_:)))
         hover.delegate = self
+        // Curseur (trackpad, souris) : cliquer-glisser sélectionne le texte. Le doigt, lui, passe par l'appui long.
+        pointerSelect = UIPanGestureRecognizer(target: self, action: #selector(handlePointerSelect(_:)))
+        pointerSelect.allowedTouchTypes = [NSNumber(value: UITouch.TouchType.indirectPointer.rawValue)]
+        pointerSelect.allowedScrollTypesMask = []
+        pointerSelect.maximumNumberOfTouches = 1
+        pointerSelect.cancelsTouchesInView = false
+        pointerSelect.delegate = self
+        if attach { pdfView.addGestureRecognizer(pointerSelect) }
         if attach {
             pdfView.addGestureRecognizer(hover)
             pdfView.addGestureRecognizer(pencilTap)
@@ -274,16 +282,45 @@ extension ReaderController {
             setInnerPan(enabled: false)
             select(page.selectionForWord(at: pagePoint))
         case .changed:
-            // Document reconstruit pendant l'appui (réglage, page nettoyée) : sélection abandonnée.
-            guard let (page, start) = selectionAnchor, page.document === pdfView.document, !isDrawing else {
-                selectionAnchor = nil
-                setInnerPan(enabled: true)
-                return
-            }
-            select(page.selection(from: start, to: pdfView.convert(point, to: page)))
+            extendSelection(to: point)
         default:
             selectionAnchor = nil
             setInnerPan(enabled: true)
+        }
+    }
+
+    /// Sélection du point d'ancrage jusqu'à `point`, d'une page à l'autre d'une double page.
+    /// Document reconstruit pendant le geste (réglage, page nettoyée) : sélection abandonnée.
+    private func extendSelection(to point: CGPoint) {
+        guard let (page, start) = selectionAnchor, let document = page.document, document === pdfView.document, !isDrawing else {
+            selectionAnchor = nil
+            setInnerPan(enabled: true)
+            return
+        }
+        let target = pdfView.page(for: point, nearest: true) ?? page
+        select(document.selection(from: page, at: start, to: target, at: pdfView.convert(point, to: target)))
+    }
+
+    @objc func handlePointerSelect(_ gesture: UIPanGestureRecognizer) {
+        let point = gesture.location(in: pdfView)
+        switch gesture.state {
+        case .began:
+            guard !isDrawing, !ocrHighlightMode else { return }
+            let translation = gesture.translation(in: pdfView)
+            let origin = CGPoint(x: point.x - translation.x, y: point.y - translation.y)
+            // Page sans texte (scan) : rien à sélectionner, le glisser garde son effet habituel.
+            guard let page = pdfView.page(for: origin, nearest: false), page.string?.isEmpty == false else { return }
+            pressWasLong = true
+            selectionAnchor = (page, pdfView.convert(origin, to: page))
+            setInnerPan(enabled: false)
+            extendSelection(to: point)
+        case .changed:
+            extendSelection(to: point)
+        default:
+            if selectionAnchor != nil {
+                selectionAnchor = nil
+                setInnerPan(enabled: true)
+            }
         }
     }
 

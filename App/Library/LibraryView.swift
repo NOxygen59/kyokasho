@@ -688,8 +688,8 @@ struct LibraryView: View {
     @ViewBuilder
     private func menu(for document: LibraryDocument) -> some View {
         Button { model.openDocumentId = document.id } label: { Label("Ouvrir", systemImage: "book") }
-        if !document.capabilities.study {
-            // Lecture visuelle : ni chat ni mention de lecture IA.
+        if !document.capabilities.chat {
+            // CBZ et mangas : ni chat ni mention de lecture IA.
         } else if (Qwen3VLReader().isAvailable || ModelStore.shared.isInstalled(.qwen35chat4b)),
            DocumentKnowledge.isReady(document) {
             Button {
@@ -788,6 +788,28 @@ struct LibraryView: View {
     }
 }
 
+/// Toute petite barre sous la carte du document en cours d'analyse. Vue à part : seule elle se redessine à chaque page
+/// analysée, pas toute la grille. Rien du tout pour les autres documents.
+private struct AnalysisProgressLine: View {
+    let documentId: String
+    @ObservedObject private var analysis = DocumentAnalysisService.shared
+
+    var body: some View {
+        if let progress = analysis.progress, progress.documentId == documentId {
+            GeometryReader { area in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Atelier.Tint.ai.opacity(0.2))
+                    Capsule().fill(Atelier.Tint.ai)
+                        .frame(width: max(2, area.size.width * Double(progress.done) / Double(max(progress.total, 1))))
+                }
+            }
+            .frame(height: 2)
+            .accessibilityElement()
+            .accessibilityLabel(Text("Analyse : \(progress.done) sur \(progress.total)"))
+        }
+    }
+}
+
 /// Carte de document : couverture, titre, progression façon cartouche de plan.
 struct DocumentCard: View {
     @EnvironmentObject private var model: AppModel
@@ -839,6 +861,7 @@ struct DocumentCard: View {
                 Text("\(document.pageLabel(document.lastPageIndex))/\(document.pageLabel(document.pageCount - 1))")
                     .font(.system(size: 11, weight: .semibold, design: .monospaced)).foregroundStyle(Atelier.textTertiary)
             }
+            AnalysisProgressLine(documentId: document.id)
         }
         .onAppear(perform: load)
         .onChange(of: document.id) { _ in load() }

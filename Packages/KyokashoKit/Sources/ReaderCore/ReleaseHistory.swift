@@ -10,6 +10,17 @@ import Foundation
 enum ReleaseHistory {
     static let past: [ReleaseNotes] = [
         // Candidates locales non publiées.
+        ReleaseNotes("1.4.8", "2026-11-05", published: false, String(localized: "Tableau de bord, texte vertical et batterie", bundle: .main), added: [
+            String(localized: "Tableau de bord : touche le temps de lecture sur l'accueil pour voir ta lecture, tes révisions, ta bibliothèque et les performances.", bundle: .main),
+            String(localized: "Le temps de lecture repart de zéro, avec les pages vues et les mots cherchés.", bundle: .main),
+            String(localized: "Lecteur, interface cachée : batterie de l'iPhone Duo et heure en haut à gauche, et une petite flèche pour faire revenir l'interface.", bundle: .main),
+            String(localized: "Moniteur : le temps de calcul mesuré pour le dessin des pages, le texte, le nettoyage, la teinte et les furigana.", bundle: .main),
+        ], fixed: [
+            String(localized: "Interface du lecteur : un toucher dans le blanc la cache ou la rappelle, même en mode dictionnaire.", bundle: .main),
+            String(localized: "Texte vertical : la lecture Apple Vision lit désormais les colonnes de manga. Relance la lecture des pages déjà lues.", bundle: .main),
+            String(localized: "CBZ : conversion bien plus légère en mémoire, un gros fichier ne doit plus fermer l'app.", bundle: .main),
+            String(localized: "Conversion d'un CBZ en PDF : quasi immédiate, sans recopier les images.", bundle: .main),
+        ]),
         ReleaseNotes("1.4.7", "2026-11-05", published: false, String(localized: "Conversion mieux guidée et moniteur détaillé", bundle: .main), added: [
             String(localized: "Moniteur de l'accueil, panneau déplié : les activités en cours et la mémoire du modèle IA.", bundle: .main),
             String(localized: "Temps de lecture séparé entre Livres & Manuels et Manga.", bundle: .main),

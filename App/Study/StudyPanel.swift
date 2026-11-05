@@ -59,7 +59,8 @@ struct StudyPanel: View {
             }
             PillTabs(items: [(Tab.text, "character.ja", String(localized: "Texte")), (.vocab, "character.book.closed.ja", String(localized: "Dico")),
                              (.notes, "text.bubble", String(localized: "Notes")), (.marks, "bookmark", String(localized: "Repères")),
-                             (.chat, "bubble.left.and.bubble.right", String(localized: "Chat"))],
+                             (.chat, "bubble.left.and.bubble.right", String(localized: "Chat"))]
+                                .filter { $0.0 != .chat || reader.document.capabilities.chat },
                      selection: $tab, tint: tint)
             Group {
                 switch tab {
@@ -77,6 +78,8 @@ struct StudyPanel: View {
                     }
                 case .notes: StudyNotesTab(reader: reader)
                 case .marks: StudyMarksTab(reader: reader, openSearch: openSearch)
+                // Onglet repris d'un document précédent : pas de chat sur un manga.
+                case .chat where !reader.document.capabilities.chat: StudyTextTab(reader: reader, openLineEditor: openLineEditor)
                 case .chat: QwenChatView(document: reader.document, embedded: true,
                                          focusPage: reader.document.pageLabel(reader.focusSource),
                                          openPage: { reader.go(toSource: $0) },

@@ -109,6 +109,8 @@ final class ReaderController: NSObject, ObservableObject {
     @Published var lookupHighlight: [CGRect] = []
     /// Mode « Surligner l'OCR » (#23) : glisser sur les zones de l'OCR surligne au lieu de faire défiler.
     @Published var ocrHighlightMode = false
+    /// Geste à un doigt du mode surlignage, créé à sa première activation.
+    var ocrHighlightPan: UIPanGestureRecognizer?
     /// Aperçu du surlignage en cours (repère de la vue PDF).
     @Published var ocrHighlightPreview: [CGRect] = []
     /// Glisser en cours : page, OCR, cadre et premier caractère (fixés à l'appui).
@@ -237,6 +239,7 @@ final class ReaderController: NSObject, ObservableObject {
     var cropTask: Task<Void, Never>?
     var ocrTask: Task<Void, Never>?
     var settleWork: DispatchWorkItem?
+    var pointerSelect: UIPanGestureRecognizer!
     var singleTap: UITapGestureRecognizer!
     var doubleTap: UITapGestureRecognizer!
     var swipeLeft: UISwipeGestureRecognizer!
@@ -992,6 +995,16 @@ final class ReaderPDFView: PDFView {
 
     private static let redrawDelay: TimeInterval = 0.12
     private var redrawRequested = false
+
+    /// « Tout sélectionner » (⌘A, clic droit) : les pages affichées. PDFKit prendrait tout le document, jusqu'à figer un gros livre.
+    override func selectAll(_ sender: Any?) {
+        let selection = PDFSelection(document: document ?? PDFDocument())
+        for page in visiblePages {
+            if let text = page.selection(for: page.bounds(for: .cropBox)) { selection.add(text) }
+        }
+        guard selection.string?.isEmpty == false else { return }
+        setCurrentSelection(selection, animate: false)
+    }
 
     override func buildMenu(with builder: UIMenuBuilder) {
         super.buildMenu(with: builder)

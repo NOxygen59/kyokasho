@@ -191,13 +191,23 @@ struct ResourceMonitorPanel: View {
                 Text("Mesure…").foregroundStyle(Atelier.textTertiary)
             }
             if fillsWidth { Spacer(minLength: 4) }
+            // Cibles de 40 pt au doigt, écartées : la croix touchée par erreur fermait le moniteur à côté du panneau OCR.
             Button { detailed.toggle() } label: {
                 Image(systemName: "chevron.down")
+                    .font(Atelier.font(14, weight: .bold))
                     .rotationEffect(.degrees((detailed ? 180 : 0) + (expandsDown ? 0 : 180)))
+                    .frame(width: 40, height: 32)
+                    .contentShape(Rectangle())
             }
             .accessibilityLabel(detailed ? String(localized: "Replier le graphique") : String(localized: "Dérouler le graphique"))
-            Button { shown = false } label: { Image(systemName: "xmark") }
-                .accessibilityLabel("Fermer le moniteur")
+            Button { shown = false } label: {
+                Image(systemName: "xmark")
+                    .font(Atelier.font(14, weight: .bold))
+                    .frame(width: 40, height: 32)
+                    .contentShape(Rectangle())
+            }
+            .accessibilityLabel("Fermer le moniteur")
+            .padding(.trailing, 6)
         }
         .buttonStyle(.plain)
     }

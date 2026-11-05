@@ -67,9 +67,17 @@ enum FuriganaLayer {
         var rect: CGRect
         var reading: String
         var vertical: Bool
+        /// Plafond absolu, d'après la page (`largestSizeRatio`). `nil` : pas de plafond.
+        var largestSize: CGFloat? = nil
         /// Taille de police maximale : place libre au-dessus (ou à droite en vertical) jusqu'à la ligne voisine.
         var maxSize: CGFloat = .greatestFiniteMagnitude
     }
+
+    /// En dessous, le texte OCR ne suffit pas à poser une lecture. Les lignes relues par l'IA ont une confiance de 1.
+    static let minimumConfidence = 0.4
+    /// Taille la plus grande d'un furigana, en part de la largeur de la page affichée : sans elle, un titre ou une enseigne
+    /// dessinée en grand recevait des lectures géantes.
+    static let largestSizeRatio: CGFloat = 0.016
 
     /// Place libre au-dessus du mot (horizontal) ou à sa droite (vertical), jusqu'à la ligne la plus proche
     /// qui le recouvre. Sans voisine : 60 % du caractère.
@@ -145,6 +153,8 @@ enum FuriganaLayer {
                 boxes = line.charBoxes
             }
             guard text.contains(where: Furigana.isKanji) else { return [] }
+            // Déjà imprimés sur la page (manga), ou texte trop douteux : une lecture inventée gêne plus qu'elle n'aide.
+            guard line.hasPrintedRuby != true, line.confidence >= minimumConfidence else { return [] }
             let lineRect = lineRects[l]
             let measured = line.measuredCharBoxes && boxes.compactMap { $0 }.count >= 2
             let placed = boxes.compactMap { $0 }.map { frame.pageRect($0) }
@@ -170,7 +180,7 @@ enum FuriganaLayer {
                 let wordInLine = vertical
                     ? CGRect(x: lineRect.minX, y: rect.minY, width: lineRect.width, height: rect.height)
                     : CGRect(x: rect.minX, y: lineRect.minY, width: rect.width, height: lineRect.height)
-                return Mark(rect: rect, reading: ruby.reading, vertical: vertical,
+                return Mark(rect: rect, reading: ruby.reading, vertical: vertical, largestSize: frame.box.width * largestSizeRatio,
                             maxSize: room(for: wordInLine, vertical: vertical, among: lineRects, skipping: l) * 0.85)
             }
         }
@@ -231,6 +241,7 @@ enum FuriganaLayer {
             let base = mark.vertical ? mark.rect.width : mark.rect.height
             let span = mark.vertical ? mark.rect.height : mark.rect.width
             var size = min(base * 0.45, max(mark.maxSize, base * 0.32))
+            if let cap = mark.largestSize { size = min(size, cap) }
             // Très longue lecture sur un mot court : on serre un peu, jusqu'à 3 fois la largeur du mot.
             if size * count > span * 3 { size = max(base * 0.28, span * 3 / count) }
             let total = size * count

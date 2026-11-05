@@ -148,7 +148,7 @@ final class StyleTokensGuardTests: XCTestCase {
         "Reader/InkOverlay.swift": 1,        // encre par défaut sur la page
         "Reader/NoteWindow.swift": 3,        // stylo noir et texte de la note (papier)
         "Reader/FuriganaLayer.swift": 3,     // couleur des furigana sur la page
-        "Reader/ReaderStatusBadge.swift": 4, // batterie et heure : blanc sur noir translucide, lisibles sur toute page
+        "Reader/ReaderStatusBadge.swift": 7, // batterie et heure : blanc sur noir translucide, lisibles sur toute page
         "Settings/SettingsView.swift": 4,    // noms des fonds de page
         "Library/DocumentExport.swift": 2,   // dessin dans le PDF exporté
     ]

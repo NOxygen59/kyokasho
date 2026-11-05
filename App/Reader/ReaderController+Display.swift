@@ -44,10 +44,11 @@ extension ReaderController {
         pdfView.finishLayout(preserving: viewport)
         // Sans contrôleur de pages, PDFKit ne tourne pas les pages au glisser : on le fait nous-mêmes.
         let manualSwipe = paginated && !pageController && !isDrawing
-        swipeLeft.isEnabled = manualSwipe
-        swipeRight.isEnabled = manualSwipe
-        doubleTap.isEnabled = s.doubleTapZoom && !isDrawing
-        singleTap.isEnabled = !isDrawing
+        // Mode surlignage : un doigt surligne, rien d'autre (`applyHighlightGestures`).
+        swipeLeft.isEnabled = manualSwipe && !ocrHighlightMode
+        swipeRight.isEnabled = manualSwipe && !ocrHighlightMode
+        doubleTap.isEnabled = s.doubleTapZoom && !isDrawing && !ocrHighlightMode
+        singleTap.isEnabled = !isDrawing && !ocrHighlightMode
         if s.doubleTapZoom {
             singleTap.require(toFail: doubleTap)
         }

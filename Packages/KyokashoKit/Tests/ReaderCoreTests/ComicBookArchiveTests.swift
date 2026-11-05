@@ -287,6 +287,17 @@ final class ComicBookArchiveTests: XCTestCase {
         }
     }
 
+    /// Pas de chat sur un manga, en PDF comme en CBZ ; le reste du panneau d'étude d'un manga PDF demeure.
+    func testChatIsOffOnManga() {
+        var pdf = LibraryDocument(id: "a", title: "a", originalFileName: "a.pdf", pageCount: 1, fileSize: 1)
+        XCTAssertTrue(pdf.capabilities.chat)
+        pdf.settingsOverride.mangaSpace = true
+        XCTAssertFalse(pdf.capabilities.chat)
+        XCTAssertTrue(pdf.capabilities.study)
+        let comic = LibraryDocument(id: "b", title: "b", originalFileName: "b.cbz", pageCount: 1, fileSize: 1)
+        XCTAssertFalse(comic.capabilities.chat)
+    }
+
     /// Contre-revue : une grande page à décoder respecte son budget de pixels ; ses proportions restent.
     func testDecodedPageRespectsPixelBudget() throws {
         let source = try archive([("1.png", try image(width: 5000, height: 4000, type: .png))])

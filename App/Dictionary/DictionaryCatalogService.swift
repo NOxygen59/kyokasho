@@ -29,6 +29,8 @@ final class DictionaryCatalogService: ObservableObject {
     private static let offeredKey = "dictionaries.offeredUpdates"
     private var task: Task<Void, Never>?
     private var queue: [String] = []
+    /// La file installe aussi ce qui est absent (« Tout installer ») ; sinon elle ne met à jour que l'existant.
+    private var installsMissing = false
     private static let lastAutomaticCheckKey = "dictionaries.lastUpdateCheck"
     /// Version du lexique fourni déjà proposée : « Plus tard » ne redemande pas à chaque retour dans l'app.
     private static var bundledOfferedKey: String { "dictionaries.bundledOfferedRevision." + BundledLexicon.selectedLanguage.rawValue }
@@ -194,6 +196,18 @@ final class DictionaryCatalogService: ObservableObject {
 
     func dismissOfferedUpdates() { offeredUpdates = [] }
 
+    /// Dictionnaires du catalogue pas encore installés.
+    func missingEntries(in model: DictionaryModel) -> [CatalogEntry] {
+        DictionaryCatalog.entries.filter { installed($0, in: model) == nil }
+    }
+
+    /// Tout le catalogue, l'un après l'autre. Un échec reste affiché sur sa ligne et n'arrête pas les suivants.
+    func installAll(model: DictionaryModel) {
+        queue = missingEntries(in: model).map(\.id)
+        installsMissing = true
+        installNextQueued(model: model)
+    }
+
     func offeredNames(in model: DictionaryModel) -> [String] {
         offeredUpdates.map { id in
             id == BundledLexicon.resource ? BundledLexicon.name : DictionaryCatalog.entries.first { $0.id == id }?.name ?? id
@@ -201,12 +215,16 @@ final class DictionaryCatalogService: ObservableObject {
     }
 
     private func installNextQueued(model: DictionaryModel) {
-        guard working == nil, !queue.isEmpty else { return }
+        guard working == nil else { return }
+        guard !queue.isEmpty else {
+            installsMissing = false
+            return
+        }
         let id = queue.removeFirst()
         // Supprimé entre la proposition et la réponse : on ne le réinstalle pas.
         if id == BundledLexicon.resource, model.dictionaries.contains(where: { BundledLexicon.language(forTitle: $0.title) != nil }) {
             installBundled(model: model)
-        } else if let entry = DictionaryCatalog.entries.first(where: { $0.id == id }), installed(entry, in: model) != nil {
+        } else if let entry = DictionaryCatalog.entries.first(where: { $0.id == id }), installsMissing || installed(entry, in: model) != nil {
             install(entry, model: model)
         } else {
             installNextQueued(model: model)
@@ -283,10 +301,29 @@ final class DictionaryCatalogService: ObservableObject {
 struct DictionaryCatalogView: View {
     @EnvironmentObject private var model: DictionaryModel
     @ObservedObject private var service = DictionaryCatalogService.shared
+    @State private var confirmInstallAll = false
+
+    private var missing: [CatalogEntry] { service.missingEntries(in: model) }
 
     var body: some View {
         List {
             Section("Fourni avec l'app") { bundledRow }
+            if !missing.isEmpty {
+                Section {
+                    Button { confirmInstallAll = true } label: {
+                        Label("Tout installer (\(missing.count))", systemImage: "square.and.arrow.down.on.square")
+                    }
+                    .disabled(service.working != nil)
+                } footer: {
+                    Text("Environ \(ByteCountFormatter.string(fromByteCount: missing.reduce(0) { $0 + $1.approxBytes }, countStyle: .file)) à télécharger, plus la place une fois installés.")
+                }
+                .alert("Installer tout le catalogue ?", isPresented: $confirmInstallAll) {
+                    Button("Tout installer") { service.installAll(model: model) }
+                    Button("Annuler", role: .cancel) {}
+                } message: {
+                    Text("Les dictionnaires se téléchargent l'un après l'autre. Reste sur cet écran ou dans l'app, de préférence en Wi-Fi.")
+                }
+            }
             Section {
                 ForEach(DictionaryCatalog.entries) { entry in row(entry) }
             } footer: {
