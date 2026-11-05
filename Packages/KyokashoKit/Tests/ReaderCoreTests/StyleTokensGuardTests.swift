@@ -59,7 +59,7 @@ final class StyleTokensGuardTests: XCTestCase {
         for (file, guardText) in [
             ("Reader/ReaderController+OCR.swift", "func runOCR(engine: String? = nil, force: Bool = false) {\n        guard document.capabilities.textAnalysis"),
             ("Reader/ReaderController+OCR.swift", "func ensureOCR(_ pages: [Int]) {\n        guard document.capabilities.textAnalysis"),
-            ("Reader/ReaderController.swift", "fromHover: Bool = false) async {\n        guard document.capabilities.textAnalysis"),
+            ("Reader/ReaderController.swift", "tapGeneration: Int? = nil) async {\n        guard document.capabilities.textAnalysis"),
             ("Reader/ReaderController+Search.swift", "guard documentOCRTask == nil, document.capabilities.textAnalysis"),
             ("Reader/ReaderScreen.swift", "private func openStudy(_ tab: StudyPanel.Tab) {\n        guard capabilities.study"),
             ("Library/DocumentScan.swift", "guard document.capabilities.study, UserDefaults"),
@@ -72,6 +72,23 @@ final class StyleTokensGuardTests: XCTestCase {
             let source = try String(contentsOf: app.appendingPathComponent(file), encoding: .utf8)
             XCTAssertTrue(source.contains(guardText), "\(file) : \(guardText)")
         }
+    }
+
+    /// Revue Codex : un OCR lent ne doit pas rouvrir le mot d'une page quittée. Chaque fenêtre de la recherche passe le contrôle.
+    func testStaleLookupNeverPresents() throws {
+        let app = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .appendingPathComponent("../../../../App/Reader/ReaderController.swift").standardizedFileURL
+        let source = try String(contentsOf: app, encoding: .utf8)
+        let start = try XCTUnwrap(source.range(of: "func lookup(at point: CGPoint"))
+        let end = try XCTUnwrap(source.range(of: "nonisolated static func glyphToStringMap"))
+        let body = source[start.upperBound..<end.lowerBound]
+        let presents = body.components(separatedBy: "present(text:").count - 1
+        XCTAssertEqual(presents, 2)
+        // Chaque garde collée à sa publication : deux gardes dans la même branche ne passeraient pas.
+        let guarded = try NSRegularExpression(pattern: #"guard !isStale\(\) else \{ return \}[^\n]*\n\s*present\(text:"#)
+        XCTAssertEqual(guarded.numberOfMatches(in: String(body), range: NSRange(body.startIndex..., in: body)), presents)
+        XCTAssertTrue(body.contains("if let ocr, !isStale() {"))
+        XCTAssertTrue(body.contains("guard let ocr, !isStale() else { return }"))
     }
 
     /// Une analyse OvisOCR2 doit pouvoir s'arrêter depuis la liste des IA, et sa durée être annoncée.
@@ -131,6 +148,7 @@ final class StyleTokensGuardTests: XCTestCase {
         "Reader/InkOverlay.swift": 1,        // encre par défaut sur la page
         "Reader/NoteWindow.swift": 3,        // stylo noir et texte de la note (papier)
         "Reader/FuriganaLayer.swift": 3,     // couleur des furigana sur la page
+        "Reader/ReaderStatusBadge.swift": 4, // batterie et heure : blanc sur noir translucide, lisibles sur toute page
         "Settings/SettingsView.swift": 4,    // noms des fonds de page
         "Library/DocumentExport.swift": 2,   // dessin dans le PDF exporté
     ]

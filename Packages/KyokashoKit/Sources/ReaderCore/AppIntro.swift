@@ -78,13 +78,16 @@ public struct ReleaseNotes: Equatable, Sendable, Identifiable {
 
     /// La version en cours de préparation : seulement ce qu'elle change (décision de NOxygen59 du 04/11/2026). C'est
     /// elle que montre la fenêtre « Nouveautés » ; les versions précédentes vont dans `ReleaseHistory`.
-    public static let current = ReleaseNotes("1.4.7", "2026-11-05", published: false, String(localized: "Conversion mieux guidée et moniteur détaillé", bundle: .main), added: [
-            String(localized: "Moniteur de l'accueil, panneau déplié : les activités en cours et la mémoire du modèle IA.", bundle: .main),
-            String(localized: "Temps de lecture séparé entre Livres & Manuels et Manga.", bundle: .main),
-            String(localized: "Après une conversion, l'app propose de mettre les CBZ à la corbeille.", bundle: .main),
+    public static let current = ReleaseNotes("1.4.8", "2026-11-05", published: false, String(localized: "Tableau de bord, texte vertical et batterie", bundle: .main), added: [
+            String(localized: "Tableau de bord : touche le temps de lecture sur l'accueil pour voir ta lecture, tes révisions, ta bibliothèque et les performances.", bundle: .main),
+            String(localized: "Le temps de lecture repart de zéro, avec les pages vues et les mots cherchés.", bundle: .main),
+            String(localized: "Lecteur, interface cachée : batterie de l'iPhone Duo et heure en haut à gauche, et une petite flèche pour faire revenir l'interface.", bundle: .main),
+            String(localized: "Moniteur : le temps de calcul mesuré pour le dessin des pages, le texte, le nettoyage, la teinte et les furigana.", bundle: .main),
         ], fixed: [
-            String(localized: "Conversion des CBZ : elle suit l'ordre de sélection, s'annule, et ne lance plus de lecture IA.", bundle: .main),
-            String(localized: "CBZ déjà présent : un message prévient que l'import est annulé.", bundle: .main),
+            String(localized: "Interface du lecteur : un toucher dans le blanc la cache ou la rappelle, même en mode dictionnaire.", bundle: .main),
+            String(localized: "Texte vertical : la lecture Apple Vision lit désormais les colonnes de manga. Relance la lecture des pages déjà lues.", bundle: .main),
+            String(localized: "CBZ : conversion bien plus légère en mémoire, un gros fichier ne doit plus fermer l'app.", bundle: .main),
+            String(localized: "Conversion d'un CBZ en PDF : quasi immédiate, sans recopier les images.", bundle: .main),
         ])
 
     /// Notes de `version` (« 1.3.2 », sans le numéro de build) : la version elle-même, jamais une build de test.

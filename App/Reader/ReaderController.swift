@@ -25,8 +25,15 @@ final class ReaderController: NSObject, ObservableObject {
     @Published private(set) var presented: [PresentedPage] = []
     @Published var currentIndex = 0
     @Published var barsVisible = true {
-        didSet { barsChangedAt = ProcessInfo.processInfo.systemUptime }
+        didSet {
+            barsChangedAt = ProcessInfo.processInfo.systemUptime
+            // La flèche ou un autre geste a déjà décidé : un toucher encore en attente d'OCR ne doit plus rien changer.
+            tapLookupGeneration += 1
+        }
     }
+    /// Change à chaque geste qui rend périmée une recherche lancée par un toucher (nouveau toucher, page, mode, fermeture).
+    /// L'OCR peut durer plusieurs secondes : sans cela, le toucher agirait sur une page que l'utilisateur a déjà quittée.
+    var tapLookupGeneration = 0
     /// Dernier changement des barres : voir `ReaderBarsPolicy.settleDelay`.
     var barsChangedAt: TimeInterval = 0
     @Published var isDrawing = false
@@ -89,7 +96,10 @@ final class ReaderController: NSObject, ObservableObject {
 
     /// Outil « dictionnaire » actif : un tap sur un caractère cherche le mot.
     @Published var lookupMode = false {
-        didSet { toolModes.update(documentId: document.id) { [lookupMode] in $0.lookup = lookupMode } }
+        didSet {
+            toolModes.update(documentId: document.id) { [lookupMode] in $0.lookup = lookupMode }
+            tapLookupGeneration += 1
+        }
     }
     /// Mode dessin à rétablir une fois le document installé (les surcouches PencilKit doivent exister).
     var pendingDrawingRestore = false
@@ -571,8 +581,12 @@ final class ReaderController: NSObject, ObservableObject {
     /// Cherche le texte sous `point` (vue PDF) : texte intégré du PDF, sinon OCR (fait si besoin).
     /// `fromHover` : survol au curseur → jamais d'OCR lancé (trop lent), et rien ne se ferme
     /// quand le pointeur passe sur un blanc (pour pouvoir aller jusqu'au popup).
-    func lookup(at point: CGPoint, fromHover: Bool = false) async {
+    /// `tapGeneration` : le toucher qui a lancé la recherche. Devenu périmé pendant l'attente de l'OCR, il n'ouvre plus de fenêtre.
+    func lookup(at point: CGPoint, fromHover: Bool = false, tapGeneration: Int? = nil) async {
         guard document.capabilities.textAnalysis else { return } // Ce chemin lancerait l'OCR.
+        // Toute source de recherche (toucher, stylet, survol) devient périmée au prochain geste, changement de page ou fermeture.
+        let generation = tapGeneration ?? tapLookupGeneration
+        func isStale() -> Bool { generation != tapLookupGeneration || closed || Task.isCancelled }
         traceLookup("Recherche lancée ; survol=\(fromHover)")
         if !fromHover { lookupOpenedByShiftOnly = false }
         guard let pdf, let page = pdfView.page(for: point, nearest: false) else { return }
@@ -607,7 +621,7 @@ final class ReaderController: NSObject, ObservableObject {
             let glyph = page.characterIndex(at: pagePoint)
             // Point hors du texte (marge, image) : rien à chercher, et surtout pas l'OCR d'une page numérique.
             guard glyph >= 0, glyph < map.count, let i = Self.stringIndex(near: map[glyph], glyph: glyph, on: page, string: ns) else {
-                if !fromHover { lookupHighlight = [] }
+                if !fromHover, !isStale() { lookupHighlight = [] }
                 return
             }
             do {
@@ -650,10 +664,11 @@ final class ReaderController: NSObject, ObservableObject {
                     let context = LookupContext(source: source, presentedIndex: index,
                                                 sentence: line?.string?.trimmingCharacters(in: .whitespacesAndNewlines) ?? text,
                                                 lineRect: line?.bounds(for: page) ?? .zero, vertical: false)
+                    guard !isStale() else { return }
                     present(text: text, rects: rects, anchor: point, context: context)
                     return
                 }
-                if !fromHover { lookupHighlight = [] }
+                if !fromHover, !isStale() { lookupHighlight = [] }
                 return
             }
         }
@@ -674,9 +689,11 @@ final class ReaderController: NSObject, ObservableObject {
             let engine = await scanEngine(source: source)
             ocr = try? await model.ocr.page(documentId: document.id, url: fileURL, pageIndex: source, engine: engine)
             if focused, focusSource == source { ocrState = .idle }
-            if let ocr { if source == focusSource { ocrPage = ocr }; showOCR(ocr, source: source) }
+            // `ocrState` revient toujours au repos. Le résultat, lui, reste au cache : un geste plus récent garde l'écran.
+            if let ocr, !isStale() { if source == focusSource { ocrPage = ocr }; showOCR(ocr, source: source) }
         }
-        guard let ocr else { return }
+        // L'OCR a pu durer plusieurs secondes : un résultat périmé reste au cache mais ne touche plus à l'écran.
+        guard let ocr, !isStale() else { return }
         // Rotation intrinsèque comprise (photos de pages) : sans elle, le toucher visait à côté.
         let normalized = frame.normalized(pagePoint)
         // Marge de toucher : ~14 pt au doigt, ~4 pt au curseur, convertis en fraction de la page affichée.
@@ -686,7 +703,7 @@ final class ReaderController: NSObject, ObservableObject {
         let tolerance = Double(margin / max(shownWidth * pdfView.scaleFactor, 1))
         guard let hit = ocr.character(at: normalized, tolerance: tolerance) else {
             traceLookup("Aucun caractère OCR sous le pointeur")
-            if !fromHover { lookupHighlight = [] }
+            if !fromHover { lookupHighlight = [] }  // Aucune attente depuis le contrôle ci-dessus.
             return
         }
         let hitLine = ocr.lines[hit.line]
@@ -716,6 +733,7 @@ final class ReaderController: NSObject, ObservableObject {
             line += 1
             start = 0
         }
+        guard !isStale() else { return }  // `wordStart` attend le dictionnaire.
         present(text: text, rects: rects, anchor: point, context: context)
     }
 
@@ -761,6 +779,7 @@ final class ReaderController: NSObject, ObservableObject {
         }
         traceLookup("Présentation du dictionnaire")
         lookupRequest = LookupRequest(text: text, anchor: anchor, wordRect: first, vertical: vertical)
+        ReadingTimeTracker.shared.wordLookedUp()
     }
 
     /// Le dictionnaire a reconnu `length` caractères : on surligne exactement le mot.

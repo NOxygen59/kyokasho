@@ -32,6 +32,11 @@ final class ResourceMonitor: ObservableObject {
     }
 
     @Published private(set) var samples: [Sample] = []
+    /// Activités du dernier relevé. Une seule lecture du registre par seconde : un second lecteur fausserait les parts.
+    @Published private(set) var activities: [ActivityLedger.Row] = []
+    /// Historique du tableau de bord, relevé seulement moniteur affiché.
+    private(set) var log = PerformanceLog.decode(UserDefaults.standard.data(forKey: ResourceMonitor.logKey))
+    static let logKey = "stats.v2.performance"
     private var timer: Timer?
     private var link: CADisplayLink?
     private var frames = 0
@@ -45,6 +50,8 @@ final class ResourceMonitor: ObservableObject {
     func start() {
         users += 1
         guard users == 1 else { return }
+        // Point de départ : le travail fait moniteur fermé ne doit pas compter dans le premier relevé.
+        _ = ActivityCenter.shared.snapshot()
         lastTick = CACurrentMediaTime()
         frames = 0
         let link = CADisplayLink(target: FrameCounter { [weak self] in self?.frames += 1 }, selector: #selector(FrameCounter.tick))
@@ -60,7 +67,11 @@ final class ResourceMonitor: ObservableObject {
         guard users == 0 else { return }
         timer?.invalidate(); timer = nil
         link?.invalidate(); link = nil
+        log.finishPeak()
+        saveLog()
     }
+
+    private func saveLog() { UserDefaults.standard.set(log.encoded(), forKey: Self.logKey) }
 
     private func sample() {
         let now = CACurrentMediaTime()
@@ -68,22 +79,44 @@ final class ResourceMonitor: ObservableObject {
         frames = 0
         lastTick = now
         counter += 1
-        samples.append(Sample(id: counter, cpu: Self.cpuPercent(), ramMB: Diagnostics.footprintMB(), fps: fps))
+        // `sample` tourne sur le fil principal : son propre fil est celui de l'interface.
+        let cpu = Self.cpuUsage(mainThread: pthread_mach_thread_np(pthread_self()))
+        let ram = Diagnostics.footprintMB()
+        samples.append(Sample(id: counter, cpu: cpu.total, ramMB: ram, fps: fps))
         if samples.count > 90 { samples.removeFirst(samples.count - 90) }
+        activities = ActivityCenter.shared.snapshot()
+        record(cpu: cpu, ram: ram, fps: fps)
+    }
+
+    private func record(cpu: (total: Double, main: Double), ram: Double, fps: Double) {
+        var measured: [String: Double] = [:]
+        for row in activities { if let seconds = row.cpuSeconds, seconds > 0 { measured[row.kind] = seconds } }
+        let sample = PerformanceSample(date: Date(), cpu: cpu.total, mainThreadCPU: cpu.main, ramMB: ram, fps: fps,
+                                       inReader: ReadingTimeTracker.shared.isReading, activitySeconds: measured)
+        let peakEnded = log.add(sample)
+        if peakEnded, let peak = log.peaks.last {
+            let parts = peak.activitySeconds.map { "\($0.key) \(String(format: "%.1f", $0.value)) s" }.sorted().joined(separator: ", ")
+            Diagnostics.log("pic CPU \(Int(peak.maxCPU)) % (moyenne \(Int(peak.averageCPU)) %) pendant \(peak.seconds) s, fil principal \(Int(peak.mainThreadCPU)) %, travaux finis : \(parts)", "performances")
+        }
+        // Une écriture toutes les minutes, ou à la fin d'un pic.
+        if peakEnded || counter % 60 == 0 { saveLog() }
     }
 
     /// Somme de l'usage CPU des fils de l'app (100 % = un cœur plein).
-    nonisolated static func cpuPercent() -> Double {
+    nonisolated static func cpuPercent() -> Double { cpuUsage().total }
+
+    /// Somme de l'usage CPU des fils de l'app, et part de `mainThread`, le fil de l'interface s'il est donné.
+    nonisolated static func cpuUsage(mainThread: mach_port_t? = nil) -> (total: Double, main: Double) {
         var threads: thread_act_array_t?
         var count: mach_msg_type_number_t = 0
-        guard task_threads(mach_task_self_, &threads, &count) == KERN_SUCCESS, let threads else { return 0 }
+        guard task_threads(mach_task_self_, &threads, &count) == KERN_SUCCESS, let threads else { return (0, 0) }
         defer {
             // Une référence de port par fil, à rendre, puis le tableau lui-même.
             for i in 0..<Int(count) { mach_port_deallocate(mach_task_self_, threads[i]) }
             vm_deallocate(mach_task_self_, vm_address_t(UInt(bitPattern: threads)),
                           vm_size_t(Int(count) * MemoryLayout<thread_t>.stride))
         }
-        var total = 0.0
+        var total = 0.0, main = 0.0
         for i in 0..<Int(count) {
             var info = thread_basic_info()
             var size = mach_msg_type_number_t(MemoryLayout<thread_basic_info>.size / MemoryLayout<integer_t>.size)
@@ -93,9 +126,11 @@ final class ResourceMonitor: ObservableObject {
                 }
             }
             guard result == KERN_SUCCESS, info.flags & TH_FLAGS_IDLE == 0 else { continue }
-            total += Double(info.cpu_usage) / Double(TH_USAGE_SCALE) * 100
+            let usage = Double(info.cpu_usage) / Double(TH_USAGE_SCALE) * 100
+            total += usage
+            if threads[i] == mainThread { main = usage }
         }
-        return total
+        return (total, main)
     }
 
 }
@@ -237,37 +272,38 @@ private struct MonitorBackground: ViewModifier {
     }
 }
 
-/// Détail du panneau déplié de l'accueil. Le total CPU et mémoire reste celui de toute l'app, en tête du panneau : ces lignes
-/// disent ce qui tourne en même temps, sans ventiler ce total : iPadOS ne donne ni le CPU ni la mémoire par fonction.
-/// « Part du temps » n'est donc jamais une part du CPU, et seule la mémoire du modèle IA est une mesure propre. Mis à jour au rythme du moniteur, une fois par seconde.
+/// Détail du panneau déplié de l'accueil. Le total CPU et mémoire reste celui de toute l'app, en tête du panneau.
+/// iPadOS ne donne ni le CPU ni la mémoire par fonction. Chaque valeur dit donc d'où elle vient : « mesuré » pour le temps
+/// processeur du travail instrumenté, compté à la fin de chaque travail et donc jamais retranché du total instantané, « estimé » pour les images d'après leurs dimensions, « compteur MLX » pour le chiffre
+/// partagé de MLX. La mémoire reste affichée à part, jamais soustraite : ces compteurs ne mesurent pas la même chose.
 private struct MonitorActivityList: View {
     @ObservedObject private var monitor = ResourceMonitor.shared
     @ObservedObject private var tasks = AITaskCenter.shared
-    @State private var rows: [ActivityLedger.Row] = []
     @State private var modelMB: Int?
     @State private var modelName: String?
+    @State private var cacheMB = 0
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            if rows.isEmpty && tasks.jobs.isEmpty && modelName == nil {
+            if monitor.activities.isEmpty && tasks.jobs.isEmpty && modelName == nil {
                 Text("Aucune tâche coûteuse en cours").foregroundStyle(Atelier.textSecondary)
-            } else {
-                Text("En cours en même temps, sans détail du processeur par tâche").foregroundStyle(Atelier.textTertiary)
             }
-            ForEach(rows, id: \.kind) { row in
-                line(ActivityCenter.Kind(rawValue: row.kind)?.title ?? row.kind,
-                     detail: row.detail, value: String(localized: "\(Int(row.busyShare * 100)) % du temps"))
+            ForEach(monitor.activities, id: \.kind) { row in
+                line(ActivityCenter.Kind(rawValue: row.kind)?.title ?? row.kind, detail: row.detail, value: value(row))
             }
             ForEach(tasks.jobs) { job in
                 line(job.title, detail: job.activity, value: job.progress.map { "\($0.done)/\($0.total)" } ?? String(localized: "en cours"))
             }
             if let modelName {
                 line(String(localized: "Modèle IA chargé"), detail: modelName,
-                     value: modelMB.map { String(localized: "\($0) Mo mesurés") } ?? String(localized: "chargé"))
+                     value: modelMB.map { String(localized: "compteur MLX \($0) Mo") } ?? String(localized: "chargé"))
             }
-            if let total = monitor.last?.ramMB {
-                let rest = max(0, Int(total) - (modelMB ?? 0))
-                line(String(localized: "Mémoire hors modèle IA"), detail: nil, value: String(localized: "\(rest) Mo"))
+            if cacheMB > 0 {
+                line(String(localized: "Images de pages gardées"), detail: nil, value: String(localized: "\(cacheMB) Mo estimés"))
+            }
+            if let last = monitor.last {
+                // Le compteur MLX est partagé, et compte autrement que l'empreinte : rien n'en est soustrait (contre-revue de ff60a3a).
+                line(String(localized: "Empreinte totale de l'app"), detail: nil, value: String(localized: "\(Int(last.ramMB)) Mo"))
             }
         }
         .font(Atelier.font(11))
@@ -276,8 +312,13 @@ private struct MonitorActivityList: View {
         .onChange(of: monitor.last?.id) { _ in refresh() }
     }
 
+    private func value(_ row: ActivityLedger.Row) -> String {
+        if let seconds = row.cpuSeconds { return String(format: String(localized: "%.2f s de calcul finies"), seconds) }
+        return String(localized: "\(Int(row.busyShare * 100)) % du temps")
+    }
+
     private func refresh() {
-        rows = ActivityCenter.shared.snapshot()
+        cacheMB = (ToneCache.estimatedBytes + ScanSharpening.estimatedBytes) / 1_048_576
         Task {
             let status = await GLMOCREngine.status()
             modelName = status.loaded?.lastPathComponent

@@ -137,4 +137,32 @@ final class ReadingSessionLogTests: XCTestCase {
         document.settingsOverride.mangaSpace = true
         XCTAssertEqual(ReadingScope(document: document), .manga)
     }
+
+    /// Contre-revue de ff60a3a : une séance courte ne doit pas changer de case en s'arrêtant.
+    func testShortSessionLeavesNoGapBetweenTotalAndSpaces() {
+        var log = ReadingSessionLog()
+        for index in 0..<15 {
+            let start = t0.addingTimeInterval(TimeInterval(index * 10))
+            log.record(documentId: "manga", start: start, end: start.addingTimeInterval(4), scope: .manga)
+        }
+        XCTAssertEqual(log.totalSeconds, 0, "le journal fait le total : rien à réattribuer")
+        XCTAssertEqual(log.breakdown(current: [:]).study(total: log.totalSeconds), 0)
+    }
+
+    /// Contre-revue de ff60a3a : une séance sortie du journal reste dans sa case et dans le total.
+    func testRetiredSessionsStayInTheirSpace() {
+        var log = ReadingSessionLog()
+        log.record(documentId: "manga", start: t0, end: t0.addingTimeInterval(100), scope: .manga)
+        for index in 0..<ReadingSessionLog.maxEntries {
+            let start = t0.addingTimeInterval(TimeInterval(1000 + index * 100))
+            log.record(documentId: "livre", start: start, end: start.addingTimeInterval(10), scope: .book)
+        }
+        XCTAssertEqual(log.sessions.count, ReadingSessionLog.maxEntries)
+        XCTAssertFalse(log.sessions.contains { $0.documentId == "manga" })
+        XCTAssertEqual(log.breakdown(current: [:]).manga, 100)
+        XCTAssertEqual(log.totalSeconds, 100 + TimeInterval(ReadingSessionLog.maxEntries * 10))
+        let reread = ReadingSessionLog.decode(log.encoded())
+        XCTAssertEqual(reread.breakdown(current: [:]).manga, 100)
+        XCTAssertEqual(reread.totalSeconds, log.totalSeconds)
+    }
 }

@@ -34,6 +34,7 @@ struct LibraryView: View {
     @State private var editingPages: PageEditTarget?
     @State private var chatDocument: LibraryDocument?
     @State private var showDictionary = false
+    @State private var showDashboard = false
     @State private var renaming: LibraryDocument?
     @EnvironmentObject private var review: ReviewModel
     @EnvironmentObject private var themes: ThemeManager
@@ -231,6 +232,9 @@ struct LibraryView: View {
             }
             .environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review).preferredColorScheme(Theme.current.colorScheme)
         }
+        .fullScreenCover(isPresented: $showDashboard) {
+            DashboardView().environmentObject(model).environmentObject(model.review).preferredColorScheme(Theme.current.colorScheme)
+        }
         .sheet(isPresented: $showBench) {
             NavigationStack {
                 BenchView().toolbar { ToolbarItem(placement: .confirmationAction) { Button("OK") { showBench = false } } }
@@ -412,8 +416,18 @@ struct LibraryView: View {
 
     /// Temps de lecture active, à la place de « Progression XX/XX pages » (RET-037, #52).
     private var statsCard: some View {
+        Button { showDashboard = true } label: { statsCardContent }
+            .buttonStyle(PressScale())
+            .accessibilityHint(Text("Ouvre le tableau de bord"))
+    }
+
+    private var statsCardContent: some View {
         VStack(alignment: .leading, spacing: 8) {
-            AtelierLabel(String(localized: "Temps de lecture"))
+            HStack {
+                AtelierLabel(String(localized: "Temps de lecture"))
+                Spacer()
+                Image(systemName: "chart.bar.fill").font(Atelier.font(12)).foregroundStyle(Atelier.textTertiary)
+            }
             // Séparé par espace, d'après le journal des séances. Le reste du total, plus ancien que ce journal, reste
             // compté dans Livres & Manuels.
             let now = Date()
@@ -426,6 +440,7 @@ struct LibraryView: View {
             }
             Text("livre ouvert à l'écran").font(Atelier.font(13)).foregroundStyle(Atelier.textSecondary)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
         .background(Atelier.surfaceHigh, in: RoundedRectangle(cornerRadius: Atelier.corner(14), style: .continuous))
     }
@@ -444,6 +459,7 @@ struct LibraryView: View {
             CapsuleButton(icon: "plus", label: String(localized: "Importer")) { showImportOptions = true }
             CapsuleButton(icon: "externaldrive.badge.icloud", label: String(localized: "Google Drive")) { showDrive = true }
             CapsuleButton(icon: "character.book.closed.ja", label: String(localized: "Dictionnaire")) { showDictionary = true }
+            CapsuleButton(icon: "chart.bar.fill", label: String(localized: "Tableau de bord")) { showDashboard = true }
             CapsuleButton(icon: "gearshape", label: String(localized: "Réglages")) { showSettings = true }
         }
         .padding(10)

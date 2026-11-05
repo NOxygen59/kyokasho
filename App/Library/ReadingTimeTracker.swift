@@ -6,14 +6,15 @@ import SwiftUI
 
 /// Compte le temps de lecture active pour l'accueil (RET-037, #52) : lecteur ouvert **et** app au premier plan.
 ///
-/// Le total est gardé dans `UserDefaults` (un nombre de secondes, pas une donnée de la bibliothèque) à chaque arrêt de
-/// séance. Il part de zéro : le temps passé avant cette version n'a jamais été enregistré. Chaque séance est aussi
-/// notée dans un petit journal (début, durée, document), préalable au futur tableau de bord.
+/// Le journal des séances (début, durée, document, rangement, pages, mots cherchés) est gardé dans `UserDefaults` à chaque
+/// arrêt de séance : il nourrit à la fois le compteur de l'accueil et le tableau de bord, qui ne peuvent donc plus diverger.
+///
+/// **Départ de zéro (décision de NOxygen59, 05/11/2026) :** les chiffres d'avant ne correspondaient plus. Ce journal a ses
+/// propres clés ; les anciennes ne sont ni lues ni effacées, et une version antérieure de l'app les retrouve intactes.
 @MainActor
 final class ReadingTimeTracker: ObservableObject {
     static let shared = ReadingTimeTracker()
-    static let storageKey = "stats.readingSeconds"
-    static let sessionsKey = "stats.readingSessions"
+    static let sessionsKey = "stats.v2.readingSessions"
 
     @Published private(set) var clock: ReadingClock
     private(set) var log: ReadingSessionLog
@@ -24,11 +25,14 @@ final class ReadingTimeTracker: ObservableObject {
     /// Rangement du document à l'écran, puis de la séance en cours (voir `ReadingScope`).
     private var scope: ReadingScope?
     private var sessionScope: ReadingScope?
+    private var sessionPages = Set<Int>()
+    private var sessionLookups = 0
     private var appActive = true
 
     private init() {
-        clock = ReadingClock(total: UserDefaults.standard.double(forKey: Self.storageKey))
-        log = ReadingSessionLog.decode(UserDefaults.standard.data(forKey: Self.sessionsKey))
+        let saved = ReadingSessionLog.decode(UserDefaults.standard.data(forKey: Self.sessionsKey))
+        log = saved
+        clock = ReadingClock(total: saved.totalSeconds)
     }
 
     func readerOpened(document: LibraryDocument) {
@@ -43,6 +47,21 @@ final class ReadingTimeTracker: ObservableObject {
         guard self.documentId == documentId else { return }
         self.documentId = nil
         update()
+    }
+
+    /// Un livre est-il en cours de lecture ?
+    var isReading: Bool { clock.startedAt != nil }
+
+    /// Page affichée dans la séance en cours.
+    func pageViewed(_ page: Int) {
+        guard clock.startedAt != nil else { return }
+        sessionPages.insert(page)
+    }
+
+    /// Mot cherché au dictionnaire dans la séance en cours.
+    func wordLookedUp() {
+        guard clock.startedAt != nil else { return }
+        sessionLookups += 1
     }
 
     /// Temps par espace à cet instant, séance en cours comprise. `documents` : toute la bibliothèque, corbeille comprise.
@@ -70,12 +89,16 @@ final class ReadingTimeTracker: ObservableObject {
             if clock.startedAt == nil {
                 sessionDocument = documentId
                 sessionScope = scope
+                sessionPages = []
+                sessionLookups = 0
             }
             clock.start(at: now)
         } else if let started = clock.startedAt {
             clock.stop(at: now)
-            UserDefaults.standard.set(clock.total, forKey: Self.storageKey)
-            log.record(documentId: sessionDocument ?? "", start: started, end: now, scope: sessionScope)
+            log.record(documentId: sessionDocument ?? "", start: started, end: now, scope: sessionScope,
+                       pages: sessionPages.count, lookups: sessionLookups)
+            // Le journal fait foi : une séance trop courte pour y entrer ne laisse pas d'écart avec le total affiché.
+            clock = ReadingClock(total: log.totalSeconds)
             sessionScope = nil
             saveLog()
         }

@@ -40,6 +40,8 @@ final class ReaderBarsPolicyTests: XCTestCase {
 
     /// Mode dictionnaire : seul un toucher sans mot, sans fenêtre ouverte, change les barres.
     func testLookupModeTapOnBlankTogglesBars() {
+        XCTAssertFalse(ReaderBarsPolicy.togglesAfterLookup(isStale: true, popupWasOpen: false, popupIsOpen: false),
+                       "OCR lent : page tournée ou flèche touchée pendant l'attente")
         XCTAssertTrue(ReaderBarsPolicy.togglesAfterLookup(popupWasOpen: false, popupIsOpen: false))
         XCTAssertFalse(ReaderBarsPolicy.togglesAfterLookup(popupWasOpen: false, popupIsOpen: true))
         XCTAssertFalse(ReaderBarsPolicy.togglesAfterLookup(popupWasOpen: true, popupIsOpen: true))

@@ -166,29 +166,63 @@ final class ComicBookArchiveTests: XCTestCase {
         XCTAssertEqual(order.map(\.title), ["Tome 2", "Tome 10"])
     }
 
-    /// Revue Codex de 291c02f : la dernière écriture peut franchir la réserve, sans page suivante pour le voir.
-    func testReserveCrossedByLastWriteFailsWithoutLeavingFile() throws {
-        let source = try archive([("1.jpg", try image(width: 30)), ("2.jpg", try image(width: 40))])
-        let output = folder.appendingPathComponent("sortie.pdf")
-        var calls = 0
-        _ = try ComicBookArchive.makePDF(from: source, to: output) { _ in calls += 1; return .max }
-        try FileManager.default.removeItem(at: output)
-
-        var call = 0
-        XCTAssertThrowsError(try ComicBookArchive.makePDF(from: source, to: output) { _ in
-            call += 1
-            return call == calls ? ComicBookArchive.minimumFreeBytes - 1 : .max
-        })
-        XCTAssertEqual(call, calls)
-        XCTAssertFalse(FileManager.default.fileExists(atPath: output.path))
+    /// Mesure sur Mac d'une conversion lourde en PNG, à lancer à la main : KYOKASHO_HEAVY_CBZ=1 swift test --filter testHeavyPNG.
+    /// Ne remplace pas l'essai sur iPad. Pages de bruit : le pire cas, car le PNG ne les compresse presque pas.
+    func testHeavyPNGConversionMeasure() throws {
+        try XCTSkipUnless(ProcessInfo.processInfo.environment["KYOKASHO_HEAVY_CBZ"] != nil, "mesure manuelle")
+        let width = 2000, height = 3000, count = 40
+        let url = folder.appendingPathComponent("lourd.cbz")
+        let archive = try Archive(url: url, accessMode: .create)
+        var generator = SystemRandomNumberGenerator()
+        for index in 0..<count {
+            var bytes = [UInt8](repeating: 0, count: width * height * 4)
+            for position in stride(from: 0, to: bytes.count, by: 8) {
+                let value = generator.next() as UInt64
+                withUnsafeBytes(of: value) { source in
+                    for offset in 0..<min(8, bytes.count - position) { bytes[position + offset] = source[offset] }
+                }
+            }
+            let context = try XCTUnwrap(bytes.withUnsafeMutableBytes { buffer in
+                CGContext(data: buffer.baseAddress, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width * 4,
+                          space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)
+            })
+            let data = NSMutableData()
+            let destination = try XCTUnwrap(CGImageDestinationCreateWithData(data, UTType.png.identifier as CFString, 1, nil))
+            CGImageDestinationAddImage(destination, try XCTUnwrap(context.makeImage()), nil)
+            XCTAssertTrue(CGImageDestinationFinalize(destination))
+            let page = data as Data
+            try archive.addEntry(with: "\(index).png", type: .file, uncompressedSize: Int64(page.count), compressionMethod: .none) { position, size in
+                page.subdata(in: Int(position)..<Int(position) + size)
+            }
+        }
+        func footprintMB() -> Double {
+            var info = task_vm_info_data_t()
+            var size = mach_msg_type_number_t(MemoryLayout<task_vm_info_data_t>.size / MemoryLayout<integer_t>.size)
+            _ = withUnsafeMutablePointer(to: &info) {
+                $0.withMemoryRebound(to: integer_t.self, capacity: Int(size)) { task_info(mach_task_self_, task_flavor_t(TASK_VM_INFO), $0, &size) }
+            }
+            return Double(info.phys_footprint) / 1_048_576
+        }
+        let output = folder.appendingPathComponent("lourd.pdf")
+        let baseline = footprintMB()
+        var peak = baseline
+        let start = Date(), cpuStart = ThreadCPU.seconds()
+        let result = try ComicBookArchive.makePDF(from: url, to: output) { _, _ in peak = max(peak, footprintMB()); return .max }
+        let input = try XCTUnwrap(url.resourceValues(forKeys: [.fileSizeKey]).fileSize)
+        let produced = try XCTUnwrap(output.resourceValues(forKeys: [.fileSizeKey]).fileSize)
+        print("MESURE CBZ \(input / 1_048_576) Mo -> PDF \(produced / 1_048_576) Mo, x\(Double(produced) / Double(input)), \(result.pages) pages, durée \(Date().timeIntervalSince(start)) s, CPU \(ThreadCPU.seconds() - cpuStart) s, mémoire +\(peak - baseline) Mo")
     }
 
-    /// Au-dessus de la réserve, mais pas assez pour la page à écrire : refus avant d'écrire.
-    func testRoomMustCoverNextPage() throws {
-        let directory = folder!
-        XCTAssertNoThrow(try ComicBookArchive.ensureRoom(in: directory) { _ in ComicBookArchive.minimumFreeBytes })
-        XCTAssertThrowsError(try ComicBookArchive.ensureRoom(in: directory, forNext: 2) { _ in ComicBookArchive.minimumFreeBytes + 1 })
-        XCTAssertNoThrow(try ComicBookArchive.ensureRoom(in: directory, forNext: 2) { _ in ComicBookArchive.minimumFreeBytes + 2 })
+    /// Revue Codex de 291c02f : la dernière écriture peut franchir la réserve, sans page suivante pour le voir.
+    /// Vise le contrôle après fermeture lui-même (contre-revue de ff60a3a) : le retirer ferait échouer ce test.
+    func testReserveCrossedAtCloseFailsWithoutLeavingFile() throws {
+        let source = try archive([("1.jpg", try image(width: 30)), ("2.jpg", try image(width: 40))])
+        let output = folder.appendingPathComponent("sortie.pdf")
+        XCTAssertThrowsError(try ComicBookArchive.makePDF(from: source, to: output) { check, _ in
+            check == .afterClose ? ComicBookArchive.minimumFreeBytes - 1 : .max
+        })
+        XCTAssertFalse(FileManager.default.fileExists(atPath: output.path))
+        XCTAssertEqual(try partials(), [])
     }
 
     func testRewriteReserveCrossedAtCloseFailsWithoutLeavingFile() throws {
@@ -196,16 +230,161 @@ final class ComicBookArchiveTests: XCTestCase {
         let pdf = folder.appendingPathComponent("source.pdf")
         _ = try ComicBookArchive.makePDF(from: source, to: pdf)
         let output = folder.appendingPathComponent("copie.pdf")
-        var calls = 0
-        try ComicBookArchive.rewritePDF(pdf, to: output, title: "T") { _ in calls += 1; return .max }
-        try FileManager.default.removeItem(at: output)
-
-        var call = 0
-        XCTAssertThrowsError(try ComicBookArchive.rewritePDF(pdf, to: output, title: "T") { _ in
-            call += 1
-            return call == calls ? 0 : .max
+        XCTAssertThrowsError(try ComicBookArchive.rewritePDF(pdf, to: output, title: "T") { check, _ in
+            check == .afterClose ? 0 : .max
         })
         XCTAssertFalse(FileManager.default.fileExists(atPath: output.path))
+        XCTAssertEqual(try partials(), [])
+    }
+
+    private func partials() throws -> [String] {
+        try FileManager.default.contentsOfDirectory(atPath: folder.path).filter { $0.hasSuffix(".partial") || $0.hasSuffix(".page") }
+    }
+
+    /// Au-dessus de la réserve, mais pas assez pour la page à écrire : refus avant d'écrire.
+    func testRoomMustCoverNextPage() throws {
+        let free = ComicBookArchive.minimumFreeBytes
+        XCTAssertNoThrow(try ComicBookArchive.ensureRoom(in: folder, check: .afterClose) { _, _ in free })
+        XCTAssertThrowsError(try ComicBookArchive.ensureRoom(in: folder, forNext: 2, check: .beforePage) { _, _ in free + 1 })
+        XCTAssertNoThrow(try ComicBookArchive.ensureRoom(in: folder, forNext: 2, check: .beforePage) { _, _ in free + 2 })
+    }
+
+    /// Contre-revue de ff60a3a : un refus ne doit jamais toucher un fichier déjà à cette place.
+    func testFailureKeepsExistingDestination() throws {
+        let output = folder.appendingPathComponent("existant.pdf")
+        let original = Data("ne pas toucher".utf8)
+        try original.write(to: output)
+        let notArchive = folder.appendingPathComponent("faux.cbz")
+        try Data("pas une archive".utf8).write(to: notArchive)
+        XCTAssertThrowsError(try ComicBookArchive.makePDF(from: notArchive, to: output))
+        XCTAssertEqual(try Data(contentsOf: output), original)
+        let source = try archive([("1.jpg", try image(width: 30))])
+        XCTAssertThrowsError(try ComicBookArchive.makePDF(from: source, to: output) { check, _ in check == .afterClose ? 0 : .max })
+        XCTAssertEqual(try Data(contentsOf: output), original)
+        XCTAssertNoThrow(try ComicBookArchive.makePDF(from: source, to: output))
+        XCTAssertEqual(CGPDFDocument(output as CFURL)?.numberOfPages, 1)
+        XCTAssertEqual(try partials(), [])
+    }
+
+    /// Le PDF écrit à la main doit s'ouvrir et se dessiner comme l'image d'origine.
+    func testWrittenPagesDrawTheirImage() throws {
+        for (name, type): (String, UTType) in [("1.jpg", .jpeg), ("2.png", .png)] {
+            let source = try archive([(name, try image(width: 64, height: 48, type: type))], name: name + ".cbz")
+            let output = folder.appendingPathComponent(name + ".pdf")
+            XCTAssertEqual(try ComicBookArchive.makePDF(from: source, to: output).pages, 1)
+            let page = try XCTUnwrap(CGPDFDocument(output as CFURL)?.page(at: 1))
+            XCTAssertEqual(page.getBoxRect(.mediaBox).size, CGSize(width: 64, height: 48))
+            let context = try XCTUnwrap(CGContext(data: nil, width: 64, height: 48, bitsPerComponent: 8, bytesPerRow: 0,
+                                                  space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue))
+            context.setFillColor(red: 0, green: 1, blue: 0, alpha: 1)
+            context.fill(CGRect(x: 0, y: 0, width: 64, height: 48))
+            context.drawPDFPage(page)
+            let pixels = try XCTUnwrap(context.data).assumingMemoryBound(to: UInt8.self)
+            let center = (24 * context.bytesPerRow) + 32 * 4
+            XCTAssertEqual(Double(pixels[center]), 204, accuracy: 12, name)
+            XCTAssertEqual(Double(pixels[center + 1]), 51, accuracy: 12, name)
+            XCTAssertEqual(Double(pixels[center + 2]), 51, accuracy: 12, name)
+        }
+    }
+
+    /// Contre-revue : une grande page à décoder respecte son budget de pixels ; ses proportions restent.
+    func testDecodedPageRespectsPixelBudget() throws {
+        let source = try archive([("1.png", try image(width: 5000, height: 4000, type: .png))])
+        let output = folder.appendingPathComponent("sortie.pdf")
+        _ = try ComicBookArchive.makePDF(from: source, to: output)
+        let box = try XCTUnwrap(CGPDFDocument(output as CFURL)?.page(at: 1)?.getBoxRect(.mediaBox))
+        XCTAssertLessThanOrEqual(Int(box.width) * Int(box.height), ComicBookArchive.maximumDecodedPixels + 10_000)
+        XCTAssertGreaterThan(Int(box.width) * Int(box.height), ComicBookArchive.maximumDecodedPixels * 9 / 10)
+        XCTAssertEqual(box.width / box.height, 1.25, accuracy: 0.01)
+    }
+
+    /// Revue Codex : la voie de secours, qui garde tout en mémoire, refuse les gros fichiers. Fin de fichier sans table lisible.
+    func testCoreGraphicsFallbackIsBounded() throws {
+        let source = try archive([("1.jpg", try image(width: 30))])
+        let pdf = folder.appendingPathComponent("source.pdf")
+        _ = try ComicBookArchive.makePDF(from: source, to: pdf)
+        var bytes = try Data(contentsOf: pdf)
+        bytes.append(Data(repeating: 0x20, count: 5000))
+        try bytes.write(to: pdf)
+        let output = folder.appendingPathComponent("copie.pdf")
+        XCTAssertThrowsError(try ComicBookArchive.rewritePDF(pdf, to: output, title: "T", coreGraphicsLimit: 10) { _, _ in .max })
+        XCTAssertFalse(FileManager.default.fileExists(atPath: output.path))
+        XCTAssertNoThrow(try ComicBookArchive.rewritePDF(pdf, to: output, title: "T") { _, _ in .max })
+        XCTAssertEqual(CGPDFDocument(output as CFURL)?.numberOfPages, 1)
+    }
+
+    /// Les CBZ déjà importés ont été écrits par Core Graphics : ils doivent prendre la voie sans mémoire, pas la voie de secours.
+    func testOldCoreGraphicsPDFUsesTitleUpdate() throws {
+        let pdf = folder.appendingPathComponent("ancien.pdf")
+        var box = CGRect(x: 0, y: 0, width: 50, height: 50)
+        let context = try XCTUnwrap(CGContext(pdf as CFURL, mediaBox: &box, nil))
+        context.beginPage(mediaBox: &box)
+        context.endPage()
+        context.closePDF()
+        let output = folder.appendingPathComponent("copie.pdf")
+        try ComicBookArchive.rewritePDF(pdf, to: output, title: "Tome", coreGraphicsLimit: 0) { _, _ in .max }
+        let before = try Data(contentsOf: pdf)
+        XCTAssertEqual(try Data(contentsOf: output).prefix(before.count), before)
+        XCTAssertEqual(CGPDFDocument(output as CFURL)?.numberOfPages, 1)
+    }
+
+    /// Une image en niveaux de gris reste grise, et sort juste malgré le filtre sur place.
+    func testGrayPNGDrawsRightAndStaysGray() throws {
+        let context = try XCTUnwrap(CGContext(data: nil, width: 40, height: 30, bitsPerComponent: 8, bytesPerRow: 0,
+                                              space: CGColorSpaceCreateDeviceGray(), bitmapInfo: CGImageAlphaInfo.none.rawValue))
+        context.setFillColor(gray: 0.3, alpha: 1)
+        context.fill(CGRect(x: 0, y: 0, width: 40, height: 30))
+        context.setFillColor(gray: 0.9, alpha: 1)
+        context.fill(CGRect(x: 0, y: 15, width: 40, height: 15))
+        let page = try XCTUnwrap(ImagePDFWriter.losslessPage(try XCTUnwrap(context.makeImage())))
+        XCTAssertEqual(page.colorSpace, "DeviceGray")
+        let output = folder.appendingPathComponent("gris.pdf")
+        let writer = try ImagePDFWriter(url: output)
+        try writer.add(page)
+        try writer.finish()
+        let drawn = try XCTUnwrap(CGContext(data: nil, width: 40, height: 30, bitsPerComponent: 8, bytesPerRow: 40,
+                                            space: CGColorSpaceCreateDeviceGray(), bitmapInfo: CGImageAlphaInfo.none.rawValue))
+        drawn.drawPDFPage(try XCTUnwrap(CGPDFDocument(output as CFURL)?.page(at: 1)))
+        let pixels = try XCTUnwrap(drawn.data).assumingMemoryBound(to: UInt8.self)
+        XCTAssertEqual(Double(pixels[5 * 40 + 20]), 0.9 * 255, accuracy: 4, "haut de l'image")
+        XCTAssertEqual(Double(pixels[25 * 40 + 20]), 0.3 * 255, accuracy: 4, "bas de l'image")
+    }
+
+    /// Le JPEG entre tel quel dans le PDF, sans recompression.
+    func testJPEGIsCopiedUnchanged() throws {
+        let jpeg = try image(width: 80, height: 60)
+        let source = try archive([("1.jpg", jpeg)])
+        let output = folder.appendingPathComponent("sortie.pdf")
+        _ = try ComicBookArchive.makePDF(from: source, to: output)
+        XCTAssertNotNil(try Data(contentsOf: output).range(of: jpeg))
+    }
+
+    /// Titre ajouté sans toucher aux octets d'origine : l'empreinte change, les pages restent, et la mise à jour survit à une
+    /// seconde mise à jour.
+    func testTitleUpdateKeepsOriginalBytes() throws {
+        let source = try archive([("1.jpg", try image(width: 30)), ("2.jpg", try image(width: 40))])
+        let pdf = folder.appendingPathComponent("source.pdf")
+        _ = try ComicBookArchive.makePDF(from: source, to: pdf)
+        let copy = folder.appendingPathComponent("copie.pdf")
+        try ComicBookArchive.rewritePDF(pdf, to: copy, title: "転生 Tome 2")
+        let (before, after) = (try Data(contentsOf: pdf), try Data(contentsOf: copy))
+        XCTAssertEqual(after.prefix(before.count), before)
+        XCTAssertGreaterThan(after.count, before.count)
+        let document = try XCTUnwrap(CGPDFDocument(copy as CFURL))
+        XCTAssertEqual(document.numberOfPages, 2)
+        var title: CGPDFStringRef?
+        XCTAssertTrue(CGPDFDictionaryGetString(try XCTUnwrap(document.info), "Title", &title))
+        XCTAssertEqual(CGPDFStringCopyTextString(try XCTUnwrap(title)) as String?, "転生 Tome 2")
+        let again = folder.appendingPathComponent("encore.pdf")
+        try ComicBookArchive.rewritePDF(copy, to: again, title: "Autre")
+        XCTAssertEqual(CGPDFDocument(again as CFURL)?.numberOfPages, 2)
+    }
+
+    func testZlibStreamMatchesKnownChecksum() throws {
+        // Adler-32 de « Wikipedia » : 0x11E60398.
+        let stream = try XCTUnwrap(ImagePDFWriter.zlib(Array("Wikipedia".utf8)))
+        XCTAssertEqual(Array(stream.suffix(4)), [0x11, 0xE6, 0x03, 0x98])
+        XCTAssertEqual(Array(stream.prefix(2)), [0x78, 0x9C])
     }
 
     /// Revue Codex de 2b55bd9 : une image immense n'est pas décodée entière.

@@ -122,10 +122,11 @@ public enum OCRLayout {
     public static func verticalReadingOrder(_ page: OCRPage) -> [OCRLine] {
         let lines = page.lines
         let groups = readingGroups(lines)
-        struct Section { let lines: [OCRLine]; let top: Double; let bottom: Double; let right: Double }
+        struct Section { let lines: [OCRLine]; let top: Double; let bottom: Double; let right: Double; let vertical: Bool }
         let sections = groups.values.map { group in
             Section(lines: sorted(group), top: group.map(\.box.y).min() ?? 0,
-                    bottom: group.map { $0.box.y + $0.box.h }.max() ?? 0, right: group.map { $0.box.x + $0.box.w }.max() ?? 0)
+                    bottom: group.map { $0.box.y + $0.box.h }.max() ?? 0, right: group.map { $0.box.x + $0.box.w }.max() ?? 0,
+                    vertical: group.contains(where: \.vertical))
         }.sorted { ($0.top, -$0.right) < ($1.top, -$1.right) }
         var bands: [(bottom: Double, top: Double, sections: [Section])] = []
         for section in sections {
@@ -137,7 +138,11 @@ public enum OCRLayout {
                 bands.append((section.bottom, section.top, [section]))
             }
         }
-        return bands.flatMap { $0.sections.sorted { $0.right > $1.right }.flatMap(\.lines) }
+        // Une bande sans aucun vertical (colonnes horizontales d'une page mixte) se lit de gauche à droite.
+        return bands.flatMap { band in
+            let rightToLeft = band.sections.contains(where: \.vertical)
+            return band.sections.sorted { rightToLeft ? $0.right > $1.right : $0.right < $1.right }.flatMap(\.lines)
+        }
     }
 
     /// Blocs de lignes voisines. Balayage presque linéaire sur une vraie page ; quadratique seulement si toutes les lignes

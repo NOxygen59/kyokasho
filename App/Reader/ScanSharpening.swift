@@ -61,6 +61,9 @@ enum ScanSharpening {
         }
     }
 
+    /// Taille d'après les dimensions des images gardées : une estimation, pas une mesure du système.
+    static var estimatedBytes: Int { lock.withLock { images.values.reduce(0) { $0 + $1.bytesPerRow * $1.height } } }
+
     static func clearMemory() { lock.withLock { images = [:]; order = [] } }
 
     // MARK: Cache disque

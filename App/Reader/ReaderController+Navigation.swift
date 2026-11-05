@@ -88,6 +88,8 @@ extension ReaderController {
         let changed = index != currentIndex
         currentIndex = index
         updateCurrentSourcePage()
+        ReadingTimeTracker.shared.pageViewed(currentSourcePage)
+        if changed { tapLookupGeneration += 1 }
         if changed, lookupRequest != nil { endLookup() }
         if ReaderBarsPolicy.hidesOnPageChange(pageChanged: changed, rebuilding: rebuilding, hideOnTurn: settings.hideBarsOnScroll,
                                               barsVisible: barsVisible,
@@ -338,12 +340,15 @@ extension ReaderController {
         }
         if lookupMode {
             // Sans cette reprise, les barres cachées en tournant la page ne revenaient plus dans ce mode.
+            tapLookupGeneration += 1
+            let generation = tapLookupGeneration
             let popupWasOpen = lookupRequest != nil
             Task { [weak self] in
                 guard let self else { return }
-                await self.lookup(at: point)
-                guard !self.closed, ReaderBarsPolicy.togglesAfterLookup(popupWasOpen: popupWasOpen,
-                                                                        popupIsOpen: self.lookupRequest != nil) else { return }
+                await self.lookup(at: point, tapGeneration: generation)
+                guard !self.closed, ReaderBarsPolicy.togglesAfterLookup(
+                    isStale: generation != self.tapLookupGeneration,
+                    popupWasOpen: popupWasOpen, popupIsOpen: self.lookupRequest != nil) else { return }
                 Diagnostics.log("toucher sans mot : barres \(self.barsVisible ? "cachées" : "affichées")", "gestes")
                 self.barsVisible.toggle()
             }

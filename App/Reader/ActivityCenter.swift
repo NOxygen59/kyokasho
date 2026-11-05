@@ -13,6 +13,7 @@ final class ActivityCenter: @unchecked Sendable {
 
     enum Kind: String {
         case thumbnails, importing, comicImport, comicConversion, backup
+        case pageRender, pageText, sharpening, tone, furigana
 
         var title: String {
             switch self {
@@ -21,6 +22,11 @@ final class ActivityCenter: @unchecked Sendable {
             case .comicImport: return String(localized: "Import de CBZ")
             case .comicConversion: return String(localized: "Conversion de CBZ en PDF")
             case .backup: return String(localized: "Sauvegarde")
+            case .pageRender: return String(localized: "Dessin des pages")
+            case .pageText: return String(localized: "Texte des pages")
+            case .sharpening: return String(localized: "Nettoyage des scans")
+            case .tone: return String(localized: "Teinte des pages")
+            case .furigana: return String(localized: "Furigana")
             }
         }
     }
@@ -33,6 +39,20 @@ final class ActivityCenter: @unchecked Sendable {
     }
 
     func end(_ id: UUID) { lock.withLock { ledger.end(id, at: Date()) } }
+
+    /// Travail synchrone dont le vrai temps processeur est mesuré. À garder hors de tout `await` : la mesure suit un seul fil.
+    func measure<Result>(_ kind: Kind, detail: String? = nil, _ work: () throws -> Result) rethrows -> Result {
+        let id = begin(kind, detail: detail)
+        let start = ThreadCPU.seconds()
+        defer {
+            let spent = ThreadCPU.seconds() - start
+            lock.withLock {
+                ledger.addCPU(kind: kind.rawValue, seconds: spent)
+                ledger.end(id, at: Date())
+            }
+        }
+        return try work()
+    }
 
     func snapshot() -> [ActivityLedger.Row] { lock.withLock { ledger.snapshot(at: Date()) } }
 }

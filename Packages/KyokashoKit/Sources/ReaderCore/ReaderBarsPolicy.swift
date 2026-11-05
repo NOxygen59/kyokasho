@@ -27,8 +27,9 @@ public enum ReaderBarsPolicy {
     }
 
     /// Mode dictionnaire : un toucher sans mot (marge, image, blanc) montre ou cache les barres, comme hors de ce mode.
-    /// Une fenêtre déjà ouverte reste la priorité : ce toucher ne doit pas, en plus, changer les barres.
-    public static func togglesAfterLookup(popupWasOpen: Bool, popupIsOpen: Bool) -> Bool {
-        !popupWasOpen && !popupIsOpen
+    /// Une fenêtre déjà ouverte reste la priorité : ce toucher ne doit pas, en plus, changer les barres. `isStale` : un geste
+    /// plus récent (toucher, page, flèche, mode) est arrivé pendant l'attente de l'OCR, et décide à sa place.
+    public static func togglesAfterLookup(isStale: Bool = false, popupWasOpen: Bool, popupIsOpen: Bool) -> Bool {
+        !isStale && !popupWasOpen && !popupIsOpen
     }
 }

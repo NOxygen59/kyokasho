@@ -82,9 +82,11 @@ extension ReaderController {
             for page in pages {
                 guard !Task.isCancelled else { return }
                 // Page avec du texte intégré (PDF numérique) : déjà nette, rien à faire.
-                guard !PDFTextEngine.hasTextLayer(url: url, pageIndex: page) else { continue }
+                let hasText = ActivityCenter.shared.measure(.pageText) { PDFTextEngine.hasTextLayer(url: url, pageIndex: page) }
+                guard !hasText else { continue }
                 let key = ScanSharpening.key(documentId: id, page: page)
-                if (try? ScanSharpening.prepare(key: key, fileURL: url, page: page)) == true { changed = true }
+                let done = ActivityCenter.shared.measure(.sharpening) { (try? ScanSharpening.prepare(key: key, fileURL: url, page: page)) == true }
+                if done { changed = true }
             }
             guard changed, !Task.isCancelled else { return }
             await self?.pdfView.requestRedraw()
@@ -179,10 +181,12 @@ extension ReaderController {
                 guard !Task.isCancelled else { return }
                 let key = ScanSharpening.key(documentId: id, page: source)
                 guard !FuriganaLayer.has(key) else { continue }
-                guard PDFTextEngine.hasTextLayer(url: url, pageIndex: source) else { continue }
-                let marks: [FuriganaLayer.Mark]? = (try? PDFPool.withDocument(url) { doc -> [FuriganaLayer.Mark]? in
-                    doc.page(at: source).map(FuriganaLayer.marks(from:))
-                }) ?? nil
+                guard ActivityCenter.shared.measure(.pageText, { PDFTextEngine.hasTextLayer(url: url, pageIndex: source) }) else { continue }
+                let marks: [FuriganaLayer.Mark]? = ActivityCenter.shared.measure(.furigana) {
+                    (try? PDFPool.withDocument(url) { doc -> [FuriganaLayer.Mark]? in
+                        doc.page(at: source).map(FuriganaLayer.marks(from:))
+                    }) ?? nil
+                }
                 if let marks { FuriganaLayer.set(marks, for: key); changed = true }
             }
             guard changed, !Task.isCancelled else { return }
@@ -235,7 +239,8 @@ extension ReaderController {
             for page in order {
                 guard !Task.isCancelled else { return }
                 let key = ScanSharpening.key(documentId: id, page: page)
-                if ToneCache.prepare(key: key, fileURL: url, page: page, tone: tone), visible.contains(page) { shownReady = true }
+                let ready = ActivityCenter.shared.measure(.tone) { ToneCache.prepare(key: key, fileURL: url, page: page, tone: tone) }
+                if ready, visible.contains(page) { shownReady = true }
             }
             guard shownReady, !Task.isCancelled else { return }
             await self?.pdfView.requestRedraw()

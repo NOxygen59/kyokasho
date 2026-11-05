@@ -106,6 +106,9 @@ enum ToneCache {
 
     static func clear() { lock.withLock { images = [:] } }
 
+    /// Taille d'après les dimensions des images gardées : une estimation, pas une mesure du système.
+    static var estimatedBytes: Int { lock.withLock { images.values.reduce(0) { $0 + $1.bytesPerRow * $1.height } } }
+
     /// Rend la page source (cadre `cropBox`, comme les pages nettoyées) puis la teinte. Hors du fil principal.
     static func prepare(key: String, fileURL: URL, page index: Int, tone: PageTone) -> Bool {
         guard tone != .normal, image(for: key, tone: tone) == nil,
@@ -144,7 +147,12 @@ final class TonedPage: PDFPage {
     /// commune du livre : les furigana (calculés sur l'origine) sont alors agrandis d'autant.
     var sourceBox: CGRect = .zero
 
+    /// Lancé par PDFKit sur ses fils de dessin : c'est ici qu'on voit le coût réel de l'affichage des pages.
     override func draw(with box: PDFDisplayBox, to context: CGContext) {
+        ActivityCenter.shared.measure(.pageRender) { drawPage(with: box, to: context) }
+    }
+
+    private func drawPage(with box: PDFDisplayBox, to context: CGContext) {
         let tone = PageTone.current
         // Page teintée déjà prête (et assez nette pour le zoom actuel) : posée telle quelle, pas de teinte après coup.
         if tone != .normal, let key = pageKey, ScanSharpening.image(for: key) == nil,

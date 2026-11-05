@@ -146,6 +146,13 @@ public struct VisionOCREngine: OCREngine {
             lines.append(OCRLine(text: text, box: box, charBoxes: charBoxes, measuredCharBoxes: ok,
                                  vertical: vertical, confidence: Double(candidate.confidence)))
         }
+        // Vision ignore le japonais vertical : ce qu'il n'a pas lu passe par `VerticalTextReader`.
+        lines += try VerticalTextReader.read(image, languages: languages, skipping: lines.map(\.box))
+        // Du vertical sur la page : colonnes de droite à gauche, bloc par bloc, même à côté de lignes horizontales. La recherche au
+        // dictionnaire enchaîne les lignes suivantes, elle lirait sinon les colonnes à l'envers.
+        if lines.contains(where: \.vertical) {
+            return OCRLayout.verticalReadingOrder(OCRPage(engine: "vision", lines: lines, durationMs: 0))
+        }
         // Ordre de lecture approximatif : de haut en bas, puis de gauche à droite.
         lines.sort { abs($0.box.y - $1.box.y) > 0.01 ? $0.box.y < $1.box.y : $0.box.x < $1.box.x }
         return lines

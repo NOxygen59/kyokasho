@@ -50,7 +50,7 @@ extension ReaderController {
             let url = fileURL
             pageTextTask = Task.detached(priority: .utility) { [weak self] in
                 // Même règle que le toucher : un peu de texte suffit (folio, légende).
-                let has = PDFTextEngine.hasTextLayer(url: url, pageIndex: source)
+                let has = ActivityCenter.shared.measure(.pageText) { PDFTextEngine.hasTextLayer(url: url, pageIndex: source) }
                 await MainActor.run {
                     guard !Task.isCancelled, self?.currentSourcePage == source else { return }
                     self?.pageHasPDFText = has

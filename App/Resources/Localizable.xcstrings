@@ -639,6 +639,50 @@
         }
       }
     },
+    "%.1f s": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%.1f s"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%.1f s"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%.1f 秒"
+          }
+        }
+      }
+    },
+    "%.2f s de calcul finies": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%.2f s of finished work"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%.2f s de calcul finies"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已完成计算 %.2f 秒"
+          }
+        }
+      }
+    },
     "%@ %%": {
       "localizations": {
         "en": {
@@ -1497,24 +1541,24 @@
         }
       }
     },
-    "%lld Mo mesurés": {
+    "%lld Mo estimés": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld MB measured"
+            "value": "%lld MB estimated"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "%lld Mo mesurés"
+            "value": "%lld Mo estimés"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "已测得 %lld MB"
+            "value": "估计 %lld MB"
           }
         }
       }
@@ -2289,6 +2333,28 @@
         }
       }
     },
+    "%lld s · %.0f Mo · %.0f i/s au plus bas": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld s · %.0f MB · %.0f fps at the lowest"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld s · %.0f Mo · %.0f i/s au plus bas"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 秒 · %.0f MB · 最低 %.0f 帧/秒"
+          }
+        }
+      }
+    },
     "%lld sélectionné%@": {
       "localizations": {
         "en": {
@@ -2641,6 +2707,28 @@
         }
       }
     },
+    "12 mois": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "12 months"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "12 mois"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "12 个月"
+          }
+        }
+      }
+    },
     "2 · Furigana et découpage des mots": {
       "localizations": {
         "en": {
@@ -2707,6 +2795,28 @@
         }
       }
     },
+    "30 jours": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "30 days"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "30 jours"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "30 天"
+          }
+        }
+      }
+    },
     "4 · Mise en forme du texte extrait": {
       "localizations": {
         "en": {
@@ -2769,6 +2879,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "5 · 清理扫描件"
+          }
+        }
+      }
+    },
+    "7 jours": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "7 days"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "7 jours"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "7 天"
           }
         }
       }
@@ -5963,6 +6095,28 @@
         }
       }
     },
+    "Aucun pic au-dessus de %.0f %%.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No peak above %.0f %%."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun pic au-dessus de %.0f %%."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没有超过 %.0f %% 的峰值。"
+          }
+        }
+      }
+    },
     "Aucun réglage trouvé. Essaie « zoom », « traduction » ou « stockage ».": {
       "localizations": {
         "en": {
@@ -6179,6 +6333,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "没有差异：OvisOCR2 读取结果相同。"
+          }
+        }
+      }
+    },
+    "Aucune mesure pour l'instant : affiche le moniteur pendant que tu lis.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No measurements yet: show the monitor while you read."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucune mesure pour l'instant : affiche le moniteur pendant que tu lis."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂无数据：阅读时请显示监视器。"
           }
         }
       }
@@ -6579,6 +6755,28 @@
         }
       }
     },
+    "Avancement des documents ouverts": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Progress of opened documents"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avancement des documents ouverts"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已打开文档的进度"
+          }
+        }
+      }
+    },
     "Avertissement quand un brouillon de note n'a pas été ajouté.": {
       "localizations": {
         "en": {
@@ -6927,6 +7125,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "电池"
+          }
+        }
+      }
+    },
+    "Batterie %lld %%": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Battery %lld %%"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Batterie %lld %%"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "电池 %lld %%"
           }
         }
       }
@@ -7569,6 +7789,28 @@
         }
       }
     },
+    "CBZ : conversion bien plus légère en mémoire, un gros fichier ne doit plus fermer l'app.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CBZ: conversion uses far less memory, a large file should no longer close the app."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CBZ : conversion bien plus légère en mémoire, un gros fichier ne doit plus fermer l'app."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CBZ：转换占用的内存大幅减少，大文件不应再导致应用关闭。"
+          }
+        }
+      }
+    },
     "CBZ déjà présent : un message prévient que l'import est annulé.": {
       "localizations": {
         "en": {
@@ -8119,6 +8361,28 @@
         }
       }
     },
+    "Cartes mûres": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mature cards"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cartes mûres"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "成熟卡片"
+          }
+        }
+      }
+    },
     "Catalogue": {
       "localizations": {
         "en": {
@@ -8181,6 +8445,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "分类"
+          }
+        }
+      }
+    },
+    "Ce PDF dépasse la limite de %lld Mo pour cette conversion.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This PDF exceeds the %lld MB limit for this conversion."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce PDF dépasse la limite de %lld Mo pour cette conversion."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此 PDF 超过了本次转换 %lld MB 的上限。"
           }
         }
       }
@@ -11023,6 +11309,28 @@
         }
       }
     },
+    "Conversion d'un CBZ en PDF : quasi immédiate, sans recopier les images.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Converting a CBZ to PDF: almost immediate, without copying the images again."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conversion d'un CBZ en PDF : quasi immédiate, sans recopier les images."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "将 CBZ 转换为 PDF：几乎立即完成，无需重新复制图像。"
+          }
+        }
+      }
+    },
     "Conversion de CBZ en PDF": {
       "localizations": {
         "en": {
@@ -12519,6 +12827,28 @@
         }
       }
     },
+    "Dans le lecteur": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In the reader"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dans le lecteur"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在阅读器中"
+          }
+        }
+      }
+    },
     "De": {
       "localizations": {
         "en": {
@@ -12849,6 +13179,28 @@
         }
       }
     },
+    "Derniers pics de processeur": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Latest processor peaks"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Derniers pics de processeur"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最近的处理器峰值"
+          }
+        }
+      }
+    },
     "Dernière analyse : %@ · %@ · pages %@ à %@%@": {
       "localizations": {
         "en": {
@@ -12955,6 +13307,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "最近的任务"
+          }
+        }
+      }
+    },
+    "Dessin des pages": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Page drawing"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dessin des pages"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "页面绘制"
           }
         }
       }
@@ -13773,6 +14147,28 @@
         }
       }
     },
+    "Document supprimé": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deleted document"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Document supprimé"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已删除的文档"
+          }
+        }
+      }
+    },
     "Document traduit en %@ (%lld pages) : panneau Texte → ✨ → %@": {
       "localizations": {
         "en": {
@@ -13813,6 +14209,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "文档（PDF）"
+          }
+        }
+      }
+    },
+    "Documents les plus lus": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Most read documents"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Documents les plus lus"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "阅读最多的文档"
           }
         }
       }
@@ -14983,6 +15401,28 @@
         }
       }
     },
+    "Empreinte totale de l'app": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Total app footprint"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Empreinte totale de l'app"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "应用总占用"
+          }
+        }
+      }
+    },
     "En apprentissage": {
       "localizations": {
         "en": {
@@ -15067,28 +15507,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "进行中"
-          }
-        }
-      }
-    },
-    "En cours en même temps, sans détail du processeur par tâche": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Running at the same time, no processor detail per task"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "En cours en même temps, sans détail du processeur par tâche"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "同时运行，不含各任务的处理器明细"
           }
         }
       }
@@ -17051,6 +17469,28 @@
         }
       }
     },
+    "Fil principal (interface)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Main thread (interface)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fil principal (interface)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "主线程（界面）"
+          }
+        }
+      }
+    },
     "File integrity check failed: %@": {
       "localizations": {
         "en": {
@@ -18899,6 +19339,28 @@
         }
       }
     },
+    "Heures de lecture": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reading hours"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heures de lecture"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "阅读时段"
+          }
+        }
+      }
+    },
     "Hier": {
       "localizations": {
         "en": {
@@ -18983,6 +19445,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "层次清晰，编辑感衬线"
+          }
+        }
+      }
+    },
+    "Hors du lecteur": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Outside the reader"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Hors du lecteur"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在阅读器外"
           }
         }
       }
@@ -19599,6 +20083,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "PNG 图片（zip）"
+          }
+        }
+      }
+    },
+    "Images de pages gardées": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Page images kept"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Images de pages gardées"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保留的页面图像"
           }
         }
       }
@@ -20395,6 +20901,28 @@
         }
       }
     },
+    "Interface du lecteur : un toucher dans le blanc la cache ou la rappelle, même en mode dictionnaire.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reader interface: a tap on a blank area hides or brings it back, even in dictionary mode."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Interface du lecteur : un toucher dans le blanc la cache ou la rappelle, même en mode dictionnaire."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "阅读器界面：轻触空白处可隐藏或恢复，词典模式下也一样。"
+          }
+        }
+      }
+    },
     "Interface « Atelier » en paysage, panneau d'étude, DeepL, Google Drive simplifié.": {
       "localizations": {
         "en": {
@@ -20589,6 +21117,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "翡翠"
+          }
+        }
+      }
+    },
+    "Jamais ouverts": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Never opened"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jamais ouverts"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从未打开"
           }
         }
       }
@@ -20875,6 +21425,50 @@
           "stringUnit": {
             "state": "translated",
             "value": "详细的手势和缩放日志，用于查找卡顿原因。"
+          }
+        }
+      }
+    },
+    "Jours de la semaine": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Days of the week"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jours de la semaine"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "星期分布"
+          }
+        }
+      }
+    },
+    "Jours lus": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Days read"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jours lus"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "阅读天数"
           }
         }
       }
@@ -22639,6 +23233,28 @@
         }
       }
     },
+    "Le temps de lecture repart de zéro, avec les pages vues et les mots cherchés.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reading time starts again from zero, with pages viewed and words looked up."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le temps de lecture repart de zéro, avec les pages vues et les mots cherchés."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "阅读时间从零重新开始，并记录已看页数和查词次数。"
+          }
+        }
+      }
+    },
     "Le texte de cette page a changé pendant ta correction : rien n'a été enregistré. Ferme cet écran et recommence.": {
       "localizations": {
         "en": {
@@ -22899,6 +23515,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "阅读器、批注、评论、页面发送给 AI、Google Drive。"
+          }
+        }
+      }
+    },
+    "Lecteur, interface cachée : batterie de l'iPhone Duo et heure en haut à gauche, et une petite flèche pour faire revenir l'interface.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reader, interface hidden: iPhone Duo battery and time at the top left, and a small arrow to bring the interface back."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lecteur, interface cachée : batterie de l'iPhone Duo et heure en haut à gauche, et une petite flèche pour faire revenir l'interface."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "阅读器隐藏界面时：左上角显示 iPhone Duo 电池和时间，并有小箭头可恢复界面。"
           }
         }
       }
@@ -24949,6 +25587,28 @@
         }
       }
     },
+    "Meilleure série": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Best streak"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Meilleure série"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最佳连续"
+          }
+        }
+      }
+    },
     "Mesure…": {
       "localizations": {
         "en": {
@@ -26093,6 +26753,28 @@
         }
       }
     },
+    "Moniteur : le temps de calcul mesuré pour le dessin des pages, le texte, le nettoyage, la teinte et les furigana.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Monitor: measured computing time for page drawing, text, cleanup, tint and furigana."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moniteur : le temps de calcul mesuré pour le dessin des pages, le texte, le nettoyage, la teinte et les furigana."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "监视器：页面绘制、文字、清理、色调和假名的实测计算时间。"
+          }
+        }
+      }
+    },
     "Moniteur de l'accueil, panneau déplié : les activités en cours et la mémoire du modèle IA.": {
       "localizations": {
         "en": {
@@ -26379,6 +27061,28 @@
         }
       }
     },
+    "Mots cherchés": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Words looked up"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mots cherchés"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "查词次数"
+          }
+        }
+      }
+    },
     "Mots enregistrés": {
       "localizations": {
         "en": {
@@ -26467,28 +27171,6 @@
         }
       }
     },
-    "Mémoire hors modèle IA": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Memory outside the AI model"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mémoire hors modèle IA"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "AI 模型以外的内存"
-          }
-        }
-      }
-    },
     "Mémoire rendue par l'IA.": {
       "localizations": {
         "en": {
@@ -26507,6 +27189,50 @@
           "stringUnit": {
             "state": "translated",
             "value": "AI 释放内存。"
+          }
+        }
+      }
+    },
+    "Mémoire, maximum par jour (Mo)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Memory, daily maximum (MB)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mémoire, maximum par jour (Mo)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "内存，每日最高（MB）"
+          }
+        }
+      }
+    },
+    "Mémorisation": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retention"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mémorisation"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "记忆率"
           }
         }
       }
@@ -28799,6 +29525,28 @@
         }
       }
     },
+    "Ouvre le tableau de bord": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opens the dashboard"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ouvre le tableau de bord"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开仪表板"
+          }
+        }
+      }
+    },
     "Ouvrir": {
       "localizations": {
         "en": {
@@ -30405,6 +31153,28 @@
         }
       }
     },
+    "Pages vues": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pages viewed"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pages vues"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已看页数"
+          }
+        }
+      }
+    },
     "Pages à supprimer": {
       "localizations": {
         "en": {
@@ -31065,6 +31835,28 @@
         }
       }
     },
+    "Par jour lu": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Per day read"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Par jour lu"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每个阅读日"
+          }
+        }
+      }
+    },
     "Parse error: %@": {
       "localizations": {
         "en": {
@@ -31395,6 +32187,28 @@
         }
       }
     },
+    "Pas encore de révision à montrer.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No reviews to show yet."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pas encore de révision à montrer."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "还没有复习记录。"
+          }
+        }
+      }
+    },
     "Pas envie ? Le bouton « Fichiers » marche aussi avec Google Drive si l'app Google Drive est installée sur l'iPad.": {
       "localizations": {
         "en": {
@@ -31457,6 +32271,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "备份期间，导入、删除和方向调整会等待其完成。"
+          }
+        }
+      }
+    },
+    "Performances": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Performance"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Performances"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "性能"
           }
         }
       }
@@ -31769,6 +32605,28 @@
         }
       }
     },
+    "Place occupée": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Space used"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Place occupée"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "占用空间"
+          }
+        }
+      }
+    },
     "Place prise par l'app": {
       "localizations": {
         "en": {
@@ -31901,6 +32759,28 @@
         }
       }
     },
+    "Plus %@ de séances anciennes, comptées au total de l'accueil sans détail.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plus %@ of older sessions, counted in the home total without detail."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plus %@ de séances anciennes, comptées au total de l'accueil sans détail."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "另有 %@ 的旧记录，计入主页总时间，无明细。"
+          }
+        }
+      }
+    },
     "Plus court": {
       "localizations": {
         "en": {
@@ -31941,6 +32821,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "AI 识别时不再中断，识别长度有上限。"
+          }
+        }
+      }
+    },
+    "Plus longue séance": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Longest session"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plus longue séance"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最长一次"
           }
         }
       }
@@ -32099,6 +33001,28 @@
         }
       }
     },
+    "Position de reprise, documents ouverts": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resume position, opened documents"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Position de reprise, documents ouverts"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "继续阅读位置（已打开文档）"
+          }
+        }
+      }
+    },
     "Pour chaque modèle de chat : consigne générale, préréglages (résumer, expliquer les formules, professeur de japonais, traduction mot à mot), température, longueur…": {
       "localizations": {
         "en": {
@@ -32227,6 +33151,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "第一个完整版本"
+          }
+        }
+      }
+    },
+    "Processeur, maximum par jour (100 % = un cœur)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Processor, daily maximum (100 % = one core)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Processeur, maximum par jour (100 % = un cœur)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "处理器，每日最高（100 % = 一个核心）"
           }
         }
       }
@@ -33903,6 +34849,28 @@
         }
       }
     },
+    "Relevé seulement quand le moniteur est affiché. Ce sont les mesures de Kyōkasho, pas celles de tout l'iPad.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recorded only while the monitor is shown. These are Kyōkasho's measurements, not those of the whole iPad."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Relevé seulement quand le moniteur est affiché. Ce sont les mesures de Kyōkasho, pas celles de tout l'iPad."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "仅在显示监视器时记录。这些是 Kyōkasho 的数据，不是整台 iPad 的数据。"
+          }
+        }
+      }
+    },
     "Relie ton Drive en 5 minutes": {
       "localizations": {
         "en": {
@@ -35223,6 +36191,28 @@
         }
       }
     },
+    "Rien sur cette période. Le compteur est reparti de zéro : seules les lectures faites depuis comptent.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing in this period. The counter started again from zero: only reading done since then counts."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rien sur cette période. Le compteur est reparti de zéro : seules les lectures faites depuis comptent."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此时段没有记录。计数器已从零重新开始：只统计此后的阅读。"
+          }
+        }
+      }
+    },
     "Rien trouvé dans cette page.": {
       "localizations": {
         "en": {
@@ -36103,6 +37093,28 @@
         }
       }
     },
+    "Révision": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Review"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Révision"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "复习"
+          }
+        }
+      }
+    },
     "Révisions": {
       "localizations": {
         "en": {
@@ -36143,6 +37155,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "每天最多复习：%lld"
+          }
+        }
+      }
+    },
+    "Révisions, 30 derniers jours": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reviews, last 30 days"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Révisions, 30 derniers jours"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最近 30 天复习"
           }
         }
       }
@@ -38369,6 +39403,50 @@
         }
       }
     },
+    "Séance moyenne": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Average session"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Séance moyenne"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "平均每次"
+          }
+        }
+      }
+    },
+    "Séances": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sessions"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Séances"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "阅读次数"
+          }
+        }
+      }
+    },
     "Sélectionner": {
       "localizations": {
         "en": {
@@ -38497,6 +39575,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "棕褐、墨框、古典衬线"
+          }
+        }
+      }
+    },
+    "Série en cours": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Current streak"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Série en cours"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当前连续"
           }
         }
       }
@@ -38633,6 +39733,72 @@
         }
       }
     },
+    "Tableau de bord": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dashboard"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tableau de bord"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "仪表板"
+          }
+        }
+      }
+    },
+    "Tableau de bord : touche le temps de lecture sur l'accueil pour voir ta lecture, tes révisions, ta bibliothèque et les performances.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dashboard: touch the reading time on the home screen to see your reading, reviews, library and performance."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tableau de bord : touche le temps de lecture sur l'accueil pour voir ta lecture, tes révisions, ta bibliothèque et les performances."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "仪表板：轻触主页上的阅读时间，查看阅读、复习、书库和性能。"
+          }
+        }
+      }
+    },
+    "Tableau de bord, texte vertical et batterie": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dashboard, vertical text and battery"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tableau de bord, texte vertical et batterie"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "仪表板、竖排文字和电池"
+          }
+        }
+      }
+    },
     "Taille": {
       "localizations": {
         "en": {
@@ -38743,6 +39909,28 @@
         }
       }
     },
+    "Teinte des pages": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Page tint"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Teinte des pages"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "页面色调"
+          }
+        }
+      }
+    },
     "Teintes préchargées, sombre intelligent": {
       "localizations": {
         "en": {
@@ -38809,6 +39997,28 @@
         }
       }
     },
+    "Temps": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Time"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Temps"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "时间"
+          }
+        }
+      }
+    },
     "Temps de lecture": {
       "localizations": {
         "en": {
@@ -38871,6 +40081,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "阅读时间按书籍与教材、漫画分开统计。"
+          }
+        }
+      }
+    },
+    "Temps processeur des travaux, crédité à leur fin, jusqu'au premier relevé après le pic :": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Processor time of work, credited when it ends, up to the first reading after the peak:"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Temps processeur des travaux, crédité à leur fin, jusqu'au premier relevé après le pic :"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "任务的处理器时间，在任务结束时计入，截至峰值后的首次读数："
           }
         }
       }
@@ -39575,6 +40807,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "已排版文本（标题、表格），面板默认打开。"
+          }
+        }
+      }
+    },
+    "Texte vertical : la lecture Apple Vision lit désormais les colonnes de manga. Relance la lecture des pages déjà lues.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vertical text: Apple Vision reading now reads manga columns. Run reading again on pages already read."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Texte vertical : la lecture Apple Vision lit désormais les colonnes de manga. Relance la lecture des pages déjà lues."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "竖排文字：Apple Vision 现在可以读取漫画的竖列。已读页面请重新识别。"
           }
         }
       }
@@ -44397,6 +45651,28 @@
         }
       }
     },
+    "compteur MLX %lld Mo": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MLX counter %lld MB"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "compteur MLX %lld Mo"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MLX 计数 %lld MB"
+          }
+        }
+      }
+    },
     "connecté": {
       "localizations": {
         "en": {
@@ -45101,6 +46377,28 @@
         }
       }
     },
+    "min": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "min"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "min"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "分钟"
+          }
+        }
+      }
+    },
     "mise en page": {
       "localizations": {
         "en": {
@@ -45119,6 +46417,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "版面"
+          }
+        }
+      }
+    },
+    "moyenne %.0f %%": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "average %.0f %%"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "moyenne %.0f %%"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "平均 %.0f %%"
           }
         }
       }
@@ -46439,6 +47759,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "导入和打开时，若已安装模型，OvisOCR2 会读取尚未保存的页面。此文本用于面板、振假名和聊天；已读取的页面不会重新运行。"
+          }
+        }
+      }
+    },
+    "À la corbeille": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In the trash"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "À la corbeille"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在废纸篓中"
           }
         }
       }

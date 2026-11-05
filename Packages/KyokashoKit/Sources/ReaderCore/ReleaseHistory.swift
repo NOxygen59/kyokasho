@@ -10,6 +10,14 @@ import Foundation
 enum ReleaseHistory {
     static let past: [ReleaseNotes] = [
         // Candidates locales non publiées.
+        ReleaseNotes("1.4.7", "2026-11-05", published: false, String(localized: "Conversion mieux guidée et moniteur détaillé", bundle: .main), added: [
+            String(localized: "Moniteur de l'accueil, panneau déplié : les activités en cours et la mémoire du modèle IA.", bundle: .main),
+            String(localized: "Temps de lecture séparé entre Livres & Manuels et Manga.", bundle: .main),
+            String(localized: "Après une conversion, l'app propose de mettre les CBZ à la corbeille.", bundle: .main),
+        ], fixed: [
+            String(localized: "Conversion des CBZ : elle suit l'ordre de sélection, s'annule, et ne lance plus de lecture IA.", bundle: .main),
+            String(localized: "CBZ déjà présent : un message prévient que l'import est annulé.", bundle: .main),
+        ]),
         ReleaseNotes("1.4.6", "2026-11-05", published: false, String(localized: "Espace Manga et accueil plus pratique", bundle: .main), added: [
             String(localized: "Espace Manga, sur son propre onglet : mangas PDF avec toutes les fonctions.", bundle: .main),
             String(localized: "Fichiers .cbz, à titre expérimental : images seules, sans OCR ni IA, et conversion en PDF avec OCR.", bundle: .main),

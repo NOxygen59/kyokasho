@@ -131,6 +131,8 @@ struct ReaderScreen: View {
                             portraitPanelShown: docked == .study && !landscape, panelWidth: panelWidth, gap: Atelier.gap))
                             .transition(.opacity)
                     } else {
+                        ReaderStatusBadge()
+                            .transition(.opacity)
                         restoreBarsButton
                             .transition(.opacity)
                     }

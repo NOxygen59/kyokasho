@@ -16,6 +16,9 @@ public enum ComicBookArchive {
     static let maximumTotalBytes: UInt64 = 4 * 1_073_741_824
     static let maximumPages = 5000
     static let maximumPageSide = 6000
+    /// Budget d'une page qu'il faut décoder (PNG, WebP…) : 64 Mo de pixels au plus, puis son flux compressé. Au-delà, elle est
+    /// réduite. Un JPEG normal n'est jamais décodé, ce budget ne le touche pas.
+    static let maximumDecodedPixels = 16_000_000
     private static let imageExtensions: Set<String> = ["jpg", "jpeg", "png", "webp", "gif", "heic", "heif", "tif", "tiff", "bmp"]
 
     public struct Conversion: Equatable, Sendable {
@@ -34,14 +37,25 @@ public enum ComicBookArchive {
         .sorted { $0.localizedStandardCompare($1) == .orderedAscending }
     }
 
-    /// Écrit le PDF dans `output`. Une image par page, à sa taille : Core Graphics reprend les JPEG sans les recompresser,
-    /// sauf s'il faut les réduire ou les remettre à l'endroit.
-    public static func makePDF(from archiveURL: URL, to output: URL,
-                               freeSpace: (URL) -> Int64 = availableSpace) throws -> Conversion {
-        try removingOutputOnFailure(output) { try writePDF(from: archiveURL, to: output, freeSpace: freeSpace) }
+    /// Moment d'un contrôle de la place, pour qu'un test puisse viser exactement l'un d'eux.
+    enum SpaceCheck: Equatable { case beforeStart, beforePage, afterClose }
+
+    public static func availableSpace(in directory: URL) -> Int64 {
+        (try? directory.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey]))?
+            .volumeAvailableCapacityForImportantUsage ?? .max
     }
 
-    private static func writePDF(from archiveURL: URL, to output: URL, freeSpace: (URL) -> Int64) throws -> Conversion {
+    /// Écrit le PDF dans `output`, une image par page, à sa taille. Mémoire d'une seule page à la fois (`ImagePDFWriter`).
+    /// Un JPEG est repris sans recompression, sauf s'il faut le réduire ou le remettre à l'endroit.
+    public static func makePDF(from archiveURL: URL, to output: URL) throws -> Conversion {
+        try makePDF(from: archiveURL, to: output) { _, directory in availableSpace(in: directory) }
+    }
+
+    static func makePDF(from archiveURL: URL, to output: URL, freeSpace: (SpaceCheck, URL) -> Int64) throws -> Conversion {
+        try publishing(to: output) { temporary in try writePDF(from: archiveURL, to: temporary, freeSpace: freeSpace) }
+    }
+
+    private static func writePDF(from archiveURL: URL, to output: URL, freeSpace: (SpaceCheck, URL) -> Int64) throws -> Conversion {
         let archive: Archive
         do {
             archive = try Archive(url: archiveURL, accessMode: .read)
@@ -60,10 +74,13 @@ public enum ComicBookArchive {
         }
         // Place pour les pages extraites une à une et pour le PDF, qui peut dépasser l'archive (PNG, WebP).
         let directory = output.deletingLastPathComponent()
-        guard freeSpace(directory) >= Int64(clamping: total + total / 2 + maximumPageBytes) else {
-            throw ImportError.unreadable(String(localized: "Pas assez d'espace libre pour convertir ce fichier CBZ.", bundle: .main))
+        guard freeSpace(.beforeStart, directory) >= Int64(clamping: total + total / 2 + maximumPageBytes) else {
+            throw noRoom
         }
-        guard let context = CGContext(output as CFURL, mediaBox: nil, nil) else {
+        let writer: ImagePDFWriter
+        do {
+            writer = try ImagePDFWriter(url: output)
+        } catch {
             throw ImportError.unreadable(String(localized: "Ce fichier CBZ n'a pas pu être converti.", bundle: .main))
         }
         let pageFile = directory.appendingPathComponent(UUID().uuidString + ".page")
@@ -71,46 +88,82 @@ public enum ComicBookArchive {
         var pages = 0, skipped = 0
         for name in names {
             guard let entry = entries[name], entry.uncompressedSize <= maximumPageBytes else { skipped += 1; continue }
-            try ensureRoom(in: directory, forNext: Int64(clamping: entry.uncompressedSize), freeSpace: freeSpace)
+            try ensureRoom(in: directory, forNext: Int64(clamping: entry.uncompressedSize), check: .beforePage, freeSpace: freeSpace)
             // Une page à la fois, sur disque puis lue par ImageIO : ni l'archive ni le fichier ne restent en mémoire.
             let drawn: Bool = try autoreleasepool {
                 try? FileManager.default.removeItem(at: pageFile)
-                guard (try? archive.extract(entry, to: pageFile)) != nil, let image = pageImage(at: pageFile) else { return false }
-                // Au pire, Core Graphics écrit l'image non compressée. La taille du fichier ne le borne pas (PNG, WebP).
-                try ensureRoom(in: directory, forNext: Int64(image.bytesPerRow) * Int64(image.height), freeSpace: freeSpace)
-                var box = CGRect(x: 0, y: 0, width: image.width, height: image.height)
-                context.beginPage(mediaBox: &box)
-                context.draw(image, in: box)
-                context.endPage()
+                guard (try? archive.extract(entry, to: pageFile)) != nil, let page = pdfPage(at: pageFile) else { return false }
+                // La taille exacte est connue avant d'écrire : la réserve n'est franchie par aucune page.
+                try ensureRoom(in: directory, forNext: Int64(page.stream.count), check: .beforePage, freeSpace: freeSpace)
+                try writer.add(page)
                 return true
             }
             if drawn { pages += 1 } else { skipped += 1 }
         }
-        context.closePDF()
-        try ensureRoom(in: directory, freeSpace: freeSpace)
         guard pages > 0 else {
             throw ImportError.unreadable(String(localized: "Ce fichier CBZ ne contient aucune page lisible.", bundle: .main))
         }
+        try writer.finish()
+        try ensureRoom(in: directory, check: .afterClose, freeSpace: freeSpace)
         return Conversion(pages: pages, skipped: skipped)
     }
 
-    /// Copie page par page, images reprises telles quelles, avec le titre dans les métadonnées.
-    static func rewritePDF(_ source: URL, to output: URL, title: String, freeSpace: (URL) -> Int64 = availableSpace) throws {
-        try removingOutputOnFailure(output) { try copyPDF(source, to: output, title: title, freeSpace: freeSpace) }
+    private static func pdfPage(at url: URL) -> ImagePDFWriter.Page? {
+        if let jpeg = ImagePDFWriter.jpegPage(at: url) { return jpeg }
+        return pageImage(at: url).flatMap(ImagePDFWriter.losslessPage)
     }
 
-    private static func copyPDF(_ source: URL, to output: URL, title: String, freeSpace: (URL) -> Int64) throws {
+    /// Reprend le PDF à l'identique et y ajoute le titre (`ImagePDFWriter.titleUpdate`). Sur le même volume, la copie est un
+    /// clone : ni temps, ni place, ni mémoire. Une fin de PDF inattendue passe par Core Graphics, page par page.
+    static func rewritePDF(_ source: URL, to output: URL, title: String) throws {
+        try rewritePDF(source, to: output, title: title) { _, directory in availableSpace(in: directory) }
+    }
+
+    /// Core Graphics garde tout le PDF en mémoire : au-delà de cette taille, la voie de secours refuse plutôt que de risquer
+    /// une fermeture de l'app. Seuil choisi, pas encore éprouvé sur iPad. Elle ne sert qu'aux PDF à table compressée, que ni Core Graphics ni `ImagePDFWriter` n'écrivent :
+    /// les CBZ déjà importés passent par la voie normale.
+    static let coreGraphicsCopyLimit = 512 * 1_048_576
+
+    static func rewritePDF(_ source: URL, to output: URL, title: String, coreGraphicsLimit: Int = coreGraphicsCopyLimit,
+                           freeSpace: (SpaceCheck, URL) -> Int64) throws {
+        try Task.checkCancellation()
+        try publishing(to: output) { temporary in
+            let directory = output.deletingLastPathComponent()
+            let size = (try? source.resourceValues(forKeys: [.fileSizeKey]))?.fileSize ?? 0
+            try ensureRoom(in: directory, forNext: Int64(size), check: .beforePage, freeSpace: freeSpace)
+            if let update = try titleUpdate(of: source, title: title) {
+                try FileManager.default.copyItem(at: source, to: temporary)
+                let handle = try FileHandle(forWritingTo: temporary)
+                defer { try? handle.close() }
+                try handle.seekToEnd()
+                try handle.write(contentsOf: update)
+            } else {
+                guard size <= coreGraphicsLimit else {
+                    let limit = coreGraphicsLimit / 1_048_576
+                    throw ImportError.unreadable(String(localized: "Ce PDF dépasse la limite de \(limit) Mo pour cette conversion.", bundle: .main))
+                }
+                try copyWithCoreGraphics(source, to: temporary, title: title)
+            }
+            try ensureRoom(in: directory, check: .afterClose, freeSpace: freeSpace)
+        }
+    }
+
+    private static func titleUpdate(of source: URL, title: String) throws -> Data? {
+        let handle = try FileHandle(forReadingFrom: source)
+        defer { try? handle.close() }
+        let size = try handle.seekToEnd()
+        try handle.seek(toOffset: size - min(size, 4096))
+        guard let tail = try handle.readToEnd() else { return nil }
+        return ImagePDFWriter.titleUpdate(fileTail: String(decoding: tail, as: UTF8.self), fileSize: size, title: title)
+    }
+
+    private static func copyWithCoreGraphics(_ source: URL, to output: URL, title: String) throws {
         guard let document = CGPDFDocument(source as CFURL), document.numberOfPages > 0,
               let context = CGContext(output as CFURL, mediaBox: nil, [kCGPDFContextTitle: title] as CFDictionary) else {
             throw ImportError.unreadable(String(localized: "Ce fichier CBZ n'a pas pu être converti.", bundle: .main))
         }
-        let directory = output.deletingLastPathComponent()
-        // Taille d'une page inconnue avant copie : deux fois la moyenne, le contrôle suivant rattrape une page plus lourde.
-        let sourceSize = (try? source.resourceValues(forKeys: [.fileSizeKey]))?.fileSize ?? 0
-        let nextPage = Int64(sourceSize) / Int64(document.numberOfPages) * 2
         for index in 1...document.numberOfPages {
             try Task.checkCancellation()
-            try ensureRoom(in: directory, forNext: nextPage, freeSpace: freeSpace)
             autoreleasepool {
                 guard let page = document.page(at: index) else { return }
                 var box = page.getBoxRect(.mediaBox)
@@ -120,34 +173,33 @@ public enum ComicBookArchive {
             }
         }
         context.closePDF()
-        try ensureRoom(in: directory, freeSpace: freeSpace)
     }
 
     /// Réserve gardée libre pendant l'écriture : la taille d'un PDF issu de PNG ou de WebP ne se prévoit pas, seule la place
     /// restante le permet. Vérifiée en cours de route, elle interrompt la conversion avant de remplir l'iPad.
     static let minimumFreeBytes: Int64 = 300 * 1_048_576
 
-    /// Avant une page, `forNext` couvre ce qu'elle va écrire. Après le dernier écrit, `forNext` vaut 0 : Core Graphics écrit
-    /// aussi à la fermeture du PDF, et plus aucune page ne viendrait détecter que la réserve a été franchie.
-    static func ensureRoom(in directory: URL, forNext bytes: Int64 = 0, freeSpace: (URL) -> Int64) throws {
-        guard freeSpace(directory) >= minimumFreeBytes + bytes else {
-            throw ImportError.unreadable(String(localized: "Pas assez d'espace libre pour convertir ce fichier CBZ.", bundle: .main))
-        }
+    private static var noRoom: ImportError {
+        .unreadable(String(localized: "Pas assez d'espace libre pour convertir ce fichier CBZ.", bundle: .main))
     }
 
-    public static func availableSpace(in directory: URL) -> Int64 {
-        (try? directory.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey]))?
-            .volumeAvailableCapacityForImportantUsage ?? .max
+    /// Avant une page, `forNext` couvre ce qu'elle va écrire. Après la fermeture, `forNext` vaut 0.
+    static func ensureRoom(in directory: URL, forNext bytes: Int64 = 0, check: SpaceCheck, freeSpace: (SpaceCheck, URL) -> Int64) throws {
+        guard freeSpace(check, directory) >= minimumFreeBytes + bytes else { throw noRoom }
     }
 
-    /// Le PDF partiel est retiré une fois le contexte libéré : un échec ne laisse jamais de fichier, même sans appelant.
-    private static func removingOutputOnFailure<Result>(_ output: URL, _ write: () throws -> Result) rethrows -> Result {
-        do {
-            return try write()
-        } catch {
-            try? FileManager.default.removeItem(at: output)
-            throw error
+    /// Écrit dans un fichier à soi, et ne remplace `output` qu'une fois tout réussi : un échec ne touche jamais un fichier
+    /// déjà là. Suffixe `.partial` : un arrêt brutal est rattrapé par `DocumentStorage.removeAbandonedTemporaries`.
+    private static func publishing<Result>(to output: URL, _ write: (URL) throws -> Result) throws -> Result {
+        let temporary = output.deletingLastPathComponent().appendingPathComponent(UUID().uuidString + ".partial")
+        defer { try? FileManager.default.removeItem(at: temporary) }
+        let result = try write(temporary)
+        if FileManager.default.fileExists(atPath: output.path) {
+            _ = try FileManager.default.replaceItemAt(output, withItemAt: temporary)
+        } else {
+            try FileManager.default.moveItem(at: temporary, to: output)
         }
+        return result
     }
 
     /// Dimensions lues avant tout décodage. Image normale : reprise telle quelle. Trop grande ou tournée (EXIF) : passe par
@@ -160,12 +212,16 @@ public enum ComicBookArchive {
               let height = properties[kCGImagePropertyPixelHeight] as? Int, width > 0, height > 0 else { return nil }
         let orientation = properties[kCGImagePropertyOrientation] as? Int ?? 1
         let side = max(width, height)
-        if orientation == 1, side <= maximumPageSide { return CGImageSourceCreateImageAtIndex(source, 0, options) }
+        let pixels = Double(width) * Double(height)
+        if orientation == 1, side <= maximumPageSide, pixels <= Double(maximumDecodedPixels) {
+            return CGImageSourceCreateImageAtIndex(source, 0, options)
+        }
+        let shrink = min(1, (Double(maximumDecodedPixels) / pixels).squareRoot())
         return CGImageSourceCreateThumbnailAtIndex(source, 0, [
             kCGImageSourceCreateThumbnailFromImageAlways: true,
             kCGImageSourceCreateThumbnailWithTransform: true,
             kCGImageSourceShouldCacheImmediately: false,
-            kCGImageSourceThumbnailMaxPixelSize: min(side, maximumPageSide),
+            kCGImageSourceThumbnailMaxPixelSize: min(Int(Double(side) * shrink), maximumPageSide),
         ] as CFDictionary)
     }
 }
