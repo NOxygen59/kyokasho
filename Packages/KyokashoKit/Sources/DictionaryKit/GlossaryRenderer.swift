@@ -320,7 +320,33 @@ public struct GlossaryRenderer: Sendable {
             key.allSatisfy { $0.isLetter || $0.isNumber } && value.allSatisfy { $0.isHexDigit || "#(),. %rgba".contains($0) }
         }
         guard !safe.isEmpty else { return "" }
-        return ":root{" + safe.sorted { $0.key < $1.key }.map { "--\($0.key):\($0.value);" }.joined() + "}"
+        let variables = safe.sorted { $0.key < $1.key }.map { "--\($0.key):\($0.value);" }.joined()
+        return ":root{" + variables + derivedVariables(safe) + "}" + (Self.isLight(safe["bg"]) ? Self.lightTagsCSS : "")
+    }
+
+    /// Encres atténuées et filets tirés de l'encre du thème. Laissés aux valeurs d'origine, blanches, ils rendaient les
+    /// furigana invisibles sur les thèmes clairs (recette 1.4.5).
+    private func derivedVariables(_ palette: [String: String]) -> String {
+        guard let ink = palette["fg"].flatMap(Self.rgb) else { return "" }
+        let color = "\(ink.r),\(ink.g),\(ink.b)"
+        return "--fg2:rgba(\(color),.66);--fg3:rgba(\(color),.46);--line:rgba(\(color),.12);"
+            + "color-scheme:\(Self.isLight(palette["bg"]) ? "light" : "dark");"
+    }
+
+    /// Étiquettes : les fonds d'origine sont sombres, illisibles sous une encre foncée.
+    private static let lightTagsCSS = """
+        .tag{background:rgba(0,0,0,.08)} .tag.cat-partOfSpeech{background:rgba(30,130,115,.20)}
+        .tag.cat-popular,.tag.cat-frequent{background:rgba(190,100,50,.20)} .tag.cat-archaism,.tag.cat-dictionary{background:rgba(100,80,180,.18)}
+        """
+
+    private static func rgb(_ hex: String) -> (r: Int, g: Int, b: Int)? {
+        guard hex.count == 7, hex.hasPrefix("#"), let value = Int(hex.dropFirst(), radix: 16) else { return nil }
+        return (value >> 16 & 255, value >> 8 & 255, value & 255)
+    }
+
+    private static func isLight(_ hex: String?) -> Bool {
+        guard let color = hex.flatMap(rgb) else { return false }
+        return 299 * color.r + 587 * color.g + 114 * color.b > 128_000
     }
 
     static let baseCSS = """

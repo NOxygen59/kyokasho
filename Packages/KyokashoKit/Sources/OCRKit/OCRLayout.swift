@@ -117,6 +117,22 @@ public enum OCRLayout {
         return items.enumerated().sorted { ($0.element.order, $0.offset) < ($1.element.order, $1.offset) }.map(\.element.block)
     }
 
+    /// Colonnes d'une page verticale dans l'ordre de lecture : parties de haut en bas, colonnes de droite à gauche dans
+    /// chacune. Sans dépendre de l'ordre rendu par le moteur.
+    public static func verticalReadingOrder(_ page: OCRPage) -> [OCRLine] {
+        var sections: [[OCRLine]] = []
+        for line in page.lines {
+            let joined = sections.indices.filter { i in sections[i].contains { sameBlock($0, line) } }
+            var merged = joined.flatMap { sections[$0] } + [line]
+            merged = sorted(merged)
+            for i in joined.reversed() { sections.remove(at: i) }
+            sections.append(merged)
+        }
+        return sections
+            .sorted { a, b in (a.map(\.box.y).min() ?? 0) < (b.map(\.box.y).min() ?? 0) }
+            .flatMap { $0 }
+    }
+
     public static func markdown(_ page: OCRPage) -> String {
         markdown(blocks(page))
     }

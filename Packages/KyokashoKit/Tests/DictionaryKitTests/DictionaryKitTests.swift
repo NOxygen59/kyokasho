@@ -220,6 +220,19 @@ final class DictionaryKitTests: XCTestCase {
         XCTAssertEqual(try translator.findTerms("照明").map(\.frequencies), before.map(\.frequencies))
     }
 
+    /// Recette 1.4.5 : sur un thème clair, les furigana restaient blancs (`--fg2` non dérivé de l'encre du thème).
+    func testLightThemeDerivesFuriganaInkFromThemeInk() {
+        var renderer = GlossaryRenderer(inflectionName: { $0 })
+        renderer.palette = ["fg": "#1b2226", "bg": "#ffffff"]
+        XCTAssertTrue(renderer.paletteCSS.contains("--fg2:rgba(27,34,38,.66)"))
+        XCTAssertTrue(renderer.paletteCSS.contains("color-scheme:light"))
+        XCTAssertTrue(renderer.paletteCSS.contains(".tag{background:rgba(0,0,0,.08)}"))
+        renderer.palette = ["fg": "#eff4f2", "bg": "#1c252a"]
+        XCTAssertTrue(renderer.paletteCSS.contains("--fg2:rgba(239,244,242,.66)"))
+        XCTAssertTrue(renderer.paletteCSS.contains("color-scheme:dark"))
+        XCTAssertFalse(renderer.paletteCSS.contains(".tag{"))
+    }
+
     func testRendering() throws {
         let results = try translator.findTerms("照明")
         let renderer = GlossaryRenderer(inflectionName: { [translator] in translator!.inflectionName($0) })
