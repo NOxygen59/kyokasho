@@ -10,7 +10,8 @@ struct AppLanguagePicker: View {
     @State private var language = Self.stored
 
     /// Langue réellement affichée depuis le lancement.
-    private let running = Bundle.main.preferredLocalizations.first ?? "fr"
+    private static let launchLanguage = Bundle.main.preferredLocalizations.first ?? "fr"
+    private var running: String { Self.launchLanguage }
 
     /// Langue que l'app prendrait sans choix propre (réglage général d'iOS).
     private var system: String {

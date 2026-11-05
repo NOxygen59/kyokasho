@@ -209,6 +209,16 @@ extension AppDatabase {
         try writer.write { db in try document.save(db) }
     }
 
+    /// Document et correspondance d'archive enregistrés ensemble, ou pas du tout.
+    func saveComic(_ document: LibraryDocument, sources: [String: String], sourcesKey: String) throws {
+        try writer.write { db in
+            try document.save(db)
+            let json = String(decoding: try JSONEncoder.sorted.encode(sources), as: UTF8.self)
+            try db.execute(sql: "INSERT INTO setting (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+                           arguments: [sourcesKey, json])
+        }
+    }
+
     public func deleteDocument(id: String) throws {
         try writer.write { db in _ = try LibraryDocument.deleteOne(db, key: id) }
     }

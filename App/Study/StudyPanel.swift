@@ -992,6 +992,14 @@ struct OCRLineEditor: View {
     @State private var kind: Source
     @State private var outdated = false
     @State private var confirmingUndo = false
+    @State private var confirmingDiscard = false
+
+    /// Saisie non enregistrée : la fermeture demande confirmation, y compris d'un toucher à côté.
+    private var isDirty: Bool {
+        if let ovisOriginal, ovisDraft != ovisOriginal { return true }
+        guard let original else { return false }
+        return drafts.contains { original.lines.indices.contains($0.key) && original.lines[$0.key].text != $0.value }
+    }
 
     init(reader: ReaderController) {
         self.reader = reader
@@ -1045,10 +1053,19 @@ struct OCRLineEditor: View {
             .navigationTitle("Corriger le texte")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Fermer") { dismiss() } }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Fermer") { if isDirty { confirmingDiscard = true } else { dismiss() } }
+                }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Garder") { save() }.disabled(outdated)
                 }
+            }
+            .interactiveDismissDisabled(isDirty)
+            .alert("Abandonner les modifications ?", isPresented: $confirmingDiscard) {
+                Button("Abandonner", role: .destructive) { dismiss() }
+                Button("Continuer", role: .cancel) {}
+            } message: {
+                Text("Le texte que tu viens de corriger ne sera pas enregistré.")
             }
             .alert("Annuler les corrections ?", isPresented: $confirmingUndo) {
                 Button("Annuler les corrections", role: .destructive) {

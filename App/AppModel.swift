@@ -72,6 +72,8 @@ final class AppModel: ObservableObject {
     private var pendingDocuments: [LibraryDocument]?
     /// Documents nouvellement importés dont la catégorie reste à demander (« Livre ou manuel ? », RET-039, #54).
     @Published private(set) var categoryQuestions: [LibraryDocument] = []
+    /// PDF rangés à la main dans « Comics » (`LibrarySections.comicMarksKey`) : classement seul, l'OCR reste disponible.
+    @Published private(set) var comicMarks: Set<String> = []
     /// Import d'un seul fichier : il s'ouvre une fois la question répondue.
     private var openAfterCategory: String?
 
@@ -120,8 +122,16 @@ final class AppModel: ObservableObject {
         appSettings = (try? database.appSettings()) ?? AppSettings()
         readerDefaults = (try? database.readerDefaults()) ?? .default
 
+        comicMarks = Set((try? database.storedValue([String].self, forKey: LibrarySections.comicMarksKey)) ?? [])
         database.documentsPublisher()
-            .replaceError(with: [])
+            // Bibliothèque illisible : le dire, plutôt que de la montrer vide comme si tout avait disparu.
+            .catch { [weak self] error -> Empty<[LibraryDocument], Never> in
+                Diagnostics.error("lecture de la bibliothèque : \(error.localizedDescription)", "app")
+                DispatchQueue.main.async {
+                    self?.lastError = String(localized: "La bibliothèque n'a pas pu être lue. Tes documents restent sur l'iPad : réinstalle la dernière version de l'app.")
+                }
+                return Empty()
+            }
             .receive(on: DispatchQueue.main)
             .sink { [weak self] list in
                 guard let self else { return }
@@ -199,7 +209,10 @@ final class AppModel: ObservableObject {
                         : try importer.importFile(at: url, displayName: url.lastPathComponent)
                     if result.isNew {
                         OCRTargetLanguage.set(language, forDocument: result.document.id)
-                        if !isComic { newDocuments.append(result.document) } // La catégorie d'un comics est connue.
+                        if !isComic { newDocuments.append(result.document) } // Un comics a déjà sa place.
+                        if result.skippedPages > 0 {
+                            errors.append(String(localized: "\(url.lastPathComponent) : \(result.skippedPages) page(s) illisible(s) ou trop lourde(s) ignorée(s)."))
+                        }
                     }
                     lastImported = result.document.id
                     imported.append(result.document)
@@ -211,7 +224,7 @@ final class AppModel: ObservableObject {
             }
             await MainActor.run {
                 self.importProgress = nil
-                for document in imported where !document.isComic {
+                for document in imported where document.capabilities.study {
                     DocumentScan.start(document, url: self.storage.url(for: document.id), ocr: self.ocr)
                 }
                 if !errors.isEmpty { self.lastError = errors.joined(separator: "\n") }
@@ -397,6 +410,13 @@ final class AppModel: ObservableObject {
     }
 
     /// Catégorie d'un document (requête ciblée : rien d'autre n'est réécrit).
+    /// Range un document dans « Comics » ou l'en retire, sans toucher à ses capacités.
+    func setComicMark(_ documentId: String, _ marked: Bool) {
+        if marked { comicMarks.insert(documentId) } else { comicMarks.remove(documentId) }
+        let marks = comicMarks.sorted()
+        persist { try $0.setStoredValue(marks, forKey: LibrarySections.comicMarksKey) }
+    }
+
     func setCategory(_ documentId: String, _ category: DocumentCategory?) {
         // Copie en mémoire mise à jour tout de suite : le lecteur ouvert juste après part de la bonne catégorie et ne
         // la réécrit pas avec l'ancienne en enregistrant ses réglages (la base suit, sur la file d'écriture).

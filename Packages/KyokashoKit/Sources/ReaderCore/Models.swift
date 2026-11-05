@@ -6,13 +6,12 @@ import GRDB
 
 /// Catégorie choisie à l'import, pour se repérer sur l'accueil (RET-039, #54). Modifiable dans « Ce document ».
 public enum DocumentCategory: String, Codable, CaseIterable, Sendable {
-    case book, textbook, comics
+    case book, textbook
 
     public var title: String {
         switch self {
         case .book: return String(localized: "Livre", bundle: .main)
         case .textbook: return String(localized: "Manuel", bundle: .main)
-        case .comics: return String(localized: "Comics", bundle: .main)
         }
     }
 }
@@ -38,9 +37,6 @@ public struct LibraryDocument: Codable, Identifiable, Hashable, Sendable {
     public var firstPageIndex: Int
     /// Livre ou manuel (`nil` : pas encore choisi, documents d'avant la migration `v5-document-category`).
     public var category: DocumentCategory?
-
-    /// Comics : lecture seule des images, sans OCR ni IA ni furigana.
-    public var isComic: Bool { category == .comics }
 
     public init(id: String, title: String, originalFileName: String, pageCount: Int, fileSize: Int64,
                 importedAt: Date = Date(), lastOpenedAt: Date? = nil, lastPageIndex: Int = 0,

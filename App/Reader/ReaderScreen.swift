@@ -70,6 +70,7 @@ struct ReaderScreen: View {
     }
 
     enum Side: Equatable { case study, web }
+    private var capabilities: DocumentCapabilities { reader.document.capabilities }
     @State private var keyboardFreeSize = CGSize.zero
 
     init(document: LibraryDocument, model: AppModel) {
@@ -206,7 +207,7 @@ struct ReaderScreen: View {
                 reservedSide = docked
                 reader.adaptLayout(portrait: !landscape)
                 // Paysage (taille réelle de la vue, pas l'orientation de la scène) : panneau d'étude ouvert d'office.
-                if landscape, !autoOpenedSide, !reader.document.isComic { autoOpenedSide = true; side = .study }
+                if landscape, !autoOpenedSide, capabilities.study { autoOpenedSide = true; side = .study }
             }
             .overlay(alignment: .trailing) {
                 // En portrait seulement, le panneau reste flottant sur la page.
@@ -358,7 +359,10 @@ struct ReaderScreen: View {
             .padding(.top, 8)
             GeometryReader { area in
                 ZStack(alignment: .topLeading) {
-                    FloatingToolbar(area: area.size) { vertical in toolItems(vertical: vertical) }
+                    // Lecture visuelle : la barre d'outils n'a rien à proposer (dessin, dictionnaire, surlignage, étude, IA).
+                    if capabilities.annotations {
+                        FloatingToolbar(area: area.size) { vertical in toolItems(vertical: vertical) }
+                    }
                     if let note = reader.openNote {
                         NoteWindow(reader: reader, note: note, area: area.size)
                     }
@@ -497,13 +501,17 @@ struct ReaderScreen: View {
                 .accessibilityLabel("Aller à la page")
                 .padding(.horizontal, 4)
             pageArrow(left: false)
-            CapsuleButton(icon: "magnifyingglass", label: String(localized: "Rechercher")) { sheet = .search }
+            if capabilities.textAnalysis {
+                CapsuleButton(icon: "magnifyingglass", label: String(localized: "Rechercher")) { sheet = .search }
+            }
             CapsuleButton(icon: reader.isCurrentPageBookmarked ? "bookmark.fill" : "bookmark", label: String(localized: "Signet"),
                           active: reader.isCurrentPageBookmarked) { reader.toggleBookmark() }
-            CapsuleButton(icon: "character.ja", label: furigana ? String(localized: "Masquer les furigana de la page") : String(localized: "Afficher les furigana de la page"),
-                          active: furigana, tint: Atelier.Tint.japanese) {
-                furigana.toggle()
-                reader.setFurigana(furigana)
+            if capabilities.textAnalysis {
+                CapsuleButton(icon: "character.ja", label: furigana ? String(localized: "Masquer les furigana de la page") : String(localized: "Afficher les furigana de la page"),
+                              active: furigana, tint: Atelier.Tint.japanese) {
+                    furigana.toggle()
+                    reader.setFurigana(furigana)
+                }
             }
             Menu {
                 // Rangé par thème : affichage (pour tous les livres), cette page, ce document.
@@ -514,53 +522,57 @@ struct ReaderScreen: View {
                         Label("Fond de page", systemImage: "circle.lefthalf.filled")
                     }
                     .pickerStyle(.menu)
-                    Picker(selection: Binding(get: { furiganaTint }, set: { furiganaTint = $0; reader.setFuriganaTint($0) })) {
-                        ForEach(FuriganaLayer.Tint.allCases) { Text($0.title).tag($0) }
-                    } label: {
-                        Label("Couleur des furigana", systemImage: "paintpalette")
-                    }
-                    .pickerStyle(.menu)
-                    Picker(selection: Binding(get: { scanCleaning }, set: { scanCleaning = $0; reader.setScanCleaning($0) })) {
-                        ForEach(ScanSharpening.Method.allCases.filter { $0 != .degan || ScanSharpening.isInstalled }) {
-                            Text($0.title).tag($0)
+                    if capabilities.textAnalysis {
+                        Picker(selection: Binding(get: { furiganaTint }, set: { furiganaTint = $0; reader.setFuriganaTint($0) })) {
+                            ForEach(FuriganaLayer.Tint.allCases) { Text($0.title).tag($0) }
+                        } label: {
+                            Label("Couleur des furigana", systemImage: "paintpalette")
                         }
-                    } label: {
-                        Label("Nettoyage des scans", systemImage: "wand.and.stars")
-                    }
-                    .pickerStyle(.menu)
-                    Button { reader.setShowOCRBoxes(!showOCRBoxes) } label: {
-                        Label(showOCRBoxes ? String(localized: "Masquer les zones OCR") : String(localized: "Montrer les zones OCR"),
-                              systemImage: "rectangle.dashed")
+                        .pickerStyle(.menu)
+                        Picker(selection: Binding(get: { scanCleaning }, set: { scanCleaning = $0; reader.setScanCleaning($0) })) {
+                            ForEach(ScanSharpening.Method.allCases.filter { $0 != .degan || ScanSharpening.isInstalled }) {
+                                Text($0.title).tag($0)
+                            }
+                        } label: {
+                            Label("Nettoyage des scans", systemImage: "wand.and.stars")
+                        }
+                        .pickerStyle(.menu)
+                        Button { reader.setShowOCRBoxes(!showOCRBoxes) } label: {
+                            Label(showOCRBoxes ? String(localized: "Masquer les zones OCR") : String(localized: "Montrer les zones OCR"),
+                                  systemImage: "rectangle.dashed")
+                        }
                     }
                 } label: {
                     Label("Affichage", systemImage: "eye")
                 }
-                Menu {
-                    Button { sheet = .pageCards } label: {
-                        Label("Créer des cartes de cette page", systemImage: "rectangle.stack.badge.plus")
-                    }
-                    Button { sheet = .pageOrientation } label: {
-                        Label("Orientation des pages…", systemImage: "rotate.right")
-                    }
-                    Button { reader.toggleSplitCurrentPage() } label: {
-                        Label(reader.isCurrentPageSplit ? String(localized: "Ne plus couper la page") : String(localized: "Couper la page en deux"),
-                              systemImage: "rectangle.split.2x1")
-                    }
-                    Button { reader.setFirstPage(reader.currentSourcePage) } label: {
-                        Label("Cette page est la page 1", systemImage: "1.circle")
-                    }
-                    if reader.document.firstPageIndex != 0 {
-                        Button { reader.setFirstPage(0) } label: {
-                            Label("Numéros du PDF (page 1 = début)", systemImage: "arrow.uturn.backward")
+                if capabilities.pageEditing {
+                    Menu {
+                        Button { sheet = .pageCards } label: {
+                            Label("Créer des cartes de cette page", systemImage: "rectangle.stack.badge.plus")
                         }
+                        Button { sheet = .pageOrientation } label: {
+                            Label("Orientation des pages…", systemImage: "rotate.right")
+                        }
+                        Button { reader.toggleSplitCurrentPage() } label: {
+                            Label(reader.isCurrentPageSplit ? String(localized: "Ne plus couper la page") : String(localized: "Couper la page en deux"),
+                                  systemImage: "rectangle.split.2x1")
+                        }
+                        Button { reader.setFirstPage(reader.currentSourcePage) } label: {
+                            Label("Cette page est la page 1", systemImage: "1.circle")
+                        }
+                        if reader.document.firstPageIndex != 0 {
+                            Button { reader.setFirstPage(0) } label: {
+                                Label("Numéros du PDF (page 1 = début)", systemImage: "arrow.uturn.backward")
+                            }
+                        }
+                    } label: {
+                        Label("Cette page", systemImage: "doc")
                     }
-                } label: {
-                    Label("Cette page", systemImage: "doc")
                 }
-                if !reader.document.isComic {
+                if capabilities.annotations {
                     Button { openStudy(.notes) } label: { Label("Notes de la page", systemImage: "text.bubble") }
+                    Button { reader.newNote() } label: { Label("Nouvelle note flottante", systemImage: "note.text.badge.plus") }
                 }
-                Button { reader.newNote() } label: { Label("Nouvelle note flottante", systemImage: "note.text.badge.plus") }
                 if monitorEnabled {
                     Toggle(isOn: $monitorShown) { Label("Moniteur de ressources", systemImage: "gauge.with.dots.needle.33percent") }
                 }
@@ -579,7 +591,7 @@ struct ReaderScreen: View {
                 Image(systemName: "ellipsis").font(Atelier.font(17, weight: .semibold))
                     .frame(width: 40, height: 40).foregroundStyle(Atelier.textPrimary)
             }
-            if !reader.document.isComic {
+            if capabilities.study {
                 Rectangle().fill(Atelier.hairline).frame(width: 1, height: 22).padding(.horizontal, 4)
                 CapsuleButton(icon: "sidebar.trailing", label: String(localized: "Panneau d'étude"), active: side == .study,
                               tint: Atelier.Tint.japanese) {
@@ -653,16 +665,14 @@ struct ReaderScreen: View {
                 }
             }
             railDivider(vertical)
-            if !reader.document.isComic {
-                ToolButton(icon: "character.ja", label: String(localized: "Texte de la page"), tint: Atelier.Tint.japanese,
-                           active: side == .study && studyTab == .text) { openStudy(.text) }
-                ToolButton(icon: "character.book.closed.ja", label: String(localized: "Dictionnaire"), tint: Atelier.Tint.japanese,
-                           active: side == .study && studyTab == .vocab) { openStudy(.vocab) }
-                railDivider(vertical)
-                ToolButton(icon: "sparkles", label: String(localized: "Page vers IA"), tint: Atelier.Tint.ai) { sheet = .ai }
-                ToolButton(icon: "globe", label: String(localized: "Navigateur à côté"), tint: Atelier.Tint.ai, active: side == .web) {
-                    side = side == .web ? nil : .web
-                }
+            ToolButton(icon: "character.ja", label: String(localized: "Texte de la page"), tint: Atelier.Tint.japanese,
+                       active: side == .study && studyTab == .text) { openStudy(.text) }
+            ToolButton(icon: "character.book.closed.ja", label: String(localized: "Dictionnaire"), tint: Atelier.Tint.japanese,
+                       active: side == .study && studyTab == .vocab) { openStudy(.vocab) }
+            railDivider(vertical)
+            ToolButton(icon: "sparkles", label: String(localized: "Page vers IA"), tint: Atelier.Tint.ai) { sheet = .ai }
+            ToolButton(icon: "globe", label: String(localized: "Navigateur à côté"), tint: Atelier.Tint.ai, active: side == .web) {
+                side = side == .web ? nil : .web
             }
     }
 
@@ -699,7 +709,7 @@ struct ReaderScreen: View {
     }
 
     private func openStudy(_ tab: StudyPanel.Tab) {
-        guard !reader.document.isComic else { return } // Comics : ni panneau de texte, ni étude.
+        guard capabilities.study else { return } // Lecture visuelle : ni panneau de texte, ni étude.
         if side == .study && studyTab == tab {
             side = nil
         } else {

@@ -54,7 +54,7 @@ final class DocumentCategoryTests: XCTestCase {
         try database.save(LibraryDocument(id: "b", title: "B", originalFileName: "b.pdf", pageCount: 1, fileSize: 1,
                                           category: .book))
         XCTAssertEqual(try database.document(id: "b")?.category, .book)
-        XCTAssertEqual(DocumentCategory.allCases.map(\.title), ["Livre", "Manuel", "Comics"])
+        XCTAssertEqual(DocumentCategory.allCases.map(\.title), ["Livre", "Manuel"])
         try database.writer.close()
     }
 }

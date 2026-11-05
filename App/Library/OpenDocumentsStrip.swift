@@ -16,7 +16,7 @@ struct OpenDocumentsStrip: View {
     var body: some View {
         if !documents.isEmpty {
             VStack(alignment: .leading, spacing: 6) {
-                AtelierLabel(String(localized: "Documents ouverts"), tint: Atelier.Tint.read)
+                AtelierLabel(String(localized: "Onglets ouverts"), tint: Atelier.Tint.read)
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 8) {
                         ForEach(documents) { document in chip(document) }

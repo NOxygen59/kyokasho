@@ -38,6 +38,8 @@ public struct ImportResult: Equatable, Sendable {
     public var document: LibraryDocument
     /// `false` si le même fichier était déjà dans la bibliothèque.
     public var isNew: Bool
+    /// Comics : images illisibles ou trop lourdes laissées de côté.
+    public var skippedPages = 0
 }
 
 /// Importe un PDF : empreinte SHA-256 (lue par blocs, mémoire constante), copie dans le stockage

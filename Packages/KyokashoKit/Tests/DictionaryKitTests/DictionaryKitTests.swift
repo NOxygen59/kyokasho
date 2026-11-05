@@ -224,13 +224,31 @@ final class DictionaryKitTests: XCTestCase {
     func testLightThemeDerivesFuriganaInkFromThemeInk() {
         var renderer = GlossaryRenderer(inflectionName: { $0 })
         renderer.palette = ["fg": "#1b2226", "bg": "#ffffff"]
-        XCTAssertTrue(renderer.paletteCSS.contains("--fg2:rgba(27,34,38,.66)"))
+        XCTAssertTrue(renderer.paletteCSS.contains("--fg2:rgba(27,34,38,0.66)"))
         XCTAssertTrue(renderer.paletteCSS.contains("color-scheme:light"))
         XCTAssertTrue(renderer.paletteCSS.contains(".tag{background:rgba(0,0,0,.08)}"))
         renderer.palette = ["fg": "#eff4f2", "bg": "#1c252a"]
-        XCTAssertTrue(renderer.paletteCSS.contains("--fg2:rgba(239,244,242,.66)"))
+        XCTAssertTrue(renderer.paletteCSS.contains("--fg2:rgba(239,244,242,0.66)"))
         XCTAssertTrue(renderer.paletteCSS.contains("color-scheme:dark"))
         XCTAssertFalse(renderer.paletteCSS.contains(".tag{"))
+    }
+
+    /// Revue Codex de 2b55bd9 : encres atténuées à 4,5:1 au moins, sur Sépia et Terre où l'opacité fixe échouait.
+    func testSecondaryInkReachesReadableContrast() {
+        func luminance(_ v: [Double]) -> Double {
+            let c = v.map { $0 / 255 <= 0.03928 ? $0 / 255 / 12.92 : pow(($0 / 255 + 0.055) / 1.055, 2.4) }
+            return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
+        }
+        for (ink, surface) in [((59, 42, 26), (248, 240, 225)), ((59, 42, 26), (230, 216, 190)), ((46, 42, 36), (243, 238, 229)), ((46, 42, 36), (221, 211, 195))] {
+            for start in [0.66, 0.46] {
+                let a = GlossaryRenderer.opacity(of: (ink.0, ink.1, ink.2), from: start, on: [(surface.0, surface.1, surface.2)])
+                let mixed = [ink.0, ink.1, ink.2].enumerated().map { i, v in
+                    Double(v) * a + Double([surface.0, surface.1, surface.2][i]) * (1 - a)
+                }
+                let one = luminance(mixed), two = luminance([Double(surface.0), Double(surface.1), Double(surface.2)])
+                XCTAssertGreaterThanOrEqual((max(one, two) + 0.05) / (min(one, two) + 0.05), 4.5)
+            }
+        }
     }
 
     func testRendering() throws {

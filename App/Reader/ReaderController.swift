@@ -568,7 +568,7 @@ final class ReaderController: NSObject, ObservableObject {
     /// `fromHover` : survol au curseur → jamais d'OCR lancé (trop lent), et rien ne se ferme
     /// quand le pointeur passe sur un blanc (pour pouvoir aller jusqu'au popup).
     func lookup(at point: CGPoint, fromHover: Bool = false) async {
-        guard !document.isComic else { return } // Pas de texte reconnu, et ce chemin lancerait l'OCR.
+        guard document.capabilities.textAnalysis else { return } // Ce chemin lancerait l'OCR.
         traceLookup("Recherche lancée ; survol=\(fromHover)")
         if !fromHover { lookupOpenedByShiftOnly = false }
         guard let pdf, let page = pdfView.page(for: point, nearest: false) else { return }

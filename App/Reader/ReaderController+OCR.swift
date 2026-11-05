@@ -60,11 +60,11 @@ extension ReaderController {
         if visible != shownSources { cancelEnsureOCR() }
         if shownSources != visible { shownSources = visible }
         if !keepFocus { focusSource = pinnedFocus.flatMap { visible.contains($0) ? $0 : nil } ?? source }
-        scheduleSharpening(visible)
         scheduleTone(visible)
+        guard document.capabilities.textAnalysis else { return } // Lecture visuelle : ni nettoyage, ni furigana, ni OCR.
+        scheduleSharpening(visible)
         scheduleFurigana(visible)
-        guard !document.isComic else { return } // Images seules : ni OCR ni zones de texte.
-        Task { [weak self] in
+                Task { [weak self] in
             guard let self else { return }
             // Zones en cache pour toutes les pages visibles (double page).
             var missing: [Int] = []
@@ -167,7 +167,7 @@ extension ReaderController {
     ///   - engine: moteur imposé (sinon : réglage du document, « auto » résolu selon la page).
     ///   - force: ignore le cache (bouton « Relancer »).
     func runOCR(engine: String? = nil, force: Bool = false) {
-        guard !document.isComic else { return }
+        guard document.capabilities.textAnalysis else { return }
         ocrTask?.cancel()
         let source = focusSource
         let url = fileURL
@@ -232,7 +232,7 @@ extension ReaderController {
     /// Lit en fond les pages données qui n'ont pas encore d'OCR (moteur du document), une à la fois :
     /// une seule file, vidée quand la page change ou que le lecteur se ferme.
     func ensureOCR(_ pages: [Int]) {
-        guard !document.isComic else { return }
+        guard document.capabilities.textAnalysis else { return }
         for page in pages where !ensureQueue.contains(page) && ensuringPage != page { ensureQueue.append(page) }
         guard ensureTask == nil, !ensureQueue.isEmpty else { return }
         let url = fileURL, documentId = document.id, choice = settings.ocrEngine, service = model.ocr

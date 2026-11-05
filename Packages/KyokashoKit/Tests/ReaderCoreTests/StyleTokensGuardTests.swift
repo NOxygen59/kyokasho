@@ -57,12 +57,12 @@ final class StyleTokensGuardTests: XCTestCase {
         let app = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
             .appendingPathComponent("../../../../App").standardizedFileURL
         for (file, guardText) in [
-            ("Reader/ReaderController+OCR.swift", "func runOCR(engine: String? = nil, force: Bool = false) {\n        guard !document.isComic"),
-            ("Reader/ReaderController+OCR.swift", "func ensureOCR(_ pages: [Int]) {\n        guard !document.isComic"),
-            ("Reader/ReaderController.swift", "fromHover: Bool = false) async {\n        guard !document.isComic"),
-            ("Reader/ReaderController+Search.swift", "guard documentOCRTask == nil, !document.isComic"),
-            ("Reader/ReaderScreen.swift", "private func openStudy(_ tab: StudyPanel.Tab) {\n        guard !reader.document.isComic"),
-            ("Library/DocumentScan.swift", "guard !document.isComic, UserDefaults"),
+            ("Reader/ReaderController+OCR.swift", "func runOCR(engine: String? = nil, force: Bool = false) {\n        guard document.capabilities.textAnalysis"),
+            ("Reader/ReaderController+OCR.swift", "func ensureOCR(_ pages: [Int]) {\n        guard document.capabilities.textAnalysis"),
+            ("Reader/ReaderController.swift", "fromHover: Bool = false) async {\n        guard document.capabilities.textAnalysis"),
+            ("Reader/ReaderController+Search.swift", "guard documentOCRTask == nil, document.capabilities.textAnalysis"),
+            ("Reader/ReaderScreen.swift", "private func openStudy(_ tab: StudyPanel.Tab) {\n        guard capabilities.study"),
+            ("Library/DocumentScan.swift", "guard document.capabilities.study, UserDefaults"),
         ] {
             let source = try String(contentsOf: app.appendingPathComponent(file), encoding: .utf8)
             XCTAssertTrue(source.contains(guardText), "\(file) : \(guardText)")

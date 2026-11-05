@@ -329,8 +329,33 @@ public struct GlossaryRenderer: Sendable {
     private func derivedVariables(_ palette: [String: String]) -> String {
         guard let ink = palette["fg"].flatMap(Self.rgb) else { return "" }
         let color = "\(ink.r),\(ink.g),\(ink.b)"
-        return "--fg2:rgba(\(color),.66);--fg3:rgba(\(color),.46);--line:rgba(\(color),.12);"
+        let surfaces = [palette["bg"], palette["bg2"]].compactMap { $0.flatMap(Self.rgb) }
+        // Texte informatif, même atténué : au moins 4,5:1 sur les deux fonds où il se pose.
+        func readable(from opacity: Double) -> String {
+            String(format: "%.2f", Self.opacity(of: ink, from: opacity, on: surfaces))
+        }
+        return "--fg2:rgba(\(color),\(readable(from: 0.66)));--fg3:rgba(\(color),\(readable(from: 0.46)));--line:rgba(\(color),.12);"
             + "color-scheme:\(Self.isLight(palette["bg"]) ? "light" : "dark");"
+    }
+
+    /// Plus petite opacité, à partir de `start`, qui atteint 4,5:1 sur chaque fond.
+    static func opacity(of ink: (r: Int, g: Int, b: Int), from start: Double, on surfaces: [(r: Int, g: Int, b: Int)]) -> Double {
+        func luminance(_ c: (r: Double, g: Double, b: Double)) -> Double {
+            func channel(_ v: Double) -> Double { v <= 0.03928 ? v / 12.92 : pow((v + 0.055) / 1.055, 2.4) }
+            return 0.2126 * channel(c.r / 255) + 0.7152 * channel(c.g / 255) + 0.0722 * channel(c.b / 255)
+        }
+        var opacity = start
+        while opacity < 1 {
+            let passes = surfaces.allSatisfy { surface in
+                func mix(_ a: Int, _ b: Int) -> Double { Double(a) * opacity + Double(b) * (1 - opacity) }
+                let one = luminance((mix(ink.r, surface.r), mix(ink.g, surface.g), mix(ink.b, surface.b)))
+                let two = luminance((Double(surface.r), Double(surface.g), Double(surface.b)))
+                return (max(one, two) + 0.05) / (min(one, two) + 0.05) >= 4.5
+            }
+            if passes { return opacity }
+            opacity += 0.01
+        }
+        return 1
     }
 
     /// Étiquettes : les fonds d'origine sont sombres, illisibles sous une encre foncée.

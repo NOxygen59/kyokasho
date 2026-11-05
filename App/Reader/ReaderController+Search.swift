@@ -78,7 +78,7 @@ extension ReaderController {
 
     /// Lit (OCR) toutes les pages qui n'ont pas encore de texte, en tâche de fond.
     func ocrWholeDocument() {
-        guard documentOCRTask == nil, !document.isComic else { return }
+        guard documentOCRTask == nil, document.capabilities.textAnalysis else { return }
         let url = fileURL
         let documentId = document.id
         let count = document.pageCount

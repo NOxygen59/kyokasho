@@ -47,4 +47,24 @@ final class VerticalJapaneseTests: XCTestCase {
         let lines = [column("三", x: 0.64), column("一", x: 0.76), column("二", x: 0.70)]
         XCTAssertEqual(OCRLayout.verticalReadingOrder(page(lines)).map(\.text), ["一", "二", "三"])
     }
+
+    /// Revue Codex de 2b55bd9 : une large gouttière ne doit pas dépendre de l'ordre du moteur.
+    func testWideGutterStaysRightToLeftWhateverTheEngineOrder() {
+        let right = column("右", x: 0.80), left = column("左", x: 0.20)
+        XCTAssertEqual(OCRLayout.verticalReadingOrder(page([left, right])).map(\.text), ["右", "左"])
+        XCTAssertEqual(OCRLayout.verticalReadingOrder(page([right, left])).map(\.text), ["右", "左"])
+    }
+
+    func testHorizontalTitleComesFirst() {
+        let title = OCRLine(text: "題", box: NormBox(x: 0.2, y: 0.02, w: 0.5, h: 0.05), charBoxes: [], measuredCharBoxes: false, vertical: false, confidence: 1)
+        let order = OCRLayout.verticalReadingOrder(page([column("二", x: 0.70, y: 0.2), title, column("一", x: 0.76, y: 0.2)]))
+        XCTAssertEqual(order.map(\.text), ["題", "一", "二"])
+    }
+
+    func testThousandLinesStayFast() {
+        let lines = (0..<1000).map { column("字", x: 0.99 - Double($0 % 50) * 0.02, y: Double($0 / 50) * 0.05, h: 0.04) }
+        let start = Date()
+        XCTAssertEqual(OCRLayout.verticalReadingOrder(page(lines)).count, 1000)
+        XCTAssertLessThan(Date().timeIntervalSince(start), 5)
+    }
 }

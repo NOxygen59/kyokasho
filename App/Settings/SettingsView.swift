@@ -184,15 +184,17 @@ struct DocumentSettingsSheet: View {
         let d = model.readerDefaults
         NavigationStack {
             Form {
-                Section {
-                    // Repère de l'accueil (RET-039, #54) : requête ciblée, la copie du lecteur suit pour ne pas
-                    // réécrire l'ancienne valeur en enregistrant les autres réglages.
-                    Picker("Catégorie", selection: Binding(get: { reader.document.category }, set: { category in
-                        reader.document.category = category
-                        model.setCategory(reader.document.id, category)
-                    })) {
-                        Text("Non classé").tag(DocumentCategory?.none)
-                        ForEach(DocumentCategory.allCases, id: \.self) { Text($0.title).tag(DocumentCategory?.some($0)) }
+                if reader.document.capabilities.editableShelf {
+                    Section {
+                        // Repère de l'accueil (RET-039, #54) : requête ciblée, la copie du lecteur suit pour ne pas
+                        // réécrire l'ancienne valeur en enregistrant les autres réglages.
+                        Picker("Catégorie", selection: Binding(get: { reader.document.category }, set: { category in
+                            reader.document.category = category
+                            model.setCategory(reader.document.id, category)
+                        })) {
+                            Text("Non classé").tag(DocumentCategory?.none)
+                            ForEach(DocumentCategory.allCases, id: \.self) { Text($0.title).tag(DocumentCategory?.some($0)) }
+                        }
                     }
                 }
                 Section {
@@ -220,9 +222,11 @@ struct DocumentSettingsSheet: View {
                     OptionalBool(String(localized: "Double tap zoom"), value: $override.doubleTapZoom, defaultValue: d.doubleTapZoom)
                     OptionalBool(String(localized: "Masquer les barres"), value: $override.hideBarsOnScroll, defaultValue: d.hideBarsOnScroll)
                 }
-                Section("OCR") {
-                    OptionalPicker(String(localized: "Moteur"), value: $override.ocrEngine, defaultValue: d.ocrEngine,
-                                   options: OCREngineChoice.allCases.map { ($0, $0.label) })
+                if reader.document.capabilities.textAnalysis {
+                    Section("OCR") {
+                        OptionalPicker(String(localized: "Moteur"), value: $override.ocrEngine, defaultValue: d.ocrEngine,
+                                       options: OCREngineChoice.allCases.map { ($0, $0.label) })
+                    }
                 }
                 Section {
                     Button("Revenir aux réglages généraux", role: .destructive) { override = ReaderSettingsOverride() }
@@ -230,14 +234,16 @@ struct DocumentSettingsSheet: View {
                 } footer: {
                     Text("Réinitialise les choix de lecture et le moteur OCR propres à ce livre.")
                 }
-                Section {
-                    DocumentLanguagePicker(documentId: reader.document.id)
-                } header: {
-                    Text("Langue du document")
-                } footer: {
-                    Text("Guide les prochaines lectures OvisOCR2 et corrige les confusions d'écriture connues. Les pages déjà enregistrées ne sont pas rescannées ; rouvre le livre pour actualiser leur affichage.")
+                if reader.document.capabilities.textAnalysis {
+                    Section {
+                        DocumentLanguagePicker(documentId: reader.document.id)
+                    } header: {
+                        Text("Langue du document")
+                    } footer: {
+                        Text("Guide les prochaines lectures OvisOCR2 et corrige les confusions d'écriture connues. Les pages déjà enregistrées ne sont pas rescannées ; rouvre le livre pour actualiser leur affichage.")
+                    }
+                    PageAdditionHistorySection(documentId: reader.document.id)
                 }
-                PageAdditionHistorySection(documentId: reader.document.id)
             }
             .navigationTitle("Ce document")
             .navigationBarTitleDisplayMode(.inline)

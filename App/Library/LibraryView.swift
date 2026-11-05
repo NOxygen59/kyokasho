@@ -131,8 +131,7 @@ struct LibraryView: View {
         // chaque document reçoit une réponse, « Plus tard » compris.
         .alert("Livre ou manuel ?", isPresented: Binding(get: { !model.categoryQuestions.isEmpty }, set: { _ in }),
                presenting: model.categoryQuestions.first) { _ in
-            // Comics : au long press sur la carte, ou d'office pour un .cbz. La question reste « Livre ou manuel ? ».
-            ForEach(DocumentCategory.allCases.filter { $0 != .comics }, id: \.self) { category in
+            ForEach(DocumentCategory.allCases, id: \.self) { category in
                 Button(category.title) { model.answerCategory(category) }
             }
             Button("Plus tard", role: .cancel) { model.answerCategory(nil) }
@@ -439,7 +438,7 @@ struct LibraryView: View {
                             // Sections « Manuels », « Livres », « Non classés » (recette 1.3.2 (61), E5) : chacune s'allonge
                             // avec ses documents, les suivantes descendent d'autant.
                             LazyVGrid(columns: [GridItem(.adaptive(minimum: 180, maximum: 220), spacing: 22)], spacing: 26) {
-                                ForEach(LibrarySections.group(filtered), id: \.title) { section in
+                                ForEach(LibrarySections.group(filtered, comicMarks: model.comicMarks), id: \.title) { section in
                                     Section {
                                         ForEach(section.documents) { document in
                                             Button {
@@ -450,12 +449,16 @@ struct LibraryView: View {
                                             .buttonStyle(PressScale())
                                             .id(LibraryCardRenderIdentity(documentId: document.id,
                                                                           category: document.category,
-                                                                          selecting: selecting))
+                                                                          selecting: selecting,
+                                                                          comics: LibrarySections.isComics(document, marks: model.comicMarks)))
                                             // La catégorie appartient à l'état courant de la bibliothèque. En la
                                             // dessinant au-dessus du bouton, elle n'est plus retenue dans l'ancien
                                             // rendu interne de la carte après l'import.
                                             .overlay(alignment: .topLeading) {
-                                                if let category = document.category {
+                                                if LibrarySections.isComics(document, marks: model.comicMarks) {
+                                                    // Format fixe pour un .cbz ; simple rangement pour un PDF.
+                                                    comicsMark(archive: document.isComicArchive).allowsHitTesting(false)
+                                                } else if let category = document.category {
                                                     categoryMark(category).allowsHitTesting(false)
                                                 }
                                             }
@@ -472,7 +475,7 @@ struct LibraryView: View {
                                         }
                                     } header: {
                                         HStack(alignment: .firstTextBaseline, spacing: 8) {
-                                            AtelierLabel(section.title, tint: section.category == .textbook ? Atelier.Tint.read
+                                            AtelierLabel(section.title, tint: section.isComics ? Atelier.Tint.japanese : section.category == .textbook ? Atelier.Tint.read
                                                          : section.category == .book ? Atelier.Tint.annotate : Atelier.textTertiary)
                                             Text("\(section.documents.count)").font(Atelier.mono).foregroundStyle(Atelier.textTertiary)
                                             Spacer()
@@ -510,20 +513,19 @@ struct LibraryView: View {
 
     /// Pastille Livre/Manuel, rendue par la grille depuis la catégorie publiée la plus récente.
     private func categoryMark(_ category: DocumentCategory) -> some View {
-        // Comics : lecture d'immersion encore à l'essai, et dit comme tel sur la carte.
-        Text(category == .comics ? String(localized: "Comics · expérimental") : category.title).font(Atelier.font(11, weight: .semibold))
+        Text(category.title).font(Atelier.font(11, weight: .semibold))
             .padding(.horizontal, 8).padding(.vertical, 4)
             .foregroundStyle(Atelier.onAccentInk.opacity(0.8))
-            .background(categoryTint(category), in: Capsule())
+            .background(category == .textbook ? Atelier.Tint.read : Atelier.Tint.annotate, in: Capsule())
             .padding(8)
     }
 
-    private func categoryTint(_ category: DocumentCategory) -> Color {
-        switch category {
-        case .textbook: return Atelier.Tint.read
-        case .book: return Atelier.Tint.annotate
-        case .comics: return Atelier.Tint.japanese
-        }
+    private func comicsMark(archive: Bool) -> some View {
+        Text(archive ? String(localized: "Comics · expérimental") : String(localized: "Comics")).font(Atelier.font(11, weight: .semibold))
+            .padding(.horizontal, 8).padding(.vertical, 4)
+            .foregroundStyle(Atelier.onAccentInk.opacity(0.8))
+            .background(Atelier.Tint.japanese, in: Capsule())
+            .padding(8)
     }
 
     /// Case de sélection sur la couverture.
@@ -573,7 +575,9 @@ struct LibraryView: View {
     @ViewBuilder
     private func menu(for document: LibraryDocument) -> some View {
         Button { model.openDocumentId = document.id } label: { Label("Ouvrir", systemImage: "book") }
-        if (Qwen3VLReader().isAvailable || ModelStore.shared.isInstalled(.qwen35chat4b)),
+        if !document.capabilities.study {
+            // Lecture visuelle : ni chat ni mention de lecture IA.
+        } else if (Qwen3VLReader().isAvailable || ModelStore.shared.isInstalled(.qwen35chat4b)),
            DocumentKnowledge.isReady(document) {
             Button {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { chatDocument = document }
@@ -586,18 +590,16 @@ struct LibraryView: View {
             newTitle = document.title
             renaming = document
         } label: { Label("Renommer", systemImage: "pencil") }
-        Picker(selection: Binding(get: { document.category }, set: { model.setCategory(document.id, $0) })) {
-            ForEach(DocumentCategory.allCases, id: \.self) { Text($0.title).tag(DocumentCategory?.some($0)) }
-            Text("Non classé").tag(DocumentCategory?.none)
-        } label: {
-            Label("Catégorie", systemImage: "tag")
+        if document.capabilities.editableShelf {
+            shelfPicker(for: document)
         }
-        .pickerStyle(.menu)
-        Button {
-            pageOneText = String(document.firstPageIndex + 1)
-            settingPageOne = document
-        } label: { Label("Définir la page 1…", systemImage: "1.circle") }
-        if !document.isComic {
+        if document.capabilities.pageEditing {
+            Button {
+                pageOneText = String(document.firstPageIndex + 1)
+                settingPageOne = document
+            } label: { Label("Définir la page 1…", systemImage: "1.circle") }
+        }
+        if document.capabilities.study {
             Button {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { analyzing = document }
             } label: {
@@ -608,19 +610,51 @@ struct LibraryView: View {
                 }
             }
         }
-        Button {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { addingPages = document }
-        } label: { Label("Ajouter des pages…", systemImage: "doc.badge.plus") }
-        Button {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { editingPages = PageEditTarget(document: document, page: nil) }
-        } label: { Label("Supprimer des pages…", systemImage: "doc.badge.minus") }
-        Button {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { exporting = document }
-        } label: { Label("Exporter…", systemImage: "square.and.arrow.up") }
+        if document.capabilities.pageEditing {
+            Button {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { addingPages = document }
+            } label: { Label("Ajouter des pages…", systemImage: "doc.badge.plus") }
+            Button {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { editingPages = PageEditTarget(document: document, page: nil) }
+            } label: { Label("Supprimer des pages…", systemImage: "doc.badge.minus") }
+        }
+        if document.capabilities.export {
+            Button {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { exporting = document }
+            } label: { Label("Exporter…", systemImage: "square.and.arrow.up") }
+        }
         Button(role: .destructive) {
             // Le menu d'appui long doit finir de se fermer, sinon iOS ignore la fenêtre de confirmation.
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { deleting = document }
         } label: { Label("Supprimer", systemImage: "trash") }
+    }
+
+    /// Classement libre. « Comics » est un rangement, pas un format : le PDF garde l'OCR et l'étude.
+    private func shelfPicker(for document: LibraryDocument) -> some View {
+        let comics = model.comicMarks.contains(document.id)
+        return Menu {
+            ForEach(DocumentCategory.allCases, id: \.self) { category in
+                Button {
+                    model.setComicMark(document.id, false)
+                    model.setCategory(document.id, category)
+                } label: { shelfLabel(category.title, on: !comics && document.category == category) }
+            }
+            Button {
+                model.setComicMark(document.id, true)
+                model.setCategory(document.id, nil)
+            } label: { shelfLabel(String(localized: "Comics"), on: comics) }
+            Button {
+                model.setComicMark(document.id, false)
+                model.setCategory(document.id, nil)
+            } label: { shelfLabel(String(localized: "Non classé"), on: !comics && document.category == nil) }
+        } label: {
+            Label("Catégorie", systemImage: "tag")
+        }
+    }
+
+    @ViewBuilder
+    private func shelfLabel(_ title: String, on: Bool) -> some View {
+        if on { Label(title, systemImage: "checkmark") } else { Text(title) }
     }
 
     private var emptyState: some View {

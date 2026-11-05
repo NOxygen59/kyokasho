@@ -117,20 +117,40 @@ public enum OCRLayout {
         return items.enumerated().sorted { ($0.element.order, $0.offset) < ($1.element.order, $1.offset) }.map(\.element.block)
     }
 
-    /// Colonnes d'une page verticale dans l'ordre de lecture : parties de haut en bas, colonnes de droite à gauche dans
-    /// chacune. Sans dépendre de l'ordre rendu par le moteur.
+    /// Colonnes d'une page verticale dans l'ordre de lecture, sans dépendre de l'ordre du moteur : les lignes voisines
+    /// forment des blocs, les blocs à la même hauteur une bande. Bandes de haut en bas, blocs de droite à gauche.
     public static func verticalReadingOrder(_ page: OCRPage) -> [OCRLine] {
-        var sections: [[OCRLine]] = []
-        for line in page.lines {
-            let joined = sections.indices.filter { i in sections[i].contains { sameBlock($0, line) } }
-            var merged = joined.flatMap { sections[$0] } + [line]
-            merged = sorted(merged)
-            for i in joined.reversed() { sections.remove(at: i) }
-            sections.append(merged)
+        let lines = page.lines
+        var parent = Array(lines.indices)
+        func root(_ i: Int) -> Int {
+            var i = i
+            while parent[i] != i { parent[i] = parent[parent[i]]; i = parent[i] }
+            return i
         }
-        return sections
-            .sorted { a, b in (a.map(\.box.y).min() ?? 0) < (b.map(\.box.y).min() ?? 0) }
-            .flatMap { $0 }
+        for i in lines.indices {
+            for j in lines.indices.dropFirst(i + 1) where sameBlock(lines[i], lines[j]) {
+                let a = root(i), b = root(j)
+                if a != b { parent[b] = a }
+            }
+        }
+        var groups: [Int: [OCRLine]] = [:]
+        for i in lines.indices { groups[root(i), default: []].append(lines[i]) }
+        struct Section { let lines: [OCRLine]; let top: Double; let bottom: Double; let right: Double }
+        let sections = groups.values.map { group in
+            Section(lines: sorted(group), top: group.map(\.box.y).min() ?? 0,
+                    bottom: group.map { $0.box.y + $0.box.h }.max() ?? 0, right: group.map { $0.box.x + $0.box.w }.max() ?? 0)
+        }.sorted { ($0.top, -$0.right) < ($1.top, -$1.right) }
+        var bands: [(bottom: Double, top: Double, sections: [Section])] = []
+        for section in sections {
+            if let last = bands.indices.last,
+               overlap(bands[last].top, bands[last].bottom, section.top, section.bottom) > 0.5 * min(bands[last].bottom - bands[last].top, section.bottom - section.top) {
+                bands[last].sections.append(section)
+                bands[last].bottom = max(bands[last].bottom, section.bottom)
+            } else {
+                bands.append((section.bottom, section.top, [section]))
+            }
+        }
+        return bands.flatMap { $0.sections.sorted { $0.right > $1.right }.flatMap(\.lines) }
     }
 
     public static func markdown(_ page: OCRPage) -> String {

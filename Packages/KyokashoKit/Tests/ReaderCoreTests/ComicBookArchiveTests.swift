@@ -73,7 +73,7 @@ final class ComicBookArchiveTests: XCTestCase {
         XCTAssertThrowsError(try ComicBookArchive.makePDF(from: source, to: folder.appendingPathComponent("sortie.pdf")))
     }
 
-    func testImportIsAComicReadRightToLeftAndNotDuplicated() throws {
+    func testImportIsAVisualReadingDocumentAndNotDuplicated() throws {
         let database = try AppDatabase.inMemory()
         let importer = DocumentImporter(storage: DocumentStorage(root: folder.appendingPathComponent("Docs")), database: database)
         let source = try archive([("1.jpg", try image(width: 30))])
@@ -81,12 +81,74 @@ final class ComicBookArchiveTests: XCTestCase {
         XCTAssertTrue(first.isNew)
         XCTAssertEqual(first.document.title, "tome")
         XCTAssertEqual(first.document.pageCount, 1)
-        XCTAssertTrue(first.document.isComic)
-        XCTAssertEqual(first.document.settingsOverride.direction, .rightToLeft)
-        let saved = try XCTUnwrap(database.document(id: first.document.id))
-        XCTAssertEqual(saved.category, .comics)
+        XCTAssertTrue(first.document.isComicArchive)
+        let settings = first.document.settingsOverride
+        XCTAssertEqual(settings.layout, .auto, "une page en portrait, deux en paysage, quels que soient les réglages généraux")
+        XCTAssertEqual(settings.splitWidePages, false, "planches larges intactes")
+        XCTAssertEqual(settings.direction, .rightToLeft)
         let second = try importer.importComicArchive(at: source)
         XCTAssertFalse(second.isNew)
         XCTAssertEqual(second.document.id, first.document.id)
+    }
+
+    /// Revue Codex de 2b55bd9 : la colonne `category` reste lisible par 1.4.5, où une valeur inconnue viderait la bibliothèque.
+    func testComicIsStoredWithACategoryOldVersionsCanRead() throws {
+        let database = try AppDatabase.inMemory()
+        let importer = DocumentImporter(storage: DocumentStorage(root: folder.appendingPathComponent("Docs")), database: database)
+        let document = try importer.importComicArchive(at: try archive([("1.jpg", try image(width: 30))])).document
+        let stored = try database.writer.read { db in
+            try String.fetchOne(db, sql: "SELECT category FROM document WHERE id = ?", arguments: [document.id])
+        }
+        XCTAssertNil(stored)
+        XCTAssertEqual(Set(DocumentCategory.allCases.map(\.rawValue)), ["book", "textbook"])
+    }
+
+    func testCapabilitiesComeFromTheFormatNotTheShelf() {
+        var comic = LibraryDocument(id: "a", title: "t", originalFileName: "tome.CBZ", pageCount: 1, fileSize: 1)
+        comic.category = .book
+        for capabilities in [comic.capabilities] {
+            XCTAssertFalse(capabilities.textAnalysis || capabilities.study || capabilities.annotations
+                           || capabilities.pageEditing || capabilities.export || capabilities.editableShelf)
+        }
+        let manga = LibraryDocument(id: "b", title: "t", originalFileName: "manga.pdf", pageCount: 1, fileSize: 1)
+        XCTAssertTrue(manga.capabilities.textAnalysis, "un PDF rangé dans Comics garde l'OCR")
+        XCTAssertTrue(LibrarySections.isComics(manga, marks: ["b"]))
+        XCTAssertTrue(LibrarySections.isComics(comic, marks: []), "un CBZ reste un comics, même marqué autrement")
+    }
+
+    func testComicsSectionComesBeforeUnclassified() {
+        let comic = LibraryDocument(id: "a", title: "t", originalFileName: "x.cbz", pageCount: 1, fileSize: 1)
+        let loose = LibraryDocument(id: "b", title: "t", originalFileName: "y.pdf", pageCount: 1, fileSize: 1)
+        var book = LibraryDocument(id: "c", title: "t", originalFileName: "z.pdf", pageCount: 1, fileSize: 1)
+        book.category = .book
+        let sections = LibrarySections.group([comic, loose, book])
+        XCTAssertEqual(sections.map(\.documents.first?.id), ["c", "a", "b"])
+        XCTAssertEqual(sections.map(\.isComics), [false, true, false])
+    }
+
+    /// Revue Codex de 2b55bd9 : une image immense n'est pas décodée entière.
+    func testOversizedPageIsReduced() throws {
+        let side = ComicBookArchive.maximumPageSide + 400
+        let source = try archive([("1.png", try image(width: side, height: 40, type: .png))])
+        let output = folder.appendingPathComponent("sortie.pdf")
+        _ = try ComicBookArchive.makePDF(from: source, to: output)
+        let box = try XCTUnwrap(CGPDFDocument(output as CFURL)?.page(at: 1)?.getBoxRect(.mediaBox))
+        XCTAssertEqual(Int(box.width), ComicBookArchive.maximumPageSide)
+    }
+
+    /// Revue Codex de 2b55bd9 : orientations EXIF appliquées (de 5 à 8, largeur et hauteur s'échangent).
+    func testExifOrientationsAreApplied() throws {
+        for orientation in 1...8 {
+            let pixels = try image(width: 40, height: 20)
+            let source = try XCTUnwrap(CGImageSourceCreateWithData(pixels as CFData, nil))
+            let data = NSMutableData()
+            let destination = try XCTUnwrap(CGImageDestinationCreateWithData(data, UTType.jpeg.identifier as CFString, 1, nil))
+            CGImageDestinationAddImageFromSource(destination, source, 0, [kCGImagePropertyOrientation: orientation] as CFDictionary)
+            XCTAssertTrue(CGImageDestinationFinalize(destination))
+            let output = folder.appendingPathComponent("o\(orientation).pdf")
+            _ = try ComicBookArchive.makePDF(from: try archive([("1.jpg", data as Data)], name: "o\(orientation).cbz"), to: output)
+            let box = try XCTUnwrap(CGPDFDocument(output as CFURL)?.page(at: 1)?.getBoxRect(.mediaBox))
+            XCTAssertEqual(box.size, orientation >= 5 ? CGSize(width: 20, height: 40) : CGSize(width: 40, height: 20), "orientation \(orientation)")
+        }
     }
 }

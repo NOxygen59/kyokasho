@@ -116,6 +116,7 @@ final class DocumentAnalysisService: ObservableObject {
     }
 
     func start(_ document: LibraryDocument, model: AppModel, options: Options? = nil) {
+        guard document.capabilities.study else { return }
         guard progress == nil, !PageShift.isBusy(document.id), !LibraryBackupService.inProgress else { return }
         lastError = nil
         let id = document.id
@@ -350,6 +351,7 @@ final class DocumentAnalysisService: ObservableObject {
     /// Accepte les différences déjà lues par Ovis sur tout le livre, sans lancer de nouvelle IA.
     /// Les corrections manuelles et les lignes mathématiques restent intactes.
     func applyOvisToDocument(_ document: LibraryDocument, model: AppModel) {
+        guard document.capabilities.study else { return }
         guard progress == nil else { return }
         let id = document.id
         let url = model.storage.url(for: id)

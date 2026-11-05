@@ -749,6 +749,28 @@
         }
       }
     },
+    "%@ : %lld page(s) illisible(s) ou trop lourde(s) ignorée(s).": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@: %2$lld unreadable or oversized page(s) skipped."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ : %lld page(s) illisible(s) ou trop lourde(s) ignorée(s)."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@：已跳过 %2$lld 个无法读取或过大的页面。"
+          }
+        }
+      }
+    },
     "%@ : elles ne pourront plus être restaurées. Leurs cartes de révision sont gardées, sans page.": {
       "localizations": {
         "en": {
@@ -2747,6 +2769,50 @@
           "stringUnit": {
             "state": "translated",
             "value": "AGPL-3.0（OpenDataLab）— ONNX 转换：RapidAI/RapidLayout"
+          }
+        }
+      }
+    },
+    "Abandonner": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Discard"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abandonner"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "放弃"
+          }
+        }
+      }
+    },
+    "Abandonner les modifications ?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Discard changes?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abandonner les modifications ?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "放弃更改？"
           }
         }
       }
@@ -13333,28 +13399,6 @@
         }
       }
     },
-    "Documents ouverts": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Open documents"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Documents ouverts"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已打开的文档"
-          }
-        }
-      }
-    },
     "Donne 5 mots du bâtiment en japonais": {
       "localizations": {
         "en": {
@@ -20615,6 +20659,28 @@
         }
       }
     },
+    "La bibliothèque n'a pas pu être lue. Tes documents restent sur l'iPad : réinstalle la dernière version de l'app.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The library could not be read. Your documents are still on the iPad: reinstall the latest version of the app."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La bibliothèque n'a pas pu être lue. Tes documents restent sur l'iPad : réinstalle la dernière version de l'app."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法读取资料库。文档仍保留在 iPad 上：请重新安装最新版本的应用。"
+          }
+        }
+      }
+    },
     "La copie de ces pages n'existe plus : restauration impossible.": {
       "localizations": {
         "en": {
@@ -22019,6 +22085,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "图片的准确文本。空格和换行不计入错误。"
+          }
+        }
+      }
+    },
+    "Le texte que tu viens de corriger ne sera pas enregistré.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The text you just corrected will not be saved."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le texte que tu viens de corriger ne sera pas enregistré."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "刚才更正的文本将不会保存。"
           }
         }
       }
@@ -27171,6 +27259,28 @@
         }
       }
     },
+    "Onglets ouverts": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open tabs"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Onglets ouverts"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已打开的标签页"
+          }
+        }
+      }
+    },
     "Only a single image is allowed for this operation.": {
       "localizations": {
         "en": {
@@ -30269,6 +30379,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "与我共享"
+          }
+        }
+      }
+    },
+    "Pas assez d'espace libre pour convertir ce fichier CBZ.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not enough free space to convert this CBZ file."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pas assez d'espace libre pour convertir ce fichier CBZ."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可用空间不足，无法转换此 CBZ 文件。"
           }
         }
       }
