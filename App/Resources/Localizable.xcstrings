@@ -2949,6 +2949,28 @@
         }
       }
     },
+    "Accueil : les onglets ouverts sont listés, avec une croix pour les fermer.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Home: open tabs are listed, with a cross to close them."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accueil : les onglets ouverts sont listés, avec une croix pour les fermer."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "主页：列出已打开的标签页，并可点按叉号关闭。"
+          }
+        }
+      }
+    },
     "Accueil en sections Manuels et Livres, question « Livre ou manuel ? » à l'import, suppression de plusieurs documents.": {
       "localizations": {
         "en": {
@@ -5145,6 +5167,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "学习"
+          }
+        }
+      }
+    },
+    "Appui long sur un document : choisir Manuel, Livre, Comics ou Non classé.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Long press a document: choose Textbook, Book, Comics or Unclassified."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Appui long sur un document : choisir Manuel, Livre, Comics ou Non classé."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "长按文档：可选择教材、书籍、漫画或未分类。"
           }
         }
       }
@@ -9967,6 +10011,50 @@
         }
       }
     },
+    "Comics .cbz, à titre expérimental : lecture des images seules, sans OCR ni IA.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": ".cbz comics, as an experiment: images only, without OCR or AI."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comics .cbz, à titre expérimental : lecture des images seules, sans OCR ni IA."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": ".cbz 漫画（实验功能）：仅显示图片，不含 OCR 和 AI。"
+          }
+        }
+      }
+    },
+    "Comics expérimentaux et accueil plus pratique": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Experimental comics and a handier home screen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comics expérimentaux et accueil plus pratique"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "实验性漫画与更便捷的主页"
+          }
+        }
+      }
+    },
     "Comics · expérimental": {
       "localizations": {
         "en": {
@@ -12735,6 +12823,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "词典"
+          }
+        }
+      }
+    },
+    "Dictionnaire : les furigana sont lisibles sur les thèmes clairs.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dictionary: furigana are readable on light themes."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dictionnaire : les furigana sont lisibles sur les thèmes clairs."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "词典：浅色主题下注音清晰可读。"
           }
         }
       }
@@ -15903,6 +16013,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "学习窗口、笔记和词典：在硬阴影样式下，文字不再重影。"
+          }
+        }
+      }
+    },
+    "Fenêtre de correction : elle reste ouverte quand l'iPad tourne ou que le clavier apparaît, et demande confirmation avant de perdre une saisie.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Correction window: it stays open when the iPad rotates or the keyboard appears, and asks before losing your input."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fenêtre de correction : elle reste ouverte quand l'iPad tourne ou que le clavier apparaît, et demande confirmation avant de perdre une saisie."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更正窗口：旋转 iPad 或键盘出现时保持打开，丢弃输入前会先确认。"
           }
         }
       }
@@ -21143,6 +21275,28 @@
         }
       }
     },
+    "Langue : le bouton de relance n'apparaît que s'il sert.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Language: the relaunch button only appears when needed."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Langue : le bouton de relance n'apparaît que s'il sert."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "语言：仅在需要时显示重新启动按钮。"
+          }
+        }
+      }
+    },
     "Langue ciblée": {
       "localizations": {
         "en": {
@@ -23713,6 +23867,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "书籍"
+          }
+        }
+      }
+    },
+    "Livres verticaux : les colonnes de deux parties d'une page ne se mélangent plus.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vertical books: columns from two parts of a page no longer get mixed."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Livres verticaux : les colonnes de deux parties d'une page ne se mélangent plus."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "竖排书籍：同一页两部分的文字列不再混排。"
           }
         }
       }

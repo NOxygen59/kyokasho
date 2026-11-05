@@ -78,10 +78,15 @@ public struct ReleaseNotes: Equatable, Sendable, Identifiable {
 
     /// La version en cours de préparation : seulement ce qu'elle change (décision de NOxygen59 du 04/11/2026). C'est
     /// elle que montre la fenêtre « Nouveautés » ; les versions précédentes vont dans `ReleaseHistory`.
-    public static let current = ReleaseNotes("1.4.5", "2026-11-05", published: false, String(localized: "Lecteur allégé et huit univers", bundle: .main), added: [
-            String(localized: "Thèmes : huit univers très différents, avec un aperçu complet. Les palettes se choisissent à part et gardent leur motif.", bundle: .main),
+    public static let current = ReleaseNotes("1.4.6", "2026-11-05", published: false, String(localized: "Comics expérimentaux et accueil plus pratique", bundle: .main), added: [
+            String(localized: "Comics .cbz, à titre expérimental : lecture des images seules, sans OCR ni IA.", bundle: .main),
+            String(localized: "Accueil : les onglets ouverts sont listés, avec une croix pour les fermer.", bundle: .main),
+            String(localized: "Appui long sur un document : choisir Manuel, Livre, Comics ou Non classé.", bundle: .main),
         ], fixed: [
-            String(localized: "Lecteur : les furigana se dessinent sans refaire tout le calcul, et une page déjà vue n'est pas recalculée.", bundle: .main),
+            String(localized: "Fenêtre de correction : elle reste ouverte quand l'iPad tourne ou que le clavier apparaît, et demande confirmation avant de perdre une saisie.", bundle: .main),
+            String(localized: "Dictionnaire : les furigana sont lisibles sur les thèmes clairs.", bundle: .main),
+            String(localized: "Livres verticaux : les colonnes de deux parties d'une page ne se mélangent plus.", bundle: .main),
+            String(localized: "Langue : le bouton de relance n'apparaît que s'il sert.", bundle: .main),
         ])
 
     /// Notes de `version` (« 1.3.2 », sans le numéro de build) : la version elle-même, jamais une build de test.

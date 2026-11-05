@@ -10,6 +10,11 @@ import Foundation
 enum ReleaseHistory {
     static let past: [ReleaseNotes] = [
         // Candidates locales non publiées.
+        ReleaseNotes("1.4.5", "2026-11-05", published: false, String(localized: "Lecteur allégé et huit univers", bundle: .main), added: [
+            String(localized: "Thèmes : huit univers très différents, avec un aperçu complet. Les palettes se choisissent à part et gardent leur motif.", bundle: .main),
+        ], fixed: [
+            String(localized: "Lecteur : les furigana se dessinent sans refaire tout le calcul, et une page déjà vue n'est pas recalculée.", bundle: .main),
+        ]),
         ReleaseNotes("1.4.4", "2026-11-05", published: false, String(localized: "Pages avec texte OCR allégées", bundle: .main), added: [], fixed: [
             String(localized: "Pages avec texte OCR : les mots déjà cherchés ne sont plus recalculés.", bundle: .main),
             String(localized: "Changement de page ou fermeture d'un manuel : les calculs de furigana en cours s'arrêtent.", bundle: .main),
