@@ -130,6 +130,9 @@ struct ReaderScreen: View {
                         chrome(filmstripTrailing: FilmstripLayout.trailingInset(
                             portraitPanelShown: docked == .study && !landscape, panelWidth: panelWidth, gap: Atelier.gap))
                             .transition(.opacity)
+                    } else {
+                        restoreBarsButton
+                            .transition(.opacity)
                     }
                     if let request = reader.lookupRequest {
                         GeometryReader { area in
@@ -259,7 +262,7 @@ struct ReaderScreen: View {
             }
             reader.load()
             ReaderArrowKeys.shared.webOpen = side == .web
-            ReadingTimeTracker.shared.readerOpened(documentId: reader.document.id)
+            ReadingTimeTracker.shared.readerOpened(document: reader.document)
         }
         .onDisappear {
             reader.close()
@@ -334,6 +337,22 @@ struct ReaderScreen: View {
     }
 
     // MARK: Chrome flottant
+
+    /// Toute petite flèche, toujours là quand les barres sont cachées : un chemin de retour qui ne dépend d'aucun geste
+    /// sur la page (recette iPad 1.4.7). Discrète à l'œil, mais assez grande au doigt ; le reste de l'écran reste à PDFKit.
+    private var restoreBarsButton: some View {
+        Button { reader.barsVisible = true } label: {
+            Image(systemName: "chevron.down").font(Atelier.font(11, weight: .bold))
+                .frame(width: 24, height: 24)
+                .foregroundStyle(Atelier.textPrimary.opacity(0.75))
+                .background(Atelier.surfaceHigh.opacity(0.65), in: Circle())
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(PressScale())
+        .accessibilityLabel("Afficher les barres")
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+    }
 
     private func chrome(filmstripTrailing: CGFloat) -> some View {
         VStack(spacing: 0) {

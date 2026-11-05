@@ -89,7 +89,11 @@ extension ReaderController {
         currentIndex = index
         updateCurrentSourcePage()
         if changed, lookupRequest != nil { endLookup() }
-        if changed, !rebuilding, settings.hideBarsOnScroll, barsVisible { barsVisible = false }
+        if ReaderBarsPolicy.hidesOnPageChange(pageChanged: changed, rebuilding: rebuilding, hideOnTurn: settings.hideBarsOnScroll,
+                                              barsVisible: barsVisible,
+                                              secondsSinceBarsChanged: ProcessInfo.processInfo.systemUptime - barsChangedAt) {
+            barsVisible = false
+        }
         scheduleSavePosition()
         // Glisser ou zoomer dans la même page : la page de travail reste (le panneau ne revient pas en haut).
         schedulePageSettled(samePageKeeps: true)
@@ -310,11 +314,21 @@ extension ReaderController {
 
     @objc func handleTap(_ gesture: UITapGestureRecognizer) {
         // Un appui long sert à sélectionner du texte (PDFKit) : ce n'est pas un tap.
-        guard !pressWasLong else { return }
+        guard !pressWasLong else {
+            Diagnostics.log("toucher ignoré : suit un appui long", "gestes")
+            return
+        }
         let point = gesture.location(in: pdfView)
         if hasSelection {
+            // Le drapeau peut être périmé (document reconstruit : PDFKit n'annonce pas toujours la fin de la sélection).
+            // Remis à zéro ici, sinon chaque toucher suivant serait avalé et les barres ne reviendraient plus.
+            let visible = ReaderBarsPolicy.isVisibleSelection(pdfView.currentSelection?.string)
             pdfView.clearSelection()
-            return
+            hasSelection = false
+            if visible {
+                Diagnostics.log("toucher : efface la sélection", "gestes")
+                return
+            }
         }
         // Note en attente d'ancre : ce toucher la pose (sur le mot touché s'il y en a un).
         if let note = placingAnchorFor {
@@ -323,11 +337,21 @@ extension ReaderController {
             return
         }
         if lookupMode {
-            Task { await lookup(at: point) }
+            // Sans cette reprise, les barres cachées en tournant la page ne revenaient plus dans ce mode.
+            let popupWasOpen = lookupRequest != nil
+            Task { [weak self] in
+                guard let self else { return }
+                await self.lookup(at: point)
+                guard !self.closed, ReaderBarsPolicy.togglesAfterLookup(popupWasOpen: popupWasOpen,
+                                                                        popupIsOpen: self.lookupRequest != nil) else { return }
+                Diagnostics.log("toucher sans mot : barres \(self.barsVisible ? "cachées" : "affichées")", "gestes")
+                self.barsVisible.toggle()
+            }
             return
         }
         // Popup ouvert par le survol : un clic ailleurs le ferme (sans tourner la page).
         if lookupRequest != nil {
+            Diagnostics.log("toucher : ferme le dictionnaire", "gestes")
             endLookup()
             return
         }
@@ -346,6 +370,7 @@ extension ReaderController {
             }
         }
         // Un tap ne tourne plus la page (glisser au doigt, flèches ou ← → au clavier) : il montre / cache les barres.
+        Diagnostics.log("toucher : barres \(barsVisible ? "cachées" : "affichées")", "gestes")
         barsVisible.toggle()
     }
 

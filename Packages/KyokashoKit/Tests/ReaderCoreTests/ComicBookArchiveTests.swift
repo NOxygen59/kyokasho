@@ -166,6 +166,48 @@ final class ComicBookArchiveTests: XCTestCase {
         XCTAssertEqual(order.map(\.title), ["Tome 2", "Tome 10"])
     }
 
+    /// Revue Codex de 291c02f : la dernière écriture peut franchir la réserve, sans page suivante pour le voir.
+    func testReserveCrossedByLastWriteFailsWithoutLeavingFile() throws {
+        let source = try archive([("1.jpg", try image(width: 30)), ("2.jpg", try image(width: 40))])
+        let output = folder.appendingPathComponent("sortie.pdf")
+        var calls = 0
+        _ = try ComicBookArchive.makePDF(from: source, to: output) { _ in calls += 1; return .max }
+        try FileManager.default.removeItem(at: output)
+
+        var call = 0
+        XCTAssertThrowsError(try ComicBookArchive.makePDF(from: source, to: output) { _ in
+            call += 1
+            return call == calls ? ComicBookArchive.minimumFreeBytes - 1 : .max
+        })
+        XCTAssertEqual(call, calls)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: output.path))
+    }
+
+    /// Au-dessus de la réserve, mais pas assez pour la page à écrire : refus avant d'écrire.
+    func testRoomMustCoverNextPage() throws {
+        let directory = folder!
+        XCTAssertNoThrow(try ComicBookArchive.ensureRoom(in: directory) { _ in ComicBookArchive.minimumFreeBytes })
+        XCTAssertThrowsError(try ComicBookArchive.ensureRoom(in: directory, forNext: 2) { _ in ComicBookArchive.minimumFreeBytes + 1 })
+        XCTAssertNoThrow(try ComicBookArchive.ensureRoom(in: directory, forNext: 2) { _ in ComicBookArchive.minimumFreeBytes + 2 })
+    }
+
+    func testRewriteReserveCrossedAtCloseFailsWithoutLeavingFile() throws {
+        let source = try archive([("1.jpg", try image(width: 30))])
+        let pdf = folder.appendingPathComponent("source.pdf")
+        _ = try ComicBookArchive.makePDF(from: source, to: pdf)
+        let output = folder.appendingPathComponent("copie.pdf")
+        var calls = 0
+        try ComicBookArchive.rewritePDF(pdf, to: output, title: "T") { _ in calls += 1; return .max }
+        try FileManager.default.removeItem(at: output)
+
+        var call = 0
+        XCTAssertThrowsError(try ComicBookArchive.rewritePDF(pdf, to: output, title: "T") { _ in
+            call += 1
+            return call == calls ? 0 : .max
+        })
+        XCTAssertFalse(FileManager.default.fileExists(atPath: output.path))
+    }
+
     /// Revue Codex de 2b55bd9 : une image immense n'est pas décodée entière.
     func testOversizedPageIsReduced() throws {
         let side = ComicBookArchive.maximumPageSide + 400

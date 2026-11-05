@@ -24,7 +24,11 @@ final class ReaderController: NSObject, ObservableObject {
     @Published var pdf: PDFDocument?
     @Published private(set) var presented: [PresentedPage] = []
     @Published var currentIndex = 0
-    @Published var barsVisible = true
+    @Published var barsVisible = true {
+        didSet { barsChangedAt = ProcessInfo.processInfo.systemUptime }
+    }
+    /// Dernier changement des barres : voir `ReaderBarsPolicy.settleDelay`.
+    var barsChangedAt: TimeInterval = 0
     @Published var isDrawing = false
     @Published var hasSelection = false
     @Published var bookmarks: [Bookmark] = []
@@ -854,8 +858,7 @@ final class ReaderController: NSObject, ObservableObject {
         observers.append(center.addObserver(forName: .PDFViewSelectionChanged, object: pdfView, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated {
                 guard let self else { return }
-                let text = self.pdfView.currentSelection?.string ?? ""
-                self.hasSelection = !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                self.hasSelection = ReaderBarsPolicy.isVisibleSelection(self.pdfView.currentSelection?.string)
             }
         })
         // Corrections depuis l'analyse : elles ne passent pas par AITaskCenter.finished.

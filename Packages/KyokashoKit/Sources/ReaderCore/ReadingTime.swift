@@ -45,20 +45,64 @@ public struct ReadingClock: Equatable, Sendable {
     }
 }
 
+/// Rangement d'une séance au moment où elle a lieu : mettre un manga à la corbeille, l'effacer ou le déplacer plus tard
+/// ne doit pas faire changer de case le temps déjà lu.
+public enum ReadingScope: String, Codable, Sendable {
+    case manga, textbook, book, unclassified
+
+    public init(document: LibraryDocument) {
+        if document.isInMangaSpace {
+            self = .manga
+        } else {
+            switch document.category {
+            case .textbook: self = .textbook
+            case .book: self = .book
+            case nil: self = .unclassified
+            }
+        }
+    }
+}
+
+/// Temps par espace, d'après le journal et la séance en cours. Une seule source pour l'accueil : Manga et le reste
+/// forment toujours le total.
+public struct ReadingBreakdown: Equatable, Sendable {
+    public var manga: TimeInterval = 0
+    public var textbook: TimeInterval = 0
+    public var book: TimeInterval = 0
+
+    public init() {}
+
+    /// Livres & Manuels : tout ce qui n'est pas Manga. Le total inclut le temps d'avant le journal et les séances trop
+    /// courtes pour y figurer.
+    public func study(total: TimeInterval) -> TimeInterval { max(0, total - manga) }
+
+    mutating func add(_ seconds: TimeInterval, to scope: ReadingScope?) {
+        switch scope {
+        case .manga: manga += seconds
+        case .textbook: textbook += seconds
+        case .book: book += seconds
+        case .unclassified, nil: break
+        }
+    }
+}
+
 /// Une séance de lecture active : début, durée et document (journal des séances, préalable au tableau de bord).
 public struct ReadingSession: Codable, Equatable, Sendable {
     public var start: Date
     public var seconds: Int
     /// Vide une fois le document supprimé : le temps reste compté dans ses jours, sans lien avec le livre.
     public var documentId: String
+    /// `nil` : séance d'avant cette version. Clé ignorée par les anciennes versions, sans dommage pour le journal.
+    public var scope: ReadingScope?
 
-    public init(start: Date, seconds: Int, documentId: String) {
+    public init(start: Date, seconds: Int, documentId: String, scope: ReadingScope? = nil) {
         self.start = start
         self.seconds = seconds
         self.documentId = documentId
+        self.scope = scope
     }
 
-    private enum CodingKeys: String, CodingKey { case start = "s", seconds = "d", documentId = "id" }
+    private enum CodingKeys: String, CodingKey { case start = "s", seconds = "d", documentId = "id", scope = "c" }
 }
 
 /// Journal des séances de lecture active : l'historique dont le futur tableau de bord aura besoin (fréquences par
@@ -74,10 +118,10 @@ public struct ReadingSessionLog: Equatable, Sendable {
     public init(sessions: [ReadingSession] = []) { self.sessions = sessions }
 
     /// Ajoute la séance `start…end`, durée bornée comme ``ReadingClock`` ; rien sous ``minSeconds``.
-    public mutating func record(documentId: String, start: Date, end: Date) {
+    public mutating func record(documentId: String, start: Date, end: Date, scope: ReadingScope? = nil) {
         let seconds = Int(min(max(0, end.timeIntervalSince(start)), ReadingClock.maxSession))
         guard seconds >= Self.minSeconds else { return }
-        sessions.append(ReadingSession(start: start, seconds: seconds, documentId: documentId))
+        sessions.append(ReadingSession(start: start, seconds: seconds, documentId: documentId, scope: scope))
         if sessions.count > Self.maxEntries { sessions.removeFirst(sessions.count - Self.maxEntries) }
     }
 
@@ -87,6 +131,18 @@ public struct ReadingSessionLog: Equatable, Sendable {
         for index in sessions.indices where sessions[index].documentId == documentId {
             sessions[index].documentId = ""
         }
+    }
+
+    /// Ventilation du temps lu. `current` range les séances d'avant cette version, sans rangement enregistré, d'après
+    /// l'état actuel de leur document (corbeille comprise). La séance en cours compte dans sa case.
+    public func breakdown(current: [String: ReadingScope], activeScope: ReadingScope? = nil,
+                          activeSeconds: TimeInterval = 0) -> ReadingBreakdown {
+        var result = ReadingBreakdown()
+        for session in sessions {
+            result.add(TimeInterval(session.seconds), to: session.scope ?? current[session.documentId])
+        }
+        result.add(activeSeconds, to: activeScope)
+        return result
     }
 
     public func encoded() -> Data? { try? JSONEncoder().encode(sessions) }

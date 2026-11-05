@@ -21,6 +21,9 @@ final class ReadingTimeTracker: ObservableObject {
     private var documentId: String?
     /// Document de la séance en cours (gardé jusqu'à son arrêt, même si `documentId` est déjà remis à `nil`).
     private var sessionDocument: String?
+    /// Rangement du document à l'écran, puis de la séance en cours (voir `ReadingScope`).
+    private var scope: ReadingScope?
+    private var sessionScope: ReadingScope?
     private var appActive = true
 
     private init() {
@@ -28,9 +31,10 @@ final class ReadingTimeTracker: ObservableObject {
         log = ReadingSessionLog.decode(UserDefaults.standard.data(forKey: Self.sessionsKey))
     }
 
-    func readerOpened(documentId: String) {
-        if self.documentId != nil && self.documentId != documentId { readerClosed(documentId: self.documentId!) }
-        self.documentId = documentId
+    func readerOpened(document: LibraryDocument) {
+        if documentId != nil && documentId != document.id { readerClosed(documentId: documentId!) }
+        documentId = document.id
+        scope = ReadingScope(document: document)
         update()
     }
 
@@ -41,9 +45,11 @@ final class ReadingTimeTracker: ObservableObject {
         update()
     }
 
-    /// Secondes lues dans ces documents, d'après le journal des séances.
-    func seconds(in ids: Set<String>) -> TimeInterval {
-        TimeInterval(log.sessions.reduce(0) { ids.contains($1.documentId) ? $0 + $1.seconds : $0 })
+    /// Temps par espace à cet instant, séance en cours comprise. `documents` : toute la bibliothèque, corbeille comprise.
+    func breakdown(documents: [LibraryDocument], at date: Date) -> ReadingBreakdown {
+        let current = Dictionary(documents.map { ($0.id, ReadingScope(document: $0)) }, uniquingKeysWith: { first, _ in first })
+        return log.breakdown(current: current, activeScope: sessionScope,
+                             activeSeconds: clock.elapsed(at: date) - clock.total)
     }
 
     /// Document supprimé : ses séances restent dans les jours lus, sans lien avec lui.
@@ -61,12 +67,16 @@ final class ReadingTimeTracker: ObservableObject {
     private func update() {
         let now = Date()
         if documentId != nil && appActive {
-            if clock.startedAt == nil { sessionDocument = documentId }
+            if clock.startedAt == nil {
+                sessionDocument = documentId
+                sessionScope = scope
+            }
             clock.start(at: now)
         } else if let started = clock.startedAt {
             clock.stop(at: now)
             UserDefaults.standard.set(clock.total, forKey: Self.storageKey)
-            log.record(documentId: sessionDocument ?? "", start: started, end: now)
+            log.record(documentId: sessionDocument ?? "", start: started, end: now, scope: sessionScope)
+            sessionScope = nil
             saveLog()
         }
     }

@@ -238,7 +238,8 @@ private struct MonitorBackground: ViewModifier {
 }
 
 /// Détail du panneau déplié de l'accueil. Le total CPU et mémoire reste celui de toute l'app, en tête du panneau : ces lignes
-/// disent ce qui tourne, et ne s'additionnent pas en un total. Mis à jour au rythme du moniteur, une fois par seconde.
+/// disent ce qui tourne en même temps, sans ventiler ce total : iPadOS ne donne ni le CPU ni la mémoire par fonction.
+/// « Part du temps » n'est donc jamais une part du CPU, et seule la mémoire du modèle IA est une mesure propre. Mis à jour au rythme du moniteur, une fois par seconde.
 private struct MonitorActivityList: View {
     @ObservedObject private var monitor = ResourceMonitor.shared
     @ObservedObject private var tasks = AITaskCenter.shared
@@ -250,10 +251,12 @@ private struct MonitorActivityList: View {
         VStack(alignment: .leading, spacing: 4) {
             if rows.isEmpty && tasks.jobs.isEmpty && modelName == nil {
                 Text("Aucune tâche coûteuse en cours").foregroundStyle(Atelier.textSecondary)
+            } else {
+                Text("En cours en même temps, sans détail du processeur par tâche").foregroundStyle(Atelier.textTertiary)
             }
             ForEach(rows, id: \.kind) { row in
                 line(ActivityCenter.Kind(rawValue: row.kind)?.title ?? row.kind,
-                     detail: row.detail, value: String(localized: "actif \(Int(row.busyShare * 100)) %"))
+                     detail: row.detail, value: String(localized: "\(Int(row.busyShare * 100)) % du temps"))
             }
             ForEach(tasks.jobs) { job in
                 line(job.title, detail: job.activity, value: job.progress.map { "\($0.done)/\($0.total)" } ?? String(localized: "en cours"))
@@ -264,7 +267,7 @@ private struct MonitorActivityList: View {
             }
             if let total = monitor.last?.ramMB {
                 let rest = max(0, Int(total) - (modelMB ?? 0))
-                line(String(localized: "Kyōkasho — non attribué"), detail: nil, value: String(localized: "\(rest) Mo"))
+                line(String(localized: "Mémoire hors modèle IA"), detail: nil, value: String(localized: "\(rest) Mo"))
             }
         }
         .font(Atelier.font(11))

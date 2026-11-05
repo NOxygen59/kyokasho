@@ -36,7 +36,12 @@ public enum ComicBookArchive {
 
     /// Écrit le PDF dans `output`. Une image par page, à sa taille : Core Graphics reprend les JPEG sans les recompresser,
     /// sauf s'il faut les réduire ou les remettre à l'endroit.
-    public static func makePDF(from archiveURL: URL, to output: URL) throws -> Conversion {
+    public static func makePDF(from archiveURL: URL, to output: URL,
+                               freeSpace: (URL) -> Int64 = availableSpace) throws -> Conversion {
+        try removingOutputOnFailure(output) { try writePDF(from: archiveURL, to: output, freeSpace: freeSpace) }
+    }
+
+    private static func writePDF(from archiveURL: URL, to output: URL, freeSpace: (URL) -> Int64) throws -> Conversion {
         let archive: Archive
         do {
             archive = try Archive(url: archiveURL, accessMode: .read)
@@ -55,9 +60,7 @@ public enum ComicBookArchive {
         }
         // Place pour les pages extraites une à une et pour le PDF, qui peut dépasser l'archive (PNG, WebP).
         let directory = output.deletingLastPathComponent()
-        let free = (try? directory.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey]))?
-            .volumeAvailableCapacityForImportantUsage ?? .max
-        guard free >= Int64(clamping: total + total / 2 + maximumPageBytes) else {
+        guard freeSpace(directory) >= Int64(clamping: total + total / 2 + maximumPageBytes) else {
             throw ImportError.unreadable(String(localized: "Pas assez d'espace libre pour convertir ce fichier CBZ.", bundle: .main))
         }
         guard let context = CGContext(output as CFURL, mediaBox: nil, nil) else {
@@ -67,12 +70,14 @@ public enum ComicBookArchive {
         defer { try? FileManager.default.removeItem(at: pageFile) }
         var pages = 0, skipped = 0
         for name in names {
-            try ensureRoom(in: directory)
             guard let entry = entries[name], entry.uncompressedSize <= maximumPageBytes else { skipped += 1; continue }
+            try ensureRoom(in: directory, forNext: Int64(clamping: entry.uncompressedSize), freeSpace: freeSpace)
             // Une page à la fois, sur disque puis lue par ImageIO : ni l'archive ni le fichier ne restent en mémoire.
-            let drawn: Bool = autoreleasepool {
+            let drawn: Bool = try autoreleasepool {
                 try? FileManager.default.removeItem(at: pageFile)
                 guard (try? archive.extract(entry, to: pageFile)) != nil, let image = pageImage(at: pageFile) else { return false }
+                // Au pire, Core Graphics écrit l'image non compressée. La taille du fichier ne le borne pas (PNG, WebP).
+                try ensureRoom(in: directory, forNext: Int64(image.bytesPerRow) * Int64(image.height), freeSpace: freeSpace)
                 var box = CGRect(x: 0, y: 0, width: image.width, height: image.height)
                 context.beginPage(mediaBox: &box)
                 context.draw(image, in: box)
@@ -82,6 +87,7 @@ public enum ComicBookArchive {
             if drawn { pages += 1 } else { skipped += 1 }
         }
         context.closePDF()
+        try ensureRoom(in: directory, freeSpace: freeSpace)
         guard pages > 0 else {
             throw ImportError.unreadable(String(localized: "Ce fichier CBZ ne contient aucune page lisible.", bundle: .main))
         }
@@ -89,14 +95,22 @@ public enum ComicBookArchive {
     }
 
     /// Copie page par page, images reprises telles quelles, avec le titre dans les métadonnées.
-    static func rewritePDF(_ source: URL, to output: URL, title: String) throws {
+    static func rewritePDF(_ source: URL, to output: URL, title: String, freeSpace: (URL) -> Int64 = availableSpace) throws {
+        try removingOutputOnFailure(output) { try copyPDF(source, to: output, title: title, freeSpace: freeSpace) }
+    }
+
+    private static func copyPDF(_ source: URL, to output: URL, title: String, freeSpace: (URL) -> Int64) throws {
         guard let document = CGPDFDocument(source as CFURL), document.numberOfPages > 0,
               let context = CGContext(output as CFURL, mediaBox: nil, [kCGPDFContextTitle: title] as CFDictionary) else {
             throw ImportError.unreadable(String(localized: "Ce fichier CBZ n'a pas pu être converti.", bundle: .main))
         }
+        let directory = output.deletingLastPathComponent()
+        // Taille d'une page inconnue avant copie : deux fois la moyenne, le contrôle suivant rattrape une page plus lourde.
+        let sourceSize = (try? source.resourceValues(forKeys: [.fileSizeKey]))?.fileSize ?? 0
+        let nextPage = Int64(sourceSize) / Int64(document.numberOfPages) * 2
         for index in 1...document.numberOfPages {
             try Task.checkCancellation()
-            try ensureRoom(in: output.deletingLastPathComponent())
+            try ensureRoom(in: directory, forNext: nextPage, freeSpace: freeSpace)
             autoreleasepool {
                 guard let page = document.page(at: index) else { return }
                 var box = page.getBoxRect(.mediaBox)
@@ -106,17 +120,33 @@ public enum ComicBookArchive {
             }
         }
         context.closePDF()
+        try ensureRoom(in: directory, freeSpace: freeSpace)
     }
 
     /// Réserve gardée libre pendant l'écriture : la taille d'un PDF issu de PNG ou de WebP ne se prévoit pas, seule la place
     /// restante le permet. Vérifiée en cours de route, elle interrompt la conversion avant de remplir l'iPad.
     static let minimumFreeBytes: Int64 = 300 * 1_048_576
 
-    static func ensureRoom(in directory: URL) throws {
-        let free = (try? directory.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey]))?
-            .volumeAvailableCapacityForImportantUsage ?? .max
-        guard free >= minimumFreeBytes else {
+    /// Avant une page, `forNext` couvre ce qu'elle va écrire. Après le dernier écrit, `forNext` vaut 0 : Core Graphics écrit
+    /// aussi à la fermeture du PDF, et plus aucune page ne viendrait détecter que la réserve a été franchie.
+    static func ensureRoom(in directory: URL, forNext bytes: Int64 = 0, freeSpace: (URL) -> Int64) throws {
+        guard freeSpace(directory) >= minimumFreeBytes + bytes else {
             throw ImportError.unreadable(String(localized: "Pas assez d'espace libre pour convertir ce fichier CBZ.", bundle: .main))
+        }
+    }
+
+    public static func availableSpace(in directory: URL) -> Int64 {
+        (try? directory.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey]))?
+            .volumeAvailableCapacityForImportantUsage ?? .max
+    }
+
+    /// Le PDF partiel est retiré une fois le contexte libéré : un échec ne laisse jamais de fichier, même sans appelant.
+    private static func removingOutputOnFailure<Result>(_ output: URL, _ write: () throws -> Result) rethrows -> Result {
+        do {
+            return try write()
+        } catch {
+            try? FileManager.default.removeItem(at: output)
+            throw error
         }
     }
 

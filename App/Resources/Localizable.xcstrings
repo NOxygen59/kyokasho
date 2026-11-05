@@ -1409,6 +1409,28 @@
         }
       }
     },
+    "%lld %% du temps": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld %% of the time"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld %% du temps"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld %% 的时间"
+          }
+        }
+      }
+    },
     "%lld / %lld pages lues : prêt à extraire": {
       "localizations": {
         "en": {
@@ -3231,6 +3253,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "显示资源监视器"
+          }
+        }
+      }
+    },
+    "Afficher les barres": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show the bars"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Afficher les barres"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "显示工具栏"
           }
         }
       }
@@ -15027,6 +15071,28 @@
         }
       }
     },
+    "En cours en même temps, sans détail du processeur par tâche": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Running at the same time, no processor detail per task"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En cours en même temps, sans détail du processeur par tâche"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "同时运行，不含各任务的处理器明细"
+          }
+        }
+      }
+    },
     "Encre de charbon · laiton brossé": {
       "localizations": {
         "en": {
@@ -20967,28 +21033,6 @@
         }
       }
     },
-    "Kyōkasho — non attribué": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kyōkasho — unattributed"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kyōkasho — non attribué"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Kyōkasho — 未归属"
-          }
-        }
-      }
-    },
     "L'IA choisie lit les pages déjà lues par OvisOCR2 et propose les termes du métier, avec lecture et sens dans la langue choisie. Environ 20 à 40 s par page ; branche l'iPad pour un livre entier.": {
       "localizations": {
         "en": {
@@ -26419,6 +26463,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "GPU 内存（MLX）"
+          }
+        }
+      }
+    },
+    "Mémoire hors modèle IA": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Memory outside the AI model"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mémoire hors modèle IA"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI 模型以外的内存"
           }
         }
       }
@@ -43777,28 +43843,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "_（此页尚未识别）_\n"
-          }
-        }
-      }
-    },
-    "actif %lld %%": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "active %lld %%"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "actif %lld %%"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "活动 %lld %%"
           }
         }
       }

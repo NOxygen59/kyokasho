@@ -416,11 +416,12 @@ struct LibraryView: View {
             AtelierLabel(String(localized: "Temps de lecture"))
             // Séparé par espace, d'après le journal des séances. Le reste du total, plus ancien que ce journal, reste
             // compté dans Livres & Manuels.
-            let manga = readingTime.seconds(in: Set(model.documents.filter(\.isInMangaSpace).map(\.id)))
-            Text(ReadingClock.format(space == .manga ? manga : max(0, readingTime.clock.elapsed(at: Date()) - manga)))
+            let now = Date()
+            let time = readingTime.breakdown(documents: model.documents + model.trashedDocuments, at: now)
+            Text(ReadingClock.format(space == .manga ? time.manga : time.study(total: readingTime.clock.elapsed(at: now))))
                 .font(Atelier.display(30)).foregroundStyle(Atelier.textPrimary)
             if space == .study {
-                Text("Manuels \(ReadingClock.format(categorySeconds(.textbook))) · Livres \(ReadingClock.format(categorySeconds(.book)))")
+                Text("Manuels \(ReadingClock.format(time.textbook)) · Livres \(ReadingClock.format(time.book))")
                     .font(Atelier.font(12)).foregroundStyle(Atelier.textSecondary)
             }
             Text("livre ouvert à l'écran").font(Atelier.font(13)).foregroundStyle(Atelier.textSecondary)
@@ -597,10 +598,6 @@ struct LibraryView: View {
     }
 
     /// Pastille Livre/Manuel, rendue par la grille depuis la catégorie publiée la plus récente.
-    private func categorySeconds(_ category: DocumentCategory) -> TimeInterval {
-        readingTime.seconds(in: Set(model.documents.filter { $0.category == category && !$0.isInMangaSpace }.map(\.id)))
-    }
-
     private func categoryMark(_ category: DocumentCategory) -> some View {
         Text(category.title).font(Atelier.font(11, weight: .semibold))
             .padding(.horizontal, 8).padding(.vertical, 4)
