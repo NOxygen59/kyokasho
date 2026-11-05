@@ -62,42 +62,69 @@ struct Theme: Identifiable, Equatable {
         }
     }
 
-    enum Backdrop: Equatable { case grid, washi, blueprint, floorplan, dusk, ink, sakura }
+    enum Backdrop: Equatable {
+        case plain, grid, paper, engraving, blocks, swiss, neon, earth, forest, embers, dunes, waves
+        case washi, blueprint, floorplan, dusk, ink, sakura
+    }
+
+    /// Repère visuel du thème, utilisé dans les aperçus sans texte supplémentaire à traduire.
+    var symbol: String {
+        switch id {
+        case "atelier": return "pencil.and.ruler"
+        case "clair": return "sun.max"
+        case "sepia": return "book.closed"
+        case "brutal": return "square.stack.3d.up.fill"
+        case "swiss": return "square.grid.3x3"
+        case "synthwave": return "sunset" // `sun.horizon` n'existe qu'à partir d'iOS 17.
+        case "terre": return "circle.hexagongrid"
+        case "foret": return "leaf"
+        case "braise": return "flame"
+        case "sable": return "wind"
+        case "lagon": return "water.waves"
+        case "washi": return "doc.text"
+        case "architecte": return "compass.drawing"
+        case "interieur": return "chair.lounge"
+        case "soir": return "moon.haze"
+        case "encre": return "paintbrush.pointed"
+        case "sakura": return "camera.macro"
+        default: return "circle"
+        }
+    }
 
     static let atelier = Theme(
         id: "atelier", name: String(localized: "Atelier (graphite)"),
         canvas: Color(hex: 0x101619), surface: Color(hex: 0x1C252A), surfaceHigh: Color(hex: 0x2A353C),
         ink: Color(hex: 0xEFF4F2),
         read: Color(hex: 0x81D8CB), annotate: Color(hex: 0xF0C775), japanese: Color(hex: 0xFA9A8D),
-        ai: Color(hex: 0xBFB0EF), cloud: Color(hex: 0x91BDEC))
+        ai: Color(hex: 0xBFB0EF), cloud: Color(hex: 0x91BDEC), backdrop: .grid)
 
     static let foret = Theme(
         id: "foret", name: String(localized: "Forêt (rouge et vert)"),
         canvas: Color(hex: 0x101B17), surface: Color(hex: 0x1B2B24), surfaceHigh: Color(hex: 0x2A3B32),
         ink: Color(hex: 0xEFF4E9),
         read: Color(hex: 0x97CCA3), annotate: Color(hex: 0xE6C883), japanese: Color(hex: 0xF29587),
-        ai: Color(hex: 0xC0BDD9), cloud: Color(hex: 0x94CBCD))
+        ai: Color(hex: 0xC0BDD9), cloud: Color(hex: 0x94CBCD), backdrop: .forest)
 
     static let braise = Theme(
         id: "braise", name: String(localized: "Braise (prune et rouille)"),
         canvas: Color(hex: 0x1C151C), surface: Color(hex: 0x2C212B), surfaceHigh: Color(hex: 0x3D2E3B),
         ink: Color(hex: 0xF8EFEE),
         read: Color(hex: 0xF0A18C), annotate: Color(hex: 0xEEC481), japanese: Color(hex: 0xFFAAA1),
-        ai: Color(hex: 0xCFADD6), cloud: Color(hex: 0xA6BCD9))
+        ai: Color(hex: 0xCFADD6), cloud: Color(hex: 0xA6BCD9), backdrop: .embers)
 
     static let sable = Theme(
         id: "sable", name: String(localized: "Sable (orange et crème)"),
         canvas: Color(hex: 0x1C1914), surface: Color(hex: 0x2C261F), surfaceHigh: Color(hex: 0x3D342A),
         ink: Color(hex: 0xF8F1E5),
         read: Color(hex: 0xDEC39B), annotate: Color(hex: 0xE9C06C), japanese: Color(hex: 0xF2AE80),
-        ai: Color(hex: 0xCDB9DE), cloud: Color(hex: 0xA8C8D4))
+        ai: Color(hex: 0xCDB9DE), cloud: Color(hex: 0xA8C8D4), backdrop: .dunes)
 
     static let lagon = Theme(
         id: "lagon", name: String(localized: "Lagon (jaune et ardoise)"),
         canvas: Color(hex: 0x111D21), surface: Color(hex: 0x1D2D33), surfaceHigh: Color(hex: 0x2C3F46),
         ink: Color(hex: 0xEBF4F2),
-        read: Color(hex: 0x99C7CB), annotate: Color(hex: 0xE3C990), japanese: Color(hex: 0xEAD66F),
-        ai: Color(hex: 0xBEB9E4), cloud: Color(hex: 0x9ACAE6))
+        read: Color(hex: 0xEAD66F), annotate: Color(hex: 0xE3C990), japanese: Color(hex: 0x99C7CB),
+        ai: Color(hex: 0xBEB9E4), cloud: Color(hex: 0x78DCE0), backdrop: .waves)
 
     static let washi = Theme(
         id: "washi", name: String(localized: "Washi (papier et encre)"),
@@ -148,7 +175,7 @@ struct Theme: Identifiable, Equatable {
         canvas: Color(hex: 0xF4F2EE), surface: Color(hex: 0xFFFFFF), surfaceHigh: Color(hex: 0xECE8E1),
         ink: Color(hex: 0x1B2226),
         read: Color(hex: 0x0F7466), annotate: Color(hex: 0x8A5A00), japanese: Color(hex: 0xB3372A),
-        ai: Color(hex: 0x6347B8), cloud: Color(hex: 0x2563A8),
+        ai: Color(hex: 0x6347B8), cloud: Color(hex: 0x2563A8), backdrop: .paper,
         isLight: true, onAccent: Color(hex: 0xFFFFFF), contrast: Color(hex: 0x1B2226), shadowTint: Color(hex: 0x1B2226),
         secondaryLevel: 0.82, tertiaryLevel: 0.72)
 
@@ -158,7 +185,7 @@ struct Theme: Identifiable, Equatable {
         canvas: Color(hex: 0xEFE4D0), surface: Color(hex: 0xF8F0E1), surfaceHigh: Color(hex: 0xE6D8BE),
         ink: Color(hex: 0x3B2A1A),
         read: Color(hex: 0x1C6457), annotate: Color(hex: 0x845000), japanese: Color(hex: 0xA53A24),
-        ai: Color(hex: 0x5E4A9E), cloud: Color(hex: 0x2F5F8A), backdrop: .washi,
+        ai: Color(hex: 0x5E4A9E), cloud: Color(hex: 0x2F5F8A), backdrop: .engraving,
         isLight: true, onAccent: Color(hex: 0xFFF8EC), contrast: Color(hex: 0x3B2A1A), shadowTint: Color(hex: 0x3B2A1A),
         secondaryLevel: 0.82, tertiaryLevel: 0.75)
 
@@ -168,7 +195,7 @@ struct Theme: Identifiable, Equatable {
         canvas: Color(hex: 0xFFF4D6), surface: Color(hex: 0xFFFFFF), surfaceHigh: Color(hex: 0xFFEFB0),
         ink: Color(hex: 0x111111),
         read: Color(hex: 0x0050C8), annotate: Color(hex: 0x8A4B00), japanese: Color(hex: 0xB0154F),
-        ai: Color(hex: 0x5B2DB8), cloud: Color(hex: 0x006D5B),
+        ai: Color(hex: 0x5B2DB8), cloud: Color(hex: 0x006D5B), backdrop: .blocks,
         isLight: true, onAccent: Color(hex: 0xFFFFFF), contrast: Color(hex: 0x111111), shadowTint: Color(hex: 0x111111),
         secondaryLevel: 0.82, tertiaryLevel: 0.72)
 
@@ -177,7 +204,7 @@ struct Theme: Identifiable, Equatable {
         canvas: Color(hex: 0xF2F2F2), surface: Color(hex: 0xFFFFFF), surfaceHigh: Color(hex: 0xE6E6E6),
         ink: Color(hex: 0x111111),
         read: Color(hex: 0xC01F14), annotate: Color(hex: 0x8A5A00), japanese: Color(hex: 0x9E1B32),
-        ai: Color(hex: 0x3F3FBF), cloud: Color(hex: 0x1F5FA8),
+        ai: Color(hex: 0x3F3FBF), cloud: Color(hex: 0x1F5FA8), backdrop: .swiss,
         isLight: true, onAccent: Color(hex: 0xFFFFFF), contrast: Color(hex: 0x111111), shadowTint: Color(hex: 0x111111),
         secondaryLevel: 0.82, tertiaryLevel: 0.72)
 
@@ -186,14 +213,14 @@ struct Theme: Identifiable, Equatable {
         canvas: Color(hex: 0x140A26), surface: Color(hex: 0x221238), surfaceHigh: Color(hex: 0x321C4E),
         ink: Color(hex: 0xF6EEFF),
         read: Color(hex: 0x5CF2E6), annotate: Color(hex: 0xFFD166), japanese: Color(hex: 0xFF6EC7),
-        ai: Color(hex: 0xB69CFF), cloud: Color(hex: 0x7FB7FF), backdrop: .dusk)
+        ai: Color(hex: 0xB69CFF), cloud: Color(hex: 0x7FB7FF), backdrop: .neon)
 
     static let terre = Theme(
         id: "terre", name: String(localized: "Terre (wabi-sabi)"),
         canvas: Color(hex: 0xE9E2D6), surface: Color(hex: 0xF3EEE5), surfaceHigh: Color(hex: 0xDDD3C3),
         ink: Color(hex: 0x2E2A24),
         read: Color(hex: 0x3F5A2E), annotate: Color(hex: 0x7A4A12), japanese: Color(hex: 0x8E3B2A),
-        ai: Color(hex: 0x5A4A78), cloud: Color(hex: 0x3D5A6B), backdrop: .washi,
+        ai: Color(hex: 0x5A4A78), cloud: Color(hex: 0x3D5A6B), backdrop: .earth,
         isLight: true, onAccent: Color(hex: 0xFBF7EF), contrast: Color(hex: 0x2E2A24), shadowTint: Color(hex: 0x2E2A24),
         secondaryLevel: 0.82, tertiaryLevel: 0.75)
 
@@ -290,7 +317,7 @@ struct ThemePickerView: View {
                     AppLanguagePicker()
                 }
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 220), spacing: 14)], spacing: 14) {
-                    ForEach(AppStyle.all) { style in
+                    ForEach(AppStyle.featured) { style in
                         Button { themes.select(style: style) } label: { styleCard(style) }
                             .buttonStyle(PressScale())
                             .accessibilityLabel(style.name)
@@ -298,7 +325,11 @@ struct ThemePickerView: View {
                             .accessibilityAddTraits(themes.style == style ? .isSelected : [])
                     }
                 }
-                Text("Palette").font(.title3.weight(.semibold)).foregroundStyle(Atelier.textPrimary).padding(.top, 6)
+                HStack {
+                    Text("Sélectionné").foregroundStyle(Atelier.textSecondary)
+                    Text(ui: themes.style.name).foregroundStyle(Atelier.textPrimary)
+                }.font(.subheadline)
+                DisclosureGroup("Palette") {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 280), spacing: 18)], spacing: 18) {
                     ForEach(Theme.all) { theme in
                         Button { themes.select(theme) } label: { card(theme) }
@@ -307,7 +338,9 @@ struct ThemePickerView: View {
                             .accessibilityValue(themes.theme == theme ? String(localized: "Sélectionné") : theme.atmosphere)
                             .accessibilityAddTraits(themes.theme == theme ? .isSelected : [])
                     }
+                }.padding(.top, 12)
                 }
+                .font(.title3.weight(.semibold)).foregroundStyle(Atelier.textPrimary)
             }
             .padding(22)
         }
@@ -315,86 +348,48 @@ struct ThemePickerView: View {
         .navigationTitle("Thèmes")
     }
 
-    /// Carte d'un style : son nom, sa ligne, et un échantillon dessiné avec ses propres formes et bordures.
+    /// Aperçu complet : mêmes motifs, couleurs, formes et relief que le style réellement choisi.
     private func styleCard(_ s: AppStyle) -> some View {
         let on = themes.style == s
         let palette = Theme.all.first { $0.id == s.defaultTheme } ?? .atelier
-        let corner = 14 * s.cornerScale
-        return HStack(spacing: 12) {
-            RoundedRectangle(cornerRadius: corner, style: .continuous)
-                .fill(palette.surface)
-                .overlay(RoundedRectangle(cornerRadius: corner, style: .continuous)
-                    .strokeBorder(s.panelEdge == .ink ? palette.ink : palette.read.opacity(s.panelEdge == .glow ? 0.9 : 0.4),
-                                  lineWidth: s.borderScale))
-                .overlay(Text("教").font(.custom("HiraMinProN-W6", size: 22)).foregroundStyle(palette.japanese))
-                .frame(width: 52, height: 52)
-            VStack(alignment: .leading, spacing: 3) {
-                Text(ui: s.name).font(.system(size: 15, weight: .semibold, design: s.fontDesign)).foregroundStyle(Atelier.textPrimary)
-                Text(ui: s.summary).font(.system(size: 12, design: s.fontDesign)).foregroundStyle(Atelier.textSecondary)
+        let corner = 18 * s.cornerScale
+        return VStack(alignment: .leading, spacing: 0) {
+            ThemePreview(theme: palette, style: s, selected: on)
+            VStack(alignment: .leading, spacing: 6) {
+                Text(ui: s.name).font(.system(size: 16, weight: .semibold, design: s.fontDesign)).foregroundStyle(palette.ink)
+                Text(ui: s.summary).font(.system(size: 12, design: s.fontDesign)).foregroundStyle(palette.secondaryInk)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            Spacer(minLength: 0)
-            Image(systemName: on ? "checkmark.circle.fill" : "circle")
-                .font(Atelier.font(20, weight: .medium))
-                .foregroundStyle(on ? Atelier.Tint.read : Atelier.textTertiary)
+            .padding(16)
+            .frame(maxWidth: .infinity, minHeight: 90, alignment: .topLeading)
+            .background(palette.surface)
         }
-        .padding(12)
-        .frame(minHeight: 76)
-        .background(Atelier.surface, in: RoundedRectangle(cornerRadius: Atelier.corner(16), style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: Atelier.corner(16), style: .continuous)
-            .strokeBorder(on ? Atelier.Tint.read : Atelier.hairline, lineWidth: on ? 2 : 1))
-        .contentShape(RoundedRectangle(cornerRadius: Atelier.corner(16), style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: corner, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: corner, style: .continuous)
+            .strokeBorder(on ? palette.read : palette.separator, lineWidth: on ? 2 : 1))
+        .contentShape(RoundedRectangle(cornerRadius: corner, style: .continuous))
     }
 
     private func card(_ t: Theme) -> some View {
         let on = themes.theme == t
-        return VStack(alignment: .leading, spacing: 0) {
-            ZStack(alignment: .topLeading) {
-                ThemeBackdrop(theme: t)
-                VStack(alignment: .leading, spacing: 0) {
-                    HStack(alignment: .top) {
-                        Text("教科書").font(.custom("HiraMinProN-W3", size: 32)).foregroundStyle(t.ink)
-                        Spacer()
-                        Image(systemName: on ? "checkmark.circle.fill" : "circle")
-                            .font(Atelier.font(22, weight: .medium))
-                            .foregroundStyle(on ? t.read : t.tertiaryInk)
-                    }
-                    Spacer()
-                    HStack(spacing: 5) {
-                        ForEach(Array([t.read, t.annotate, t.japanese, t.ai, t.cloud].enumerated()), id: \.offset) { _, color in
-                            Capsule().fill(color).frame(width: 25, height: 4)
-                        }
-                    }
+        return HStack(spacing: 12) {
+            HStack(spacing: 3) {
+                ForEach(Array([t.canvas, t.read, t.japanese].enumerated()), id: \.offset) { _, color in
+                    Capsule().fill(color).frame(width: 12, height: 38)
                 }
-                .padding(20)
             }
-            .frame(height: 142)
-            VStack(alignment: .leading, spacing: 12) {
-                VStack(alignment: .leading, spacing: 5) {
-                    Text(ui: t.name).font(Atelier.font(16, weight: .semibold)).foregroundStyle(t.ink)
-                    Text(ui: t.atmosphere).font(Atelier.font(12)).foregroundStyle(t.secondaryInk)
-                }
-                HStack(spacing: 10) {
-                    Text("辞").font(.custom("HiraginoSans-W3", size: 18))
-                        .foregroundStyle(t.japanese).frame(width: 38, height: 38)
-                        .background(t.japanese.opacity(0.12), in: RoundedRectangle(cornerRadius: Atelier.corner(10)))
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("Texte de la page").font(Atelier.font(12, weight: .medium)).foregroundStyle(t.ink)
-                        Text("Lecture · vocabulaire · notes").font(Atelier.font(10)).foregroundStyle(t.secondaryInk)
-                    }
-                    Spacer(minLength: 0)
-                    Image(systemName: "arrow.right").font(Atelier.font(12, weight: .semibold)).foregroundStyle(t.read)
-                }
-                .padding(10)
-                .background(t.surfaceHigh, in: RoundedRectangle(cornerRadius: Atelier.corner(13)))
+            VStack(alignment: .leading, spacing: 4) {
+                Text(ui: t.name).font(Atelier.font(14, weight: .semibold)).foregroundStyle(t.ink)
+                Text(ui: t.atmosphere).font(Atelier.font(11)).foregroundStyle(t.secondaryInk)
             }
-            .padding(18)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(t.surface)
+            Spacer(minLength: 0)
+            Image(systemName: on ? "checkmark.circle.fill" : "circle").foregroundStyle(t.read)
         }
-        .clipShape(RoundedRectangle(cornerRadius: Atelier.corner(20), style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: Atelier.corner(20), style: .continuous)
+        .padding(14)
+        .frame(maxWidth: .infinity, minHeight: 80, alignment: .leading)
+        .background(t.surface, in: RoundedRectangle(cornerRadius: Atelier.corner(14)))
+        .overlay(RoundedRectangle(cornerRadius: Atelier.corner(14))
             .strokeBorder(on ? t.read : t.separator, lineWidth: on ? 2 : 1))
-        .contentShape(RoundedRectangle(cornerRadius: Atelier.corner(20), style: .continuous))
+        .contentShape(RoundedRectangle(cornerRadius: Atelier.corner(14)))
     }
 }

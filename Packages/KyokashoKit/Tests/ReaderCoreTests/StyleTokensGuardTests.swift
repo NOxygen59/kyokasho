@@ -82,6 +82,22 @@ final class StyleTokensGuardTests: XCTestCase {
         }
     }
 
+    /// Revue Claude de 05108d3 : un univers n'impose pas son fond à toutes les palettes, et aucun aperçu n'utilise un
+    /// symbole absent d'iOS 16 (nom en simple chaîne : ni le compilateur ni un rendu Mac ne le voient).
+    func testPaletteKeepsItsBackdropAndSymbolsExistOnIOS16() throws {
+        let design = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .appendingPathComponent("../../../../App/Design").standardizedFileURL
+        let backdrop = try String(contentsOf: design.appendingPathComponent("ThemeBackdrop.swift"), encoding: .utf8)
+        let imposed = try XCTUnwrap(backdrop.range(of: "private var effectiveBackdrop"))
+        let end = try XCTUnwrap(backdrop.range(of: "default: return theme.backdrop"))
+        let cases = backdrop[imposed.upperBound..<end.lowerBound]
+        for id in ["atelier", "wabisabi", "swiss", "brutalism", "synthwave", "luxury"] {
+            XCTAssertFalse(cases.contains("\"\(id)\""), "\(id) ne doit pas imposer son fond")
+        }
+        let themes = try String(contentsOf: design.appendingPathComponent("Themes.swift"), encoding: .utf8)
+        XCTAssertFalse(themes.contains("return \"sun.horizon\""))
+    }
+
     /// Fichier → nombre d'usages permis, chacun vérifié à la main le 29/10/2026.
     private let allowed: [String: Int] = [
         "Design/Styles.swift": 1,            // voile du style Atelier
@@ -132,7 +148,7 @@ final class StyleTokensGuardTests: XCTestCase {
     func testInterfaceReliefAndBordersUseStyleTokens() throws {
         XCTAssertEqual(try count(#"\.shadow\("#), [:], "Ombre en dur : utiliser atelierShadow")
         // Sur un contenu avec du texte, l'ombre franche le dédouble : passer par atelierShapeShadow.
-        XCTAssertEqual(try count(#"\.atelierShadow\("#), ["Design/Atelier.swift": 3, "Library/LibraryView.swift": 1])
+        XCTAssertEqual(try count(#"\.atelierShadow\("#), ["Design/Atelier.swift": 3, "Design/ThemePreview.swift": 1, "Library/LibraryView.swift": 1])
         XCTAssertEqual(try count(#"\.background\(\.[A-Za-z]+Material"#), [:], "Matière en dur : utiliser Atelier.material")
         // Fond dessiné du thème (motifs) et trait posé sur la page.
         XCTAssertEqual(try count(#"lineWidth: [0-9]"#), ["Design/ThemeBackdrop.swift": 13, "Reader/ReaderScreen.swift": 1],
