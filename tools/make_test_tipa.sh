@@ -16,7 +16,9 @@ unzip -q "$SOURCE" -d "$WORK"
 APP="$WORK/Payload/Kyokasho.app"
 /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier fr.noxygen59.kyokasho.test" "$APP/Info.plist"
 /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName Kyōkasho Test" "$APP/Info.plist"
-ldid -S"$ROOT/packaging/entitlements-trollstore.plist" "$APP/Kyokasho"
+# Les droits nomment l'identifiant de l'app : ils doivent suivre, sinon iOS confondrait les deux installations.
+sed 's/fr\.noxygen59\.kyokasho/fr.noxygen59.kyokasho.test/g' "$ROOT/packaging/entitlements-trollstore.plist" > "$WORK/droits.plist"
+ldid -S"$WORK/droits.plist" "$APP/Kyokasho"
 TARGET="${OUTPUT:A}/${NAME/Kyokasho/Kyokasho-Test}.tipa"
 (cd "$WORK" && zip -qry "$TARGET" Payload)
 print "OK : $TARGET"
