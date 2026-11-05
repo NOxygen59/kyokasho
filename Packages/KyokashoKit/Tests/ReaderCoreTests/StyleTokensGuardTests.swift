@@ -52,6 +52,23 @@ final class StyleTokensGuardTests: XCTestCase {
         XCTAssertFalse(layer.contains("(line: CTLine"), "pas de ligne gardée dans la page préparée")
     }
 
+    /// Comics : aucune porte vers l'OCR, l'IA ou le panneau d'étude. Contrôle du source : ces chemins passent par PDFKit.
+    func testComicsCannotReachOCROrAI() throws {
+        let app = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .appendingPathComponent("../../../../App").standardizedFileURL
+        for (file, guardText) in [
+            ("Reader/ReaderController+OCR.swift", "func runOCR(engine: String? = nil, force: Bool = false) {\n        guard !document.isComic"),
+            ("Reader/ReaderController+OCR.swift", "func ensureOCR(_ pages: [Int]) {\n        guard !document.isComic"),
+            ("Reader/ReaderController.swift", "fromHover: Bool = false) async {\n        guard !document.isComic"),
+            ("Reader/ReaderController+Search.swift", "guard documentOCRTask == nil, !document.isComic"),
+            ("Reader/ReaderScreen.swift", "private func openStudy(_ tab: StudyPanel.Tab) {\n        guard !reader.document.isComic"),
+            ("Library/DocumentScan.swift", "guard !document.isComic, UserDefaults"),
+        ] {
+            let source = try String(contentsOf: app.appendingPathComponent(file), encoding: .utf8)
+            XCTAssertTrue(source.contains(guardText), "\(file) : \(guardText)")
+        }
+    }
+
     /// Une analyse OvisOCR2 doit pouvoir s'arrêter depuis la liste des IA, et sa durée être annoncée.
     func testOvisAnalysisCanBeStoppedAndAnnouncesItsDuration() throws {
         let app = URL(fileURLWithPath: #filePath).deletingLastPathComponent()

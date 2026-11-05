@@ -557,7 +557,9 @@ struct ReaderScreen: View {
                 } label: {
                     Label("Cette page", systemImage: "doc")
                 }
-                Button { openStudy(.notes) } label: { Label("Notes de la page", systemImage: "text.bubble") }
+                if !reader.document.isComic {
+                    Button { openStudy(.notes) } label: { Label("Notes de la page", systemImage: "text.bubble") }
+                }
                 Button { reader.newNote() } label: { Label("Nouvelle note flottante", systemImage: "note.text.badge.plus") }
                 if monitorEnabled {
                     Toggle(isOn: $monitorShown) { Label("Moniteur de ressources", systemImage: "gauge.with.dots.needle.33percent") }
@@ -577,15 +579,17 @@ struct ReaderScreen: View {
                 Image(systemName: "ellipsis").font(Atelier.font(17, weight: .semibold))
                     .frame(width: 40, height: 40).foregroundStyle(Atelier.textPrimary)
             }
-            Rectangle().fill(Atelier.hairline).frame(width: 1, height: 22).padding(.horizontal, 4)
-            CapsuleButton(icon: "sidebar.trailing", label: String(localized: "Panneau d'étude"), active: side == .study,
-                          tint: Atelier.Tint.japanese) {
-                // Panneau réduit en pastille : le bouton le rouvre au lieu de le fermer.
-                if studyMode == .minimized {
-                    studyMode = studyRestore == .minimized ? .docked : studyRestore
-                    side = .study
-                } else {
-                    side = side == .study ? nil : .study
+            if !reader.document.isComic {
+                Rectangle().fill(Atelier.hairline).frame(width: 1, height: 22).padding(.horizontal, 4)
+                CapsuleButton(icon: "sidebar.trailing", label: String(localized: "Panneau d'étude"), active: side == .study,
+                              tint: Atelier.Tint.japanese) {
+                    // Panneau réduit en pastille : le bouton le rouvre au lieu de le fermer.
+                    if studyMode == .minimized {
+                        studyMode = studyRestore == .minimized ? .docked : studyRestore
+                        side = .study
+                    } else {
+                        side = side == .study ? nil : .study
+                    }
                 }
             }
         }
@@ -695,6 +699,7 @@ struct ReaderScreen: View {
     }
 
     private func openStudy(_ tab: StudyPanel.Tab) {
+        guard !reader.document.isComic else { return } // Comics : ni panneau de texte, ni étude.
         if side == .study && studyTab == tab {
             side = nil
         } else {

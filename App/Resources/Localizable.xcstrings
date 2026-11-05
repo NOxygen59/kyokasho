@@ -9901,6 +9901,28 @@
         }
       }
     },
+    "Comics · expérimental": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comics · experimental"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comics · expérimental"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "漫画 · 实验功能"
+          }
+        }
+      }
+    },
     "Commandes de l'écran d'orientation centrées et redessinées.": {
       "localizations": {
         "en": {
@@ -22793,28 +22815,6 @@
         }
       }
     },
-    "Les comics .cbz sont acceptés aussi, à titre expérimental : lecture des images seules, sans OCR ni IA.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Comic .cbz files are also accepted, as an experiment: images only, without OCR or AI."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Les comics .cbz sont acceptés aussi, à titre expérimental : lecture des images seules, sans OCR ni IA."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "也可导入 .cbz 漫画（实验功能）：仅显示图片，不含 OCR 和 AI。"
-          }
-        }
-      }
-    },
     "Les corrections OCR manuelles tournent avec la page au lieu d'être effacées.": {
       "localizations": {
         "en": {
@@ -23801,6 +23801,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "我的列表 · %lld"
+          }
+        }
+      }
+    },
+    "Mangas et magazines .cbz acceptés, à titre expérimental : lecture d'immersion, images seules, sans OCR ni IA.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": ".cbz manga and magazines are accepted, as an experiment: immersion reading, images only, without OCR or AI."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mangas et magazines .cbz acceptés, à titre expérimental : lecture d'immersion, images seules, sans OCR ni IA."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可导入 .cbz 漫画和杂志（实验功能）：沉浸式阅读，仅显示图片，不含 OCR 和 AI。"
           }
         }
       }

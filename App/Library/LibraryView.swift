@@ -510,7 +510,8 @@ struct LibraryView: View {
 
     /// Pastille Livre/Manuel, rendue par la grille depuis la catégorie publiée la plus récente.
     private func categoryMark(_ category: DocumentCategory) -> some View {
-        Text(category.title).font(Atelier.font(11, weight: .semibold))
+        // Comics : lecture d'immersion encore à l'essai, et dit comme tel sur la carte.
+        Text(category == .comics ? String(localized: "Comics · expérimental") : category.title).font(Atelier.font(11, weight: .semibold))
             .padding(.horizontal, 8).padding(.vertical, 4)
             .foregroundStyle(Atelier.onAccentInk.opacity(0.8))
             .background(categoryTint(category), in: Capsule())

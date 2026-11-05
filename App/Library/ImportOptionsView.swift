@@ -32,7 +32,7 @@ struct ImportOptionsView: View {
                         Label("Choisir des PDF", systemImage: "doc.badge.plus")
                     }
                 } footer: {
-                    Text("Les comics .cbz sont acceptés aussi, à titre expérimental : lecture des images seules, sans OCR ni IA.")
+                    Text("Mangas et magazines .cbz acceptés, à titre expérimental : lecture d'immersion, images seules, sans OCR ni IA.")
                 }
                 if onPackage != nil {
                     Section {
