@@ -127,10 +127,21 @@ public enum OCRLayout {
             while parent[i] != i { parent[i] = parent[parent[i]]; i = parent[i] }
             return i
         }
-        for i in lines.indices {
-            for j in lines.indices.dropFirst(i + 1) where sameBlock(lines[i], lines[j]) {
-                let a = root(i), b = root(j)
-                if a != b { parent[b] = a }
+        // Balayage : `sameBlock` exige un écart inférieur à 1,2 fois la plus grande taille. Triées par début, les lignes
+        // au-delà de cette distance sont donc ignorées, ainsi que toutes les suivantes. Seules les voisines sont comparées.
+        let reach = (lines.map(size).max() ?? 0) * 1.2
+        for vertical in [true, false] {
+            func start(_ i: Int) -> Double { vertical ? lines[i].box.x : lines[i].box.y }
+            func end(_ i: Int) -> Double { vertical ? lines[i].box.x + lines[i].box.w : lines[i].box.y + lines[i].box.h }
+            let order = lines.indices.filter { lines[$0].vertical == vertical }.sorted { start($0) < start($1) }
+            var active: [Int] = []
+            for j in order {
+                active.removeAll { start(j) - end($0) >= reach }
+                for i in active where sameBlock(lines[i], lines[j]) {
+                    let a = root(i), b = root(j)
+                    if a != b { parent[b] = a }
+                }
+                active.append(j)
             }
         }
         var groups: [Int: [OCRLine]] = [:]

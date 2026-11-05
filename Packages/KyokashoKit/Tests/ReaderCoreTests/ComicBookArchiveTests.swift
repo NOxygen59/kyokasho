@@ -151,4 +151,25 @@ final class ComicBookArchiveTests: XCTestCase {
             XCTAssertEqual(box.size, orientation >= 5 ? CGSize(width: 20, height: 40) : CGSize(width: 40, height: 20), "orientation \(orientation)")
         }
     }
+
+    /// Contre-revue Codex de f8a3fa9 : nettoyage après arrêt brutal, limité aux noms privés assez anciens.
+    func testOnlyOldPrivateTemporariesAreRemoved() throws {
+        let storage = DocumentStorage(root: folder)
+        let old = Date().addingTimeInterval(-7200)
+        func file(_ name: String, date: Date) throws -> URL {
+            let url = folder.appendingPathComponent(name)
+            try Data("x".utf8).write(to: url)
+            try FileManager.default.setAttributes([.modificationDate: date], ofItemAtPath: url.path)
+            return url
+        }
+        let abandoned = [try file(UUID().uuidString + ".partial", date: old), try file(UUID().uuidString + ".page", date: old)]
+        let kept = [try file(UUID().uuidString + ".partial", date: Date()), try file("abc.pdf", date: old),
+                    try file("notes.partial", date: old), try file(UUID().uuidString + ".pdf", date: old)]
+        let directory = folder.appendingPathComponent(UUID().uuidString + ".page")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try FileManager.default.setAttributes([.modificationDate: old], ofItemAtPath: directory.path)
+        XCTAssertEqual(storage.removeAbandonedTemporaries(), 2)
+        for url in abandoned { XCTAssertFalse(FileManager.default.fileExists(atPath: url.path)) }
+        for url in kept + [directory] { XCTAssertTrue(FileManager.default.fileExists(atPath: url.path), url.lastPathComponent) }
+    }
 }

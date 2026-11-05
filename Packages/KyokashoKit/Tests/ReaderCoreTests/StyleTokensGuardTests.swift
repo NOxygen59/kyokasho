@@ -63,6 +63,11 @@ final class StyleTokensGuardTests: XCTestCase {
             ("Reader/ReaderController+Search.swift", "guard documentOCRTask == nil, document.capabilities.textAnalysis"),
             ("Reader/ReaderScreen.swift", "private func openStudy(_ tab: StudyPanel.Tab) {\n        guard capabilities.study"),
             ("Library/DocumentScan.swift", "guard document.capabilities.study, UserDefaults"),
+            ("Reader/ReaderController+Search.swift", "func search(_ query: String) {\n        guard document.capabilities.textAnalysis"),
+            ("Reader/ReaderController+OCR.swift", "func ocr(engine: String) async throws -> OCRPage {\n        guard document.capabilities.textAnalysis"),
+            ("Reader/ReaderController+OCR.swift", "if document.capabilities.textAnalysis {\n            let url = fileURL\n            pageTextTask"),
+            ("AppModel.swift", "capabilities.pageEditing != false else { return }"),
+            ("Reader/ReaderScreen.swift", "if capabilities.pageEditing {\n                                    // #49"),
         ] {
             let source = try String(contentsOf: app.appendingPathComponent(file), encoding: .utf8)
             XCTAssertTrue(source.contains(guardText), "\(file) : \(guardText)")

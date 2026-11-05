@@ -108,6 +108,8 @@ final class AppModel: ObservableObject {
         }
         storage = DocumentStorage(root: support.appendingPathComponent("Documents", isDirectory: true))
         importer = DocumentImporter(storage: storage, database: database)
+        let abandoned = storage
+        DispatchQueue.global(qos: .utility).async { abandoned.removeAbandonedTemporaries() }
         thumbnails = ThumbnailCache(directory: caches.appendingPathComponent("Thumbnails", isDirectory: true))
         // Moteurs à modèle téléchargé : toujours enregistrés, disponibles une fois le modèle installé.
         OCRService.register(NDLOCREngine())
@@ -328,6 +330,7 @@ final class AppModel: ObservableObject {
     @Published var pageEditRequest: PageEditRequest?
 
     func requestPageEdit(documentId: String, page: Int) {
+        guard documents.first(where: { $0.id == documentId })?.capabilities.pageEditing != false else { return }
         pageEditRequest = PageEditRequest(documentId: documentId, page: page)
         openDocumentId = nil
     }

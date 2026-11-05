@@ -44,15 +44,17 @@ extension ReaderController {
         // (pas à chaque page qui défile).
         preloadThumbnails(around: source)
         ink.trim(around: source)
-        if !keepFocus { pageHasPDFText = false }
+        if !keepFocus || !document.capabilities.textAnalysis { pageHasPDFText = false }
         pageTextTask?.cancel()
-        let url = fileURL
-        pageTextTask = Task.detached(priority: .utility) { [weak self] in
-            // Même règle que le toucher : un peu de texte suffit (folio, légende).
-            let has = PDFTextEngine.hasTextLayer(url: url, pageIndex: source)
-            await MainActor.run {
-                guard !Task.isCancelled, self?.currentSourcePage == source else { return }
-                self?.pageHasPDFText = has
+        if document.capabilities.textAnalysis {
+            let url = fileURL
+            pageTextTask = Task.detached(priority: .utility) { [weak self] in
+                // Même règle que le toucher : un peu de texte suffit (folio, légende).
+                let has = PDFTextEngine.hasTextLayer(url: url, pageIndex: source)
+                await MainActor.run {
+                    guard !Task.isCancelled, self?.currentSourcePage == source else { return }
+                    self?.pageHasPDFText = has
+                }
             }
         }
         let visible = visibleSources()
@@ -208,7 +210,8 @@ extension ReaderController {
 
     /// OCR d'une page avec un moteur précis (comparaison), sans changer la page affichée.
     func ocr(engine: String) async throws -> OCRPage {
-        try await model.ocr.page(documentId: document.id, url: fileURL, pageIndex: focusSource, engine: engine)
+        guard document.capabilities.textAnalysis else { throw CancellationError() }
+        return try await model.ocr.page(documentId: document.id, url: fileURL, pageIndex: focusSource, engine: engine)
     }
 
     /// Pilule du panneau : travailler sur l'autre page affichée (double page).

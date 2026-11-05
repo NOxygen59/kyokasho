@@ -45,7 +45,11 @@ public enum ComicBookArchive {
         }
         let entries = Dictionary(archive.filter { $0.type == .file }.map { ($0.path, $0) }, uniquingKeysWith: { first, _ in first })
         let names = pageNames(Array(entries.keys))
-        let total = names.reduce(UInt64(0)) { $0 + (entries[$1]?.uncompressedSize ?? 0) }
+        // Tailles lues dans l'archive, donc non fiables : la somme ne doit pas déborder.
+        let total = names.reduce(UInt64(0)) { sum, name in
+            let (value, overflow) = sum.addingReportingOverflow(entries[name]?.uncompressedSize ?? 0)
+            return overflow ? .max : value
+        }
         guard total <= maximumTotalBytes, names.count <= maximumPages else {
             throw ImportError.unreadable(String(localized: "Ce fichier CBZ est trop volumineux pour être converti.", bundle: .main))
         }

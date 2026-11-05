@@ -67,4 +67,30 @@ final class VerticalJapaneseTests: XCTestCase {
         XCTAssertEqual(OCRLayout.verticalReadingOrder(page(lines)).count, 1000)
         XCTAssertLessThan(Date().timeIntervalSince(start), 5)
     }
+
+    /// Contre-revue Codex de f8a3fa9 : le balayage forme les mêmes blocs que la comparaison de toutes les paires.
+    func testSweepGroupsLikeComparingEveryPair() {
+        var generator = SystemRandomNumberGenerator()
+        for _ in 0..<40 {
+            let lines = (0..<60).map { index -> OCRLine in
+                let vertical = Bool.random(using: &generator)
+                let a = Double.random(in: 0...0.9, using: &generator), b = Double.random(in: 0...0.9, using: &generator)
+                let thin = Double.random(in: 0.01...0.05, using: &generator), long = Double.random(in: 0.05...0.4, using: &generator)
+                return OCRLine(text: "\(index)", box: NormBox(x: a, y: b, w: vertical ? thin : long, h: vertical ? long : thin),
+                               charBoxes: [], measuredCharBoxes: false, vertical: vertical, confidence: 1)
+            }
+            var groups = lines.indices.map { [$0] }
+            for i in lines.indices { for j in lines.indices where i < j && OCRLayout.sameBlock(lines[i], lines[j]) {
+                let a = groups.firstIndex { $0.contains(i) }!, b = groups.firstIndex { $0.contains(j) }!
+                if a != b { groups[a] += groups[b]; groups.remove(at: b) }
+            } }
+            let reference = groups.map { Set($0.map { lines[$0].text }) }
+            let order = OCRLayout.verticalReadingOrder(page(lines)).map(\.text)
+            // Chaque bloc de référence occupe des positions contiguës dans l'ordre de lecture.
+            for block in reference {
+                let positions = order.indices.filter { block.contains(order[$0]) }
+                XCTAssertEqual((positions.last ?? 0) - (positions.first ?? 0) + 1, positions.count, "bloc coupé : \(block)")
+            }
+        }
+    }
 }

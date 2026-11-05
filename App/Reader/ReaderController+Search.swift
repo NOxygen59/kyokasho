@@ -45,7 +45,7 @@ extension ReaderController {
     }
 
     func search(_ query: String) {
-        guard let pdf else { return }
+        guard document.capabilities.textAnalysis, let pdf else { return }
         pdf.cancelFindString()
         searchResults = []
         pendingResults = []

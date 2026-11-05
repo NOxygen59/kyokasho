@@ -20,6 +20,23 @@ public struct DocumentStorage: Sendable {
     public func remove(documentId: String) {
         try? FileManager.default.removeItem(at: url(for: documentId))
     }
+
+    /// Fichiers d'un import interrompu par un arrêt brutal (`<UUID>.partial`, `<UUID>.page`). Seuls ces noms privés, assez
+    /// anciens pour ne pas être en cours d'écriture ; jamais un PDF, ni un dossier, ni un autre nom.
+    @discardableResult
+    public func removeAbandonedTemporaries(olderThan age: TimeInterval = 3600, now: Date = Date()) -> Int {
+        let fm = FileManager.default
+        let keys: Set<URLResourceKey> = [.isRegularFileKey, .contentModificationDateKey]
+        guard let files = try? fm.contentsOfDirectory(at: root, includingPropertiesForKeys: Array(keys)) else { return 0 }
+        var removed = 0
+        for file in files where ["partial", "page"].contains(file.pathExtension)
+            && UUID(uuidString: file.deletingPathExtension().lastPathComponent) != nil {
+            guard let values = try? file.resourceValues(forKeys: keys), values.isRegularFile == true,
+                  let date = values.contentModificationDate, now.timeIntervalSince(date) >= age else { continue }
+            if (try? fm.removeItem(at: file)) != nil { removed += 1 }
+        }
+        return removed
+    }
 }
 
 public enum ImportError: LocalizedError, Equatable {
