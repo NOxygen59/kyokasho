@@ -78,10 +78,11 @@ public struct ReleaseNotes: Equatable, Sendable, Identifiable {
 
     /// La version en cours de préparation : seulement ce qu'elle change (décision de NOxygen59 du 04/11/2026). C'est
     /// elle que montre la fenêtre « Nouveautés » ; les versions précédentes vont dans `ReleaseHistory`.
-    public static let current = ReleaseNotes("1.4.6", "2026-11-05", published: false, String(localized: "Comics expérimentaux et accueil plus pratique", bundle: .main), added: [
-            String(localized: "Comics .cbz, à titre expérimental : lecture des images seules, sans OCR ni IA.", bundle: .main),
+    public static let current = ReleaseNotes("1.4.6", "2026-11-05", published: false, String(localized: "Espace Manga et accueil plus pratique", bundle: .main), added: [
+            String(localized: "Espace Manga, sur son propre onglet : mangas PDF avec toutes les fonctions.", bundle: .main),
+            String(localized: "Fichiers .cbz, à titre expérimental : images seules, sans OCR ni IA, et conversion en PDF avec OCR.", bundle: .main),
             String(localized: "Accueil : les onglets ouverts sont listés, avec une croix pour les fermer.", bundle: .main),
-            String(localized: "Appui long sur un document : choisir Manuel, Livre, Comics ou Non classé.", bundle: .main),
+            String(localized: "Appui long sur un document : choisir Manuel, Livre, Manga ou Non classé.", bundle: .main),
         ], fixed: [
             String(localized: "Fenêtre de correction : elle reste ouverte quand l'iPad tourne ou que le clavier apparaît, et demande confirmation avant de perdre une saisie.", bundle: .main),
             String(localized: "Dictionnaire : les furigana sont lisibles sur les thèmes clairs.", bundle: .main),

@@ -87,6 +87,24 @@ public enum ComicBookArchive {
         return Conversion(pages: pages, skipped: skipped)
     }
 
+    /// Copie page par page, images reprises telles quelles, avec le titre dans les métadonnées.
+    static func rewritePDF(_ source: URL, to output: URL, title: String) throws {
+        guard let document = CGPDFDocument(source as CFURL), document.numberOfPages > 0,
+              let context = CGContext(output as CFURL, mediaBox: nil, [kCGPDFContextTitle: title] as CFDictionary) else {
+            throw ImportError.unreadable(String(localized: "Ce fichier CBZ n'a pas pu être converti.", bundle: .main))
+        }
+        for index in 1...document.numberOfPages {
+            autoreleasepool {
+                guard let page = document.page(at: index) else { return }
+                var box = page.getBoxRect(.mediaBox)
+                context.beginPage(mediaBox: &box)
+                context.drawPDFPage(page)
+                context.endPage()
+            }
+        }
+        context.closePDF()
+    }
+
     /// Dimensions lues avant tout décodage. Image normale : reprise telle quelle. Trop grande ou tournée (EXIF) : passe par
     /// ImageIO, qui la réduit sans la décoder entière et la remet à l'endroit.
     static func pageImage(at url: URL) -> CGImage? {
@@ -164,6 +182,56 @@ extension DocumentImporter {
         settings.firstPageAlone = true
         settings.splitWidePages = false
         settings.autoCrop = false
+        settings.mangaSpace = true
         return settings
+    }
+
+    private static let comicConversionsKey = "comics.converted"
+
+    /// Ordre de conversion des CBZ sélectionnés : tome 2 avant tome 10.
+    public static func conversionOrder(_ documents: [LibraryDocument]) -> [LibraryDocument] {
+        documents.filter(\.isComicArchive).sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
+    }
+
+    /// Crée un PDF ordinaire, avec OCR et étude, à partir d'un CBZ importé. Le CBZ reste en place et sans OCR.
+    /// L'identifiant d'un document est l'empreinte de son fichier, et le CBZ est déjà stocké en PDF : le titre écrit ici
+    /// rend le fichier différent, sinon l'import retomberait sur le même document. Un second appel rend le même PDF.
+    @discardableResult
+    public func convertComicToPDF(_ comic: LibraryDocument) throws -> ImportResult {
+        guard comic.isComicArchive else {
+            throw ImportError.unreadable(String(localized: "Ce document n'est pas un fichier CBZ.", bundle: .main))
+        }
+        var conversions = (try? database.storedValue([String: String].self, forKey: Self.comicConversionsKey)) ?? [:]
+        if let id = conversions[comic.id], let existing = try database.document(id: id) {
+            return ImportResult(document: existing, isNew: false)
+        }
+        let free = (try? storage.root.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey]))?
+            .volumeAvailableCapacityForImportantUsage ?? .max
+        guard free >= comic.fileSize + comic.fileSize / 4 + 100 * 1_048_576 else {
+            throw ImportError.unreadable(String(localized: "Pas assez d'espace libre pour créer ce PDF.", bundle: .main))
+        }
+        let temporary = storage.root.appendingPathComponent(UUID().uuidString + ".partial")
+        defer { try? FileManager.default.removeItem(at: temporary) }
+        try ComicBookArchive.rewritePDF(storage.url(for: comic.id), to: temporary, title: comic.title)
+        let hash = try Self.sha256(of: temporary)
+        let pageCount = try Self.inspect(temporary).pageCount
+        conversions[comic.id] = hash
+        if let existing = try database.document(id: hash) {
+            try database.setStoredValue(conversions, forKey: Self.comicConversionsKey)
+            return ImportResult(document: existing, isNew: false)
+        }
+        let destination = storage.url(for: hash)
+        try FileManager.default.moveItem(at: temporary, to: destination)
+        var document = LibraryDocument(
+            id: hash, title: comic.title, originalFileName: comic.title + ".pdf", pageCount: pageCount,
+            fileSize: (try? FileManager.default.attributesOfItem(atPath: destination.path)[.size] as? NSNumber)?.int64Value ?? 0)
+        document.settingsOverride = Self.comicSettings
+        do {
+            try database.saveComic(document, sources: conversions, sourcesKey: Self.comicConversionsKey)
+        } catch {
+            try? FileManager.default.removeItem(at: destination)
+            throw error
+        }
+        return ImportResult(document: document, isNew: true)
     }
 }

@@ -33,6 +33,9 @@ public struct DocumentCapabilities: Equatable, Sendable {
 extension LibraryDocument {
     public var capabilities: DocumentCapabilities { DocumentCapabilities(document: self) }
 
+    /// Espace où le document apparaît. N'enlève aucune fonction à un PDF : seul le format décide des capacités.
+    public var isInMangaSpace: Bool { isComicArchive || settingsOverride.mangaSpace == true }
+
     /// Issu d'un `.cbz`. Le nom d'origine ne change jamais et existe depuis toujours : une version plus ancienne de l'app
     /// relit ce document comme un PDF ordinaire, sans valeur inconnue qui ferait échouer toute la bibliothèque.
     public var isComicArchive: Bool {

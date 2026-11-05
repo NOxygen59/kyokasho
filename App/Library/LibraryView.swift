@@ -50,8 +50,34 @@ struct LibraryView: View {
     @State private var showBatchSecond = false
     @State private var search = ""
 
+    /// Espace affiché : Livres & Manuels ou Manga. Simple filtre : il ne réécrit ni document ni progression.
+    enum Space: String { case study, manga }
+    @AppStorage("library.space") private var space = Space.study
+    @State private var convertingComics: [LibraryDocument] = []
+    @State private var showConvertConfirmation = false
+
+    private var spaceDocuments: [LibraryDocument] {
+        model.documents.filter { $0.isInMangaSpace == (space == .manga) }
+    }
+
+    /// Le Manga forme une seule liste ; les catégories Livre et Manuel n'y ont pas de sens.
+    private var sections: [LibrarySections.Section] {
+        guard space == .manga else { return LibrarySections.group(filtered) }
+        return filtered.isEmpty ? [] : [LibrarySections.Section(category: nil, title: String(localized: "Manga"), documents: filtered)]
+    }
+
+    private var selectedComics: [LibraryDocument] {
+        model.documents.filter { batch.selected.contains($0.id) && $0.isComicArchive }
+    }
+
+    private var conversionSizeText: String {
+        ByteCountFormatter.string(fromByteCount: convertingComics.reduce(0) { $0 + $1.fileSize }, countStyle: .file)
+    }
+
+    private var spaceTitle: String { space == .manga ? "Aidoku (2)" : "Kyōkasho" }
+
     private var filtered: [LibraryDocument] {
-        var docs = model.documents
+        var docs = spaceDocuments
         switch filter {
         case .all: break
         case .inProgress: docs = docs.filter { $0.lastPageIndex > 0 && $0.lastPageIndex < $0.pageCount - 1 }
@@ -129,11 +155,12 @@ struct LibraryView: View {
         }
         // « Livre ou manuel ? » après chaque import (RET-039, #54). Une alerte ne se ferme pas par un toucher à côté :
         // chaque document reçoit une réponse, « Plus tard » compris.
-        .alert("Livre ou manuel ?", isPresented: Binding(get: { !model.categoryQuestions.isEmpty }, set: { _ in }),
+        .alert("Livre, manuel ou manga ?", isPresented: Binding(get: { !model.categoryQuestions.isEmpty }, set: { _ in }),
                presenting: model.categoryQuestions.first) { _ in
             ForEach(DocumentCategory.allCases, id: \.self) { category in
                 Button(category.title) { model.answerCategory(category) }
             }
+            Button("Manga") { model.answerManga() }
             Button("Plus tard", role: .cancel) { model.answerCategory(nil) }
         } message: { document in
             Text("« \(document.title) » : la catégorie s'affiche sur l'accueil pour t'aider à te repérer. Tu pourras la changer dans « Ce document ».")
@@ -229,6 +256,16 @@ struct LibraryView: View {
             Text("Numéro de la page du fichier PDF où ton manuel imprime « 1 ». Plus simple : ouvre le livre sur cette page, puis menu ••• → « Cette page est la page 1 ».")
         }
         // Double confirmation de la suppression multiple : rien n'est effacé avant « Effacer » (`BatchDeletion`).
+        .alert("Convertir \(convertingComics.count) CBZ en PDF ?", isPresented: $showConvertConfirmation) {
+            Button("Convertir") {
+                model.convertComics(convertingComics)
+                selecting = false
+                batch = BatchDeletion()
+            }
+            Button("Annuler", role: .cancel) {}
+        } message: {
+            Text("Un PDF par CBZ, avec les fonctions OCR de l'app. Les CBZ restent en place. Place nécessaire : environ \(conversionSizeText).")
+        }
         .alert("Supprimer \(batch.selected.count) document\(batch.selected.count > 1 ? "s" : "") ?", isPresented: $showBatchFirst) {
             Button("Annuler", role: .cancel) { batch.cancel() }
             Button("Continuer", role: .destructive) {
@@ -281,22 +318,22 @@ struct LibraryView: View {
     private var sidebarContent: some View {
         VStack(alignment: .leading, spacing: 22) {
             HStack(spacing: 10) {
-                Text("教").font(.custom("HiraMinProN-W6", size: 26))
+                Text(verbatim: space == .manga ? "漫" : "教").font(.custom("HiraMinProN-W6", size: 26))
                     .frame(width: 42, height: 42)
                     .foregroundStyle(Atelier.onAccentInk.opacity(0.85))
                     .background(Atelier.Tint.japanese, in: RoundedRectangle(cornerRadius: Atelier.smallRadius, style: .continuous))
                 VStack(alignment: .leading, spacing: 0) {
-                    Text("Kyōkasho").font(Atelier.display(19)).foregroundStyle(Atelier.textPrimary)
-                    Text("教科書 · atelier de lecture").font(Atelier.font(11)).foregroundStyle(Atelier.textTertiary)
+                    Text(verbatim: spaceTitle).font(Atelier.display(19)).foregroundStyle(Atelier.textPrimary)
+                    Text(space == .manga ? "漫画 · lecture de manga" : "教科書 · atelier de lecture").font(Atelier.font(11)).foregroundStyle(Atelier.textTertiary)
                 }
             }
             VStack(alignment: .leading, spacing: 4) {
                 AtelierLabel(String(localized: "Bibliothèque")).padding(.bottom, 4)
-                sideRow(.all, icon: "square.grid.2x2", title: String(localized: "Tous les documents"), count: model.documents.count)
+                sideRow(.all, icon: "square.grid.2x2", title: String(localized: "Tous les documents"), count: spaceDocuments.count)
                 sideRow(.inProgress, icon: "book", title: String(localized: "En cours"),
-                        count: model.documents.filter { $0.lastPageIndex > 0 && $0.lastPageIndex < $0.pageCount - 1 }.count)
+                        count: spaceDocuments.filter { $0.lastPageIndex > 0 && $0.lastPageIndex < $0.pageCount - 1 }.count)
                 sideRow(.drive, icon: "externaldrive.badge.icloud", title: String(localized: "Depuis Drive"),
-                        count: model.documents.filter { $0.driveFileId != nil }.count)
+                        count: spaceDocuments.filter { $0.driveFileId != nil }.count)
             }
             VStack(alignment: .leading, spacing: 4) {
                 AtelierLabel(String(localized: "Importer")).padding(.bottom, 4)
@@ -376,7 +413,7 @@ struct LibraryView: View {
     /// Portrait : barre compacte en haut.
     private var compactBar: some View {
         HStack(spacing: 12) {
-            Text("Kyōkasho").font(Atelier.display(22)).foregroundStyle(Atelier.textPrimary)
+            Text(verbatim: spaceTitle).font(Atelier.display(22)).foregroundStyle(Atelier.textPrimary)
             Spacer()
             Picker("", selection: $filter) {
                 Text("Tous").tag(Filter.all)
@@ -402,8 +439,38 @@ struct LibraryView: View {
     }
     private var monitorVisible: Bool { monitorEnabled && monitorShown }
 
+    /// Onglets ouverts au-dessus : ils valent pour les deux espaces.
+    private var spaceTabs: some View {
+        HStack(spacing: 8) {
+            spaceTab(.study, title: String(localized: "Livres & Manuels"), icon: "books.vertical")
+            spaceTab(.manga, title: String(localized: "Manga"), icon: "book")
+            Spacer(minLength: 0)
+        }
+    }
+
+    private func spaceTab(_ value: Space, title: String, icon: String) -> some View {
+        let on = space == value
+        let count = model.documents.filter { $0.isInMangaSpace == (value == .manga) }.count
+        return Button {
+            guard !on else { return }
+            selecting = false
+            batch = BatchDeletion()
+            space = value
+        } label: {
+            Label { Text(ui: "\(title) · \(count)") } icon: { Image(systemName: icon) }
+                .font(Atelier.font(14, weight: .semibold))
+                .padding(.horizontal, 14).padding(.vertical, 9)
+                .foregroundStyle(on ? Atelier.onAccentInk.opacity(0.85) : Atelier.textPrimary)
+                .background(Capsule().fill(on ? Atelier.Tint.japanese : Atelier.surfaceHigh))
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(on ? .isSelected : [])
+    }
+
     private var main: some View {
         VStack(alignment: .leading, spacing: Atelier.gap) {
+            OpenDocumentsStrip()
+            spaceTabs
             HStack(alignment: .bottom) {
                 VStack(alignment: .leading, spacing: 2) {
                     AtelierLabel(filterTitle, tint: Atelier.Tint.read)
@@ -428,7 +495,6 @@ struct LibraryView: View {
                 Button { showImportOptions = true } label: { Label("Importer", systemImage: "plus") }
                     .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.cloud))
             }
-            OpenDocumentsStrip()
             ZStack(alignment: .topTrailing) {
                 VStack(alignment: .leading, spacing: Atelier.gap) {
                     if filtered.isEmpty {
@@ -438,7 +504,7 @@ struct LibraryView: View {
                             // Sections « Manuels », « Livres », « Non classés » (recette 1.3.2 (61), E5) : chacune s'allonge
                             // avec ses documents, les suivantes descendent d'autant.
                             LazyVGrid(columns: [GridItem(.adaptive(minimum: 180, maximum: 220), spacing: 22)], spacing: 26) {
-                                ForEach(LibrarySections.group(filtered, comicMarks: model.comicMarks), id: \.title) { section in
+                                ForEach(sections, id: \.title) { section in
                                     Section {
                                         ForEach(section.documents) { document in
                                             Button {
@@ -450,14 +516,14 @@ struct LibraryView: View {
                                             .id(LibraryCardRenderIdentity(documentId: document.id,
                                                                           category: document.category,
                                                                           selecting: selecting,
-                                                                          comics: LibrarySections.isComics(document, marks: model.comicMarks)))
+                                                                          manga: document.isInMangaSpace))
                                             // La catégorie appartient à l'état courant de la bibliothèque. En la
                                             // dessinant au-dessus du bouton, elle n'est plus retenue dans l'ancien
                                             // rendu interne de la carte après l'import.
                                             .overlay(alignment: .topLeading) {
-                                                if LibrarySections.isComics(document, marks: model.comicMarks) {
+                                                if document.isInMangaSpace {
                                                     // Format fixe pour un .cbz ; simple rangement pour un PDF.
-                                                    comicsMark(archive: document.isComicArchive).allowsHitTesting(false)
+                                                    mangaMark(archive: document.isComicArchive).allowsHitTesting(false)
                                                 } else if let category = document.category {
                                                     categoryMark(category).allowsHitTesting(false)
                                                 }
@@ -475,7 +541,7 @@ struct LibraryView: View {
                                         }
                                     } header: {
                                         HStack(alignment: .firstTextBaseline, spacing: 8) {
-                                            AtelierLabel(section.title, tint: section.isComics ? Atelier.Tint.japanese : section.category == .textbook ? Atelier.Tint.read
+                                            AtelierLabel(section.title, tint: space == .manga ? Atelier.Tint.japanese : section.category == .textbook ? Atelier.Tint.read
                                                          : section.category == .book ? Atelier.Tint.annotate : Atelier.textTertiary)
                                             Text("\(section.documents.count)").font(Atelier.mono).foregroundStyle(Atelier.textTertiary)
                                             Spacer()
@@ -520,8 +586,8 @@ struct LibraryView: View {
             .padding(8)
     }
 
-    private func comicsMark(archive: Bool) -> some View {
-        Text(archive ? String(localized: "Comics · expérimental") : String(localized: "Comics")).font(Atelier.font(11, weight: .semibold))
+    private func mangaMark(archive: Bool) -> some View {
+        Text(archive ? String(localized: "CBZ · expérimental") : String(localized: "Manga")).font(Atelier.font(11, weight: .semibold))
             .padding(.horizontal, 8).padding(.vertical, 4)
             .foregroundStyle(Atelier.onAccentInk.opacity(0.8))
             .background(Atelier.Tint.japanese, in: Capsule())
@@ -544,6 +610,14 @@ struct LibraryView: View {
             Text("\(batch.selected.count) sélectionné\(batch.selected.count > 1 ? "s" : "")")
                 .font(Atelier.font(14, weight: .semibold)).foregroundStyle(Atelier.textSecondary)
             Spacer()
+            // Propre à l'espace Manga : le CBZ reste en place, le PDF créé a l'OCR.
+            if space == .manga, !selectedComics.isEmpty {
+                Button("Convertir en PDF (\(selectedComics.count))") {
+                    convertingComics = selectedComics
+                    showConvertConfirmation = true
+                }
+                .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.japanese))
+            }
             Button("Tout sélectionner") { batch.selectAll(filtered.map(\.id)) }
                 .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.read))
             Button(role: .destructive) {
@@ -629,24 +703,24 @@ struct LibraryView: View {
         } label: { Label("Supprimer", systemImage: "trash") }
     }
 
-    /// Classement libre. « Comics » est un rangement, pas un format : le PDF garde l'OCR et l'étude.
+    /// Classement libre. « Manga » est un espace, pas un format : le PDF garde l'OCR et l'étude.
     private func shelfPicker(for document: LibraryDocument) -> some View {
-        let comics = model.comicMarks.contains(document.id)
+        let manga = document.isInMangaSpace
         return Menu {
             ForEach(DocumentCategory.allCases, id: \.self) { category in
                 Button {
-                    model.setComicMark(document.id, false)
+                    model.setMangaSpace(document.id, false)
                     model.setCategory(document.id, category)
-                } label: { shelfLabel(category.title, on: !comics && document.category == category) }
+                } label: { shelfLabel(category.title, on: !manga && document.category == category) }
             }
             Button {
-                model.setComicMark(document.id, true)
+                model.setMangaSpace(document.id, true)
                 model.setCategory(document.id, nil)
-            } label: { shelfLabel(String(localized: "Comics"), on: comics) }
+            } label: { shelfLabel(String(localized: "Manga"), on: manga) }
             Button {
-                model.setComicMark(document.id, false)
+                model.setMangaSpace(document.id, false)
                 model.setCategory(document.id, nil)
-            } label: { shelfLabel(String(localized: "Non classé"), on: !comics && document.category == nil) }
+            } label: { shelfLabel(String(localized: "Non classé"), on: !manga && document.category == nil) }
         } label: {
             Label("Catégorie", systemImage: "tag")
         }
@@ -660,9 +734,9 @@ struct LibraryView: View {
     private var emptyState: some View {
         VStack(spacing: 16) {
             Text("教").font(.custom("HiraMinProN-W6", size: 64)).foregroundStyle(Atelier.Tint.japanese.opacity(0.8))
-            Text(filter == .all ? String(localized: "Ta bibliothèque est vide") : String(localized: "Rien ici pour l'instant"))
+            Text(space == .manga && filter == .all ? String(localized: "Aucun manga pour l'instant") : filter == .all ? String(localized: "Ta bibliothèque est vide") : String(localized: "Rien ici pour l'instant"))
                 .font(Atelier.display(24)).foregroundStyle(Atelier.textPrimary)
-            Text("Importe un cours ou un manuel en PDF, depuis Fichiers ou Google Drive.")
+            Text(space == .manga ? "Importe un .cbz, ou range un PDF ici d'un appui long sur sa carte." : "Importe un cours ou un manuel en PDF, depuis Fichiers ou Google Drive.")
                 .foregroundStyle(Atelier.textSecondary)
             HStack(spacing: 12) {
                 Button { showImportOptions = true } label: { Label("Fichiers", systemImage: "folder") }

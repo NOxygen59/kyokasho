@@ -11,33 +11,22 @@ public enum LibrarySections {
         public var category: DocumentCategory?
         public var title: String
         public var documents: [LibraryDocument]
-        public var isComics = false
-    }
 
-    /// Clé des PDF rangés à la main dans « Comics ». Simple classement, hors de la colonne `category` : une version plus
-    /// ancienne de l'app ne sait pas lire une catégorie inconnue, et toute sa bibliothèque paraîtrait vide.
-    public static let comicMarksKey = "comics.marked"
-
-    public static func isComics(_ document: LibraryDocument, marks: Set<String>) -> Bool {
-        document.isComicArchive || marks.contains(document.id)
+        public init(category: DocumentCategory?, title: String, documents: [LibraryDocument]) {
+            self.category = category
+            self.title = title
+            self.documents = documents
+        }
     }
 
     public static let order: [DocumentCategory?] = [.textbook, .book, nil]
 
-    public static func group(_ documents: [LibraryDocument], comicMarks: Set<String> = []) -> [Section] {
-        let comics = documents.filter { isComics($0, marks: comicMarks) }
-        let others = documents.filter { !isComics($0, marks: comicMarks) }
-        var sections: [Section] = order.compactMap { category in
-            let docs = others.filter { $0.category == category }
+    public static func group(_ documents: [LibraryDocument]) -> [Section] {
+        order.compactMap { category in
+            let docs = documents.filter { $0.category == category }
             guard !docs.isEmpty else { return nil }
             return Section(category: category, title: title(category), documents: docs)
         }
-        if !comics.isEmpty {
-            // Avant « Non classés », toujours en dernier.
-            let index = sections.last?.category == nil && !sections.isEmpty ? sections.count - 1 : sections.count
-            sections.insert(Section(category: nil, title: String(localized: "Comics", bundle: .main), documents: comics, isComics: true), at: index)
-        }
-        return sections
     }
 
     public static func title(_ category: DocumentCategory?) -> String {
@@ -54,12 +43,12 @@ public struct LibraryCardRenderIdentity: Hashable, Sendable {
     public var documentId: String
     public var category: DocumentCategory?
     public var selecting: Bool
-    public var comics: Bool
+    public var manga: Bool
 
-    public init(documentId: String, category: DocumentCategory?, selecting: Bool, comics: Bool = false) {
+    public init(documentId: String, category: DocumentCategory?, selecting: Bool, manga: Bool = false) {
         self.documentId = documentId
         self.category = category
         self.selecting = selecting
-        self.comics = comics
+        self.manga = manga
     }
 }

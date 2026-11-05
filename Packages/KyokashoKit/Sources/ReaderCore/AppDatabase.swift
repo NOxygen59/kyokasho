@@ -209,6 +209,17 @@ extension AppDatabase {
         try writer.write { db in try document.save(db) }
     }
 
+    /// Change seulement l'espace du document, dans une transaction : ses autres réglages ne sont pas réécrits.
+    public func updateMangaSpace(documentId: String, inManga: Bool) throws {
+        try writer.write { db in
+            guard var document = try LibraryDocument.fetchOne(db, key: documentId) else { return }
+            var settings = document.settingsOverride
+            settings.mangaSpace = inManga ? true : nil
+            document.settingsOverride = settings
+            try db.execute(sql: "UPDATE document SET settingsJSON = ? WHERE id = ?", arguments: [document.settingsJSON, documentId])
+        }
+    }
+
     /// Document et correspondance d'archive enregistrés ensemble, ou pas du tout.
     func saveComic(_ document: LibraryDocument, sources: [String: String], sourcesKey: String) throws {
         try writer.write { db in

@@ -93,6 +93,9 @@ public struct ReaderSettingsOverride: Codable, Equatable, Sendable {
     public var doubleTapZoom: Bool?
     public var hideBarsOnScroll: Bool?
     public var ocrEngine: OCREngineChoice?
+    /// Rangé dans l'espace Manga. Dans ce JSON : il suit le document dans ses paquets, et une version plus ancienne
+    /// de l'app l'ignore sans rien casser.
+    public var mangaSpace: Bool?
 
     public init() {}
 

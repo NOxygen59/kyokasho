@@ -72,8 +72,6 @@ final class AppModel: ObservableObject {
     private var pendingDocuments: [LibraryDocument]?
     /// Documents nouvellement importés dont la catégorie reste à demander (« Livre ou manuel ? », RET-039, #54).
     @Published private(set) var categoryQuestions: [LibraryDocument] = []
-    /// PDF rangés à la main dans « Comics » (`LibrarySections.comicMarksKey`) : classement seul, l'OCR reste disponible.
-    @Published private(set) var comicMarks: Set<String> = []
     /// Import d'un seul fichier : il s'ouvre une fois la question répondue.
     private var openAfterCategory: String?
 
@@ -124,7 +122,6 @@ final class AppModel: ObservableObject {
         appSettings = (try? database.appSettings()) ?? AppSettings()
         readerDefaults = (try? database.readerDefaults()) ?? .default
 
-        comicMarks = Set((try? database.storedValue([String].self, forKey: LibrarySections.comicMarksKey)) ?? [])
         database.documentsPublisher()
             // Bibliothèque illisible : le dire, plutôt que de la montrer vide comme si tout avait disparu.
             .catch { [weak self] error -> Empty<[LibraryDocument], Never> in
@@ -413,11 +410,57 @@ final class AppModel: ObservableObject {
     }
 
     /// Catégorie d'un document (requête ciblée : rien d'autre n'est réécrit).
-    /// Range un document dans « Comics » ou l'en retire, sans toucher à ses capacités.
-    func setComicMark(_ documentId: String, _ marked: Bool) {
-        if marked { comicMarks.insert(documentId) } else { comicMarks.remove(documentId) }
-        let marks = comicMarks.sorted()
-        persist { try $0.setStoredValue(marks, forKey: LibrarySections.comicMarksKey) }
+    /// Range un PDF dans l'espace Manga ou l'en retire, sans toucher à ses fonctions.
+    func setMangaSpace(_ documentId: String, _ inManga: Bool) {
+        if let index = documents.firstIndex(where: { $0.id == documentId }) {
+            var settings = documents[index].settingsOverride
+            settings.mangaSpace = inManga ? true : nil
+            documents[index].settingsOverride = settings
+        }
+        persist { try $0.updateMangaSpace(documentId: documentId, inManga: inManga) }
+    }
+
+    /// Réponse « Manga » à la question posée après l'import d'un PDF.
+    func answerManga() {
+        if let document = categoryQuestions.first { setMangaSpace(document.id, true) }
+        answerCategory(nil)
+    }
+
+    /// Crée un PDF avec OCR pour chaque CBZ sélectionné, dans l'ordre des tomes. Les CBZ restent en place.
+    func convertComics(_ documents: [LibraryDocument]) {
+        let comics = DocumentImporter.conversionOrder(documents)
+        guard storageRecoveryError == nil, importProgress == nil, let first = comics.first else { return }
+        guard !LibraryBackupService.inProgress else {
+            lastError = String(localized: "Sauvegarde en cours : réessaie après sa fin.")
+            return
+        }
+        importProgress = ImportProgress(done: 0, total: comics.count, currentName: first.title)
+        let importer = importer
+        Task.detached(priority: .userInitiated) {
+            var created: [LibraryDocument] = []
+            var errors: [String] = []
+            for (index, comic) in comics.enumerated() {
+                await MainActor.run {
+                    self.importProgress = ImportProgress(done: index, total: comics.count, currentName: comic.title)
+                }
+                do {
+                    let result = try importer.convertComicToPDF(comic)
+                    if result.isNew {
+                        OCRTargetLanguage.set(.japanese, forDocument: result.document.id)
+                        created.append(result.document)
+                    }
+                } catch {
+                    errors.append("\(comic.title) : \(error.localizedDescription)")
+                }
+            }
+            await MainActor.run {
+                self.importProgress = nil
+                for document in created {
+                    DocumentScan.start(document, url: self.storage.url(for: document.id), ocr: self.ocr)
+                }
+                if !errors.isEmpty { self.lastError = errors.joined(separator: "\n") }
+            }
+        }
     }
 
     func setCategory(_ documentId: String, _ category: DocumentCategory?) {

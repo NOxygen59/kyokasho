@@ -103,27 +103,67 @@ final class ComicBookArchiveTests: XCTestCase {
         XCTAssertEqual(Set(DocumentCategory.allCases.map(\.rawValue)), ["book", "textbook"])
     }
 
-    func testCapabilitiesComeFromTheFormatNotTheShelf() {
+    func testCapabilitiesComeFromTheFormatNotTheSpace() {
         var comic = LibraryDocument(id: "a", title: "t", originalFileName: "tome.CBZ", pageCount: 1, fileSize: 1)
         comic.category = .book
-        for capabilities in [comic.capabilities] {
-            XCTAssertFalse(capabilities.textAnalysis || capabilities.study || capabilities.annotations
-                           || capabilities.pageEditing || capabilities.export || capabilities.editableShelf)
-        }
-        let manga = LibraryDocument(id: "b", title: "t", originalFileName: "manga.pdf", pageCount: 1, fileSize: 1)
-        XCTAssertTrue(manga.capabilities.textAnalysis, "un PDF rangé dans Comics garde l'OCR")
-        XCTAssertTrue(LibrarySections.isComics(manga, marks: ["b"]))
-        XCTAssertTrue(LibrarySections.isComics(comic, marks: []), "un CBZ reste un comics, même marqué autrement")
+        let capabilities = comic.capabilities
+        XCTAssertFalse(capabilities.textAnalysis || capabilities.study || capabilities.annotations
+                       || capabilities.pageEditing || capabilities.export || capabilities.editableShelf)
+        XCTAssertTrue(comic.isInMangaSpace, "un CBZ reste dans Manga, quelle que soit sa catégorie")
+        var manga = LibraryDocument(id: "b", title: "t", originalFileName: "manga.pdf", pageCount: 1, fileSize: 1)
+        XCTAssertFalse(manga.isInMangaSpace)
+        var settings = ReaderSettingsOverride()
+        settings.mangaSpace = true
+        manga.settingsOverride = settings
+        XCTAssertTrue(manga.isInMangaSpace)
+        XCTAssertTrue(manga.capabilities.textAnalysis && manga.capabilities.study, "un manga PDF garde toutes ses fonctions")
     }
 
-    func testComicsSectionComesBeforeUnclassified() {
-        let comic = LibraryDocument(id: "a", title: "t", originalFileName: "x.cbz", pageCount: 1, fileSize: 1)
-        let loose = LibraryDocument(id: "b", title: "t", originalFileName: "y.pdf", pageCount: 1, fileSize: 1)
-        var book = LibraryDocument(id: "c", title: "t", originalFileName: "z.pdf", pageCount: 1, fileSize: 1)
-        book.category = .book
-        let sections = LibrarySections.group([comic, loose, book])
-        XCTAssertEqual(sections.map(\.documents.first?.id), ["c", "a", "b"])
-        XCTAssertEqual(sections.map(\.isComics), [false, true, false])
+    func testMangaSpaceUpdateKeepsOtherSettings() throws {
+        let database = try AppDatabase.inMemory()
+        var document = LibraryDocument(id: "a", title: "t", originalFileName: "m.pdf", pageCount: 1, fileSize: 1)
+        var settings = ReaderSettingsOverride()
+        settings.direction = .rightToLeft
+        document.settingsOverride = settings
+        try database.save(document)
+        try database.updateMangaSpace(documentId: "a", inManga: true)
+        var saved = try XCTUnwrap(database.document(id: "a"))
+        XCTAssertTrue(saved.isInMangaSpace)
+        XCTAssertEqual(saved.settingsOverride.direction, .rightToLeft)
+        try database.updateMangaSpace(documentId: "a", inManga: false)
+        saved = try XCTUnwrap(database.document(id: "a"))
+        XCTAssertFalse(saved.isInMangaSpace)
+        XCTAssertEqual(saved.settingsOverride.direction, .rightToLeft)
+    }
+
+    /// Le CBZ est déjà stocké en PDF, et l'identifiant est l'empreinte du fichier : sans contenu différent, la conversion
+    /// retomberait sur le même document.
+    func testConversionCreatesASeparatePDFWithFullCapabilities() throws {
+        let database = try AppDatabase.inMemory()
+        let storage = DocumentStorage(root: folder.appendingPathComponent("Docs"))
+        let importer = DocumentImporter(storage: storage, database: database)
+        let comic = try importer.importComicArchive(at: try archive([("1.jpg", try image(width: 30)), ("2.jpg", try image(width: 40))])).document
+        let result = try importer.convertComicToPDF(comic)
+        XCTAssertTrue(result.isNew)
+        XCTAssertNotEqual(result.document.id, comic.id)
+        XCTAssertEqual(result.document.pageCount, 2)
+        XCTAssertFalse(result.document.isComicArchive)
+        XCTAssertTrue(result.document.isInMangaSpace)
+        XCTAssertTrue(result.document.capabilities.textAnalysis)
+        XCTAssertEqual(try DocumentImporter.sha256(of: storage.url(for: result.document.id)), result.document.id)
+        XCTAssertNotNil(try database.document(id: comic.id), "le CBZ reste en place")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: storage.url(for: comic.id).path))
+        let again = try importer.convertComicToPDF(comic)
+        XCTAssertFalse(again.isNew)
+        XCTAssertEqual(again.document.id, result.document.id)
+    }
+
+    func testConversionFollowsVolumeOrderAndSkipsPDF() {
+        func doc(_ title: String, _ file: String) -> LibraryDocument {
+            LibraryDocument(id: title, title: title, originalFileName: file, pageCount: 1, fileSize: 1)
+        }
+        let order = DocumentImporter.conversionOrder([doc("Tome 10", "a.cbz"), doc("Tome 2", "b.cbz"), doc("Manga", "c.pdf")])
+        XCTAssertEqual(order.map(\.title), ["Tome 2", "Tome 10"])
     }
 
     /// Revue Codex de 2b55bd9 : une image immense n'est pas décodée entière.

@@ -5171,18 +5171,18 @@
         }
       }
     },
-    "Appui long sur un document : choisir Manuel, Livre, Comics ou Non classé.": {
+    "Appui long sur un document : choisir Manuel, Livre, Manga ou Non classé.": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Long press a document: choose Textbook, Book, Comics or Unclassified."
+            "value": "Long press a document: choose Textbook, Book, Manga or Unclassified."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Appui long sur un document : choisir Manuel, Livre, Comics ou Non classé."
+            "value": "Appui long sur un document : choisir Manuel, Livre, Manga ou Non classé."
           }
         },
         "zh-Hans": {
@@ -5783,6 +5783,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "没有保存的日志。"
+          }
+        }
+      }
+    },
+    "Aucun manga pour l'instant": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No manga yet"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun manga pour l'instant"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "暂无漫画"
           }
         }
       }
@@ -7415,6 +7437,28 @@
         }
       }
     },
+    "CBZ · expérimental": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CBZ · experimental"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CBZ · expérimental"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CBZ · 实验功能"
+          }
+        }
+      }
+    },
     "CC BY-SA 4.0 (EDRDG)": {
       "localizations": {
         "en": {
@@ -8071,6 +8115,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "此文档已在你的书库中。当前版本（笔记、OCR、AI 识别结果……）会先保存到“文件”→ Kyōkasho → Paquets de sécurité，然后被包中的版本替换。"
+          }
+        }
+      }
+    },
+    "Ce document n'est pas un fichier CBZ.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This document is not a CBZ file."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce document n'est pas un fichier CBZ."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此文档不是 CBZ 文件。"
           }
         }
       }
@@ -9989,94 +10055,6 @@
         }
       }
     },
-    "Comics": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Comics"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Comics"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "漫画"
-          }
-        }
-      }
-    },
-    "Comics .cbz, à titre expérimental : lecture des images seules, sans OCR ni IA.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": ".cbz comics, as an experiment: images only, without OCR or AI."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Comics .cbz, à titre expérimental : lecture des images seules, sans OCR ni IA."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": ".cbz 漫画（实验功能）：仅显示图片，不含 OCR 和 AI。"
-          }
-        }
-      }
-    },
-    "Comics expérimentaux et accueil plus pratique": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Experimental comics and a handier home screen"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Comics expérimentaux et accueil plus pratique"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "实验性漫画与更便捷的主页"
-          }
-        }
-      }
-    },
-    "Comics · expérimental": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Comics · experimental"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Comics · expérimental"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "漫画 · 实验功能"
-          }
-        }
-      }
-    },
     "Commandes de l'écran d'orientation centrées et redessinées.": {
       "localizations": {
         "en": {
@@ -10843,6 +10821,72 @@
           "stringUnit": {
             "state": "translated",
             "value": "对话"
+          }
+        }
+      }
+    },
+    "Convertir": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Convert"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Convertir"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "转换"
+          }
+        }
+      }
+    },
+    "Convertir %lld CBZ en PDF ?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Convert %lld CBZ to PDF?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Convertir %lld CBZ en PDF ?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "将 %lld 个 CBZ 转换为 PDF？"
+          }
+        }
+      }
+    },
+    "Convertir en PDF (%lld)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Convert to PDF (%lld)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Convertir en PDF (%lld)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "转换为 PDF（%lld）"
           }
         }
       }
@@ -15247,6 +15291,50 @@
         }
       }
     },
+    "Espace Manga et accueil plus pratique": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manga space and a handier home screen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Espace Manga et accueil plus pratique"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "漫画空间与更便捷的主页"
+          }
+        }
+      }
+    },
+    "Espace Manga, sur son propre onglet : mangas PDF avec toutes les fonctions.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manga space, on its own tab: PDF manga with every feature."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Espace Manga, sur son propre onglet : mangas PDF avec toutes les fonctions."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "独立标签页的漫画空间：PDF 漫画可使用全部功能。"
+          }
+        }
+      }
+    },
     "Espace de stockage": {
       "localizations": {
         "en": {
@@ -16563,6 +16651,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "文件"
+          }
+        }
+      }
+    },
+    "Fichiers .cbz, à titre expérimental : images seules, sans OCR ni IA, et conversion en PDF avec OCR.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": ".cbz files, as an experiment: images only, without OCR or AI, plus conversion to PDF with OCR."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fichiers .cbz, à titre expérimental : images seules, sans OCR ni IA, et conversion en PDF avec OCR."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": ".cbz 文件（实验功能）：仅显示图片，不含 OCR 和 AI，并可转换为带 OCR 的 PDF。"
           }
         }
       }
@@ -19379,6 +19489,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "无法导入。"
+          }
+        }
+      }
+    },
+    "Importe un .cbz, ou range un PDF ici d'un appui long sur sa carte.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import a .cbz, or move a PDF here by long-pressing its card."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importe un .cbz, ou range un PDF ici d'un appui long sur sa carte."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导入 .cbz，或长按 PDF 卡片将其移到此处。"
           }
         }
       }
@@ -23827,24 +23959,24 @@
         }
       }
     },
-    "Livre ou manuel ?": {
+    "Livre, manuel ou manga ?": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Book or textbook?"
+            "value": "Book, textbook or manga?"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Livre ou manuel ?"
+            "value": "Livre, manuel ou manga ?"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "书籍还是教材？"
+            "value": "书籍、教材还是漫画？"
           }
         }
       }
@@ -23867,6 +23999,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "书籍"
+          }
+        }
+      }
+    },
+    "Livres & Manuels": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Books & Textbooks"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Livres & Manuels"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "书籍与教材"
           }
         }
       }
@@ -24069,24 +24223,46 @@
         }
       }
     },
-    "Mangas et magazines .cbz acceptés, à titre expérimental : lecture d'immersion, images seules, sans OCR ni IA.": {
+    "Manga": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": ".cbz manga and magazines are accepted, as an experiment: immersion reading, images only, without OCR or AI."
+            "value": "Manga"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mangas et magazines .cbz acceptés, à titre expérimental : lecture d'immersion, images seules, sans OCR ni IA."
+            "value": "Manga"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "可导入 .cbz 漫画和杂志（实验功能）：沉浸式阅读，仅显示图片，不含 OCR 和 AI。"
+            "value": "漫画"
+          }
+        }
+      }
+    },
+    "Mangas et magazines .cbz acceptés, à titre expérimental : rangés dans l'espace Manga, images seules, sans OCR ni IA.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": ".cbz manga and magazines are accepted, as an experiment: placed in the Manga space, images only, without OCR or AI."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mangas et magazines .cbz acceptés, à titre expérimental : rangés dans l'espace Manga, images seules, sans OCR ni IA."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可导入 .cbz 漫画和杂志（实验功能）：放入漫画空间，仅显示图片，不含 OCR 和 AI。"
           }
         }
       }
@@ -30577,6 +30753,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "可用空间不足，无法转换此 CBZ 文件。"
+          }
+        }
+      }
+    },
+    "Pas assez d'espace libre pour créer ce PDF.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not enough free space to create this PDF."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pas assez d'espace libre pour créer ce PDF."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可用空间不足，无法创建此 PDF。"
           }
         }
       }
@@ -41097,6 +41295,28 @@
         }
       }
     },
+    "Un PDF par CBZ, avec les fonctions OCR de l'app. Les CBZ restent en place. Place nécessaire : environ %@.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "One PDF per CBZ, with the app's OCR features. The CBZ files stay in place. Space needed: about %@."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un PDF par CBZ, avec les fonctions OCR de l'app. Les CBZ restent en place. Place nécessaire : environ %@."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每个 CBZ 生成一个 PDF，可使用应用的 OCR 功能。CBZ 文件会保留。所需空间：约 %@。"
+          }
+        }
+      }
+    },
     "Un brouillon de note porte une page inattendue : rien n'est modifié.": {
       "localizations": {
         "en": {
@@ -46417,6 +46637,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "日本語"
+          }
+        }
+      }
+    },
+    "漫画 · lecture de manga": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "漫画 · manga reading"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "漫画 · lecture de manga"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "漫画 · 漫画阅读"
           }
         }
       }

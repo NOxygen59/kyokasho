@@ -229,7 +229,12 @@ struct DocumentSettingsSheet: View {
                     }
                 }
                 Section {
-                    Button("Revenir aux réglages généraux", role: .destructive) { override = ReaderSettingsOverride() }
+                    Button("Revenir aux réglages généraux", role: .destructive) {
+                        // L'espace est un rangement, pas un réglage de lecture : il reste.
+                        var fresh = ReaderSettingsOverride()
+                        fresh.mangaSpace = override.mangaSpace
+                        override = fresh
+                    }
                         .disabled(override.isEmpty)
                 } footer: {
                     Text("Réinitialise les choix de lecture et le moteur OCR propres à ce livre.")
