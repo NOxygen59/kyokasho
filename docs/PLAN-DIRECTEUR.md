@@ -3,6 +3,8 @@
 
 # Plan directeur — professionnalisation de Kyōkasho
 
+**Accueil personnel iPad — 05/11.** Lot local `codex/accueil-ipad` sur `7a3d742`. Réglages → Thèmes propose une palette indépendante pour chaque espace, avec la palette générale comme repli. Le fond de la bibliothèque fait un fondu, sauf avec Réduire les animations. La rangée compacte montre les couvertures, types et pages de reprise des documents ouverts dans les deux espaces. Elle est désactivable. Mac et iPhone gardent leur présentation. Vérifications locales : 17 tests Swift ciblés, 30 contrôles Python, 167 liens et compilation iOS Release générique réussis. Recette iPad à faire : choisir deux palettes dont une claire, alterner vite en portrait et paysage, revenir après ouverture d’un document de l’autre espace, fermer un onglet, relancer et vérifier les préférences. GitHub `main` observé à `398721d`, distinct de la base locale de ce lot.
+
 **05/11 — refonte visuelle demandée par NOxygen59 :** huit univers distincts sur branche locale `codex/identite-themes`, base `57deec9`. Identifiants historiques conservés ; [preuves, limites et revue Claude ciblée](REFONTE-THEMES-2026-11-05.md). Aucun accord de fusion, candidate ou validation iPad déduit.
 
 > **Lot local lexique du 04/11/2026 :** [livraison multilingue et revue ciblée](LEXIQUE-LANGUES-REPRISE.md), `codex/lexique-langues`, base `15f18a3`. Archives EN et chinois court hors dépôt, 3 836 entrées chacune ; anglais 8 121/8 121 textes. Vrai import/réouverture et filtre vérifiés, 432 Swift réussis / 7 ignorés, 67 Python, compilation iOS Release générique réussie. Revue Claude, raccordement au paquet Mac et recettes Mac/iPad restent à faire. Aucune fusion/push/version/candidate autorisée par cette note.

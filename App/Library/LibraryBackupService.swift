@@ -145,7 +145,7 @@ enum LibraryBackupService {
     /// de sauvegarde, comptes et identifiants clients, diagnostic, relevé de batterie, mises à jour, visite guidée,
     /// moniteur, options de débogage.
     static let devicePreferencePrefixes = ["backup.", "google", "github.", "diagnostics.", "energy.", "update.", "intro.",
-                                           "monitor.", "debug", "forceLandscape"]
+                                           "monitor.", "debug", "forceLandscape", "appearance.ipadLibrary."]
 
     /// Domaine restauré : celui de la sauvegarde, sauf les réglages de l'appareil, gardés tels qu'ils sont ici.
     static func mergedPreferences(restored: [String: Any], current: [String: Any]) -> [String: Any] {

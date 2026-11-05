@@ -52,8 +52,13 @@ struct LibraryView: View {
     @State private var search = ""
 
     /// Espace affiché : Livres & Manuels ou Manga. Simple filtre : il ne réécrit ni document ni progression.
-    enum Space: String { case study, manga }
-    @AppStorage("library.space") private var space = Space.study
+    enum Space: String {
+        case study, manga
+        static let storageKey = "library.space"
+    }
+    @AppStorage(Space.storageKey) private var space = Space.study
+    @AppStorage(PersonalPadLibrary.compactDocumentsKey) private var compactDocuments = true
+    private var usesCompactDocuments: Bool { PersonalPadLibrary.isAvailable && compactDocuments }
     @State private var convertingComics: [LibraryDocument] = []
     @State private var showConvertConfirmation = false
 
@@ -154,20 +159,24 @@ struct LibraryView: View {
         GeometryReader { geo in
             let landscape = geo.size.width > geo.size.height
             ZStack {
-                GridBackground()
-                if landscape {
-                    HStack(alignment: .top, spacing: Atelier.gap) {
-                        sidebar.frame(width: 248)
-                        main
+                libraryBackdrop
+                Group {
+                    if landscape {
+                        HStack(alignment: .top, spacing: Atelier.gap) {
+                            sidebar.frame(width: 248)
+                            main
+                        }
+                        .padding(Atelier.gap)
+                    } else {
+                        VStack(spacing: Atelier.gap) {
+                            compactBar
+                            main
+                        }
+                        .padding(Atelier.gap)
                     }
-                    .padding(Atelier.gap)
-                } else {
-                    VStack(spacing: Atelier.gap) {
-                        compactBar
-                        main
-                    }
-                    .padding(Atelier.gap)
                 }
+                // Les composants lisent les couleurs globales. Seul le contenu de l'accueil est remonté.
+                .id(PersonalPadLibrary.isAvailable ? themes.effectiveTheme.id : "")
             }
         }
         .toolbar(.hidden, for: .navigationBar)
@@ -310,6 +319,21 @@ struct LibraryView: View {
             Text("Il quitte la bibliothèque mais garde son PDF, ses notes, surlignages, dessins et son texte OCR. Restaurable pendant 30 jours depuis la Corbeille.")
         }
         .sheet(isPresented: $showTrash) { TrashView().environmentObject(model).preferredColorScheme(Theme.current.colorScheme) }
+    }
+
+    @ViewBuilder
+    private var libraryBackdrop: some View {
+        if PersonalPadLibrary.isAvailable {
+            ZStack {
+                ThemeBackdrop(theme: themes.effectiveTheme, style: themes.style)
+                    .id(themes.effectiveTheme.id)
+                    .transition(.opacity)
+            }
+            .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: themes.effectiveTheme.id)
+            .ignoresSafeArea()
+        } else {
+            GridBackground()
+        }
     }
 
     // MARK: Barre latérale
@@ -492,6 +516,7 @@ struct LibraryView: View {
             selecting = false
             batch = BatchDeletion()
             space = value
+            themes.showLibrarySpace(value)
         } label: {
             Label { Text(ui: "\(title) · \(count)") } icon: { Image(systemName: icon) }
                 .font(Atelier.font(14, weight: .semibold))
@@ -505,8 +530,15 @@ struct LibraryView: View {
 
     private var main: some View {
         VStack(alignment: .leading, spacing: Atelier.gap) {
-            OpenDocumentsStrip()
-            spaceTabs
+            if usesCompactDocuments {
+                VStack(alignment: .leading, spacing: 5) {
+                    spaceTabs
+                    OpenDocumentsStrip(compact: true)
+                }
+            } else {
+                OpenDocumentsStrip()
+                spaceTabs
+            }
             HStack(alignment: .bottom) {
                 VStack(alignment: .leading, spacing: 2) {
                     AtelierLabel(filterTitle, tint: Atelier.Tint.read)

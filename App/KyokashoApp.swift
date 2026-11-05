@@ -33,7 +33,7 @@ struct KyokashoApp: App {
                 .macInitialWindowFrame()
                 .environmentObject(themes)
                 .environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review)
-                .preferredColorScheme(themes.theme.colorScheme)
+                .preferredColorScheme(themes.effectiveTheme.colorScheme)
                 .atelierFontDesign()
                 .tint(Atelier.Tint.read)
                 .onOpenURL { url in

@@ -2,6 +2,20 @@
 // Copyright (c) 2026 NOxygen59
 
 import SwiftUI
+import UIKit
+
+/// Préférences de l'accueil personnel, invisibles sur Mac et iPhone.
+enum PersonalPadLibrary {
+    static let compactDocumentsKey = "appearance.ipadLibrary.compactDocuments"
+
+    static var isAvailable: Bool {
+        #if targetEnvironment(macCatalyst)
+        return false
+        #else
+        return UIDevice.current.userInterfaceIdiom == .pad && !ProcessInfo.processInfo.isiOSAppOnMac
+        #endif
+    }
+}
 
 /// Un thème = une palette : fonds, une couleur par fonction, un fond dessiné (`ThemeBackdrop`), et sa variante
 /// (lot 3 des styles, planche choisie par NOxygen59 le 29/10/2026) : **nuit** (fonds sombres, tous les thèmes
@@ -245,6 +259,35 @@ struct Theme: Identifiable, Equatable {
 final class ThemeManager: ObservableObject {
     @Published private(set) var theme: Theme
     @Published private(set) var style: AppStyle
+    @Published private(set) var effectiveTheme: Theme
+    @Published private var spacePalettes: [LibraryView.Space: String] = [:]
+    private var librarySpace: LibraryView.Space
+
+    private static func paletteKey(_ space: LibraryView.Space) -> String {
+        "appearance.ipadLibrary.palette." + space.rawValue
+    }
+
+    func paletteID(for space: LibraryView.Space) -> String { spacePalettes[space] ?? "" }
+
+    func selectPalette(_ id: String, for space: LibraryView.Space) {
+        guard PersonalPadLibrary.isAvailable, id.isEmpty || Theme.all.contains(where: { $0.id == id }) else { return }
+        spacePalettes[space] = id.isEmpty ? nil : id
+        UserDefaults.standard.set(spacePalettes[space], forKey: Self.paletteKey(space))
+        refreshEffectiveTheme()
+    }
+
+    /// Change la palette sans changer l'identité de la racine ni fermer les feuilles du lecteur.
+    func showLibrarySpace(_ space: LibraryView.Space) {
+        librarySpace = space
+        refreshEffectiveTheme()
+    }
+
+    private func refreshEffectiveTheme() {
+        let id = PersonalPadLibrary.isAvailable ? spacePalettes[librarySpace] : nil
+        let next = Theme.all.first { $0.id == id } ?? theme
+        Theme.current = next
+        if next != effectiveTheme { effectiveTheme = next }
+    }
 
     /// Apparence choisie (palette et style), visible tout de suite dans Réglages → Thèmes qui observe ce gestionnaire.
     var appearanceRevision: String { theme.id + "|" + style.id }
@@ -265,7 +308,15 @@ final class ThemeManager: ObservableObject {
         let style = AppStyle.all.first { $0.id == styleId } ?? .atelier
         self.theme = theme
         self.style = style
-        Theme.current = theme
+        effectiveTheme = theme
+        librarySpace = UserDefaults.standard.string(forKey: LibraryView.Space.storageKey)
+            .flatMap(LibraryView.Space.init(rawValue:)) ?? .study
+        if PersonalPadLibrary.isAvailable {
+            for space in [LibraryView.Space.study, .manga] {
+                spacePalettes[space] = UserDefaults.standard.string(forKey: Self.paletteKey(space))
+            }
+        }
+        refreshEffectiveTheme()
         AppStyle.current = style
         appliedAppearance = theme.id + "|" + style.id
     }
@@ -278,17 +329,17 @@ final class ThemeManager: ObservableObject {
         AppStyle.current = style
         if let palette = Theme.all.first(where: { $0.id == style.defaultTheme }), palette != theme {
             UserDefaults.standard.set(palette.id, forKey: "theme.id")
-            Theme.current = palette
             theme = palette
         }
         self.style = style
+        refreshEffectiveTheme()
     }
 
     func select(_ theme: Theme) {
         guard theme != self.theme else { return }
         UserDefaults.standard.set(theme.id, forKey: "theme.id")
-        Theme.current = theme
         self.theme = theme
+        refreshEffectiveTheme()
     }
 }
 
@@ -303,6 +354,7 @@ extension Color {
 struct ThemePickerView: View {
     @EnvironmentObject private var themes: ThemeManager
     @AppStorage("appearance.themePatterns") private var patternsEnabled = true
+    @AppStorage(PersonalPadLibrary.compactDocumentsKey) private var compactDocuments = true
 
     var body: some View {
         ScrollView {
@@ -315,6 +367,15 @@ struct ThemePickerView: View {
                     Toggle("Motifs de fond", isOn: $patternsEnabled)
                         .font(.subheadline).tint(Atelier.Tint.read).padding(.top, 8)
                     AppLanguagePicker()
+                }
+                if PersonalPadLibrary.isAvailable {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Thèmes par espace sur cet iPad").font(.headline)
+                        spacePalette(.study, title: String(localized: "Livres & Manuels"))
+                        spacePalette(.manga, title: String(localized: "Manga"))
+                        Toggle("Documents ouverts compacts", isOn: $compactDocuments)
+                    }
+                    .tint(Atelier.Tint.read)
                 }
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 220), spacing: 14)], spacing: 14) {
                     ForEach(AppStyle.featured) { style in
@@ -346,6 +407,17 @@ struct ThemePickerView: View {
         }
         .background(Atelier.canvas)
         .navigationTitle("Thèmes")
+    }
+
+    private func spacePalette(_ space: LibraryView.Space, title: String) -> some View {
+        Picker(selection: Binding(get: { themes.paletteID(for: space) },
+                                  set: { themes.selectPalette($0, for: space) })) {
+            Text("Palette générale").tag("")
+            ForEach(Theme.all) { Text(ui: $0.name).tag($0.id) }
+        } label: {
+            Text(ui: title)
+        }
+        .pickerStyle(.menu)
     }
 
     /// Aperçu complet : mêmes motifs, couleurs, formes et relief que le style réellement choisi.
