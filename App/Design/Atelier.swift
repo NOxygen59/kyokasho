@@ -60,7 +60,14 @@ enum Atelier {
     static func font(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
         .system(size: size, weight: weight, design: AppStyle.current.fontDesign)
     }
-    static func display(_ size: CGFloat) -> Font { font(size, weight: .semibold) }
+    static func display(_ size: CGFloat) -> Font {
+        switch AppStyle.current.id {
+        case "swiss", "brutalism": return font(size, weight: .heavy)
+        case "cyberpunk", "synthwave": return font(size, weight: .bold)
+        case "wabisabi", "luxury", "glass": return font(size, weight: .regular)
+        default: return font(size, weight: .semibold)
+        }
+    }
     /// Petites étiquettes en capitales espacées, style plan d'architecte.
     static var label: Font { font(11, weight: .semibold).width(.expanded) }
     static let mono = Font.system(size: 13, weight: .medium, design: .monospaced)
@@ -80,7 +87,7 @@ struct AtelierPanel: ViewModifier {
             // à chaque image quand la page défile derrière) et ombre portée par la forme seule
             // (sinon tout le contenu, textes et icônes, est redessiné à part pour la calculer).
             .background {
-                let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
+                let shape = StyledPanelShape(radius: radius, kind: AppStyle.current.panelShape)
                 switch AppStyle.current.panelFill {
                 case .solid:
                     shape.fill(Atelier.surface.opacity(0.97))
@@ -93,10 +100,13 @@ struct AtelierPanel: ViewModifier {
                 }
             }
             .overlay {
-                let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
+                let shape = StyledPanelShape(radius: radius, kind: AppStyle.current.panelShape)
                 switch AppStyle.current.panelEdge {
                 case .hairline: shape.strokeBorder(Atelier.hairline, lineWidth: Atelier.border(1))
                 case .ink: shape.strokeBorder(Atelier.textPrimary, lineWidth: Atelier.border(1))
+                case .doubleLine:
+                    shape.strokeBorder(Atelier.Tint.read.opacity(0.8), lineWidth: Atelier.border(1))
+                    shape.inset(by: 5).strokeBorder(Atelier.Tint.read.opacity(0.35), lineWidth: Atelier.border(0.5))
                 case .glow: shape.strokeBorder(Atelier.Tint.read.opacity(0.8), lineWidth: Atelier.border(1))
                     .atelierGlow(Atelier.Tint.read.opacity(0.55))
                 }
@@ -137,10 +147,11 @@ extension View {
     /// Ombre portée selon le style (`AppStyle.shadowKind`). Valeurs = celles d'origine pour une ombre douce ; appliquée
     /// là où l'était `.shadow`, donc au même calque (sur la forme seule pour les panneaux, voir `AtelierPanel`).
     @ViewBuilder
-    func atelierShadow(opacity: Double, radius: CGFloat, y: CGFloat) -> some View {
-        switch AppStyle.current.shadowKind {
-        case .soft: shadow(color: Atelier.shadow.opacity(opacity), radius: radius, y: y)
-        case .hard(let offset): shadow(color: Atelier.shadow.opacity(min(1, opacity * 2)), radius: 0, x: offset, y: offset)
+    func atelierShadow(opacity: Double, radius: CGFloat, y: CGFloat,
+                       style: AppStyle = .current, tint: Color = Theme.current.shadowTint) -> some View {
+        switch style.shadowKind {
+        case .soft: shadow(color: tint.opacity(opacity), radius: radius, y: y)
+        case .hard(let offset): shadow(color: tint.opacity(min(1, opacity * 2)), radius: 0, x: offset, y: offset)
         case .none: self
         }
     }

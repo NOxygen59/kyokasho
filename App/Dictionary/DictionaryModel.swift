@@ -59,7 +59,7 @@ final class DictionaryModel: ObservableObject {
         set { profiles.active = newValue }
     }
 
-    private var lookupOptions: LookupOptions {
+    var lookupOptions: LookupOptions {
         var options = profile.lookup
         options.excludedDictionaryIds.formUnion(BundledLexicon.excludedDictionaryIds(in: dictionaries, language: BundledLexicon.selectedLanguage))
         return options
@@ -205,10 +205,15 @@ final class DictionaryModel: ObservableObject {
         return await Task.detached(priority: .userInitiated) { try? translator.findKanji(character) }.value
     }
 
-    func segment(_ text: String) async -> [Translator.Segment] {
+    /// - Parameter cancellable: pour l'affichage seulement : une tâche annulée (page quittée) arrête le calcul et
+    ///   reçoit un découpage partiel, qu'elle doit jeter. La relecture OCR et l'analyse, qui en déduisent des
+    ///   données, gardent le découpage complet.
+    func segment(_ text: String, cancellable: Bool = false) async -> [Translator.Segment] {
         guard let translator else { return [] }
         let options = lookupOptions
-        return await Task.detached(priority: .utility) { (try? translator.segment(text, options: options)) ?? [] }.value
+        let work = Task.detached(priority: .utility) { (try? translator.segment(text, options: options)) ?? [] }
+        guard cancellable else { return await work.value }
+        return await withTaskCancellationHandler { await work.value } onCancel: { work.cancel() }
     }
 
     func renderer(canAddCards: Bool = false, added: Set<String> = []) -> GlossaryRenderer {

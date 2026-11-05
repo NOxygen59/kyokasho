@@ -57,6 +57,8 @@ final class ReaderController: NSObject, ObservableObject {
 
     /// Dernier calcul de furigana OCR lancé par page (`showOCR`).
     var furiganaGeneration: [Int: Int] = [:]
+    /// Calcul en cours par page : annulé quand un plus récent le remplace, il ne consomme plus pour rien.
+    var pageFuriganaTasks: [Int: Task<Void, Never>] = [:]
     /// Orientation de l'écran du lecteur (`adaptLayout`) ; `nil` tant qu'elle n'est pas connue.
     var portraitMode: Bool?
     /// Préparation des pages teintées voisines (`scheduleTone`).
@@ -952,6 +954,21 @@ final class ReaderPDFView: PDFView {
         }
         walk(self)
     }
+
+    /// Résultats de tâches de fond (nettoyage, teinte, furigana) : ils arrivent coup sur coup après chaque page posée,
+    /// et chacun ferait redessiner et redécoder toute la page. Un seul redessin les regroupe. Les changements de
+    /// réglage, eux, gardent le redessin immédiat.
+    func requestRedraw() {
+        guard !redrawRequested else { return }
+        redrawRequested = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.redrawDelay) { [weak self] in
+            self?.redrawRequested = false
+            self?.redrawVisiblePages()
+        }
+    }
+
+    private static let redrawDelay: TimeInterval = 0.12
+    private var redrawRequested = false
 
     override func buildMenu(with builder: UIMenuBuilder) {
         super.buildMenu(with: builder)

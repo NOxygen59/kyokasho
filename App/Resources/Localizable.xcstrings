@@ -8493,24 +8493,24 @@
         }
       }
     },
-    "Changement de style : fermer les Réglages en touchant à côté ne bloque plus l'ouverture des manuels.": {
+    "Changement de page ou fermeture d'un manuel : les calculs de furigana en cours s'arrêtent.": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Changing style: closing Settings by tapping outside no longer blocks opening textbooks."
+            "value": "Turning the page or closing a textbook: furigana calculations in progress now stop."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Changement de style : fermer les Réglages en touchant à côté ne bloque plus l'ouverture des manuels."
+            "value": "Changement de page ou fermeture d'un manuel : les calculs de furigana en cours s'arrêtent."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "更改样式：点按外部关闭设置后，不会再无法打开教材。"
+            "value": "翻页或关闭课本时：正在进行的注音计算会停止。"
           }
         }
       }
@@ -21957,6 +21957,50 @@
         }
       }
     },
+    "Lecteur : les furigana se dessinent sans refaire tout le calcul, et une page déjà vue n'est pas recalculée.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reader: furigana are drawn without redoing the whole calculation, and a page already seen is not recalculated."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lecteur : les furigana se dessinent sans refaire tout le calcul, et une page déjà vue n'est pas recalculée."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "阅读器：绘制注音时无需重新计算全部内容，已看过的页面也不会重新计算。"
+          }
+        }
+      }
+    },
+    "Lecteur allégé et huit univers": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lighter reader and eight visual worlds"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lecteur allégé et huit univers"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更轻量的阅读器与八种视觉风格"
+          }
+        }
+      }
+    },
     "Lecteur de texte": {
       "localizations": {
         "en": {
@@ -28949,6 +28993,50 @@
           "stringUnit": {
             "state": "translated",
             "value": "页面已添加"
+          }
+        }
+      }
+    },
+    "Pages avec texte OCR : les mots déjà cherchés ne sont plus recalculés.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pages with OCR text: words already looked up are no longer recalculated."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pages avec texte OCR : les mots déjà cherchés ne sont plus recalculés."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "含 OCR 文本的页面：已查过的词不再重新计算。"
+          }
+        }
+      }
+    },
+    "Pages avec texte OCR allégées": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lighter pages with OCR text"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pages avec texte OCR allégées"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "减轻含 OCR 文本页面的负担"
           }
         }
       }
@@ -38563,6 +38651,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "主题"
+          }
+        }
+      }
+    },
+    "Thèmes : huit univers très différents, avec un aperçu complet. Les palettes se choisissent à part et gardent leur motif.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Themes: eight very different visual worlds, with a full preview. Palettes are chosen separately and keep their pattern."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thèmes : huit univers très différents, avec un aperçu complet. Les palettes se choisissent à part et gardent leur motif."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "主题：八种风格迥异的视觉世界，并提供完整预览。配色可单独选择，并保留各自的图案。"
           }
         }
       }

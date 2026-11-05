@@ -8,13 +8,6 @@ import GRDB
 public final class ReviewStore: @unchecked Sendable {
     public let writer: any DatabaseWriter
 
-    /// Pages insérées avant celles d'un document (« Ajouter des pages… ») : page d'origine des cartes décalée.
-    public func shiftSourcePages(documentId: String, by offset: Int) throws {
-        try writer.write { db in
-            try db.execute(sql: "UPDATE card SET sourcePage = sourcePage + ? WHERE sourceDocumentId = ? AND sourcePage IS NOT NULL",
-                           arguments: [offset, documentId])
-        }
-    }
     /// Instantané sans limite de pagination ; seuls les liens vers les pages sont capturés.
     public func sourcePages(documentId: String) throws -> [Int64: Int] {
         try writer.read { db in

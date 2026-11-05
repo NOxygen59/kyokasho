@@ -10,6 +10,14 @@ import Foundation
 enum ReleaseHistory {
     static let past: [ReleaseNotes] = [
         // Candidates locales non publiées.
+        ReleaseNotes("1.4.4", "2026-11-05", published: false, String(localized: "Pages avec texte OCR allégées", bundle: .main), added: [], fixed: [
+            String(localized: "Pages avec texte OCR : les mots déjà cherchés ne sont plus recalculés.", bundle: .main),
+            String(localized: "Changement de page ou fermeture d'un manuel : les calculs de furigana en cours s'arrêtent.", bundle: .main),
+        ]),
+        ReleaseNotes("1.4.3", "2026-11-04", published: false, String(localized: "Corrections de la recette 1.4.2", bundle: .main), added: [], fixed: [
+            String(localized: "Extraction des lectures OvisOCR2 : le partage ne gèle plus l'app.", bundle: .main),
+            String(localized: "Analyse d'un document : le bouton Arrêter fonctionne.", bundle: .main),
+        ]),
         ReleaseNotes("1.4.2", "2026-11-04", published: false, String(localized: "Nouveautés et export plus clairs", bundle: .main), added: [
             String(localized: "Export : le fichier se prépare d'abord, puis un message indique clairement quand il est prêt à être enregistré ou envoyé.", bundle: .main),
             String(localized: "Extraction des lectures OvisOCR2 : le nombre de pages lues est affiché pour chaque document.", bundle: .main),

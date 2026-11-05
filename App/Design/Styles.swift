@@ -38,8 +38,17 @@ struct AppStyle: Identifiable, Equatable {
     enum PanelFill: Equatable { case solid, glass }
     var panelFill: PanelFill = .solid
     /// Bord des panneaux : trait fin (d'origine), encre pleine (Neo-Brutalism) ou néon de la couleur de lecture.
-    enum PanelEdge: Equatable { case hairline, ink, glow }
+    enum PanelEdge: Equatable { case hairline, ink, glow, doubleLine }
     var panelEdge: PanelEdge = .hairline
+    /// Silhouette des panneaux d'interface ; aucune incidence sur les pages et zones OCR.
+    enum PanelShape: Equatable { case rounded, organic, chamfered }
+    var panelShape: PanelShape {
+        switch id {
+        case "wabisabi": return .organic
+        case "cyberpunk": return .chamfered
+        default: return .rounded
+        }
+    }
 
     // MARK: Voile
     /// Voile derrière une fenêtre au premier plan (les encres claires ou foncées viennent de la palette, `Theme`).
@@ -52,7 +61,7 @@ struct AppStyle: Identifiable, Equatable {
                                     defaultTheme: "brutal", cornerScale: 0, fontDesign: .monospaced,
                                     shadowKind: .hard(offset: 5), borderScale: 2.5, usesMaterials: false, panelEdge: .ink)
     static let glass = AppStyle(id: "glass", name: String(localized: "Glassmorphism"), summary: String(localized: "Verre flouté, formes arrondies"),
-                                defaultTheme: "soir", cornerScale: 1.2, panelFill: .glass)
+                                defaultTheme: "clair", cornerScale: 1.2, panelFill: .glass)
     static let synthwave = AppStyle(id: "synthwave", name: String(localized: "Synthwave"), summary: String(localized: "Nuit violette, bords néon"),
                                     defaultTheme: "synthwave", cornerScale: 0.5, fontDesign: .rounded,
                                     usesMaterials: false, panelEdge: .glow)
@@ -80,7 +89,7 @@ struct AppStyle: Identifiable, Equatable {
                                     shadowKind: .none, borderScale: 0.7, usesMaterials: false)
     static let luxury = AppStyle(id: "luxury", name: String(localized: "Luxury Typography"), summary: String(localized: "Encre et or, typographie élégante"),
                                  defaultTheme: "encre", cornerScale: 0.3, fontDesign: .serif,
-                                 shadowKind: .none, borderScale: 1.2, usesMaterials: false, panelEdge: .ink)
+                                 shadowKind: .none, borderScale: 1.2, usesMaterials: false, panelEdge: .doubleLine)
     static let victorian = AppStyle(id: "victorian", name: String(localized: "Victorian"), summary: String(localized: "Sépia, cadres d'encre, serif classique"),
                                     defaultTheme: "sepia", cornerScale: 0.2, fontDesign: .serif,
                                     borderScale: 1.5, usesMaterials: false, panelEdge: .ink)
@@ -92,7 +101,7 @@ struct AppStyle: Identifiable, Equatable {
                                     defaultTheme: "foret", cornerScale: 0.3, fontDesign: .monospaced,
                                     borderScale: 1.4, usesMaterials: false, panelEdge: .glow)
     static let cyberpunk = AppStyle(id: "cyberpunk", name: String(localized: "Cyberpunk"), summary: String(localized: "Angles vifs, néon et ombres franches"),
-                                    defaultTheme: "synthwave", cornerScale: 0.2, fontDesign: .monospaced,
+                                    defaultTheme: "lagon", cornerScale: 0.2, fontDesign: .monospaced,
                                     shadowKind: .hard(offset: 4), borderScale: 1.7, usesMaterials: false, panelEdge: .glow)
     static let y2k = AppStyle(id: "y2k", name: String(localized: "Y2K Aesthetic"), summary: String(localized: "Bulles chromées, verre et couleur"),
                              defaultTheme: "lagon", cornerScale: 1.4, fontDesign: .rounded,
@@ -124,6 +133,35 @@ struct AppStyle: Identifiable, Equatable {
         .cybercore, .cyberpunk, .y2k, .pixel,
         .scrapbook, .sketch, .bohemian, .surrealism, .bento,
     ]
+
+    /// Huit univers principaux. `all` conserve les anciens identifiants pour relire les choix déjà enregistrés.
+    /// Retirer un doublon du sélecteur ne réécrit jamais les préférences existantes.
+    static let featured: [AppStyle] = [.atelier, .wabiSabi, .swiss, .brutalism, .glass, .synthwave, .cyberpunk, .luxury]
+
+    /// Signature du style dans les aperçus ; indépendante du symbole de sa palette.
+    var symbol: String {
+        switch id {
+        case "glass": return "square.on.square"
+        case "clay": return "square.3.layers.3d"
+        case "neumorphism": return "circle.inset.filled"
+        case "ethereal": return "sparkles"
+        case "minimalism": return "minus"
+        case "editorial": return "text.alignleft"
+        case "luxury": return "diamond"
+        case "victorian": return "seal"
+        case "maximalism": return "circle.hexagongrid.fill"
+        case "cybercore": return "cpu"
+        case "cyberpunk": return "bolt.fill"
+        case "y2k": return "sparkle"
+        case "pixel": return "square.grid.3x3.fill"
+        case "scrapbook": return "scissors"
+        case "sketch": return "pencil.tip"
+        case "bohemian": return "sun.max"
+        case "surrealism": return "moon.stars"
+        case "bento": return "rectangle.grid.2x2"
+        default: return Theme.all.first { $0.id == defaultTheme }?.symbol ?? "circle"
+        }
+    }
 
     /// Style en cours (lu par `Atelier`). Changé par `ThemeManager`.
     static var current: AppStyle = .atelier

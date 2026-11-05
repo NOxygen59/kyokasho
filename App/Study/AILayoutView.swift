@@ -34,6 +34,8 @@ struct AILayoutView: View {
     /// Page construite avec les deux langues (`#langs`) : la bascule passe par `RubyWebView.language`.
     @State private var combined = false
     @State private var confirmingRedo = false
+    /// Page dont `html` est le texte. Reconstruire la même page garde la vue web (et son processus) au lieu de la recréer.
+    @State private var shownKey = ""
 
     private var source: Int { reader.focusSource }
 
@@ -91,7 +93,9 @@ struct AILayoutView: View {
     private func load() async {
         markdown = DocumentAITextStore.read(documentId: reader.document.id, reader: ModelSpec.ovisocr2.id, page: source)
         frenchMarkdown = DocumentAITextStore.read(documentId: reader.document.id, reader: language, page: source)
-        html = ""
+        let key = "\(reader.document.id)|\(source)"
+        if markdown == nil || key != shownKey { html = "" }
+        shownKey = key
         guard let markdown else { return }
         let vertical = reader.ocrPage.map(FuriganaTextView.isVertical) == true
         // Valeurs construites localement, publiées ensemble après le contrôle d'annulation : une tâche annulée
@@ -193,7 +197,8 @@ struct AILayoutView: View {
                 switch part {
                 case .formula(let source): result += FormulaMarkup.html(source)
                 case .prose(let prose):
-                    let segments = await dictionary.segment(prose)
+                    guard !Task.isCancelled else { return result } // Page quittée : `load` jettera ce HTML.
+                    let segments = await dictionary.segment(prose, cancellable: true)
                     let rubies = furigana ? TextFurigana.rubies(prose, segments: segments) : []
                     result += FuriganaTextView.markup(prose, rubies: rubies,
                                                      wordStarts: FuriganaTextView.wordStarts(prose, segments: segments))

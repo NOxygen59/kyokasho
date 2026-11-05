@@ -10,7 +10,6 @@ import Foundation
 public enum UniDic {
     public static let archiveURL = URL(string: "https://files.pythonhosted.org/packages/55/2b/8cf7514cb57d028abcef625afa847d60ff1ffbf0049c36b78faa7c35046f/unidic-lite-1.0.8.tar.gz")!
     public static let archiveSHA256 = "db9d4572d9fdd4d00a97949d4b0741ec480ee05a7e7e2e32f547500dae27b245"
-    public static let archiveSize: Int64 = 47_356_746
     public static let homepage = URL(string: "https://github.com/polm/unidic-lite")!
     /// Fichiers gardés (le reste de l'archive est ignoré) ; `sys.dic` en dernier : sa présence = installé.
     static let keep = ["BSD", "COPYING", "char.bin", "dicrc", "matrix.bin", "unk.dic", "rewrite.def", "sys.dic"]

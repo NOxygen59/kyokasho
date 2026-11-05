@@ -56,26 +56,6 @@ final class SettingsTests: XCTestCase {
     }
 }
 
-final class TapZoneTests: XCTestCase {
-    func testLeftToRight() {
-        let s = ReaderSettings.default
-        XCTAssertEqual(TapZones.action(atFraction: 0.1, settings: s), .previous)
-        XCTAssertEqual(TapZones.action(atFraction: 0.5, settings: s), .toggleBars)
-        XCTAssertEqual(TapZones.action(atFraction: 0.9, settings: s), .next)
-    }
-
-    func testRightToLeftAndInvert() {
-        var s = ReaderSettings.default
-        s.direction = .rightToLeft
-        XCTAssertEqual(TapZones.action(atFraction: 0.1, settings: s), .next)
-        XCTAssertEqual(TapZones.action(atFraction: 0.9, settings: s), .previous)
-        s.invertTapZones = true
-        XCTAssertEqual(TapZones.action(atFraction: 0.1, settings: s), .previous)
-        s.tapZonesEnabled = false
-        XCTAssertEqual(TapZones.action(atFraction: 0.1, settings: s), .toggleBars)
-    }
-}
-
 final class PresentationTests: XCTestCase {
     func testSplitOrder() {
         let ltr = PresentationLayout.pages(pageCount: 3, splitPages: [1], rightToLeft: false)

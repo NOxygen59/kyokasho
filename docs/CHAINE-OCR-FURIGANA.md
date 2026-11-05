@@ -77,6 +77,8 @@ Filtres contre les fausses lectures :
 ## 6. Étape 5 : affichage
 
 - Les marques calculées sont gardées en mémoire par page (`FuriganaLayer.set` / `marks(for:)`, clé `ScanSharpening.key(documentId:page:)`). Le calcul tourne hors du fil principal, en priorité basse.
+- `pageFuriganaTasks` annule le calcul remplacé ; `Translator.segment` mémorise le mot retenu à chaque position (vidé par `invalidate()`) et ne charge pas les fréquences.
+- `FuriganaLayer.PreparedPage` : mise en place et glyphes calculés une fois hors du fil principal, sans `CTLine` partagée entre fils ; chaque morceau dessiné ne pose que ses lectures. Une empreinte évite de recalculer une page aux mêmes données, et les résultats de fond partagent un seul redessin (`requestRedraw`).
 - `furiganaGeneration` : si plusieurs calculs sont lancés pour la même page, seul le dernier est gardé.
 - Le dessin a lieu avec celui de la page (`PageTone` appelle `FuriganaLayer.draw`) : kana sur une bande couleur papier, lisibles sur une trame ou un dessin. Couleur au choix dans le menu « … » → Affichage (`FuriganaLayer.Tint`).
 - Une nouvelle lecture IA de la page relance le calcul (`refreshFurigana(afterAIRead:)`), une correction OCR aussi (`cacheUpdated`, voir ARCHITECTURE-LECTURE).

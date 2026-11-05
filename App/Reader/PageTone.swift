@@ -179,7 +179,7 @@ final class TonedPage: PDFPage {
     }
 
     private func drawFurigana(_ box: PDFDisplayBox, in context: CGContext) {
-        guard let key = pageKey, let marks = FuriganaLayer.marks(for: key), !marks.isEmpty else { return }
+        guard let key = pageKey, let page = FuriganaLayer.prepared(for: key), !page.marks.isEmpty else { return }
         context.saveGState()
         context.concatenate(transform(for: box))
         context.clip(to: bounds(for: box))
@@ -189,7 +189,7 @@ final class TonedPage: PDFPage {
             context.scaleBy(x: f, y: f)
             context.translateBy(x: -sourceBox.minX, y: -sourceBox.minY)
         }
-        FuriganaLayer.draw(marks, in: context)
+        FuriganaLayer.draw(page, in: context)
         context.restoreGState()
     }
 

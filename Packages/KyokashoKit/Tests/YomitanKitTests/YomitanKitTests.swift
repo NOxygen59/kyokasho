@@ -76,8 +76,6 @@ final class JapaneseTextTests: XCTestCase {
         XCTAssertTrue(JapaneseText.isKanji("照"))
         XCTAssertFalse(JapaneseText.isKanji("あ"))
         XCTAssertTrue(JapaneseText.isKana("カ"))
-        XCTAssertTrue(JapaneseText.isEntirelyKana("たべもの"))
-        XCTAssertFalse(JapaneseText.isEntirelyKana("食べ物"))
     }
 
     func testMorae() {
@@ -96,6 +94,5 @@ final class JapaneseTextTests: XCTestCase {
         XCTAssertEqual(JapaneseText.distributeFurigana("照明", "しょうめい"), [S("照明", "しょうめい")])
         XCTAssertEqual(JapaneseText.distributeFurigana("お茶", "おちゃ"), [S("お", ""), S("茶", "ちゃ")])
         XCTAssertEqual(JapaneseText.distributeFurigana("かな", "かな"), [S("かな", "")])
-        XCTAssertEqual(JapaneseText.distributeFuriganaInflected("食べる", "たべる", source: "食べた"), [S("食", "た"), S("べた", "")])
     }
 }

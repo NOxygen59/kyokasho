@@ -19,7 +19,37 @@ final class StyleTokensGuardTests: XCTestCase {
         // fermeture des Réglages.
         XCTAssertTrue(source.contains(".id(themes.appliedAppearance)"), "La racine doit suivre l'apparence appliquée")
         let library = try String(contentsOf: app.deletingLastPathComponent().appendingPathComponent("Library/LibraryView.swift"), encoding: .utf8)
-        XCTAssertTrue(library.contains("if model.openDocumentId == nil { themes.applyAppearance() }"), "Appliquer l'apparence à la fermeture des Réglages")
+        XCTAssertTrue(library.contains("onDismiss: { themes.applyAppearance() }"), "Appliquer l'apparence à la fermeture des Réglages")
+    }
+
+    /// Revue Codex de 40952cf : un calcul de furigana annulé à la fermeture ne doit pas être publié. Contrôle du source :
+    /// le contrôleur dépend de PDFKit et n'a pas de test d'exécution ici.
+    func testCancelledPageFuriganaIsNotPublished() throws {
+        let reader = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .appendingPathComponent("../../../../App/Reader").standardizedFileURL
+        let display = try String(contentsOf: reader.appendingPathComponent("ReaderController+Display.swift"), encoding: .utf8)
+        XCTAssertTrue(display.contains("guard !closed, !Task.isCancelled, furiganaGeneration[source] == generation else { return }"))
+        XCTAssertEqual(display.components(separatedBy: "FuriganaLayer.set(").count, 3, "publication de showOCR et de scheduleFurigana, pas d'autre")
+        let close = try String(contentsOf: reader.appendingPathComponent("ReaderController+OCR.swift"), encoding: .utf8)
+        XCTAssertTrue(close.contains("for page in furiganaGeneration.keys { furiganaGeneration[page, default: 0] += 1 }"))
+    }
+
+    /// Optimisation du lecteur : les résultats de fond regroupent leurs redessins, et une page aux mêmes données n'est
+    /// pas recalculée. Contrôle du source : ces chemins passent par PDFKit.
+    func testBackgroundResultsShareOneRedrawAndSkipKnownPages() throws {
+        let reader = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .appendingPathComponent("../../../../App/Reader").standardizedFileURL
+        let display = try String(contentsOf: reader.appendingPathComponent("ReaderController+Display.swift"), encoding: .utf8)
+        XCTAssertFalse(display.contains("await self?.pdfView.redrawVisiblePages()"))
+        XCTAssertTrue(display.contains("guard FuriganaLayer.signature(for: key) != signature else { return }"))
+        XCTAssertTrue(display.contains("hasher.combine(frame.box.width)"), "PDF remplacé : l'empreinte doit suivre le cadre")
+        let package = try String(contentsOf: reader.appendingPathComponent("../Library/DocumentPackageService.swift").standardizedFileURL, encoding: .utf8)
+        XCTAssertTrue(package.contains("FuriganaLayer.clearMemory()"))
+        let layer = try String(contentsOf: reader.appendingPathComponent("FuriganaLayer.swift"), encoding: .utf8)
+        XCTAssertFalse(layer.contains("CTFontCreateWithName(\"HiraginoSans-W5\" as CFString, size, nil)"), "pas de police par lecture au dessin")
+        // Revue Codex de 502383c : les fils de dessin ne partagent pas de ligne Core Text, réservée à un seul fil.
+        XCTAssertFalse(layer.contains("CTLineDraw("))
+        XCTAssertFalse(layer.contains("(line: CTLine"), "pas de ligne gardée dans la page préparée")
     }
 
     /// Un `.sheet` posé sur une `Section` est recopié sur chaque ligne : sur Mac, ouvrir « Voir le résumé » fermait toute
@@ -84,6 +114,22 @@ final class StyleTokensGuardTests: XCTestCase {
         }
     }
 
+    /// Revue Claude de 05108d3 : un univers n'impose pas son fond à toutes les palettes, et aucun aperçu n'utilise un
+    /// symbole absent d'iOS 16 (nom en simple chaîne : ni le compilateur ni un rendu Mac ne le voient).
+    func testPaletteKeepsItsBackdropAndSymbolsExistOnIOS16() throws {
+        let design = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .appendingPathComponent("../../../../App/Design").standardizedFileURL
+        let backdrop = try String(contentsOf: design.appendingPathComponent("ThemeBackdrop.swift"), encoding: .utf8)
+        let imposed = try XCTUnwrap(backdrop.range(of: "private var effectiveBackdrop"))
+        let end = try XCTUnwrap(backdrop.range(of: "default: return theme.backdrop"))
+        let cases = backdrop[imposed.upperBound..<end.lowerBound]
+        for id in ["atelier", "wabisabi", "swiss", "brutalism", "synthwave", "luxury"] {
+            XCTAssertFalse(cases.contains("\"\(id)\""), "\(id) ne doit pas imposer son fond")
+        }
+        let themes = try String(contentsOf: design.appendingPathComponent("Themes.swift"), encoding: .utf8)
+        XCTAssertFalse(themes.contains("return \"sun.horizon\""))
+    }
+
     /// Fichier → nombre d'usages permis, chacun vérifié à la main le 29/10/2026.
     private let allowed: [String: Int] = [
         "Design/Styles.swift": 1,            // voile du style Atelier
@@ -134,7 +180,7 @@ final class StyleTokensGuardTests: XCTestCase {
     func testInterfaceReliefAndBordersUseStyleTokens() throws {
         XCTAssertEqual(try count(#"\.shadow\("#), [:], "Ombre en dur : utiliser atelierShadow")
         // Sur un contenu avec du texte, l'ombre franche le dédouble : passer par atelierShapeShadow.
-        XCTAssertEqual(try count(#"\.atelierShadow\("#), ["Design/Atelier.swift": 3, "Library/LibraryView.swift": 1])
+        XCTAssertEqual(try count(#"\.atelierShadow\("#), ["Design/Atelier.swift": 3, "Design/ThemePreview.swift": 1, "Library/LibraryView.swift": 1])
         XCTAssertEqual(try count(#"\.background\(\.[A-Za-z]+Material"#), [:], "Matière en dur : utiliser Atelier.material")
         // Fond dessiné du thème (motifs) et trait posé sur la page.
         XCTAssertEqual(try count(#"lineWidth: [0-9]"#), ["Design/ThemeBackdrop.swift": 13, "Reader/ReaderScreen.swift": 1],

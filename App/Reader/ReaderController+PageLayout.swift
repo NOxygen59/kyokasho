@@ -31,6 +31,7 @@ extension ReaderController {
             ink.setOCR(nil, source: page)
             realOCRMemo[page] = nil
             furiganaGeneration[page, default: 0] += 1
+            pageFuriganaTasks[page]?.cancel()
         }
         LayoutRegionsCache.shared.clear()
         FuriganaLayer.clearMemory()
