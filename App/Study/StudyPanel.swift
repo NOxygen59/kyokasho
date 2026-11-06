@@ -95,6 +95,14 @@ struct StudyPanel: View {
         .frame(width: fixedWidth ? Atelier.panelWidth : nil)
         .frame(maxWidth: fixedWidth ? nil : .infinity, maxHeight: .infinity)
         .atelierPanel()
+        // Onglet Chat repris d'un document qui l'avait : ramené sur Texte dès la reprise, titre et pilules compris
+        // (revue après recette 1.4.8, P3 1).
+        .onAppear(perform: normalizeTab)
+        .onChange(of: reader.document.id) { _ in normalizeTab() }
+    }
+
+    private func normalizeTab() {
+        if tab == .chat && !reader.document.capabilities.chat { tab = .text }
     }
 
     private var tint: Color {

@@ -530,10 +530,17 @@ struct ReaderScreen: View {
             CapsuleButton(icon: reader.isCurrentPageBookmarked ? "bookmark.fill" : "bookmark", label: String(localized: "Signet"),
                           active: reader.isCurrentPageBookmarked) { reader.toggleBookmark() }
             if capabilities.textAnalysis {
-                CapsuleButton(icon: "character.ja", label: furigana ? String(localized: "Masquer les furigana de la page") : String(localized: "Afficher les furigana de la page"),
-                              active: furigana, tint: Atelier.Tint.japanese) {
-                    furigana.toggle()
-                    reader.setFurigana(furigana)
+                // Manga : masqués par défaut, choix propre à ce document ; ailleurs, réglage général (`furigana`, lu ici pour
+                // redessiner le bouton quand il change).
+                let pageFurigana = reader.document.isInMangaSpace ? reader.pageFuriganaOn : furigana
+                CapsuleButton(icon: "character.ja", label: pageFurigana ? String(localized: "Masquer les furigana de la page") : String(localized: "Afficher les furigana de la page"),
+                              active: pageFurigana, tint: Atelier.Tint.japanese) {
+                    if reader.document.isInMangaSpace {
+                        reader.setFurigana(!pageFurigana)
+                    } else {
+                        furigana.toggle()
+                        reader.setFurigana(furigana)
+                    }
                 }
             }
             Menu {

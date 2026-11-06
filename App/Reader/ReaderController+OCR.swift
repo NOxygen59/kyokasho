@@ -79,7 +79,7 @@ extension ReaderController {
                 }
             }
             // OCR automatique (réglage) ou furigana actifs : les pages visibles sans OCR sont lues.
-            if !missing.isEmpty, self.model.appSettings.ocrAutoCurrentPage || FuriganaLayer.enabled {
+            if !missing.isEmpty, self.model.appSettings.ocrAutoCurrentPage || self.pageFuriganaOn {
                 self.ensureOCR(missing)
             }
         }
@@ -226,7 +226,7 @@ extension ReaderController {
             guard let self else { return }
             if let cached = await self.cachedOCR(source: source) {
                 if self.focusSource == source { self.ocrPage = cached }
-            } else if self.model.appSettings.ocrAutoCurrentPage || FuriganaLayer.enabled {
+            } else if self.model.appSettings.ocrAutoCurrentPage || self.pageFuriganaOn {
                 self.ensureOCR([source])
             }
         }

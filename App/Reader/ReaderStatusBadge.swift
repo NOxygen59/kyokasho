@@ -50,10 +50,13 @@ struct ReaderStatusBadge: View {
     private var gapIndicator: some View {
         let diameter = Self.diameter
         if battery.hotspot {
+            // Demandé par NOxygen59 (recette 1.4.8). iOS ne dit que « Wi-Fi coûteux » : le libellé le dit tel quel
+            // (revue après recette 1.4.8, P3 2).
             Image(systemName: "personalhotspot")
                 .font(Atelier.font(diameter * 0.26, weight: .bold))
                 .foregroundStyle(.white)
                 .offset(y: diameter * 0.4)
+                .accessibilityLabel(Text("Wi-Fi coûteux, sans doute un partage de connexion"))
         } else {
             let dot = diameter * DuoBatteryRing.dotDiameterRatio
             ForEach(Array(DuoBatteryRing.dotOffsets.enumerated()), id: \.offset) { _, offset in
@@ -154,12 +157,14 @@ private final class BatteryWatcher: ObservableObject {
     private func startNetwork() {
         guard path == nil else { return }
         let monitor = NWPathMonitor()
-        monitor.pathUpdateHandler = { [weak self] update in
+        monitor.pathUpdateHandler = { [weak self, weak monitor] update in
             let connected = update.status == .satisfied && update.usesInterfaceType(.wifi)
             let shared = connected && update.isExpensive
             DispatchQueue.main.async {
                 guard let self else { return }
                 MainActor.assumeIsolated {
+                    // Moniteur arrêté ou remplacé depuis l'envoi : ce message est périmé.
+                    guard let monitor, self.path === monitor else { return }
                     self.wifi = connected
                     self.hotspot = shared
                 }

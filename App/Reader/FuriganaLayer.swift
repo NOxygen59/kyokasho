@@ -105,9 +105,30 @@ enum FuriganaLayer {
     private static var order: [String] = []
     private static let limit = 40
 
+    /// Mangas ouverts et ceux dont les furigana sont affichés : un manga suit son propre choix (masqués par défaut),
+    /// les autres documents le réglage général.
+    private static var mangaDocuments: Set<String> = []
+    private static var mangaShown: Set<String> = []
+
+    static func setManga(_ manga: Bool, shown: Bool, documentId: String) {
+        lock.withLock {
+            if manga { mangaDocuments.insert(documentId) } else { mangaDocuments.remove(documentId) }
+            if manga && shown { mangaShown.insert(documentId) } else { mangaShown.remove(documentId) }
+        }
+    }
+
+    /// Clé « <document>-<page> » : le document est tout ce qui précède le dernier tiret.
+    private static func documentId(of key: String) -> Substring {
+        key.lastIndex(of: "-").map { key[..<$0] } ?? Substring(key)
+    }
+
     static func prepared(for key: String) -> PreparedPage? {
-        guard enabled else { return nil }
-        return lock.withLock { pages[key] }
+        let global = enabled
+        return lock.withLock {
+            let document = String(documentId(of: key))
+            let shown = mangaDocuments.contains(document) ? mangaShown.contains(document) : global
+            return shown ? pages[key] : nil
+        }
     }
 
     static func has(_ key: String) -> Bool { lock.withLock { pages[key] != nil } }
@@ -189,6 +210,7 @@ enum FuriganaLayer {
     /// PDF numérique : texte intégré, ligne par ligne, positions de chaque caractère.
     static func marks(from page: PDFPage) -> [Mark] {
         guard let text = page.string, !text.isEmpty else { return [] }
+        let largest = page.bounds(for: .cropBox).width * largestSizeRatio
         let ns = text as NSString
         var out: [Mark] = []
         // (`selection(for:)` suit les index de `page.string` ; `characterBounds` compte autrement les fins de ligne.)
@@ -213,7 +235,7 @@ enum FuriganaLayer {
                 let wordInLine = lineRect.isNull ? rect : vertical
                     ? CGRect(x: lineRect.minX, y: rect.minY, width: lineRect.width, height: rect.height)
                     : CGRect(x: rect.minX, y: lineRect.minY, width: rect.width, height: lineRect.height)
-                out.append(Mark(rect: rect, reading: ruby.reading, vertical: vertical,
+                out.append(Mark(rect: rect, reading: ruby.reading, vertical: vertical, largestSize: largest,
                                 maxSize: room(for: wordInLine, vertical: vertical, among: lineRects.filter { $0 != lineRect }) * 0.85))
             }
         }
@@ -241,9 +263,14 @@ enum FuriganaLayer {
             let base = mark.vertical ? mark.rect.width : mark.rect.height
             let span = mark.vertical ? mark.rect.height : mark.rect.width
             var size = min(base * 0.45, max(mark.maxSize, base * 0.32))
-            if let cap = mark.largestSize { size = min(size, cap) }
             // Très longue lecture sur un mot court : on serre un peu, jusqu'à 3 fois la largeur du mot.
             if size * count > span * 3 { size = max(base * 0.28, span * 3 / count) }
+            // Plafond de la page en dernier : aucun plancher ne le dépasse (revue Codex après recette 1.4.8, P2 1).
+            if let cap = mark.largestSize {
+                size = min(size, cap)
+                // Pas la place (ligne voisine bien plus proche que la lecture) : rien sur la page, elle reste au panneau.
+                if mark.maxSize < size * 0.5 { return nil }
+            }
             let total = size * count
             let strip = mark.vertical
                 ? CGRect(x: mark.rect.maxX + size * 0.05, y: mark.rect.midY - total / 2, width: size, height: total)

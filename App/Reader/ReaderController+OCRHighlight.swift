@@ -30,6 +30,7 @@ struct OCRHighlightDrag {
 extension ReaderController {
     func setOCRHighlightMode(_ on: Bool) {
         ocrHighlightMode = on
+        ocrHighlightGeneration += 1   // un appui en attente de l'OCR ne publie plus rien
         ocrHighlightDrag = nil
         ocrHighlightPreview = []
         if !on { ocrHighlightErasing = false }
@@ -53,9 +54,16 @@ extension ReaderController {
             pan.delegate = self
             pdfView.addGestureRecognizer(pan)
             ocrHighlightPan = pan
+            let tap = UITapGestureRecognizer(target: self, action: #selector(handleEraseTap(_:)))
+            tap.cancelsTouchesInView = false
+            pdfView.addGestureRecognizer(tap)
+            ocrEraseTap = tap
         }
         ocrHighlightPan?.isEnabled = on
-        pdfInnerScrollView?.panGestureRecognizer.minimumNumberOfTouches = on ? 2 : 1
+        ocrEraseTap?.isEnabled = on
+        // Appui long de sélection : il se disputait le doigt avec le surlignage.
+        longPressWatcher?.isEnabled = !on
+        applyInnerPanTouches()
         if on {
             swipeLeft.isEnabled = false
             swipeRight.isEnabled = false
@@ -81,9 +89,17 @@ extension ReaderController {
             let stored = UserDefaults.standard.string(forKey: "highlight.ocrColor").flatMap(HighlightColor.init(rawValue:))
             ocrHighlightEnded(color: stored ?? .yellow)
         default:
+            // Annulé ou raté : l'appui en attente de l'OCR ne doit plus publier d'aperçu.
+            ocrHighlightGeneration += 1
             ocrHighlightDrag = nil
             ocrHighlightPreview = []
         }
+    }
+
+    /// Gomme : un simple toucher efface aussi (le glisser seul ne suffisait plus depuis le pan).
+    @objc func handleEraseTap(_ gesture: UITapGestureRecognizer) {
+        guard ocrHighlightMode, ocrHighlightErasing, gesture.state == .ended else { return }
+        erase(at: gesture.location(in: pdfView))
     }
 
     func ocrHighlightBegan(at point: CGPoint) async {
@@ -91,6 +107,7 @@ extension ReaderController {
         if ocrHighlightErasing { erase(at: point); return }
         let generation = ocrHighlightGeneration
         guard let pdf, let page = pdfView.page(for: point, nearest: false) else { return }
+        let startPDF = pdf
         let index = pdf.index(for: page)
         guard presented.indices.contains(index) else { return }
         let source = presented[index].source
@@ -106,7 +123,9 @@ extension ReaderController {
         // Même marge qu'un survol au curseur (≈ 4 pt), en fraction de la page affichée.
         let shownWidth = frame.rotation % 180 == 0 ? box.width : box.height
         let tolerance = Double(6 / max(shownWidth * pdfView.scaleFactor, 1))
-        guard generation == ocrHighlightGeneration,   // déjà relâché pendant la lecture de l'OCR
+        // Même geste, même mode, même PDF et même page qu'à l'appui : sinon l'aperçu serait périmé (P2 5).
+        guard generation == ocrHighlightGeneration, ocrHighlightMode, self.pdf === startPDF,
+              presented.indices.contains(index), presented[index].source == source,
               let hit = ocr.character(at: frame.normalized(pdfView.convert(point, to: page)), tolerance: tolerance) else { return }
         ocrHighlightDrag = OCRHighlightDrag(page: page, source: source, ocr: ocr, frame: frame, tolerance: tolerance,
                                             anchor: hit, last: hit)

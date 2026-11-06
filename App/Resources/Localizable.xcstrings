@@ -49060,6 +49060,28 @@
           }
         }
       }
+    },
+    "Wi-Fi coûteux, sans doute un partage de connexion": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Expensive Wi-Fi, probably a personal hotspot"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wi-Fi coûteux, sans doute un partage de connexion"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按流量计费的 Wi-Fi，可能是个人热点"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

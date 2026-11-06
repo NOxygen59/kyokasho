@@ -28,6 +28,8 @@ final class DictionaryCatalogService: ObservableObject {
     }
     private static let offeredKey = "dictionaries.offeredUpdates"
     private var task: Task<Void, Never>?
+    /// +1 à chaque installation : les messages de progression d'une installation annulée sont ignorés.
+    private var generation = 0
     private var queue: [String] = []
     /// La file installe aussi ce qui est absent (« Tout installer ») ; sinon elle ne met à jour que l'existant.
     private var installsMissing = false
@@ -52,6 +54,12 @@ final class DictionaryCatalogService: ObservableObject {
         offeredUpdates.removeAll { $0 == entry.id } // Installé par ailleurs : plus rien à proposer.
         let previous = installed(entry, in: model)
         working = (entry.id, .index)
+        generation += 1
+        let run = generation
+        // Progression publiée seulement pour l'installation en cours (revue après recette 1.4.8, P2 6).
+        let report: @Sendable (Phase) -> Void = { phase in
+            Task { @MainActor in if self.generation == run, self.working?.id == entry.id { self.working = (entry.id, phase) } }
+        }
         task = Task { [weak self] in
             let folder = FileManager.default.temporaryDirectory.appendingPathComponent("DictionaryDownload-\(UUID().uuidString)", isDirectory: true)
             defer { try? FileManager.default.removeItem(at: folder) }
@@ -64,18 +72,24 @@ final class DictionaryCatalogService: ObservableObject {
                 try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
                 let zip = folder.appendingPathComponent("\(entry.id).zip")
                 try await Self.download(download, to: zip, expected: entry.approxBytes) { fraction in
-                    Task { @MainActor in self?.working = (entry.id, .download(fraction)) }
+                    report(.download(fraction))
                 }
                 try Task.checkCancellation()
                 self?.working = (entry.id, .importing(0))
                 var last = Date.distantPast
-                _ = try await Task.detached(priority: .userInitiated) {
+                let importing = Task.detached(priority: .userInitiated) {
                     try DictionaryImporter(database: database).importDictionary(at: zip) { p in
                         guard Date().timeIntervalSince(last) > 0.1 || p.fraction >= 1 else { return }
                         last = Date()
-                        Task { @MainActor in self?.working = (entry.id, .importing(p.fraction)) }
+                        report(.importing(p.fraction))
                     }
-                }.value
+                }
+                // « Annuler » arrête aussi l'import d'une nouvelle installation (l'importeur efface ce qu'il a commencé).
+                // Une mise à jour va au bout : l'importeur retire l'ancienne version avant de remplir la nouvelle, et
+                // l'arrêter en route ne laisserait aucun des deux.
+                _ = try await withTaskCancellationHandler { try await importing.value } onCancel: {
+                    if previous == nil { importing.cancel() }
+                }
                 // Mise à jour : l'ancienne version part, la nouvelle prend sa place dans l'ordre.
                 if let previous, let oldId = previous.id, previous.title != index.title {
                     try? await Task.detached { try database.deleteDictionary(id: oldId) }.value
@@ -90,6 +104,8 @@ final class DictionaryCatalogService: ObservableObject {
                 self?.updates[entry.id] = nil
                 Diagnostics.log("dictionnaires : « \(index.title) » installé depuis le catalogue", "dictionnaire")
             } catch is CancellationError {
+            } catch let error as URLError where error.code == .cancelled {
+                // Téléchargement arrêté par « Annuler » : pas une erreur.
             } catch {
                 self?.errors[entry.id] = error.localizedDescription
                 Diagnostics.log("dictionnaires : échec « \(entry.name) » — \(error.localizedDescription)", "dictionnaire")

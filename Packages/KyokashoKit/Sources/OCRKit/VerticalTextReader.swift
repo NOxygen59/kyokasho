@@ -84,8 +84,12 @@ enum VerticalTextReader {
                 small.minX >= column.maxX - 2 && small.minX <= column.maxX + column.width
                     && small.maxY >= column.minY && small.minY <= column.maxY
             }.count >= 2
-            var line = OCRLine(text: text, box: box, charBoxes: charBoxes, measuredCharBoxes: true,
-                               vertical: true, confidence: Double(reading.confidence))
+            // Positions annoncées mesurées seulement si Vision a donné une case à chaque caractère, dans l'ordre et sans
+            // doublon ; sinon, cases proportionnelles marquées estimées (revue après recette 1.4.8, P2 3).
+            let measured = !reading.estimated && inReadingOrder(cleaned)
+            var line = OCRLine(text: text, box: box,
+                               charBoxes: measured ? charBoxes : CharacterLayout.proportional(text, in: box, vertical: true),
+                               measuredCharBoxes: measured, vertical: true, confidence: Double(reading.confidence))
             line.hasPrintedRuby = ruby ? true : nil
             lines.append(line)
         }
@@ -103,7 +107,13 @@ enum VerticalTextReader {
 
     /// Vision dit où il a lu chaque caractère dans la bande : c'est ce qui relie le texte aux vraies cases. Compter les
     /// caractères ne suffit pas : un seul oublié décalait tout le reste, et le toucher tombait sur le mauvais mot.
-    private static func recognize(_ strip: CGImage, cellCount: Int) -> (characters: [ReadCharacter], confidence: Float)? {
+    /// Cases de lecture fiables : chaque caractère après le précédent, sans case partagée.
+    static func inReadingOrder(_ characters: [ReadCharacter]) -> Bool {
+        zip(characters, characters.dropFirst()).allSatisfy { $1.cells.lowerBound > $0.cells.upperBound }
+    }
+
+    /// `estimated` : au moins un caractère sans boîte de Vision, placé par son rang.
+    private static func recognize(_ strip: CGImage, cellCount: Int) -> (characters: [ReadCharacter], confidence: Float, estimated: Bool)? {
         let request = VNRecognizeTextRequest()
         request.recognitionLevel = .accurate
         request.recognitionLanguages = ["ja-JP"]
@@ -112,6 +122,7 @@ enum VerticalTextReader {
         let candidates = (request.results ?? []).compactMap { $0.topCandidates(1).first }
         guard !candidates.isEmpty else { return nil }
         var characters: [ReadCharacter] = []
+        var estimated = false
         for candidate in candidates {
             let text = candidate.string
             var index = text.startIndex
@@ -119,6 +130,7 @@ enum VerticalTextReader {
             while index < text.endIndex {
                 let next = text.index(after: index)
                 let box = (try? candidate.boundingBox(for: index..<next))?.boundingBox
+                if box == nil { estimated = true }
                 characters.append(ReadCharacter(character: text[index], cells: {
                     let cell = box.map { cellIndex(midX: $0.midX, stripWidth: strip.width, cellCount: cellCount) }
                         ?? min(order, cellCount - 1)
@@ -128,7 +140,7 @@ enum VerticalTextReader {
                 index = next
             }
         }
-        return (characters, candidates.map(\.confidence).max() ?? 0)
+        return (characters, candidates.map(\.confidence).max() ?? 0, estimated)
     }
 
     /// Case sous une position de la bande, de 0 à 1 sur sa largeur.

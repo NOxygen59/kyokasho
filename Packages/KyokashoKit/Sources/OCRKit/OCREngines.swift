@@ -95,6 +95,12 @@ public enum PageRenderer {
 
 /// Apple Vision, japonais + anglais, niveau `.accurate` (le seul qui lit le japonais).
 public struct VisionOCREngine: OCREngine {
+    /// Bout de dessin lu comme un caractère : seul, hors chiffre, et peu sûr ou étranger au japonais (ni kana ni kanji).
+    public static func isDrawingFragment(_ line: OCRLine) -> Bool {
+        guard line.hasPrintedRuby == nil, line.text.count == 1, let c = line.text.first, !c.isNumber else { return false }
+        return line.confidence < 0.5 || !OCRProofreader.isJapanese(c)
+    }
+
     public let id = OCREngineID.vision
     public var languages = ["ja-JP", "en-US"]
 
@@ -151,9 +157,10 @@ public struct VisionOCREngine: OCREngine {
         // Du vertical sur la page : colonnes de droite à gauche, bloc par bloc, même à côté de lignes horizontales. La recherche au
         // dictionnaire enchaîne les lignes suivantes, elle lirait sinon les colonnes à l'envers.
         if lines.contains(where: \.vertical) {
-            // Page de manga : Vision y lit aussi des bouts de dessin, un caractère à la fois.
+            // Page de manga : Vision y lit aussi des bouts de dessin, un caractère à la fois. Seuls les fragments douteux partent ;
+            // un 何 ou un 雨 seul et bien lu reste pour le panneau, le dictionnaire et la recherche (revue après recette 1.4.8, P2 2).
             if lines.filter(\.vertical).count * 2 > lines.count {
-                lines.removeAll { $0.hasPrintedRuby == nil && $0.text.count == 1 && !$0.text.allSatisfy(\.isNumber) }
+                lines.removeAll(where: Self.isDrawingFragment)
             }
             return OCRLayout.verticalReadingOrder(OCRPage(engine: "vision", lines: lines, durationMs: 0))
         }

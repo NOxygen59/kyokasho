@@ -13,7 +13,19 @@ import UIKit
 extension ReaderController {
     // MARK: Réglages
 
+    /// Furigana dessinés sur ce document : choix du manga (masqués par défaut), sinon réglage général.
+    var pageFuriganaOn: Bool {
+        document.isInMangaSpace ? document.settingsOverride.pageFurigana == true : FuriganaLayer.enabled
+    }
+
+    /// Fait connaître au dessin le choix de ce document (lu par PDFKit depuis ses fils).
+    func registerFuriganaChoice() {
+        FuriganaLayer.setManga(document.isInMangaSpace, shown: document.settingsOverride.pageFurigana == true,
+                               documentId: document.id)
+    }
+
     func applyDisplaySettings(refit: Bool = false) {
+        registerFuriganaChoice()
         let viewport = refit ? nil : pdfView.captureViewport()
         let s = settings
         let paginated = s.scrollMode == .paginated
@@ -63,11 +75,20 @@ extension ReaderController {
     /// un doigt, le pincement démarre à chaque geste à deux doigts, et il fait déjà suivre la page sous les
     /// doigts. Ailleurs, les réglages relevés de PDFKit sont rétablis.
     func tuneDoublePageGestures(double: Bool, paginated: Bool, pageController: Bool) {
-        guard !pageController, let scroll = pdfInnerScrollView else { return }
         // Réglage mesuré en double page paginée (le cas observé par NOxygen59) ; le reste garde le comportement de PDFKit.
-        let tuned = double && paginated
-        scroll.isDirectionalLockEnabled = !tuned
-        scroll.panGestureRecognizer.maximumNumberOfTouches = tuned ? 1 : 2
+        doublePagePanTuned = !pageController && double && paginated
+        guard !pageController, let scroll = pdfInnerScrollView else { return }
+        scroll.isDirectionalLockEnabled = !doublePagePanTuned
+        applyInnerPanTouches()
+    }
+
+    /// Seul endroit qui règle le nombre de doigts du pan interne de PDFKit, appelé après chaque création de la vue interne
+    /// et à chaque changement du mode surlignage (revue après recette 1.4.8, P2 4). Surlignage : un doigt surligne, deux
+    /// doigts déplacent (aussi en double page). Sinon, un doigt en double page paginée (pincement), un ou deux ailleurs.
+    func applyInnerPanTouches() {
+        guard let pan = pdfInnerScrollView?.panGestureRecognizer else { return }
+        pan.minimumNumberOfTouches = ocrHighlightMode ? 2 : 1
+        pan.maximumNumberOfTouches = doublePagePanTuned && !ocrHighlightMode ? 1 : 2
     }
 
     /// Applique de nouveaux réglages (globaux ou du document). Reconstruit si la structure change.
@@ -100,7 +121,7 @@ extension ReaderController {
     func showOCR(_ ocr: OCRPage, source: Int) {
         realOCRMemo[source] = nil
         ink.setOCR(ocr, source: source)
-        guard FuriganaLayer.enabled else { return }
+        guard pageFuriganaOn else { return }
         // Un moteur OCR explicite fournit les boîtes du scan même si le scanner a ajouté une couche texte PDF.
         // La couche PDF est traitée séparément par `scheduleFurigana`.
         guard ocr.engine != OCREngineID.pdfText else { return }
@@ -164,7 +185,7 @@ extension ReaderController {
 
 
     func refreshFurigana(afterAIRead read: DocumentScan.PageRead) {
-        guard !closed, read.documentId == document.id, shownSources.contains(read.page), FuriganaLayer.enabled else { return }
+        guard !closed, read.documentId == document.id, shownSources.contains(read.page), pageFuriganaOn else { return }
         Task { [weak self] in
             guard let self, let cached = await self.cachedOCR(source: read.page) else { return }
             self.showOCR(cached, source: read.page)
@@ -174,7 +195,7 @@ extension ReaderController {
     /// Pages visibles avec texte intégré : furigana calculés depuis le texte du PDF.
     func scheduleFurigana(_ pages: [Int]) {
         furiganaTask?.cancel()
-        guard FuriganaLayer.enabled else { return }
+        guard pageFuriganaOn else { return }
         let url = fileURL, id = document.id
         furiganaTask = Task.detached(priority: .utility) { [weak self] in
             var changed = false
@@ -201,7 +222,15 @@ extension ReaderController {
     }
 
     func setFurigana(_ on: Bool) {
-        UserDefaults.standard.set(on, forKey: FuriganaLayer.storageKey)
+        if document.isInMangaSpace {
+            // Manga : choix de ce document seulement, gardé dans ses réglages (et ses paquets).
+            var override = document.settingsOverride
+            override.pageFurigana = on ? true : nil
+            setDocumentOverride(override)
+        } else {
+            UserDefaults.standard.set(on, forKey: FuriganaLayer.storageKey)
+        }
+        registerFuriganaChoice()
         // Recalcul complet de la page posée (texte du PDF et OCR en cache).
         if on { schedulePageSettled() } else { furiganaTask?.cancel() }
         pdfView.redrawVisiblePages()
