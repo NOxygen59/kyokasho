@@ -125,8 +125,8 @@ struct DomainLexiconView: View {
                 Button { editing = DomainLexicon.Entry(term: "", reading: "", meaning: "") } label: { Label("Ajouter", systemImage: "plus") }
             }
         }
-        .sheet(item: $editing) { entry in LexiconEntryEditor(entry: entry) }
-        .sheet(isPresented: $showHarvest) { LexiconHarvestView() }
+        .stackedSheet(item: $editing) { entry in LexiconEntryEditor(entry: entry) }
+        .stackedSheet(isPresented: $showHarvest) { LexiconHarvestView() }
     }
 }
 
@@ -135,7 +135,7 @@ private struct LexiconEntryEditor: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        NavigationStack {
+        SheetStack {
             Form {
                 TextField("Terme (ex. 野縁)", text: $entry.term)
                 TextField("Lecture en kana (ex. のぶち)", text: $entry.reading)

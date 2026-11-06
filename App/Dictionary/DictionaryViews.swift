@@ -441,8 +441,8 @@ struct DictionaryManagerView: View {
             }
         }
         .environment(\.editMode, .constant(.active))
-        .sheet(isPresented: $showCatalog) {
-            NavigationStack {
+        .stackedSheet(isPresented: $showCatalog) {
+            SheetStack {
                 DictionaryCatalogView()
                     .toolbar { ToolbarItem(placement: .confirmationAction) { Button("OK") { showCatalog = false } } }
             }

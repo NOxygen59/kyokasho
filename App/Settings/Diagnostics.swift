@@ -165,7 +165,13 @@ struct DiagnosticsSection: View {
         Section {
             Toggle("Relevé de batterie", isOn: $energy)
                 .onChange(of: energy) { EnergyMeter.shared.setEnabled($0) }
+            #if targetEnvironment(macCatalyst)
+            NavigationLink { EnergySummaryView().environment(\.pushedPage, true) } label: {
+                Label("Voir le résumé", systemImage: "battery.75")
+            }
+            #else
             Button { showEnergy = true } label: { Label("Voir le résumé", systemImage: "battery.75") }
+            #endif
             Button("Effacer le relevé", role: .destructive) { EnergyFile.erase() }
         } header: {
             Text("Batterie")
@@ -178,9 +184,15 @@ struct DiagnosticsSection: View {
         }
         .sheet(isPresented: $showEnergy) { EnergySummaryView() }
         Section {
+            #if targetEnvironment(macCatalyst)
+            NavigationLink { OvisReadingExportView().environment(\.pushedPage, true) } label: {
+                Label("Extraire les lectures OvisOCR2 d'un document", systemImage: "doc.plaintext")
+            }
+            #else
             Button { showReadingExport = true } label: {
                 Label("Extraire les lectures OvisOCR2 d'un document", systemImage: "doc.plaintext")
             }
+            #endif
         } header: {
             Text("Lectures IA")
         } footer: {
@@ -201,11 +213,17 @@ private struct OvisReadingExportView: View {
     @State private var readCounts: [String: Int] = [:]
 
     var body: some View {
-        NavigationStack {
+        SheetStack {
             List {
                 if let message {
                     Label(message, systemImage: "info.circle").foregroundStyle(.secondary)
                 }
+                #if targetEnvironment(macCatalyst)
+                // Mac : le partage s'ouvre d'ici, sans feuille par-dessus les Réglages.
+                if let file {
+                    ShareLink(item: file.url) { Label("Partager", systemImage: "square.and.arrow.up") }
+                }
+                #endif
                 Section {
                     ForEach(model.documents) { document in
                         let read = readCounts[document.id]
@@ -242,7 +260,9 @@ private struct OvisReadingExportView: View {
                 ToolbarItem(placement: .confirmationAction) { Button("Fermer") { dismiss() } }
             }
         }
+        #if !targetEnvironment(macCatalyst)
         .sheet(item: $file) { ActivityShareSheet(url: $0.url) }
+        #endif
     }
 
     private func export(_ document: LibraryDocument) {

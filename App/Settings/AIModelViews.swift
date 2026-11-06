@@ -287,7 +287,7 @@ struct QwenChatView: View {
         .centeredConfirmation(isPresented: $confirmDelete, title: String(localized: "Supprimer cette conversation ?"),
                               message: String(localized: "Ses messages seront effacés de l'iPad. Les autres conversations sont gardées."),
                               confirm: String(localized: "Supprimer")) { deleteConversation() }
-        .sheet(isPresented: $showConversations) {
+        .stackedSheet(isPresented: $showConversations) {
             ConversationListSheet(
                 items: conversations.map { ($0.id, $0.shownTitle, $0.messages.count) },
                 selected: selectedConversation,
@@ -301,8 +301,8 @@ struct QwenChatView: View {
                 onDelete: { ids in deleteConversations(ids) },
                 onNew: { showConversations = false; newConversation() })
         }
-        .sheet(isPresented: $showSettings, onDismiss: applySettingsIfChanged) {
-            NavigationStack {
+        .stackedSheet(isPresented: $showSettings, onDismiss: applySettingsIfChanged) {
+            SheetStack {
                 AIChatSettingsView(modelID: selectedModelID, fixedModel: true)
                     .toolbar { ToolbarItem(placement: .confirmationAction) { Button("OK") { showSettings = false } } }
             }
@@ -882,7 +882,7 @@ struct ConversationListSheet: View {
     @State private var confirm = false
 
     var body: some View {
-        NavigationStack {
+        SheetStack {
             List(selection: $picked) {
                 ForEach(items, id: \.id) { item in
                     HStack {

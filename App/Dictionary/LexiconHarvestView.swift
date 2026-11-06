@@ -36,7 +36,7 @@ struct LexiconHarvestView: View {
     private var running: Bool { center.isRunning(Self.key) }
 
     var body: some View {
-        NavigationStack {
+        SheetStack {
             List {
                 Section {
                     Picker("Livre", selection: $documentId) {

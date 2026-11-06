@@ -91,7 +91,7 @@ struct WhatsNewView: View {
     var onClose: () -> Void
 
     var body: some View {
-        NavigationStack {
+        SheetStack {
             List {
                 section(String(localized: "Ajouté"), icon: "plus.circle.fill", tint: .green, items: notes.added)
                 section(String(localized: "Corrigé"), icon: "wrench.and.screwdriver.fill", tint: .orange, items: notes.fixed)
@@ -166,10 +166,19 @@ struct IntroSettingsSection: View {
 
     var body: some View {
         Section {
+            #if targetEnvironment(macCatalyst)
+            NavigationLink { MacTourPage() } label: { Label("Revoir la visite guidée", systemImage: "figure.walk") }
+            if let notes = ReleaseNotes.notes(for: IntroStore.marketingVersion) {
+                NavigationLink { MacWhatsNewPage(notes: notes) } label: {
+                    Label("Nouveautés de cette version", systemImage: "sparkles")
+                }
+            }
+            #else
             Button { tour = true } label: { Label("Revoir la visite guidée", systemImage: "figure.walk") }
             if ReleaseNotes.notes(for: IntroStore.marketingVersion) != nil {
                 Button { news = true } label: { Label("Nouveautés de cette version", systemImage: "sparkles") }
             }
+            #endif
             NavigationLink { VersionHistoryView() } label: {
                 Label("Historique des versions", systemImage: "clock.arrow.circlepath")
             }
@@ -188,6 +197,28 @@ struct IntroSettingsSection: View {
         }
     }
 }
+
+#if targetEnvironment(macCatalyst)
+/// Mac : visite revue depuis les Réglages, dans leur navigation ; « Commencer » ou « Passer » revient aux Réglages.
+private struct MacTourPage: View {
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        IntroTourView { IntroStore.markSeen(tour: true); dismiss() }
+            .navigationBarBackButtonHidden()
+    }
+}
+
+/// Mac : nouveautés de la version dans la navigation des Réglages ; « OK » y revient.
+private struct MacWhatsNewPage: View {
+    let notes: ReleaseNotes
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        WhatsNewView(notes: notes) { dismiss() }.environment(\.pushedPage, true)
+    }
+}
+#endif
 
 /// Historique de toutes les versions, de la plus récente à la 0.1.0, builds de test non publiées comprises
 /// (`ReleaseNotes.all`). Chaque version se déplie.

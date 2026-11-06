@@ -49808,6 +49808,28 @@
           }
         }
       }
+    },
+    "Sauvegarde prête : touche « Partager » en haut pour l'enregistrer.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Backup ready: use “Share” at the top to save it."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sauvegarde prête : touche « Partager » en haut pour l'enregistrer."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "备份已就绪：点按顶部的“共享”进行保存。"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

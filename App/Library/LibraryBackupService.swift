@@ -309,9 +309,20 @@ struct BackupSettingsView: View {
                 folderName = LibraryBackupService.folder?.lastPathComponent
             } catch { message = String(localized: "Dossier refusé : \(error.localizedDescription)") }
         }
+        #if targetEnvironment(macCatalyst)
+        // Mac : partage depuis la barre, sans feuille par-dessus les Réglages.
+        .toolbar {
+            if let shareURL {
+                ToolbarItem(placement: .primaryAction) {
+                    ShareLink(item: shareURL) { Label("Partager", systemImage: "square.and.arrow.up") }
+                }
+            }
+        }
+        #else
         .sheet(item: Binding(get: { shareURL.map(SharedFile.init) }, set: { if $0 == nil { shareURL = nil } })) { file in
             ActivityShareSheet(url: file.url)
         }
+        #endif
         .documentPicker(isPresented: $pickingBackup, types: [UTType(filenameExtension: LibraryBackup.fileExtension) ?? .data, .data], multiple: false) { urls in
             guard let url = urls.first, let kept = PickedFile.keep(url) else { return }
             Task { await verify(kept); PickedFile.discard(kept) }
@@ -342,7 +353,11 @@ struct BackupSettingsView: View {
             if result.inChosenFolder {
                 message = String(localized: "Sauvegarde écrite dans « \(folderName ?? "") »") + (result.removed > 0 ? String(localized: " ; \(result.removed) ancienne(s) effacée(s).") : ".")
             } else {
+                #if targetEnvironment(macCatalyst)
+                message = String(localized: "Sauvegarde prête : touche « Partager » en haut pour l'enregistrer.")
+                #else
                 message = String(localized: "Sauvegarde prête : choisis où l'enregistrer.")
+                #endif
                 shareURL = result.url
             }
         } catch {

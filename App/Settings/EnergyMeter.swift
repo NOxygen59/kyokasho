@@ -104,7 +104,7 @@ struct EnergySummaryView: View {
     @State private var count = 0
 
     var body: some View {
-        NavigationStack {
+        SheetStack {
             List {
                 if let rows {
                     if rows.isEmpty {

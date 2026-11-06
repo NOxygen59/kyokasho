@@ -78,7 +78,7 @@ struct BenchView: View {
                 if scoped { url.stopAccessingSecurityScopedResource() }
             }
         }
-        .sheet(item: $editing, onDismiss: reload) { sample in
+        .stackedSheet(item: $editing, onDismiss: reload) { sample in
             BenchSampleEditor(sample: sample).environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review)
         }
     }
@@ -171,7 +171,7 @@ struct BenchSampleEditor: View {
     @State private var runs: [BenchRun] = []
 
     var body: some View {
-        NavigationStack {
+        SheetStack {
             Form {
                 Section("Titre") { TextField("Titre", text: $sample.title) }
                 Section("Image") {
