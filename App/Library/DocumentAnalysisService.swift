@@ -234,14 +234,15 @@ final class DocumentAnalysisService: ObservableObject {
     /// Traduit (Qwen3-VL, hors ligne) dans `language` toutes les pages déjà mises en page par OvisOCR2 et pas encore
     /// traduites dans cette langue ; même écran de progression que l'analyse (reprise possible).
     func translateAll(_ document: LibraryDocument, into language: TranslationLanguage = .french) {
-        guard progress == nil, Qwen3VLReader().isAvailable else { return }
+        let translator = PageTranslator()
+        guard progress == nil, translator.isAvailable else { return }
         let id = document.id
         let pages = (0..<document.pageCount).filter {
             FileManager.default.fileExists(atPath: Self.rawURL(id, ModelSpec.ovisocr2.id, $0).path)
                 && !FileManager.default.fileExists(atPath: Self.rawURL(id, language.rawValue, $0).path)
         }
         guard !pages.isEmpty else { return }
-        progress = Progress(documentId: id, phase: String(localized: "Traduction (Qwen3-VL)"), done: 0, total: pages.count, phaseStarted: Date())
+        progress = Progress(documentId: id, phase: String(localized: "Traduction (\(translator.name))"), done: 0, total: pages.count, phaseStarted: Date())
         UIApplication.shared.isIdleTimerDisabled = true
         task = Task { [weak self] in
             defer {
@@ -254,7 +255,7 @@ final class DocumentAnalysisService: ObservableObject {
                 do {
                     let glossary = language == .french ? DomainLexicon.shared.glossary : []
                     let translated = try await Diagnostics.measure("traduction (\(language.rawValue)) p. \(p)", "traduction") {
-                        try await Qwen3VLReader().translate(markdown: md, into: language, glossary: glossary)
+                        try await translator.translate(markdown: md, into: language, glossary: glossary)
                     }
                     try? DocumentAITextStore.write(translated, documentId: id, reader: language.rawValue, page: p)
                 } catch {
@@ -262,7 +263,7 @@ final class DocumentAnalysisService: ObservableObject {
                 }
                 self?.step(done: k + 1)
             }
-            await Qwen3VLReader().unload()
+            await translator.unload()
         }
     }
 

@@ -49830,6 +49830,160 @@
           }
         }
       }
+    },
+    "%@ traduit la page… (1 à 3 min, hors ligne)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ is translating the page… (1 to 3 min, offline)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ traduit la page… (1 à 3 min, hors ligne)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 正在翻译本页…（1 到 3 分钟，离线）"
+          }
+        }
+      }
+    },
+    "Traduire en %@ (hors ligne)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Translate into %@ (offline)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Traduire en %@ (hors ligne)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "翻译成%@（离线）"
+          }
+        }
+      }
+    },
+    "Traduction hors ligne : télécharge %@ dans Réglages → Modèles d'IA et outils.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Offline translation: download %@ in Settings → AI models and tools."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Traduction hors ligne : télécharge %@ dans Réglages → Modèles d'IA et outils."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "离线翻译：请在“设置 → AI 模型和工具”中下载 %@。"
+          }
+        }
+      }
+    },
+    "Traduction %@ p. %lld": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ translation p. %lld"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Traduction %@ p. %lld"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 翻译 第 %lld 页"
+          }
+        }
+      }
+    },
+    "%@ traduit en %@ %lld caractères de la page %lld (glossaire : %lld terme(s))…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ is translating into %2$@ %3$lld characters of page %4$lld (glossary: %5$lld term(s))…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ traduit en %@ %lld caractères de la page %lld (glossaire : %lld terme(s))…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ 正在将第 %4$lld 页的 %3$lld 个字符翻译成%2$@（术语表：%5$lld 个）…"
+          }
+        }
+      }
+    },
+    "Traduction (%@)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Translation (%@)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Traduction (%@)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "翻译（%@）"
+          }
+        }
+      }
+    },
+    "chinois": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chinese"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "chinois"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "中文"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

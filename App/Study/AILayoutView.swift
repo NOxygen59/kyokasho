@@ -438,7 +438,7 @@ struct AILayoutLanguageBar: View {
         if translating {
             HStack(spacing: 10) {
                 ProgressView()
-                Text("Qwen3-VL traduit la page… (1 à 3 min, hors ligne)").font(.footnote).foregroundStyle(Atelier.textSecondary)
+                Text("\(PageTranslator().name) traduit la page… (1 à 3 min, hors ligne)").font(.footnote).foregroundStyle(Atelier.textSecondary)
             }
         } else if hasFrench {
             HStack {
@@ -453,13 +453,12 @@ struct AILayoutLanguageBar: View {
                 Button { translate() } label: { Image(systemName: "arrow.clockwise") }
                     .accessibilityLabel("Retraduire la page")
                     .foregroundStyle(Atelier.textTertiary)
-                    .disabled(!Qwen3VLReader().isAvailable)
+                    .disabled(!PageTranslator().isAvailable)
             }
-        } else if Qwen3VLReader().isAvailable {
+        } else if PageTranslator().isAvailable {
             HStack {
                 Button { translate() } label: {
-                    Label(target == .french ? String(localized: "Traduire en français (hors ligne)") : String(localized: "Traduire en anglais (hors ligne)"),
-                          systemImage: "character.bubble")
+                    Label(String(localized: "Traduire en \(target.localizedName) (hors ligne)"), systemImage: "character.bubble")
                 }
                 .font(.footnote.weight(.semibold))
                 .foregroundStyle(Atelier.Tint.ai)
@@ -467,7 +466,7 @@ struct AILayoutLanguageBar: View {
             }
         } else {
             // Sans Qwen3-VL ni traduction gardée : un message plutôt qu'une barre vide.
-            Label("Traduction hors ligne : télécharge Qwen3-VL dans Réglages → Modèles d'IA et outils.",
+            Label("Traduction hors ligne : télécharge \(PageTranslator.preferredName) dans Réglages → Modèles d'IA et outils.",
                   systemImage: "character.bubble")
                 .font(.caption)
                 .foregroundStyle(Atelier.textTertiary)
@@ -478,7 +477,7 @@ struct AILayoutLanguageBar: View {
     private var languageMenu: some View {
         Menu {
             Picker("Langue de traduction", selection: $language) {
-                ForEach(TranslationLanguage.allCases) { Text($0.title).tag($0.rawValue) }
+                ForEach(TranslationLanguage.available) { Text($0.title).tag($0.rawValue) }
             }
         } label: {
             Text(target.rawValue.uppercased()).font(.caption2.weight(.bold))
@@ -494,10 +493,11 @@ struct AILayoutLanguageBar: View {
         let source = source, documentId = reader.document.id, target = target
         // Le lexique du domaine donne des sens en français : imposé seulement pour une traduction française.
         let glossary = target == .french ? DomainLexicon.shared.glossary : []
-        center.run(translateKey, title: String(localized: "Traduction Qwen3-VL p. \(source + 1)"), modelId: ModelSpec.qwen3vl4b.id, activity: "traduction") { id in
-            center.log(id, String(localized: "Qwen3-VL traduit en \(target.title) \(markdown.count) caractères de la page \(source + 1) (glossaire : \(glossary.count) terme(s))…"))
+        let translator = PageTranslator()
+        center.run(translateKey, title: String(localized: "Traduction \(translator.name) p. \(source + 1)"), modelId: translator.spec.id, activity: "traduction") { id in
+            center.log(id, String(localized: "\(translator.name) traduit en \(target.title) \(markdown.count) caractères de la page \(source + 1) (glossaire : \(glossary.count) terme(s))…"))
             let translated = try await Diagnostics.measure("traduction (\(target.rawValue)) p. \(source)", "traduction") {
-                try await Qwen3VLReader().translate(markdown: markdown, into: target, glossary: glossary)
+                try await translator.translate(markdown: markdown, into: target, glossary: glossary)
             }
             // Arrêtée : la génération rend un texte partiel, jamais gardé.
             try Task.checkCancellation()

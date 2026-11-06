@@ -141,14 +141,22 @@ public struct Qwen3VLReader: Sendable {
         ("畳", "tatami"), ("押入れ", "placard japonais (oshiire)"), ("縁側", "véranda (engawa)"),
     ]
 
+    /// Traduit le Markdown d'une page en gardant sa structure (voir `PageVLMReader.translate`).
+    public func translate(markdown: String, into language: TranslationLanguage = .french,
+                          glossary: [(String, String)] = defaultGlossary, maxTokens: Int? = nil) async throws -> String {
+        try await base.translate(markdown: markdown, into: language, glossary: glossary, maxTokens: maxTokens)
+    }
+}
+
+extension PageVLMReader {
     /// Traduit le Markdown d'une page (texte seul, pas d'image) en français ou en anglais, **structure gardée** :
     /// mêmes titres, listes, tableaux et balises `<img>` ; glossaire imposé (il est en français : l'app n'en passe
     /// pas pour l'anglais). Même modèle que la lecture (déjà téléchargé).
-    public func translate(markdown: String, into language: TranslationLanguage = .french,
-                          glossary: [(String, String)] = defaultGlossary, maxTokens: Int? = nil) async throws -> String {
-        guard isAvailable else { throw OCRError.modelMissing(base.spec.title) }
-        if let free = PageVLMReader.availableMemory(), free < base.minimumFreeMemory {
-            throw OCRError.engineFailed("Pas assez de mémoire libre pour la traduction (\(free / 1_048_576) Mo libres).")
+    func translate(markdown: String, into language: TranslationLanguage,
+                   glossary: [(String, String)], maxTokens: Int? = nil) async throws -> String {
+        guard isAvailable else { throw OCRError.modelMissing(spec.title) }
+        if let free = PageVLMReader.availableMemory(), free < minimumFreeMemory {
+            throw OCRError.engineFailed(String(localized: "Pas assez de mémoire libre pour \(spec.title) (\(free / 1_048_576) Mo libres). Ferme les autres apps et réessaie.", bundle: .main))
         }
         let terms = glossary.filter { markdown.contains($0.0) }.map { "- \($0.0) → \($0.1)" }.joined(separator: "\n")
         let prompt = """
@@ -162,9 +170,9 @@ public struct Qwen3VLReader: Sendable {
         \(markdown)
         """
         #if canImport(MLXVLM)
-        let user = UserInput(chat: [.user(prompt)])
+        let user = UserInput(chat: [.user(prompt)], additionalContext: context)
         let budget = maxTokens ?? min(6000, max(512, markdown.count * 3 + 256))
-        return try await GLMModel.using(directory: base.store.directory(base.spec), extraEOSTokens: []) { container in
+        return try await GLMModel.using(directory: store.directory(spec), extraEOSTokens: []) { container in
         try await withError {
             try await container.perform { context in
                 let prepared = try await context.processor.prepare(input: user)
@@ -182,13 +190,79 @@ public struct Qwen3VLReader: Sendable {
     }
 }
 
+
+/// Traducteur des pages. Mac à puce Apple : Qwen3.5-9B s'il est installé (texte seul, plus juste que le 4B ; demande
+/// de NOxygen59 du 06/11/2026), sinon Qwen3-VL-4B, comme sur l'iPad.
+public struct PageTranslator: Sendable {
+    let base: PageVLMReader
+
+    public init(store: ModelStore = .shared) {
+        #if targetEnvironment(macCatalyst)
+        if store.isInstalled(.qwen35chat9b) {
+            base = PageVLMReader(spec: .qwen35chat9b, prompt: "", context: ["enable_thinking": false], longSide: 0,
+                                 minimumFreeMemory: ModelSpec.chatMemoryNeeded(.qwen35chat9b), store: store)
+            return
+        }
+        #endif
+        base = Qwen3VLReader(store: store).base
+    }
+
+    public var isAvailable: Bool { base.isAvailable }
+    public var spec: ModelSpec { base.spec }
+    /// Nom court affiché (« Qwen3.5-9B », « Qwen3-VL »).
+    public var name: String { base.spec.id == ModelSpec.qwen3vl4b.id ? "Qwen3-VL" : "Qwen3.5-9B" }
+    /// Modèle à télécharger pour traduire sur cet appareil.
+    public static var preferredName: String {
+        #if targetEnvironment(macCatalyst)
+        return "Qwen3.5-9B"
+        #else
+        return "Qwen3-VL"
+        #endif
+    }
+
+    public func translate(markdown: String, into language: TranslationLanguage,
+                          glossary: [(String, String)], maxTokens: Int? = nil) async throws -> String {
+        try await base.translate(markdown: markdown, into: language, glossary: glossary, maxTokens: maxTokens)
+    }
+
+    public func unload() async { await base.unload() }
+}
+
 /// Langue des traductions de pages (Qwen3-VL, hors ligne). `rawValue` = nom du lecteur dans `DocumentAITextStore`
 /// (`fr-<page>.md`, `en-<page>.md`) : les deux traductions d'une page coexistent.
 public enum TranslationLanguage: String, CaseIterable, Sendable, Identifiable {
-    case french = "fr", english = "en"
+    case french = "fr", english = "en", chinese = "zh"
     public var id: String { rawValue }
     /// Nom donné au modèle dans la consigne (écrite en anglais).
-    public var englishName: String { self == .french ? "French" : "English" }
-    /// Nom affiché dans l'app.
-    public var title: String { self == .french ? "Français" : "English" }
+    public var englishName: String {
+        switch self {
+        case .french: return "French"
+        case .english: return "English"
+        case .chinese: return "Simplified Chinese"
+        }
+    }
+    /// Nom affiché dans l'app (dans sa propre langue).
+    public var title: String {
+        switch self {
+        case .french: return "Français"
+        case .english: return "English"
+        case .chinese: return "简体中文"
+        }
+    }
+    /// Nom dans une phrase de l'interface (« Traduire en français »).
+    public var localizedName: String {
+        switch self {
+        case .french: return String(localized: "français", bundle: .main)
+        case .english: return String(localized: "anglais", bundle: .main)
+        case .chinese: return String(localized: "chinois", bundle: .main)
+        }
+    }
+    /// Langues proposées : le chinois sur la version Mac seulement (pas de chinois sur l'iPad, décision du 04/11/2026).
+    public static var available: [TranslationLanguage] {
+        #if targetEnvironment(macCatalyst)
+        return allCases
+        #else
+        return [.french, .english]
+        #endif
+    }
 }
