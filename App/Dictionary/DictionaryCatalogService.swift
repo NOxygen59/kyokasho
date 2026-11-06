@@ -104,6 +104,8 @@ final class DictionaryCatalogService: ObservableObject {
                 self?.updates[entry.id] = nil
                 Diagnostics.log("dictionnaires : « \(index.title) » installé depuis le catalogue", "dictionnaire")
             } catch is CancellationError {
+            } catch DictionaryImporter.ImportError.cancelled {
+                // Import arrêté par « Annuler » : l'importeur a retiré ce qu'il avait commencé, pas une erreur.
             } catch let error as URLError where error.code == .cancelled {
                 // Téléchargement arrêté par « Annuler » : pas une erreur.
             } catch {

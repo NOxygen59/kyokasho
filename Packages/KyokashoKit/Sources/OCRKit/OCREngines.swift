@@ -94,6 +94,16 @@ public enum PageRenderer {
 // MARK: - Apple Vision
 
 /// Apple Vision, japonais + anglais, niveau `.accurate` (le seul qui lit le japonais).
+public extension OCRPage {
+    /// Pour le dessin des zones seulement : sur une page surtout verticale, sans les bouts de dessin lus comme un caractère.
+    func withoutDrawingFragments() -> OCRPage {
+        guard lines.filter(\.vertical).count * 2 > lines.count else { return self }
+        var page = self
+        page.lines.removeAll(where: VisionOCREngine.isDrawingFragment)
+        return page
+    }
+}
+
 public struct VisionOCREngine: OCREngine {
     /// Bout de dessin lu comme un caractère : seul, hors chiffre, et peu sûr ou étranger au japonais (ni kana ni kanji).
     public static func isDrawingFragment(_ line: OCRLine) -> Bool {
@@ -157,11 +167,9 @@ public struct VisionOCREngine: OCREngine {
         // Du vertical sur la page : colonnes de droite à gauche, bloc par bloc, même à côté de lignes horizontales. La recherche au
         // dictionnaire enchaîne les lignes suivantes, elle lirait sinon les colonnes à l'envers.
         if lines.contains(where: \.vertical) {
-            // Page de manga : Vision y lit aussi des bouts de dessin, un caractère à la fois. Seuls les fragments douteux partent ;
-            // un 何 ou un 雨 seul et bien lu reste pour le panneau, le dictionnaire et la recherche (revue après recette 1.4.8, P2 2).
-            if lines.filter(\.vertical).count * 2 > lines.count {
-                lines.removeAll(where: Self.isDrawingFragment)
-            }
+            // Page de manga : Vision y lit aussi des bouts de dessin, un caractère à la fois. Ils restent dans le résultat
+            // (panneau, dictionnaire, recherche) ; seul le dessin des zones les écarte (`OCRPage.withoutDrawingFragments`,
+            // contre-revue du chantier 1.5.0, P2 2).
             return OCRLayout.verticalReadingOrder(OCRPage(engine: "vision", lines: lines, durationMs: 0))
         }
         // Ordre de lecture approximatif : de haut en bas, puis de gauche à droite.

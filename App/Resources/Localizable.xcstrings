@@ -49544,6 +49544,50 @@
           }
         }
       }
+    },
+    "Touche un livre pour l'ouvrir. Glisse, ou utilise ‹ › et les flèches du clavier, pour tourner les pages ; pince ou touche deux fois pour zoomer. Les onglets en haut passent d'un livre à l'autre.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tap a book to open it. Swipe, or use ‹ › and the arrow keys, to turn pages; pinch or double-tap to zoom. The tabs at the top switch between books."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Touche un livre pour l'ouvrir. Glisse, ou utilise ‹ › et les flèches du clavier, pour tourner les pages ; pince ou touche deux fois pour zoomer. Les onglets en haut passent d'un livre à l'autre."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "轻点书籍即可打开。滑动，或使用 ‹ › 和键盘方向键翻页；双指捏合或轻点两下可缩放。顶部标签可在书籍之间切换。"
+          }
+        }
+      }
+    },
+    "Dans la barre d'outils, « Texte de la page » (あ) ouvre le panneau Texte : l'app lit la page scannée (OCR), y compris le japonais vertical, et la met en forme avec furigana et traduction. Le bouton あ de la barre du haut pose les furigana sur la page.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In the toolbar, “Page text” (あ) opens the Text panel: the app reads the scanned page (OCR), vertical Japanese included, and lays it out with furigana and translation. The あ button in the top bar puts furigana on the page."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dans la barre d'outils, « Texte de la page » (あ) ouvre le panneau Texte : l'app lit la page scannée (OCR), y compris le japonais vertical, et la met en forme avec furigana et traduction. Le bouton あ de la barre du haut pose les furigana sur la page."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在工具栏中，“页面文本”（あ）可打开“文本”面板：应用会识别扫描页面（OCR，包括竖排日文），并排版显示振假名和翻译。顶部栏的 あ 按钮可在页面上显示振假名。"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

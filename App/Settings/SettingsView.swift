@@ -230,9 +230,10 @@ struct DocumentSettingsSheet: View {
                 }
                 Section {
                     Button("Revenir aux réglages généraux", role: .destructive) {
-                        // L'espace est un rangement, pas un réglage de lecture : il reste.
+                        // L'espace et le choix des furigana du manga ne sont pas des réglages de lecture : ils restent.
                         var fresh = ReaderSettingsOverride()
                         fresh.mangaSpace = override.mangaSpace
+                        fresh.pageFurigana = override.pageFurigana
                         override = fresh
                     }
                         .disabled(!override.hasReaderOverrides)

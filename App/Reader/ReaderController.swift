@@ -115,6 +115,8 @@ final class ReaderController: NSObject, ObservableObject {
     var ocrEraseTap: UITapGestureRecognizer?
     /// Double page paginée : pan interne limité à un doigt pour laisser démarrer le pincement (`tuneDoublePageGestures`).
     var doublePagePanTuned = false
+    /// Recalage « page entière » prévu après le zoom arrière animé ; annulé par la prochaine interaction.
+    var pendingFitToPage: DispatchWorkItem?
     /// Aperçu du surlignage en cours (repère de la vue PDF).
     @Published var ocrHighlightPreview: [CGRect] = []
     /// Glisser en cours : page, OCR, cadre et premier caractère (fixés à l'appui).

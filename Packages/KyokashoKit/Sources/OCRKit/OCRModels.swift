@@ -96,6 +96,16 @@ public struct OCRLine: Codable, Hashable, Sendable {
         return line
     }
 
+    /// Ancien résultat : des boîtes de caractères en double ne sont pas des mesures. Texte et corrections gardés, cases
+    /// proportionnelles marquées estimées (contre-revue du chantier 1.5.0, P2 3).
+    public func downgradingDuplicateBoxes() -> OCRLine {
+        guard measuredCharBoxes, CharacterLayout.hasDuplicates(charBoxes) else { return self }
+        var line = self
+        line.charBoxes = CharacterLayout.proportional(text, in: box, vertical: vertical)
+        line.measuredCharBoxes = false
+        return line
+    }
+
     public init(text: String, box: NormBox, charBoxes: [NormBox], measuredCharBoxes: Bool, vertical: Bool, confidence: Double) {
         self.text = text
         self.box = box

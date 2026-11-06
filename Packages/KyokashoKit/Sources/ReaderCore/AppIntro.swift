@@ -41,10 +41,10 @@ public enum AppTour {
         }
         list += [
         IntroStep(icon: "book", title: String(localized: "Lire", bundle: .main),
-                  how: mac ? String(localized: "Clique un livre pour l'ouvrir. ‹ ›, les flèches du clavier ou le trackpad tournent les pages ; pince le trackpad ou double-clique pour zoomer. Les onglets en haut passent d'un livre à l'autre.", bundle: .main) : String(localized: "Touche un livre pour l'ouvrir. Glisse, ou utilise ‹ › et les flèches du clavier, pour tourner les pages ; pince pour zoomer. Les onglets en haut passent d'un livre à l'autre.", bundle: .main),
+                  how: mac ? String(localized: "Clique un livre pour l'ouvrir. ‹ ›, les flèches du clavier ou le trackpad tournent les pages ; pince le trackpad ou double-clique pour zoomer. Les onglets en haut passent d'un livre à l'autre.", bundle: .main) : String(localized: "Touche un livre pour l'ouvrir. Glisse, ou utilise ‹ › et les flèches du clavier, pour tourner les pages ; pince ou touche deux fois pour zoomer. Les onglets en haut passent d'un livre à l'autre.", bundle: .main),
                   why: String(localized: "Chaque livre rouvre à la page où tu l'avais laissé.", bundle: .main)),
         IntroStep(icon: "character.ja", title: String(localized: "Le texte de la page", bundle: .main),
-                  how: String(localized: "Le bouton あ ouvre le panneau Texte : l'app lit la page scannée (OCR), y compris le japonais vertical, et la met en forme avec furigana et traduction.", bundle: .main),
+                  how: String(localized: "Dans la barre d'outils, « Texte de la page » (あ) ouvre le panneau Texte : l'app lit la page scannée (OCR), y compris le japonais vertical, et la met en forme avec furigana et traduction. Le bouton あ de la barre du haut pose les furigana sur la page.", bundle: .main),
                   why: String(localized: "Un scan n'est qu'une image : l'OCR en fait du texte que tu peux chercher, copier et comprendre.", bundle: .main)),
         IntroStep(icon: "character.book.closed.ja", title: String(localized: "Le dictionnaire", bundle: .main),
                   how: mac ? String(localized: "Clique un mot de la page ou du panneau Texte, ou tiens Maj et passe la souris dessus. Réglages → Dictionnaires installe tout le catalogue en un bouton.", bundle: .main) : String(localized: "Touche un mot de la page ou du panneau Texte. Avec un clavier, tiens Maj et passe la souris sur un mot. Réglages → Dictionnaires installe tout le catalogue en un bouton.", bundle: .main),

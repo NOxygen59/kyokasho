@@ -86,6 +86,14 @@ extension ReaderController {
         let index = pdf.index(for: page)
         guard index != NSNotFound, index != currentIndex || presented.isEmpty == false else { return }
         let changed = index != currentIndex
+        // Planche changée : un surlignage commencé sur l'ancienne ne publie plus rien (contre-revue 1.5.0, P2 5),
+        // et le recalage différé du zoom animé n'a plus lieu d'être (P2 9).
+        if changed {
+            ocrHighlightGeneration += 1
+            ocrHighlightDrag = nil
+            ocrHighlightPreview = []
+            pendingFitToPage?.cancel()
+        }
         currentIndex = index
         updateCurrentSourcePage()
         ReadingTimeTracker.shared.pageViewed(currentSourcePage)
@@ -417,6 +425,7 @@ extension ReaderController {
     }
 
     @objc func handleDoubleTap(_ gesture: UITapGestureRecognizer) {
+        pendingFitToPage?.cancel()
         let point = gesture.location(in: pdfView)
         let fit = pdfView.scaleFactorForSizeToFit
         // Zoom animé par le défilement interne de PDFKit (demande de NOxygen59 du 06/11/2026) ; sans lui, ou avec
@@ -429,8 +438,16 @@ extension ReaderController {
                 return
             }
             scroll.setZoomScale(scroll.minimumZoomScale, animated: true)
-            // Puis l'ajustement habituel, une fois l'animation finie (bornes et repère du zoom « page entière »).
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in self?.pdfView.fitToPage() }
+            // Puis l'ajustement habituel, une fois l'animation finie (bornes et repère du zoom « page entière »), seulement
+            // si rien n'a bougé entre-temps : même PDF, même page, zoom toujours au minimum (contre-revue 1.5.0, P2 9).
+            let startPDF = pdfView.document, startPage = pdfView.currentPage, target = scroll.minimumZoomScale
+            let fit = DispatchWorkItem { [weak self, weak scroll] in
+                guard let self, let scroll, self.pdfView.document === startPDF, self.pdfView.currentPage === startPage,
+                      abs(scroll.zoomScale - target) < 0.01, !scroll.isZooming, !scroll.isTracking else { return }
+                self.pdfView.fitToPage()
+            }
+            pendingFitToPage = fit
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4, execute: fit)
             return
         }
         guard let page = pdfView.page(for: point, nearest: true) else { return }

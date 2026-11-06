@@ -252,6 +252,12 @@ struct ReaderScreen: View {
             }
         }
         .onChange(of: side) { new in ReaderTabHandoff.shared.current = { [studyTab] in (new, studyTab) } }
+        // Document rangé en Manga (ou retiré) pendant la lecture : le lecteur garde sa copie, elle suit ici
+        // (contre-revue du chantier 1.5.0, P2 8).
+        .onReceive(model.$documents) { documents in
+            guard let current = documents.first(where: { $0.id == reader.document.id }) else { return }
+            reader.syncClassification(mangaSpace: current.settingsOverride.mangaSpace)
+        }
         .onChange(of: studyTab) { new in ReaderTabHandoff.shared.current = { [side] in (side, new) } }
         .statusBarHidden(!chromeVisible)
         .persistentSystemOverlays(chromeVisible ? .automatic : .hidden)

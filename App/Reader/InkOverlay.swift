@@ -216,7 +216,8 @@ final class InkPageView: UIView, PKCanvasViewDelegate {
 
     /// Zones OCR (lignes en orange, caractères en bleu) ; `nil` pour les masquer.
     func showOCR(_ page: OCRPage?) {
-        ocrPage = page
+        // Zones dessinées : sans les bouts de dessin ; le résultat complet reste au panneau et à la recherche.
+        ocrPage = page?.withoutDrawingFragments()
         drawOCR()
     }
 

@@ -64,7 +64,9 @@ public actor OCRService {
         guard let stored = try? decoder.decode(OCRPage.self, from: record.json),
               let page = stored.readable(atAdditionalRotation: additionalRotation(documentId: documentId, pageIndex: pageIndex))
         else { return nil }
-        return OCRTargetLanguage.forDocument(documentId) == .japanese ? JapaneseOCRText.normalize(page) : page
+        var fixed = OCRTargetLanguage.forDocument(documentId) == .japanese ? JapaneseOCRText.normalize(page) : page
+        fixed.lines = fixed.lines.map { $0.downgradingDuplicateBoxes() }
+        return fixed
     }
 
     public func additionalRotation(documentId: String, pageIndex: Int) -> Int {

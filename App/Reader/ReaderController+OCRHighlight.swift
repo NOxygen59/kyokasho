@@ -108,6 +108,8 @@ extension ReaderController {
         let generation = ocrHighlightGeneration
         guard let pdf, let page = pdfView.page(for: point, nearest: false) else { return }
         let startPDF = pdf
+        // Point dans la page fixé à l'appui : après l'attente de l'OCR, la vue a pu bouger.
+        let pagePoint = pdfView.convert(point, to: page)
         let index = pdf.index(for: page)
         guard presented.indices.contains(index) else { return }
         let source = presented[index].source
@@ -126,7 +128,8 @@ extension ReaderController {
         // Même geste, même mode, même PDF et même page qu'à l'appui : sinon l'aperçu serait périmé (P2 5).
         guard generation == ocrHighlightGeneration, ocrHighlightMode, self.pdf === startPDF,
               presented.indices.contains(index), presented[index].source == source,
-              let hit = ocr.character(at: frame.normalized(pdfView.convert(point, to: page)), tolerance: tolerance) else { return }
+              pdfView.visiblePages.contains(page),
+              let hit = ocr.character(at: frame.normalized(pagePoint), tolerance: tolerance) else { return }
         ocrHighlightDrag = OCRHighlightDrag(page: page, source: source, ocr: ocr, frame: frame, tolerance: tolerance,
                                             anchor: hit, last: hit)
         updateOCRHighlightPreview()
@@ -151,7 +154,8 @@ extension ReaderController {
             ocrHighlightDrag = nil
             ocrHighlightPreview = []
         }
-        guard let drag = ocrHighlightDrag else { return }
+        // Page quittée pendant le geste : rien n'est enregistré sur une page qu'on ne voit plus.
+        guard let drag = ocrHighlightDrag, pdfView.visiblePages.contains(drag.page) else { return }
         let segments = OCRRangeSelection.segments(in: drag.ocr, from: drag.anchor, to: drag.last)
         let rects = OCRRangeSelection.boxes(in: drag.ocr, segments).map(drag.frame.pageRect)
         guard !rects.isEmpty else { return }

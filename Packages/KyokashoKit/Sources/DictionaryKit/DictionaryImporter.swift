@@ -204,6 +204,8 @@ public struct DictionaryImporter: Sendable {
             info.kanjiMetaCount = counts.kanjiMeta
             info.mediaCount = counts.media
             let final = info
+            // Dernier point d'arrêt avant de rendre le dictionnaire visible.
+            try Task.checkCancellation()
             try database.writer.write { db in try final.update(db) }
             database.clearCaches()
             progress(Progress(step: String(localized: "Terminé", bundle: .main), fraction: 1))
@@ -236,6 +238,8 @@ public struct DictionaryImporter: Sendable {
         var inserted = 0
         var start = 0
         while start < rows.count {
+            // « Annuler » est vu entre deux lots, pas seulement entre deux fichiers (contre-revue du chantier 1.5.0, P2 6).
+            try Task.checkCancellation()
             let end = min(start + batchSize, rows.count)
             let slice = rows[start..<end]
             try database.writer.write { db in

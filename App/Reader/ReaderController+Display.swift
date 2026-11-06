@@ -24,6 +24,16 @@ extension ReaderController {
                                documentId: document.id)
     }
 
+    /// Classement changé dans la bibliothèque pendant la lecture : la copie du lecteur, le choix des furigana et les pages
+    /// dessinées suivent, sans attendre la réouverture.
+    func syncClassification(mangaSpace: Bool?) {
+        guard document.settingsOverride.mangaSpace != mangaSpace else { return }
+        document.settingsOverride.mangaSpace = mangaSpace
+        registerFuriganaChoice()
+        if pageFuriganaOn { schedulePageSettled() } else { furiganaTask?.cancel() }
+        pdfView.redrawVisiblePages()
+    }
+
     func applyDisplaySettings(refit: Bool = false) {
         registerFuriganaChoice()
         let viewport = refit ? nil : pdfView.captureViewport()

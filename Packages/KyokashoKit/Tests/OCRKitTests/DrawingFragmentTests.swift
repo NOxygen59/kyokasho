@@ -48,3 +48,30 @@ final class VerticalReadingOrderTests: XCTestCase {
         XCTAssertFalse(VerticalTextReader.inReadingOrder(chars([0...1, 1...2])))
     }
 }
+
+/// Contre-revue du chantier 1.5.0 : les bouts de dessin restent dans l'OCR, seul le dessin des zones les écarte ;
+/// des boîtes en double ne passent plus pour des mesures.
+final class OCRRawAndDuplicateTests: XCTestCase {
+    private func line(_ text: String, vertical: Bool, confidence: Double, boxes: [NormBox] = [], measured: Bool = false) -> OCRLine {
+        OCRLine(text: text, box: NormBox(x: 0.5, y: 0.2, w: 0.02, h: 0.3), charBoxes: boxes, measuredCharBoxes: measured,
+                vertical: vertical, confidence: confidence)
+    }
+
+    func testFragmentsLeaveOnlyTheDrawnZones() {
+        let page = OCRPage(engine: "vision", lines: [line("何だと", vertical: true, confidence: 0.9),
+                                                     line("ここ", vertical: true, confidence: 0.9),
+                                                     line("/", vertical: true, confidence: 0.9)], durationMs: 0)
+        XCTAssertEqual(page.lines.count, 3)
+        XCTAssertEqual(page.withoutDrawingFragments().lines.map(\.text), ["何だと", "ここ"])
+    }
+
+    func testPartialDuplicateBoxesAreNotMeasured() {
+        let a = NormBox(x: 0.5, y: 0.2, w: 0.02, h: 0.03), b = NormBox(x: 0.5, y: 0.25, w: 0.02, h: 0.03)
+        XCTAssertFalse(CharacterLayout.validate([a, a, b], count: 3, vertical: true))
+        XCTAssertTrue(CharacterLayout.validate([a, b], count: 2, vertical: true))
+        let old = line("何だ字", vertical: true, confidence: 0.9, boxes: [a, a, b], measured: true).downgradingDuplicateBoxes()
+        XCTAssertFalse(old.measuredCharBoxes)
+        XCTAssertEqual(old.text, "何だ字")
+        XCTAssertEqual(old.charBoxes.count, 3)
+    }
+}
