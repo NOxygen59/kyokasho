@@ -50072,6 +50072,94 @@
           }
         }
       }
+    },
+    "Copie, notifications et tableau de bord en fenêtre": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy, notifications and dashboard window"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copie, notifications et tableau de bord en fenêtre"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "复制、通知与仪表板窗口"
+          }
+        }
+      }
+    },
+    "Le tableau de bord s'ouvre en fenêtre sur l'accueil.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The dashboard opens as a window over the home screen."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le tableau de bord s'ouvre en fenêtre sur l'accueil."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "仪表板以窗口形式在主页上打开。"
+          }
+        }
+      }
+    },
+    "Copier une sélection depuis le menu copie bien son texte.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copying a selection from the menu now copies its text."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copier une sélection depuis le menu copie bien son texte."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从菜单复制所选内容时会正确复制其文字。"
+          }
+        }
+      }
+    },
+    "Thèmes clairs : le texte des notifications reste lisible.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Light themes: notification text stays readable."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thèmes clairs : le texte des notifications reste lisible."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "浅色主题：通知文字保持清晰可读。"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

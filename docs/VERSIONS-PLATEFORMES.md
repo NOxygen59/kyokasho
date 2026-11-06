@@ -9,7 +9,7 @@ Référence de ce que chaque version embarque ou non. Décidé par NOxygen59 le 
 
 | Élément | iPad | Mac Intel | Mac Apple Silicon |
 |---|---|---|---|
-| État | candidate 1.5.1 | essai 1.4.2, branche `claude/mac-intel-ia` | essai 1.4.9 validé, branche `claude/mac-m5` |
+| État | candidate 1.5.2 | essai 1.4.2, branche `claude/mac-intel-ia` | essai 1.4.9 validé, branche `claude/mac-m5` |
 | Appareil visé | iPad Pro M1, iOS 16.6.1, TrollStore | i5 1,4 GHz, 8 Go, macOS 15.8.2 | M5 ; essais possibles sur M2 Pro |
 | Langues | français, anglais | français, anglais, chinois | français, anglais, chinois |
 | Lexique intérieur | FR, EN | FR, EN, zh-Hans | FR, EN, zh-Hans |

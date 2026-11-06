@@ -101,15 +101,11 @@ public struct ReleaseNotes: Equatable, Sendable, Identifiable {
 
     /// La version en cours de préparation : seulement ce qu'elle change (décision de NOxygen59 du 04/11/2026). C'est
     /// elle que montre la fenêtre « Nouveautés » ; les versions précédentes vont dans `ReleaseHistory`.
-    public static let current = ReleaseNotes("1.5.1", "2026-11-06", published: false, String(localized: "Tableau de bord en tuiles et dictionnaires à jour", bundle: .main), added: [
-            String(localized: "Tableau de bord refait en tuiles : un chiffre clé par case, des courbes et des anneaux.", bundle: .main),
-            String(localized: "Dictionnaires : l'app cherche les mises à jour à chaque lancement s'il y a une connexion ; le catalogue a un bouton pour tout mettre à jour.", bundle: .main),
-            String(localized: "Accueil : les documents ouverts sont rangés en deux groupes, Livres & Manuels puis Manga.", bundle: .main),
+    public static let current = ReleaseNotes("1.5.2", "2026-11-07", published: false, String(localized: "Copie, notifications et tableau de bord en fenêtre", bundle: .main), added: [
+            String(localized: "Le tableau de bord s'ouvre en fenêtre sur l'accueil.", bundle: .main),
         ], fixed: [
-            String(localized: "Thèmes clairs : la barre latérale, la recherche et le moniteur ne restent plus sombres.", bundle: .main),
-            String(localized: "Réglages → Thèmes : « Comme la palette générale » s'applique, et la carte choisie passe en tête.", bundle: .main),
-            String(localized: "Copier une sélection copie bien son texte.", bundle: .main),
-            String(localized: "Moniteur de l'accueil : CPU, RAM et FPS lisibles quand il est déplié.", bundle: .main),
+            String(localized: "Copier une sélection depuis le menu copie bien son texte.", bundle: .main),
+            String(localized: "Thèmes clairs : le texte des notifications reste lisible.", bundle: .main),
         ])
 
     /// Notes de `version` (« 1.3.2 », sans le numéro de build) : la version elle-même, jamais une build de test.

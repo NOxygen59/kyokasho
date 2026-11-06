@@ -10,6 +10,16 @@ import Foundation
 enum ReleaseHistory {
     static let past: [ReleaseNotes] = [
         // Candidates locales non publiées.
+        ReleaseNotes("1.5.1", "2026-11-06", published: false, String(localized: "Tableau de bord en tuiles et dictionnaires à jour", bundle: .main), added: [
+            String(localized: "Tableau de bord refait en tuiles : un chiffre clé par case, des courbes et des anneaux.", bundle: .main),
+            String(localized: "Dictionnaires : l'app cherche les mises à jour à chaque lancement s'il y a une connexion ; le catalogue a un bouton pour tout mettre à jour.", bundle: .main),
+            String(localized: "Accueil : les documents ouverts sont rangés en deux groupes, Livres & Manuels puis Manga.", bundle: .main),
+        ], fixed: [
+            String(localized: "Thèmes clairs : la barre latérale, la recherche et le moniteur ne restent plus sombres.", bundle: .main),
+            String(localized: "Réglages → Thèmes : « Comme la palette générale » s'applique, et la carte choisie passe en tête.", bundle: .main),
+            String(localized: "Copier une sélection copie bien son texte.", bundle: .main),
+            String(localized: "Moniteur de l'accueil : CPU, RAM et FPS lisibles quand il est déplié.", bundle: .main),
+        ]),
         ReleaseNotes("1.5.0", "2026-11-06", published: false, String(localized: "Thèmes et nouveaux réglages des mangas", bundle: .main), added: [
             String(localized: "Réglages → Thèmes : une pilule Kyōkasho | Manga et des cartes pour choisir la palette de chaque espace ; le lecteur prend la palette du document.", bundle: .main),
             String(localized: "Double-toucher : le zoom s'anime, à l'aller comme au retour.", bundle: .main),
