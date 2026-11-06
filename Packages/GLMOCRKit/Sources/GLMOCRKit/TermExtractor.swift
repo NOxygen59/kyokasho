@@ -18,7 +18,7 @@ public enum TermExtractor {
     public enum Language: String, CaseIterable, Sendable { case french = "fr", english = "en" }
 
     /// Modèles capables de cette tâche (texte seul).
-    public static let models: [ModelSpec] = [.qwen3vl4b, .qwen35chat4b]
+    public static let models: [ModelSpec] = [.qwen3vl4b, .qwen35chat]
 
     public static func isAvailable(_ model: ModelSpec, store: ModelStore = .shared) -> Bool { store.isInstalled(model) }
 
@@ -53,14 +53,14 @@ public enum TermExtractor {
 
     public static func extract(markdown: String, known: [String] = [], language: Language, model: ModelSpec,
                                store: ModelStore = .shared, maxTokens: Int = 1200) async throws -> String {
-        guard models.contains(where: { $0.id == model.id }) else { throw OCRError.engineFailed("Ce modèle ne sait pas relever des termes.") }
+        guard models.contains(where: { $0.id == model.id }) else { throw OCRError.engineFailed(String(localized: "Ce modèle ne sait pas relever des termes.", bundle: .main)) }
         guard store.isInstalled(model) else { throw OCRError.modelMissing(model.title) }
-        if let free = PageVLMReader.availableMemory(), free < 3_800 * 1_048_576 {
-            throw OCRError.engineFailed("Pas assez de mémoire libre pour \(model.title) (\(free / 1_048_576) Mo libres).")
+        if let free = PageVLMReader.availableMemory(), free < ModelSpec.chatMemoryNeeded(model) {
+            throw OCRError.engineFailed(String(localized: "Pas assez de mémoire libre pour \(model.title) (\(free / 1_048_576) Mo libres). Ferme les autres apps et réessaie.", bundle: .main))
         }
         #if canImport(MLXVLM)
         // Qwen3.5 : pas de « réflexion » affichée, réponse directe.
-        let context: [String: any Sendable]? = model.id == ModelSpec.qwen35chat4b.id ? ["enable_thinking": false] : nil
+        let context: [String: any Sendable]? = model.id == ModelSpec.qwen35chat.id ? ["enable_thinking": false] : nil
         let user = UserInput(chat: [.user(prompt(markdown: markdown, known: known, language: language))], additionalContext: context)
         return try await GLMModel.using(directory: store.directory(model), extraEOSTokens: []) { container in
             try await withError {

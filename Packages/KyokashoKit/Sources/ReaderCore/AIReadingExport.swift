@@ -16,7 +16,8 @@ public enum AIReadingExport {
     }
 
     public static func text(title: String, reader: String, totalPages: Int, pages: [Page]) -> String {
-        var lines = ["Kyōkasho : lectures \(reader)", "Document : \(title)", "Pages lues : \(pages.count) sur \(totalPages)"]
+        var lines = [String(localized: "Kyōkasho : lectures \(reader)", bundle: .main), String(localized: "Document : \(title)", bundle: .main),
+                     String(localized: "Pages lues : \(pages.count) sur \(totalPages)", bundle: .main)]
         for page in pages {
             lines += ["", "=== Page \(page.label) ===", page.text.trimmingCharacters(in: .whitespacesAndNewlines)]
         }

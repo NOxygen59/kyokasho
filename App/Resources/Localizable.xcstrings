@@ -49060,6 +49060,270 @@
           }
         }
       }
+    },
+    "Qwen3.5-9B (chat du livre)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5-9B (book chat)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5-9B (chat du livre)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Qwen3.5-9B（书籍对话）"
+          }
+        }
+      }
+    },
+    "Modèle de conversation pour discuter des pages lues par OvisOCR2. Environ 6 Go à télécharger et 7 Go de mémoire pendant le chat ; un seul modèle IA est chargé à la fois.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chat model to discuss the pages read by OvisOCR2. About 6 GB to download and 7 GB of memory while chatting; only one AI model is loaded at a time."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modèle de conversation pour discuter des pages lues par OvisOCR2. Environ 6 Go à télécharger et 7 Go de mémoire pendant le chat ; un seul modèle IA est chargé à la fois."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "用于讨论 OvisOCR2 已读取页面的对话模型。下载约 6 GB，对话时占用约 7 GB 内存；一次只加载一个 AI 模型。"
+          }
+        }
+      }
+    },
+    "Ce modèle ne sait pas relever des termes.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This model cannot extract terms."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce modèle ne sait pas relever des termes."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此模型无法提取术语。"
+          }
+        }
+      }
+    },
+    "Pas assez de mémoire libre pour %@ (%llu Mo libres, %llu Mo nécessaires). Ferme les autres apps et réessaie.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not enough free memory for %@ (%llu MB free, %llu MB needed). Close other apps and try again."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pas assez de mémoire libre pour %@ (%llu Mo libres, %llu Mo nécessaires). Ferme les autres apps et réessaie."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 的可用内存不足（可用 %llu MB，需要 %llu MB）。请关闭其他应用后重试。"
+          }
+        }
+      }
+    },
+    "Réponds toujours en français, quelle que soit la langue du document ou de la question.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Always answer in English, whatever the language of the document or of the question."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Réponds toujours en français, quelle que soit la langue du document ou de la question."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无论文档或问题使用哪种语言，始终用简体中文回答。"
+          }
+        }
+      }
+    },
+    "Explique cette slide en français, simplement. Ajoute les furigana aux kanji et propose un petit schéma si ça aide.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Explain this slide in English, simply. Add furigana to the kanji and suggest a small diagram if it helps."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Explique cette slide en français, simplement. Ajoute les furigana aux kanji et propose un petit schéma si ça aide."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "用简体中文简单解释这张幻灯片。为汉字加上振假名，如有帮助可附一个简单示意图。"
+          }
+        }
+      }
+    },
+    "Traduis cette page de cours en français, en gardant la mise en forme. Mets les furigana aux kanji difficiles.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Translate this course page into English, keeping the layout. Add furigana to difficult kanji."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Traduis cette page de cours en français, en gardant la mise en forme. Mets les furigana aux kanji difficiles."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "把这页课程内容翻译成简体中文，保留排版。为较难的汉字加上振假名。"
+          }
+        }
+      }
+    },
+    "Liste le vocabulaire important de cette page : mot, lecture en hiragana, sens en français, et une phrase d'exemple.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "List the important vocabulary on this page: word, reading in hiragana, meaning in English, and an example sentence."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Liste le vocabulaire important de cette page : mot, lecture en hiragana, sens en français, et une phrase d'exemple."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "列出本页的重要词汇：词语、平假名读音、简体中文释义和一个例句。"
+          }
+        }
+      }
+    },
+    "À partir de cette page, écris 5 questions de révision avec leurs réponses, en français.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "From this page, write 5 review questions with their answers, in English."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "À partir de cette page, écris 5 questions de révision avec leurs réponses, en français."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "根据本页内容，用简体中文写 5 道复习题并附上答案。"
+          }
+        }
+      }
+    },
+    "Kyōkasho : lectures %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kyōkasho: %@ readings"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kyōkasho : lectures %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kyōkasho：%@ 识别结果"
+          }
+        }
+      }
+    },
+    "Document : %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Document: %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Document : %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文档：%@"
+          }
+        }
+      }
+    },
+    "Pages lues : %lld sur %lld": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pages read: %lld of %lld"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pages lues : %lld sur %lld"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已读页面：%lld / %lld"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

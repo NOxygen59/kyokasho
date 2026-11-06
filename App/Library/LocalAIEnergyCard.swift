@@ -16,7 +16,7 @@ struct LocalAIEnergyCard: View {
 
     /// Modèles MLX (lourds) ; les moteurs ONNX légers ne comptent pas.
     private var modelInstalled: Bool {
-        [ModelSpec.glmocr, .ovisocr2, .qwen3vl4b, .qwen35chat4b].contains { ModelStore.shared.isInstalled($0) }
+        [ModelSpec.glmocr, .ovisocr2, .qwen3vl4b, .qwen35chat].contains { ModelStore.shared.isInstalled($0) }
     }
 
     private var state: LocalAIEnergyNotice {

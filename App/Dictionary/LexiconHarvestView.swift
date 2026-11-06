@@ -45,7 +45,7 @@ struct LexiconHarvestView: View {
                     }
                     Picker("IA", selection: $modelID) {
                         ForEach(TermExtractor.models, id: \.id) { spec in
-                            Text(spec.id == ModelSpec.qwen35chat4b.id ? String(localized: "Qwen3.5 4B") : String(localized: "Qwen3-VL 4B"))
+                            Text(spec.id == ModelSpec.qwen35chat.id ? ModelSpec.qwen35chatName : String(localized: "Qwen3-VL 4B"))
                                 + Text(TermExtractor.isAvailable(spec) ? "" : String(localized: " (à télécharger)"))
                         }
                     }

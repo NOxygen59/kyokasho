@@ -81,16 +81,22 @@ struct OCRModelsSection: View {
             switch group {
             case .ocr:
                 row(.ndlocr, badge: String(localized: "Recommandé"))
+                #if !targetEnvironment(macCatalyst)
                 row(.ppocr5, badge: String(localized: "Optionnel"))
+                #endif
             case .ai:
+                #if !targetEnvironment(macCatalyst)
                 row(.glmocr, badge: String(localized: "Optionnel"))
+                #endif
                 row(.ovisocr2, badge: String(localized: "Optionnel"))
                 row(.qwen3vl4b, badge: String(localized: "Optionnel · lourd"))
-                row(.qwen35chat4b, badge: String(localized: "Optionnel · chat"))
+                row(.qwen35chat, badge: String(localized: "Optionnel · chat"))
             case .layout:
                 ForEach(ModelSpec.layoutModels) { spec in row(spec, badge: String(localized: "Optionnel")) }
             case .sharpen:
+                #if !targetEnvironment(macCatalyst)
                 row(.degan, badge: String(localized: "Optionnel"))
+                #endif
             }
         } header: {
             Text(ui: header)

@@ -577,6 +577,16 @@ struct TranslationSettingsSection: View {
     }
 }
 
+/// Version Mac à puce Apple : GLM-OCR, PP-OCRv5 et DE-GAN ne sont pas proposés (choix de NOxygen59 du 06/11/2026).
+func macModelList(_ specs: [ModelSpec]) -> [ModelSpec] {
+    #if targetEnvironment(macCatalyst)
+    let left = [ModelSpec.glmocr.id, ModelSpec.ppocr5.id, ModelSpec.degan.id]
+    return specs.filter { !left.contains($0.id) }
+    #else
+    return specs
+    #endif
+}
+
 /// Tous les modèles à télécharger (OCR, netteté des scans), avec leurs liens.
 struct ModelsView: View {
     @AppStorage(AITaskPill.visibleKey) private var showAIBadges = true
@@ -607,7 +617,7 @@ struct ModelsView: View {
                 Text("De petites pastilles indiquent ce que fait chaque IA. Elles deviennent plus discrètes quand un modèle reste simplement chargé en mémoire.")
             }
             Section {
-                ForEach([ModelSpec.ovisocr2, .qwen3vl4b, .qwen35chat4b, .glmocr, .ndlocr, .ppocr5]) { spec in
+                ForEach(macModelList([ModelSpec.ovisocr2, .qwen3vl4b, .qwen35chat, .glmocr, .ndlocr, .ppocr5])) { spec in
                     NavigationLink { AIModelDetailView(spec: spec) } label: { Text(spec.title) }
                 }
             } header: {

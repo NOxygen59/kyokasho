@@ -729,12 +729,12 @@ struct LibraryView: View {
         Button { model.openDocumentId = document.id } label: { Label("Ouvrir", systemImage: "book") }
         if !document.capabilities.chat {
             // CBZ et mangas : ni chat ni mention de lecture IA.
-        } else if (Qwen3VLReader().isAvailable || ModelStore.shared.isInstalled(.qwen35chat4b)),
+        } else if (Qwen3VLReader().isAvailable || ModelStore.shared.isInstalled(.qwen35chat)),
            DocumentKnowledge.isReady(document) {
             Button {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { chatDocument = document }
             } label: { Label("Discuter du livre", systemImage: "bubble.left.and.bubble.right") }
-        } else if Qwen3VLReader().isAvailable || ModelStore.shared.isInstalled(.qwen35chat4b) {
+        } else if Qwen3VLReader().isAvailable || ModelStore.shared.isInstalled(.qwen35chat) {
             Label("Chat après lecture OvisOCR2 (\(DocumentKnowledge.readCount(document))/\(document.pageCount))",
                   systemImage: "text.book.closed")
         }

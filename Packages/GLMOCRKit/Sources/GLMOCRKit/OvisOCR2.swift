@@ -28,7 +28,7 @@ public struct PageVLMReader: Sendable {
     public func read(_ input: OCRInput, maxTokens: Int = 4096) async throws -> String {
         guard isAvailable else { throw OCRError.modelMissing(spec.title) }
         if let free = Self.availableMemory(), free < minimumFreeMemory {
-            throw OCRError.engineFailed("Pas assez de mémoire libre pour \(spec.title) (\(free / 1_048_576) Mo libres, \(minimumFreeMemory / 1_048_576) Mo nécessaires). Ferme les autres apps et réessaie.")
+            throw OCRError.engineFailed(String(localized: "Pas assez de mémoire libre pour \(spec.title) (\(free / 1_048_576) Mo libres, \(minimumFreeMemory / 1_048_576) Mo nécessaires). Ferme les autres apps et réessaie.", bundle: .main))
         }
         let image: CGImage
         switch input {

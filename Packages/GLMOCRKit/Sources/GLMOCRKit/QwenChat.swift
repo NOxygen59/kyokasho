@@ -26,12 +26,18 @@ public final class QwenChat: @unchecked Sendable {
     }
 
     public static let instructions = """
-        Tu aides l'utilisateur à comprendre le document qu'il consulte. Réponds à sa question actuelle en français, \
+        Tu aides l'utilisateur à comprendre le document qu'il consulte. Réponds à sa question actuelle \
         clairement et brièvement. Ne suppose pas le sujet du document ni celui de la question. Quand des extraits \
         sont fournis, appuie chaque affirmation sur eux et cite les pages. Pour un mot japonais, donne sa lecture \
         en hiragana et son sens seulement si tu peux les établir. Si les extraits ne répondent pas à la question, \
         dis-le sans inventer. Si la demande porte uniquement sur des mots-clés de recherche, renvoie uniquement ces mots-clés.
         """
+
+    /// Langue des réponses : celle de l'interface (le catalogue donne la phrase dans chaque langue de l'app).
+    /// Ajoutée à toute consigne, même personnalisée, pour suivre le changement de langue de l'app.
+    public static var replyLanguageRule: String {
+        String(localized: "Réponds toujours en français, quelle que soit la langue du document ou de la question.", bundle: .main)
+    }
 
     /// Lexique du domaine (terme → sens) et lectures sûres (terme → kana), fournis par l'app (lexique modifiable).
     public var glossary: [(String, String)] = Qwen3VLReader.defaultGlossary
@@ -56,11 +62,11 @@ public final class QwenChat: @unchecked Sendable {
     /// `settings` : consigne et paramètres choisis pour ce modèle (#37, #45) ; par défaut, ceux d'avant.
     public func start(history: [Message], grounded: Bool = false, settings: AIChatSettings = AIChatSettings()) async throws {
         guard session == nil else { return }
-        guard model.id == ModelSpec.qwen3vl4b.id || model.id == ModelSpec.qwen35chat4b.id else {
+        guard model.id == ModelSpec.qwen3vl4b.id || model.id == ModelSpec.qwen35chat.id else {
             throw OCRError.engineFailed(String(localized: "Ce modèle ne sait pas discuter.", bundle: .main))
         }
         guard isAvailable else { throw OCRError.modelMissing(model.title) }
-        if let free = PageVLMReader.availableMemory(), free < 3_800 * 1_048_576 {
+        if let free = PageVLMReader.availableMemory(), free < ModelSpec.chatMemoryNeeded(model) {
             throw OCRError.engineFailed(String(localized: "Pas assez de mémoire libre pour \(model.title) (\(free / 1_048_576) Mo libres). Ferme les autres apps et réessaie.", bundle: .main))
         }
         #if canImport(MLXVLM)
@@ -71,9 +77,9 @@ public final class QwenChat: @unchecked Sendable {
                                             temperature: Float(settings.effectiveTemperature(grounded: grounded)),
                                             topP: Float(settings.topP), topK: settings.topK,
                                             repetitionPenalty: settings.repetitionPenalty.map { Float($0) })
-        session = ChatSession(container, instructions: settings.effectiveInstructions(default: Self.instructions), history: past,
+        session = ChatSession(container, instructions: settings.effectiveInstructions(default: Self.instructions) + "\n" + Self.replyLanguageRule, history: past,
                               generateParameters: parameters,
-                              additionalContext: model.id == ModelSpec.qwen35chat4b.id ? ["enable_thinking": settings.thinking] : nil)
+                              additionalContext: model.id == ModelSpec.qwen35chat.id ? ["enable_thinking": settings.thinking] : nil)
         #else
         _ = history
         throw localAIUnavailableOnMac

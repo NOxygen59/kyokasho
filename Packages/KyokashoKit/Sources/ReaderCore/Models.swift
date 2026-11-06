@@ -316,16 +316,16 @@ public struct AIPrompt: Codable, Identifiable, Hashable, Sendable {
 
     public static let defaults: [AIPrompt] = [
         AIPrompt(title: String(localized: "Expliquer la slide", bundle: .main),
-                 body: "Explique cette slide en français, simplement. Ajoute les furigana aux kanji et propose un petit schéma si ça aide.",
+                 body: String(localized: "Explique cette slide en français, simplement. Ajoute les furigana aux kanji et propose un petit schéma si ça aide.", bundle: .main),
                  position: 0),
         AIPrompt(title: String(localized: "Traduire la page", bundle: .main),
-                 body: "Traduis cette page de cours en français, en gardant la mise en forme. Mets les furigana aux kanji difficiles.",
+                 body: String(localized: "Traduis cette page de cours en français, en gardant la mise en forme. Mets les furigana aux kanji difficiles.", bundle: .main),
                  position: 1),
         AIPrompt(title: String(localized: "Vocabulaire", bundle: .main),
-                 body: "Liste le vocabulaire important de cette page : mot, lecture en hiragana, sens en français, et une phrase d'exemple.",
+                 body: String(localized: "Liste le vocabulaire important de cette page : mot, lecture en hiragana, sens en français, et une phrase d'exemple.", bundle: .main),
                  position: 2),
         AIPrompt(title: String(localized: "Questions de révision", bundle: .main),
-                 body: "À partir de cette page, écris 5 questions de révision avec leurs réponses, en français.",
+                 body: String(localized: "À partir de cette page, écris 5 questions de révision avec leurs réponses, en français.", bundle: .main),
                  position: 3),
     ]
 }
