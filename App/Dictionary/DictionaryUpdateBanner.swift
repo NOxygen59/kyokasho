@@ -10,7 +10,11 @@ struct DictionaryUpdateBanner: View {
     @ObservedObject private var service = DictionaryCatalogService.shared
     @EnvironmentObject private var dictionaries: DictionaryModel
 
+    /// Lu pour être redessiné quand la palette change (voir `EnvironmentValues.themeRevision`) : sans cela, le texte
+    /// gardait l'encre claire d'un thème sombre sur un thème clair (recette iPad 1.5.1, point 1.1).
+    @Environment(\.themeRevision) private var themeRevision
     var body: some View {
+        let _ = themeRevision
         // Arrive en glissant depuis le haut et pousse l'accueil vers le bas, comme la notification de mise à jour de l'app.
         VStack(spacing: 0) { content }
             .animation(.spring(response: 0.45, dampingFraction: 0.86), value: service.offeredUpdates)

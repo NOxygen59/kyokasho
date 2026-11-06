@@ -24,7 +24,11 @@ struct LocalAIEnergyCard: View {
                                   aiActive: !center.jobs.isEmpty || analysis.progress != nil, onBattery: onBattery)
     }
 
+    /// Lu pour être redessiné quand la palette change (voir `EnvironmentValues.themeRevision`) : sans cela, le texte
+    /// gardait l'encre claire d'un thème sombre sur un thème clair (recette iPad 1.5.1, point 1.1).
+    @Environment(\.themeRevision) private var themeRevision
     var body: some View {
+        let _ = themeRevision
         Group {
             switch state {
             case .hidden:

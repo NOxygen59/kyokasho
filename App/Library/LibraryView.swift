@@ -239,9 +239,28 @@ struct LibraryView: View {
             }
             .environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review).preferredColorScheme(Theme.current.colorScheme)
         }
-        .fullScreenCover(isPresented: $showDashboard) {
-            DashboardView().environmentObject(model).environmentObject(model.review).preferredColorScheme(Theme.current.colorScheme)
+        // Fenêtre posée sur l'accueil, pas une page plein écran (recette iPad 1.5.1, point 5.1) : l'accueil reste visible
+        // autour, sous un voile ; toucher le voile ou « OK » referme.
+        .overlay {
+            if showDashboard {
+                ZStack {
+                    Atelier.scrim.opacity(0.35).ignoresSafeArea()
+                        .onTapGesture { showDashboard = false }
+                        .accessibilityLabel(Text("Fermer le tableau de bord"))
+                        .accessibilityAddTraits(.isButton)
+                    DashboardView(onClose: { showDashboard = false })
+                        .environmentObject(model).environmentObject(model.review)
+                        .frame(maxWidth: 1040, maxHeight: 860)
+                        .clipShape(RoundedRectangle(cornerRadius: Atelier.corner(26), style: .continuous))
+                        .atelierShapeShadow(RoundedRectangle(cornerRadius: Atelier.corner(26), style: .continuous),
+                                            opacity: 0.35, radius: 30, y: 12)
+                        .padding(.horizontal, 36).padding(.vertical, 28)
+                        .accessibilityAddTraits(.isModal)
+                }
+                .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.96)))
+            }
         }
+        .animation(reduceMotion ? .easeOut(duration: 0.15) : .spring(response: 0.38, dampingFraction: 0.9), value: showDashboard)
         .sheet(isPresented: $showBench) {
             NavigationStack {
                 BenchView().toolbar { ToolbarItem(placement: .confirmationAction) { Button("OK") { showBench = false } } }

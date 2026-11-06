@@ -35,6 +35,8 @@ struct DashboardView: View {
     @State private var period = ReadingStats.Period.week
     @State private var filter = ReadingStats.Filter.everything
     @State private var reviewStats: ReviewStore.Stats?
+    /// Fenêtre posée sur l'accueil : c'est elle qui se ferme. Sans valeur (feuille), `dismiss`.
+    var onClose: (() -> Void)?
 
     /// Écart entre les tuiles ; la hauteur d'une petite tuile en découle pour la grande (deux rangées).
     private static let gap: CGFloat = 12
@@ -70,7 +72,7 @@ struct DashboardView: View {
             .background(Atelier.canvas.ignoresSafeArea())
             .navigationTitle(Text("Tableau de bord"))
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("OK") { dismiss() } } }
+            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("OK") { if let onClose { onClose() } else { dismiss() } } } }
         }
         .task { reviewStats = try? review.store.stats(settings: review.settings) }
     }

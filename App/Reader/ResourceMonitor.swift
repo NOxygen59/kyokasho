@@ -162,7 +162,11 @@ struct ResourceMonitorPanel: View {
     @AppStorage("monitor.metric") private var metric = ResourceMonitor.Metric.cpu
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    /// Lu pour être redessiné quand la palette change (voir `EnvironmentValues.themeRevision`) : sans cela, le texte
+    /// gardait l'encre claire d'un thème sombre sur un thème clair (recette iPad 1.5.1, point 1.1).
+    @Environment(\.themeRevision) private var themeRevision
     var body: some View {
+        let _ = themeRevision
         VStack(alignment: .leading, spacing: 6) {
             if detailed && !expandsDown { chart }
             header
@@ -294,7 +298,11 @@ struct ActivityDock: View {
     @AppStorage(ResourceMonitor.enabledKey) private var monitorEnabled = false
     @AppStorage(ResourceMonitor.shownKey) private var monitorShown = false
 
+    /// Lu pour être redessiné quand la palette change (voir `EnvironmentValues.themeRevision`) : sans cela, le texte
+    /// gardait l'encre claire d'un thème sombre sur un thème clair (recette iPad 1.5.1, point 1.1).
+    @Environment(\.themeRevision) private var themeRevision
     var body: some View {
+        let _ = themeRevision
         HStack(alignment: .bottom, spacing: 6) {
             if showsMonitor && monitorEnabled && monitorShown {
                 ResourceMonitorPanel().transition(.opacity)
@@ -323,7 +331,11 @@ private struct MonitorActivityList: View {
     @State private var modelName: String?
     @State private var cacheMB = 0
 
+    /// Lu pour être redessiné quand la palette change (voir `EnvironmentValues.themeRevision`) : sans cela, le texte
+    /// gardait l'encre claire d'un thème sombre sur un thème clair (recette iPad 1.5.1, point 1.1).
+    @Environment(\.themeRevision) private var themeRevision
     var body: some View {
+        let _ = themeRevision
         VStack(alignment: .leading, spacing: 4) {
             if monitor.activities.isEmpty && tasks.jobs.isEmpty && modelName == nil {
                 Text("Aucune tâche coûteuse en cours").foregroundStyle(Atelier.textSecondary)

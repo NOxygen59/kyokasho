@@ -50050,6 +50050,28 @@
           }
         }
       }
+    },
+    "Fermer le tableau de bord": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Close the dashboard"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fermer le tableau de bord"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "关闭仪表板"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

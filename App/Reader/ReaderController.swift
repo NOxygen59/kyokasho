@@ -1015,12 +1015,39 @@ final class ReaderPDFView: PDFView {
     /// « Copier » : le texte de la sélection, écrit nous-mêmes. Une sélection bâtie page par page (`selectAll`)
     /// donnait à PDFKit un presse-papiers vide alors que son texte existait (recette iPad 1.5.0, point 1.2).
     override func copy(_ sender: Any?) {
-        guard let text = currentSelection?.string, !text.isEmpty else { return super.copy(sender) }
+        guard copySelectionText() else { return super.copy(sender) }
+    }
+
+    /// Texte brut de la sélection dans le presse-papiers, seul type écrit : une app qui préfère le texte riche ne
+    /// colle plus un contenu vide. Faux si rien n'est sélectionné.
+    @discardableResult
+    func copySelectionText() -> Bool {
+        guard let text = currentSelection?.string, ReaderBarsPolicy.isVisibleSelection(text) else { return false }
         UIPasteboard.general.string = text
+        return true
     }
 
     override func buildMenu(with builder: UIMenuBuilder) {
         super.buildMenu(with: builder)
+        // « Copier » du menu (clic droit, appui) part vers une vue interne de PDFKit, pas vers `copy(_:)` ci-dessus :
+        // la copie restait vide (recette iPad 1.5.1, points 3.1 et 3.2). L'entrée du menu est donc remplacée par la nôtre.
+        if ReaderBarsPolicy.isVisibleSelection(currentSelection?.string) {
+            let copyAction = UIAction(title: String(localized: "Copier"), image: UIImage(systemName: "doc.on.doc")) { [weak self] _ in
+                self?.copySelectionText()
+            }
+            var replaced = false
+            builder.replaceChildren(ofMenu: .standardEdit) { children in
+                children.map { element in
+                    if let command = element as? UICommand, command.action == #selector(UIResponderStandardEditActions.copy(_:)) {
+                        replaced = true
+                        return copyAction
+                    }
+                    return element
+                }
+            }
+            // Menu sans entrée « Copier » reconnue : la nôtre est ajoutée en tête, pour ne jamais rester sans copie.
+            if !replaced { builder.insertChild(UIMenu(options: .displayInline, children: [copyAction]), atStartOfMenu: .root) }
+        }
         guard let onLookupSelection, currentSelection?.string?.isEmpty == false else { return }
         let action = UIAction(title: String(localized: "Dictionnaire"), image: UIImage(systemName: "character.book.closed.ja")) { _ in
             onLookupSelection()

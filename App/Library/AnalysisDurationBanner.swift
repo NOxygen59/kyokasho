@@ -17,7 +17,11 @@ struct AnalysisDurationBanner: View {
             || center.jobs.contains { $0.modelId == ModelSpec.ovisocr2.id }
     }
 
+    /// Lu pour être redessiné quand la palette change (voir `EnvironmentValues.themeRevision`) : sans cela, le texte
+    /// gardait l'encre claire d'un thème sombre sur un thème clair (recette iPad 1.5.1, point 1.1).
+    @Environment(\.themeRevision) private var themeRevision
     var body: some View {
+        let _ = themeRevision
         Group {
             if ovisIsReading, !dismissed {
                 HStack(spacing: 12) {
