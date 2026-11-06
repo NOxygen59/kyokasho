@@ -36,4 +36,13 @@ final class LibrarySpaceTests: XCTestCase {
         XCTAssertEqual(LibrarySpace.effectivePaletteID(general: "general", overrides: [.manga: "night"], library: .study,
                                                        document: .manga, available: ["night"], enabled: false), "general")
     }
+
+    /// Recette iPad 1.5.0, point 2.2 : la palette choisie passe en tête, puis reprend sa place.
+    func testSelectedPaletteCardMovesFirstAndReturns() {
+        let all = ["a", "b", "c"]
+        XCTAssertEqual(SpacePaletteOrder.cards(all: all, selected: nil), ["", "a", "b", "c"])
+        XCTAssertEqual(SpacePaletteOrder.cards(all: all, selected: "c"), ["c", "", "a", "b"])
+        XCTAssertEqual(SpacePaletteOrder.cards(all: all, selected: "b"), ["b", "", "a", "c"])
+        XCTAssertEqual(SpacePaletteOrder.cards(all: all, selected: "retired"), ["", "a", "b", "c"])
+    }
 }

@@ -99,15 +99,26 @@ public struct YomitanIndex: Decodable, Equatable, Sendable {
     }
 }
 
-/// Rythme de la vérification automatique des mises à jour : la licence EDRDG demande de tenir les données à jour,
-/// sans que l'app interroge les sites à chaque lancement.
+/// Rythme de la vérification automatique des mises à jour. Demande de NOxygen59 (recette iPad 1.5.0, point 1.7) :
+/// vérifier **à chaque lancement** s'il y a une connexion. Seuls les petits index publiés sont lus ; une heure au moins
+/// sépare deux lectures (lancements répétés), et un retour dans l'app sans relancer revérifie après un jour.
 public enum DictionaryUpdateSchedule {
-    public static let interval: TimeInterval = 7 * 24 * 3600
+    /// Écart minimal entre deux vérifications au lancement.
+    public static let launchInterval: TimeInterval = 3600
+    /// Écart pour un simple retour dans l'app (sans relancement).
+    public static let interval: TimeInterval = 24 * 3600
 
-    public static func isDue(lastCheck: Date?, now: Date = Date()) -> Bool {
+    public static func isDue(lastCheck: Date?, atLaunch: Bool = false, now: Date = Date()) -> Bool {
         guard let lastCheck else { return true }
         // Horloge de l'iPad reculée : mieux vaut vérifier une fois de trop que ne plus jamais vérifier.
-        return lastCheck > now || now.timeIntervalSince(lastCheck) >= interval
+        return lastCheck > now || now.timeIntervalSince(lastCheck) >= (atLaunch ? launchInterval : interval)
+    }
+}
+
+/// Mises à jour refusées (« Ignorer ») : une version déjà refusée n'est plus reproposée ; une plus récente, si.
+public enum DictionaryUpdateOffers {
+    public static func toOffer(found: [String: String], dismissed: [String: String]) -> [String] {
+        found.keys.sorted().filter { dismissed[$0] != found[$0] }
     }
 }
 

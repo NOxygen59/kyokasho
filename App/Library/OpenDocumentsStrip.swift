@@ -16,6 +16,26 @@ struct OpenDocumentsStrip: View {
         model.tabs.ids.compactMap { id in model.documents.first { $0.id == id } }
     }
 
+    /// Ouverts rangés en deux groupes, Livres & Manuels puis Manga (CBZ compris), chacun dans l'ordre des onglets
+    /// (recette iPad 1.5.0, point 2.11). Un groupe vide n'est pas affiché.
+    private var groups: [(title: String, documents: [LibraryDocument])] {
+        let study = documents.filter { !$0.isInMangaSpace }
+        let manga = documents.filter(\.isInMangaSpace)
+        return [(String(localized: "Livres & Manuels"), study), (String(localized: "Manga · CBZ"), manga)]
+            .filter { !$0.documents.isEmpty }
+    }
+
+    private func groupTitle(_ title: String) -> some View {
+        Text(ui: title).textCase(.uppercase)
+            .font(Atelier.font(10, weight: .semibold)).tracking(0.8)
+            .foregroundStyle(palette.secondaryInk)
+            .fixedSize()
+    }
+
+    private var groupDivider: some View {
+        Rectangle().fill(palette.separator).frame(width: 1).padding(.vertical, 8)
+    }
+
     var body: some View {
         if !documents.isEmpty {
             if compact {
@@ -26,7 +46,11 @@ struct OpenDocumentsStrip: View {
                         .fixedSize()
                     ScrollView(.horizontal, showsIndicators: false) {
                         LazyHStack(spacing: 8) {
-                            ForEach(documents) { CompactOpenDocument(document: $0, palette: palette) }
+                            ForEach(Array(groups.enumerated()), id: \.element.title) { index, group in
+                                if index > 0 { groupDivider }
+                                groupTitle(group.title)
+                                ForEach(group.documents) { CompactOpenDocument(document: $0, palette: palette) }
+                            }
                         }
                     }
                     .frame(height: CompactOpenDocument.height)
@@ -42,7 +66,11 @@ struct OpenDocumentsStrip: View {
             AtelierLabel(String(localized: "Onglets ouverts"), tint: palette.read)
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
-                    ForEach(documents) { document in chip(document) }
+                    ForEach(Array(groups.enumerated()), id: \.element.title) { index, group in
+                        if index > 0 { groupDivider.frame(height: 34) }
+                        groupTitle(group.title)
+                        ForEach(group.documents) { document in chip(document) }
+                    }
                 }
             }
         }

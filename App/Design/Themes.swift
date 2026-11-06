@@ -297,8 +297,16 @@ final class ThemeManager: ObservableObject {
         if next != effectiveTheme { effectiveTheme = next }
     }
 
-    /// Apparence choisie (palette et style), visible tout de suite dans Réglages → Thèmes qui observe ce gestionnaire.
-    var appearanceRevision: String { theme.id + "|" + style.id }
+    /// Apparence choisie (palette générale, palettes d'espace et style), visible tout de suite dans Réglages → Thèmes qui
+    /// observe ce gestionnaire. Les palettes d'espace en font partie : sans elles, choisir « Comme la palette générale »
+    /// ou une autre carte d'espace ne reconstruisait rien à la fermeture des Réglages (recette iPad 1.5.0, point 2.3).
+    var appearanceRevision: String {
+        let spaces = LibrarySpace.allCases.map { $0.rawValue + "=" + (spacePalettes[$0] ?? "") }.joined(separator: ",")
+        return theme.id + "|" + style.id + "|" + spaces
+    }
+
+    /// Palette réellement affichée et style : change aussi quand on passe d'un espace à l'autre (`themeRevision`).
+    var effectiveRevision: String { effectiveTheme.id + "|" + style.id }
     /// Apparence appliquée à toute l'app : identité de la racine, mise à jour seulement à la fermeture des Réglages
     /// (`applyAppearance`). Les couleurs sont lues dans des valeurs globales que SwiftUI ne surveille pas : seule une
     /// reconstruction garantit que toutes les vues, UIKit et pages web comprises, prennent la nouvelle apparence ;
@@ -327,7 +335,7 @@ final class ThemeManager: ObservableObject {
         }
         refreshEffectiveTheme()
         AppStyle.current = style
-        appliedAppearance = theme.id + "|" + style.id
+        appliedAppearance = appearanceRevision
     }
 
     /// Choisir un style applique aussi sa palette proposée (décision du 29/10/2026) ; une autre palette peut être
@@ -433,12 +441,22 @@ struct ThemePickerView: View {
             .frame(maxWidth: .infinity)
 
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 220), spacing: 14)], spacing: 14) {
-                spaceCard(themes.theme, id: nil, title: String(localized: "Comme la palette générale"))
-                ForEach(Theme.all) { theme in
-                    spaceCard(theme, id: theme.id, title: theme.name)
+                ForEach(spaceCardOrder, id: \.self) { id in
+                    if id.isEmpty {
+                        spaceCard(themes.theme, id: nil, title: String(localized: "Comme la palette générale"))
+                    } else if let theme = Theme.all.first(where: { $0.id == id }) {
+                        spaceCard(theme, id: theme.id, title: theme.name)
+                    }
                 }
             }
+            .animation(.spring(response: 0.4, dampingFraction: 0.86), value: spaceCardOrder)
         }
+    }
+
+    /// Ordre des cartes de l'espace : la palette choisie passe en tête ; désélectionnée, elle reprend sa place
+    /// (recette iPad 1.5.0, point 2.2). Chaîne vide = carte « Comme la palette générale », déjà première.
+    private var spaceCardOrder: [String] {
+        SpacePaletteOrder.cards(all: Theme.all.map(\.id), selected: themes.paletteID(for: editedSpace))
     }
 
     private func spaceSegment(_ space: LibrarySpace, title: String) -> some View {

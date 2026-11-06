@@ -24,3 +24,17 @@ public enum LibrarySpace: String, CaseIterable, Hashable, Sendable {
         return paletteID(overrides[document ?? library], available: available) ?? general
     }
 }
+
+/// Ordre des cartes de palette d'un espace (Réglages → Thèmes, iPad).
+public enum SpacePaletteOrder {
+    /// Carte « Comme la palette générale » (chaîne vide) puis toutes les palettes, la palette choisie en tête.
+    /// Rien d'autre ne bouge : désélectionnée, une palette retrouve sa place d'origine.
+    public static func cards(all: [String], selected: String?) -> [String] {
+        let base = [""] + all
+        guard let selected, let index = base.firstIndex(of: selected) else { return base }
+        var order = base
+        order.remove(at: index)
+        order.insert(selected, at: 0)
+        return order
+    }
+}

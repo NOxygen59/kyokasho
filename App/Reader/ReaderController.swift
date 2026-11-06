@@ -1012,6 +1012,13 @@ final class ReaderPDFView: PDFView {
         setCurrentSelection(selection, animate: false)
     }
 
+    /// « Copier » : le texte de la sélection, écrit nous-mêmes. Une sélection bâtie page par page (`selectAll`)
+    /// donnait à PDFKit un presse-papiers vide alors que son texte existait (recette iPad 1.5.0, point 1.2).
+    override func copy(_ sender: Any?) {
+        guard let text = currentSelection?.string, !text.isEmpty else { return super.copy(sender) }
+        UIPasteboard.general.string = text
+    }
+
     override func buildMenu(with builder: UIMenuBuilder) {
         super.buildMenu(with: builder)
         guard let onLookupSelection, currentSelection?.string?.isEmpty == false else { return }

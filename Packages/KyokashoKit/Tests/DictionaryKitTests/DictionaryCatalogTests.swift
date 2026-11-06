@@ -6,11 +6,21 @@ import XCTest
 
 /// #50 : catalogue des dictionnaires téléchargeables (sans aucun vrai dictionnaire : index d'exemple seulement).
 final class DictionaryUpdateScheduleTests: XCTestCase {
-    func testCheckIsDueOnceAWeek() {
+    /// Recette iPad 1.5.0, point 1.7 : vérification à chaque lancement (une heure d'écart au moins), un jour au retour.
+    func testCheckIsDueAtLaunchAndDailyOnReturn() {
         let now = Date(timeIntervalSince1970: 1_000_000_000)
         XCTAssertTrue(DictionaryUpdateSchedule.isDue(lastCheck: nil, now: now))
-        XCTAssertFalse(DictionaryUpdateSchedule.isDue(lastCheck: now.addingTimeInterval(-6 * 24 * 3600), now: now))
-        XCTAssertTrue(DictionaryUpdateSchedule.isDue(lastCheck: now.addingTimeInterval(-7 * 24 * 3600), now: now))
+        XCTAssertFalse(DictionaryUpdateSchedule.isDue(lastCheck: now.addingTimeInterval(-30 * 60), atLaunch: true, now: now))
+        XCTAssertTrue(DictionaryUpdateSchedule.isDue(lastCheck: now.addingTimeInterval(-2 * 3600), atLaunch: true, now: now))
+        XCTAssertFalse(DictionaryUpdateSchedule.isDue(lastCheck: now.addingTimeInterval(-2 * 3600), now: now))
+        XCTAssertTrue(DictionaryUpdateSchedule.isDue(lastCheck: now.addingTimeInterval(-24 * 3600), now: now))
+    }
+
+    func testDismissedVersionIsNotOfferedAgainButNewerIs() {
+        let found = ["jitendex": "2026.11.01", "kanjidic": "v2"]
+        XCTAssertEqual(DictionaryUpdateOffers.toOffer(found: found, dismissed: [:]), ["jitendex", "kanjidic"])
+        XCTAssertEqual(DictionaryUpdateOffers.toOffer(found: found, dismissed: ["jitendex": "2026.11.01"]), ["kanjidic"])
+        XCTAssertEqual(DictionaryUpdateOffers.toOffer(found: found, dismissed: ["jitendex": "2026.10.01"]), ["jitendex", "kanjidic"])
     }
 
     func testClockMovedBackDoesNotStopChecking() {

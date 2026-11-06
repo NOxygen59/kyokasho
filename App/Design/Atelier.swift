@@ -74,14 +74,35 @@ enum Atelier {
     static let jp = Font.custom("HiraginoSans-W3", size: 17)
 }
 
+// MARK: - Révision de l'apparence
+
+private struct ThemeRevisionKey: EnvironmentKey {
+    static let defaultValue = ""
+}
+
+extension EnvironmentValues {
+    /// Identité de la palette et du style **appliqués** (palette d'espace comprise), posée à la racine. Les couleurs
+    /// d'`Atelier` sont lues dans des valeurs globales que SwiftUI ne surveille pas : un composant dont les entrées ne
+    /// changent pas lit cette clé pour être redessiné quand la palette change. Vide hors racine SwiftUI (UIKit).
+    var themeRevision: String {
+        get { self[ThemeRevisionKey.self] }
+        set { self[ThemeRevisionKey.self] = newValue }
+    }
+}
+
 // MARK: - Panneau
 
 struct AtelierPanel: ViewModifier {
     var padding: CGFloat = 0
     var radius: CGFloat = Atelier.radius
+    /// Lu pour que SwiftUI redessine le panneau quand la palette change : ses entrées (marge, arrondi) restent égales,
+    /// et un modificateur aux entrées inchangées n'est pas réévalué. Sans cela, la barre latérale, la recherche et le
+    /// moniteur de l'accueil gardaient le fond sombre de l'espace quitté (recette iPad 1.5.0, point 2.5).
+    @Environment(\.themeRevision) private var themeRevision
 
     func body(content: Content) -> some View {
-        content
+        let _ = themeRevision
+        return content
             .padding(padding)
             // Batterie / fluidité : pas de flou (invisible sous un fond presque opaque, mais recalculé
             // à chaque image quand la page défile derrière) et ombre portée par la forme seule

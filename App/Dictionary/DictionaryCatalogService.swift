@@ -27,6 +27,13 @@ final class DictionaryCatalogService: ObservableObject {
         didSet { UserDefaults.standard.set(offeredUpdates, forKey: Self.offeredKey) }
     }
     private static let offeredKey = "dictionaries.offeredUpdates"
+    /// Versions refusées par « Ignorer » (identifiant → version) : la même version n'est plus reproposée à chaque
+    /// lancement, une version plus récente l'est.
+    private static let dismissedKey = "dictionaries.dismissedUpdates"
+    private var dismissedVersions: [String: String] {
+        get { UserDefaults.standard.dictionary(forKey: Self.dismissedKey) as? [String: String] ?? [:] }
+        set { UserDefaults.standard.set(newValue, forKey: Self.dismissedKey) }
+    }
     private var task: Task<Void, Never>?
     /// +1 à chaque installation : les messages de progression d'une installation annulée sont ignorés.
     private var generation = 0
@@ -172,9 +179,11 @@ final class DictionaryCatalogService: ObservableObject {
         return installedBundled(in: model)?.revision != bundled
     }
 
-    /// Une fois par semaine au plus, en Wi-Fi : cherche de nouvelles versions et les propose. N'installe rien.
-    /// La date n'est notée qu'après une réponse d'un site : une coupure ne repousse pas la vérification d'une semaine.
-    func checkAutomaticallyIfDue(model: DictionaryModel) async {
+    /// Au lancement (et au retour dans l'app après un jour), s'il y a une connexion : cherche de nouvelles versions et
+    /// les propose dans la notification de l'accueil, qui reste jusqu'à une réponse. N'installe rien. Seuls les petits
+    /// index publiés sont lus, donc toute connexion convient (recette iPad 1.5.0, point 1.7). La date n'est notée
+    /// qu'après une réponse d'un site : une coupure ne repousse pas la vérification.
+    func checkAutomaticallyIfDue(model: DictionaryModel, atLaunch: Bool = false) async {
         let defaults = UserDefaults.standard
         guard !checking, working == nil else { return }
         discardOtherLanguageOffers()
@@ -185,20 +194,22 @@ final class DictionaryCatalogService: ObservableObject {
             defaults.set(Self.bundledRevision, forKey: Self.bundledOfferedKey)
             Diagnostics.log("dictionnaires : nouveau lexique fourni proposé", "dictionnaire")
         }
-        guard DictionaryUpdateSchedule.isDue(lastCheck: defaults.object(forKey: Self.lastAutomaticCheckKey) as? Date) else {
+        guard DictionaryUpdateSchedule.isDue(lastCheck: defaults.object(forKey: Self.lastAutomaticCheckKey) as? Date,
+                                             atLaunch: atLaunch) else {
             offeredUpdates += ids.filter { !offeredUpdates.contains($0) }
             return
         }
         checking = true
         defer { checking = false }
-        if await Self.isOnWiFi() {
+        if await Self.isOnline() {
             let (found, reached) = await publishedUpdates(model: model)
             updates = found
-            ids += DictionaryCatalog.entries.filter { found[$0.id] != nil }.map(\.id)
+            let offered = Set(DictionaryUpdateOffers.toOffer(found: found.mapValues(\.version), dismissed: dismissedVersions))
+            ids += DictionaryCatalog.entries.filter { offered.contains($0.id) }.map(\.id)
             if reached { defaults.set(Date(), forKey: Self.lastAutomaticCheckKey) }
             Diagnostics.log("dictionnaires : vérification, \(found.count) mise(s) à jour, site joint : \(reached)", "dictionnaire")
         } else {
-            Diagnostics.log("dictionnaires : vérification reportée, pas de Wi-Fi", "dictionnaire")
+            Diagnostics.log("dictionnaires : vérification reportée, pas de connexion", "dictionnaire")
         }
         // Ce qui attend déjà une réponse reste proposé.
         offeredUpdates = offeredUpdates + ids.filter { !offeredUpdates.contains($0) }
@@ -212,7 +223,30 @@ final class DictionaryCatalogService: ObservableObject {
         installNextQueued(model: model)
     }
 
-    func dismissOfferedUpdates() { offeredUpdates = [] }
+    /// « Ignorer » : ces versions ne sont plus proposées ; elles restent dans le catalogue (« Tout mettre à jour »).
+    func dismissOfferedUpdates() {
+        var dismissed = dismissedVersions
+        for id in offeredUpdates { if let version = updates[id]?.version { dismissed[id] = version } }
+        dismissedVersions = dismissed
+        offeredUpdates = []
+    }
+
+    /// Dictionnaires installés qui ont une version plus récente (catalogue et lexique fourni).
+    func pendingUpdates(in model: DictionaryModel) -> [String] {
+        var ids = DictionaryCatalog.entries.filter { updates[$0.id] != nil && installed($0, in: model) != nil }.map(\.id)
+        if bundledUpdateAvailable(in: model) { ids.insert(BundledLexicon.resource, at: 0) }
+        return ids
+    }
+
+    /// « Tout mettre à jour » du catalogue : l'un après l'autre, comme « Tout installer ».
+    func updateAll(model: DictionaryModel) {
+        let ids = pendingUpdates(in: model)
+        guard !ids.isEmpty else { return }
+        offeredUpdates.removeAll { ids.contains($0) }
+        queue = ids
+        installsMissing = false
+        installNextQueued(model: model)
+    }
 
     /// Dictionnaires du catalogue pas encore installés.
     func missingEntries(in model: DictionaryModel) -> [CatalogEntry] {
@@ -249,14 +283,15 @@ final class DictionaryCatalogService: ObservableObject {
         }
     }
 
-    private nonisolated static func isOnWiFi() async -> Bool {
+    /// Connexion disponible, quelle qu'elle soit : la vérification ne lit que de petits index (quelques Ko).
+    private nonisolated static func isOnline() async -> Bool {
         await withCheckedContinuation { continuation in
-            let monitor = NWPathMonitor(requiredInterfaceType: .wifi)
+            let monitor = NWPathMonitor()
             monitor.pathUpdateHandler = { path in
                 monitor.cancel()
-                continuation.resume(returning: path.status == .satisfied && !path.isExpensive)
+                continuation.resume(returning: path.status == .satisfied)
             }
-            monitor.start(queue: DispatchQueue(label: "dictionnaires.wifi"))
+            monitor.start(queue: DispatchQueue(label: "dictionnaires.connexion"))
         }
     }
 
@@ -326,6 +361,15 @@ struct DictionaryCatalogView: View {
     var body: some View {
         List {
             Section("Fourni avec l'app") { bundledRow }
+            let pending = service.pendingUpdates(in: model)
+            if !pending.isEmpty {
+                Section {
+                    Button { service.updateAll(model: model) } label: {
+                        Label("Tout mettre à jour (\(pending.count))", systemImage: "arrow.down.circle")
+                    }
+                    .disabled(service.working != nil)
+                }
+            }
             if !missing.isEmpty {
                 Section {
                     Button { confirmInstallAll = true } label: {
@@ -345,7 +389,7 @@ struct DictionaryCatalogView: View {
             Section {
                 ForEach(DictionaryCatalog.entries) { entry in row(entry) }
             } footer: {
-                Text("Téléchargés depuis le site officiel de chaque projet, puis importés sur l'iPad. Rien d'autre ne part en ligne. Une fois par semaine en Wi-Fi, l'app regarde si une version plus récente existe et te la propose ; rien ne s'installe sans ton accord. Les dictionnaires ne sont pas dans la sauvegarde : on les retélécharge.")
+                Text("Téléchargés depuis le site officiel de chaque projet, puis importés sur l'iPad. Rien d'autre ne part en ligne. À chaque lancement, s'il y a une connexion, l'app regarde si une version plus récente existe et te la propose ; rien ne s'installe sans ton accord. Les dictionnaires ne sont pas dans la sauvegarde : on les retélécharge.")
             }
             Section {
                 NavigationLink { DictionaryLicensesView() } label: {

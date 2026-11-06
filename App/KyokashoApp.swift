@@ -34,6 +34,7 @@ struct KyokashoApp: App {
                 .environmentObject(themes)
                 .environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review)
                 .preferredColorScheme(themes.effectiveTheme.colorScheme)
+                .environment(\.themeRevision, themes.effectiveRevision)
                 .atelierFontDesign()
                 .tint(Atelier.Tint.read)
                 .onOpenURL { url in
@@ -124,6 +125,7 @@ struct RootView: View {
             ReaderTabsHost()
                 .environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review)
                 .preferredColorScheme(themes.effectiveTheme.colorScheme)
+                .environment(\.themeRevision, themes.effectiveRevision)
                 .atelierFontDesign()
                 .tint(Atelier.Tint.read)
         }
@@ -136,7 +138,7 @@ struct RootView: View {
         .onChange(of: model.openDocumentId) { if $0 == nil { Self.releaseAI() } }
         .onChange(of: scenePhase) { phase in
             if phase == .background { Self.releaseAI() }
-            // Au retour dans l'app : le Wi-Fi a pu revenir ou la semaine être passée. La garde hebdomadaire reste.
+            // Au retour dans l'app : la connexion a pu revenir ou un jour être passé (`DictionaryUpdateSchedule`).
             if phase == .active, !LibraryBackupService.inProgress {
                 Task { await dictionaryUpdates.checkAutomaticallyIfDue(model: model.dictionary) }
             }
@@ -144,7 +146,7 @@ struct RootView: View {
         .task {
             // Après le chargement de la bibliothèque, et jamais par-dessus une sauvegarde en cours.
             guard !LibraryBackupService.inProgress else { return }
-            await dictionaryUpdates.checkAutomaticallyIfDue(model: model.dictionary)
+            await dictionaryUpdates.checkAutomaticallyIfDue(model: model.dictionary, atLaunch: true)
         }
         .alert("Erreur", isPresented: Binding(get: { model.lastError != nil }, set: { if !$0 { model.lastError = nil } })) {
             Button("OK", role: .cancel) {}

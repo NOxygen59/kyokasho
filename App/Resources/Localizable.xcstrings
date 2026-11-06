@@ -49808,6 +49808,72 @@
           }
         }
       }
+    },
+    "Manga · CBZ": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manga · CBZ"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manga · CBZ"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "漫画 · CBZ"
+          }
+        }
+      }
+    },
+    "Tout mettre à jour (%lld)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Update all (%lld)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tout mettre à jour (%lld)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全部更新（%lld）"
+          }
+        }
+      }
+    },
+    "Téléchargés depuis le site officiel de chaque projet, puis importés sur l'iPad. Rien d'autre ne part en ligne. À chaque lancement, s'il y a une connexion, l'app regarde si une version plus récente existe et te la propose ; rien ne s'installe sans ton accord. Les dictionnaires ne sont pas dans la sauvegarde : on les retélécharge.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Downloaded from each project's official site, then imported on the iPad. Nothing else goes online. At each launch, when connected, the app checks whether a newer version exists and offers it to you; nothing installs without your approval. Dictionaries are not in the backup: they can be downloaded again."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Téléchargés depuis le site officiel de chaque projet, puis importés sur l'iPad. Rien d'autre ne part en ligne. À chaque lancement, s'il y a une connexion, l'app regarde si une version plus récente existe et te la propose ; rien ne s'installe sans ton accord. Les dictionnaires ne sont pas dans la sauvegarde : on les retélécharge."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从各项目官方网站下载，然后导入 iPad。不会有其他内容联网。每次启动时，如有网络连接，会检查是否有新版本并提示你；未经你同意不会安装。词典不包含在备份中：可重新下载。"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

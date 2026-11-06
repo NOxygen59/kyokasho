@@ -180,36 +180,63 @@ struct ResourceMonitorPanel: View {
         .onDisappear { monitor.stop() }
     }
 
+    /// Déplié dans la colonne de l'accueil (300 pt), les trois valeurs ne tiennent plus à côté des deux boutons : elles
+    /// passent sur leur propre ligne, à parts égales, au lieu d'être tassées (recette iPad 1.5.0, point 1.10).
+    private var valuesOnOwnRow: Bool { fillsWidth && detailed && showsActivities }
+
+    @ViewBuilder
     private var header: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "gauge.with.dots.needle.33percent").foregroundStyle(Atelier.Tint.read)
-            if let s = monitor.last {
-                value(.cpu, String(format: "%.0f %%", s.cpu))
-                value(.ram, String(format: String(localized: "%.0f Mo"), s.ramMB))
-                value(.fps, String(format: "%.0f", s.fps))
-            } else {
-                Text("Mesure…").foregroundStyle(Atelier.textTertiary)
+        if valuesOnOwnRow {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 8) {
+                    Image(systemName: "gauge.with.dots.needle.33percent").foregroundStyle(Atelier.Tint.read)
+                    Spacer(minLength: 4)
+                    headerButtons
+                }
+                .buttonStyle(.plain)
+                HStack(spacing: 4) { values(stretched: true) }
             }
-            if fillsWidth { Spacer(minLength: 4) }
-            // Cibles de 40 pt au doigt, écartées : la croix touchée par erreur fermait le moniteur à côté du panneau OCR.
-            Button { detailed.toggle() } label: {
-                Image(systemName: "chevron.down")
-                    .font(Atelier.font(14, weight: .bold))
-                    .rotationEffect(.degrees((detailed ? 180 : 0) + (expandsDown ? 0 : 180)))
-                    .frame(width: 40, height: 32)
-                    .contentShape(Rectangle())
+        } else {
+            HStack(spacing: 8) {
+                Image(systemName: "gauge.with.dots.needle.33percent").foregroundStyle(Atelier.Tint.read)
+                values(stretched: false)
+                if fillsWidth { Spacer(minLength: 4) }
+                headerButtons
             }
-            .accessibilityLabel(detailed ? String(localized: "Replier le graphique") : String(localized: "Dérouler le graphique"))
-            Button { shown = false } label: {
-                Image(systemName: "xmark")
-                    .font(Atelier.font(14, weight: .bold))
-                    .frame(width: 40, height: 32)
-                    .contentShape(Rectangle())
-            }
-            .accessibilityLabel("Fermer le moniteur")
-            .padding(.trailing, 6)
+            .buttonStyle(.plain)
         }
-        .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
+    private func values(stretched: Bool) -> some View {
+        if let s = monitor.last {
+            value(.cpu, String(format: "%.0f %%", s.cpu), stretched: stretched)
+            value(.ram, String(format: String(localized: "%.0f Mo"), s.ramMB), stretched: stretched)
+            value(.fps, String(format: "%.0f", s.fps), stretched: stretched)
+        } else {
+            Text("Mesure…").foregroundStyle(Atelier.textTertiary)
+        }
+    }
+
+    @ViewBuilder
+    private var headerButtons: some View {
+        // Cibles de 40 pt au doigt, écartées : la croix touchée par erreur fermait le moniteur à côté du panneau OCR.
+        Button { detailed.toggle() } label: {
+            Image(systemName: "chevron.down")
+                .font(Atelier.font(14, weight: .bold))
+                .rotationEffect(.degrees((detailed ? 180 : 0) + (expandsDown ? 0 : 180)))
+                .frame(width: 40, height: 32)
+                .contentShape(Rectangle())
+        }
+        .accessibilityLabel(detailed ? String(localized: "Replier le graphique") : String(localized: "Dérouler le graphique"))
+        Button { shown = false } label: {
+            Image(systemName: "xmark")
+                .font(Atelier.font(14, weight: .bold))
+                .frame(width: 40, height: 32)
+                .contentShape(Rectangle())
+        }
+        .accessibilityLabel("Fermer le moniteur")
+        .padding(.trailing, 6)
     }
 
     private var chart: some View {
@@ -238,14 +265,17 @@ struct ResourceMonitorPanel: View {
 
     /// Valeur de l'en-tête ; en mode détaillé, la toucher choisit la courbe affichée (mesure choisie mise en avant).
     @ViewBuilder
-    private func value(_ m: ResourceMonitor.Metric, _ text: String) -> some View {
+    private func value(_ m: ResourceMonitor.Metric, _ text: String, stretched: Bool = false) -> some View {
         let label = HStack(spacing: 3) {
             Text(m.title).foregroundStyle(detailed && metric == m ? Atelier.Tint.read : Atelier.textTertiary)
             Text(text)
         }
+        .lineLimit(1)
+        .fixedSize()
         if detailed {
             Button { metric = m } label: {
                 label.padding(.horizontal, 5).padding(.vertical, 2)
+                    .frame(maxWidth: stretched ? .infinity : nil)
                     .background(metric == m ? Atelier.Tint.read.opacity(0.15) : .clear, in: Capsule())
             }
             .accessibilityLabel("Courbe \(m.title)")

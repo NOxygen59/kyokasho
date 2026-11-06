@@ -11,6 +11,13 @@ struct DictionaryUpdateBanner: View {
     @EnvironmentObject private var dictionaries: DictionaryModel
 
     var body: some View {
+        // Arrive en glissant depuis le haut et pousse l'accueil vers le bas, comme la notification de mise à jour de l'app.
+        VStack(spacing: 0) { content }
+            .animation(.spring(response: 0.45, dampingFraction: 0.86), value: service.offeredUpdates)
+    }
+
+    @ViewBuilder
+    private var content: some View {
         if service.working != nil {
             // Après « Mettre à jour » : la notification ne disparaît pas sans rien dire pendant l'import.
             HStack(spacing: 12) {
