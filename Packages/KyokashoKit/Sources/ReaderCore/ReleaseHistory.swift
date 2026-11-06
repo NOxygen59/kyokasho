@@ -10,6 +10,18 @@ import Foundation
 enum ReleaseHistory {
     static let past: [ReleaseNotes] = [
         // Candidates locales non publiées.
+        ReleaseNotes("1.5.0", "2026-11-06", published: false, String(localized: "Thèmes et nouveaux réglages des mangas", bundle: .main), added: [
+            String(localized: "Réglages → Thèmes : une pilule Kyōkasho | Manga et des cartes pour choisir la palette de chaque espace ; le lecteur prend la palette du document.", bundle: .main),
+            String(localized: "Double-toucher : le zoom s'anime, à l'aller comme au retour.", bundle: .main),
+            String(localized: "Visite guidée mise à jour.", bundle: .main),
+        ], fixed: [
+            String(localized: "Mangas : les furigana ajoutés sont masqués par défaut ; le bouton あ les affiche pour ce manga, le panneau Texte garde les lectures.", bundle: .main),
+            String(localized: "Furigana mieux contenus sur les lectures longues et les PDF à texte.", bundle: .main),
+            String(localized: "OCR : un caractère seul bien lu n'est plus effacé ; positions plus justes en vertical.", bundle: .main),
+            String(localized: "Surlignage : plus d'aperçu périmé, gomme au simple toucher, déplacement à deux doigts en double page.", bundle: .main),
+            String(localized: "Catalogue des dictionnaires : « Annuler » arrête vraiment l'installation en cours.", bundle: .main),
+            String(localized: "Accueil : la rangée des documents ouverts montre le titre et les infos en entier.", bundle: .main),
+        ]),
         ReleaseNotes("1.4.9", "2026-11-06", published: false, String(localized: "Sélection, zoom en surlignage et petits réglages", bundle: .main), added: [
             String(localized: "Catalogue des dictionnaires : un bouton pour tout installer.", bundle: .main),
             String(localized: "Accueil : une petite barre montre l'avancée de l'analyse sous le document.", bundle: .main),

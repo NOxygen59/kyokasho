@@ -49874,6 +49874,182 @@
           }
         }
       }
+    },
+    "Tableau de bord en tuiles et dictionnaires à jour": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tiled dashboard and up-to-date dictionaries"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tableau de bord en tuiles et dictionnaires à jour"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "卡片式仪表板与词典更新"
+          }
+        }
+      }
+    },
+    "Tableau de bord refait en tuiles : un chiffre clé par case, des courbes et des anneaux.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dashboard redesigned as tiles: one key figure per tile, with curves and rings."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tableau de bord refait en tuiles : un chiffre clé par case, des courbes et des anneaux."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "仪表板改为卡片布局：每张卡片一个关键数字，配有曲线和圆环。"
+          }
+        }
+      }
+    },
+    "Dictionnaires : l'app cherche les mises à jour à chaque lancement s'il y a une connexion ; le catalogue a un bouton pour tout mettre à jour.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dictionaries: the app checks for updates at each launch when connected; the catalog has a button to update everything."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dictionnaires : l'app cherche les mises à jour à chaque lancement s'il y a une connexion ; le catalogue a un bouton pour tout mettre à jour."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "词典：每次启动时如有网络连接，应用会检查更新；目录中有“全部更新”按钮。"
+          }
+        }
+      }
+    },
+    "Accueil : les documents ouverts sont rangés en deux groupes, Livres & Manuels puis Manga.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Home: open documents are sorted into two groups, Books & Textbooks then Manga."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accueil : les documents ouverts sont rangés en deux groupes, Livres & Manuels puis Manga."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "主页：已打开的文档分为两组：书籍与教材，然后是漫画。"
+          }
+        }
+      }
+    },
+    "Thèmes clairs : la barre latérale, la recherche et le moniteur ne restent plus sombres.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Light themes: the sidebar, search and monitor no longer stay dark."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thèmes clairs : la barre latérale, la recherche et le moniteur ne restent plus sombres."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "浅色主题：侧边栏、搜索框和监视器不再保持深色。"
+          }
+        }
+      }
+    },
+    "Réglages → Thèmes : « Comme la palette générale » s'applique, et la carte choisie passe en tête.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Settings → Themes: “Same as the general palette” now applies, and the chosen card moves to the top."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Réglages → Thèmes : « Comme la palette générale » s'applique, et la carte choisie passe en tête."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "设置 → 主题：“与通用配色相同”现已生效，所选卡片会移到最前。"
+          }
+        }
+      }
+    },
+    "Copier une sélection copie bien son texte.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copying a selection now copies its text."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copier une sélection copie bien son texte."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "复制所选内容时会正确复制其文字。"
+          }
+        }
+      }
+    },
+    "Moniteur de l'accueil : CPU, RAM et FPS lisibles quand il est déplié.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Home monitor: CPU, RAM and FPS are readable when it is expanded."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moniteur de l'accueil : CPU, RAM et FPS lisibles quand il est déplié."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "主页监视器：展开时 CPU、内存和 FPS 清晰可读。"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
