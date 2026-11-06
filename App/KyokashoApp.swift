@@ -68,6 +68,8 @@ struct KyokashoApp: App {
 }
 
 struct RootView: View {
+    @EnvironmentObject private var themes: ThemeManager
+
     @EnvironmentObject private var model: AppModel
     @ObservedObject private var dictionaryUpdates = DictionaryCatalogService.shared
     @Environment(\.scenePhase) private var scenePhase
@@ -121,10 +123,15 @@ struct RootView: View {
         )) {
             ReaderTabsHost()
                 .environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review)
-                .preferredColorScheme(Theme.current.colorScheme)
+                .preferredColorScheme(themes.effectiveTheme.colorScheme)
                 .atelierFontDesign()
                 .tint(Atelier.Tint.read)
         }
+        .onAppear {
+            model.themeManager = themes
+            themes.showDocument(in: model.activeDocumentSpace)
+        }
+        .onChange(of: model.activeDocumentSpace) { themes.showDocument(in: $0) }
         // Retour à la bibliothèque ou app en arrière-plan : les IA rendent leur mémoire.
         .onChange(of: model.openDocumentId) { if $0 == nil { Self.releaseAI() } }
         .onChange(of: scenePhase) { phase in

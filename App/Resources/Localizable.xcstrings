@@ -1,6 +1,72 @@
 {
   "sourceLanguage": "fr",
   "strings": {
+    "%@, page %@ sur %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@, page %@ of %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@, page %@ sur %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@，第 %@ 页，共 %@ 页"
+          }
+        }
+      }
+    },
+    "Comme la palette générale": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use the general palette"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comme la palette générale"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用全局配色"
+          }
+        }
+      }
+    },
+    "La palette générale s’applique aux espaces qui utilisent la carte de repli.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The general palette applies to spaces that use the fallback card."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La palette générale s’applique aux espaces qui utilisent la carte de repli."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全局配色适用于选择默认配色卡片的空间。"
+          }
+        }
+      }
+    },
     "Thèmes par espace sur cet iPad": {
       "localizations": {
         "en": {

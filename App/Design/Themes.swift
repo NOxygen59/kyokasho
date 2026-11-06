@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 NOxygen59
 
+import ReaderCore
 import SwiftUI
 import UIKit
 
@@ -260,30 +261,37 @@ final class ThemeManager: ObservableObject {
     @Published private(set) var theme: Theme
     @Published private(set) var style: AppStyle
     @Published private(set) var effectiveTheme: Theme
-    @Published private var spacePalettes: [LibraryView.Space: String] = [:]
-    private var librarySpace: LibraryView.Space
+    @Published private var spacePalettes: [LibrarySpace: String] = [:]
+    private var librarySpace: LibrarySpace
 
-    private static func paletteKey(_ space: LibraryView.Space) -> String {
-        "appearance.ipadLibrary.palette." + space.rawValue
-    }
+    private var documentSpace: LibrarySpace?
+    private static let paletteIDs = Set(Theme.all.map(\.id))
 
-    func paletteID(for space: LibraryView.Space) -> String { spacePalettes[space] ?? "" }
+    func paletteID(for space: LibrarySpace) -> String? { spacePalettes[space] }
 
-    func selectPalette(_ id: String, for space: LibraryView.Space) {
-        guard PersonalPadLibrary.isAvailable, id.isEmpty || Theme.all.contains(where: { $0.id == id }) else { return }
-        spacePalettes[space] = id.isEmpty ? nil : id
-        UserDefaults.standard.set(spacePalettes[space], forKey: Self.paletteKey(space))
+    func selectPalette(_ id: String?, for space: LibrarySpace) {
+        guard PersonalPadLibrary.isAvailable else { return }
+        let valid = LibrarySpace.paletteID(id, available: Self.paletteIDs)
+        guard id == nil || valid != nil else { return }
+        spacePalettes[space] = valid
+        UserDefaults.standard.set(valid, forKey: space.paletteKey)
         refreshEffectiveTheme()
     }
 
-    /// Change la palette sans changer l'identité de la racine ni fermer les feuilles du lecteur.
-    func showLibrarySpace(_ space: LibraryView.Space) {
+    func showLibrarySpace(_ space: LibrarySpace) {
         librarySpace = space
         refreshEffectiveTheme()
     }
 
+    func showDocument(in space: LibrarySpace?) {
+        documentSpace = space
+        refreshEffectiveTheme()
+    }
+
     private func refreshEffectiveTheme() {
-        let id = PersonalPadLibrary.isAvailable ? spacePalettes[librarySpace] : nil
+        let id = LibrarySpace.effectivePaletteID(general: theme.id, overrides: spacePalettes,
+                                                library: librarySpace, document: documentSpace,
+                                                available: Self.paletteIDs, enabled: PersonalPadLibrary.isAvailable)
         let next = Theme.all.first { $0.id == id } ?? theme
         Theme.current = next
         if next != effectiveTheme { effectiveTheme = next }
@@ -309,11 +317,12 @@ final class ThemeManager: ObservableObject {
         self.theme = theme
         self.style = style
         effectiveTheme = theme
-        librarySpace = UserDefaults.standard.string(forKey: LibraryView.Space.storageKey)
-            .flatMap(LibraryView.Space.init(rawValue:)) ?? .study
+        librarySpace = UserDefaults.standard.string(forKey: LibrarySpace.storageKey)
+            .flatMap(LibrarySpace.init(rawValue:)) ?? .study
         if PersonalPadLibrary.isAvailable {
-            for space in [LibraryView.Space.study, .manga] {
-                spacePalettes[space] = UserDefaults.standard.string(forKey: Self.paletteKey(space))
+            for space in LibrarySpace.allCases {
+                spacePalettes[space] = LibrarySpace.paletteID(UserDefaults.standard.string(forKey: space.paletteKey),
+                                                             available: Self.paletteIDs)
             }
         }
         refreshEffectiveTheme()
@@ -352,6 +361,7 @@ extension Color {
 
 /// Réglages → Apparence : le vrai motif reste visible au-dessus d'un échantillon d'interface.
 struct ThemePickerView: View {
+    @State private var editedSpace: LibrarySpace = .study
     @EnvironmentObject private var themes: ThemeManager
     @AppStorage("appearance.themePatterns") private var patternsEnabled = true
     @AppStorage(PersonalPadLibrary.compactDocumentsKey) private var compactDocuments = true
@@ -371,8 +381,7 @@ struct ThemePickerView: View {
                 if PersonalPadLibrary.isAvailable {
                     VStack(alignment: .leading, spacing: 10) {
                         Text("Thèmes par espace sur cet iPad").font(.headline)
-                        spacePalette(.study, title: String(localized: "Livres & Manuels"))
-                        spacePalette(.manga, title: String(localized: "Manga"))
+                        spacePalettes
                         Toggle("Documents ouverts compacts", isOn: $compactDocuments)
                     }
                     .tint(Atelier.Tint.read)
@@ -391,6 +400,10 @@ struct ThemePickerView: View {
                     Text(ui: themes.style.name).foregroundStyle(Atelier.textPrimary)
                 }.font(.subheadline)
                 DisclosureGroup("Palette") {
+                if PersonalPadLibrary.isAvailable {
+                    Text("La palette générale s’applique aux espaces qui utilisent la carte de repli.")
+                        .font(.footnote).foregroundStyle(Atelier.textSecondary)
+                }
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 280), spacing: 18)], spacing: 18) {
                     ForEach(Theme.all) { theme in
                         Button { themes.select(theme) } label: { card(theme) }
@@ -409,15 +422,61 @@ struct ThemePickerView: View {
         .navigationTitle("Thèmes")
     }
 
-    private func spacePalette(_ space: LibraryView.Space, title: String) -> some View {
-        Picker(selection: Binding(get: { themes.paletteID(for: space) },
-                                  set: { themes.selectPalette($0, for: space) })) {
-            Text("Palette générale").tag("")
-            ForEach(Theme.all) { Text(ui: $0.name).tag($0.id) }
-        } label: {
-            Text(ui: title)
+    private var spacePalettes: some View {
+        VStack(spacing: 14) {
+            HStack(spacing: 4) {
+                spaceSegment(.study, title: String(localized: "Kyōkasho"))
+                spaceSegment(.manga, title: String(localized: "Manga"))
+            }
+            .padding(4)
+            .background(Atelier.surfaceHigh, in: Capsule())
+            .frame(maxWidth: .infinity)
+
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 220), spacing: 14)], spacing: 14) {
+                spaceCard(themes.theme, id: nil, title: String(localized: "Comme la palette générale"))
+                ForEach(Theme.all) { theme in
+                    spaceCard(theme, id: theme.id, title: theme.name)
+                }
+            }
         }
-        .pickerStyle(.menu)
+    }
+
+    private func spaceSegment(_ space: LibrarySpace, title: String) -> some View {
+        let selected = editedSpace == space
+        return Button { editedSpace = space } label: {
+            Text(ui: title)
+                .font(.subheadline.weight(.semibold))
+                .padding(.horizontal, 16)
+                .frame(minHeight: 44)
+                .foregroundStyle(selected ? Atelier.onAccentInk : Atelier.textPrimary)
+                .background(selected ? Atelier.Tint.read : Color.clear, in: Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+
+    private func spaceCard(_ theme: Theme, id: String?, title: String) -> some View {
+        let selected = themes.paletteID(for: editedSpace) == id
+        return Button { themes.selectPalette(id, for: editedSpace) } label: {
+            VStack(alignment: .leading, spacing: 0) {
+                ThemePreview(theme: theme, style: themes.style, selected: selected)
+                HStack {
+                    Text(ui: title).font(.subheadline.weight(.semibold))
+                    Spacer()
+                    if selected { Image(systemName: "checkmark.circle.fill").accessibilityHidden(true) }
+                }
+                .foregroundStyle(theme.ink)
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(theme.surface)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: Atelier.corner(14)))
+            .overlay(RoundedRectangle(cornerRadius: Atelier.corner(14))
+                .strokeBorder(selected ? theme.read : theme.separator, lineWidth: selected ? 2 : 1))
+        }
+        .buttonStyle(PressScale())
+        .accessibilityLabel(title)
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
     /// Aperçu complet : mêmes motifs, couleurs, formes et relief que le style réellement choisi.

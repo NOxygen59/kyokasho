@@ -5,6 +5,7 @@ import GLMOCRKit
 import OCRKit
 import ReaderCore
 import SwiftUI
+import UIKit
 
 /// Bibliothèque « Atelier » : barre latérale (sources, outils) + planche de documents sur fond
 /// quadrillé. Pensée pour le paysage ; en portrait la barre latérale se replie en haut.
@@ -52,11 +53,9 @@ struct LibraryView: View {
     @State private var search = ""
 
     /// Espace affiché : Livres & Manuels ou Manga. Simple filtre : il ne réécrit ni document ni progression.
-    enum Space: String {
-        case study, manga
-        static let storageKey = "library.space"
-    }
-    @AppStorage(Space.storageKey) private var space = Space.study
+    @AppStorage(LibrarySpace.storageKey) private var space = LibrarySpace.study
+    @State private var scrollAnchors: [LibrarySpace: String] = [:]
+    @State private var snapshot: UIView?
     @AppStorage(PersonalPadLibrary.compactDocumentsKey) private var compactDocuments = true
     private var usesCompactDocuments: Bool { PersonalPadLibrary.isAvailable && compactDocuments }
     @State private var convertingComics: [LibraryDocument] = []
@@ -175,8 +174,7 @@ struct LibraryView: View {
                         .padding(Atelier.gap)
                     }
                 }
-                // Les composants lisent les couleurs globales. Seul le contenu de l'accueil est remonté.
-                .id(PersonalPadLibrary.isAvailable ? themes.effectiveTheme.id : "")
+
             }
         }
         .toolbar(.hidden, for: .navigationBar)
@@ -324,13 +322,9 @@ struct LibraryView: View {
     @ViewBuilder
     private var libraryBackdrop: some View {
         if PersonalPadLibrary.isAvailable {
-            ZStack {
-                ThemeBackdrop(theme: themes.effectiveTheme, style: themes.style)
-                    .id(themes.effectiveTheme.id)
-                    .transition(.opacity)
-            }
-            .animation(reduceMotion ? nil : .easeInOut(duration: 0.25), value: themes.effectiveTheme.id)
-            .ignoresSafeArea()
+            ThemeBackdrop(theme: themes.effectiveTheme, style: themes.style)
+                .id(themes.effectiveTheme.id)
+                .ignoresSafeArea()
         } else {
             GridBackground()
         }
@@ -508,13 +502,14 @@ struct LibraryView: View {
         }
     }
 
-    private func spaceTab(_ value: Space, title: String, icon: String) -> some View {
+    private func spaceTab(_ value: LibrarySpace, title: String, icon: String) -> some View {
         let on = space == value
         let count = model.documents.filter { $0.isInMangaSpace == (value == .manga) }.count
         return Button {
             guard !on else { return }
             selecting = false
             batch = BatchDeletion()
+            captureAppearance()
             space = value
             themes.showLibrarySpace(value)
         } label: {
@@ -528,15 +523,35 @@ struct LibraryView: View {
         .accessibilityAddTraits(on ? .isSelected : [])
     }
 
+    // Un seul cliché au-dessus de l’interface, sans dupliquer les listes ni leurs miniatures.
+    private func captureAppearance() {
+        guard PersonalPadLibrary.isAvailable, !reduceMotion,
+              let window = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene })
+                  .first(where: { $0.activationState == .foregroundActive })?.keyWindow else { return }
+        snapshot?.removeFromSuperview()
+        guard let image = window.snapshotView(afterScreenUpdates: false) else { return }
+        image.frame = window.bounds
+        image.isUserInteractionEnabled = false
+        image.accessibilityElementsHidden = true
+        window.addSubview(image)
+        snapshot = image
+        UIView.animate(withDuration: 0.25, delay: 0.05, options: [.curveEaseInOut]) {
+            image.alpha = 0
+        } completion: { _ in
+            image.removeFromSuperview()
+            if snapshot === image { snapshot = nil }
+        }
+    }
+
     private var main: some View {
         VStack(alignment: .leading, spacing: Atelier.gap) {
             if usesCompactDocuments {
                 VStack(alignment: .leading, spacing: 5) {
                     spaceTabs
-                    OpenDocumentsStrip(compact: true)
+                    OpenDocumentsStrip(compact: true, palette: themes.effectiveTheme)
                 }
             } else {
-                OpenDocumentsStrip()
+                OpenDocumentsStrip(palette: themes.effectiveTheme)
                 spaceTabs
             }
             HStack(alignment: .bottom) {
@@ -568,57 +583,87 @@ struct LibraryView: View {
                     if filtered.isEmpty {
                         emptyState
                     } else {
-                        ScrollView {
-                            // Sections « Manuels », « Livres », « Non classés » (recette 1.3.2 (61), E5) : chacune s'allonge
-                            // avec ses documents, les suivantes descendent d'autant.
-                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 180, maximum: 220), spacing: 22)], spacing: 26) {
-                                ForEach(sections, id: \.title) { section in
-                                    Section {
-                                        ForEach(section.documents) { document in
-                                            Button {
-                                                if selecting { batch.toggle(document.id) } else { model.openDocumentId = document.id }
-                                            } label: {
-                                                DocumentCard(document: document)
-                                            }
-                                            .buttonStyle(PressScale())
-                                            .id(LibraryCardRenderIdentity(documentId: document.id,
-                                                                          category: document.category,
-                                                                          selecting: selecting,
-                                                                          manga: document.isInMangaSpace))
-                                            // La catégorie appartient à l'état courant de la bibliothèque. En la
-                                            // dessinant au-dessus du bouton, elle n'est plus retenue dans l'ancien
-                                            // rendu interne de la carte après l'import.
-                                            .overlay(alignment: .topLeading) {
-                                                if document.isInMangaSpace {
-                                                    // Format fixe pour un .cbz ; simple rangement pour un PDF.
-                                                    mangaMark(archive: document.isComicArchive).allowsHitTesting(false)
-                                                } else if let category = document.category {
-                                                    categoryMark(category).allowsHitTesting(false)
+                        ScrollViewReader { proxy in
+                            let displayedSpace = space
+                            ScrollView {
+                                // Sections « Manuels », « Livres », « Non classés » (recette 1.3.2 (61), E5) : chacune s'allonge
+                                // avec ses documents, les suivantes descendent d'autant.
+                                LazyVGrid(columns: [GridItem(.adaptive(minimum: 180, maximum: 220), spacing: 22)], spacing: 26) {
+                                    ForEach(sections, id: \.title) { section in
+                                        Section {
+                                            ForEach(section.documents) { document in
+                                                Button {
+                                                    if selecting { batch.toggle(document.id) } else { model.openDocumentId = document.id }
+                                                } label: {
+                                                    DocumentCard(document: document)
                                                 }
-                                            }
-                                            // L'indicateur reste au-dessus du bouton lui-même. Dans le contenu du
-                                            // bouton, SwiftUI pouvait le masquer jusqu'à la reconstruction de la
-                                            // bibliothèque après un redémarrage (constaté sur iPad, 30/10/2026).
-                                            .overlay(alignment: .topTrailing) {
-                                                if selecting {
-                                                    selectionMark(batch.selected.contains(document.id))
-                                                        .allowsHitTesting(false)
+                                                .buttonStyle(PressScale())
+                                                .id(LibraryCardRenderIdentity(documentId: document.id,
+                                                                              category: document.category,
+                                                                              selecting: selecting,
+                                                                              manga: document.isInMangaSpace))
+                                                // La catégorie appartient à l'état courant de la bibliothèque. En la
+                                                // dessinant au-dessus du bouton, elle n'est plus retenue dans l'ancien
+                                                // rendu interne de la carte après l'import.
+                                                .overlay(alignment: .topLeading) {
+                                                    if document.isInMangaSpace {
+                                                        // Format fixe pour un .cbz ; simple rangement pour un PDF.
+                                                        mangaMark(archive: document.isComicArchive).allowsHitTesting(false)
+                                                    } else if let category = document.category {
+                                                        categoryMark(category).allowsHitTesting(false)
+                                                    }
                                                 }
+                                                // L'indicateur reste au-dessus du bouton lui-même. Dans le contenu du
+                                                // bouton, SwiftUI pouvait le masquer jusqu'à la reconstruction de la
+                                                // bibliothèque après un redémarrage (constaté sur iPad, 30/10/2026).
+                                                .overlay(alignment: .topTrailing) {
+                                                    if selecting {
+                                                        selectionMark(batch.selected.contains(document.id))
+                                                            .allowsHitTesting(false)
+                                                    }
+                                                }
+                                                .background {
+                                                    if PersonalPadLibrary.isAvailable {
+                                                        GeometryReader { card in
+                                                            Color.clear.preference(key: LibraryCardPositions.self,
+                                                                value: [document.id: card.frame(in: .named("library-grid"))])
+                                                        }
+                                                    }
+                                                }
+                                                .contextMenu { if !selecting { menu(for: document) } }
                                             }
-                                            .contextMenu { if !selecting { menu(for: document) } }
+                                        } header: {
+                                            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                                                AtelierLabel(section.title, tint: space == .manga ? Atelier.Tint.japanese : section.category == .textbook ? Atelier.Tint.read
+                                                             : section.category == .book ? Atelier.Tint.annotate : Atelier.textTertiary)
+                                                Text("\(section.documents.count)").font(Atelier.mono).foregroundStyle(Atelier.textTertiary)
+                                                Spacer()
+                                            }
+                                            .padding(.top, 8)
                                         }
-                                    } header: {
-                                        HStack(alignment: .firstTextBaseline, spacing: 8) {
-                                            AtelierLabel(section.title, tint: space == .manga ? Atelier.Tint.japanese : section.category == .textbook ? Atelier.Tint.read
-                                                         : section.category == .book ? Atelier.Tint.annotate : Atelier.textTertiary)
-                                            Text("\(section.documents.count)").font(Atelier.mono).foregroundStyle(Atelier.textTertiary)
-                                            Spacer()
-                                        }
-                                        .padding(.top, 8)
                                     }
                                 }
+                                .padding(.vertical, 6)
                             }
-                            .padding(.vertical, 6)
+                            .coordinateSpace(name: "library-grid")
+                            .id(PersonalPadLibrary.isAvailable ? displayedSpace.rawValue : "")
+                            .onAppear {
+                                if let anchor = scrollAnchors[displayedSpace], filtered.contains(where: { $0.id == anchor }) {
+                                    proxy.scrollTo(LibraryCardRenderIdentity(
+                                        documentId: anchor,
+                                        category: filtered.first(where: { $0.id == anchor })?.category,
+                                        selecting: selecting, manga: displayedSpace == .manga), anchor: .top)
+                                }
+                            }
+                            .onPreferenceChange(LibraryCardPositions.self) { frames in
+                                guard space == displayedSpace else { return }
+                                let first = frames.filter { $0.value.maxY > 0 }.min { lhs, rhs in
+                                    lhs.value.minY == rhs.value.minY ? lhs.value.minX < rhs.value.minX : lhs.value.minY < rhs.value.minY
+                                }
+                                if let first, scrollAnchors[displayedSpace] != first.key {
+                                    scrollAnchors[displayedSpace] = first.key
+                                }
+                            }
                         }
                         if selecting { selectionBar }
                     }
@@ -958,5 +1003,13 @@ struct ImportBanner: View {
         .foregroundStyle(Atelier.textPrimary)
         .padding(.horizontal, 18).padding(.vertical, 12)
         .atelierPanel(radius: 24)
+    }
+}
+
+private struct LibraryCardPositions: PreferenceKey {
+    static let defaultValue: [String: CGRect] = [:]
+
+    static func reduce(value: inout [String: CGRect], nextValue: () -> [String: CGRect]) {
+        value.merge(nextValue(), uniquingKeysWith: { _, new in new })
     }
 }

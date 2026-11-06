@@ -57,9 +57,13 @@ final class AppModel: ObservableObject {
     /// Document à ouvrir (bibliothèque → lecteur) ; chaque document ouvert prend un onglet.
     /// Paquet `.kyokasho` ouvert depuis Fichiers, pris en charge par la bibliothèque (vérification, accord).
     @Published var incomingPackage: URL?
+    weak var themeManager: ThemeManager?
+
     @Published var openDocumentId: String? {
         didSet {
             if let openDocumentId { tabs.open(openDocumentId) }
+            // Le lecteur doit lire Theme.current avant de construire ses vues et ses furigana.
+            themeManager?.showDocument(in: activeDocumentSpace)
             // Lecteur fermé : la bibliothèque reçoit enfin les positions de lecture mises de côté.
             if openDocumentId == nil, let pending = pendingDocuments {
                 pendingDocuments = nil
@@ -67,6 +71,11 @@ final class AppModel: ObservableObject {
             }
         }
     }
+    var activeDocumentSpace: LibrarySpace? {
+        guard let openDocumentId, let document = documents.first(where: { $0.id == openDocumentId }) else { return nil }
+        return LibrarySpace(document: document)
+    }
+
     /// Liste reçue pendant la lecture quand seule la position de lecture a changé : pas publiée
     /// tout de suite (sinon la bibliothèque, derrière le lecteur, se redessine à chaque page tournée).
     private var pendingDocuments: [LibraryDocument]?
