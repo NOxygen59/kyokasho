@@ -32,7 +32,11 @@ struct ImportOptionsView: View {
                         Label("Choisir des PDF", systemImage: "doc.badge.plus")
                     }
                 } footer: {
-                    Text("Mangas et magazines .cbz acceptés, à titre expérimental : rangés dans l'espace Manga, images seules, sans OCR ni IA.")
+                    if PersonalPadLibrary.isAvailable {
+                        Text("Mangas et magazines .cbz acceptés, à titre expérimental : rangés dans l'espace Manga, images seules, sans OCR ni IA.")
+                    } else {
+                        Text("Choisis des PDF. Les .cbz restent réservés à l'iPad.")
+                    }
                 }
                 if onPackage != nil {
                     Section {
@@ -47,7 +51,8 @@ struct ImportOptionsView: View {
             .navigationTitle("Importer")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Annuler") { dismiss() } } }
-            .documentPicker(isPresented: $showPicker, types: [.pdf, DocumentPicker.comicArchive]) { urls in
+            .documentPicker(isPresented: $showPicker,
+                            types: PersonalPadLibrary.isAvailable ? [.pdf, DocumentPicker.comicArchive] : [.pdf]) { urls in
                 guard !urls.isEmpty else { return }
                 onImport(urls, language)
                 dismiss()

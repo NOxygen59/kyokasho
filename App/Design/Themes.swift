@@ -304,8 +304,9 @@ final class ThemeManager: ObservableObject {
     init() {
         let id = UserDefaults.standard.string(forKey: "theme.id")
         let styleId = UserDefaults.standard.string(forKey: "style.id")
-        let theme = Theme.all.first { $0.id == id } ?? .atelier
-        let style = AppStyle.all.first { $0.id == styleId } ?? .atelier
+        // Première ouverture : Swiss Design, style et palette (choix de NOxygen59 du 06/11/2026). Un choix enregistré reste.
+        let theme = Theme.all.first { $0.id == id } ?? Theme.all.first { $0.id == AppStyle.swiss.defaultTheme } ?? .atelier
+        let style = AppStyle.all.first { $0.id == styleId } ?? .swiss
         self.theme = theme
         self.style = style
         effectiveTheme = theme

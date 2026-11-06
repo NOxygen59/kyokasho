@@ -159,7 +159,7 @@ struct RootView: View {
 }
 
 private extension View {
-    /// Version Mac : fenêtre en 10:9 à l'ouverture. Rien sur iPad.
+    /// Version Mac : fenêtre en 16:10 à l'ouverture. Rien sur iPad.
     @ViewBuilder
     func macInitialWindowFrame() -> some View {
         #if targetEnvironment(macCatalyst)

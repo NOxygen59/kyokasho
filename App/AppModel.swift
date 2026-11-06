@@ -209,6 +209,15 @@ final class AppModel: ObservableObject {
             lastError = String(localized: "Sauvegarde en cours : réessaie après sa fin.")
             return
         }
+        var urls = urls
+        // Les .cbz (espace Manga) sont personnels à l'iPad : ailleurs, ils ne sont pas importés (même glissés).
+        if !PersonalPadLibrary.isAvailable {
+            let comics = urls.filter { $0.pathExtension.lowercased() == ComicBookArchive.fileExtension }
+            if !comics.isEmpty {
+                urls.removeAll { $0.pathExtension.lowercased() == ComicBookArchive.fileExtension }
+                lastError = String(localized: "Les .cbz sont réservés à l'iPad : \(comics.count) fichier(s) non importé(s).")
+            }
+        }
         guard !urls.isEmpty else { return }
         importProgress = ImportProgress(done: 0, total: urls.count, currentName: urls[0].lastPathComponent)
         let importer = importer

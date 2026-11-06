@@ -59,14 +59,20 @@ struct LibraryView: View {
         case study, manga
         static let storageKey = "library.space"
     }
-    @AppStorage(Space.storageKey) private var space = Space.study
+    @AppStorage(Space.storageKey) private var storedSpace = Space.study
+    /// Manga et CBZ sont personnels à l'iPad (décision de NOxygen59) : ailleurs, un seul espace, Livres & Manuels.
+    private var space: Space {
+        get { PersonalPadLibrary.isAvailable ? storedSpace : .study }
+        nonmutating set { storedSpace = newValue }
+    }
     @AppStorage(PersonalPadLibrary.compactDocumentsKey) private var compactDocuments = true
     private var usesCompactDocuments: Bool { PersonalPadLibrary.isAvailable && compactDocuments }
     @State private var convertingComics: [LibraryDocument] = []
     @State private var showConvertConfirmation = false
 
     private var spaceDocuments: [LibraryDocument] {
-        model.documents.filter { $0.isInMangaSpace == (space == .manga) }
+        guard PersonalPadLibrary.isAvailable else { return model.documents }
+        return model.documents.filter { $0.isInMangaSpace == (space == .manga) }
     }
 
     /// Le Manga forme une seule liste ; les catégories Livre et Manuel n'y ont pas de sens.
@@ -192,12 +198,12 @@ struct LibraryView: View {
         }
         // « Livre ou manuel ? » après chaque import (RET-039, #54). Une alerte ne se ferme pas par un toucher à côté :
         // chaque document reçoit une réponse, « Plus tard » compris.
-        .alert("Livre, manuel ou manga ?", isPresented: Binding(get: { !model.categoryQuestions.isEmpty }, set: { _ in }),
+        .alert(PersonalPadLibrary.isAvailable ? String(localized: "Livre, manuel ou manga ?") : String(localized: "Livre ou manuel ?"), isPresented: Binding(get: { !model.categoryQuestions.isEmpty }, set: { _ in }),
                presenting: model.categoryQuestions.first) { _ in
             ForEach(DocumentCategory.allCases, id: \.self) { category in
                 Button(category.title) { model.answerCategory(category) }
             }
-            Button("Manga") { model.answerManga() }
+            if PersonalPadLibrary.isAvailable { Button("Manga") { model.answerManga() } }
             Button("Plus tard", role: .cancel) { model.answerCategory(nil) }
         } message: { document in
             Text("« \(document.title) » : la catégorie s'affiche sur l'accueil pour t'aider à te repérer. Tu pourras la changer dans « Ce document ».")
@@ -507,7 +513,14 @@ struct LibraryView: View {
     private var monitorVisible: Bool { monitorEnabled && monitorShown }
 
     /// Onglets ouverts au-dessus : ils valent pour les deux espaces.
+    @ViewBuilder
     private var spaceTabs: some View {
+        if PersonalPadLibrary.isAvailable {
+            spaceTabsRow
+        }
+    }
+
+    private var spaceTabsRow: some View {
         HStack(spacing: 8) {
             spaceTab(.study, title: String(localized: "Livres & Manuels"), icon: "books.vertical")
             spaceTab(.manga, title: String(localized: "Manga"), icon: "book")
@@ -791,10 +804,12 @@ struct LibraryView: View {
                     model.setCategory(document.id, category)
                 } label: { shelfLabel(category.title, on: !manga && document.category == category) }
             }
-            Button {
-                model.setMangaSpace(document.id, true)
-                model.setCategory(document.id, nil)
-            } label: { shelfLabel(String(localized: "Manga"), on: manga) }
+            if PersonalPadLibrary.isAvailable {
+                Button {
+                    model.setMangaSpace(document.id, true)
+                    model.setCategory(document.id, nil)
+                } label: { shelfLabel(String(localized: "Manga"), on: manga) }
+            }
             Button {
                 model.setMangaSpace(document.id, false)
                 model.setCategory(document.id, nil)
