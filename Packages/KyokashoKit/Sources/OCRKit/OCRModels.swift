@@ -93,13 +93,15 @@ public struct OCRLine: Codable, Hashable, Sendable {
         line.doubt = originalDoubt
         line.originalDoubt = nil
         line.edited = nil
-        return line
+        // La géométrie d'origine peut venir d'un ancien résultat : mêmes règles que le cache (contre-revue 5a0f68f, P2 1).
+        return line.downgradingDuplicateBoxes()
     }
 
     /// Ancien résultat : des boîtes de caractères en double ne sont pas des mesures. Texte et corrections gardés, cases
     /// proportionnelles marquées estimées (contre-revue du chantier 1.5.0, P2 3).
     public func downgradingDuplicateBoxes() -> OCRLine {
-        guard measuredCharBoxes, CharacterLayout.hasDuplicates(charBoxes) else { return self }
+        guard measuredCharBoxes, CharacterLayout.hasDuplicates(charBoxes) || CharacterLayout.hasSharedOrigins(charBoxes)
+        else { return self }
         var line = self
         line.charBoxes = CharacterLayout.proportional(text, in: box, vertical: vertical)
         line.measuredCharBoxes = false

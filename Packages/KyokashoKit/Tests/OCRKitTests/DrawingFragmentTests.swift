@@ -74,4 +74,22 @@ final class OCRRawAndDuplicateTests: XCTestCase {
         XCTAssertEqual(old.text, "何だ字")
         XCTAssertEqual(old.charBoxes.count, 3)
     }
+
+    func testSharedOriginsAreNotMeasured() {
+        let a = NormBox(x: 0.5, y: 0.2, w: 0.02, h: 0.03), wide = NormBox(x: 0.5, y: 0.2, w: 0.04, h: 0.03)
+        XCTAssertFalse(CharacterLayout.validate([a, wide], count: 2, vertical: true))
+    }
+
+    func testUndoingACorrectionDowngradesOldDuplicateBoxes() {
+        let a = NormBox(x: 0.5, y: 0.2, w: 0.02, h: 0.03), b = NormBox(x: 0.5, y: 0.25, w: 0.02, h: 0.03)
+        var line = line("何だ字", vertical: true, confidence: 0.9, boxes: [a, a, b], measured: true)
+        line.originalText = "何だ字"
+        line.originalCharBoxes = [a, a, b]
+        line.originalMeasuredCharBoxes = true
+        line.text = "何だ子"
+        let undone = line.revertingCorrection
+        XCTAssertEqual(undone.text, "何だ字")
+        XCTAssertFalse(undone.measuredCharBoxes)
+        XCTAssertFalse(CharacterLayout.hasDuplicates(undone.charBoxes))
+    }
 }

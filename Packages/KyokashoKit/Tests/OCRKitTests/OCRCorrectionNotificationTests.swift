@@ -101,7 +101,10 @@ final class OCRCorrectionNotificationTests: XCTestCase {
         // Une deuxième correction garde le texte de l'OCR, pas la première correction.
         XCTAssertEqual(corrected.acceptingCorrection("相対湿度").originalText, "相对湿度")
         let reverted = corrected.revertingCorrection
-        XCTAssertEqual(reverted, original)
+        // Texte d'origine rendu ; ses quatre boîtes identiques ne sont pas des mesures (contre-revue 5a0f68f, P2 1).
+        XCTAssertEqual(reverted, original.downgradingDuplicateBoxes())
+        XCTAssertEqual(reverted.text, original.text)
+        XCTAssertFalse(reverted.measuredCharBoxes)
         // « Garder tel quel » n'est pas une correction : rien à annuler.
         XCTAssertNil(original.acceptingCorrection("相对湿度").originalText)
     }

@@ -99,6 +99,8 @@ struct StudyPanel: View {
         // (revue après recette 1.4.8, P3 1).
         .onAppear(perform: normalizeTab)
         .onChange(of: reader.document.id) { _ in normalizeTab() }
+        // Même document rangé en Manga pendant la lecture : la capacité Chat disparaît sans changer d'identifiant.
+        .onChange(of: reader.document.capabilities.chat) { _ in normalizeTab() }
     }
 
     private func normalizeTab() {

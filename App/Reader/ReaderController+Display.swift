@@ -236,7 +236,7 @@ extension ReaderController {
             // Manga : choix de ce document seulement, gardé dans ses réglages (et ses paquets).
             var override = document.settingsOverride
             override.pageFurigana = on ? true : nil
-            setDocumentOverride(override)
+            setDocumentOverride(override, keepingChoices: false)
         } else {
             UserDefaults.standard.set(on, forKey: FuriganaLayer.storageKey)
         }
@@ -323,7 +323,14 @@ extension ReaderController {
         if old.ocrEngine != newSettings.ocrEngine { schedulePageSettled() }
     }
 
-    func setDocumentOverride(_ override: ReaderSettingsOverride) {
+    /// `keepingChoices` : le classement Manga et le choix des furigana viennent de la copie courante du lecteur, pas d'une
+    /// feuille ouverte avant un reclassement (contre-revue 5a0f68f, P2 2). Seul `setFurigana` les écrit lui-même.
+    func setDocumentOverride(_ override: ReaderSettingsOverride, keepingChoices: Bool = true) {
+        var override = override
+        if keepingChoices {
+            override.mangaSpace = document.settingsOverride.mangaSpace
+            override.pageFurigana = document.settingsOverride.pageFurigana
+        }
         document.settingsOverride = override
         let doc = document
         model.persist { try $0.save(doc) }
