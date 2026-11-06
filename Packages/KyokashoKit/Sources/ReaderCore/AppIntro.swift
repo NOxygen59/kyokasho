@@ -18,32 +18,55 @@ public struct IntroStep: Equatable, Sendable, Identifiable {
 }
 
 public enum AppTour {
-    public static let steps: [IntroStep] = [
+    /// Étapes de la visite pour cet appareil : le Mac n'a ni Pencil ni espace Manga (réservé à l'iPad).
+    public static var steps: [IntroStep] {
+        #if targetEnvironment(macCatalyst)
+        return steps(mac: true)
+        #else
+        return steps(mac: false)
+        #endif
+    }
+
+    public static func steps(mac: Bool) -> [IntroStep] {
+        var list: [IntroStep] = [
         IntroStep(icon: "books.vertical", title: String(localized: "Ta bibliothèque", bundle: .main),
-                  how: String(localized: "« Importer » ajoute des PDF depuis Fichiers ou Google Drive. Les outils convertissent aussi des photos en PDF et fusionnent plusieurs PDF.", bundle: .main),
-                  why: String(localized: "Tous tes manuels au même endroit, rangés en Manuels et Livres.", bundle: .main)),
+                  how: mac ? String(localized: "« Importer » ajoute des PDF choisis dans le Finder. Les outils convertissent des photos en PDF, fusionnent plusieurs PDF et importent un paquet .kyokasho venu de l'iPad, avec ses lectures.", bundle: .main) : String(localized: "« Importer » ajoute des PDF depuis Fichiers ou Google Drive. Les outils convertissent des photos en PDF, fusionnent plusieurs PDF et importent un paquet .kyokasho venu d'un autre appareil, avec ses lectures.", bundle: .main),
+                  why: String(localized: "Tes livres et manuels au même endroit, rangés par catégorie, chacun avec sa progression et son temps de lecture.", bundle: .main)),
+        ]
+        if !mac {
+            list.append(
+        IntroStep(icon: "rectangle.split.2x1", title: String(localized: "Deux espaces", bundle: .main),
+                  how: String(localized: "En haut de l'accueil, passe de Livres & Manuels à Manga. Les .cbz vont dans Manga ; un PDF s'y range d'un appui long sur sa carte. La rangée du haut montre tes documents ouverts.", bundle: .main),
+                  why: String(localized: "Chaque espace garde ses documents et, si tu veux, son propre thème (Réglages → Thèmes).", bundle: .main)))
+        }
+        list += [
         IntroStep(icon: "book", title: String(localized: "Lire", bundle: .main),
-                  how: String(localized: "Touche un livre pour l'ouvrir. Glisse, ou utilise ‹ › et les flèches du clavier, pour tourner les pages. Les onglets en haut passent d'un livre à l'autre.", bundle: .main),
+                  how: mac ? String(localized: "Clique un livre pour l'ouvrir. ‹ ›, les flèches du clavier ou le trackpad tournent les pages ; pince le trackpad ou double-clique pour zoomer. Les onglets en haut passent d'un livre à l'autre.", bundle: .main) : String(localized: "Touche un livre pour l'ouvrir. Glisse, ou utilise ‹ › et les flèches du clavier, pour tourner les pages ; pince pour zoomer. Les onglets en haut passent d'un livre à l'autre.", bundle: .main),
                   why: String(localized: "Chaque livre rouvre à la page où tu l'avais laissé.", bundle: .main)),
         IntroStep(icon: "character.ja", title: String(localized: "Le texte de la page", bundle: .main),
-                  how: String(localized: "Le bouton あ ouvre le panneau Texte : l'app lit la page scannée (OCR) et la met en forme, avec furigana et traduction.", bundle: .main),
+                  how: String(localized: "Le bouton あ ouvre le panneau Texte : l'app lit la page scannée (OCR), y compris le japonais vertical, et la met en forme avec furigana et traduction.", bundle: .main),
                   why: String(localized: "Un scan n'est qu'une image : l'OCR en fait du texte que tu peux chercher, copier et comprendre.", bundle: .main)),
         IntroStep(icon: "character.book.closed.ja", title: String(localized: "Le dictionnaire", bundle: .main),
-                  how: String(localized: "Touche un mot de la page ou du panneau Texte. Avec un clavier, tiens Maj et passe la souris sur un mot.", bundle: .main),
+                  how: mac ? String(localized: "Clique un mot de la page ou du panneau Texte, ou tiens Maj et passe la souris dessus. Réglages → Dictionnaires installe tout le catalogue en un bouton.", bundle: .main) : String(localized: "Touche un mot de la page ou du panneau Texte. Avec un clavier, tiens Maj et passe la souris sur un mot. Réglages → Dictionnaires installe tout le catalogue en un bouton.", bundle: .main),
                   why: String(localized: "Lecture et sens d'un mot sans quitter la page ; tu peux le garder pour le réviser.", bundle: .main)),
         IntroStep(icon: "highlighter", title: String(localized: "Annoter", bundle: .main),
-                  how: String(localized: "Notes, signets, dessin au Pencil, et le surligneur : glisse sur le texte de la page pour le surligner.", bundle: .main),
+                  how: mac ? String(localized: "Notes, signets et surligneur : glisse sur le texte de la page pour le surligner.", bundle: .main) : String(localized: "Notes, signets, dessin au Pencil, et le surligneur : glisse sur le texte de la page pour le surligner.", bundle: .main),
                   why: String(localized: "Tes repères restent attachés à la page, et s'exportent.", bundle: .main)),
         IntroStep(icon: "rectangle.stack.badge.play", title: String(localized: "Réviser", bundle: .main),
                   how: String(localized: "« Révisions » propose chaque jour les mots gardés, au bon moment.", bundle: .main),
                   why: String(localized: "Revoir juste avant d'oublier : c'est ce qui fait retenir.", bundle: .main)),
         IntroStep(icon: "sparkles", title: String(localized: "L'IA locale", bundle: .main),
-                  how: String(localized: "OvisOCR2 lit les pages mieux que l'OCR simple ; Qwen traduit et répond à tes questions sur le livre. Tout tourne sur l'iPad, hors ligne.", bundle: .main),
-                  why: String(localized: "Rien ne part sur Internet, mais la batterie baisse vite : branche l'iPad pour les longues lectures.", bundle: .main)),
+                  how: mac ? String(localized: "Réglages → Modèles d'IA : OvisOCR2 lit les pages, NDLOCR-Lite fait l'OCR rapide et Qwen3.5-9B répond à tes questions sur le livre, dans la langue de l'app. Tout tourne sur ce Mac, hors ligne.", bundle: .main) : String(localized: "OvisOCR2 lit les pages mieux que l'OCR simple ; Qwen traduit et répond à tes questions sur le livre. Tout tourne sur l'iPad, hors ligne.", bundle: .main),
+                  why: mac ? String(localized: "Rien ne part sur Internet. Un seul modèle est chargé à la fois ; sur batterie, préfère les lectures courtes.", bundle: .main) : String(localized: "Rien ne part sur Internet, mais la batterie baisse vite : branche l'iPad pour les longues lectures.", bundle: .main)),
+        IntroStep(icon: "chart.bar.xaxis", title: String(localized: "Suivre ton travail", bundle: .main),
+                  how: String(localized: "L'accueil montre ton temps de lecture et l'avancée des analyses ; le panneau des performances montre ce que fait l'app et ce qu'elle consomme.", bundle: .main),
+                  why: String(localized: "Voir où passe ton temps, et savoir quand l'IA travaille.", bundle: .main)),
         IntroStep(icon: "gearshape", title: String(localized: "Réglages et sauvegarde", bundle: .main),
-                  how: String(localized: "Les réglages ajustent la lecture, l'OCR et l'IA ; ils permettent aussi de sauvegarder la bibliothèque et de revoir cette visite.", bundle: .main),
+                  how: String(localized: "Les réglages ajustent la lecture, l'OCR, l'IA, la langue de l'app et le thème ; ils sauvegardent aussi la bibliothèque et relancent cette visite.", bundle: .main),
                   why: String(localized: "Une sauvegarde régulière protège tes notes et tes lectures.", bundle: .main)),
-    ]
+        ]
+        return list
+    }
 }
 
 /// Notes d'une version : ce qui est ajouté, corrigé, retiré. L'historique complet (``all``) va de la 0.1.0 à la

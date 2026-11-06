@@ -419,17 +419,35 @@ extension ReaderController {
     @objc func handleDoubleTap(_ gesture: UITapGestureRecognizer) {
         let point = gesture.location(in: pdfView)
         let fit = pdfView.scaleFactorForSizeToFit
+        // Zoom animé par le défilement interne de PDFKit (demande de NOxygen59 du 06/11/2026) ; sans lui, ou avec
+        // « Réduire les animations », le zoom reste immédiat comme avant.
+        let scroll = UIAccessibility.isReduceMotionEnabled ? nil : pdfInnerScrollView
+        let zoomView = scroll.flatMap { $0.delegate?.viewForZooming?(in: $0) }
         if !pdfView.isAtFit {
-            pdfView.fitToPage()
+            guard let scroll, zoomView != nil, scroll.minimumZoomScale > 0 else {
+                pdfView.fitToPage()
+                return
+            }
+            scroll.setZoomScale(scroll.minimumZoomScale, animated: true)
+            // Puis l'ajustement habituel, une fois l'animation finie (bornes et repère du zoom « page entière »).
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in self?.pdfView.fitToPage() }
             return
         }
         guard let page = pdfView.page(for: point, nearest: true) else { return }
         let pagePoint = pdfView.convert(point, to: page)
         let target = fit * 2.5
-        pdfView.scaleFactor = target
         let visible = CGSize(width: pdfView.bounds.width / target, height: pdfView.bounds.height / target)
-        pdfView.go(to: CGRect(x: pagePoint.x - visible.width / 2, y: pagePoint.y - visible.height / 2,
-                              width: visible.width, height: visible.height), on: page)
+        let pageRect = CGRect(x: pagePoint.x - visible.width / 2, y: pagePoint.y - visible.height / 2,
+                              width: visible.width, height: visible.height)
+        if let scroll, let zoomView {
+            let rect = pdfView.convert(pdfView.convert(pageRect, from: page), to: zoomView)
+            if rect.width > 0, rect.height > 0, rect.minX.isFinite, rect.minY.isFinite {
+                scroll.zoom(to: rect, animated: true)
+                return
+            }
+        }
+        pdfView.scaleFactor = target
+        pdfView.go(to: pageRect, on: page)
     }
 
     // MARK: Dessin

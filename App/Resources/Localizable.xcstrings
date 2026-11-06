@@ -49082,6 +49082,402 @@
           }
         }
       }
+    },
+    "« Importer » ajoute des PDF choisis dans le Finder. Les outils convertissent des photos en PDF, fusionnent plusieurs PDF et importent un paquet .kyokasho venu de l'iPad, avec ses lectures.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“Import” adds PDFs chosen in the Finder. The tools also turn photos into a PDF, merge several PDFs and import a .kyokasho package from the iPad, with its readings."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "« Importer » ajoute des PDF choisis dans le Finder. Les outils convertissent des photos en PDF, fusionnent plusieurs PDF et importent un paquet .kyokasho venu de l'iPad, avec ses lectures."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“导入”可添加在访达中选择的 PDF。工具还能把照片转换为 PDF、合并多个 PDF，并导入来自 iPad 的 .kyokasho 包（含识别结果）。"
+          }
+        }
+      }
+    },
+    "« Importer » ajoute des PDF depuis Fichiers ou Google Drive. Les outils convertissent des photos en PDF, fusionnent plusieurs PDF et importent un paquet .kyokasho venu d'un autre appareil, avec ses lectures.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“Import” adds PDFs from Files or Google Drive. The tools also turn photos into a PDF, merge several PDFs and import a .kyokasho package from another device, with its readings."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "« Importer » ajoute des PDF depuis Fichiers ou Google Drive. Les outils convertissent des photos en PDF, fusionnent plusieurs PDF et importent un paquet .kyokasho venu d'un autre appareil, avec ses lectures."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“导入”可从“文件”或 Google 云端硬盘添加 PDF。工具还能把照片转换为 PDF、合并多个 PDF，并导入来自其他设备的 .kyokasho 包（含识别结果）。"
+          }
+        }
+      }
+    },
+    "Tes livres et manuels au même endroit, rangés par catégorie, chacun avec sa progression et son temps de lecture.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All your books and textbooks in one place, sorted by category, each with its progress and reading time."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tes livres et manuels au même endroit, rangés par catégorie, chacun avec sa progression et son temps de lecture."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "所有书籍和教材集中一处，按类别整理，每本都有自己的进度和阅读时间。"
+          }
+        }
+      }
+    },
+    "Deux espaces": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Two spaces"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Deux espaces"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "两个空间"
+          }
+        }
+      }
+    },
+    "En haut de l'accueil, passe de Livres & Manuels à Manga. Les .cbz vont dans Manga ; un PDF s'y range d'un appui long sur sa carte. La rangée du haut montre tes documents ouverts.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "At the top of the home screen, switch between Books & Textbooks and Manga. .cbz files go to Manga; a PDF moves there with a long press on its card. The top row shows your open documents."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En haut de l'accueil, passe de Livres & Manuels à Manga. Les .cbz vont dans Manga ; un PDF s'y range d'un appui long sur sa carte. La rangée du haut montre tes documents ouverts."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在主页顶部切换“书籍与教材”和“漫画”。.cbz 文件放在“漫画”中；长按 PDF 卡片也可将其移入。顶部一行显示已打开的文档。"
+          }
+        }
+      }
+    },
+    "Chaque espace garde ses documents et, si tu veux, son propre thème (Réglages → Thèmes).": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Each space keeps its own documents and, if you like, its own theme (Settings → Themes)."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chaque espace garde ses documents et, si tu veux, son propre thème (Réglages → Thèmes)."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每个空间保留各自的文档，也可以使用各自的主题（设置 → 主题）。"
+          }
+        }
+      }
+    },
+    "Clique un livre pour l'ouvrir. ‹ ›, les flèches du clavier ou le trackpad tournent les pages ; pince le trackpad ou double-clique pour zoomer. Les onglets en haut passent d'un livre à l'autre.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Click a book to open it. ‹ ›, the arrow keys or the trackpad turn pages; pinch the trackpad or double-click to zoom. The tabs at the top switch between books."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clique un livre pour l'ouvrir. ‹ ›, les flèches du clavier ou le trackpad tournent les pages ; pince le trackpad ou double-clique pour zoomer. Les onglets en haut passent d'un livre à l'autre."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "点按书籍即可打开。‹ ›、键盘方向键或触控板可翻页；在触控板上捏合或连按两次可缩放。顶部标签可在书籍之间切换。"
+          }
+        }
+      }
+    },
+    "Touche un livre pour l'ouvrir. Glisse, ou utilise ‹ › et les flèches du clavier, pour tourner les pages ; pince pour zoomer. Les onglets en haut passent d'un livre à l'autre.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tap a book to open it. Swipe, or use ‹ › and the arrow keys, to turn pages; pinch to zoom. The tabs at the top switch between books."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Touche un livre pour l'ouvrir. Glisse, ou utilise ‹ › et les flèches du clavier, pour tourner les pages ; pince pour zoomer. Les onglets en haut passent d'un livre à l'autre."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "轻点书籍即可打开。滑动，或使用 ‹ › 和键盘方向键翻页；双指捏合可缩放。顶部标签可在书籍之间切换。"
+          }
+        }
+      }
+    },
+    "Le bouton あ ouvre le panneau Texte : l'app lit la page scannée (OCR), y compris le japonais vertical, et la met en forme avec furigana et traduction.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The あ button opens the Text panel: the app reads the scanned page (OCR), vertical Japanese included, and lays it out with furigana and translation."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le bouton あ ouvre le panneau Texte : l'app lit la page scannée (OCR), y compris le japonais vertical, et la met en forme avec furigana et traduction."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "あ 按钮可打开“文本”面板：应用会识别扫描页面（OCR，包括竖排日文），并排版显示振假名和翻译。"
+          }
+        }
+      }
+    },
+    "Clique un mot de la page ou du panneau Texte, ou tiens Maj et passe la souris dessus. Réglages → Dictionnaires installe tout le catalogue en un bouton.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Click a word on the page or in the Text panel, or hold Shift and hover over it. Settings → Dictionaries installs the whole catalog with one button."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clique un mot de la page ou du panneau Texte, ou tiens Maj et passe la souris dessus. Réglages → Dictionnaires installe tout le catalogue en un bouton."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "点按页面或“文本”面板中的词语，或按住 Shift 并将指针悬停其上。在“设置 → 词典”中一键安装全部词典。"
+          }
+        }
+      }
+    },
+    "Touche un mot de la page ou du panneau Texte. Avec un clavier, tiens Maj et passe la souris sur un mot. Réglages → Dictionnaires installe tout le catalogue en un bouton.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tap a word on the page or in the Text panel. With a keyboard, hold Shift and hover over a word. Settings → Dictionaries installs the whole catalog with one button."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Touche un mot de la page ou du panneau Texte. Avec un clavier, tiens Maj et passe la souris sur un mot. Réglages → Dictionnaires installe tout le catalogue en un bouton."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "轻点页面或“文本”面板中的词语。连接键盘时，按住 Shift 并将指针悬停在词语上。在“设置 → 词典”中一键安装全部词典。"
+          }
+        }
+      }
+    },
+    "Notes, signets et surligneur : glisse sur le texte de la page pour le surligner.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notes, bookmarks and highlighter: drag over the text of the page to highlight it."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notes, signets et surligneur : glisse sur le texte de la page pour le surligner."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "笔记、书签和荧光笔：在页面文字上拖动即可高亮。"
+          }
+        }
+      }
+    },
+    "Réglages → Modèles d'IA : OvisOCR2 lit les pages, NDLOCR-Lite fait l'OCR rapide et Qwen3.5-9B répond à tes questions sur le livre, dans la langue de l'app. Tout tourne sur ce Mac, hors ligne.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Settings → AI models: OvisOCR2 reads pages, NDLOCR-Lite does fast OCR and Qwen3.5-9B answers your questions about the book, in the app's language. Everything runs on this Mac, offline."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Réglages → Modèles d'IA : OvisOCR2 lit les pages, NDLOCR-Lite fait l'OCR rapide et Qwen3.5-9B répond à tes questions sur le livre, dans la langue de l'app. Tout tourne sur ce Mac, hors ligne."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "设置 → AI 模型：OvisOCR2 识别页面，NDLOCR-Lite 进行快速 OCR，Qwen3.5-9B 用应用语言回答你关于书籍的问题。全部在这台 Mac 上离线运行。"
+          }
+        }
+      }
+    },
+    "Rien ne part sur Internet. Un seul modèle est chargé à la fois ; sur batterie, préfère les lectures courtes.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing goes to the Internet. Only one model is loaded at a time; on battery, prefer short reading sessions."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rien ne part sur Internet. Un seul modèle est chargé à la fois ; sur batterie, préfère les lectures courtes."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不会向互联网发送任何内容。一次只加载一个模型；使用电池时，建议只做短时间的识别。"
+          }
+        }
+      }
+    },
+    "Suivre ton travail": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Track your work"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Suivre ton travail"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "跟踪你的学习"
+          }
+        }
+      }
+    },
+    "L'accueil montre ton temps de lecture et l'avancée des analyses ; le panneau des performances montre ce que fait l'app et ce qu'elle consomme.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The home screen shows your reading time and the progress of analyses; the performance panel shows what the app is doing and what it uses."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L'accueil montre ton temps de lecture et l'avancée des analyses ; le panneau des performances montre ce que fait l'app et ce qu'elle consomme."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "主页显示你的阅读时间和分析进度；性能面板显示应用正在做什么以及资源占用。"
+          }
+        }
+      }
+    },
+    "Voir où passe ton temps, et savoir quand l'IA travaille.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "See where your time goes, and know when the AI is working."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voir où passe ton temps, et savoir quand l'IA travaille."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "了解时间花在哪里，并知道 AI 何时在工作。"
+          }
+        }
+      }
+    },
+    "Les réglages ajustent la lecture, l'OCR, l'IA, la langue de l'app et le thème ; ils sauvegardent aussi la bibliothèque et relancent cette visite.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Settings adjust reading, OCR, AI, the app's language and theme; they also back up the library and replay this tour."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les réglages ajustent la lecture, l'OCR, l'IA, la langue de l'app et le thème ; ils sauvegardent aussi la bibliothèque et relancent cette visite."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "设置可调整阅读、OCR、AI、应用语言和主题；还可备份资料库并重新播放本导览。"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
