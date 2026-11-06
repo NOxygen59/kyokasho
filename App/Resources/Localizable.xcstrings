@@ -49786,6 +49786,28 @@
           }
         }
       }
+    },
+    "Accueil : la rangée des documents ouverts montre le titre et les infos en entier.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Home: the row of open documents shows the full title and details."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accueil : la rangée des documents ouverts montre le titre et les infos en entier."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "主页：已打开文档一栏完整显示标题和信息。"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

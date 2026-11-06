@@ -25,11 +25,11 @@ struct OpenDocumentsStrip: View {
                         .foregroundStyle(palette.secondaryInk)
                         .fixedSize()
                     ScrollView(.horizontal, showsIndicators: false) {
-                        LazyHStack(spacing: 6) {
+                        LazyHStack(spacing: 8) {
                             ForEach(documents) { CompactOpenDocument(document: $0, palette: palette) }
                         }
                     }
-                    .frame(height: 44)
+                    .frame(height: CompactOpenDocument.height)
                 }
             } else {
                 legacyStrip
@@ -87,35 +87,41 @@ private struct CompactOpenDocument: View {
     private var page: String { document.pageLabel(min(max(0, document.lastPageIndex), max(0, document.pageCount - 1))) }
     private var finalPage: String { document.pageLabel(max(0, document.pageCount - 1)) }
 
+    /// Hauteur de l'entrée : deux lignes de titre et la ligne d'infos tiennent dans le rectangle, avec sa marge
+    /// (recette de la 1.5.0 : le titre et les infos débordaient de l'ancienne entrée de 44 pt, à largeur fixe).
+    static let height: CGFloat = 58
+
     var body: some View {
-        HStack(spacing: 0) {
+        HStack(spacing: 8) {
             Button { model.openDocumentId = document.id } label: {
-                HStack(spacing: 6) {
+                HStack(spacing: 8) {
                     Group {
                         if let cover {
-                            Image(uiImage: cover).resizable().scaledToFit()
+                            Image(uiImage: cover).resizable().scaledToFill()
                         } else {
-                            Image(systemName: "doc").font(Atelier.font(12))
+                            Image(systemName: "doc").font(Atelier.font(13))
                         }
                     }
-                    .frame(width: 20, height: 26)
+                    .frame(width: 30, height: 40)
+                    .clipShape(RoundedRectangle(cornerRadius: Atelier.corner(3)))
                     .foregroundStyle(palette.secondaryInk)
                     .accessibilityHidden(true)
-                    VStack(alignment: .leading, spacing: 1) {
+                    VStack(alignment: .leading, spacing: 2) {
                         Text(ui: document.title)
                             .font(Atelier.font(12, weight: .semibold))
-                            .lineLimit(1)
+                            .lineLimit(2)
                             .truncationMode(.middle)
+                            .multilineTextAlignment(.leading)
+                            .fixedSize(horizontal: false, vertical: true)
                             .foregroundStyle(palette.ink.opacity(0.96))
-                        Text(verbatim: "\(kind) · \(page)/\(finalPage)")
+                        Text(verbatim: "\(kind) · p. \(page)/\(finalPage)")
                             .font(Atelier.font(10))
                             .lineLimit(1)
+                            .minimumScaleFactor(0.8)
                             .foregroundStyle(palette.secondaryInk)
                     }
-                    .frame(width: 150, alignment: .leading)
+                    .frame(minWidth: 130, maxWidth: 210, alignment: .leading)
                 }
-                .padding(.leading, 6)
-                .frame(height: 44)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -123,19 +129,22 @@ private struct CompactOpenDocument: View {
             .accessibilityValue(Text("\(kind), page \(page) sur \(finalPage)"))
             Button { model.closeTab(document.id) } label: {
                 Image(systemName: "xmark")
-                    .font(Atelier.font(9, weight: .semibold))
+                    .font(Atelier.font(10, weight: .semibold))
                     .foregroundStyle(palette.secondaryInk)
+                    .frame(width: 30, height: 30)
+                    .background(palette.surface.opacity(0.6), in: Circle())
                     .frame(width: 44, height: 44)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .accessibilityLabel(String(localized: "Fermer « \(document.title) »"))
         }
-        .background(alignment: .center) {
-            RoundedRectangle(cornerRadius: Atelier.corner(8))
-                .fill(palette.surfaceHigh)
-                .padding(.vertical, 2)
-        }
+        .padding(.leading, 7)
+        .padding(.vertical, 5)
+        .frame(height: Self.height)
+        .background(palette.surfaceHigh, in: RoundedRectangle(cornerRadius: Atelier.corner(10)))
+        .overlay(RoundedRectangle(cornerRadius: Atelier.corner(10)).strokeBorder(palette.separator, lineWidth: Atelier.border(1)))
+        .clipShape(RoundedRectangle(cornerRadius: Atelier.corner(10)))
         .onAppear {
             guard cover == nil else { return }
             model.thumbnails.thumbnail(documentId: document.id, fileURL: model.storage.url(for: document.id),

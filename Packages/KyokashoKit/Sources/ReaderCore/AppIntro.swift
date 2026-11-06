@@ -111,6 +111,7 @@ public struct ReleaseNotes: Equatable, Sendable, Identifiable {
             String(localized: "OCR : un caractère seul bien lu n'est plus effacé ; positions plus justes en vertical.", bundle: .main),
             String(localized: "Surlignage : plus d'aperçu périmé, gomme au simple toucher, déplacement à deux doigts en double page.", bundle: .main),
             String(localized: "Catalogue des dictionnaires : « Annuler » arrête vraiment l'installation en cours.", bundle: .main),
+            String(localized: "Accueil : la rangée des documents ouverts montre le titre et les infos en entier.", bundle: .main),
         ])
 
     /// Notes de `version` (« 1.3.2 », sans le numéro de build) : la version elle-même, jamais une build de test.
