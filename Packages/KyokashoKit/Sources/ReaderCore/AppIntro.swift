@@ -101,15 +101,16 @@ public struct ReleaseNotes: Equatable, Sendable, Identifiable {
 
     /// La version en cours de préparation : seulement ce qu'elle change (décision de NOxygen59 du 04/11/2026). C'est
     /// elle que montre la fenêtre « Nouveautés » ; les versions précédentes vont dans `ReleaseHistory`.
-    public static let current = ReleaseNotes("1.4.9", "2026-11-06", published: false, String(localized: "Sélection, zoom en surlignage et petits réglages", bundle: .main), added: [
-            String(localized: "Catalogue des dictionnaires : un bouton pour tout installer.", bundle: .main),
-            String(localized: "Accueil : une petite barre montre l'avancée de l'analyse sous le document.", bundle: .main),
-            String(localized: "Badge du lecteur : Wi-Fi et partage de connexion dans l'anneau.", bundle: .main),
+    public static let current = ReleaseNotes("1.5.0", "2026-11-06", published: false, String(localized: "Thèmes et nouveaux réglages des mangas", bundle: .main), added: [
+            String(localized: "Réglages → Thèmes : une pilule Kyōkasho | Manga et des cartes pour choisir la palette de chaque espace ; le lecteur prend la palette du document.", bundle: .main),
+            String(localized: "Double-toucher : le zoom s'anime, à l'aller comme au retour.", bundle: .main),
+            String(localized: "Visite guidée mise à jour.", bundle: .main),
         ], fixed: [
-            String(localized: "Tout sélectionner ne prend plus que les pages affichées.", bundle: .main),
-            String(localized: "Le zoom à deux doigts marche en mode surlignage.", bundle: .main),
-            String(localized: "Mangas : chat IA retiré, furigana mieux contenus.", bundle: .main),
-            String(localized: "Boutons du moniteur plus grands.", bundle: .main),
+            String(localized: "Mangas : les furigana ajoutés sont masqués par défaut ; le bouton あ les affiche pour ce manga, le panneau Texte garde les lectures.", bundle: .main),
+            String(localized: "Furigana mieux contenus sur les lectures longues et les PDF à texte.", bundle: .main),
+            String(localized: "OCR : un caractère seul bien lu n'est plus effacé ; positions plus justes en vertical.", bundle: .main),
+            String(localized: "Surlignage : plus d'aperçu périmé, gomme au simple toucher, déplacement à deux doigts en double page.", bundle: .main),
+            String(localized: "Catalogue des dictionnaires : « Annuler » arrête vraiment l'installation en cours.", bundle: .main),
         ])
 
     /// Notes de `version` (« 1.3.2 », sans le numéro de build) : la version elle-même, jamais une build de test.

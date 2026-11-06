@@ -10,6 +10,16 @@ import Foundation
 enum ReleaseHistory {
     static let past: [ReleaseNotes] = [
         // Candidates locales non publiées.
+        ReleaseNotes("1.4.9", "2026-11-06", published: false, String(localized: "Sélection, zoom en surlignage et petits réglages", bundle: .main), added: [
+            String(localized: "Catalogue des dictionnaires : un bouton pour tout installer.", bundle: .main),
+            String(localized: "Accueil : une petite barre montre l'avancée de l'analyse sous le document.", bundle: .main),
+            String(localized: "Badge du lecteur : Wi-Fi et partage de connexion dans l'anneau.", bundle: .main),
+        ], fixed: [
+            String(localized: "Tout sélectionner ne prend plus que les pages affichées.", bundle: .main),
+            String(localized: "Le zoom à deux doigts marche en mode surlignage.", bundle: .main),
+            String(localized: "Mangas : chat IA retiré, furigana mieux contenus.", bundle: .main),
+            String(localized: "Boutons du moniteur plus grands.", bundle: .main),
+        ]),
         ReleaseNotes("1.4.8", "2026-11-05", published: false, String(localized: "Tableau de bord, texte vertical et batterie", bundle: .main), added: [
             String(localized: "Tableau de bord : touche le temps de lecture sur l'accueil pour voir ta lecture, tes révisions, ta bibliothèque et les performances.", bundle: .main),
             String(localized: "Le temps de lecture repart de zéro, avec les pages vues et les mots cherchés.", bundle: .main),

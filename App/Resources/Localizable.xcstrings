@@ -49588,6 +49588,204 @@
           }
         }
       }
+    },
+    "Thèmes et nouveaux réglages des mangas": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Themes and new manga settings"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thèmes et nouveaux réglages des mangas"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "主题与漫画新设置"
+          }
+        }
+      }
+    },
+    "Réglages → Thèmes : une pilule Kyōkasho | Manga et des cartes pour choisir la palette de chaque espace ; le lecteur prend la palette du document.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Settings → Themes: a Kyōkasho | Manga switch and cards to choose each space's palette; the reader uses the document's palette."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Réglages → Thèmes : une pilule Kyōkasho | Manga et des cartes pour choisir la palette de chaque espace ; le lecteur prend la palette du document."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "设置 → 主题：通过 Kyōkasho | 漫画 切换和卡片为每个空间选择配色；阅读器使用文档所属空间的配色。"
+          }
+        }
+      }
+    },
+    "Double-toucher : le zoom s'anime, à l'aller comme au retour.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Double-tap: zooming is animated, in and out."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Double-toucher : le zoom s'anime, à l'aller comme au retour."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "轻点两下：放大和缩小都有动画。"
+          }
+        }
+      }
+    },
+    "Visite guidée mise à jour.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Updated guided tour."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Visite guidée mise à jour."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导览已更新。"
+          }
+        }
+      }
+    },
+    "Mangas : les furigana ajoutés sont masqués par défaut ; le bouton あ les affiche pour ce manga, le panneau Texte garde les lectures.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manga: added furigana are hidden by default; the あ button shows them for this manga, and the Text panel keeps the readings."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mangas : les furigana ajoutés sont masqués par défaut ; le bouton あ les affiche pour ce manga, le panneau Texte garde les lectures."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "漫画：默认隐藏添加的振假名；あ 按钮可为当前漫画显示，“文本”面板保留读音。"
+          }
+        }
+      }
+    },
+    "Furigana mieux contenus sur les lectures longues et les PDF à texte.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Furigana better contained on long readings and text PDFs."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Furigana mieux contenus sur les lectures longues et les PDF à texte."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "长读音和带文字的 PDF 上振假名更规整。"
+          }
+        }
+      }
+    },
+    "OCR : un caractère seul bien lu n'est plus effacé ; positions plus justes en vertical.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OCR: a single well-read character is no longer removed; more accurate positions in vertical text."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OCR : un caractère seul bien lu n'est plus effacé ; positions plus justes en vertical."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OCR：识别准确的单个字符不再被删除；竖排位置更准确。"
+          }
+        }
+      }
+    },
+    "Surlignage : plus d'aperçu périmé, gomme au simple toucher, déplacement à deux doigts en double page.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Highlighting: no stale preview, eraser on a single tap, two-finger panning in two-page view."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Surlignage : plus d'aperçu périmé, gomme au simple toucher, déplacement à deux doigts en double page."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "高亮：不再出现过时预览，橡皮擦轻点即可，双页模式下双指移动。"
+          }
+        }
+      }
+    },
+    "Catalogue des dictionnaires : « Annuler » arrête vraiment l'installation en cours.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dictionary catalog: “Cancel” really stops the current installation."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Catalogue des dictionnaires : « Annuler » arrête vraiment l'installation en cours."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "词典目录：“取消”会真正停止当前安装。"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
