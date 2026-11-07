@@ -177,4 +177,20 @@ final class OCRPageSelectionTests: XCTestCase {
         XCTAssertEqual(selection.pinned[2], OCREngineID.ndlocr)
         XCTAssertEqual(selection.selected[2], OCREngineID.ndlocr)
     }
+
+    /// Contre-revue Claude de 1ef9ab9 (L1) : un choix du menu déjà affiché survit à la rotation, même si un autre choix
+    /// fait ensuite échoue (la rotation vide le moteur dessiné, pas le choix).
+    func testRevertKeepsAConfirmedPinAfterRotation() {
+        var selection = OCRPageSelection()
+        selection.pin(OCREngineID.ndlocr, source: 3)
+        XCTAssertTrue(selection.adopt(OCREngineID.ndlocr, ticket: selection.ticket(for: 3)))
+        selection.publish(OCREngineID.ndlocr, source: 3)
+        selection.forget(3)
+        let intent = selection.pin(OCREngineID.vision, source: 3)
+        XCTAssertTrue(selection.revert(intent))
+        XCTAssertEqual(selection.pinned[3], OCREngineID.ndlocr)
+        XCTAssertNil(selection.selected[3], "rien n'est dessiné après la rotation : la page se relira selon le choix")
+        selection.reset()
+        XCTAssertNil(selection.pinned[3])
+    }
 }

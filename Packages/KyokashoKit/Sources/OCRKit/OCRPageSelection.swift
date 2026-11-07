@@ -31,6 +31,9 @@ public struct OCRPageSelection: Sendable {
     /// passage NDLOCR → texte du PDF par le menu doit encore savoir que des furigana NDLOCR sont à retirer
     /// (contre-revue Codex de 51f8a2d, F1).
     public private(set) var published: [Int: String] = [:]
+    /// Choix du menu déjà dessiné au moins une fois pour la page : seul choix qu'un échec peut rétablir. Gardé à la
+    /// rotation (qui vide `published`), vidé par un nouveau réglage (contre-revue Claude de 1ef9ab9, L1).
+    private var confirmedPinned: [Int: String] = [:]
     private var revisions: [Int: Int] = [:]
     /// Incrémentée par `reset` : périme d'un coup toutes les pages, même celles sans révision propre.
     private var epoch = 0
@@ -47,7 +50,6 @@ public struct OCRPageSelection: Sendable {
         public let ticket: Ticket
         /// Moteur demandé par cette intention.
         let engine: String
-        let previousPinned: String?
     }
 
     /// Vrai si aucune intention ni changement de moteur adopté n'a eu lieu pour la page depuis la prise du ticket.
@@ -59,20 +61,18 @@ public struct OCRPageSelection: Sendable {
     /// Choix du menu du panneau : retenu pour la page ; les demandes en cours pour elle deviennent périmées.
     @discardableResult
     public mutating func pin(_ engine: String, source: Int) -> Intent {
-        let previousPinned = pinned[source]
         invalidate(source)
         pinned[source] = engine
         selected[source] = engine
-        return Intent(ticket: ticket(for: source), engine: engine, previousPinned: previousPinned)
+        return Intent(ticket: ticket(for: source), engine: engine)
     }
 
     /// « Relancer » avec un moteur connu : même moteur retenu, sans en faire un choix durable pour la page.
     @discardableResult
     public mutating func retain(_ engine: String, source: Int) -> Intent {
-        let previousPinned = pinned[source]
         invalidate(source)
         selected[source] = engine
-        return Intent(ticket: ticket(for: source), engine: engine, previousPinned: previousPinned)
+        return Intent(ticket: ticket(for: source), engine: engine)
     }
 
     /// Lecture de l'intention échouée : la lecture **affichée** (`published`) redevient explicitement l'OCR retenu, plutôt
@@ -81,7 +81,8 @@ public struct OCRPageSelection: Sendable {
     /// Contre-revue Codex de 4522367 : rétablir l'état sauvegardé pouvait remettre une intention annulée et jamais publiée
     /// (Vision puis GLM-OCR choisis, GLM-OCR en échec), ou défaire un moteur dessiné entre-temps par un autre chemin. D'où :
     /// - sans effet si une intention plus récente existe, ou si le moteur demandé est déjà celui qui est affiché ;
-    /// - moteur retenu = moteur affiché ; choix du menu d'avant gardé seulement s'il correspond à l'affichage.
+    /// - moteur retenu = moteur affiché ; choix du menu rétabli = dernier choix déjà dessiné (`confirmedPinned`), jamais
+    ///   une intention restée sans affichage.
     /// Les demandes encore en route pour l'intention échouée restent refusées.
     /// - Returns: `true` si l'état a été rétabli sur la lecture affichée.
     @discardableResult
@@ -90,7 +91,7 @@ public struct OCRPageSelection: Sendable {
         guard isCurrent(intent.ticket), published[source] != intent.engine else { return false }
         invalidate(source)
         selected[source] = published[source]
-        pinned[source] = intent.previousPinned == published[source] ? intent.previousPinned : nil
+        pinned[source] = confirmedPinned[source]
         return true
     }
 
@@ -100,6 +101,7 @@ public struct OCRPageSelection: Sendable {
     public mutating func publish(_ engine: String, source: Int) -> String? {
         let previous = published[source]
         published[source] = engine
+        if pinned[source] == engine { confirmedPinned[source] = engine }
         return previous == engine ? nil : previous
     }
 
@@ -121,6 +123,7 @@ public struct OCRPageSelection: Sendable {
         pinned.removeAll()
         selected.removeAll()
         published.removeAll()
+        confirmedPinned.removeAll()
         revisions.removeAll()
     }
 
