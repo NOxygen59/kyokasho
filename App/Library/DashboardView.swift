@@ -53,6 +53,7 @@ struct DashboardView: View {
             VStack(spacing: 0) {
                 ZStack {
                     Text("Tableau de bord").font(Atelier.font(17, weight: .semibold)).foregroundStyle(Atelier.textPrimary)
+                        .accessibilityAddTraits(.isHeader) // Rôle que donnait la barre système (relecture 1.5.3, L1).
                     HStack {
                         Spacer()
                         Button("OK", action: onClose).font(Atelier.font(17, weight: .semibold))

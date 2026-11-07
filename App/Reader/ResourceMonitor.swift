@@ -180,7 +180,9 @@ struct ResourceMonitorPanel: View {
         // Pendant que la forme s'élargit et s'allonge, rien ne dépasse de ses bords (ouverture jugée bizarre par NOxygen59,
         // 07/11/2026 : courbe et liste surgissaient pleines, par-dessus le panneau encore étroit). Découpe avant le fond,
         // pour garder son ombre.
-        .clipShape(RoundedRectangle(cornerRadius: embedded ? 0 : 14, style: .continuous))
+        // Même forme que le fond (`MonitorBackground` → `atelierPanel(radius: 14)`), angles droits ou chanfreins compris
+        // (relecture 1.5.3, L2).
+        .clipShape(StyledPanelShape(radius: embedded ? 0 : 14, kind: AppStyle.current.panelShape))
         .modifier(MonitorBackground(embedded: embedded))
         // Même ressort que la capsule : la courbe se déroule dans le prolongement du même mouvement.
         .animation(reduceMotion ? .easeOut(duration: 0.15) : .spring(response: 0.42, dampingFraction: 0.9), value: detailed)

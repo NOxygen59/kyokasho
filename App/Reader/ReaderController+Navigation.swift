@@ -447,10 +447,17 @@ extension ReaderController {
         let fit = pdfView.scaleFactorForSizeToFit
         // Zoom animé par le défilement interne de PDFKit (demande de NOxygen59 du 06/11/2026) ; sans lui, ou avec
         // « Réduire les animations », le zoom reste immédiat comme avant.
-        let scroll = UIAccessibility.isReduceMotionEnabled ? nil : zoomableScrollView(at: point)
+        let pageScroll = zoomableScrollView(at: point)
+        let scroll = UIAccessibility.isReduceMotionEnabled ? nil : pageScroll
         let zoomView = scroll.flatMap { $0.delegate?.viewForZooming?(in: $0) }
-        if !pdfView.isAtFit {
+        // Zoomé ? En page unique avec glissement, le zoom vit dans le défilement de la page ; PDFKit ne le reporte peut-être
+        // pas dans `scaleFactor` (`isAtFit` resterait vrai et le double toucher zoomerait encore au lieu de revenir à la
+        // page entière). On regarde donc aussi l'échelle de ce défilement (relecture du lot 1.5.3, R1).
+        let pageZoomed = pageScroll.map { $0.minimumZoomScale > 0 && $0.zoomScale > $0.minimumZoomScale * 1.01 } ?? false
+        if !pdfView.isAtFit || pageZoomed {
             guard let scroll, zoomView != nil, scroll.minimumZoomScale > 0 else {
+                // Sans animation : remettre aussi le défilement de la page à son minimum, puis l'ajustement habituel.
+                if pageZoomed, let pageScroll { pageScroll.setZoomScale(pageScroll.minimumZoomScale, animated: false) }
                 pdfView.fitToPage()
                 return
             }

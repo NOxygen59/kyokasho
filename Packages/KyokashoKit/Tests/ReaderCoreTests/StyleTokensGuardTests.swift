@@ -276,10 +276,12 @@ final class StyleTokensGuardTests: XCTestCase {
         XCTAssertTrue(library.contains("static var dashboardRadius: CGFloat { max(Atelier.corner(26), 18) }"))
         // Zoom animé en page unique : défilement zoomable de la page touchée.
         let navigation = try read("Reader/ReaderController+Navigation.swift")
-        XCTAssertTrue(navigation.contains("let scroll = UIAccessibility.isReduceMotionEnabled ? nil : zoomableScrollView(at: point)"))
+        XCTAssertTrue(navigation.contains("let pageScroll = zoomableScrollView(at: point)"))
         // Moniteur : ouverture en deux temps, contenu découpé avant le fond (ombre gardée).
         let monitor = try read("Reader/ResourceMonitor.swift")
         XCTAssertTrue(monitor.contains("insertion: .opacity.animation(.easeOut(duration: 0.22).delay(0.2))"))
-        XCTAssertTrue(monitor.contains(".clipShape(RoundedRectangle(cornerRadius: embedded ? 0 : 14, style: .continuous))\n        .modifier(MonitorBackground(embedded: embedded))"))
+        XCTAssertTrue(monitor.contains(".clipShape(StyledPanelShape(radius: embedded ? 0 : 14, kind: AppStyle.current.panelShape))\n        .modifier(MonitorBackground(embedded: embedded))"))
+        // R1 : le retour à la page entière regarde aussi le zoom du défilement de la page.
+        XCTAssertTrue(navigation.contains("if !pdfView.isAtFit || pageZoomed {"))
     }
 }
