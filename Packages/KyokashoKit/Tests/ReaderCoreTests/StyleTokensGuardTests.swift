@@ -262,4 +262,24 @@ final class StyleTokensGuardTests: XCTestCase {
         }
         return found
     }
+
+    /// Lot 1.5.3 (retours de NOxygen59, 07–08/11/2026). Contrôle du source : ces vues dépendent de SwiftUI/PDFKit.
+    func testLot153InterfaceRequests() throws {
+        let app = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .appendingPathComponent("../../../../App").standardizedFileURL
+        func read(_ path: String) throws -> String { try String(contentsOf: app.appendingPathComponent(path), encoding: .utf8) }
+        // Panneau de gauche : outils d'étude masqués en Manga ; sections Manga puis CBZ.
+        let library = try read("Library/LibraryView.swift")
+        XCTAssertEqual(library.components(separatedBy: "if space != .manga {").count, 3)
+        XCTAssertTrue(library.contains("return LibrarySections.groupManga(filtered)"))
+        // Tableau de bord : coins arrondis même pour un style à angles droits.
+        XCTAssertTrue(library.contains("static var dashboardRadius: CGFloat { max(Atelier.corner(26), 18) }"))
+        // Zoom animé en page unique : défilement zoomable de la page touchée.
+        let navigation = try read("Reader/ReaderController+Navigation.swift")
+        XCTAssertTrue(navigation.contains("let scroll = UIAccessibility.isReduceMotionEnabled ? nil : zoomableScrollView(at: point)"))
+        // Moniteur : ouverture en deux temps, contenu découpé avant le fond (ombre gardée).
+        let monitor = try read("Reader/ResourceMonitor.swift")
+        XCTAssertTrue(monitor.contains("insertion: .opacity.animation(.easeOut(duration: 0.22).delay(0.2))"))
+        XCTAssertTrue(monitor.contains(".clipShape(RoundedRectangle(cornerRadius: embedded ? 0 : 14, style: .continuous))\n        .modifier(MonitorBackground(embedded: embedded))"))
+    }
 }

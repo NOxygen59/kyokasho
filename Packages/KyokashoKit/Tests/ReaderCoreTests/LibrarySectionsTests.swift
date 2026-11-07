@@ -29,4 +29,23 @@ final class LibrarySectionsTests: XCTestCase {
         XCTAssertNotEqual(initial, LibraryCardRenderIdentity(documentId: "d", category: nil, selecting: true))
         XCTAssertEqual(initial, LibraryCardRenderIdentity(documentId: "d", category: nil, selecting: false))
     }
+
+    // Espace Manga en deux sections, comme Livres et Manuels (demande de NOxygen59, 07/11/2026) : les mangas PDF d'abord,
+    // puis les CBZ. Une section vide n'apparaît pas ; l'ordre des documents est gardé.
+
+    private func mangaDoc(_ id: String, file: String) -> LibraryDocument {
+        LibraryDocument(id: id, title: id, originalFileName: file, pageCount: 1, fileSize: 1)
+    }
+
+    func testMangaSpaceSplitsPDFMangaAndCBZ() {
+        let sections = LibrarySections.groupManga([mangaDoc("a", file: "a.cbz"), mangaDoc("b", file: "b.pdf"), mangaDoc("c", file: "c.cbz")])
+        XCTAssertEqual(sections.map { $0.documents.map(\.id) }, [["b"], ["a", "c"]])
+    }
+
+    func testEmptyMangaSectionIsHidden() {
+        let sections = LibrarySections.groupManga([mangaDoc("a", file: "a.cbz")])
+        XCTAssertEqual(sections.count, 1)
+        XCTAssertEqual(sections.first?.documents.map(\.id), ["a"])
+        XCTAssertTrue(LibrarySections.groupManga([]).isEmpty)
+    }
 }

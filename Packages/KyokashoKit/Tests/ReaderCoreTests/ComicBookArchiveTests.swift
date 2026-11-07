@@ -85,7 +85,7 @@ final class ComicBookArchiveTests: XCTestCase {
         let settings = first.document.settingsOverride
         XCTAssertEqual(settings.layout, .auto, "une page en portrait, deux en paysage, quels que soient les réglages généraux")
         XCTAssertEqual(settings.splitWidePages, false, "planches larges intactes")
-        XCTAssertEqual(settings.direction, .rightToLeft)
+        XCTAssertEqual(settings.direction, .leftToRight, "CBZ lus de gauche à droite par défaut (demande de NOxygen59, 08/11/2026)")
         let second = try importer.importComicArchive(at: source)
         XCTAssertFalse(second.isNew)
         XCTAssertEqual(second.document.id, first.document.id)

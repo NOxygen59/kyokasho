@@ -65,10 +65,10 @@ struct LibraryView: View {
         model.documents.filter { $0.isInMangaSpace == (space == .manga) }
     }
 
-    /// Le Manga forme une seule liste ; les catégories Livre et Manuel n'y ont pas de sens.
+    /// Livres et Manuels : sections par catégorie. Manga : « Manga » (PDF) puis « CBZ » (demande de NOxygen59, 07/11/2026).
     private var sections: [LibrarySections.Section] {
         guard space == .manga else { return LibrarySections.group(filtered) }
-        return filtered.isEmpty ? [] : [LibrarySections.Section(category: nil, title: String(localized: "Manga"), documents: filtered)]
+        return LibrarySections.groupManga(filtered)
     }
 
     private var selectedComics: [LibraryDocument] {
@@ -251,8 +251,9 @@ struct LibraryView: View {
                     DashboardView(onClose: { showDashboard = false })
                         .environmentObject(model).environmentObject(model.review)
                         .frame(maxWidth: 1040, maxHeight: 860)
-                        .clipShape(RoundedRectangle(cornerRadius: Atelier.corner(26), style: .continuous))
-                        .atelierShapeShadow(RoundedRectangle(cornerRadius: Atelier.corner(26), style: .continuous),
+                        // Coins toujours arrondis, même avec un style à angles droits (demande de NOxygen59, 07/11/2026).
+                        .clipShape(RoundedRectangle(cornerRadius: Self.dashboardRadius, style: .continuous))
+                        .atelierShapeShadow(RoundedRectangle(cornerRadius: Self.dashboardRadius, style: .continuous),
                                             opacity: 0.35, radius: 30, y: 12)
                         .padding(.horizontal, 36).padding(.vertical, 28)
                         .accessibilityAddTraits(.isModal)
@@ -349,6 +350,9 @@ struct LibraryView: View {
         }
     }
 
+    /// Rayon de la fenêtre du tableau de bord : celui du style, jamais moins de 18 pt.
+    static var dashboardRadius: CGFloat { max(Atelier.corner(26), 18) }
+
     // MARK: Barre latérale
 
     /// Colonne de gauche. Trop haute pour l'écran (outils ajoutés, carte de l'IA), elle étirait toute la page,
@@ -395,13 +399,19 @@ struct LibraryView: View {
             }
             VStack(alignment: .leading, spacing: 4) {
                 AtelierLabel(String(localized: "Outils")).padding(.bottom, 4)
-                actionRow(icon: "rectangle.stack.badge.play", title: String(localized: "Révisions"), tint: Atelier.Tint.japanese,
-                          count: review.counts.total) { showReview = true }
-                actionRow(icon: "character.book.closed.ja", title: String(localized: "Dictionnaire"), tint: Atelier.Tint.japanese,
-                          count: model.dictionary.notebook.saved.count) { showDictionary = true }
+                // Manga : pas de révisions, de dictionnaire, d'images vers PDF ni de banc d'essai OCR (demande de NOxygen59,
+                // 07/11/2026) ; ces outils servent l'étude des manuels.
+                if space != .manga {
+                    actionRow(icon: "rectangle.stack.badge.play", title: String(localized: "Révisions"), tint: Atelier.Tint.japanese,
+                              count: review.counts.total) { showReview = true }
+                    actionRow(icon: "character.book.closed.ja", title: String(localized: "Dictionnaire"), tint: Atelier.Tint.japanese,
+                              count: model.dictionary.notebook.saved.count) { showDictionary = true }
+                }
                 actionRow(icon: "doc.on.doc", title: String(localized: "Fusionner des PDF"), tint: Atelier.Tint.cloud) { showMerge = true }
-                actionRow(icon: "photo.on.rectangle.angled", title: String(localized: "Images vers PDF"), tint: Atelier.Tint.cloud) { showImagesToPDF = true }
-                actionRow(icon: "gauge.with.dots.needle.33percent", title: String(localized: "Banc d'essai OCR"), tint: Atelier.Tint.japanese) { showBench = true }
+                if space != .manga {
+                    actionRow(icon: "photo.on.rectangle.angled", title: String(localized: "Images vers PDF"), tint: Atelier.Tint.cloud) { showImagesToPDF = true }
+                    actionRow(icon: "gauge.with.dots.needle.33percent", title: String(localized: "Banc d'essai OCR"), tint: Atelier.Tint.japanese) { showBench = true }
+                }
                 actionRow(icon: "trash", title: String(localized: "Corbeille"), tint: Atelier.textSecondary,
                           count: model.trashedDocuments.count) { showTrash = true }
                 actionRow(icon: "gearshape", title: String(localized: "Réglages"), tint: Atelier.textSecondary) { showSettings = true }

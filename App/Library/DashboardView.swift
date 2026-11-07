@@ -47,7 +47,36 @@ struct DashboardView: View {
     private static let ringWidth: CGFloat = 7
 
     var body: some View {
-        NavigationStack {
+        if let onClose {
+            // Fenêtre posée sur l'accueil : barre de titre dessinée ici, dans la découpe arrondie. La barre de navigation
+            // du système, rendue par UIKit, pouvait ne pas suivre les coins arrondis (demande de NOxygen59, 07/11/2026).
+            VStack(spacing: 0) {
+                ZStack {
+                    Text("Tableau de bord").font(Atelier.font(17, weight: .semibold)).foregroundStyle(Atelier.textPrimary)
+                    HStack {
+                        Spacer()
+                        Button("OK", action: onClose).font(Atelier.font(17, weight: .semibold))
+                    }
+                }
+                .padding(.horizontal, 20).padding(.vertical, 12)
+                .background(Atelier.surface)
+                Divider()
+                content
+            }
+            .background(Atelier.canvas)
+            .task { reviewStats = try? review.store.stats(settings: review.settings) }
+        } else {
+            NavigationStack {
+                content
+                    .navigationTitle(Text("Tableau de bord"))
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar { ToolbarItem(placement: .confirmationAction) { Button("OK") { dismiss() } } }
+            }
+            .task { reviewStats = try? review.store.stats(settings: review.settings) }
+        }
+    }
+
+    private var content: some View {
             GeometryReader { area in
                 let wide = area.size.width >= 640
                 ScrollView {
@@ -70,11 +99,6 @@ struct DashboardView: View {
                 }
             }
             .background(Atelier.canvas.ignoresSafeArea())
-            .navigationTitle(Text("Tableau de bord"))
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("OK") { if let onClose { onClose() } else { dismiss() } } } }
-        }
-        .task { reviewStats = try? review.store.stats(settings: review.settings) }
     }
 
     // MARK: Lecture

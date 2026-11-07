@@ -350,6 +350,23 @@ extension ReaderController {
         return find(pdfView)
     }
 
+    /// Défilement zoomable de la page sous `point`. En page unique avec glissement, PDFKit passe par un contrôleur de pages :
+    /// le premier défilement trouvé (`pdfInnerScrollView`) est alors celui qui fait tourner les pages, sans vue à zoomer,
+    /// et le double toucher retombait sur le zoom immédiat, sans animation (retour de NOxygen59 du 07/11/2026, portrait
+    /// comme paysage). Chaque page y a son propre défilement zoomable : on prend celui qui contient le point.
+    func zoomableScrollView(at point: CGPoint) -> UIScrollView? {
+        var zoomable: [UIScrollView] = []
+        func collect(_ view: UIView) {
+            for sub in view.subviews {
+                if let scroll = sub as? UIScrollView, scroll.delegate?.viewForZooming?(in: scroll) != nil { zoomable.append(scroll) }
+                collect(sub)
+            }
+        }
+        collect(pdfView)
+        let visible = zoomable.filter { !$0.isHidden && $0.window != nil && $0.alpha > 0 }
+        return visible.first { $0.convert($0.bounds, to: pdfView).contains(point) } ?? visible.first
+    }
+
     /// Glisser du défilement interne de PDFKit (le pincement est un autre geste et reste actif).
     private func setInnerPan(enabled: Bool) {
         guard let scroll = pdfInnerScrollView else {
@@ -430,7 +447,7 @@ extension ReaderController {
         let fit = pdfView.scaleFactorForSizeToFit
         // Zoom animé par le défilement interne de PDFKit (demande de NOxygen59 du 06/11/2026) ; sans lui, ou avec
         // « Réduire les animations », le zoom reste immédiat comme avant.
-        let scroll = UIAccessibility.isReduceMotionEnabled ? nil : pdfInnerScrollView
+        let scroll = UIAccessibility.isReduceMotionEnabled ? nil : zoomableScrollView(at: point)
         let zoomView = scroll.flatMap { $0.delegate?.viewForZooming?(in: $0) }
         if !pdfView.isAtFit {
             guard let scroll, zoomView != nil, scroll.minimumZoomScale > 0 else {

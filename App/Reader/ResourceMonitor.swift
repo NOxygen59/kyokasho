@@ -171,12 +171,16 @@ struct ResourceMonitorPanel: View {
             if detailed && !expandsDown { chart }
             header
             if detailed && expandsDown { chart }
-            if detailed && showsActivities { MonitorActivityList() }
+            if detailed && showsActivities { MonitorActivityList().transition(unfoldTransition) }
         }
         .font(.system(size: 11, weight: .semibold, design: .monospaced))
         .foregroundStyle(Atelier.textPrimary)
         .padding(.horizontal, 10).padding(.vertical, 6)
         .frame(maxWidth: fillsWidth ? .infinity : nil, alignment: .leading)
+        // Pendant que la forme s'élargit et s'allonge, rien ne dépasse de ses bords (ouverture jugée bizarre par NOxygen59,
+        // 07/11/2026 : courbe et liste surgissaient pleines, par-dessus le panneau encore étroit). Découpe avant le fond,
+        // pour garder son ombre.
+        .clipShape(RoundedRectangle(cornerRadius: embedded ? 0 : 14, style: .continuous))
         .modifier(MonitorBackground(embedded: embedded))
         // Même ressort que la capsule : la courbe se déroule dans le prolongement du même mouvement.
         .animation(reduceMotion ? .easeOut(duration: 0.15) : .spring(response: 0.42, dampingFraction: 0.9), value: detailed)
@@ -264,7 +268,16 @@ struct ResourceMonitorPanel: View {
         }
         .accessibilityLabel("\(metric.title), 90 dernières secondes")
         // Révélée par le haut (la forme qui la porte s'allonge), sans glisser par-dessus les valeurs.
-        .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 1, anchor: expandsDown ? .top : .bottom)))
+        .transition(unfoldTransition)
+    }
+
+    /// Ouverture en deux temps : la forme du panneau s'agrandit d'abord, puis courbe et activités apparaissent en fondu ;
+    /// à la fermeture, elles s'effacent vite avant que la forme se replie. L'ancienne transition (échelle 1) ne faisait
+    /// qu'un fondu simultané à l'élargissement.
+    private var unfoldTransition: AnyTransition {
+        guard !reduceMotion else { return .opacity }
+        return .asymmetric(insertion: .opacity.animation(.easeOut(duration: 0.22).delay(0.2)),
+                           removal: .opacity.animation(.easeIn(duration: 0.1)))
     }
 
     /// Valeur de l'en-tête ; en mode détaillé, la toucher choisit la courbe affichée (mesure choisie mise en avant).

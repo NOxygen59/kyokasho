@@ -273,13 +273,14 @@ extension DocumentImporter {
         return ImportResult(document: document, isNew: true, skippedPages: conversion.skipped)
     }
 
-    /// Indépendant des réglages généraux : une page en portrait, deux en paysage, planches larges intactes. Sens japonais
-    /// d'office, modifiable dans les réglages du document.
+    /// Indépendant des réglages généraux : une page en portrait, deux en paysage, planches larges intactes. Sens gauche →
+    /// droite d'office (demande de NOxygen59, 08/11/2026 ; avant : sens japonais), modifiable dans les réglages du
+    /// document. Les CBZ déjà importés gardent le sens enregistré.
     static var comicSettings: ReaderSettingsOverride {
         var settings = ReaderSettingsOverride()
         settings.layout = .auto
         settings.scrollMode = .paginated
-        settings.direction = .rightToLeft
+        settings.direction = .leftToRight
         settings.firstPageAlone = true
         settings.splitWidePages = false
         settings.autoCrop = false

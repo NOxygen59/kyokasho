@@ -29,6 +29,15 @@ public enum LibrarySections {
         }
     }
 
+    /// Espace Manga, comme Livres et Manuels (demande de NOxygen59, 07/11/2026) : « Manga » (PDF, avec OCR et étude)
+    /// puis « CBZ » (lecture visuelle). Une section vide n'apparaît pas ; l'ordre des documents est gardé.
+    public static func groupManga(_ documents: [LibraryDocument]) -> [Section] {
+        let pdf = documents.filter { !$0.isComicArchive }, comics = documents.filter(\.isComicArchive)
+        return [(String(localized: "Manga", bundle: .main), pdf), ("CBZ", comics)].compactMap { title, docs in
+            docs.isEmpty ? nil : Section(category: nil, title: title, documents: docs)
+        }
+    }
+
     public static func title(_ category: DocumentCategory?) -> String {
         switch category {
         case .textbook: return String(localized: "Manuels", bundle: .main)
