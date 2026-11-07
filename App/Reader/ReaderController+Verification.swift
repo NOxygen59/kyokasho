@@ -32,7 +32,7 @@ extension ReaderController {
         guard OvisOCR2Reader().isAvailable, !AITaskCenter.shared.isRunning(verifyKey) else { return }
         let sources = force ? [focusSource] : shownSources
         let url = fileURL, service = model.ocr, documentId = document.id
-        let focused = focusSource, focusedPage = ocrPage, engines = preferredEngines()
+        let focused = focusSource, focusedPage = ocrPage
         verifications = []
         verifyState = .running(done: 0, total: sources.count)
         // Tâche de l'app : continue si on change de page ou ferme le lecteur (le Markdown lu reste gardé).
@@ -44,6 +44,9 @@ extension ReaderController {
                 var result = PageVerification(source: source, suggestions: [])
                 // Lecteur fermé entre-temps : on continue avec ce qui a été noté au départ (le Markdown est gardé).
                 var ocr: OCRPage? = source == focused ? focusedPage : nil
+                // Même règle que le lecteur (OCR retenu de la page) ; lecteur fermé : ordre Auto des lectures faites.
+                let engines = await self?.preferredEngines(source: source)
+                    ?? OCRSelectionPolicy.cacheOrder(choice: .auto, pinned: nil, hasTextLayer: false)
                 for engine in engines where ocr == nil {
                     ocr = await service.cached(documentId: documentId, pageIndex: source, engine: engine)
                 }

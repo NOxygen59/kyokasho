@@ -73,7 +73,8 @@ extension ReaderController {
             for page in visible {
                 if let cached = await self.cachedOCR(source: page) {
                     self.showOCR(cached, source: page)
-                    if page == self.focusSource, !keepFocus || self.ocrPage == nil { self.ocrPage = cached }
+                    // Panneau gardé (même page) : il suit quand même l'OCR retenu, sinon il montrerait un autre moteur.
+                    if page == self.focusSource, !keepFocus || self.ocrPage?.engine != cached.engine { self.ocrPage = cached }
                 } else {
                     missing.append(page)
                 }
@@ -106,16 +107,25 @@ extension ReaderController {
         return [first, first + 1]
     }
 
-    /// Moteurs à essayer, dans l'ordre, pour lire le cache d'une page.
-    func preferredEngines() -> [String] {
-        switch settings.ocrEngine {
-        case .pdfText: return [OCREngineID.pdfText]
-        case .vision: return [OCREngineID.vision]
-        case .ndlocr: return [OCREngineID.ndlocr]
-        case .ppocr5: return [OCREngineID.ppocr5]
-        case .glmocr: return [OCREngineID.glmocr]
-        case .auto: return [OCREngineID.pdfText, OCREngineID.ndlocr, OCREngineID.ppocr5, OCREngineID.vision]
-        }
+    /// Moteurs à essayer, dans l'ordre, pour lire le cache d'une page : règle unique `OCRSelectionPolicy` (moteur
+    /// choisi pour la page, sinon réglage ; en Auto, la lecture déjà faite d'abord).
+    func preferredEngines(source: Int) async -> [String] {
+        let choice = settings.ocrEngine, pinned = pinnedEngines[source]
+        let text = pinned == nil && choice == .auto ? await hasTextLayer(source: source) : false
+        return OCRSelectionPolicy.cacheOrder(choice: choice, pinned: pinned, hasTextLayer: text)
+    }
+
+    /// Moteur d'une nouvelle lecture de la page, quand aucune lecture faite n'est réutilisable.
+    func engineToRead(source: Int) async -> String {
+        let choice = settings.ocrEngine, pinned = pinnedEngines[source]
+        let text = pinned == nil && choice == .auto ? await hasTextLayer(source: source) : false
+        return OCRSelectionPolicy.engineToRead(choice: choice, pinned: pinned, hasTextLayer: text, isInstalled: Self.isInstalled)
+    }
+
+    /// Vraie couche de texte (pas un scan avec image pleine page), hors du fil principal.
+    func hasTextLayer(source: Int) async -> Bool {
+        let url = fileURL
+        return await Task.detached(priority: .utility) { PDFTextEngine.hasTextLayer(url: url, pageIndex: source) }.value
     }
 
     /// OCR de la page par un moteur autre que « texte du PDF » (celui du panneau, sinon le cache).
@@ -123,7 +133,7 @@ extension ReaderController {
         if source == focusSource, let page = ocrPage { return page.engine == OCREngineID.pdfText ? nil : page }
         if let memo = realOCRMemo[source] { return memo }
         var found: OCRPage?
-        for engine in preferredEngines() where engine != OCREngineID.pdfText {
+        for engine in await preferredEngines(source: source) where engine != OCREngineID.pdfText {
             if let page = await model.ocr.cached(documentId: document.id, pageIndex: source, engine: engine) { found = page; break }
         }
         realOCRMemo[source] = .some(found)
@@ -146,22 +156,23 @@ extension ReaderController {
     }
 
     func cachedOCR(source: Int) async -> OCRPage? {
-        // Un ancien cache « Texte du PDF » ne doit pas bloquer l'OCR d'une page photo devenue identifiable comme
-        // scan (le PDF du scanner peut contenir une couche OCR cachée).
-        let skipPDFText: Bool
-        if settings.ocrEngine == .auto {
-            let url = fileURL
-            skipPDFText = await Task.detached(priority: .utility) {
-                !PDFTextEngine.hasTextLayer(url: url, pageIndex: source)
-            }.value
-        } else {
-            skipPDFText = false
-        }
-        for engine in preferredEngines() {
-            if engine == OCREngineID.pdfText && skipPDFText { continue }
-            if let page = await model.ocr.cached(documentId: document.id, pageIndex: source, engine: engine) { return page }
+        for engine in await preferredEngines(source: source) {
+            if let page = await model.ocr.cached(documentId: document.id, pageIndex: source, engine: engine) {
+                // Lecture retenue pour la page : les autres moteurs ne la remplacent plus (`showOCR`).
+                selectedEngines[source] = page.engine
+                return page
+            }
         }
         return nil
+    }
+
+    /// OCR retenu de la page : lecture déjà faite selon la règle unique, sinon nouvelle lecture par le moteur de la
+    /// règle. Retenu avant l'attente : un autre résultat arrivé entre-temps est écarté par `showOCR`.
+    func selectedOCR(source: Int) async throws -> OCRPage {
+        if let cached = await cachedOCR(source: source) { return cached }
+        let engine = await engineToRead(source: source)
+        selectedEngines[source] = engine
+        return try await model.ocr.page(documentId: document.id, url: fileURL, pageIndex: source, engine: engine)
     }
 
     /// Lance l'OCR de la page lue (en tâche de fond ; le cache évite de refaire).
@@ -174,20 +185,29 @@ extension ReaderController {
         let source = focusSource
         let url = fileURL
         let documentId = document.id
-        let choice = settings.ocrEngine
         let service = model.ocr
+        // Moteur demandé (menu du panneau, « Relancer ») : retenu pour cette page (décision D2), il gagne sur le cache.
+        if let engine {
+            // « Relancer » (force) relit le même moteur : ce n'est pas un nouveau choix pour la page.
+            if !force { pinnedEngines[source] = engine }
+            selectedEngines[source] = engine
+        }
         ocrState = .running
         ocrTask = Task { [weak self] in
-            let engineID: String
-            if let engine {
-                engineID = engine
-            } else {
-                engineID = await Task.detached(priority: .userInitiated) {
-                    OCRService.resolve(choice, url: url, pageIndex: source)
-                }.value
-            }
+            let engineID = engine ?? "auto"
             do {
-                var page = try await service.page(documentId: documentId, url: url, pageIndex: source, engine: engineID, force: force)
+                guard let reader = self else { return }
+                var page: OCRPage
+                if let engine {
+                    page = try await service.page(documentId: documentId, url: url, pageIndex: source, engine: engine, force: force)
+                } else if force {
+                    let id = await reader.engineToRead(source: source)
+                    reader.selectedEngines[source] = id
+                    page = try await service.page(documentId: documentId, url: url, pageIndex: source, engine: id, force: true)
+                } else {
+                    // « Lire la page », ouverture du panneau : même règle que la page posée (lecture faite d'abord).
+                    page = try await reader.selectedOCR(source: source)
+                }
                 guard let self, !Task.isCancelled else { return }
                 // Chaque lecture demandée (même en cache) : caractères douteux revérifiés (`refineOCR`).
                 page.proofread = false
@@ -238,7 +258,6 @@ extension ReaderController {
         guard document.capabilities.textAnalysis else { return }
         for page in pages where !ensureQueue.contains(page) && ensuringPage != page { ensureQueue.append(page) }
         guard ensureTask == nil, !ensureQueue.isEmpty else { return }
-        let url = fileURL, documentId = document.id, choice = settings.ocrEngine, service = model.ocr
         ensureTask = Task { [weak self] in
             defer { self?.ensureTask = nil; self?.ensuringPage = nil }
             while let self, !Task.isCancelled, !self.ensureQueue.isEmpty {
@@ -246,11 +265,9 @@ extension ReaderController {
                 self.ensuringPage = source
                 guard self.shownSources.contains(source) else { continue }
                 if source == self.focusSource { self.ocrState = .running }
-                let engine = await Task.detached(priority: .userInitiated) {
-                    OCRService.resolve(choice, url: url, pageIndex: source)
-                }.value
                 do {
-                    let page = try await service.page(documentId: documentId, url: url, pageIndex: source, engine: engine)
+                    // Même règle que la page posée : une lecture déjà faite (même d'un modèle absent) d'abord.
+                    let page = try await self.selectedOCR(source: source)
                     self.showOCR(page, source: source)
                     if source == self.focusSource { self.ocrPage = page; self.ocrState = .idle }
                 } catch {

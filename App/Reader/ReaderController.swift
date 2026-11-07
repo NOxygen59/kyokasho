@@ -155,6 +155,14 @@ final class ReaderController: NSObject, ObservableObject {
     var pageStringCache: (index: Int, string: NSString, map: [Int], hasText: Bool)?
     /// `realOCR` des pages hors panneau (évite une lecture du cache SQLite à chaque survol) ; vidé à chaque OCR.
     var realOCRMemo: [Int: OCRPage?] = [:]
+    /// Moteur choisi dans le menu du panneau Texte pour une page, tant que le lecteur est ouvert (décision D2 de
+    /// NOxygen59 du 07/11/2026) : il reste celui de la page aux gestes suivants. « Garder pour ce document » en fait
+    /// le réglage du document. Vidé quand le réglage du moteur change.
+    @Published var pinnedEngines: [Int: String] = [:]
+    /// Moteur de l'**OCR retenu** de chaque page (`OCRSelectionPolicy`). Seul un résultat de ce moteur peut alimenter
+    /// les zones et les furigana (`showOCR`) : une lecture d'un autre moteur, arrivée en retard ou venue d'un autre
+    /// chemin, ne remplace plus les furigana (enquête furigana iPad / Mac du 07/11/2026 : 223 lectures, puis 74).
+    var selectedEngines: [Int: String] = [:]
     /// Début de mot par caractère, par ligne de texte (découpage du dictionnaire), pour le survol.
     var wordStartMemo: [String: [Int]] = [:]
     var pageTextTask: Task<Void, Never>?
@@ -696,6 +704,7 @@ final class ReaderController: NSObject, ObservableObject {
             let focused = source == focusSource
             if focused { ocrState = .running }
             let engine = await scanEngine(source: source)
+            selectedEngines[source] = engine
             ocr = try? await model.ocr.page(documentId: document.id, url: fileURL, pageIndex: source, engine: engine)
             if focused, focusSource == source { ocrState = .idle }
             // `ocrState` revient toujours au repos. Le résultat, lui, reste au cache : un geste plus récent garde l'écran.
@@ -817,14 +826,14 @@ final class ReaderController: NSObject, ObservableObject {
     /// jamais « texte du PDF » ici (on n'arrive là que si le texte intégré n'a rien donné).
     func scanEngine(source: Int) async -> String {
         let choice = settings.ocrEngine
-        let url = fileURL
-        let resolved = await Task.detached(priority: .userInitiated) {
-            OCRService.resolve(choice == .pdfText ? .auto : choice, url: url, pageIndex: source)
-        }.value
-        guard resolved == OCREngineID.pdfText else { return resolved }
-        for id in [OCREngineID.ndlocr, OCREngineID.ppocr5] where OCRService.engine(id)?.isAvailable == true { return id }
-        return OCREngineID.vision
+        let id = OCRSelectionPolicy.engineToRead(choice: choice == .pdfText ? .auto : choice, pinned: pinnedEngines[source],
+                                                 hasTextLayer: false, isInstalled: Self.isInstalled)
+        guard id == OCREngineID.pdfText else { return id }
+        return OCRSelectionPolicy.engineToRead(choice: .auto, pinned: nil, hasTextLayer: false, isInstalled: Self.isInstalled)
     }
+
+    /// Modèle d'OCR présent sur l'appareil (Vision et le texte du PDF le sont toujours).
+    nonisolated static func isInstalled(_ id: String) -> Bool { OCRService.engine(id)?.isAvailable == true }
 
     /// « Titre · p. N » (numéro imprimé) de la page du mot cherché.
     var lookupSourceLabel: String? {

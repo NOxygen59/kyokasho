@@ -28,7 +28,12 @@ final class StyleTokensGuardTests: XCTestCase {
         let reader = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
             .appendingPathComponent("../../../../App/Reader").standardizedFileURL
         let display = try String(contentsOf: reader.appendingPathComponent("ReaderController+Display.swift"), encoding: .utf8)
-        XCTAssertTrue(display.contains("guard !closed, !Task.isCancelled, furiganaGeneration[source] == generation else { return }"))
+        XCTAssertTrue(display.contains("guard !closed, !Task.isCancelled, furiganaGeneration[source] == generation,"))
+        // Enquête furigana iPad / Mac (07/11/2026) : un seul moteur par page alimente zones et furigana ; un calcul dont
+        // le moteur n'est plus retenu n'est pas publié, et le texte du PDF ne remplace pas un OCR retenu.
+        XCTAssertTrue(display.contains("if let retained = selectedEngines[source], retained != ocr.engine {"))
+        XCTAssertTrue(display.contains("selectedEngines[source] == nil || selectedEngines[source] == engine else { return }"))
+        XCTAssertTrue(display.contains("guard retained == nil || retained == OCREngineID.pdfText else { return false }"))
         XCTAssertEqual(display.components(separatedBy: "FuriganaLayer.set(").count, 3, "publication de showOCR et de scheduleFurigana, pas d'autre")
         let close = try String(contentsOf: reader.appendingPathComponent("ReaderController+OCR.swift"), encoding: .utf8)
         XCTAssertTrue(close.contains("for page in furiganaGeneration.keys { furiganaGeneration[page, default: 0] += 1 }"))

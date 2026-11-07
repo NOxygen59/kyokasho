@@ -468,6 +468,14 @@ struct StudyTextTab: View {
                     }
                 }
                 Divider()
+                // Moteur choisi ci-dessus : retenu pour cette page seulement ; ici, pour tout le document.
+                if let pinned = reader.pinnedEngines[reader.focusSource], reader.settings.ocrEngine.rawValue != pinned {
+                    Button {
+                        reader.keepPinnedEngineForDocument()
+                    } label: {
+                        Label("Garder \(OCREngineID.displayName(pinned)) pour ce document", systemImage: "pin")
+                    }
+                }
                 Button("Relancer") { reader.runOCR(engine: reader.ocrPage?.engine, force: true) }
                 Button("Comparer les moteurs") { showCompare = true }
                 if OvisOCR2Reader().isAvailable {

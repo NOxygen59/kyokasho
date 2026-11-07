@@ -50160,6 +50160,28 @@
           }
         }
       }
+    },
+    "Garder %@ pour ce document": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep %@ for this document"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Garder %@ pour ce document"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此文档保持使用 %@"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

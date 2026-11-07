@@ -129,6 +129,14 @@ extension ReaderController {
 
     /// Zones OCR affichées (+ furigana du scan si l'option est active et la page sans texte intégré).
     func showOCR(_ ocr: OCRPage, source: Int) {
+        // Un seul OCR par page alimente zones et furigana : celui retenu par la règle (`OCRSelectionPolicy`) ou choisi
+        // dans le panneau. Un autre moteur (ancienne requête, correction d'un autre moteur, vérification) reste en
+        // base mais ne remplace plus l'affichage (enquête furigana iPad / Mac, 07/11/2026).
+        if let retained = selectedEngines[source], retained != ocr.engine {
+            Diagnostics.log("OCR p. \(source + 1) : \(ocr.engine) écarté, moteur retenu \(retained)", "furigana")
+            return
+        }
+        selectedEngines[source] = ocr.engine
         realOCRMemo[source] = nil
         ink.setOCR(ocr, source: source)
         guard pageFuriganaOn else { return }
@@ -181,14 +189,17 @@ extension ReaderController {
                             + "texte Ovis \(reference?.count ?? 0) caractères, \(marks.count) lectures", "furigana")
             // Préparée ici : la publication, sur le fil principal, n'a plus qu'à la ranger.
             let page = FuriganaLayer.PreparedPage(marks, signature: signature)
-            await self?.publishPageFurigana(page, key: key, source: source, generation: generation)
+            await self?.publishPageFurigana(page, key: key, source: source, generation: generation, engine: ocr.engine)
         }
     }
 
     /// Contrôle et publication d'un seul tenant sur le fil principal : rien ne peut s'intercaler. Un calcul annulé
     /// (fermeture, remplacement) a pu rendre des lectures de secours : elles ne doivent pas entrer dans le cache.
-    private func publishPageFurigana(_ page: FuriganaLayer.PreparedPage, key: String, source: Int, generation: Int) {
-        guard !closed, !Task.isCancelled, furiganaGeneration[source] == generation else { return }
+    private func publishPageFurigana(_ page: FuriganaLayer.PreparedPage, key: String, source: Int, generation: Int,
+                                     engine: String) {
+        // Moteur retenu changé pendant le calcul (choix dans le panneau, réglage) : ces lectures ne sont plus les bonnes.
+        guard !closed, !Task.isCancelled, furiganaGeneration[source] == generation,
+              selectedEngines[source] == nil || selectedEngines[source] == engine else { return }
         FuriganaLayer.set(page, for: key)
         pdfView.requestRedraw()
     }
@@ -219,7 +230,17 @@ extension ReaderController {
                         doc.page(at: source).map(FuriganaLayer.marks(from:))
                     }) ?? nil
                 }
-                if let marks { FuriganaLayer.set(marks, for: key); changed = true }
+                guard let marks else { continue }
+                // Texte du PDF : seulement si aucun OCR d'un autre moteur n'est retenu pour la page. Vérifié sur le fil
+                // principal juste avant l'écriture : un OCR publié pendant ce calcul garde la page.
+                let allowed = await MainActor.run { () -> Bool in
+                    guard let self, !self.closed, !Task.isCancelled else { return false }
+                    let retained = self.selectedEngines[source]
+                    guard retained == nil || retained == OCREngineID.pdfText else { return false }
+                    FuriganaLayer.set(marks, for: key)
+                    return true
+                }
+                if allowed { changed = true }
             }
             guard changed, !Task.isCancelled else { return }
             await self?.pdfView.requestRedraw()
@@ -320,11 +341,27 @@ extension ReaderController {
         } else {
             applyDisplaySettings()
         }
-        if old.ocrEngine != newSettings.ocrEngine { schedulePageSettled() }
+        if old.ocrEngine != newSettings.ocrEngine {
+            // Nouveau réglage du moteur : intention durable, qui remplace les choix faits page par page dans le panneau.
+            pinnedEngines.removeAll()
+            selectedEngines.removeAll()
+            realOCRMemo.removeAll()
+            ocrPage = nil
+            schedulePageSettled()
+        }
     }
 
     /// `keepingChoices` : le classement Manga et le choix des furigana viennent de la copie courante du lecteur, pas d'une
     /// feuille ouverte avant un reclassement (contre-revue 5a0f68f, P2 2). Seul `setFurigana` les écrit lui-même.
+    /// « Garder pour ce document » (menu du panneau Texte, décision D2) : le moteur choisi pour la page de travail
+    /// devient le moteur du document ; les choix page par page sont alors remplacés par ce réglage.
+    func keepPinnedEngineForDocument() {
+        guard let id = pinnedEngines[focusSource], let choice = OCREngineChoice(rawValue: id) else { return }
+        var override = document.settingsOverride
+        override.ocrEngine = choice
+        setDocumentOverride(override)
+    }
+
     func setDocumentOverride(_ override: ReaderSettingsOverride, keepingChoices: Bool = true) {
         var override = override
         if keepingChoices {
