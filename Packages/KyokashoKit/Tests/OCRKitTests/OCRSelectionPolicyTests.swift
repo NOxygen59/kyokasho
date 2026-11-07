@@ -63,7 +63,16 @@ final class OCRSelectionPolicyTests: XCTestCase {
         XCTAssertEqual(retained([page(OCREngineID.vision), page(OCREngineID.ndlocr)], choice: .vision), OCREngineID.vision)
         // L'ordre de recherche commence par le choix, puis le reste sans doublon.
         XCTAssertEqual(OCRSelectionPolicy.lookupOrder(choice: .vision, pinned: OCREngineID.glmocr, hasTextLayer: false),
-                       ["glmocr", "vision", "ndlocr", "ppocr5"])
+                       ["glmocr", "vision", "pdfText", "ndlocr", "ppocr5"])
+    }
+
+    /// Contre-revue Codex de 4522367 (P2) : une correction du texte PDF est cherchée même avec un moteur de scan réglé
+    /// ou choisi, sans faire du texte PDF un repli quand il n'est pas corrigé.
+    func testCorrectedPDFTextWinsOverAnExplicitScanEngine() {
+        let pages = [page(OCREngineID.ndlocr), page(OCREngineID.pdfText, edited: true)]
+        XCTAssertEqual(retained(pages, choice: .ndlocr), OCREngineID.pdfText)
+        XCTAssertEqual(retained(pages, choice: .auto, pinned: OCREngineID.vision), OCREngineID.pdfText)
+        XCTAssertNil(retained([page(OCREngineID.pdfText)], choice: .ndlocr))
     }
 
     func testAutoOrderIsTextLayerThenNDLOCRPPOCRGLMVision() {

@@ -37,12 +37,14 @@ public enum OCRSelectionPolicy {
     }
 
     /// Ordre dans lequel lire les lectures déjà faites d'une page : celles du choix (`cacheOrder`) d'abord, puis tous les
-    /// autres moteurs, sans doublon. Les suivants ne servent qu'à trouver une version **corrigée** (D7).
+    /// autres moteurs, **texte du PDF compris**, sans doublon. Les suivants ne servent qu'à trouver une version
+    /// **corrigée** (D7) : le texte du PDF corrigé à la main compte même quand un moteur de scan est réglé ou choisi
+    /// (contre-revue Codex de 4522367) ; non corrigé, il n'est jamais pris à la place du choix.
     public static func lookupOrder(choice: OCREngineChoice, pinned: String?, hasTextLayer: Bool) -> [String] {
-        let scans = [OCREngineID.ndlocr, OCREngineID.ppocr5, OCREngineID.glmocr, OCREngineID.vision]
+        let all = [OCREngineID.pdfText, OCREngineID.ndlocr, OCREngineID.ppocr5, OCREngineID.glmocr, OCREngineID.vision]
         var order = cacheOrder(choice: choice, pinned: pinned, hasTextLayer: hasTextLayer)
         if choice != .auto || pinned != nil { order.append(engineID(choice)) }
-        for engine in (hasTextLayer ? [OCREngineID.pdfText] + scans : scans) { order.append(engine) }
+        order += all
         var seen = Set<String>()
         return order.filter { seen.insert($0).inserted }
     }

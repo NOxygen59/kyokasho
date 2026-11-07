@@ -138,4 +138,43 @@ final class OCRPageSelectionTests: XCTestCase {
         XCTAssertEqual(selection.selected[7], OCREngineID.vision)
         XCTAssertEqual(selection.pinned[7], OCREngineID.ndlocr, "le choix du menu est gardé pour les pages sans correction")
     }
+
+    /// Contre-revue Codex de 4522367 (P2, scénario 2) : NDLOCR affiché, choix Vision puis GLM-OCR dans le menu, GLM-OCR
+    /// échoue. Le retour rétablit ce qui est **affiché** (NDLOCR), pas l'intention Vision annulée et jamais publiée.
+    func testRevertRestoresThePublishedEngineNotACancelledIntent() {
+        var selection = OCRPageSelection()
+        XCTAssertTrue(selection.adopt(OCREngineID.ndlocr, ticket: selection.ticket(for: 0)))
+        selection.publish(OCREngineID.ndlocr, source: 0)
+        selection.pin(OCREngineID.vision, source: 0)
+        let glm = selection.pin(OCREngineID.glmocr, source: 0)
+        XCTAssertTrue(selection.revert(glm))
+        XCTAssertEqual(selection.selected[0], OCREngineID.ndlocr)
+        XCTAssertNil(selection.pinned[0], "l'intention Vision annulée n'est pas restaurée")
+    }
+
+    /// Scénario 1 : NDLOCR affiché, choix Vision ; un autre chemin adopte et dessine Vision ; puis la demande Vision
+    /// échoue. Rien n'est rétabli : l'intention est déjà satisfaite par ce qui est affiché.
+    func testRevertKeepsAnIntentAlreadySatisfiedByAnotherPath() {
+        var selection = OCRPageSelection()
+        XCTAssertTrue(selection.adopt(OCREngineID.ndlocr, ticket: selection.ticket(for: 1)))
+        selection.publish(OCREngineID.ndlocr, source: 1)
+        let intent = selection.pin(OCREngineID.vision, source: 1)
+        XCTAssertTrue(selection.adopt(OCREngineID.vision, ticket: selection.ticket(for: 1)))
+        selection.publish(OCREngineID.vision, source: 1)
+        XCTAssertFalse(selection.revert(intent))
+        XCTAssertEqual(selection.selected[1], OCREngineID.vision)
+        XCTAssertEqual(selection.pinned[1], OCREngineID.vision)
+    }
+
+    /// Échec simple : un choix antérieur qui correspond à l'affichage est gardé.
+    func testRevertKeepsAPreviousPinThatMatchesTheDisplay() {
+        var selection = OCRPageSelection()
+        selection.pin(OCREngineID.ndlocr, source: 2)
+        XCTAssertTrue(selection.adopt(OCREngineID.ndlocr, ticket: selection.ticket(for: 2)))
+        selection.publish(OCREngineID.ndlocr, source: 2)
+        let intent = selection.pin(OCREngineID.vision, source: 2)
+        XCTAssertTrue(selection.revert(intent))
+        XCTAssertEqual(selection.pinned[2], OCREngineID.ndlocr)
+        XCTAssertEqual(selection.selected[2], OCREngineID.ndlocr)
+    }
 }

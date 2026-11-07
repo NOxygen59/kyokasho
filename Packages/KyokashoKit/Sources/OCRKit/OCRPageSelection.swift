@@ -45,8 +45,9 @@ public struct OCRPageSelection: Sendable {
     /// Intention annulable (choix du menu, « Relancer ») : état d'avant et ticket de la demande lancée.
     public struct Intent: Sendable {
         public let ticket: Ticket
+        /// Moteur demandé par cette intention.
+        let engine: String
         let previousPinned: String?
-        let previousSelected: String?
     }
 
     /// Vrai si aucune intention ni changement de moteur adopté n'a eu lieu pour la page depuis la prise du ticket.
@@ -58,33 +59,38 @@ public struct OCRPageSelection: Sendable {
     /// Choix du menu du panneau : retenu pour la page ; les demandes en cours pour elle deviennent périmées.
     @discardableResult
     public mutating func pin(_ engine: String, source: Int) -> Intent {
-        let previous = (pinned[source], selected[source])
+        let previousPinned = pinned[source]
         invalidate(source)
         pinned[source] = engine
         selected[source] = engine
-        return Intent(ticket: ticket(for: source), previousPinned: previous.0, previousSelected: previous.1)
+        return Intent(ticket: ticket(for: source), engine: engine, previousPinned: previousPinned)
     }
 
     /// « Relancer » avec un moteur connu : même moteur retenu, sans en faire un choix durable pour la page.
     @discardableResult
     public mutating func retain(_ engine: String, source: Int) -> Intent {
-        let previous = (pinned[source], selected[source])
+        let previousPinned = pinned[source]
         invalidate(source)
         selected[source] = engine
-        return Intent(ticket: ticket(for: source), previousPinned: previous.0, previousSelected: previous.1)
+        return Intent(ticket: ticket(for: source), engine: engine, previousPinned: previousPinned)
     }
 
-    /// Lecture de l'intention échouée : l'ancienne lecture redevient explicitement l'OCR retenu, plutôt qu'un état hybride
-    /// (moteur demandé sans lecture, panneau de l'ancien). Sans effet si une intention plus récente existe.
+    /// Lecture de l'intention échouée : la lecture **affichée** (`published`) redevient explicitement l'OCR retenu, plutôt
+    /// qu'un état hybride (moteur demandé sans lecture, panneau d'un autre moteur).
+    ///
+    /// Contre-revue Codex de 4522367 : rétablir l'état sauvegardé pouvait remettre une intention annulée et jamais publiée
+    /// (Vision puis GLM-OCR choisis, GLM-OCR en échec), ou défaire un moteur dessiné entre-temps par un autre chemin. D'où :
+    /// - sans effet si une intention plus récente existe, ou si le moteur demandé est déjà celui qui est affiché ;
+    /// - moteur retenu = moteur affiché ; choix du menu d'avant gardé seulement s'il correspond à l'affichage.
     /// Les demandes encore en route pour l'intention échouée restent refusées.
-    /// - Returns: `true` si l'état d'avant a été rétabli.
+    /// - Returns: `true` si l'état a été rétabli sur la lecture affichée.
     @discardableResult
     public mutating func revert(_ intent: Intent) -> Bool {
-        guard isCurrent(intent.ticket) else { return false }
         let source = intent.ticket.source
+        guard isCurrent(intent.ticket), published[source] != intent.engine else { return false }
         invalidate(source)
-        pinned[source] = intent.previousPinned
-        selected[source] = intent.previousSelected
+        selected[source] = published[source]
+        pinned[source] = intent.previousPinned == published[source] ? intent.previousPinned : nil
         return true
     }
 
