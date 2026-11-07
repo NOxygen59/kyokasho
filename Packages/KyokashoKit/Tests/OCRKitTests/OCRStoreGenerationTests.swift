@@ -50,4 +50,18 @@ final class OCRStoreGenerationTests: XCTestCase {
         try await service.store(page, documentId: id, pageIndex: 2)
         XCTAssertNotNil(try db.ocrResult(documentId: id, pageIndex: 2, engine: page.engine))
     }
+
+    /// Relecture indépendante de e438892 (B1) : une génération lue **pendant** le changement de pages (acteur réentrant)
+    /// ne doit pas rester valable après sa fin.
+    func testGenerationReadDuringAPageMutationIsStaleAfterIt() async throws {
+        let (db, service, id) = try fixture()
+        await service.beginPageMutation(documentId: id)
+        let duringMutation = await service.generation(documentId: id)
+        await service.endPageMutation(documentId: id)
+        do {
+            try await service.store(page, documentId: id, pageIndex: 0, expectedGeneration: duringMutation)
+            XCTFail("écriture préparée pendant le changement de pages acceptée")
+        } catch is CancellationError {}
+        XCTAssertNil(try db.ocrResult(documentId: id, pageIndex: 0, engine: page.engine))
+    }
 }

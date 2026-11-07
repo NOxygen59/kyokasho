@@ -179,8 +179,12 @@ public actor OCRService {
         for task in tasks { _ = await task.result }
     }
 
+    /// Rouvre l'entrée. La génération change aussi ici : une génération lue **pendant** le changement (l'acteur est
+    /// réentrant pendant l'attente des moteurs dans `beginPageMutation`) ne doit pas rester valable après lui
+    /// (relecture indépendante de e438892, B1).
     public func endPageMutation(documentId: String) {
         guard let count = documentsBeingReplaced[documentId] else { return }
+        documentGeneration[documentId, default: 0] &+= 1
         if count == 1 { documentsBeingReplaced[documentId] = nil }
         else { documentsBeingReplaced[documentId] = count - 1 }
     }
