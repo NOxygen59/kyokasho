@@ -127,16 +127,57 @@ extension ReaderController {
 
     // MARK: Furigana
 
-    /// Zones OCR affichées (+ furigana du scan si l'option est active et la page sans texte intégré).
-    func showOCR(_ ocr: OCRPage, source: Int) {
+    /// Adoption **unique** d'une lecture comme OCR retenu de la page : sélection, zones, furigana, panneau et pastille
+    /// changent ensemble, ou rien ne change (revue Codex de d87e048, R1 et R2).
+    ///
+    /// Refusée si une intention plus récente a eu lieu pour la page depuis la prise du ticket (choix du menu, « Relancer »,
+    /// rotation, nouveau réglage, autre adoption), ou si le moteur diffère de celui choisi pour la page. Le résultat refusé
+    /// reste en cache ; il n'est simplement pas affiché.
+    /// - Parameters:
+    ///   - updatePanel: `false` garde le panneau (même page, même moteur, position de lecture conservée).
+    /// - Returns: `true` si la lecture est maintenant l'OCR retenu affiché.
+    @discardableResult
+    func adoptOCR(_ candidate: OCRCandidate, source: Int, updatePanel: Bool = true) -> Bool {
+        let previous = selectedEngines[source]
+        guard !closed, ocrSelection.adopt(candidate.page.engine, ticket: candidate.ticket) else {
+            Diagnostics.log("OCR p. \(source + 1) : \(candidate.page.engine) écarté, demande périmée "
+                            + "(moteur retenu \(selectedEngines[source] ?? "aucun"))", "furigana")
+            return false
+        }
+        if let previous, previous != candidate.page.engine {
+            // Autre moteur retenu : les furigana déjà mémorisés pour la page viennent de l'ancien. Les retirer, sinon
+            // `scheduleFurigana` sauterait la page (clé présente) et le dessin garderait l'ancienne lecture (cas du texte
+            // PDF choisi après des furigana NDLOCR).
+            FuriganaLayer.remove(ScanSharpening.key(documentId: document.id, page: source))
+            furiganaGeneration[source, default: 0] += 1
+            pageFuriganaTasks[source]?.cancel()
+            pdfView.requestRedraw()
+        }
+        drawOCR(candidate.page, source: source)
+        if candidate.page.engine == OCREngineID.pdfText, previous != OCREngineID.pdfText { scheduleFurigana(shownSources) }
+        if updatePanel, source == focusSource { ocrPage = candidate.page }
+        return true
+    }
+
+    /// Rafraîchit l'affichage avec une nouvelle version **du moteur déjà retenu** (relecture, correction, cache mis à
+    /// jour par une tâche IA). Un autre moteur est refusé : il doit passer par `adoptOCR`.
+    /// - Returns: `false` si le résultat a été écarté ; l'appelant ne doit alors pas toucher au panneau.
+    @discardableResult
+    func showOCR(_ ocr: OCRPage, source: Int) -> Bool {
         // Un seul OCR par page alimente zones et furigana : celui retenu par la règle (`OCRSelectionPolicy`) ou choisi
         // dans le panneau. Un autre moteur (ancienne requête, correction d'un autre moteur, vérification) reste en
         // base mais ne remplace plus l'affichage (enquête furigana iPad / Mac, 07/11/2026).
-        if let retained = selectedEngines[source], retained != ocr.engine {
-            Diagnostics.log("OCR p. \(source + 1) : \(ocr.engine) écarté, moteur retenu \(retained)", "furigana")
-            return
+        guard !closed, selectedEngines[source] == ocr.engine else {
+            Diagnostics.log("OCR p. \(source + 1) : \(ocr.engine) écarté, moteur retenu \(selectedEngines[source] ?? "aucun")", "furigana")
+            return false
         }
-        selectedEngines[source] = ocr.engine
+        drawOCR(ocr, source: source)
+        return true
+    }
+
+    /// Zones OCR affichées (+ furigana du scan si l'option est active et la page sans texte intégré). Appelée seulement
+    /// par `adoptOCR` et `showOCR`, après leur contrôle.
+    private func drawOCR(_ ocr: OCRPage, source: Int) {
         realOCRMemo[source] = nil
         ink.setOCR(ocr, source: source)
         guard pageFuriganaOn else { return }
@@ -198,8 +239,9 @@ extension ReaderController {
     private func publishPageFurigana(_ page: FuriganaLayer.PreparedPage, key: String, source: Int, generation: Int,
                                      engine: String) {
         // Moteur retenu changé pendant le calcul (choix dans le panneau, réglage) : ces lectures ne sont plus les bonnes.
+        // `drawOCR` n'est appelé qu'après adoption : un moteur retenu vide signifie un réglage remis à zéro entre-temps.
         guard !closed, !Task.isCancelled, furiganaGeneration[source] == generation,
-              selectedEngines[source] == nil || selectedEngines[source] == engine else { return }
+              selectedEngines[source] == engine else { return }
         FuriganaLayer.set(page, for: key)
         pdfView.requestRedraw()
     }
@@ -208,8 +250,8 @@ extension ReaderController {
     func refreshFurigana(afterAIRead read: DocumentScan.PageRead) {
         guard !closed, read.documentId == document.id, shownSources.contains(read.page), pageFuriganaOn else { return }
         Task { [weak self] in
-            guard let self, let cached = await self.cachedOCR(source: read.page) else { return }
-            self.showOCR(cached, source: read.page)
+            guard let self, let candidate = await self.candidateOCR(source: read.page) else { return }
+            self.adoptOCR(candidate, source: read.page)
         }
     }
 
@@ -343,8 +385,11 @@ extension ReaderController {
         }
         if old.ocrEngine != newSettings.ocrEngine {
             // Nouveau réglage du moteur : intention durable, qui remplace les choix faits page par page dans le panneau.
-            pinnedEngines.removeAll()
-            selectedEngines.removeAll()
+            // Les lectures encore en cours sont périmées, même si aucune sélection ne reste (revue Codex, R1).
+            ocrSelection.reset()
+            // Furigana mémorisés de l'ancien moteur : sans moteur retenu précédent, `adoptOCR` ne saurait pas qu'ils
+            // viennent d'ailleurs, et `scheduleFurigana` sauterait les pages (passage au texte du PDF). Simple cache.
+            FuriganaLayer.clearMemory()
             realOCRMemo.removeAll()
             ocrPage = nil
             schedulePageSettled()
@@ -379,4 +424,11 @@ extension ReaderController {
         document.firstPageIndex = max(0, min(index, document.pageCount - 1))
         model.savePageOne(document)
     }
+}
+
+/// Lecture candidate à l'OCR retenu d'une page, avec le ticket pris **avant** la lecture : `adoptOCR` la refuse si une
+/// intention plus récente a eu lieu pour la page entre-temps.
+struct OCRCandidate {
+    var page: OCRPage
+    let ticket: OCRPageSelection.Ticket
 }

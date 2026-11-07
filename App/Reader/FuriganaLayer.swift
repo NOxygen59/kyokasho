@@ -150,6 +150,14 @@ enum FuriganaLayer {
 
     static func clearMemory() { lock.withLock { pages = [:]; order = [] } }
 
+    /// Oublie les lectures d'une page : l'OCR retenu a changé de moteur, elles seront recalculées depuis le nouveau.
+    static func remove(_ key: String) {
+        lock.withLock {
+            pages[key] = nil
+            order.removeAll { $0 == key }
+        }
+    }
+
     // MARK: Calcul
 
     /// Scan : boîtes OCR normalisées → repère de la page (rotation intrinsèque comprise, voir `PageFrame`).

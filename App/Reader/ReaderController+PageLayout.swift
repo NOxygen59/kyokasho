@@ -30,7 +30,7 @@ extension ReaderController {
         for page in rotations.keys {
             ink.setOCR(nil, source: page)
             realOCRMemo[page] = nil
-            selectedEngines[page] = nil
+            ocrSelection.forget(page)
             furiganaGeneration[page, default: 0] += 1
             pageFuriganaTasks[page]?.cancel()
         }

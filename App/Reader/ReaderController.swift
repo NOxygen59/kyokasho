@@ -155,14 +155,16 @@ final class ReaderController: NSObject, ObservableObject {
     var pageStringCache: (index: Int, string: NSString, map: [Int], hasText: Bool)?
     /// `realOCR` des pages hors panneau (évite une lecture du cache SQLite à chaque survol) ; vidé à chaque OCR.
     var realOCRMemo: [Int: OCRPage?] = [:]
-    /// Moteur choisi dans le menu du panneau Texte pour une page, tant que le lecteur est ouvert (décision D2 de
-    /// NOxygen59 du 07/11/2026) : il reste celui de la page aux gestes suivants. « Garder pour ce document » en fait
-    /// le réglage du document. Vidé quand le réglage du moteur change.
-    @Published var pinnedEngines: [Int: String] = [:]
-    /// Moteur de l'**OCR retenu** de chaque page (`OCRSelectionPolicy`). Seul un résultat de ce moteur peut alimenter
-    /// les zones et les furigana (`showOCR`) : une lecture d'un autre moteur, arrivée en retard ou venue d'un autre
-    /// chemin, ne remplace plus les furigana (enquête furigana iPad / Mac du 07/11/2026 : 223 lectures, puis 74).
-    var selectedEngines: [Int: String] = [:]
+    /// OCR retenu de chaque page, versionné (`OCRPageSelection`) : moteur choisi dans le menu du panneau Texte (décision
+    /// D2 de NOxygen59 du 07/11/2026), moteur retenu, révision par page. Seul `adoptOCR` y adopte un nouveau moteur ; une
+    /// lecture demandée avant une intention plus récente est refusée (revue Codex de d87e048, R1). Remis à zéro quand le
+    /// réglage du moteur change.
+    @Published var ocrSelection = OCRPageSelection()
+    /// Moteur choisi dans le menu du panneau pour chaque page (lecture seule : `ocrSelection.pin`).
+    var pinnedEngines: [Int: String] { ocrSelection.pinned }
+    /// Moteur de l'**OCR retenu** de chaque page. Seul un résultat de ce moteur alimente zones, furigana et panneau
+    /// (enquête furigana iPad / Mac du 07/11/2026 : 223 lectures, puis 74).
+    var selectedEngines: [Int: String] { ocrSelection.selected }
     /// Début de mot par caractère, par ligne de texte (découpage du dictionnaire), pour le survol.
     var wordStartMemo: [String: [Int]] = [:]
     var pageTextTask: Task<Void, Never>?
@@ -703,12 +705,13 @@ final class ReaderController: NSObject, ObservableObject {
         if ocr == nil {
             let focused = source == focusSource
             if focused { ocrState = .running }
+            // Ticket pris avant les attentes : un choix fait entre-temps dans le menu garde la page (revue Codex, R1).
+            let ticket = ocrSelection.ticket(for: source)
             let engine = await scanEngine(source: source)
-            selectedEngines[source] = engine
             ocr = try? await model.ocr.page(documentId: document.id, url: fileURL, pageIndex: source, engine: engine)
             if focused, focusSource == source { ocrState = .idle }
             // `ocrState` revient toujours au repos. Le résultat, lui, reste au cache : un geste plus récent garde l'écran.
-            if let ocr, !isStale() { if source == focusSource { ocrPage = ocr }; showOCR(ocr, source: source) }
+            if let ocr, !isStale() { adoptOCR(OCRCandidate(page: ocr, ticket: ticket), source: source) }
         }
         // L'OCR a pu durer plusieurs secondes : un résultat périmé reste au cache mais ne touche plus à l'écran.
         guard let ocr, !isStale() else { return }

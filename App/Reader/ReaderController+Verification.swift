@@ -131,8 +131,8 @@ extension ReaderController {
                 self.loadError = String(localized: "Correction non enregistrée : \(error.localizedDescription)")
                 return
             }
-            self.showOCR(page, source: source)
-            if source == self.focusSource, self.ocrPage?.engine == engine { self.ocrPage = page }
+            // Correction d'un moteur qui n'est plus retenu : enregistrée (D7), mais l'affichage reste à l'OCR retenu.
+            if self.showOCR(page, source: source), source == self.focusSource, self.ocrPage?.engine == engine { self.ocrPage = page }
             self.wordStartMemo.removeAll()
         }
     }
