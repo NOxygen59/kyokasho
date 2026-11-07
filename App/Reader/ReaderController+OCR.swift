@@ -165,21 +165,21 @@ extension ReaderController {
         return await policyCachedOCR(source: source, excludingPDFText: excludingPDFText)
     }
 
-    /// Lecture déjà faite que la règle unique retient : ordre `OCRSelectionPolicy.cacheOrder`, puis, en Auto sans choix
-    /// pour la page, la version corrigée à la main d'abord (D7). Sans effet sur la sélection.
+    /// Lecture déjà faite que la règle unique retient : une version corrigée à la main d'abord, **toujours** (D7, décision
+    /// F4 de NOxygen59 du 07/11/2026), sinon la première lecture du choix (`OCRSelectionPolicy.cacheOrder`).
+    /// Sans effet sur la sélection. Lit chaque moteur présent : il faut savoir si l'un d'eux est corrigé.
     private func policyCachedOCR(source: Int, excludingPDFText: Bool = false) async -> OCRPage? {
         let choice = settings.ocrEngine, pinned = pinnedEngines[source]
-        var order = await preferredEngines(source: source)
+        let text = pinned == nil && choice == .auto ? await hasTextLayer(source: source) : false
+        let choiceOrder = OCRSelectionPolicy.cacheOrder(choice: choice, pinned: pinned, hasTextLayer: text)
+        var order = OCRSelectionPolicy.lookupOrder(choice: choice, pinned: pinned, hasTextLayer: text)
         if excludingPDFText { order.removeAll { $0 == OCREngineID.pdfText } }
-        let prioritize = OCRSelectionPolicy.prioritizesCorrections(choice: choice, pinned: pinned)
         var found: [OCRPage] = []
         for engine in order {
             guard let page = await model.ocr.cached(documentId: document.id, pageIndex: source, engine: engine) else { continue }
             found.append(page)
-            // Sans priorité des corrections, la première lecture suffit ; avec, il faut savoir si une suivante est corrigée.
-            if !prioritize { break }
         }
-        return OCRSelectionPolicy.retained(among: found, prioritizingCorrections: prioritize)
+        return OCRSelectionPolicy.retained(among: found, choiceOrder: choiceOrder)
     }
 
     /// Lecture déjà faite à adopter comme OCR retenu, avec le ticket pris **avant** les attentes. Ne préfère pas le
@@ -227,7 +227,12 @@ extension ReaderController {
             do {
                 guard let reader = self else { return }
                 var candidate: OCRCandidate
-                if let engine {
+                if let engine, !force, let corrected = await reader.policyCachedOCR(source: source),
+                   corrected.engine != engine, OCRSelectionPolicy.isCorrected(corrected) {
+                    // Décision F4 : une version corrigée d'un autre moteur passe avant le moteur choisi dans le menu. Le
+                    // choix reste noté pour la page ; il reprendra la main si les corrections sont annulées.
+                    candidate = OCRCandidate(page: corrected, ticket: ticket)
+                } else if let engine {
                     let page = try await service.page(documentId: documentId, url: url, pageIndex: source, engine: engine, force: force)
                     candidate = OCRCandidate(page: page, ticket: ticket)
                 } else if force {

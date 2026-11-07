@@ -138,7 +138,8 @@ extension ReaderController {
     /// - Returns: `true` si la lecture est maintenant l'OCR retenu affiché.
     @discardableResult
     func adoptOCR(_ candidate: OCRCandidate, source: Int, updatePanel: Bool = true) -> Bool {
-        guard !closed, ocrSelection.adopt(candidate.page.engine, ticket: candidate.ticket) else {
+        guard !closed, ocrSelection.adopt(candidate.page.engine, ticket: candidate.ticket,
+                                          overridingPin: OCRSelectionPolicy.isCorrected(candidate.page)) else {
             Diagnostics.log("OCR p. \(source + 1) : \(candidate.page.engine) écarté, demande périmée "
                             + "(moteur retenu \(selectedEngines[source] ?? "aucun"))", "furigana")
             return false

@@ -133,12 +133,9 @@ extension ReaderController {
             }
             if self.showOCR(page, source: source) {
                 if source == self.focusSource, self.ocrPage?.engine == engine { self.ocrPage = page }
-            } else if !self.closed,
-                      OCRSelectionPolicy.prioritizesCorrections(choice: self.settings.ocrEngine, pinned: self.pinnedEngines[source]),
-                      let candidate = await self.candidateOCR(source: source) {
-                // D7, Auto sans choix pour la page : la version corrigée passe d'abord, affichée dès l'acceptation et non
-                // au geste suivant (contre-revue Codex de 51f8a2d, F3). Avec un moteur choisi, la correction reste
-                // enregistrée sur son moteur sans remplacer le choix (D2).
+            } else if !self.closed, let candidate = await self.candidateOCR(source: source) {
+                // D7 et décision F4 : la version corrigée passe d'abord, même face au moteur réglé ou choisi dans le menu ;
+                // affichée dès l'acceptation et non au geste suivant (contre-revue Codex de 51f8a2d, F3).
                 self.adoptOCR(candidate, source: source)
             }
             self.wordStartMemo.removeAll()

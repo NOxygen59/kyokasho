@@ -128,4 +128,14 @@ final class OCRPageSelectionTests: XCTestCase {
         selection.reset()
         XCTAssertNil(selection.published[1])
     }
+
+    /// F4 : une version corrigée peut être adoptée malgré le moteur choisi pour la page ; une version non corrigée, non.
+    func testCorrectedReadingOverridesThePin() {
+        var selection = OCRPageSelection()
+        selection.pin(OCREngineID.ndlocr, source: 7)
+        XCTAssertFalse(selection.adopt(OCREngineID.vision, ticket: selection.ticket(for: 7)))
+        XCTAssertTrue(selection.adopt(OCREngineID.vision, ticket: selection.ticket(for: 7), overridingPin: true))
+        XCTAssertEqual(selection.selected[7], OCREngineID.vision)
+        XCTAssertEqual(selection.pinned[7], OCREngineID.ndlocr, "le choix du menu est gardé pour les pages sans correction")
+    }
 }

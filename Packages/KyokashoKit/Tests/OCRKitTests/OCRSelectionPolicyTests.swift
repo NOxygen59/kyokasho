@@ -16,34 +16,54 @@ final class OCRSelectionPolicyTests: XCTestCase {
         return OCRPage(engine: engine, lines: [line], durationMs: 1)
     }
 
+    /// Lectures présentes, rangées dans l'ordre de recherche de la règle.
+    private func found(_ pages: [OCRPage], choice: OCREngineChoice, pinned: String?, hasTextLayer: Bool = false) -> [OCRPage] {
+        OCRSelectionPolicy.lookupOrder(choice: choice, pinned: pinned, hasTextLayer: hasTextLayer)
+            .compactMap { engine in pages.first { $0.engine == engine } }
+    }
+
+    private func retained(_ pages: [OCRPage], choice: OCREngineChoice, pinned: String? = nil) -> String? {
+        let order = OCRSelectionPolicy.cacheOrder(choice: choice, pinned: pinned, hasTextLayer: false)
+        return OCRSelectionPolicy.retained(among: found(pages, choice: choice, pinned: pinned), choiceOrder: order)?.engine
+    }
+
     /// Le cas du manuel transféré : Auto, scan, NDLOCR et PP-OCRv5 absents de l'iPad, lectures NDLOCR et Vision présentes.
     /// La lecture NDLOCR est retenue ; Vision seulement pour une page jamais lue.
     func testAutoPrefersAnExistingNDLOCRReadingEvenWhenItsModelIsMissing() {
-        let order = OCRSelectionPolicy.cacheOrder(choice: .auto, pinned: nil, hasTextLayer: false)
-        let present = [page(OCREngineID.vision), page(OCREngineID.ndlocr)]
-        let found = order.compactMap { engine in present.first { $0.engine == engine } }
-        XCTAssertEqual(OCRSelectionPolicy.retained(among: found, prioritizingCorrections: true)?.engine, OCREngineID.ndlocr)
+        XCTAssertEqual(retained([page(OCREngineID.vision), page(OCREngineID.ndlocr)], choice: .auto), OCREngineID.ndlocr)
         XCTAssertEqual(OCRSelectionPolicy.engineToRead(choice: .auto, pinned: nil, hasTextLayer: false, isInstalled: none),
                        OCREngineID.vision)
     }
 
-    /// D7 (revue Codex de d87e048, R3) : en Auto sans choix pour la page, la version corrigée à la main passe d'abord.
+    /// D7 (revue Codex de d87e048, R3) : la version corrigée à la main passe d'abord.
     func testAutoRetainsTheCorrectedReadingFirst() {
-        let found = [page(OCREngineID.ndlocr), page(OCREngineID.vision, edited: true)]
-        XCTAssertTrue(OCRSelectionPolicy.prioritizesCorrections(choice: .auto, pinned: nil))
-        XCTAssertEqual(OCRSelectionPolicy.retained(among: found, prioritizingCorrections: true)?.engine, OCREngineID.vision)
+        XCTAssertEqual(retained([page(OCREngineID.ndlocr), page(OCREngineID.vision, edited: true)], choice: .auto), OCREngineID.vision)
         // Plusieurs versions corrigées : ordre de la politique. Aucune n'est supprimée ni déplacée.
-        let both = [page(OCREngineID.ndlocr, edited: true), page(OCREngineID.vision, edited: true)]
-        XCTAssertEqual(OCRSelectionPolicy.retained(among: both, prioritizingCorrections: true)?.engine, OCREngineID.ndlocr)
-        XCTAssertNil(OCRSelectionPolicy.retained(among: [], prioritizingCorrections: true))
+        XCTAssertEqual(retained([page(OCREngineID.ndlocr, edited: true), page(OCREngineID.vision, edited: true)], choice: .auto),
+                       OCREngineID.ndlocr)
+        XCTAssertNil(OCRSelectionPolicy.retained(among: [], choiceOrder: [OCREngineID.ndlocr]))
     }
 
-    /// Choix explicite (réglage ou page) : l'intention de l'utilisateur prime, la priorité des corrections ne s'applique pas.
-    func testExplicitChoiceIgnoresCorrectionPriority() {
-        XCTAssertFalse(OCRSelectionPolicy.prioritizesCorrections(choice: .auto, pinned: OCREngineID.ndlocr))
-        XCTAssertFalse(OCRSelectionPolicy.prioritizesCorrections(choice: .ndlocr, pinned: nil))
-        let found = [page(OCREngineID.ndlocr), page(OCREngineID.vision, edited: true)]
-        XCTAssertEqual(OCRSelectionPolicy.retained(among: found, prioritizingCorrections: false)?.engine, OCREngineID.ndlocr)
+    /// Décision F4 de NOxygen59 (07/11/2026) : la correction passe d'abord **toujours**, même face au moteur réglé ou
+    /// choisi dans le menu du panneau. Parmi plusieurs versions corrigées, le moteur choisi passe d'abord.
+    func testCorrectionWinsOverExplicitAndPinnedChoices() {
+        let pages = [page(OCREngineID.ndlocr), page(OCREngineID.vision, edited: true)]
+        XCTAssertEqual(retained(pages, choice: .ndlocr), OCREngineID.vision)
+        XCTAssertEqual(retained(pages, choice: .auto, pinned: OCREngineID.ndlocr), OCREngineID.vision)
+        let both = [page(OCREngineID.ndlocr, edited: true), page(OCREngineID.vision, edited: true)]
+        XCTAssertEqual(retained(both, choice: .auto, pinned: OCREngineID.vision), OCREngineID.vision)
+        XCTAssertTrue(OCRSelectionPolicy.isCorrected(page(OCREngineID.vision, edited: true)))
+        XCTAssertFalse(OCRSelectionPolicy.isCorrected(page(OCREngineID.vision)))
+    }
+
+    /// Sans correction, un choix explicite reste seul : la lecture d'un autre moteur n'est pas prise à sa place.
+    func testWithoutCorrectionExplicitChoiceStaysAlone() {
+        XCTAssertNil(retained([page(OCREngineID.vision)], choice: .ndlocr))
+        XCTAssertNil(retained([page(OCREngineID.vision)], choice: .auto, pinned: OCREngineID.ndlocr))
+        XCTAssertEqual(retained([page(OCREngineID.vision), page(OCREngineID.ndlocr)], choice: .vision), OCREngineID.vision)
+        // L'ordre de recherche commence par le choix, puis le reste sans doublon.
+        XCTAssertEqual(OCRSelectionPolicy.lookupOrder(choice: .vision, pinned: OCREngineID.glmocr, hasTextLayer: false),
+                       ["glmocr", "vision", "ndlocr", "ppocr5"])
     }
 
     func testAutoOrderIsTextLayerThenNDLOCRPPOCRGLMVision() {

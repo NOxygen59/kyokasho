@@ -36,22 +36,30 @@ public enum OCRSelectionPolicy {
         return [OCREngineID.ndlocr, OCREngineID.ppocr5].first(where: isInstalled) ?? OCREngineID.vision
     }
 
-    /// Vrai si la priorité des corrections (D7) s'applique : Auto, sans moteur choisi pour la page. Un choix explicite
-    /// (réglage ou menu du panneau) reste l'intention de l'utilisateur.
-    public static func prioritizesCorrections(choice: OCREngineChoice, pinned: String?) -> Bool {
-        choice == .auto && pinned == nil
+    /// Ordre dans lequel lire les lectures déjà faites d'une page : celles du choix (`cacheOrder`) d'abord, puis tous les
+    /// autres moteurs, sans doublon. Les suivants ne servent qu'à trouver une version **corrigée** (D7).
+    public static func lookupOrder(choice: OCREngineChoice, pinned: String?, hasTextLayer: Bool) -> [String] {
+        let scans = [OCREngineID.ndlocr, OCREngineID.ppocr5, OCREngineID.glmocr, OCREngineID.vision]
+        var order = cacheOrder(choice: choice, pinned: pinned, hasTextLayer: hasTextLayer)
+        if choice != .auto || pinned != nil { order.append(engineID(choice)) }
+        for engine in (hasTextLayer ? [OCREngineID.pdfText] + scans : scans) { order.append(engine) }
+        var seen = Set<String>()
+        return order.filter { seen.insert($0).inserted }
     }
 
-    /// OCR retenu parmi les lectures déjà faites, données dans l'ordre de `cacheOrder`.
+    /// OCR retenu parmi les lectures déjà faites, données dans l'ordre de `lookupOrder`.
     ///
-    /// D7 (décision de NOxygen59 du 07/11/2026 ; revue Codex de d87e048, R3) : les corrections restent attachées à leur
-    /// moteur, mais l'OCR retenu les prend en premier. Avec `prioritizingCorrections`, la première lecture corrigée à la
-    /// main gagne ; plusieurs lectures corrigées se départagent par l'ordre de la politique. Aucune version n'est
-    /// supprimée, fusionnée ni déplacée vers un autre moteur.
-    public static func retained(among pages: [OCRPage], prioritizingCorrections: Bool) -> OCRPage? {
-        if prioritizingCorrections, let corrected = pages.first(where: \.hasManualEdits) { return corrected }
-        return pages.first
+    /// D7 et décision F4 de NOxygen59 (07/11/2026) : les corrections restent attachées à leur moteur, mais l'OCR retenu
+    /// les prend **toujours** en premier, même face au moteur réglé ou choisi dans le menu du panneau. Plusieurs versions
+    /// corrigées : la première dans l'ordre de recherche (moteur choisi d'abord). Sans correction : la première lecture
+    /// d'un moteur de `choiceOrder` (le choix explicite reste seul). Aucune version n'est supprimée, fusionnée ni déplacée.
+    public static func retained(among pages: [OCRPage], choiceOrder: [String]) -> OCRPage? {
+        if let corrected = pages.first(where: isCorrected) { return corrected }
+        return pages.first { choiceOrder.contains($0.engine) }
     }
+
+    /// Lecture dont au moins une ligne a été corrigée à la main.
+    public static func isCorrected(_ page: OCRPage) -> Bool { page.hasManualEdits }
 
     /// Identifiant du moteur d'un choix explicite.
     public static func engineID(_ choice: OCREngineChoice) -> String {

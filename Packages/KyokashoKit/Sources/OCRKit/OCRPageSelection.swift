@@ -120,10 +120,13 @@ public struct OCRPageSelection: Sendable {
 
     /// Adopte `engine` comme OCR retenu de la page du ticket, si la demande est encore courante et compatible avec le
     /// moteur choisi pour la page. Refusé : rien ne change, et l'appelant ne doit rien afficher.
+    /// - Parameters:
+    ///   - overridingPin: lecture corrigée à la main : elle passe avant le moteur choisi pour la page (décision F4 de
+    ///     NOxygen59, 07/11/2026). Le choix du menu est gardé pour quand la page n'a plus de correction.
     /// - Returns: `true` si le résultat peut être affiché.
     @discardableResult
-    public mutating func adopt(_ engine: String, ticket: Ticket) -> Bool {
-        guard isCurrent(ticket), pinned[ticket.source].map({ $0 == engine }) ?? true else { return false }
+    public mutating func adopt(_ engine: String, ticket: Ticket, overridingPin: Bool = false) -> Bool {
+        guard isCurrent(ticket), overridingPin || (pinned[ticket.source].map({ $0 == engine }) ?? true) else { return false }
         // Changement de moteur : la dernière adoption gagne, une demande plus ancienne de la page ne pourra plus revenir.
         // Même moteur : l'autorité ne change pas ; une lecture forcée de ce moteur (« Relancer ») reste attendue.
         if selected[ticket.source] != engine { invalidate(ticket.source) }
