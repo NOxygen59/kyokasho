@@ -193,4 +193,27 @@ final class OCRPageSelectionTests: XCTestCase {
         selection.reset()
         XCTAssertNil(selection.pinned[3])
     }
+
+    /// Étape 2 (contre-revues Codex 51f8a2d F5 et 4522367) : « Relancer Vision », une lecture de cache de l'ancien contenu
+    /// Vision est suspendue, le nouveau contenu est adopté et dessiné ; l'ancien cache revient et doit être refusé.
+    func testCacheReadOlderThanAPublicationOfTheSameEngineIsRefused() {
+        var selection = OCRPageSelection()
+        XCTAssertTrue(selection.adopt(OCREngineID.vision, ticket: selection.ticket(for: 0)))
+        selection.publish(OCREngineID.vision, source: 0)
+        let relaunch = selection.retain(OCREngineID.vision, source: 0)
+        let oldCache = selection.ticket(for: 0)
+        XCTAssertTrue(selection.adopt(OCREngineID.vision, ticket: relaunch.ticket))
+        selection.publish(OCREngineID.vision, source: 0)
+        XCTAssertFalse(selection.adopt(OCREngineID.vision, ticket: oldCache, fromCache: true))
+    }
+
+    /// Une lecture **neuve** (calculée maintenant) n'est pas refusée par une publication du même moteur survenue pendant
+    /// son calcul : sinon « Relancer » serait perdu après une page posée.
+    func testFreshReadIsNotRefusedByAPublicationOfTheSameEngine() {
+        var selection = OCRPageSelection()
+        let relaunch = selection.retain(OCREngineID.ndlocr, source: 1)
+        XCTAssertTrue(selection.adopt(OCREngineID.ndlocr, ticket: selection.ticket(for: 1), fromCache: true))
+        selection.publish(OCREngineID.ndlocr, source: 1)
+        XCTAssertTrue(selection.adopt(OCREngineID.ndlocr, ticket: relaunch.ticket, fromCache: false))
+    }
 }

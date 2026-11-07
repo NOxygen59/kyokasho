@@ -165,6 +165,10 @@ final class ReaderController: NSObject, ObservableObject {
     /// Moteur de l'**OCR retenu** de chaque page. Seul un résultat de ce moteur alimente zones, furigana et panneau
     /// (enquête furigana iPad / Mac du 07/11/2026 : 223 lectures, puis 74).
     var selectedEngines: [Int: String] { ocrSelection.selected }
+    /// Tâche de la page posée (caches des pages visibles) : annulée à la page posée suivante.
+    var settleOCRTask: Task<Void, Never>?
+    /// Jeton de la file `ensureOCR` : seule la file courante se retire à sa fin.
+    var ensureGeneration = 0
     /// Début de mot par caractère, par ligne de texte (découpage du dictionnaire), pour le survol.
     var wordStartMemo: [String: [Int]] = [:]
     var pageTextTask: Task<Void, Never>?
@@ -711,7 +715,7 @@ final class ReaderController: NSObject, ObservableObject {
             ocr = try? await model.ocr.page(documentId: document.id, url: fileURL, pageIndex: source, engine: engine)
             if focused, focusSource == source { ocrState = .idle }
             // `ocrState` revient toujours au repos. Le résultat, lui, reste au cache : un geste plus récent garde l'écran.
-            if let ocr, !isStale() { adoptOCR(OCRCandidate(page: ocr, ticket: ticket), source: source) }
+            if let ocr, !isStale() { adoptOCR(OCRCandidate(page: ocr, ticket: ticket, fromCache: false), source: source) }
         }
         // L'OCR a pu durer plusieurs secondes : un résultat périmé reste au cache mais ne touche plus à l'écran.
         guard let ocr, !isStale() else { return }
@@ -907,8 +911,10 @@ final class ReaderController: NSObject, ObservableObject {
                   let source = note.userInfo?["pageIndex"] as? Int,
                   let engine = note.userInfo?["engine"] as? String else { return }
             MainActor.assumeIsolated {
-                guard let self, !self.closed, id == self.document.id, source == self.focusSource,
-                      engine == self.ocrPage?.engine else { return }
+                guard let self, !self.closed, id == self.document.id else { return }
+                // Double page : l'autre page affichée suit aussi (étape 2).
+                guard source == self.focusSource else { self.reloadShownPage(source, engine: engine); return }
+                guard engine == self.ocrPage?.engine else { return }
                 Diagnostics.log("Cache OCR enregistré : rafraîchissement p. \(source + 1)", "ocr-ui")
                 self.reloadOCRAfterAITask()
             }

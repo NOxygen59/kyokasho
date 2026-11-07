@@ -139,7 +139,8 @@ extension ReaderController {
     @discardableResult
     func adoptOCR(_ candidate: OCRCandidate, source: Int, updatePanel: Bool = true) -> Bool {
         guard !closed, ocrSelection.adopt(candidate.page.engine, ticket: candidate.ticket,
-                                          overridingPin: OCRSelectionPolicy.isCorrected(candidate.page)) else {
+                                          overridingPin: OCRSelectionPolicy.isCorrected(candidate.page),
+                                          fromCache: candidate.fromCache) else {
             Diagnostics.log("OCR p. \(source + 1) : \(candidate.page.engine) écarté, demande périmée "
                             + "(moteur retenu \(selectedEngines[source] ?? "aucun"))", "furigana")
             return false
@@ -432,4 +433,7 @@ extension ReaderController {
 struct OCRCandidate {
     var page: OCRPage
     let ticket: OCRPageSelection.Ticket
+    /// Lue dans le cache (et non calculée maintenant) : refusée si une lecture a été dessinée depuis le ticket, car elle
+    /// peut être plus ancienne que l'affichage (étape 2).
+    let fromCache: Bool
 }

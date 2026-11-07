@@ -56,6 +56,18 @@ final class StyleTokensGuardTests: XCTestCase {
         // F3/F4 : la correction acceptée sur un autre moteur est réévaluée tout de suite et passe avant tout choix (D7).
         let verification = try String(contentsOf: reader.appendingPathComponent("ReaderController+Verification.swift"), encoding: .utf8)
         XCTAssertTrue(verification.contains("} else if !self.closed, let candidate = await self.candidateOCR(source: source) {"))
+        // Étape 2, partie 1 : les écritures d'une relecture ou d'une suggestion portent la génération des pages capturée
+        // au début du travail (pas d'écriture sous un index devenu une autre page).
+        XCTAssertEqual(ocrFile.components(separatedBy: "expectedGeneration: generation").count, 3, "refineOCR et rereadDoubtful")
+        XCTAssertTrue(verification.contains("try await service.store(page, documentId: documentId, pageIndex: source, expectedGeneration: generation)"))
+        // Étape 2, partie 2 : cache plus ancien refusé ; file ensureOCR à jeton ; page posée annulable ; relecture lancée
+        // une fois ; autre page d'une double page rafraîchie.
+        XCTAssertTrue(display.contains("fromCache: candidate.fromCache) else {"))
+        XCTAssertTrue(ocrFile.contains("defer { if self?.ensureGeneration == generation { self?.ensureTask = nil; self?.ensuringPage = nil } }"))
+        XCTAssertTrue(ocrFile.contains("settleOCRTask?.cancel()\n        settleOCRTask = Task {"))
+        XCTAssertTrue(ocrFile.contains("if linesBefore == candidate.page.lines { self.refineOCR() }"))
+        let controller = try String(contentsOf: reader.appendingPathComponent("ReaderController.swift"), encoding: .utf8)
+        XCTAssertTrue(controller.contains("guard source == self.focusSource else { self.reloadShownPage(source, engine: engine); return }"))
         XCTAssertTrue(display.contains("overridingPin: OCRSelectionPolicy.isCorrected(candidate.page)"))
         XCTAssertTrue(display.contains("guard retained == nil || retained == OCREngineID.pdfText else { return false }"))
         XCTAssertEqual(display.components(separatedBy: "FuriganaLayer.set(").count, 3, "publication de showOCR et de scheduleFurigana, pas d'autre")

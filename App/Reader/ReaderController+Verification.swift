@@ -112,6 +112,8 @@ extension ReaderController {
         let previous = acceptChain, documentId = document.id, service = model.ocr
         acceptChain = Task { [weak self] in
             await previous?.value
+            // Génération des pages au début : une suggestion ne s'écrit pas sur une page déplacée entre-temps (étape 2).
+            let generation = await service.generation(documentId: documentId)
             guard let self else { return }
             let live = source == self.focusSource && self.ocrPage?.engine == engine ? self.ocrPage : nil
             var found = live
@@ -126,7 +128,7 @@ extension ReaderController {
             }
             guard changed else { return }
             do {
-                try await service.store(page, documentId: documentId, pageIndex: source)
+                try await service.store(page, documentId: documentId, pageIndex: source, expectedGeneration: generation)
             } catch {
                 self.loadError = String(localized: "Correction non enregistrée : \(error.localizedDescription)")
                 return

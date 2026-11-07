@@ -20,6 +20,8 @@ public struct OCRPageSelection: Sendable {
         public let source: Int
         let epoch: Int
         let revision: Int
+        /// Nombre de publications de la page au moment du ticket (fraîcheur d'une lecture de cache, étape 2).
+        let publication: Int
     }
 
     /// Moteur choisi dans le panneau Texte pour la page (décision D2), tant que le lecteur est ouvert.
@@ -34,6 +36,10 @@ public struct OCRPageSelection: Sendable {
     /// Choix du menu déjà dessiné au moins une fois pour la page : seul choix qu'un échec peut rétablir. Gardé à la
     /// rotation (qui vide `published`), vidé par un nouveau réglage (contre-revue Claude de 1ef9ab9, L1).
     private var confirmedPinned: [Int: String] = [:]
+    /// Nombre de lectures dessinées par page. Une lecture de **cache** commencée avant une publication peut rapporter un
+    /// contenu plus ancien du même moteur que celui dessiné : elle est refusée (étape 2 ; contre-revues Codex 51f8a2d F5
+    /// et 4522367). Jamais remis à zéro : un compteur qui recule rendrait un vieux ticket de nouveau valable.
+    private var publications: [Int: Int] = [:]
     private var revisions: [Int: Int] = [:]
     /// Incrémentée par `reset` : périme d'un coup toutes les pages, même celles sans révision propre.
     private var epoch = 0
@@ -42,7 +48,8 @@ public struct OCRPageSelection: Sendable {
 
     /// Ticket à prendre avant de lire le cache ou de lancer une lecture pour `source`.
     public func ticket(for source: Int) -> Ticket {
-        Ticket(source: source, epoch: epoch, revision: revisions[source, default: 0])
+        Ticket(source: source, epoch: epoch, revision: revisions[source, default: 0],
+               publication: publications[source, default: 0])
     }
 
     /// Intention annulable (choix du menu, « Relancer ») : état d'avant et ticket de la demande lancée.
@@ -101,6 +108,7 @@ public struct OCRPageSelection: Sendable {
     public mutating func publish(_ engine: String, source: Int) -> String? {
         let previous = published[source]
         published[source] = engine
+        publications[source, default: 0] &+= 1
         if pinned[source] == engine { confirmedPinned[source] = engine }
         return previous == engine ? nil : previous
     }
@@ -132,10 +140,13 @@ public struct OCRPageSelection: Sendable {
     /// - Parameters:
     ///   - overridingPin: lecture corrigée à la main : elle passe avant le moteur choisi pour la page (décision F4 de
     ///     NOxygen59, 07/11/2026). Le choix du menu est gardé pour quand la page n'a plus de correction.
+    ///   - fromCache: lecture prise dans le cache. Refusée si une lecture a été dessinée pour la page depuis le ticket :
+    ///     elle peut être plus ancienne que ce qui est affiché. Une lecture neuve (calculée maintenant) n'est pas concernée.
     /// - Returns: `true` si le résultat peut être affiché.
     @discardableResult
-    public mutating func adopt(_ engine: String, ticket: Ticket, overridingPin: Bool = false) -> Bool {
-        guard isCurrent(ticket), overridingPin || (pinned[ticket.source].map({ $0 == engine }) ?? true) else { return false }
+    public mutating func adopt(_ engine: String, ticket: Ticket, overridingPin: Bool = false, fromCache: Bool = false) -> Bool {
+        guard isCurrent(ticket), overridingPin || (pinned[ticket.source].map({ $0 == engine }) ?? true),
+              !fromCache || ticket.publication == publications[ticket.source, default: 0] else { return false }
         // Changement de moteur : la dernière adoption gagne, une demande plus ancienne de la page ne pourra plus revenir.
         // Même moteur : l'autorité ne change pas ; une lecture forcée de ce moteur (« Relancer ») reste attendue.
         if selected[ticket.source] != engine { invalidate(ticket.source) }

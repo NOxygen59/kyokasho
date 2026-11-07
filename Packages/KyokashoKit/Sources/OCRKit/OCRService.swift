@@ -112,9 +112,23 @@ public actor OCRService {
         return result
     }
 
+    /// Génération des index de pages du document : change à chaque ajout ou suppression de pages (`beginPageMutation`).
+    /// À capturer au début d'un travail qui écrira dans le cache, puis à passer à `store(expectedGeneration:)`.
+    public func generation(documentId: String) -> UInt64 {
+        documentGeneration[documentId, default: 0]
+    }
+
     /// Remplace le résultat en cache (relecture par l'IA, correction à la main).
-    public func store(_ page: OCRPage, documentId: String, pageIndex: Int) throws {
+    /// - Parameters:
+    ///   - expectedGeneration: génération capturée au début du travail. Si les pages ont changé depuis, l'index
+    ///     `pageIndex` peut désigner une autre page : l'écriture est refusée (`CancellationError`), sans notification
+    ///     (étape 2 de la reconstruction de l'OCR ; revue Codex de d87e048, §2). `nil` : refus seulement pendant le
+    ///     changement de pages, comme avant.
+    public func store(_ page: OCRPage, documentId: String, pageIndex: Int, expectedGeneration: UInt64? = nil) throws {
         guard documentsBeingReplaced[documentId] == nil else { throw CancellationError() }
+        if let expectedGeneration, documentGeneration[documentId, default: 0] != expectedGeneration {
+            throw CancellationError()
+        }
         let normalized = OCRTargetLanguage.forDocument(documentId) == .japanese ? JapaneseOCRText.normalize(page) : page
         try database.save(OCRResultRecord(documentId: documentId, pageIndex: pageIndex, engine: normalized.engine,
                                           json: try encoder.encode(normalized), durationMs: normalized.durationMs))
