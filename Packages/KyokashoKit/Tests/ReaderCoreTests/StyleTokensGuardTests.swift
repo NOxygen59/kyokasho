@@ -41,8 +41,21 @@ final class StyleTokensGuardTests: XCTestCase {
             let text = try String(contentsOf: reader.appendingPathComponent(file), encoding: .utf8)
             XCTAssertFalse(text.contains("selectedEngines[source] = "), file)
             XCTAssertFalse(text.contains("pinnedEngines[source] = "), file)
-            XCTAssertFalse(text.contains("self.showOCR(page, source: source)\n"), "\(file) : résultat de showOCR ignoré")
+            // Contre-revue Codex de 51f8a2d (F2) : chaque appel à `showOCR` est la condition d'un `guard` ou d'un `if`,
+            // jamais une instruction dont le refus serait ignoré (corrections manuelles, annulation comprises).
+            for line in text.split(separator: "\n") where line.contains("showOCR(") && !line.contains("func showOCR") {
+                let code = line.trimmingCharacters(in: .whitespaces)
+                guard !code.hasPrefix("//") else { continue }
+                XCTAssertTrue(code.hasPrefix("guard ") || code.hasPrefix("if "), "\(file) : résultat de showOCR ignoré — \(code)")
+            }
         }
+        // F1 : changement de moteur détecté d'après le moteur dessiné ; échec du moteur demandé → ancienne lecture retenue.
+        XCTAssertTrue(display.contains("if ocrSelection.publish(ocr.engine, source: source) != nil {"))
+        let ocrFile = try String(contentsOf: reader.appendingPathComponent("ReaderController+OCR.swift"), encoding: .utf8)
+        XCTAssertTrue(ocrFile.contains("if let intent { self.ocrSelection.revert(intent) }"))
+        // F3 : en Auto sans choix, la correction acceptée sur un autre moteur est réévaluée tout de suite (D7).
+        let verification = try String(contentsOf: reader.appendingPathComponent("ReaderController+Verification.swift"), encoding: .utf8)
+        XCTAssertTrue(verification.contains("OCRSelectionPolicy.prioritizesCorrections(choice: self.settings.ocrEngine"))
         XCTAssertTrue(display.contains("guard retained == nil || retained == OCREngineID.pdfText else { return false }"))
         XCTAssertEqual(display.components(separatedBy: "FuriganaLayer.set(").count, 3, "publication de showOCR et de scheduleFurigana, pas d'autre")
         let close = try String(contentsOf: reader.appendingPathComponent("ReaderController+OCR.swift"), encoding: .utf8)

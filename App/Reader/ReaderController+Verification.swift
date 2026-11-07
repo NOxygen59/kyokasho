@@ -131,8 +131,16 @@ extension ReaderController {
                 self.loadError = String(localized: "Correction non enregistrée : \(error.localizedDescription)")
                 return
             }
-            // Correction d'un moteur qui n'est plus retenu : enregistrée (D7), mais l'affichage reste à l'OCR retenu.
-            if self.showOCR(page, source: source), source == self.focusSource, self.ocrPage?.engine == engine { self.ocrPage = page }
+            if self.showOCR(page, source: source) {
+                if source == self.focusSource, self.ocrPage?.engine == engine { self.ocrPage = page }
+            } else if !self.closed,
+                      OCRSelectionPolicy.prioritizesCorrections(choice: self.settings.ocrEngine, pinned: self.pinnedEngines[source]),
+                      let candidate = await self.candidateOCR(source: source) {
+                // D7, Auto sans choix pour la page : la version corrigée passe d'abord, affichée dès l'acceptation et non
+                // au geste suivant (contre-revue Codex de 51f8a2d, F3). Avec un moteur choisi, la correction reste
+                // enregistrée sur son moteur sans remplacer le choix (D2).
+                self.adoptOCR(candidate, source: source)
+            }
             self.wordStartMemo.removeAll()
         }
     }
@@ -165,13 +173,17 @@ extension ReaderController {
     }
 
     func ocrUnchanged(since original: OCRPage, source: Int) -> Bool {
-        guard source == focusSource, let current = ocrPage, current.engine == original.engine else { return false }
+        // Le panneau doit aussi être l'OCR retenu : sinon la correction changerait le panneau sans les zones.
+        guard source == focusSource, let current = ocrPage, current.engine == original.engine,
+              selectedEngines[source] == current.engine else { return false }
         return current.lines.map(\.text) == original.lines.map(\.text)
     }
 
     /// Plusieurs lignes en une seule écriture : des écritures séparées pourraient se terminer dans le désordre.
+    /// Refusée si le panneau n'est pas l'OCR retenu de la page (contre-revue Codex de 51f8a2d, F2) : panneau et zones
+    /// changeraient de version l'un sans l'autre.
     func correctOCRLines(_ corrections: [Int: String]) {
-        guard var page = ocrPage else { return }
+        guard var page = ocrPage, selectedEngines[focusSource] == page.engine else { return }
         var changed = false
         for (index, text) in corrections where page.lines.indices.contains(index) {
             let new = text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -179,9 +191,8 @@ extension ReaderController {
             page.lines[index] = page.lines[index].acceptingCorrection(new)
             changed = true
         }
-        guard changed else { return }
+        guard changed, showOCR(page, source: focusSource) else { return }
         ocrPage = page
-        showOCR(page, source: focusSource)
         wordStartMemo.removeAll()
         let source = focusSource, documentId = document.id, service = model.ocr
         Task { try? await service.store(page, documentId: documentId, pageIndex: source) }
@@ -207,8 +218,12 @@ extension ReaderController {
         let source = focusSource
         if var page = ocrPage, page.lines.contains(where: { $0.originalText != nil }) {
             page.lines = page.lines.map(\.revertingCorrection)
+            // Même contrôle que les corrections (F2) : panneau et zones changent ensemble, ou rien n'est écrit.
+            guard showOCR(page, source: source) else {
+                model.lastError = String(localized: "Le texte de cette page a changé : rien n'a été annulé. Ferme cet écran et recommence.")
+                return
+            }
             ocrPage = page
-            showOCR(page, source: source)
             wordStartMemo.removeAll()
             let documentId = document.id, service = model.ocr
             Task { try? await service.store(page, documentId: documentId, pageIndex: source) }

@@ -86,4 +86,46 @@ final class OCRPageSelectionTests: XCTestCase {
         selection.invalidate(5)
         XCTAssertFalse(selection.isCurrent(afterForget))
     }
+
+    /// Contre-revue Codex de 51f8a2d, F1 : le choix du menu écrit le moteur demandé, pas le moteur affiché. Le passage
+    /// NDLOCR → texte du PDF doit encore signaler que les furigana NDLOCR sont à retirer.
+    func testPublicationReportsTheReplacedEngineEvenAfterPin() {
+        var selection = OCRPageSelection()
+        XCTAssertTrue(selection.adopt(OCREngineID.ndlocr, ticket: selection.ticket(for: 0)))
+        XCTAssertNil(selection.publish(OCREngineID.ndlocr, source: 0))
+        selection.pin(OCREngineID.pdfText, source: 0)
+        XCTAssertEqual(selection.published[0], OCREngineID.ndlocr)
+        XCTAssertTrue(selection.adopt(OCREngineID.pdfText, ticket: selection.ticket(for: 0)))
+        XCTAssertEqual(selection.publish(OCREngineID.pdfText, source: 0), OCREngineID.ndlocr)
+        // Rafraîchissement du même moteur : rien à retirer.
+        XCTAssertNil(selection.publish(OCREngineID.pdfText, source: 0))
+    }
+
+    /// F1, échec du nouveau moteur : l'ancienne lecture reste retenue explicitement, sans état hybride.
+    func testFailedIntentRevertsToThePreviousReading() {
+        var selection = OCRPageSelection()
+        XCTAssertTrue(selection.adopt(OCREngineID.ndlocr, ticket: selection.ticket(for: 2)))
+        selection.publish(OCREngineID.ndlocr, source: 2)
+        let intent = selection.pin(OCREngineID.vision, source: 2)
+        XCTAssertTrue(selection.revert(intent))
+        XCTAssertNil(selection.pinned[2])
+        XCTAssertEqual(selection.selected[2], OCREngineID.ndlocr)
+        XCTAssertFalse(selection.isCurrent(intent.ticket), "une lecture Vision encore en route reste refusée")
+        // Une intention plus récente ne peut pas être annulée par l'échec d'une plus ancienne.
+        let older = selection.pin(OCREngineID.vision, source: 2)
+        selection.pin(OCREngineID.glmocr, source: 2)
+        XCTAssertFalse(selection.revert(older))
+        XCTAssertEqual(selection.selected[2], OCREngineID.glmocr)
+    }
+
+    /// Rotation et nouveau réglage : plus rien n'est affiché pour la page, donc rien à signaler comme remplacé.
+    func testForgetAndResetClearThePublishedEngine() {
+        var selection = OCRPageSelection()
+        selection.publish(OCREngineID.vision, source: 1)
+        selection.forget(1)
+        XCTAssertNil(selection.published[1])
+        selection.publish(OCREngineID.vision, source: 1)
+        selection.reset()
+        XCTAssertNil(selection.published[1])
+    }
 }

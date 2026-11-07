@@ -138,23 +138,12 @@ extension ReaderController {
     /// - Returns: `true` si la lecture est maintenant l'OCR retenu affiché.
     @discardableResult
     func adoptOCR(_ candidate: OCRCandidate, source: Int, updatePanel: Bool = true) -> Bool {
-        let previous = selectedEngines[source]
         guard !closed, ocrSelection.adopt(candidate.page.engine, ticket: candidate.ticket) else {
             Diagnostics.log("OCR p. \(source + 1) : \(candidate.page.engine) écarté, demande périmée "
                             + "(moteur retenu \(selectedEngines[source] ?? "aucun"))", "furigana")
             return false
         }
-        if let previous, previous != candidate.page.engine {
-            // Autre moteur retenu : les furigana déjà mémorisés pour la page viennent de l'ancien. Les retirer, sinon
-            // `scheduleFurigana` sauterait la page (clé présente) et le dessin garderait l'ancienne lecture (cas du texte
-            // PDF choisi après des furigana NDLOCR).
-            FuriganaLayer.remove(ScanSharpening.key(documentId: document.id, page: source))
-            furiganaGeneration[source, default: 0] += 1
-            pageFuriganaTasks[source]?.cancel()
-            pdfView.requestRedraw()
-        }
         drawOCR(candidate.page, source: source)
-        if candidate.page.engine == OCREngineID.pdfText, previous != OCREngineID.pdfText { scheduleFurigana(shownSources) }
         if updatePanel, source == focusSource { ocrPage = candidate.page }
         return true
     }
@@ -179,6 +168,17 @@ extension ReaderController {
     /// par `adoptOCR` et `showOCR`, après leur contrôle.
     private func drawOCR(_ ocr: OCRPage, source: Int) {
         realOCRMemo[source] = nil
+        // Comparé au moteur **dessiné**, pas au moteur retenu : un choix du menu écrit déjà le nouveau moteur retenu
+        // avant l'arrivée de la lecture (contre-revue Codex de 51f8a2d, F1).
+        if ocrSelection.publish(ocr.engine, source: source) != nil {
+            // Les furigana mémorisés viennent de l'ancien moteur : les retirer, sinon `scheduleFurigana` sauterait la page
+            // (clé présente) et le dessin garderait l'ancienne lecture (texte du PDF choisi après des furigana NDLOCR).
+            FuriganaLayer.remove(ScanSharpening.key(documentId: document.id, page: source))
+            furiganaGeneration[source, default: 0] += 1
+            pageFuriganaTasks[source]?.cancel()
+            pdfView.requestRedraw()
+            if ocr.engine == OCREngineID.pdfText { scheduleFurigana(shownSources) }
+        }
         ink.setOCR(ocr, source: source)
         guard pageFuriganaOn else { return }
         // Un moteur OCR explicite fournit les boîtes du scan même si le scanner a ajouté une couche texte PDF.

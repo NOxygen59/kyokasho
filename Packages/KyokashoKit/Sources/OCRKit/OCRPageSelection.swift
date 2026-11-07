@@ -25,7 +25,12 @@ public struct OCRPageSelection: Sendable {
     /// Moteur choisi dans le panneau Texte pour la page (décision D2), tant que le lecteur est ouvert.
     public private(set) var pinned: [Int: String] = [:]
     /// Moteur de l'OCR retenu de chaque page : seul un résultat de ce moteur alimente zones, furigana et panneau.
+    /// Un choix du menu l'écrit **avant** que la lecture arrive : c'est une intention, pas ce qui est affiché.
     public private(set) var selected: [Int: String] = [:]
+    /// Moteur de la dernière lecture réellement dessinée pour la page (zones, furigana). Distinct de `selected` : le
+    /// passage NDLOCR → texte du PDF par le menu doit encore savoir que des furigana NDLOCR sont à retirer
+    /// (contre-revue Codex de 51f8a2d, F1).
+    public private(set) var published: [Int: String] = [:]
     private var revisions: [Int: Int] = [:]
     /// Incrémentée par `reset` : périme d'un coup toutes les pages, même celles sans révision propre.
     private var epoch = 0
@@ -37,22 +42,59 @@ public struct OCRPageSelection: Sendable {
         Ticket(source: source, epoch: epoch, revision: revisions[source, default: 0])
     }
 
-    /// Vrai si aucune intention ni adoption n'a eu lieu pour la page depuis la prise du ticket.
+    /// Intention annulable (choix du menu, « Relancer ») : état d'avant et ticket de la demande lancée.
+    public struct Intent: Sendable {
+        public let ticket: Ticket
+        let previousPinned: String?
+        let previousSelected: String?
+    }
+
+    /// Vrai si aucune intention ni changement de moteur adopté n'a eu lieu pour la page depuis la prise du ticket.
+    /// Une adoption du **même** moteur ne périme pas : la fraîcheur du contenu d'un même moteur relève de l'étape 2.
     public func isCurrent(_ ticket: Ticket) -> Bool {
         ticket.epoch == epoch && ticket.revision == revisions[ticket.source, default: 0]
     }
 
     /// Choix du menu du panneau : retenu pour la page ; les demandes en cours pour elle deviennent périmées.
-    public mutating func pin(_ engine: String, source: Int) {
+    @discardableResult
+    public mutating func pin(_ engine: String, source: Int) -> Intent {
+        let previous = (pinned[source], selected[source])
         invalidate(source)
         pinned[source] = engine
         selected[source] = engine
+        return Intent(ticket: ticket(for: source), previousPinned: previous.0, previousSelected: previous.1)
     }
 
     /// « Relancer » avec un moteur connu : même moteur retenu, sans en faire un choix durable pour la page.
-    public mutating func retain(_ engine: String, source: Int) {
+    @discardableResult
+    public mutating func retain(_ engine: String, source: Int) -> Intent {
+        let previous = (pinned[source], selected[source])
         invalidate(source)
         selected[source] = engine
+        return Intent(ticket: ticket(for: source), previousPinned: previous.0, previousSelected: previous.1)
+    }
+
+    /// Lecture de l'intention échouée : l'ancienne lecture redevient explicitement l'OCR retenu, plutôt qu'un état hybride
+    /// (moteur demandé sans lecture, panneau de l'ancien). Sans effet si une intention plus récente existe.
+    /// Les demandes encore en route pour l'intention échouée restent refusées.
+    /// - Returns: `true` si l'état d'avant a été rétabli.
+    @discardableResult
+    public mutating func revert(_ intent: Intent) -> Bool {
+        guard isCurrent(intent.ticket) else { return false }
+        let source = intent.ticket.source
+        invalidate(source)
+        pinned[source] = intent.previousPinned
+        selected[source] = intent.previousSelected
+        return true
+    }
+
+    /// Note le moteur de la lecture que l'on dessine pour la page.
+    /// - Returns: le moteur précédemment dessiné s'il était **différent** (ses furigana sont à retirer), sinon `nil`.
+    @discardableResult
+    public mutating func publish(_ engine: String, source: Int) -> String? {
+        let previous = published[source]
+        published[source] = engine
+        return previous == engine ? nil : previous
     }
 
     /// Nouvelle intention sans moteur encore connu (« Relancer » en Auto) : les demandes en cours deviennent périmées.
@@ -64,6 +106,7 @@ public struct OCRPageSelection: Sendable {
     public mutating func forget(_ source: Int) {
         invalidate(source)
         selected[source] = nil
+        published[source] = nil
     }
 
     /// Nouveau réglage du moteur : intention durable qui remplace tous les choix faits page par page.
@@ -71,6 +114,7 @@ public struct OCRPageSelection: Sendable {
         epoch &+= 1
         pinned.removeAll()
         selected.removeAll()
+        published.removeAll()
         revisions.removeAll()
     }
 

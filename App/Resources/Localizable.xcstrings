@@ -23585,6 +23585,28 @@
         }
       }
     },
+    "Le texte de cette page a changé : rien n'a été annulé. Ferme cet écran et recommence." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The text of this page changed: nothing was undone. Close this screen and start again."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le texte de cette page a changé : rien n'a été annulé. Ferme cet écran et recommence."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此页文本已更改：未撤销任何内容。请关闭此界面后重试。"
+          }
+        }
+      }
+    },
     "Le texte de cette page a changé pendant ta correction : rien n'a été enregistré. Ferme cet écran et recommence.": {
       "localizations": {
         "en": {

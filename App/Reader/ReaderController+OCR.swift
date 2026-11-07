@@ -212,9 +212,10 @@ extension ReaderController {
         let service = model.ocr
         // Moteur demandé (menu du panneau, « Relancer ») : retenu pour cette page (décision D2), il gagne sur le cache.
         // Nouvelle intention : les lectures encore en cours pour la page deviennent périmées (revue Codex, R1).
+        var intent: OCRPageSelection.Intent?
         if let engine {
             // « Relancer » (force) relit le même moteur : ce n'est pas un nouveau choix pour la page.
-            if force { ocrSelection.retain(engine, source: source) } else { ocrSelection.pin(engine, source: source) }
+            intent = force ? ocrSelection.retain(engine, source: source) : ocrSelection.pin(engine, source: source)
         } else if force {
             ocrSelection.invalidate(source)
         }
@@ -249,7 +250,11 @@ extension ReaderController {
                 return
             } catch {
                 Diagnostics.error("OCR \(engineID) p. \(source) : \(error.localizedDescription)", "ocr")
-                guard let self, self.focusSource == source else { return }
+                guard let self else { return }
+                // Moteur demandé en échec : l'ancienne lecture, toujours dessinée et dans le panneau, redevient
+                // explicitement l'OCR retenu (pas de moteur retenu sans lecture ; contre-revue Codex de 51f8a2d, F1).
+                if let intent { self.ocrSelection.revert(intent) }
+                guard self.focusSource == source else { return }
                 self.ocrState = .failed(error.localizedDescription)
             }
         }
