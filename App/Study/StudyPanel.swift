@@ -575,10 +575,14 @@ struct StudyTextTab: View {
     }
 
     /// Le texte affiché ne vient pas du moteur choisi : le dire au lieu de laisser un logo qui semble contredire le choix.
+    /// Pas en « Mise en page IA » : le texte lu vient alors d'OvisOCR2, le moteur OCR n'y décide pas de l'affichage ; ni sans
+    /// texte lu (revue DeepSeek de 39d31d3).
     @ViewBuilder
     private var engineMismatchNote: some View {
         let indicator = indicator
-        if indicator.differs, reader.ocrState != .running, let shown = indicator.shown, let chosen = indicator.chosen {
+        if aiLayout || reader.ocrPage == nil {
+            EmptyView()
+        } else if indicator.differs, reader.ocrState != .running, let shown = indicator.shown, let chosen = indicator.chosen {
             Text(indicator.corrected
                  ? String(localized: "Choisi : \(OCREngineID.displayName(chosen)). Affiché : ta correction (sur \(OCREngineID.displayName(shown))), qui passe toujours d'abord.")
                  : String(localized: "Choisi : \(OCREngineID.displayName(chosen)). Affiché : \(OCREngineID.displayName(shown)), la dernière lecture réussie."))
@@ -638,8 +642,9 @@ struct StudyTextTab: View {
     @ViewBuilder
     private var copyButton: some View {
         // Ni pendant une lecture, ni après un échec : le texte de la lecture précédente n'est plus à l'écran (relecture
-        // de 6cc15fc, P3-c).
-        if reader.ocrPage != nil, reader.ocrState == .idle {
+        // de 6cc15fc, P3-c). Ni pendant une recherche : le panneau montre les résultats, pas la page (revue DeepSeek
+        // de 39d31d3).
+        if reader.ocrPage != nil, reader.ocrState == .idle, query.isEmpty {
             Button {
                 // Lu au moment du toucher : le texte d'OvisOCR2 et sa traduction sont des fichiers (`DocumentAITextStore`).
                 let ovis = aiLayout ? DocumentAITextStore.read(documentId: reader.document.id, reader: ModelSpec.ovisocr2.id, page: reader.focusSource) : nil

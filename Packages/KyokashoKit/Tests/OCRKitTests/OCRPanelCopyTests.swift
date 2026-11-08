@@ -20,6 +20,8 @@ final class OCRPanelCopyTests: XCTestCase {
     func testAILayoutCopiesTheShownTranslation() {
         XCTAssertEqual(OCRPanelCopy.text(mode: .aiLayout, page: page, ovis: "日本語", translation: "Français", showTranslation: true), "Français")
         XCTAssertEqual(OCRPanelCopy.text(mode: .aiLayout, page: page, ovis: "日本語", translation: nil, showTranslation: true), "日本語")
+        // Traduction présente mais non affichée : le japonais (revue DeepSeek de 39d31d3).
+        XCTAssertEqual(OCRPanelCopy.text(mode: .aiLayout, page: page, ovis: "日本語", translation: "Français", showTranslation: false), "日本語")
     }
 
     /// Mise en page IA sans lecture OvisOCR2 : rien à copier (le texte OCR n'est pas affiché).
