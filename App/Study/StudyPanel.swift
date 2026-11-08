@@ -171,8 +171,13 @@ struct StudyTextTab: View {
     @State private var editingLine: LineCorrectionDraft?
     @State private var showVerify = false
     @State private var lineDraft = ""
-    /// Dernier appui sur « Copier » : le bouton affiche « Copié » un instant.
+    /// Dernier appui sur « Copier » : le bouton affiche « Copié » (ou « Rien à copier ») un instant.
     @State private var copiedAt: Date?
+    private enum CopyFeedback { case copied, nothing }
+    @State private var copyFeedback = CopyFeedback.copied
+    /// Réglages d'`AILayoutView` (mêmes clés) : la traduction affichée est celle que copie le bouton.
+    @AppStorage("study.aiLayoutFrench") private var aiLayoutTranslation = false
+    @AppStorage("study.translationLanguage") private var translationLanguage = TranslationLanguage.french.rawValue
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -557,7 +562,16 @@ struct StudyTextTab: View {
             .background(Atelier.surfaceHigh, in: Capsule())
         }
         .fixedSize()
-        .accessibilityLabel(indicator.shown.map { String(localized: "Moteur OCR : \(OCREngineID.displayName($0))") } ?? String(localized: "Moteur OCR"))
+        .accessibilityLabel(engineAccessibilityLabel(indicator))
+    }
+
+    /// VoiceOver annonce aussi la correction et l'écart avec le choix (audit DeepSeek du 08/11/2026).
+    private func engineAccessibilityLabel(_ indicator: OCREngineIndicator) -> String {
+        guard let shown = indicator.shown else { return String(localized: "Moteur OCR") }
+        var label = String(localized: "Moteur OCR : \(OCREngineID.displayName(shown))")
+        if indicator.corrected { label += String(localized: ", corrigé à la main") }
+        if indicator.differs, let chosen = indicator.chosen { label += String(localized: ", choisi : \(OCREngineID.displayName(chosen))") }
+        return label
     }
 
     /// Le texte affiché ne vient pas du moteur choisi : le dire au lieu de laisser un logo qui semble contredire le choix.
@@ -568,6 +582,13 @@ struct StudyTextTab: View {
             Text(indicator.corrected
                  ? String(localized: "Choisi : \(OCREngineID.displayName(chosen)). Affiché : ta correction (sur \(OCREngineID.displayName(shown))), qui passe toujours d'abord.")
                  : String(localized: "Choisi : \(OCREngineID.displayName(chosen)). Affiché : \(OCREngineID.displayName(shown)), la dernière lecture réussie."))
+                .font(.caption2).foregroundStyle(Atelier.textTertiary)
+                .fixedSize(horizontal: false, vertical: true)
+        } else if let pinned = reader.pinnedEngines[reader.focusSource], reader.settings.ocrEngine.rawValue != pinned,
+                  reader.ocrState != .running {
+            // Relecture de 6cc15fc (P3-a) : un moteur choisi dans le menu ne vaut que pour sa page (décision D2) ; la
+            // page suivante revient au réglage. Le dire avant qu'on tourne la page.
+            Text("Choix valable pour cette page seulement. « Garder \(OCREngineID.displayName(pinned)) pour ce document » dans le menu l'étend à tout le document.")
                 .font(.caption2).foregroundStyle(Atelier.textTertiary)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -616,13 +637,26 @@ struct StudyTextTab: View {
     /// OCR affiché dans le panneau. Mis en forme : Markdown (titres, tableaux) ; sinon le texte ligne par ligne.
     @ViewBuilder
     private var copyButton: some View {
-        if let page = reader.ocrPage, reader.ocrState != .running {
+        // Ni pendant une lecture, ni après un échec : le texte de la lecture précédente n'est plus à l'écran (relecture
+        // de 6cc15fc, P3-c).
+        if reader.ocrPage != nil, reader.ocrState == .idle {
             Button {
-                UIPasteboard.general.string = formatted && !aiLayout ? OCRLayout.markdown(page) : page.text
+                // Lu au moment du toucher : le texte d'OvisOCR2 et sa traduction sont des fichiers (`DocumentAITextStore`).
+                let ovis = aiLayout ? DocumentAITextStore.read(documentId: reader.document.id, reader: ModelSpec.ovisocr2.id, page: reader.focusSource) : nil
+                let translation = aiLayout && aiLayoutTranslation
+                    ? DocumentAITextStore.read(documentId: reader.document.id, reader: translationLanguage, page: reader.focusSource) : nil
+                let mode: OCRPanelCopy.Mode = aiLayout ? .aiLayout : (formatted ? .formatted : .raw)
+                if let text = OCRPanelCopy.text(mode: mode, page: reader.ocrPage, ovis: ovis, translation: translation,
+                                                showTranslation: aiLayoutTranslation) {
+                    UIPasteboard.general.string = text
+                    copyFeedback = .copied
+                } else {
+                    copyFeedback = .nothing
+                }
                 copiedAt = Date()
             } label: {
-                Label(copied ? String(localized: "Copié") : String(localized: "Copier"),
-                      systemImage: copied ? "checkmark" : "doc.on.doc")
+                Label(copyFeedback == .nothing && copied ? String(localized: "Rien à copier") : copied ? String(localized: "Copié") : String(localized: "Copier"),
+                      systemImage: copyFeedback == .nothing && copied ? "xmark" : copied ? "checkmark" : "doc.on.doc")
                     .font(Atelier.font(13, weight: .semibold))
                     .padding(.horizontal, 12).padding(.vertical, 8)
                     .foregroundStyle(Atelier.textPrimary)
@@ -632,7 +666,8 @@ struct StudyTextTab: View {
             }
             .buttonStyle(.plain)
             .padding(4)
-            .accessibilityLabel(formatted && !aiLayout ? String(localized: "Copier en Markdown") : String(localized: "Copier le texte"))
+            .accessibilityLabel(aiLayout ? String(localized: "Copier la mise en page IA")
+                                : formatted ? String(localized: "Copier en Markdown") : String(localized: "Copier le texte"))
             .task(id: copiedAt) {
                 // « Copié » le temps de le voir, puis retour à « Copier ».
                 guard copiedAt != nil else { return }

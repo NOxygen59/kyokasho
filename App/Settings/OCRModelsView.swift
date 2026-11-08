@@ -183,7 +183,8 @@ enum OCREngineMenu {
         case OCREngineID.vision: return "apple.logo"
         case OCREngineID.ndlocr: return "building.columns"
         case OCREngineID.ppocr5: return "text.viewfinder"
-        case OCREngineID.glmocr: return "sparkles"
+        // Pas « sparkles » : c'est l'icône de la mise en page IA (OvisOCR2), on les confondait (relecture de 6cc15fc, P3-b).
+        case OCREngineID.glmocr: return "wand.and.stars"
         default: return "cpu"
         }
     }

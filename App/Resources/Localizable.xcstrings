@@ -50468,6 +50468,116 @@
           }
         }
       }
+    },
+    "Rien à copier": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing to copy"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rien à copier"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没有可复制的内容"
+          }
+        }
+      }
+    },
+    "Copier la mise en page IA": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy the AI layout"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copier la mise en page IA"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "复制 AI 版面"
+          }
+        }
+      }
+    },
+    "Choix valable pour cette page seulement. « Garder %@ pour ce document » dans le menu l'étend à tout le document.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This choice applies to this page only. “Keep %@ for this document” in the menu extends it to the whole document."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choix valable pour cette page seulement. « Garder %@ pour ce document » dans le menu l'étend à tout le document."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此选择仅适用于本页。菜单中的“此文档保持使用 %@”可将其应用到整个文档。"
+          }
+        }
+      }
+    },
+    ", corrigé à la main": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": ", corrected by hand"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": ", corrigé à la main"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "，已手动更正"
+          }
+        }
+      }
+    },
+    ", choisi : %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": ", chosen: %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": ", choisi : %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "，已选：%@"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
