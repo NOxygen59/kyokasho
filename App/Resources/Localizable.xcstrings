@@ -50358,6 +50358,116 @@
           }
         }
       }
+    },
+    "Moteur OCR": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OCR engine"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moteur OCR"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OCR 引擎"
+          }
+        }
+      }
+    },
+    "Moteur OCR : %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OCR engine: %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moteur OCR : %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OCR 引擎：%@"
+          }
+        }
+      }
+    },
+    "%@ (choisi)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ (chosen)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ (choisi)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@（已选）"
+          }
+        }
+      }
+    },
+    "Choisi : %@. Affiché : ta correction (sur %@), qui passe toujours d'abord.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chosen: %1$@. Shown: your correction (on %2$@), which always comes first."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choisi : %1$@. Affiché : ta correction (sur %2$@), qui passe toujours d'abord."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已选：%1$@。显示：你的更正（基于 %2$@），更正始终优先。"
+          }
+        }
+      }
+    },
+    "Choisi : %@. Affiché : %@, la dernière lecture réussie.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chosen: %1$@. Shown: %2$@, the last successful reading."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choisi : %1$@. Affiché : %2$@, la dernière lecture réussie."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已选：%1$@。显示：%2$@，即上次成功的识别。"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

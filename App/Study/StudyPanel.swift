@@ -19,6 +19,8 @@ struct StudyPanel: View {
     var openSearch: () -> Void
     /// Présentée par `ReaderScreen` : ce panneau est recréé quand l'iPad tourne, et la fenêtre fermée avec lui.
     var openLineEditor: () -> Void
+    /// Feuille des réglages du document, ouverte depuis le menu du panneau Texte.
+    var openDocumentSettings: (() -> Void)? = nil
     var close: () -> Void
     /// Colonne de droite : largeur fixe ; fenêtre ou plein écran (`DetachedPanel`) : toute la place donnée.
     var fixedWidth = true
@@ -64,7 +66,7 @@ struct StudyPanel: View {
                      selection: $tab, tint: tint)
             Group {
                 switch tab {
-                case .text: StudyTextTab(reader: reader, openLineEditor: openLineEditor)
+                case .text: StudyTextTab(reader: reader, openLineEditor: openLineEditor, openDocumentSettings: openDocumentSettings)
                 case .vocab:
                     DictionarySearchView(dictionary: model.dictionary, added: model.review.keys, compact: true) { term in
                         let sentence = reader.ocrPage?.lines.first { $0.text.contains(term.matchedText) }?.text
@@ -79,7 +81,7 @@ struct StudyPanel: View {
                 case .notes: StudyNotesTab(reader: reader)
                 case .marks: StudyMarksTab(reader: reader, openSearch: openSearch)
                 // Onglet repris d'un document précédent : pas de chat sur un manga.
-                case .chat where !reader.document.capabilities.chat: StudyTextTab(reader: reader, openLineEditor: openLineEditor)
+                case .chat where !reader.document.capabilities.chat: StudyTextTab(reader: reader, openLineEditor: openLineEditor, openDocumentSettings: openDocumentSettings)
                 case .chat: QwenChatView(document: reader.document, embedded: true,
                                          focusPage: reader.document.pageLabel(reader.focusSource),
                                          openPage: { reader.go(toSource: $0) },
@@ -123,6 +125,8 @@ struct StudyTextTab: View {
     @EnvironmentObject private var model: AppModel
     @ObservedObject var reader: ReaderController
     var openLineEditor: () -> Void
+    /// « Pagination et réglages de ce document », présentée par `ReaderScreen` (recette 1.5.3 : aussi dans le menu Texte).
+    var openDocumentSettings: (() -> Void)? = nil
     /// `reader.rereading` vient d'ici.
     @ObservedObject private var aiTasks = AITaskCenter.shared
     @ObservedObject private var deepl = DeepLService.shared
@@ -167,6 +171,8 @@ struct StudyTextTab: View {
     @State private var editingLine: LineCorrectionDraft?
     @State private var showVerify = false
     @State private var lineDraft = ""
+    /// Dernier appui sur « Copier » : le bouton affiche « Copié » un instant.
+    @State private var copiedAt: Date?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -226,8 +232,11 @@ struct StudyTextTab: View {
                     }
                     documentOCRRow
                 }
+                // Place pour le bouton Copier posé en bas à droite : la fin du texte reste lisible.
+                .padding(.bottom, reader.ocrPage == nil ? 0 : 44)
             }
         }
+        .overlay(alignment: .bottomTrailing) { copyButton }
         .task(id: "\(query)|\(reader.focusSource)|\(reader.ocrPage?.hashValue ?? 0)") {
             guard let page = reader.ocrPage, !query.isEmpty else { matches = []; return }
             try? await Task.sleep(nanoseconds: 150_000_000)
@@ -451,88 +460,189 @@ struct StudyTextTab: View {
         }
     }
 
+    /// Moteur affiché, moteur choisi et correction (recette iPad 1.5.3, retour 2.10) : voir `OCREngineIndicator`.
+    private var indicator: OCREngineIndicator {
+        OCREngineIndicator(page: reader.ocrPage, pinned: reader.pinnedEngines[reader.focusSource], setting: reader.settings.ocrEngine)
+    }
+
+    /// En-tête du texte : menu des moteurs, affichage, mise en page, furigana. Recette iPad 1.5.3 (retour 2.10) : dans la
+    /// colonne de droite, tout tenait sur une ligne et s'écrasait. `ViewThatFits` garde une ligne quand la place suffit
+    /// (fenêtre large, plein écran) et passe sur deux lignes sinon ; il mesure la place réellement donnée, donc suit le
+    /// mode du panneau et la rotation sans connaître ce mode.
     private var engineRow: some View {
-        HStack(spacing: 8) {
-            Menu {
-                // OvisOCR2 en tête (#39) : sa lecture s'affiche dans « Mise en page IA ».
-                if OvisOCR2Reader().isAvailable {
-                    Button { aiLayout = true } label: {
-                        Label("OvisOCR2 (mise en page IA)", systemImage: "sparkles.rectangle.stack")
+        VStack(alignment: .leading, spacing: 6) {
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 8) {
+                    engineMenu
+                    displayPicker.frame(maxWidth: 230)
+                    layoutMenu
+                    furiganaToggle
+                    Spacer(minLength: 0)
+                }
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 8) {
+                        engineMenu
+                        Spacer(minLength: 0)
+                        layoutMenu
+                        furiganaToggle
                     }
-                    Divider()
+                    displayPicker.frame(maxWidth: .infinity)
                 }
-                ForEach([OCREngineID.pdfText, OCREngineID.vision] + OCREngineMenu.extra, id: \.self) { id in
-                    // Quitter la mise en page IA : sinon le texte du moteur choisi resterait caché.
-                    Button { aiLayout = false; reader.runOCR(engine: id) } label: {
-                        Label(OCREngineID.displayName(id), systemImage: OCREngineMenu.icon(id))
-                    }
-                }
-                Divider()
-                // Moteur choisi ci-dessus : retenu pour cette page seulement ; ici, pour tout le document.
-                if let pinned = reader.pinnedEngines[reader.focusSource], reader.settings.ocrEngine.rawValue != pinned {
-                    Button {
-                        reader.keepPinnedEngineForDocument()
-                    } label: {
-                        Label("Garder \(OCREngineID.displayName(pinned)) pour ce document", systemImage: "pin")
-                    }
-                }
-                Button("Relancer") { reader.runOCR(engine: reader.ocrPage?.engine, force: true) }
-                Button("Comparer les moteurs") { showCompare = true }
-                if OvisOCR2Reader().isAvailable {
-                    Button {
-                        reader.verifyShownPages()
-                        showVerify = true
-                    } label: {
-                        Label(reader.shownSources.count > 1 ? String(localized: "Vérifier la double page (OvisOCR2)") : String(localized: "Vérifier la page (OvisOCR2)"),
-                              systemImage: "checkmark.seal")
-                    }
-                }
-            } label: {
-                // Icône seule (le nom s'écrivait en colonne dans le panneau étroit) ; le nom est dans le menu.
-                HStack(spacing: 4) {
-                    Image(systemName: OCREngineMenu.icon(reader.ocrPage?.engine))
-                    Image(systemName: "chevron.down").font(Atelier.font(10, weight: .bold))
-                }
-                .font(Atelier.font(13, weight: .semibold))
-                .padding(.horizontal, 10).padding(.vertical, 6)
-                .background(Atelier.surfaceHigh, in: Capsule())
             }
-            Picker("Affichage", selection: Binding(get: { aiLayout ? 2 : (formatted ? 0 : 1) },
-                                                   set: { aiLayout = $0 == 2; if $0 < 2 { formatted = $0 == 0 } })) {
-                Text("Mis en forme").tag(0)
-                Text("Brut").tag(1)
-                Image(systemName: "sparkles").tag(2).accessibilityLabel("Mise en page IA")
-            }
-            .pickerStyle(.segmented)
-            .frame(maxWidth: 230)
-            if formatted && !aiLayout {
-                Menu {
-                    LayoutEnginePicker(selection: $layoutEngineRaw)
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "rectangle.3.group")
-                        Text(LayoutEngineMenu.engine(layoutEngineRaw).shortTitle)
-                            .strikethrough(!LayoutEngineMenu.engine(layoutEngineRaw).isAvailable())
-                    }
-                    .font(Atelier.font(13, weight: .semibold))
-                    .padding(.horizontal, 8).padding(.vertical, 6)
-                    .background(Atelier.surfaceHigh, in: Capsule())
-                }
-                .accessibilityLabel("Moteur de mise en page : \(LayoutEngineMenu.engine(layoutEngineRaw).title)")
-            }
-            Toggle(isOn: $furigana) { Text("ふりがな").font(Atelier.font(13, weight: .semibold)) }
-                .toggleStyle(.button)
-                .accessibilityLabel("Furigana sur le texte extrait")
-            Spacer()
-            Button {
-                guard let page = reader.ocrPage else { return }
-                UIPasteboard.general.string = formatted ? OCRLayout.markdown(page) : page.text
-            } label: { Image(systemName: "doc.on.doc") }
-                .disabled(reader.ocrPage == nil)
-                .accessibilityLabel(formatted ? String(localized: "Copier en Markdown") : String(localized: "Copier le texte"))
+            engineMismatchNote
         }
         .foregroundStyle(Atelier.textPrimary)
     }
+
+    /// Menu du panneau Texte. Ordre demandé par NOxygen59 (recette 1.5.3, retour 2.10) : OvisOCR2 en haut (mise en page
+    /// IA, vérification), puis les moteurs, puis les actions, puis les réglages du document.
+    private var engineMenu: some View {
+        let indicator = indicator
+        return Menu {
+            if OvisOCR2Reader().isAvailable {
+                // Sa lecture s'affiche dans « Mise en page IA » (#39).
+                Button { aiLayout = true } label: {
+                    Label("OvisOCR2 (mise en page IA)", systemImage: "sparkles.rectangle.stack")
+                }
+                Button {
+                    reader.verifyShownPages()
+                    showVerify = true
+                } label: {
+                    Label(reader.shownSources.count > 1 ? String(localized: "Vérifier la double page (OvisOCR2)") : String(localized: "Vérifier la page (OvisOCR2)"),
+                          systemImage: "checkmark.seal")
+                }
+                Divider()
+            }
+            ForEach([OCREngineID.pdfText, OCREngineID.vision] + OCREngineMenu.extra, id: \.self) { id in
+                // Quitter la mise en page IA : sinon le texte du moteur choisi resterait caché.
+                Button { aiLayout = false; reader.runOCR(engine: id) } label: {
+                    // Coche : le moteur du texte affiché, le même que le libellé du menu.
+                    Label(indicator.differs && id == indicator.chosen
+                            ? String(localized: "\(OCREngineID.displayName(id)) (choisi)") : OCREngineID.displayName(id),
+                          systemImage: id == indicator.shown ? "checkmark" : OCREngineMenu.icon(id))
+                }
+            }
+            Divider()
+            // Moteur choisi ci-dessus : retenu pour cette page seulement ; ici, pour tout le document.
+            if let pinned = reader.pinnedEngines[reader.focusSource], reader.settings.ocrEngine.rawValue != pinned {
+                Button {
+                    reader.keepPinnedEngineForDocument()
+                } label: {
+                    Label("Garder \(OCREngineID.displayName(pinned)) pour ce document", systemImage: "pin")
+                }
+            }
+            Button { reader.runOCR(engine: reader.ocrPage?.engine, force: true) } label: {
+                Label("Relancer", systemImage: "arrow.clockwise")
+            }
+            Button { showCompare = true } label: {
+                Label("Comparer les moteurs", systemImage: "square.split.2x1")
+            }
+            if let openDocumentSettings {
+                Divider()
+                Button(action: openDocumentSettings) {
+                    Label("Pagination et réglages de ce document", systemImage: "slider.horizontal.3")
+                }
+            }
+        } label: {
+            // Icône et nom du moteur du texte **affiché** ; crayon si ce texte est corrigé à la main.
+            HStack(spacing: 5) {
+                Image(systemName: OCREngineMenu.icon(indicator.shown))
+                Text(indicator.shown.map(OCREngineID.displayName) ?? String(localized: "Moteur"))
+                    .lineLimit(1)
+                if indicator.corrected { Image(systemName: "pencil").font(Atelier.font(11, weight: .bold)) }
+                Image(systemName: "chevron.down").font(Atelier.font(10, weight: .bold))
+            }
+            .font(Atelier.font(13, weight: .semibold))
+            .padding(.horizontal, 10).padding(.vertical, 6)
+            .background(Atelier.surfaceHigh, in: Capsule())
+        }
+        .fixedSize()
+        .accessibilityLabel(indicator.shown.map { String(localized: "Moteur OCR : \(OCREngineID.displayName($0))") } ?? String(localized: "Moteur OCR"))
+    }
+
+    /// Le texte affiché ne vient pas du moteur choisi : le dire au lieu de laisser un logo qui semble contredire le choix.
+    @ViewBuilder
+    private var engineMismatchNote: some View {
+        let indicator = indicator
+        if indicator.differs, reader.ocrState != .running, let shown = indicator.shown, let chosen = indicator.chosen {
+            Text(indicator.corrected
+                 ? String(localized: "Choisi : \(OCREngineID.displayName(chosen)). Affiché : ta correction (sur \(OCREngineID.displayName(shown))), qui passe toujours d'abord.")
+                 : String(localized: "Choisi : \(OCREngineID.displayName(chosen)). Affiché : \(OCREngineID.displayName(shown)), la dernière lecture réussie."))
+                .font(.caption2).foregroundStyle(Atelier.textTertiary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private var displayPicker: some View {
+        Picker("Affichage", selection: Binding(get: { aiLayout ? 2 : (formatted ? 0 : 1) },
+                                               set: { aiLayout = $0 == 2; if $0 < 2 { formatted = $0 == 0 } })) {
+            Text("Mis en forme").tag(0)
+            Text("Brut").tag(1)
+            Image(systemName: "sparkles").tag(2).accessibilityLabel("Mise en page IA")
+        }
+        .pickerStyle(.segmented)
+    }
+
+    @ViewBuilder
+    private var layoutMenu: some View {
+        if formatted && !aiLayout {
+            Menu {
+                LayoutEnginePicker(selection: $layoutEngineRaw)
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "rectangle.3.group")
+                    Text(LayoutEngineMenu.engine(layoutEngineRaw).shortTitle)
+                        .strikethrough(!LayoutEngineMenu.engine(layoutEngineRaw).isAvailable())
+                        .lineLimit(1)
+                }
+                .font(Atelier.font(13, weight: .semibold))
+                .padding(.horizontal, 8).padding(.vertical, 6)
+                .background(Atelier.surfaceHigh, in: Capsule())
+            }
+            .fixedSize()
+            .accessibilityLabel("Moteur de mise en page : \(LayoutEngineMenu.engine(layoutEngineRaw).title)")
+        }
+    }
+
+    private var furiganaToggle: some View {
+        Toggle(isOn: $furigana) { Text("ふりがな").font(Atelier.font(13, weight: .semibold)) }
+            .toggleStyle(.button)
+            .fixedSize()
+            .accessibilityLabel("Furigana sur le texte extrait")
+    }
+
+    /// Bouton « Copier » en bas à droite du panneau (recette iPad 1.5.3, 7.1 à 7.4) : la copie depuis la page échoue ou
+    /// reste inexacte sur les scans (PDFKit n'y a pas de vrai texte) ; NOxygen59 a préféré un bouton qui copie le texte
+    /// OCR affiché dans le panneau. Mis en forme : Markdown (titres, tableaux) ; sinon le texte ligne par ligne.
+    @ViewBuilder
+    private var copyButton: some View {
+        if let page = reader.ocrPage, reader.ocrState != .running {
+            Button {
+                UIPasteboard.general.string = formatted && !aiLayout ? OCRLayout.markdown(page) : page.text
+                copiedAt = Date()
+            } label: {
+                Label(copied ? String(localized: "Copié") : String(localized: "Copier"),
+                      systemImage: copied ? "checkmark" : "doc.on.doc")
+                    .font(Atelier.font(13, weight: .semibold))
+                    .padding(.horizontal, 12).padding(.vertical, 8)
+                    .foregroundStyle(Atelier.textPrimary)
+                    .background(Atelier.surfaceHigh, in: Capsule())
+                    .overlay(Capsule().stroke(Atelier.hairline))
+                    .atelierShapeShadow(Capsule(), opacity: 0.12, radius: 6, y: 2)
+            }
+            .buttonStyle(.plain)
+            .padding(4)
+            .accessibilityLabel(formatted && !aiLayout ? String(localized: "Copier en Markdown") : String(localized: "Copier le texte"))
+            .task(id: copiedAt) {
+                // « Copié » le temps de le voir, puis retour à « Copier ».
+                guard copiedAt != nil else { return }
+                try? await Task.sleep(nanoseconds: 1_500_000_000)
+                if !Task.isCancelled { copiedAt = nil }
+            }
+        }
+    }
+
+    private var copied: Bool { copiedAt != nil }
 
     /// Ligne avec ses caractères douteux soulignés (orange).
     static func marked(_ line: OCRLine) -> AttributedString {
