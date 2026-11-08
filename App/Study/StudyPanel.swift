@@ -174,6 +174,8 @@ struct StudyTextTab: View {
     /// Dernier appui sur « Copier » : le bouton affiche « Copié » (ou « Rien à copier ») un instant.
     @State private var copiedAt: Date?
     private enum CopyFeedback { case copied, nothing }
+    /// Dernier appui sur le petit bouton du bloc Traduction.
+    @State private var translationCopiedAt: Date?
     @State private var copyFeedback = CopyFeedback.copied
     /// Réglages d'`AILayoutView` (mêmes clés) : la traduction affichée est celle que copie le bouton.
     @AppStorage("study.aiLayoutFrench") private var aiLayoutTranslation = false
@@ -521,10 +523,11 @@ struct StudyTextTab: View {
             ForEach([OCREngineID.pdfText, OCREngineID.vision] + OCREngineMenu.extra, id: \.self) { id in
                 // Quitter la mise en page IA : sinon le texte du moteur choisi resterait caché.
                 Button { aiLayout = false; reader.runOCR(engine: id) } label: {
-                    // Coche : le moteur du texte affiché, le même que le libellé du menu.
-                    Label(indicator.differs && id == indicator.chosen
+                    // Coche : le moteur du texte affiché, le même que le libellé du menu. Ni coche ni « (choisi) » en
+                    // « Mise en page IA » : le texte lu vient d'OvisOCR2 (revue DeepSeek de 2a9da9e, A5).
+                    Label(!aiLayout && indicator.differs && id == indicator.chosen
                             ? String(localized: "\(OCREngineID.displayName(id)) (choisi)") : OCREngineID.displayName(id),
-                          systemImage: id == indicator.shown ? "checkmark" : OCREngineMenu.icon(id))
+                          systemImage: !aiLayout && id == indicator.shown ? "checkmark" : OCREngineMenu.icon(id))
                 }
             }
             Divider()
@@ -576,11 +579,12 @@ struct StudyTextTab: View {
 
     /// Le texte affiché ne vient pas du moteur choisi : le dire au lieu de laisser un logo qui semble contredire le choix.
     /// Pas en « Mise en page IA » : le texte lu vient alors d'OvisOCR2, le moteur OCR n'y décide pas de l'affichage ; ni sans
-    /// texte lu (revue DeepSeek de 39d31d3).
+    /// texte lu (revue DeepSeek de 39d31d3) ; ni pendant une lecture ou après un échec, quand le panneau n'affiche pas ce
+    /// texte (revue DeepSeek de 2a9da9e, A4).
     @ViewBuilder
     private var engineMismatchNote: some View {
         let indicator = indicator
-        if aiLayout || reader.ocrPage == nil {
+        if aiLayout || reader.ocrPage == nil || reader.ocrState != .idle {
             EmptyView()
         } else if indicator.differs, reader.ocrState != .running, let shown = indicator.shown, let chosen = indicator.chosen {
             Text(indicator.corrected
@@ -734,7 +738,30 @@ struct StudyTextTab: View {
     @ViewBuilder
     private func translationBlock(for text: String) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            AtelierLabel(String(localized: "Traduction"), tint: Atelier.Tint.ai)
+            HStack {
+                AtelierLabel(String(localized: "Traduction"), tint: Atelier.Tint.ai)
+                Spacer(minLength: 0)
+                // Choix de NOxygen59 du 08/11/2026 (analyse DeepSeek de 2a9da9e, option O2) : le japonais et la traduction
+                // sont visibles ensemble ; le grand bouton copie le japonais, celui-ci seulement la traduction.
+                if let translation {
+                    Button {
+                        UIPasteboard.general.string = translation
+                        translationCopiedAt = Date()
+                    } label: {
+                        Image(systemName: translationCopiedAt == nil ? "doc.on.doc" : "checkmark")
+                            .font(Atelier.font(13, weight: .semibold))
+                            .foregroundStyle(Atelier.Tint.ai)
+                            .frame(minWidth: 28, minHeight: 28)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Copier la traduction")
+                    .task(id: translationCopiedAt) {
+                        guard translationCopiedAt != nil else { return }
+                        try? await Task.sleep(nanoseconds: 1_500_000_000)
+                        if !Task.isCancelled { translationCopiedAt = nil }
+                    }
+                }
+            }
             if let translation {
                 Text(translation)
                     .font(Atelier.font(15))

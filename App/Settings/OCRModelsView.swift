@@ -183,8 +183,9 @@ enum OCREngineMenu {
         case OCREngineID.vision: return "apple.logo"
         case OCREngineID.ndlocr: return "building.columns"
         case OCREngineID.ppocr5: return "text.viewfinder"
-        // Pas « sparkles » : c'est l'icône de la mise en page IA (OvisOCR2), on les confondait (relecture de 6cc15fc, P3-b).
-        case OCREngineID.glmocr: return "wand.and.stars"
+        // Pas « sparkles » (mise en page IA, relecture de 6cc15fc, P3-b) ni « wand.and.stars » (autres actions IA, revue
+        // DeepSeek de 39d31d3). Choix de NOxygen59 du 08/11/2026 parmi trois symboles iOS 14+ inutilisés ailleurs.
+        case OCREngineID.glmocr: return "character.textbox"
         default: return "cpu"
         }
     }

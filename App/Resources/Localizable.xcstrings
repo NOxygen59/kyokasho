@@ -50578,6 +50578,28 @@
           }
         }
       }
+    },
+    "Copier la traduction": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy the translation"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copier la traduction"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "复制译文"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
