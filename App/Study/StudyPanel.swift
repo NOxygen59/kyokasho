@@ -255,6 +255,9 @@ struct StudyTextTab: View {
         .onChange(of: reader.focusSource) { _ in
             translation = nil
             translateError = nil
+            // Coches « copié » d'une autre page : ne pas les montrer sur la nouvelle (revue DeepSeek de 55ef23a).
+            translationCopiedAt = nil
+            copiedAt = nil
         }
         .task(id: "\(reader.focusSource)|\(layoutEngineRaw)|\(formatted)|\(reader.ocrPage != nil)") { await loadRegions() }
         // OvisOCR2 par défaut, une seule fois (#39) ; ensuite le choix de l'utilisateur reste.
@@ -586,14 +589,13 @@ struct StudyTextTab: View {
         let indicator = indicator
         if aiLayout || reader.ocrPage == nil || reader.ocrState != .idle {
             EmptyView()
-        } else if indicator.differs, reader.ocrState != .running, let shown = indicator.shown, let chosen = indicator.chosen {
+        } else if indicator.differs, let shown = indicator.shown, let chosen = indicator.chosen {
             Text(indicator.corrected
                  ? String(localized: "Choisi : \(OCREngineID.displayName(chosen)). Affiché : ta correction (sur \(OCREngineID.displayName(shown))), qui passe toujours d'abord.")
                  : String(localized: "Choisi : \(OCREngineID.displayName(chosen)). Affiché : \(OCREngineID.displayName(shown)), la dernière lecture réussie."))
                 .font(.caption2).foregroundStyle(Atelier.textTertiary)
                 .fixedSize(horizontal: false, vertical: true)
-        } else if let pinned = reader.pinnedEngines[reader.focusSource], reader.settings.ocrEngine.rawValue != pinned,
-                  reader.ocrState != .running {
+        } else if let pinned = reader.pinnedEngines[reader.focusSource], reader.settings.ocrEngine.rawValue != pinned {
             // Relecture de 6cc15fc (P3-a) : un moteur choisi dans le menu ne vaut que pour sa page (décision D2) ; la
             // page suivante revient au réglage. Le dire avant qu'on tourne la page.
             Text("Choix valable pour cette page seulement. « Garder \(OCREngineID.displayName(pinned)) pour ce document » dans le menu l'étend à tout le document.")
@@ -751,7 +753,9 @@ struct StudyTextTab: View {
                         Image(systemName: translationCopiedAt == nil ? "doc.on.doc" : "checkmark")
                             .font(Atelier.font(13, weight: .semibold))
                             .foregroundStyle(Atelier.Tint.ai)
-                            .frame(minWidth: 28, minHeight: 28)
+                            // 44 pt : cible tactile recommandée, c'est le seul geste pour copier la traduction.
+                            .frame(minWidth: 44, minHeight: 44)
+                            .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("Copier la traduction")
