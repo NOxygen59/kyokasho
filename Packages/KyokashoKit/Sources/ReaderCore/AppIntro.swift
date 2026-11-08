@@ -101,9 +101,14 @@ public struct ReleaseNotes: Equatable, Sendable, Identifiable {
 
     /// La version en cours de préparation : seulement ce qu'elle change (décision de NOxygen59 du 04/11/2026). C'est
     /// elle que montre la fenêtre « Nouveautés » ; les versions précédentes vont dans `ReleaseHistory`.
-    public static let current = ReleaseNotes("1.5.2", "2026-11-07", published: false, String(localized: "Copie, notifications et tableau de bord en fenêtre", bundle: .main), added: [
-            String(localized: "Le tableau de bord s'ouvre en fenêtre sur l'accueil.", bundle: .main),
+    public static let current = ReleaseNotes("1.5.3", "2026-11-08", published: false, String(localized: "Zoom page unique, OCR plus fiable et accueil Manga", bundle: .main), added: [
+            String(localized: "Page unique avec glissement : le double toucher zoome avec une animation, un second ramène la page entière.", bundle: .main),
+            String(localized: "Accueil Manga : une section Manga puis une section CBZ ; les outils d'étude restent dans Livres et manuels.", bundle: .main),
+            String(localized: "Les nouveaux CBZ se lisent de gauche à droite.", bundle: .main),
         ], fixed: [
+            String(localized: "OCR et furigana : un seul résultat retenu par page, le moteur choisi tient, et une correction à la main passe toujours d'abord.", bundle: .main),
+            String(localized: "Tableau de bord : coins arrondis avec tous les styles.", bundle: .main),
+            String(localized: "Moniteur de l'accueil : ouverture et fermeture fluides.", bundle: .main),
             String(localized: "Copier une sélection depuis le menu copie bien son texte.", bundle: .main),
             String(localized: "Thèmes clairs : le texte des notifications reste lisible.", bundle: .main),
         ])

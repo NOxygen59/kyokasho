@@ -50204,6 +50204,160 @@
           }
         }
       }
+    },
+    "Zoom page unique, OCR plus fiable et accueil Manga": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Single-page zoom, more reliable OCR and Manga home"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zoom page unique, OCR plus fiable et accueil Manga"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "单页缩放、更可靠的 OCR 与漫画主页"
+          }
+        }
+      }
+    },
+    "Page unique avec glissement : le double toucher zoome avec une animation, un second ramène la page entière.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Single page with scrolling: a double tap zooms in with an animation, a second one brings back the whole page."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Page unique avec glissement : le double toucher zoome avec une animation, un second ramène la page entière."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "单页滚动：双击会以动画放大，再次双击恢复整页。"
+          }
+        }
+      }
+    },
+    "Accueil Manga : une section Manga puis une section CBZ ; les outils d'étude restent dans Livres et manuels.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manga home: a Manga section then a CBZ section; study tools stay in Books & Textbooks."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accueil Manga : une section Manga puis une section CBZ ; les outils d'étude restent dans Livres et manuels."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "漫画主页：先是漫画区，再是 CBZ 区；学习工具保留在“书籍与教材”中。"
+          }
+        }
+      }
+    },
+    "Les nouveaux CBZ se lisent de gauche à droite.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New CBZ files read from left to right."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les nouveaux CBZ se lisent de gauche à droite."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新导入的 CBZ 从左到右阅读。"
+          }
+        }
+      }
+    },
+    "OCR et furigana : un seul résultat retenu par page, le moteur choisi tient, et une correction à la main passe toujours d'abord.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OCR and furigana: one result kept per page, the chosen engine sticks, and a manual correction always comes first."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OCR et furigana : un seul résultat retenu par page, le moteur choisi tient, et une correction à la main passe toujours d'abord."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OCR 与注音：每页只保留一个结果，所选引擎保持不变，手动更正始终优先。"
+          }
+        }
+      }
+    },
+    "Tableau de bord : coins arrondis avec tous les styles.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dashboard: rounded corners with every style."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tableau de bord : coins arrondis avec tous les styles."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "仪表板：所有样式均为圆角。"
+          }
+        }
+      }
+    },
+    "Moniteur de l'accueil : ouverture et fermeture fluides.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Home monitor: smooth opening and closing."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moniteur de l'accueil : ouverture et fermeture fluides."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "主页监视器：展开与收起更流畅。"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
