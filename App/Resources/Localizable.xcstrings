@@ -50600,6 +50600,248 @@
           }
         }
       }
+    },
+    "Panneau Texte plus clair et bouton Copier": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clearer Text panel and Copy button"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Panneau Texte plus clair et bouton Copier"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更清晰的文本面板与复制按钮"
+          }
+        }
+      }
+    },
+    "Panneau Texte : un bouton « Copier » en bas à droite copie le texte affiché, y compris la mise en page IA et sa traduction.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Text panel: a “Copy” button at the bottom right copies the text shown, including the AI layout and its translation."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Panneau Texte : un bouton « Copier » en bas à droite copie le texte affiché, y compris la mise en page IA et sa traduction."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文本面板：右下角的“复制”按钮复制当前显示的文本，包括 AI 版面及其译文。"
+          }
+        }
+      }
+    },
+    "Traduction DeepL : un petit bouton copie seulement la traduction.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DeepL translation: a small button copies only the translation."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Traduction DeepL : un petit bouton copie seulement la traduction."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DeepL 翻译：一个小按钮只复制译文。"
+          }
+        }
+      }
+    },
+    "Panneau Texte : une note dit quand le texte affiché ne vient pas du moteur choisi, ou qu'un moteur choisi ne vaut que pour la page.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Text panel: a note says when the text shown does not come from the chosen engine, or that a chosen engine applies to this page only."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Panneau Texte : une note dit quand le texte affiché ne vient pas du moteur choisi, ou qu'un moteur choisi ne vaut que pour la page."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文本面板：当显示的文本并非来自所选引擎，或所选引擎仅适用于本页时，会有提示说明。"
+          }
+        }
+      }
+    },
+    "Panneau Texte : le bouton du moteur montre l'icône et le nom du moteur qui a lu le texte, et un crayon s'il est corrigé à la main.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Text panel: the engine button shows the icon and name of the engine that read the text, and a pencil if it was corrected by hand."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Panneau Texte : le bouton du moteur montre l'icône et le nom du moteur qui a lu le texte, et un crayon s'il est corrigé à la main."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文本面板：引擎按钮显示识别该文本的引擎图标和名称，若已手动更正则显示铅笔。"
+          }
+        }
+      }
+    },
+    "Panneau Texte : l'en-tête tient sur une ligne quand la place suffit, sinon sur deux, au lieu d'être écrasé.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Text panel: the header fits on one line when there is room, otherwise on two, instead of being squashed."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Panneau Texte : l'en-tête tient sur une ligne quand la place suffit, sinon sur deux, au lieu d'être écrasé."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文本面板：空间足够时标题栏占一行，否则分两行，不再挤在一起。"
+          }
+        }
+      }
+    },
+    "Panneau Texte : le menu range OvisOCR2 en tête, puis les moteurs, les actions et « Pagination et réglages de ce document ».": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Text panel: the menu lists OvisOCR2 first, then the engines, the actions and “Pagination and settings for this document”."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Panneau Texte : le menu range OvisOCR2 en tête, puis les moteurs, les actions et « Pagination et réglages de ce document »."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文本面板：菜单先列出 OvisOCR2，然后是各引擎、操作以及“此文档的分页与设置”。"
+          }
+        }
+      }
+    },
+    "Menu des moteurs : GLM-OCR a sa propre icône.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Engine menu: GLM-OCR has its own icon."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Menu des moteurs : GLM-OCR a sa propre icône."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "引擎菜单：GLM-OCR 有了自己的图标。"
+          }
+        }
+      }
+    },
+    "VoiceOver annonce le moteur du texte, sa correction et l'écart avec le choix.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VoiceOver announces the text's engine, its correction and any difference from the choice."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VoiceOver annonce le moteur du texte, sa correction et l'écart avec le choix."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "VoiceOver 会播报文本的引擎、是否已更正以及与所选引擎的差异。"
+          }
+        }
+      }
+    },
+    "Accueil Manga : une section Manga puis une section CBZ.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manga home: a Manga section then a CBZ section."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accueil Manga : une section Manga puis une section CBZ."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "漫画主页：先是漫画区，再是 CBZ 区。"
+          }
+        }
+      }
+    },
+    "Espace Manga : la colonne de gauche ne montre plus Révisions, Dictionnaire, Images vers PDF ni Banc d'essai OCR ; ces outils restent dans Livres et manuels.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manga space: the left column no longer shows Reviews, Dictionary, Images to PDF or OCR Test Bench; these tools stay in Books & Textbooks."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Espace Manga : la colonne de gauche ne montre plus Révisions, Dictionnaire, Images vers PDF ni Banc d'essai OCR ; ces outils restent dans Livres et manuels."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "漫画空间：左侧栏不再显示复习、词典、图片转 PDF 和 OCR 测试台；这些工具保留在“书籍与教材”中。"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

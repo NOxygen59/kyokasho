@@ -10,6 +10,17 @@ import Foundation
 enum ReleaseHistory {
     static let past: [ReleaseNotes] = [
         // Candidates locales non publiées.
+        ReleaseNotes("1.5.3", "2026-11-08", published: false, String(localized: "Zoom page unique, OCR plus fiable et accueil Manga", bundle: .main), added: [
+            String(localized: "Page unique avec glissement : le double toucher zoome avec une animation, un second ramène la page entière.", bundle: .main),
+            String(localized: "Accueil Manga : une section Manga puis une section CBZ.", bundle: .main),
+            String(localized: "Les nouveaux CBZ se lisent de gauche à droite.", bundle: .main),
+        ], fixed: [
+            String(localized: "OCR et furigana : un seul résultat retenu par page, le moteur choisi tient, et une correction à la main passe toujours d'abord.", bundle: .main),
+            String(localized: "Tableau de bord : coins arrondis avec tous les styles.", bundle: .main),
+            String(localized: "Moniteur de l'accueil : ouverture et fermeture fluides.", bundle: .main),
+        ], removed: [
+            String(localized: "Espace Manga : la colonne de gauche ne montre plus Révisions, Dictionnaire, Images vers PDF ni Banc d'essai OCR ; ces outils restent dans Livres et manuels.", bundle: .main),
+        ]),
         ReleaseNotes("1.5.2", "2026-11-07", published: false, String(localized: "Copie, notifications et tableau de bord en fenêtre", bundle: .main), added: [
             String(localized: "Le tableau de bord s'ouvre en fenêtre sur l'accueil.", bundle: .main),
         ], fixed: [

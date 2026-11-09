@@ -101,16 +101,16 @@ public struct ReleaseNotes: Equatable, Sendable, Identifiable {
 
     /// La version en cours de préparation : seulement ce qu'elle change (décision de NOxygen59 du 04/11/2026). C'est
     /// elle que montre la fenêtre « Nouveautés » ; les versions précédentes vont dans `ReleaseHistory`.
-    public static let current = ReleaseNotes("1.5.3", "2026-11-08", published: false, String(localized: "Zoom page unique, OCR plus fiable et accueil Manga", bundle: .main), added: [
-            String(localized: "Page unique avec glissement : le double toucher zoome avec une animation, un second ramène la page entière.", bundle: .main),
-            String(localized: "Accueil Manga : une section Manga puis une section CBZ ; les outils d'étude restent dans Livres et manuels.", bundle: .main),
-            String(localized: "Les nouveaux CBZ se lisent de gauche à droite.", bundle: .main),
+    public static let current = ReleaseNotes("1.5.4", "2026-11-09", published: false, String(localized: "Panneau Texte plus clair et bouton Copier", bundle: .main), added: [
+            String(localized: "Panneau Texte : un bouton « Copier » en bas à droite copie le texte affiché, y compris la mise en page IA et sa traduction.", bundle: .main),
+            String(localized: "Traduction DeepL : un petit bouton copie seulement la traduction.", bundle: .main),
+            String(localized: "Panneau Texte : une note dit quand le texte affiché ne vient pas du moteur choisi, ou qu'un moteur choisi ne vaut que pour la page.", bundle: .main),
         ], fixed: [
-            String(localized: "OCR et furigana : un seul résultat retenu par page, le moteur choisi tient, et une correction à la main passe toujours d'abord.", bundle: .main),
-            String(localized: "Tableau de bord : coins arrondis avec tous les styles.", bundle: .main),
-            String(localized: "Moniteur de l'accueil : ouverture et fermeture fluides.", bundle: .main),
-            String(localized: "Copier une sélection depuis le menu copie bien son texte.", bundle: .main),
-            String(localized: "Thèmes clairs : le texte des notifications reste lisible.", bundle: .main),
+            String(localized: "Panneau Texte : le bouton du moteur montre l'icône et le nom du moteur qui a lu le texte, et un crayon s'il est corrigé à la main.", bundle: .main),
+            String(localized: "Panneau Texte : l'en-tête tient sur une ligne quand la place suffit, sinon sur deux, au lieu d'être écrasé.", bundle: .main),
+            String(localized: "Panneau Texte : le menu range OvisOCR2 en tête, puis les moteurs, les actions et « Pagination et réglages de ce document ».", bundle: .main),
+            String(localized: "Menu des moteurs : GLM-OCR a sa propre icône.", bundle: .main),
+            String(localized: "VoiceOver annonce le moteur du texte, sa correction et l'écart avec le choix.", bundle: .main),
         ])
 
     /// Notes de `version` (« 1.3.2 », sans le numéro de build) : la version elle-même, jamais une build de test.
