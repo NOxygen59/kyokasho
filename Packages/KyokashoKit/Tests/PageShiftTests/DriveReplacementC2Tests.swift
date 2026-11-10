@@ -532,4 +532,57 @@ extension PageShiftRecoveryTests {
                            "la perte de côté est comptée pour le rapport")
         }
     }
+
+    /// N4 (revue R2) : un journal refusé (ici : fichier source altéré) laissait l'app bloquée sur
+    /// « Réessayer la reprise », qui rejoue le même refus à chaque fois — une seule action, une
+    /// impasse. Le journal peut être mis de côté : fichier déplacé (jamais effacé, jamais
+    /// écrasé), l'app démarre normalement, la mise à jour reste relançable depuis l'état d'origine.
+    func testARejectedJournalCanBeSetAsideToRestart() async throws {
+        try await withFixture { model, doc, root in
+            let card = try seed(model, doc)
+            let (plan, _) = try replacementPlan(root, pages: 3)
+            let modesDone = trackModeKeys(doc.id, plan.newDocumentId)
+            defer { modesDone() }
+            ReaderToolModeStore().update(documentId: doc.id) { $0.drawing = true; $0.panelMode = "floating" }
+            try writeReplacementJournal(root, oldId: doc.id, oldCount: doc.pageCount, oldSize: doc.fileSize, plan: plan)
+            // Leurre : PDF honnête, empreinte différente de celle du journal → refus à la reprise.
+            let decoy = root.appendingPathComponent("leurre-" + UUID().uuidString + ".pdf")
+            try writePDF(decoy, pages: 3)
+            defer { try? FileManager.default.removeItem(at: decoy) }
+            var tampered = try journal(root)
+            tampered.newSourcePath = decoy.path
+            try JSONEncoder().encode(tampered).write(to: root.appendingPathComponent(journalFile))
+            let restarted = try AppModel(root: root)
+            PageShift.reconcile(restarted)
+            XCTAssertNotNil(restarted.storageRecoveryError, "le refus bloque d'abord (P2 n°3)")
+
+            // Pendant une sauvegarde : la mise de côté est refusée (le journal y est encore jouable).
+            LibraryBackupService.inProgress = true
+            PageShift.setAsideRejectedJournal(restarted)
+            LibraryBackupService.inProgress = false
+            XCTAssertTrue(journalExists(root), "garde réciproque : rien n'est déplacé pendant une sauvegarde")
+            XCTAssertNotNil(restarted.storageRecoveryError)
+
+            // La mise de côté : le fichier part renommé dans « journaux-refusés », jamais effacé ;
+            // la reprise est suspendue sans erreur et l'app démarre normalement.
+            PageShift.setAsideRejectedJournal(restarted)
+            XCTAssertNil(restarted.storageRecoveryError)
+            XCTAssertFalse(journalExists(root))
+            let refused = root.appendingPathComponent("Conflits-remplacement").appendingPathComponent("journaux-refusés", isDirectory: true)
+            XCTAssertEqual(try FileManager.default.contentsOfDirectory(at: refused, includingPropertiesForKeys: nil).count, 1)
+            // Sans journal en place, un nouvel appel ne fait rien (aucun dossier en plus).
+            PageShift.setAsideRejectedJournal(restarted)
+            XCTAssertEqual(try FileManager.default.contentsOfDirectory(at: refused, includingPropertiesForKeys: nil).count, 1)
+
+            // Le démarrage suivant ne rejoue rien, la bibliothèque est intacte et la mise à jour
+            // de ce cours reste relançable (le même journal authentique, remis en place, finit).
+            PageShift.reconcile(restarted)
+            XCTAssertNil(restarted.storageRecoveryError)
+            try assertUnshifted(restarted, doc, card)
+            try writeReplacementJournal(root, oldId: doc.id, oldCount: doc.pageCount, oldSize: doc.fileSize, plan: plan)
+            PageShift.reconcile(restarted)
+            XCTAssertNil(restarted.storageRecoveryError)
+            try verifyReplacement(restarted, root: root, old: doc, card: card, plan: plan)
+        }
+    }
 }
