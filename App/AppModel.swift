@@ -333,10 +333,12 @@ final class AppModel: ObservableObject {
 
     /// Efface pour de bon (le même effacement qu'avant la corbeille).
     func deleteForever(_ document: LibraryDocument) {
+        // BUG-003 : l'effacement peut être refusé (sauvegarde en cours, copies à réparer). Le document ne quitte la
+        // corbeille qu'une fois l'effacement lancé : sinon il revenait dans la bibliothèque sans avoir été restauré.
+        guard delete(document) else { return }
         trash.remove(document.id)
         saveTrash()
         trashedDocuments.removeAll { $0.id == document.id }
-        delete(document)
     }
 
     func emptyTrash() { trashedDocuments.forEach(deleteForever) }
@@ -387,14 +389,16 @@ final class AppModel: ObservableObject {
         PrintedPageNumbers.set((try? database.printedNumbers()) ?? [:])
     }
 
-    func delete(_ document: LibraryDocument) {
+    /// Renvoie `false` si l'effacement est refusé avant d'avoir commencé (message dans `lastError`) : rien n'a changé.
+    @discardableResult
+    func delete(_ document: LibraryDocument) -> Bool {
         guard !LibraryBackupService.inProgress else {
             lastError = String(localized: "Sauvegarde en cours : réessaie après sa fin.")
-            return
+            return false
         }
         // Avant la cascade SQL : réparer l'association UUID → document des copies d'avant remplacement Drive.
         do { try PageShift.synchronizeCopyOwners(database) }
-        catch { lastError = String(localized: "Suppression impossible : \(error.localizedDescription)"); return }
+        catch { lastError = String(localized: "Suppression impossible : \(error.localizedDescription)"); return false }
         let importer = importer
         let thumbnails = thumbnails
         // Retiré de la liste tout de suite ; remis (avec le message d'erreur) si l'effacement échoue.
@@ -442,6 +446,7 @@ final class AppModel: ObservableObject {
                 }
             }
         }
+        return true
     }
 
     /// Ferme l'onglet ; s'il était affiché, le voisin prend sa place (aucun : retour à la bibliothèque).
