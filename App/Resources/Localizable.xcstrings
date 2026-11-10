@@ -8625,6 +8625,28 @@
         }
       }
     },
+    "Cartes indisponibles : rouvre l'écran d'export.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cards unavailable: reopen the export screen."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cartes indisponibles : rouvre l'écran d'export."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "卡片不可用：请重新打开导出界面。"
+          }
+        }
+      }
+    },
     "Cartes mûres": {
       "localizations": {
         "en": {

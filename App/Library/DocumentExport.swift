@@ -58,6 +58,13 @@ enum DocumentExport {
         var ocr: [Int: OCRPage] = [:]
     }
 
+    /// Échec déjà expliqué à l'utilisateur (revue DeepSeek #11) : l'export des cartes repart de ce qui a été lu sur le
+    /// fil principal ; si ces cartes ont disparu entre-temps (écran d'export rouvert, cartes supprimées), le message
+    /// doit le dire — `CocoaError(.fileWriteUnknown)` n'affichait qu'une phrase système (« The file couldn't be saved »).
+    struct CardsUnavailable: LocalizedError {
+        var errorDescription: String? { String(localized: "Cartes indisponibles : rouvre l'écran d'export.") }
+    }
+
     /// Dossier propre à chaque export (`tmp/Export/<uuid>`, vidé par le système) : deux exports ne se gênent pas.
     static func folder() throws -> URL {
         let url = FileManager.default.temporaryDirectory.appendingPathComponent("Export", isDirectory: true)
@@ -403,8 +410,9 @@ struct DocumentExportSheet: View {
                     return url
                 case .cards:
                     let url = folder.appendingPathComponent(name + ".apkg")
-                    // C1.5 (audit du 09/11/2026) : plus de déballage forcé `cards!`.
-                    guard let cards else { throw CocoaError(.fileWriteUnknown) }
+                    // C1.5 (audit du 09/11/2026) : plus de déballage forcé `cards!`. Revue DeepSeek #11 : l'absence de
+                    // cartes préparées reçoit une phrase en français, pas le message système de `CocoaError`.
+                    guard let cards else { throw DocumentExport.CardsUnavailable() }
                     try AnkiExport.apkg(cards: cards.cards, template: cards.template, deckName: doc.title,
                                         mediaRoot: cards.mediaRoot, to: url)
                     return url
@@ -439,6 +447,8 @@ struct DocumentExportSheet: View {
                 switch outcome {
                 case .success(let url): result = url
                 case .failure(is CancellationError): break
+                // Déjà une phrase pour l'utilisateur : pas de préfixe « Export impossible : » devant (revue DeepSeek #11).
+                case .failure(let e as DocumentExport.CardsUnavailable): error = e.localizedDescription
                 case .failure(let e): error = String(localized: "Export impossible : \(e.localizedDescription)")
                 }
             }
