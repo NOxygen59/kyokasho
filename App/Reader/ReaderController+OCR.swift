@@ -258,13 +258,18 @@ extension ReaderController {
             } catch is CancellationError {
                 return
             } catch {
-                Diagnostics.error("OCR \(engineID) p. \(source) : \(error.localizedDescription)", "ocr")
+                // C1.9 étendu (revue DeepSeek #9) : une annulation remontée des moteurs en `URLError(.cancelled)` ou
+                // `NSUserCancelledError` (et non `CancellationError`) n'est pas un échec, comme dans `ensureOCR` :
+                // état reposé à `.idle`, rien d'affiché.
+                let cancelled = OCRCancellation.isCancellation(error, taskCancelled: Task.isCancelled)
+                if !cancelled { Diagnostics.error("OCR \(engineID) p. \(source) : \(error.localizedDescription)", "ocr") }
                 guard let self else { return }
                 // Moteur demandé en échec : l'ancienne lecture, toujours dessinée et dans le panneau, redevient
                 // explicitement l'OCR retenu (pas de moteur retenu sans lecture ; contre-revue Codex de 51f8a2d, F1).
-                if let intent { self.ocrSelection.revert(intent) }
+                // Une lecture annulée n'a pas échoué : le choix de l'utilisateur reste noté pour la page.
+                if !cancelled, let intent { self.ocrSelection.revert(intent) }
                 guard self.focusSource == source else { return }
-                self.ocrState = .failed(error.localizedDescription)
+                self.ocrState = cancelled ? .idle : .failed(error.localizedDescription)
             }
         }
     }
