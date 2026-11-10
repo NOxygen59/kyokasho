@@ -114,6 +114,14 @@ datée : génération du projet Xcode (`xcodegen generate -q`, seulement si l'ou
   précis **ni** la recette iPad de NOxygen59, et ne couvre ni ASan/LSan, ni MLX/Metal sur l'appareil, ni les essais
   MLX/ONNX avec poids.
 
+**Premier relevé de ce script (10/11/2026)** : lancé sur la branche `agents/docs-verif` (macOS 27.2 arm64,
+Xcode 27.2, Swift 6.4.2), résumé `build/verif/RESUME-2026-11-10.md` : `xcodegen` réussi, **653 tests Swift exécutés,
+10 ignorés, 0 échec** (643 lignes « Test Case … passed » recoupées), **107 tests Python** (`OK`), compilation iOS
+générique réussie (produit `Kyokasho.app` écrit, aucune ligne `error:`), **170 liens locaux, 0 erreur** ; code de
+sortie 0. Le chemin d'échec a été éprouvé à part, sur une copie jetable dont l'étape documentaire était forcée en
+échec : code de sortie 1 et résumé nommant l'étape. Ces nombres décrivent cet arbre sur ce Mac : ils ne sont ni une
+validation iPad, ni une preuve pour un autre SHA.
+
 ## Couverture à ajouter par risque
 
 1. **Préservation des données** : les PR #2/#3 couvrent plusieurs injections de panne, reprises répétées et la restauration synthétique ; le cadrage [#73](https://github.com/NOxygen59/kyokasho/issues/73) ajoute la sécurité du journal et la double interruption (section « PageShift — sécurité et reprise » ci-dessous). Restent à qualifier les parcours UIKit, l’espace réellement disponible, les copies volumineuses et le conteneur TrollStore ; ne pas présenter les tests Mac comme une validation iPad. Voir les limites de [PageShift](PHASE2-STOCKAGE.md) et de [sauvegarde](PHASE2-SAUVEGARDE.md).
