@@ -12,7 +12,10 @@ final class DefinitionTranslations: ObservableObject {
     static let shared = DefinitionTranslations()
     static let autoKey = "dictionary.autoTranslateFR"
 
-    enum Status: String, Codable { case machine, liked, disliked, edited }
+    /// Avis sur la traduction : 👍 validée, 👎 à revoir, ✏️ corrigée à la main (la correction remplace la traduction,
+    /// pour toujours). Défini dans `DictionaryKit` (`TranslationReview`) : la règle de conservation d'un avis lors d'une
+    /// nouvelle traduction automatique y est testée.
+    typealias Status = TranslationReview
 
     struct Entry: Codable, Equatable {
         var text: String
@@ -73,7 +76,14 @@ final class DefinitionTranslations: ObservableObject {
         let source = Self.source(term)
         guard !source.isEmpty else { return }
         let text = try await DeepLService.shared.translate(source, target: "FR")
-        set(Self.key(term), Entry(text: text, status: .machine, source: source))
+        // Revue DeepSeek #3 (C1.2) : la définition a changé, la traduction d'avant ne s'affiche donc plus — mais l'avis
+        // 👍/👎 donné par l'utilisateur ne doit pas disparaître en silence quand la traduction automatique est refaite.
+        // Il passe sur la nouvelle traduction (le texte, lui, est bien remplacé : il ne correspond plus à la définition).
+        // Une correction ✏️ n'arrive jamais ici : `entry(for:)` la garde toujours courante, donc aucun écran ne propose
+        // de la retraduire.
+        let key = Self.key(term)
+        let review = entries[key]?.status.keptWhenRetranslated ?? .machine
+        set(key, Entry(text: text, status: review, source: source))
     }
 
     func set(_ key: String, _ entry: Entry?) {

@@ -18,4 +18,17 @@ final class TranslationFreshnessTests: XCTestCase {
     func testOldEntriesWithoutSourceAreKept() {
         XCTAssertTrue(TranslationFreshness.isCurrent(edited: false, storedSource: nil, currentSource: "anything"))
     }
+
+    /// Revue DeepSeek #3 : une mise à jour du dictionnaire rend la traduction périmée ; la retraduire ne doit pas
+    /// effacer en silence l'avis 👍/👎 donné par l'utilisateur.
+    func testLikedAndDislikedReviewsSurviveRetranslation() {
+        XCTAssertEqual(TranslationReview.liked.keptWhenRetranslated, .liked)
+        XCTAssertEqual(TranslationReview.disliked.keptWhenRetranslated, .disliked)
+    }
+
+    func testNeutralTranslationStaysNeutralAfterRetranslation() {
+        XCTAssertEqual(TranslationReview.machine.keptWhenRetranslated, .machine)
+        // `.edited` n'est jamais retraduit (`isCurrent` le garde courant) ; s'il l'était, rien ne serait figé.
+        XCTAssertEqual(TranslationReview.edited.keptWhenRetranslated, .machine)
+    }
 }

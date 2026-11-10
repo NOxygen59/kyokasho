@@ -514,3 +514,26 @@ public enum TranslationFreshness {
         edited || storedSource == nil || storedSource == currentSource
     }
 }
+
+/// Avis porté sur une traduction française de définition : donnée de l'utilisateur, gardée sur l'appareil avec le texte.
+public enum TranslationReview: String, Codable, Sendable, Equatable {
+    /// Sortie de DeepL, sans avis.
+    case machine
+    /// 👍 validée.
+    case liked
+    /// 👎 à revoir.
+    case disliked
+    /// ✏️ corrigée à la main : la correction remplace la traduction, pour toujours.
+    case edited
+
+    /// Avis gardé quand la traduction automatique est refaite parce que la définition a changé (revue DeepSeek #3) :
+    /// l'avis 👍/👎 vient de l'utilisateur, une mise à jour du dictionnaire ne doit pas l'effacer en silence. Une
+    /// traduction neutre le reste. `.edited` n'est jamais retraduit — `TranslationFreshness.isCurrent` le garde toujours
+    /// courant — et retombe ici sur `.machine` si un autre chemin l'appelait un jour.
+    public var keptWhenRetranslated: TranslationReview {
+        switch self {
+        case .liked, .disliked: return self
+        case .machine, .edited: return .machine
+        }
+    }
+}
