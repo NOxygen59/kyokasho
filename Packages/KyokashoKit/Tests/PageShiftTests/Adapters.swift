@@ -79,3 +79,9 @@ enum Diagnostics {
 }
 /// Sauvegarde complète (#51) : jamais en cours dans le harnais.
 @MainActor enum LibraryBackupService { static var inProgress = false }
+/// P2 n°2 (lot C2) : enregistreur de la relance de la lecture IA (signature exacte de l'app) ;
+/// les URLs reçues se lisent dans `DocumentScan.started` (à vider avant chaque vérification).
+@MainActor enum DocumentScan {
+    static var started: [String] = []
+    static func start(_ document: LibraryDocument, url: URL, ocr: OCRService) { started.append(url.path) }
+}

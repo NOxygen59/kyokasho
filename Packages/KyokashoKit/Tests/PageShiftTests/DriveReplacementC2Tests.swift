@@ -117,6 +117,10 @@ extension PageShiftRecoveryTests {
             let card = try seed(model, doc)
             let (plan, newPDF) = try replacementPlan(root, pages: 3)
             XCTAssertNil(UserDefaults.standard.data(forKey: ReaderToolModeStore.key(documentId: plan.newDocumentId)))
+            // P2 n°2 : la langue OCR a été choisie pour l'ancienne version (import initial).
+            OCRTargetLanguage.set(.automatic, forDocument: doc.id)
+            defer { OCRTargetLanguage.forget(plan.newDocumentId); OCRTargetLanguage.forget(doc.id) }
+            DocumentScan.started = []
             let modesDone = trackModeKeys(doc.id, plan.newDocumentId)
             defer { modesDone() }
             ReaderToolModeStore().update(documentId: doc.id) { $0.drawing = true; $0.panelMode = "floating" }
@@ -130,6 +134,11 @@ extension PageShiftRecoveryTests {
                                      driveRevision: "rév. 2", replacingInto: plan.newDocumentId)
             }
             try verifyReplacement(model, root: root, old: doc, card: card, plan: plan)
+            // P2 n°2 : la langue OCR du livre suit le nouvel identifiant, et la lecture IA est relancée.
+            XCTAssertEqual(OCRTargetLanguage.forDocument(plan.newDocumentId), .automatic)
+            XCTAssertEqual(OCRTargetLanguage.forDocument(doc.id), .japanese, "ancienne clé retirée")
+            XCTAssertTrue(DocumentScan.started.contains(model.storage.url(for: plan.newDocumentId).path),
+                          "lecture IA relancée pour le nouveau document")
         }
     }
 
@@ -180,15 +189,26 @@ extension PageShiftRecoveryTests {
             let modesDone = trackModeKeys(doc.id, plan.newDocumentId)
             defer { modesDone() }
             ReaderToolModeStore().update(documentId: doc.id) { $0.drawing = true; $0.panelMode = "floating" }
+            // P2 n°2 : le choix de langue OCR (fait à l'import initial) attend la reprise de la bascule.
+            OCRTargetLanguage.set(.automatic, forDocument: doc.id)
+            defer { OCRTargetLanguage.forget(plan.newDocumentId); OCRTargetLanguage.forget(doc.id) }
             try writeReplacementJournal(root, oldId: doc.id, oldCount: doc.pageCount, oldSize: doc.fileSize, plan: plan)
             // Protection : l'ancien PDF n'est pas encore remplacé dans le stockage.
             XCTAssertEqual(try model.database.document(id: doc.id)?.pageCount, 2)
             XCTAssertFalse(FileManager.default.fileExists(atPath: model.storage.url(for: plan.newDocumentId).path))
 
             let restarted = try AppModel(root: root)
+            DocumentScan.started = []
             PageShift.reconcile(restarted)
             XCTAssertNil(restarted.storageRecoveryError)
             try verifyReplacement(restarted, root: root, old: doc, card: card, plan: plan)
+            // P2 n°2 : finie par la reprise au lancement, la langue suit quand même le document,
+            // et la lecture IA est bien (re)lancée pour le nouveau fichier.
+            XCTAssertEqual(OCRTargetLanguage.forDocument(plan.newDocumentId), .automatic,
+                           "langue appliquée par la reprise, pas seulement par l'écran d'import")
+            XCTAssertEqual(OCRTargetLanguage.forDocument(doc.id), .japanese)
+            XCTAssertTrue(DocumentScan.started.contains(restarted.storage.url(for: plan.newDocumentId).path),
+                          "la reprise relance la lecture IA du document")
         }
     }
 
