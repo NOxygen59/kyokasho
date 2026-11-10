@@ -131,6 +131,9 @@ struct StudyTextTab: View {
     @ObservedObject private var aiTasks = AITaskCenter.shared
     @ObservedObject private var deepl = DeepLService.shared
     @State private var translation: String?
+    /// Texte qui a servi à `translation` : une correction du texte de la page (C3.1) rend la traduction périmée, elle
+    /// n'est plus affichée (revue DeepSeek #10).
+    @State private var translatedText: String?
     /// Texte mis en forme (titres, paragraphes, tableaux) ou tel que lu, ligne par ligne.
     @AppStorage("study.formattedText") private var formatted = true
     /// 3e affichage : la page mise en forme par OvisOCR2 (`AILayoutView`).
@@ -256,6 +259,7 @@ struct StudyTextTab: View {
         }
         .onChange(of: reader.focusSource) { _ in
             translation = nil
+            translatedText = nil
             translateError = nil
             // Coches « copié » d'une autre page : ne pas les montrer sur la nouvelle (revue DeepSeek de 55ef23a).
             translationCopiedAt = nil
@@ -741,15 +745,19 @@ struct StudyTextTab: View {
 
     @ViewBuilder
     private func translationBlock(for text: String) -> some View {
+        // Revue DeepSeek #10 : la traduction n'est montrée que pour le texte dont elle vient. Une correction de la page
+        // (C3.1) change le texte ; l'ancienne traduction disparaît alors sans être perdue, et revient si le texte
+        // redevient le même (correction annulée).
+        let shown = translatedText == text ? translation : nil
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 AtelierLabel(String(localized: "Traduction"), tint: Atelier.Tint.ai)
                 Spacer(minLength: 0)
                 // Choix de NOxygen59 du 08/11/2026 (analyse DeepSeek de 2a9da9e, option O2) : le japonais et la traduction
                 // sont visibles ensemble ; le grand bouton copie le japonais, celui-ci seulement la traduction.
-                if let translation {
+                if let shown {
                     Button {
-                        UIPasteboard.general.string = translation
+                        UIPasteboard.general.string = shown
                         translationCopiedAt = Date()
                     } label: {
                         Image(systemName: translationCopiedAt == nil ? "doc.on.doc" : "checkmark")
@@ -768,8 +776,8 @@ struct StudyTextTab: View {
                     }
                 }
             }
-            if let translation {
-                Text(translation)
+            if let shown {
+                Text(shown)
                     .font(Atelier.font(15))
                     .foregroundStyle(Atelier.textPrimary)
                     .textSelection(.enabled)
@@ -777,7 +785,7 @@ struct StudyTextTab: View {
             } else if let translateError {
                 Text(translateError).font(.footnote).foregroundStyle(Atelier.textSecondary)
             }
-            if translation == nil {
+            if shown == nil {
                 if deepl.hasKey {
                     Button {
                         Task { await translate(text) }
@@ -822,7 +830,12 @@ struct StudyTextTab: View {
         translating = true
         translateError = nil
         defer { translating = false }
-        do { translation = try await DeepLService.shared.translate(text) }
+        do {
+            translation = try await DeepLService.shared.translate(text)
+            // Le texte de départ est noté avec la traduction : si la page est corrigée pendant l'attente de DeepL, le
+            // résultat ne s'affiche pas pour le nouveau texte (revue DeepSeek #10).
+            translatedText = text
+        }
         catch { translateError = error.localizedDescription }
     }
 }
