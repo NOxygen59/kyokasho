@@ -51260,6 +51260,72 @@
           }
         }
       }
+    },
+    "Conflits de remplacement : des données de l'ancienne version de « %@ » (%lld élément(s)) sont gardées dans « Conflits-remplacement ».": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Replacement conflicts: data from the old version of « %@ » (%lld item(s)) is kept in « Conflits-remplacement »."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conflits de remplacement : des données de l'ancienne version de « %@ » (%lld élément(s)) sont gardées dans « Conflits-remplacement »."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "替换冲突：“%@”旧版本的数据（共 %lld 项）保留在“Conflits-remplacement”中。"
+          }
+        }
+      }
+    },
+    "Remplacement : « %@ » existe déjà, « %@ » est mis de côté dans « Conflits-remplacement ».": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Replacement: « %@ » already exists, « %@ » is set aside in « Conflits-remplacement »."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remplacement : « %@ » existe déjà, « %@ » est mis de côté dans « Conflits-remplacement »."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "替换：“%@”已存在，“%@”已移至“Conflits-remplacement”。"
+          }
+        }
+      }
+    },
+    "Remplacement : le rapport du nouveau document existe déjà, l'ancien est mis de côté dans « Conflits-remplacement ».": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Replacement: the new document's analysis report already exists, the old one is set aside in « Conflits-remplacement »."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remplacement : le rapport du nouveau document existe déjà, l'ancien est mis de côté dans « Conflits-remplacement »."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "替换：新文件的分析报告已存在，旧报告已移至“Conflits-remplacement”。"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
