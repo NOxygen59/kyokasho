@@ -252,21 +252,43 @@ extension AppDatabase {
 
     /// Une nouvelle version d'un document (ex. cours mis à jour sur Drive) remplace l'ancienne :
     /// toutes les annotations suivent grâce aux clés étrangères `ON UPDATE CASCADE`.
+    ///
+    /// Décision DEC-C1 = A (10/11/2026) : après un remplacement, **tout l'OCR est relu**. L'ancienne
+    /// version est un autre PDF : ses boîtes de caractères, ses corrections et son rognage automatique
+    /// ne décriront jamais le contenu réel des nouvelles pages — les servir serait mentir à l'utilisateur
+    /// (Lot C2.1, fiche f85d0c0). Les rotations et les coupures manuelles des pages restent : ce sont des
+    /// choix de l'utilisateur, par page, pas des mesures du contenu. Effacement du cache OCR et remise
+    /// à zéro du rognage automatique (un rognage calculé de l'ancienne version est faux) sont faits
+    /// **dans la même transaction** que la bascule, pour les deux branches :
+    /// - le document final est un renommage (`ON UPDATE CASCADE` suit le renommage : le cache à effacer
+    ///   est donc celui du nouvel identifiant, après lui) ;
+    /// - le document final existait déjà (fusion) : la suppression en cascade emporte l'OCR de l'ancien
+    ///   identifiant, celui du survivant est effacé par la requête qui suit.
+    ///
+    /// Si l'identifiant ne change pas (`oldId == newDocument.id`) le contenu n'a pas varié : ce n'est
+    /// pas un remplacement, aucun cache valable ne doit être effacé.
     public func rekeyDocument(from oldId: String, to newDocument: LibraryDocument) throws {
         try writer.write { db in
-            if oldId != newDocument.id, try LibraryDocument.exists(db, key: newDocument.id) {
-                // La nouvelle version existe déjà : on y rattache les annotations de l'ancienne.
-                for table in ["pageTransform", "highlight", "inkDrawing", "bookmark", "pageComment"] {
-                    try db.execute(sql: "UPDATE OR IGNORE \(table) SET documentId = ? WHERE documentId = ?",
-                                   arguments: [newDocument.id, oldId])
+            if oldId != newDocument.id {
+                if try LibraryDocument.exists(db, key: newDocument.id) {
+                    // La nouvelle version existe déjà : on y rattache les annotations de l'ancienne.
+                    for table in ["pageTransform", "highlight", "inkDrawing", "bookmark", "pageComment"] {
+                        try db.execute(sql: "UPDATE OR IGNORE \(table) SET documentId = ? WHERE documentId = ?",
+                                       arguments: [newDocument.id, oldId])
+                    }
+                    // Archives des pages retirées (#49) : gardées avec le document qui reste, jamais effacées en passant.
+                    try db.execute(sql: "UPDATE pageEdit SET documentId = ? WHERE documentId = ?", arguments: [newDocument.id, oldId])
+                    _ = try LibraryDocument.deleteOne(db, key: oldId)
+                    try newDocument.update(db)
+                } else {
+                    try db.execute(sql: "UPDATE document SET id = ? WHERE id = ?", arguments: [newDocument.id, oldId])
+                    try newDocument.update(db)
                 }
-                // Archives des pages retirées (#49) : gardées avec le document qui reste, jamais effacées en passant.
-                try db.execute(sql: "UPDATE pageEdit SET documentId = ? WHERE documentId = ?", arguments: [newDocument.id, oldId])
-                _ = try LibraryDocument.deleteOne(db, key: oldId)
-                try newDocument.update(db)
-            } else {
-                try db.execute(sql: "UPDATE document SET id = ? WHERE id = ?", arguments: [newDocument.id, oldId])
-                try newDocument.update(db)
+                // DEC-C1 = A : un remplacement oppose un PDF différent. Même transaction : le cache OCR
+                // (boîtes de caractères et corrections incluses) est effacé et le rognage automatique
+                // repart de zéro. Le rognage manuel (`rotation`, `split`) reste.
+                try db.execute(sql: "DELETE FROM ocrResult WHERE documentId = ?", arguments: [newDocument.id])
+                try db.execute(sql: "UPDATE pageTransform SET autoCrop = NULL WHERE documentId = ?", arguments: [newDocument.id])
             }
             // #49 (revue Codex F1) : un autre PDF n'a pas les mêmes pages, même s'il en a autant. Les identités sont
             // refaites à la prochaine modification des pages, et la version change sans opération enregistrée : la
