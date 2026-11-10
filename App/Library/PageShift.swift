@@ -750,6 +750,14 @@ enum PageShift {
                                              documentId: newDocumentId, sourceDocumentId: sourceDocumentId)
     }
 
+    /// Dessin d'encre du survivant perdu pendant une fusion (N2, revue R2) : écrit tel quel
+    /// (`PKDrawing.dataRepresentation()`) dans `Conflits-remplacement/<ancien identifiant>/Encre/`,
+    /// jamais écrasé (`CorrectionAsideStore.keepInk`). Le dessin du livre remplacé reste sur la
+    /// page (même règle que la rotation manuelle, P3 n°9) — rien n'est fusionné ni abandonné.
+    nonisolated static func asideInkDrawing(_ sourceDocumentId: String, _ pageIndex: Int, _ data: Data) throws {
+        try CorrectionAsideStore.shared.keepInk(sourceDocumentId: sourceDocumentId, pageIndex: pageIndex, data: data)
+    }
+
     /// Plan d'un remplacement, calculé et vérifié **avant** l'écriture du journal : il lui faut
     /// l'empreinte du nouveau PDF (identifiant final), son nombre de pages et sa taille, afin qu'une
     /// bascule interrompue puisse être finie au lancement suivant depuis le journal seul. `source`
@@ -845,7 +853,8 @@ enum PageShift {
             updated.lastPageIndex = min(old.lastPageIndex, max(0, p.newCount - 1))
             updated.driveRevision = p.newRevision ?? old.driveRevision
             try model.database.rekeyDocument(from: p.documentId, to: updated,
-                                             asideCorrections: PageShift.asideCorrections)
+                                             asideCorrections: PageShift.asideCorrections,
+                                             asideInk: PageShift.asideInkDrawing)
         }
         guard try model.database.document(id: p.documentId) == nil,
               try model.database.document(id: newId) != nil else {

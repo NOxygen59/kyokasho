@@ -377,7 +377,10 @@ extension AppModel {
                                                        // DEC-C3 : les corrections manuelles de l'ancienne
                                                        // version sont mises de côté avant l'effacement du
                                                        // cache OCR (fichier `Corrections-remplacement/`).
-                                                       asideCorrections: PageShift.asideCorrections)
+                                                       asideCorrections: PageShift.asideCorrections,
+                                                       // N2 : l'encre du survivant sur une page disputée
+                                                       // part dans « Conflits-remplacement/…/Encre/ ».
+                                                       asideInk: PageShift.asideInkDrawing)
                     return (updated, false)
                 }
                 let imported = try importer.importFile(at: url, displayName: url.lastPathComponent,

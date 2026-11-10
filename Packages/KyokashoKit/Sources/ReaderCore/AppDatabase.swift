@@ -271,16 +271,24 @@ extension AppDatabase {
     public typealias AsideCorrections =
         (_ sourceDocumentId: String, _ newDocumentId: String, _ pageIndex: Int, _ engine: String, _ pageJSON: Data) throws -> Void
 
+    /// Encre perdue pendant une fusion (revue R2, N2) : la page d'arrivée n'attend qu'un dessin,
+    /// celui du survivant est offert à l'appelant **avant** d'être remplacé, pour être mis de
+    /// côté (fichier `.ink` sous « Conflits-remplacement », jamais écrasé).
+    public typealias AsideInk = (_ sourceDocumentId: String, _ pageIndex: Int, _ data: Data) throws -> Void
+
     /// Si l'identifiant ne change pas (`oldId == newDocument.id`) le contenu n'a pas varié : ce n'est
     /// pas un remplacement, aucun cache valable ne doit être effacé.
     ///
-    /// - Parameter asideCorrections: DEC-C3 (10/11/2026) — appelé pour **chaque** résultat OCR
-    ///   avant tout changement (renommage compris : les lignes deviendront celles du nouvel
-    ///   identifiant, puis partiront avec l'effacement ; fusion incluse, les deux versions
-    ///   partiront). Les lignes corrigées à la main y sont extraites et écrites dans
-    ///   `Corrections-remplacement/…`, jamais écrasées.
+    ///   - asideCorrections: DEC-C3 (10/11/2026) — appelé pour **chaque** résultat OCR
+    ///     avant tout changement (renommage compris : les lignes deviendront celles du nouvel
+    ///     identifiant, puis partiront avec l'effacement ; fusion incluse, les deux versions
+    ///     partiront). Les lignes corrigées à la main y sont extraites et écrites dans
+    ///     `Corrections-remplacement/…`, jamais écrasées.
+    ///   - asideInk: N2 (revue R2) — fusion seulement : le dessin du survivant sur une page où le
+    ///     document remplacé en a aussi un, avant que celui-là ne prenne sa place.
     public func rekeyDocument(from oldId: String, to newDocument: LibraryDocument,
-                              asideCorrections: AsideCorrections? = nil) throws {
+                              asideCorrections: AsideCorrections? = nil,
+                              asideInk: AsideInk? = nil) throws {
         try writer.write { db in
             if oldId != newDocument.id {
                 // DEC-C3 : AVANT la bascule et l'effacement, tous les résultats OCR des deux
@@ -301,17 +309,32 @@ extension AppDatabase {
                     // et documenté : le réglage du livre **remplacé** gagne, parce que c'est la
                     // fiche que l'utilisateur entretient et met à jour (le survivant n'est qu'un
                     // doublon du même fichier, reconnu à sa même empreinte). La ligne du
-                    // survivant est retirée d'abord, celle du document remplacé la reprend ;
-                    // les autres tables gardent `UPDATE OR IGNORE` : plusieurs annotations
-                    // par page peuvent coexister.
+                    // survivant est retirée d'abord, celle du document remplacé la reprend.
                     try db.execute(sql: "DELETE FROM pageTransform WHERE documentId = ? AND pageIndex IN (SELECT pageIndex FROM pageTransform WHERE documentId = ?)",
                                    arguments: [newDocument.id, oldId])
                     try db.execute(sql: "UPDATE pageTransform SET documentId = ? WHERE documentId = ?",
                                    arguments: [newDocument.id, oldId])
-                    for table in ["highlight", "inkDrawing", "bookmark", "pageComment"] {
+                    for table in ["highlight", "bookmark", "pageComment"] {
                         try db.execute(sql: "UPDATE OR IGNORE \(table) SET documentId = ? WHERE documentId = ?",
                                        arguments: [newDocument.id, oldId])
                     }
+                    // N2 (revue R2) : l'encre n'attend qu'un dessin par page (clé
+                    // `(documentId, pageIndex)`) — là où le survivant en a déjà un,
+                    // `UPDATE OR IGNORE` abandonnerait en silence le dessin du document
+                    // remplacé, exactement la classe de défaut corrigée pour la rotation.
+                    // Choix symétrique : le dessin du livre **remplacé** gagne (même règle
+                    // que la rotation), et le dessin du survivant est mis de côté par
+                    // l'appelant, jamais écrasé. Pas de fusion des deux dessins : PencilKit
+                    // n'offre pas d'assemblage public de deux `PKDrawing`, et une recomposition
+                    // approximative risquerait la géométrie exacte d'un dessin de l'utilisateur.
+                    for drawing in try InkDrawing.filter(Column("documentId") == oldId).fetchAll(db) {
+                        if let kept = try InkDrawing.fetchOne(db, key: ["documentId": newDocument.id, "pageIndex": drawing.pageIndex]) {
+                            try asideInk?(oldId, kept.pageIndex, kept.data)
+                            try kept.delete(db)
+                        }
+                    }
+                    try db.execute(sql: "UPDATE inkDrawing SET documentId = ? WHERE documentId = ?",
+                                   arguments: [newDocument.id, oldId])
                     // Archives des pages retirées (#49) : gardées avec le document qui reste, jamais effacées en passant.
                     try db.execute(sql: "UPDATE pageEdit SET documentId = ? WHERE documentId = ?", arguments: [newDocument.id, oldId])
                     _ = try LibraryDocument.deleteOne(db, key: oldId)

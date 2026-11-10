@@ -148,10 +148,13 @@ public struct DocumentImporter: Sendable {
     ///     créer un document que le journal ne décrit pas.
     ///   - asideCorrections: DEC-C3 — remis à `rekeyDocument`, voir sa fiche ; l'app passe
     ///     `PageShift.asideCorrections` pour mettre de côté les lignes corrigées à la main.
+    ///   - asideInk: N2 (revue R2) — fusion seulement : le dessin du survivant sur une page
+    ///     disputée, mis de côté par l'app (`PageShift.asideInkDrawing`) avant d'être remplacé.
     @discardableResult
     public func replace(documentId oldId: String, withFileAt source: URL, driveRevision: String? = nil,
                         replacingInto expectedId: String? = nil,
-                        asideCorrections: AppDatabase.AsideCorrections? = nil) throws -> LibraryDocument {
+                        asideCorrections: AppDatabase.AsideCorrections? = nil,
+                        asideInk: AppDatabase.AsideInk? = nil) throws -> LibraryDocument {
         guard var old = try database.document(id: oldId) else { throw ImportError.unreadable(String(localized: "document inconnu", bundle: .main)) }
         let hash = try Self.sha256(of: source)
         if let expectedId, hash != expectedId {
@@ -175,7 +178,7 @@ public struct DocumentImporter: Sendable {
         updated.fileSize = size
         updated.lastPageIndex = min(old.lastPageIndex, max(0, pageCount - 1))
         updated.driveRevision = driveRevision ?? old.driveRevision
-        try database.rekeyDocument(from: oldId, to: updated, asideCorrections: asideCorrections)
+        try database.rekeyDocument(from: oldId, to: updated, asideCorrections: asideCorrections, asideInk: asideInk)
         storage.remove(documentId: oldId)
         return updated
     }
