@@ -178,7 +178,7 @@ enum LibraryBackupService {
             Diagnostics.error("restauration : \(error.localizedDescription)", "sauvegarde")
             return
         }
-        Diagnostics.write("[sauvegarde] restauration de \(marker.backupName)…", sync: true)
+        Diagnostics.write("restauration de \(marker.backupName)…", level: .info, area: "sauvegarde", sync: true)
         do {
             let bundle = Bundle.main.bundleIdentifier ?? ""
             let current = UserDefaults.standard.persistentDomain(forName: bundle) ?? [:]
@@ -190,7 +190,7 @@ enum LibraryBackupService {
             if case .cleanupPending = outcome {
                 Diagnostics.error("restauration : copies mises de côté non effacées, nouvel essai au prochain lancement", "sauvegarde")
             }
-            Diagnostics.write("[sauvegarde] restauration terminée", sync: true)
+            Diagnostics.write("restauration terminée", level: .info, area: "sauvegarde", sync: true)
         } catch {
             restoreBlocked = true
             restoreMessage = String(localized: "Restauration inachevée : rien n'a été effacé. Ferme puis rouvre l'app pour la reprendre. (\(error.localizedDescription))")
