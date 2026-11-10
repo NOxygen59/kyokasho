@@ -5,8 +5,9 @@ import DictionaryKit
 import SwiftUI
 import YomitanKit
 
-/// Catégorie « Lexique » de l'accueil (PLAN-LEX-001, étape E2) : tous les mots des dictionnaires installés et actifs,
-/// rangés par lecture, avec leur sens en français et en anglais.
+/// Catégorie « Lexique » de l'accueil (PLAN-LEX-001, étapes E2 et E3) : tous les mots des dictionnaires installés et
+/// actifs, rangés par lecture, avec leur sens en français et en anglais. Toucher un mot ouvre sa fiche (la fenêtre du
+/// dictionnaire, avec ⭐ et « + carte ») ; le champ de recherche garde les mots qui commencent par le texte tapé.
 ///
 /// Cette vue n'a pas de logique propre : l'état de la liste est `LexiconFeed` (testé sur Mac), la lecture est
 /// `DictionaryModel.lexiconPage` (hors du fil principal, annulable). Elle n'écrit rien dans les bases.
@@ -16,11 +17,25 @@ import YomitanKit
 /// (DEC-05) ; les dictionnaires désactivés n'apparaissent pas (DEC-06, même règle que la recherche).
 struct LexiconView: View {
     @EnvironmentObject private var dictionaryModel: DictionaryModel
+    @EnvironmentObject private var review: ReviewModel
     @ObservedObject private var catalog = DictionaryCatalogService.shared
+    /// Fiche du mot touché : la même pile de recherches que le dictionnaire (`LookupSession`), rien de réécrit.
+    @StateObject private var session: LookupSession
+    @State private var showEntry = false
+    /// Début de mot tapé (DEC-07), en kana ou en kanji.
+    @State private var query = ""
+    @FocusState private var searching: Bool
+    /// Ajoute une carte depuis la fiche ; renvoie un court message (doublon, erreur) ou `nil`.
+    var onAddCard: ((TermResult) -> String?)?
     @State private var feed = LexiconFeed()
     @State private var loadError: String?
     /// Lecture de la page suivante demandée par le défilement ; annulée si l'écran se ferme.
     @State private var moreTask: Task<Void, Never>?
+
+    init(dictionary: DictionaryModel, onAddCard: ((TermResult) -> String?)? = nil) {
+        _session = StateObject(wrappedValue: LookupSession(dictionary: dictionary))
+        self.onAddCard = onAddCard
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -29,6 +44,7 @@ struct LexiconView: View {
                 Text("Tous les mots de tes dictionnaires actifs, rangés par lecture.")
                     .font(.subheadline).foregroundStyle(Atelier.textSecondary)
             }
+            searchField
             if updating {
                 // État discret : la liste reste utilisable, elle se relit seule à la fin (voir `reloadKey`).
                 HStack(spacing: 8) {
@@ -44,11 +60,58 @@ struct LexiconView: View {
         .background { GridBackground() }
         // Première page, puis relecture complète dès que la liste des dictionnaires consultés change (activation,
         // installation ou mise à jour finie, langue du lexique fourni). La tâche précédente est annulée par SwiftUI.
-        .task(id: reloadKey) {
-            feed.reset()
+        .task(id: reloadKey + "\u{1}" + LexiconFeed.cleanPrefix(query)) {
+            // Frappe en cours : on attend un court instant avant de relire (la tâche est annulée à la lettre suivante).
+            // La liste affichée reste en place pendant l'attente, puis repart du début pour la nouvelle recherche.
+            if LexiconFeed.cleanPrefix(query) != feed.prefix {
+                try? await Task.sleep(nanoseconds: 250_000_000)
+                guard !Task.isCancelled else { return }
+            }
+            moreTask?.cancel()
+            feed.reset(prefix: query)
             await loadNext()
         }
         .onDisappear { moreTask?.cancel() }
+        // Cartes déjà créées pour les mots de la fiche (✓ à la place de « + carte »), comme dans le dictionnaire.
+        .task(id: session.currentTerms.map(\.id).joined(separator: ";")) {
+            review.loadKeys(session.currentTerms.map(\.id))
+        }
+        .sheet(isPresented: $showEntry, onDismiss: { session.clear() }) {
+            LookupPopup(session: session, added: review.keys, onAddCard: onAddCard, close: { showEntry = false })
+                .padding(Atelier.gap)
+                .environmentObject(dictionaryModel).environmentObject(review)
+                .preferredColorScheme(Theme.current.colorScheme)
+                .atelierSheet()
+        }
+    }
+
+    /// Champ de recherche simple (DEC-07) : début de mot. En kana, il est comparé à la lecture ; sinon à la forme
+    /// écrite (règle de `DictionaryDatabase.lexiconPage`).
+    private var searchField: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "magnifyingglass").foregroundStyle(Atelier.Tint.japanese)
+            TextField(String(localized: "Début d'un mot, en kana ou en kanji"), text: $query)
+                .focused($searching)
+                .font(.custom("HiraginoSans-W3", size: 19))
+                .submitLabel(.search)
+                .onSubmit { searching = false }
+                .autocorrectionDisabled()
+                .textInputAutocapitalization(.never)
+            if !query.isEmpty {
+                Button { query = ""; searching = false } label: { Image(systemName: "xmark.circle.fill") }
+                    .foregroundStyle(Atelier.textTertiary)
+                    .accessibilityLabel("Effacer la recherche")
+            }
+        }
+        .padding(14)
+        .atelierPanel(radius: 16)
+    }
+
+    /// Fiche complète du mot : sa lecture passe en premier quand plusieurs mots s'écrivent pareil.
+    private func open(_ word: LexiconWord) {
+        searching = false
+        session.start(word.expression, preferredReading: word.sortReading)
+        showEntry = true
     }
 
     /// Change quand la liste des dictionnaires consultés change : mêmes identifiants, même nombre de termes.
@@ -69,7 +132,8 @@ struct LexiconView: View {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 6) {
                     ForEach(feed.words) { word in
-                        LexiconRow(word: word)
+                        Button { open(word) } label: { LexiconRow(word: word) }
+                            .buttonStyle(.plain)
                             .onAppear { wordAppeared(word) }
                     }
                     footer
@@ -93,7 +157,9 @@ struct LexiconView: View {
         } else if feed.isLoading {
             HStack { Spacer(); ProgressView().tint(Atelier.Tint.japanese); Spacer() }.padding(.vertical, 12)
         } else if feed.reachedEnd {
-            Text(feed.words.isEmpty ? String(localized: "Aucun mot dans les dictionnaires actifs.")
+            Text(feed.words.isEmpty
+                 ? (feed.prefix.isEmpty ? String(localized: "Aucun mot dans les dictionnaires actifs.")
+                    : String(localized: "Aucun mot à ce début") + " · " + String(localized: "Essaie la forme de base ou une lecture en kana."))
                  : String(localized: "Fin du lexique · \(feed.words.count) mots"))
                 .font(.footnote).foregroundStyle(Atelier.textTertiary)
                 .frame(maxWidth: .infinity).padding(.vertical, 12)
