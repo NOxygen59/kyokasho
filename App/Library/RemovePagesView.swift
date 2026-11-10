@@ -186,7 +186,9 @@ struct RemovePagesView: View {
         case .removal:
             let count = edit.mapping.removed.count
             let identities = ((try? model.database.archivedRows(editId: edit.id)) ?? []).filter { $0.tableName == "pageIdentity" }
-            let numbers: [String] = edit.removedPageIds.compactMap { id in
+            // `try?` : un journal altéré (indice hors bornes) lève côté base ; l'écran dégrade en liste
+            // vide de numéros, sans bloquer l'affichage de l'historique.
+            let numbers: [String] = ((try? edit.removedPageIds()) ?? []).compactMap { id in
                 guard let row = identities.first(where: { $0.pageId == id }) else { return nil }
                 if case .integer(let n)? = row.columns["printedNumber"] { return String(n) }
                 if case .integer(let p)? = row.columns["position"] { return "(\(p + 1))" }
