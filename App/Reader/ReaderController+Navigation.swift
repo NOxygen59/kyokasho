@@ -176,6 +176,8 @@ extension ReaderController {
         // Ses gestes de texte (sélection au doigt, liens) ne se mêlent plus au pincement et au défilement d'iOS ;
         // la sélection de texte est faite ici (appui long sur un mot, puis glisser pour l'étendre).
         pdfView.isInMarkupMode = true
+        // T1 (revue D-07) : après chaque recalage différé (rotation, panneau ouvert ou fermé), garde du Pencil réappliquée.
+        pdfView.onLayoutSettled = { [weak self] in self?.applyPencilPageTurnGuard() }
         // Appui long : sélection d'un mot, étendue en glissant (le tap l'ignore ensuite).
         longPressWatcher = UILongPressGestureRecognizer(target: self, action: #selector(handleLongPress(_:)))
         longPressWatcher.minimumPressDuration = 0.35

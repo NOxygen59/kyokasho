@@ -37,4 +37,21 @@ final class BookChatPromptTests: XCTestCase {
         // Page inventée hors des extraits : ignorée.
         XCTAssertEqual(BookChatPrompt.citedPages(in: "[p. 99]", passages: passages), [])
     }
+
+    func testRangesAndCaseFromReviewD07() {
+        XCTAssertEqual(BookChatPrompt.citedLabels(in: "[p. 12-13] [p. 14–15] [p. 16 et 17] [p.18]"),
+                       ["12", "13", "14", "15", "16", "17", "18"])
+        let passages = [(page: 2, label: "iii"), (page: 20, label: "13")]
+        XCTAssertEqual(BookChatPrompt.citedPages(in: "Voir [p. III] et [p. 12-13].", passages: passages), [2, 20])
+    }
+
+    func testListedPagesFallback() {
+        let passages = [(page: 4, label: "5"), (page: 9, label: "10")]
+        // Prose sans [p. N], appuyée sur le manuel : les extraits restent listés.
+        XCTAssertEqual(BookChatPrompt.listedPages(in: "Comme le dit la page 5, …", passages: passages), [4, 9])
+        // Explication générale : aucune page.
+        XCTAssertEqual(BookChatPrompt.listedPages(in: "\(BookChatPrompt.generalMarker) …", passages: passages), [])
+        // Citation précise : seulement elle.
+        XCTAssertEqual(BookChatPrompt.listedPages(in: "[p. 10]", passages: passages), [9])
+    }
 }

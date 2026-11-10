@@ -28,7 +28,8 @@ public final class QwenChat: @unchecked Sendable {
         clairement et brièvement. Ne suppose pas le sujet du document ni celui de la question. Quand des extraits \
         sont fournis, appuie chaque affirmation sur eux et cite les pages. Pour un mot japonais, donne sa lecture \
         en hiragana et son sens seulement si tu peux les établir. Si les extraits ne répondent pas à la question, \
-        dis-le sans inventer. Si la demande porte uniquement sur des mots-clés de recherche, renvoie uniquement ces mots-clés.
+        dis-le, puis réponds avec tes connaissances générales en le signalant clairement (T2, 10/11/2026) ; n'invente \
+        jamais de page ni de référence. Si la demande porte uniquement sur des mots-clés de recherche, renvoie uniquement ces mots-clés.
         """
 
     /// Lexique du domaine (terme → sens) et lectures sûres (terme → kana), fournis par l'app (lexique modifiable).

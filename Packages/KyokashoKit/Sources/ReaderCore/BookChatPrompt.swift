@@ -46,9 +46,11 @@ public enum BookChatPrompt {
         var rest = answer[...]
         while let open = rest.range(of: "[p.") {
             guard let close = rest[open.upperBound...].firstIndex(of: "]") else { break }
-            for part in rest[open.upperBound..<close].split(whereSeparator: { $0 == "," || $0 == ";" }) {
+            // Revue D-07 : plages « 12-13 », « 12–13 », « 12 et 13 » découpées en libellés.
+            let inside = rest[open.upperBound..<close].replacingOccurrences(of: " et ", with: ",")
+            for part in inside.split(whereSeparator: { ",;-–—".contains($0) }) {
                 let label = part.trimmingCharacters(in: .whitespaces)
-                    .replacingOccurrences(of: "p. ", with: "")
+                    .replacingOccurrences(of: "p.", with: "")
                     .trimmingCharacters(in: .whitespaces)
                 if !label.isEmpty, !labels.contains(label) { labels.append(label) }
             }
@@ -59,12 +61,24 @@ public enum BookChatPrompt {
 
     /// Pages des extraits réellement citées par la réponse, dans l'ordre des extraits.
     /// `passages` : (page, libellé affiché). Une page citée qui n'était pas parmi les extraits est ignorée.
+    /// Comparaison sans casse (revue D-07 : « [p. III] » pour le libellé « iii »).
     public static func citedPages(in answer: String, passages: [(page: Int, label: String)]) -> [Int] {
-        let cited = Set(citedLabels(in: answer))
+        let cited = Set(citedLabels(in: answer).map { $0.lowercased() })
         var pages: [Int] = []
-        for passage in passages where cited.contains(passage.label) && !pages.contains(passage.page) {
+        for passage in passages where cited.contains(passage.label.lowercased()) && !pages.contains(passage.page) {
             pages.append(passage.page)
         }
+        return pages
+    }
+
+    /// Pages listées sous la réponse : celles qu'elle cite ; si elle n'en cite aucune sous la forme [p. N] mais
+    /// s'appuie sur le manuel (pas de mention d'explication générale), les extraits fournis, comme avant T2
+    /// (revue D-07 : une réponse en prose « page 12 » ne perd pas ses liens).
+    public static func listedPages(in answer: String, passages: [(page: Int, label: String)]) -> [Int] {
+        let cited = citedPages(in: answer, passages: passages)
+        if !cited.isEmpty || answer.contains(generalMarker) { return cited }
+        var pages: [Int] = []
+        for passage in passages where !pages.contains(passage.page) { pages.append(passage.page) }
         return pages
     }
 }

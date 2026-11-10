@@ -782,6 +782,9 @@ struct QwenChatView: View {
                         // T2 (10/11) : aucune page du livre ne correspond ; l'IA répond avec ses connaissances
                         // générales en le signalant, au lieu de refuser.
                         for try await chunk in chat.stream(question, context: BookChatPrompt.generalContext) { messages[index].text += chunk }
+                        // Revue D-07 : réponse sans page, mais liée à la version actuelle (pas de mention « liens retirés »).
+                        messages[index].pages = []
+                        messages[index].layoutVersion = (try? database?.layoutVersion(documentId: document.id)) ?? 0
                     } else {
                         let report = DocumentAnalysisService.shared.report(for: document.id)
                         let sources: String = passages.map { passage in
@@ -794,7 +797,7 @@ struct QwenChatView: View {
                         let context = BookChatPrompt.context(sources: sources)
                         for try await chunk in chat.stream(question, context: context) { messages[index].text += chunk }
                         // T2 (10/11) : seules les pages réellement citées par la réponse sont listées et ouvrables.
-                        let cited = BookChatPrompt.citedPages(
+                        let cited = BookChatPrompt.listedPages(
                             in: messages[index].text,
                             passages: passages.map { (page: $0.page, label: document.pageLabel($0.page)) })
                         if !cited.isEmpty {

@@ -338,7 +338,7 @@ struct WebView: UIViewRepresentable {
 /// qui renvoie le résultat de connexion à la page d'origine. Avant (retour terrain T3 du 10/11/2026), la fenêtre était
 /// chargée à la place de la page, le lien était perdu et la connexion n'aboutissait jamais (enquête GLM
 /// `REVUES/GLM-D03-T3-CONNEXION-f85d0c0.md`). Décision pure : `WebPopupPolicy` (testée).
-final class SameViewOpener: NSObject, WKUIDelegate {
+final class SameViewOpener: NSObject, WKUIDelegate, UIAdaptivePresentationControllerDelegate {
     @MainActor static let shared = SameViewOpener()
     /// Feuilles ouvertes, par vue fille : gardent la vue en vie jusqu'à sa fermeture.
     @MainActor private var sheets: [ObjectIdentifier: UIViewController] = [:]
@@ -350,7 +350,8 @@ final class SameViewOpener: NSObject, WKUIDelegate {
         let realWindow = WebPopupPolicy.opensRealWindow(
             linkActivated: navigationAction.navigationType == .linkActivated,
             hasSize: windowFeatures.width != nil || windowFeatures.height != nil)
-        guard realWindow, let top = Self.topController() else {
+        // Revue D-07 : panneau web caché (vue hors écran) → pas de feuille surgissant au-dessus du lecteur.
+        guard realWindow, webView.window != nil, let top = Self.topController() else {
             webView.load(navigationAction.request)
             return nil
         }
@@ -358,6 +359,7 @@ final class SameViewOpener: NSObject, WKUIDelegate {
         let child = WKWebView(frame: .zero, configuration: configuration)
         child.customUserAgent = webView.customUserAgent
         child.uiDelegate = self
+        child.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         let holder = UIViewController()
         holder.view = child
         holder.navigationItem.title = navigationAction.request.url?.host
@@ -368,6 +370,8 @@ final class SameViewOpener: NSObject, WKUIDelegate {
             })
         let navigation = UINavigationController(rootViewController: holder)
         navigation.modalPresentationStyle = .formSheet
+        // Revue D-07 : feuille fermée en glissant vers le bas → vue fille libérée aussi.
+        navigation.presentationController?.delegate = self
         sheets[ObjectIdentifier(child)] = navigation
         top.present(navigation, animated: true)
         // WebKit charge lui-même la requête dans la vue renvoyée.
@@ -378,6 +382,14 @@ final class SameViewOpener: NSObject, WKUIDelegate {
     @MainActor
     func webViewDidClose(_ webView: WKWebView) {
         close(webView)
+    }
+
+    /// Feuille fermée au doigt : la vue fille et son contrôleur ne restent pas retenus.
+    @MainActor
+    func presentationControllerDidDismiss(_ presentationController: UIPresentationController) {
+        guard let entry = sheets.first(where: { $0.value === presentationController.presentedViewController }) else { return }
+        sheets.removeValue(forKey: entry.key)
+        ((entry.value as? UINavigationController)?.viewControllers.first?.view as? WKWebView)?.stopLoading()
     }
 
     @MainActor

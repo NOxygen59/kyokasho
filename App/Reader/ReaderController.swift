@@ -1078,6 +1078,9 @@ final class ReaderPDFView: PDFView {
     static let preserveViewportKey = "reader.preserveViewport"
     private var lastFit: CGFloat = 0
     private var layoutWork: DispatchWorkItem?
+    /// Appelé quand un recalage différé est terminé (revue D-07 de T1 : PDFKit peut recréer les vues de page pendant ce
+    /// recalage ; la garde du Pencil est alors réappliquée).
+    var onLayoutSettled: (() -> Void)?
     private var pendingViewport: ViewportSnapshot?
     private var layoutGeneration = 0
     private var requiresFit = false
@@ -1133,6 +1136,7 @@ final class ReaderPDFView: PDFView {
         requiresFit = viewport == nil
         let work = DispatchWorkItem { [weak self] in
             guard let self, generation == self.layoutGeneration else { return }
+            defer { self.onLayoutSettled?() }
             self.pendingViewport = nil
             self.requiresFit = false
             self.layoutWork = nil
