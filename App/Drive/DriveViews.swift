@@ -419,16 +419,18 @@ extension AppModel {
                 let url = try await GoogleDrive.shared.download(file) { _ in }
                 try await importFromDrive(url: url, file: file)
                 updated.append(document.title)
-                let keptAside = PageShift.consumeReplacementConflicts(for: document.id)
-                if keptAside > 0 {
-                    conflicts.append(String(localized: "Conflits de remplacement : des données de l'ancienne version de « \(document.title) » (\(keptAside) élément(s)) sont gardées dans « Conflits-remplacement »."))
+                // N8 (revue R2) : conflits et corrections mises de côté sont lus dans le compteur
+                // sur le disque (`cote.json`) — une bascule finie par une reprise au lancement est
+                // encore rapportable ici, même après l'arrêt de l'app entre-temps.
+                let keptAside = PageShift.consumeReplacementAsides(for: document.id)
+                if keptAside.conflicts > 0 {
+                    conflicts.append(String(localized: "Conflits de remplacement : des données de l'ancienne version de « \(document.title) » (\(keptAside.conflicts) élément(s)) sont gardées dans « Conflits-remplacement »."))
                 }
                 // DEC-C3 : les lignes corrigées à la main de l'ancienne version sont mises de côté
                 // avant l'effacement du cache OCR ; le dossier reste en attente de la remise, au
                 // moment où le nouveau résultat OCR est enregistré (`OCRService.store`).
-                let keptCorrections = PageShift.consumeReplacementCorrections(for: document.id)
-                if keptCorrections > 0 {
-                    conflicts.append(String(localized: "Corrections manuelles de l'ancienne version de « \(document.title) » : \(keptCorrections) ligne(s) mises de côté dans « Corrections-remplacement » ; elles seront remises à la prochaine lecture de leur page."))
+                if keptAside.corrections > 0 {
+                    conflicts.append(String(localized: "Corrections manuelles de l'ancienne version de « \(document.title) » : \(keptAside.corrections) ligne(s) mises de côté dans « Corrections-remplacement » ; elles seront remises à la prochaine lecture de leur page."))
                 }
             } catch {
                 failures.append("\(document.title) : \(error.localizedDescription)")
