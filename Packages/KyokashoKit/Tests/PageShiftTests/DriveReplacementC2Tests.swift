@@ -243,6 +243,43 @@ extension PageShiftRecoveryTests {
         }
     }
 
+    /// P2 n°3 (revue R2 F3) — un journal qui désigne un fichier qui n'est pas le nouveau PDF est
+    /// refusé à la reprise : rien n'est déplacé ni retiré, le journal reste ; la reprise
+    /// authentique remise en place finit normalement.
+    func testTamperedReplacementSourceFileIsRefusedAtRecovery() async throws {
+        try await withFixture { model, doc, root in
+            let card = try seed(model, doc)
+            let (plan, _) = try replacementPlan(root, pages: 3)
+            let modesDone = trackModeKeys(doc.id, plan.newDocumentId)
+            defer { modesDone() }
+            ReaderToolModeStore().update(documentId: doc.id) { $0.drawing = true; $0.panelMode = "floating" }
+            try writeReplacementJournal(root, oldId: doc.id, oldCount: doc.pageCount, oldSize: doc.fileSize, plan: plan)
+            // Leurre : PDF honnête de 3 pages, mais son empreinte ne vaut pas `newDocumentId`.
+            let decoy = root.appendingPathComponent("leurre-" + UUID().uuidString + ".pdf")
+            try writePDF(decoy, pages: 3)
+            defer { try? FileManager.default.removeItem(at: decoy) }
+            var tampered = try journal(root)
+            tampered.newSourcePath = decoy.path
+            try JSONEncoder().encode(tampered).write(to: root.appendingPathComponent(journalFile))
+            let tamperedBytes = try Data(contentsOf: root.appendingPathComponent(journalFile))
+            let before = try inventory(root)
+
+            let restarted = try AppModel(root: root)
+            for _ in 0..<2 { PageShift.reconcile(restarted) }
+            XCTAssertNotNil(restarted.storageRecoveryError, "un journal altéré arrête la reprise")
+            XCTAssertEqual(try Data(contentsOf: root.appendingPathComponent(journalFile)), tamperedBytes)
+            XCTAssertEqual(try inventory(root), before, "aucun fichier déplacé ni retiré par un journal altéré")
+            try assertUnshifted(restarted, doc, card)
+            XCTAssertNil(try restarted.database.document(id: plan.newDocumentId))
+
+            // Journal authentique remis en place : la reprise finit, rien n'a été abîmé entre-temps.
+            try writeReplacementJournal(root, oldId: doc.id, oldCount: doc.pageCount, oldSize: doc.fileSize, plan: plan)
+            PageShift.reconcile(restarted)
+            XCTAssertNil(restarted.storageRecoveryError)
+            try verifyReplacement(restarted, root: root, old: doc, card: card, plan: plan)
+        }
+    }
+
     /// Fichiers déjà présents chez l'identifiant d'arrivée (version re-importée après avoir été
     /// retirée) : jamais écrasés, source gardée en secours, conflit signalé, bascule finie quand même.
     func testExistingTargetFilesAreNeverOverwrittenAndSourceKept() async throws {
