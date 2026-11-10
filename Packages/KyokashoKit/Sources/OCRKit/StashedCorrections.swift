@@ -21,7 +21,9 @@ enum StashedCorrections {
     /// Applique les corrections mises de côté à un nouveau résultat. Retourne la page corrigée
     /// et le nombre de corrections appliquées, ou `nil` si rien ne concorde (le dossier peut
     /// très bien ne pas exister : le document n'a pas été remplacé).
-    static func applied(to page: OCRPage, documentId: String, pageIndex: Int) -> (page: OCRPage, applied: Int)? {
+    /// `commit` retire les corrections appliquées du dossier de côté : à appeler **après** l'écriture réussie du
+    /// résultat (revue R2, S3 : sinon un échec d'écriture perdait la correction des deux côtés).
+    static func applied(to page: OCRPage, documentId: String, pageIndex: Int) -> (page: OCRPage, applied: Int, commit: () -> Void)? {
         let aside = CorrectionAsideStore.shared
         let pending = aside.pendingCorrections(documentId: documentId, pageIndex: pageIndex, engine: page.engine)
         guard !pending.isEmpty else { return nil }
@@ -39,8 +41,8 @@ enum StashedCorrections {
             appliedPerFile[candidate.file, default: []].insert(candidate.entry)
         }
         // « Une correction appliquée est retirée du dossier, les autres restent » : fichier par
-        // fichier, un seul passage.
-        for (file, entries) in appliedPerFile { aside.removeApplied(documentId: documentId, file: file, entries: entries) }
-        return applied > 0 ? (result, applied) : nil
+        // fichier, un seul passage, une fois le résultat enregistré.
+        let commit = { for (file, entries) in appliedPerFile { aside.removeApplied(documentId: documentId, file: file, entries: entries) } }
+        return applied > 0 ? (result, applied, commit) : nil
     }
 }
