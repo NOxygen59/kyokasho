@@ -164,6 +164,10 @@ enum PageShift {
         applyingDocuments.contains(documentId) || pendingDocumentId == documentId
     }
 
+    /// Une opération de pages en cours sur n'importe quel document (remplacement Drive compris) :
+    /// la garde réciproque de `LibraryBackupService.backup` (C2.7).
+    static var operationInProgress: Bool { !applyingDocuments.isEmpty }
+
     /// Les clés IA portent l'identifiant entre séparateurs. Refuser les nouveaux travaux tant que le PDF ou
     /// ses indices sont réservés, y compris pendant l'attente d'un importeur Drive détaché.
     static func blocksAI(jobKey: String) -> Bool {
@@ -175,6 +179,9 @@ enum PageShift {
     static func withDriveReplacement<T>(_ model: AppModel, documentId: String,
                                        operation: () async throws -> T) async throws -> T {
         guard model.openDocumentId != documentId else { throw fail(String(localized: "Ferme le document avant de le remplacer.")) }
+        // Comme PageShift.run : la sauvegarde complète refuse de démarrer pendant une opération de pages (garde
+        // dans les deux sens, C2.7) ; ici aussi, démarrer pendant une sauvegarde écraserait des fichiers copiés.
+        guard !LibraryBackupService.inProgress else { throw fail(String(localized: "Sauvegarde en cours : réessaie après sa fin.")) }
         guard !fm.fileExists(atPath: marker.path), applyingDocuments.insert(documentId).inserted else {
             throw fail(String(localized: "Une modification des pages est déjà en cours ou doit être reprise."))
         }
