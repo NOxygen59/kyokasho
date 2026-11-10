@@ -50953,6 +50953,28 @@
         }
       }
     },
+    "Corrections manuelles de l'ancienne version de « %@ » : %lld ligne(s) mises de côté dans « Corrections-remplacement » ; elles seront remises à la prochaine lecture de leur page.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manual corrections from the old version of « %@ »: %lld line(s) set aside in « Corrections-remplacement »; they will be reapplied the next time their page is read."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Corrections manuelles de l'ancienne version de « %@ » : %lld ligne(s) mises de côté dans « Corrections-remplacement » ; elles seront remises à la prochaine lecture de leur page."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "旧版本的“%@”手动修正：%lld 行已移至“Corrections-remplacement”，下次读取相应页面时会重新应用。"
+          }
+        }
+      }
+    },
     "Remplacement : « %@ » existe déjà, « %@ » est mis de côté dans « Conflits-remplacement ».": {
       "localizations": {
         "en": {
