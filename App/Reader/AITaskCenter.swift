@@ -127,6 +127,13 @@ final class AITaskCenter: ObservableObject {
 
     func cancel(key: String) { jobs.filter { $0.key == key }.forEach { cancel($0.id) } }
 
+    /// Toutes les tâches IA d'un document (clé `…|<document>|…`), la suppression avant tout :
+    /// leurs écritures tardives (OCR, lectures IA) ne doivent pas s'installer après l'effacement
+    /// de ses PDF et bases. Même prédicat de clé que `PageShift.blocksAI(jobKey:)`.
+    func cancel(documentId: String) {
+        for job in jobs where job.key.split(separator: "|").contains(documentId) { cancel(job.id) }
+    }
+
     /// Remplacement par une version plus récente (pas un arrêt de l'utilisateur) : la tâche quitte la liste tout de
     /// suite, son résultat sera jeté.
     func cancel(prefix: String) {
