@@ -494,4 +494,42 @@ extension PageShiftRecoveryTests {
                            "la relance n'est plus faite sous la réservation")
         }
     }
+
+    /// N2 (revue R2) — fusion (l'identifiant d'arrivée existe déjà) : quand les deux versions ont
+    /// un dessin d'encre sur la même page, le dessin du livre remplacé reste (règle P3 n°9) et
+    /// celui du survivant est mis de côté dans `Conflits-remplacement/<ancien identifiant>/Encre/`,
+    /// tel quel, jamais écrasé — rien n'est abandonné en silence.
+    func testInkCollisionInAFusionIsKeptAside() async throws {
+        try await withFixture { model, doc, root in
+            _ = try seed(model, doc)
+            let (plan, newPDF) = try replacementPlan(root, pages: 3)
+            let modesDone = trackModeKeys(doc.id, plan.newDocumentId)
+            defer { modesDone() }
+            ReaderToolModeStore().update(documentId: doc.id) { $0.drawing = true; $0.panelMode = "floating" }
+            // Le document d'arrivée existe déjà (la même version du cours avait été importée) :
+            // la bascule SQL est une fusion. Un dessin du survivant sur la page 1, disputée
+            // (le seed pose déjà celui du remplacé sur la même page).
+            try model.database.save(LibraryDocument(id: plan.newDocumentId, title: doc.title,
+                                                    originalFileName: doc.originalFileName, pageCount: 3, fileSize: 2))
+            let survivorInk = Data([3, 4, 5])
+            try model.database.save(InkDrawing(documentId: plan.newDocumentId, pageIndex: 1, data: survivorInk), isEmpty: false)
+
+            let importer = DocumentImporter(storage: model.storage, database: model.database)
+            try await PageShift.withDriveReplacement(model, documentId: doc.id, replacement: plan) {
+                try importer.replace(documentId: doc.id, withFileAt: newPDF,
+                                     driveRevision: "rév. 2", replacingInto: plan.newDocumentId,
+                                     asideCorrections: PageShift.asideCorrections,
+                                     asideInk: PageShift.asideInkDrawing)
+            }
+            // La page disputée garde le dessin du remplacé (seed)…
+            XCTAssertEqual(try model.database.inkDrawing(documentId: plan.newDocumentId, pageIndex: 1)?.data, Data([1, 2, 3]),
+                           "le dessin du livre remplacé reste sur la page")
+            // …et celui du survivant est de côté, octet pour octet, dans le dossier des conflits.
+            let inkAside = root.appendingPathComponent("Conflits-remplacement").appendingPathComponent(doc.id, isDirectory: true)
+                .appendingPathComponent("Encre").appendingPathComponent("page-1.ink")
+            XCTAssertEqual(try Data(contentsOf: inkAside), survivorInk, "le dessin perdant est mis de côté, jamais écrasé")
+            XCTAssertEqual(CorrectionAsideStore.shared.consumeTally(documentId: doc.id).conflicts, 1,
+                           "la perte de côté est comptée pour le rapport")
+        }
+    }
 }

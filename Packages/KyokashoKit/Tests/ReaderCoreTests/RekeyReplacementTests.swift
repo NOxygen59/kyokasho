@@ -166,4 +166,29 @@ final class RekeyReplacementTests: XCTestCase {
         XCTAssertEqual(sources, ["old", "new"])
         XCTAssertTrue(try db.ocrResults(documentId: "new").isEmpty)
     }
+
+    /// N2 (revue R2) : l'encre n'attend qu'un dessin par page — en fusion, là où le survivant en
+    /// a déjà un, le dessin du document remplacé gagne (comme la rotation, P3 n°9) et celui du
+    /// survivant est offert à l'app pour être mis de côté, jamais abandonné en silence.
+    func testFusionKeepsTheLosingInkAsideAndLetsTheReplacedOneWin() throws {
+        try db.save(LibraryDocument(id: "old", title: "Cours", originalFileName: "c.pdf", pageCount: 3, fileSize: 1))
+        try db.save(LibraryDocument(id: "new", title: "Cours", originalFileName: "c.pdf", pageCount: 4, fileSize: 2))
+        try db.save(InkDrawing(documentId: "old", pageIndex: 0, data: Data([1, 2])), isEmpty: false)
+        try db.save(InkDrawing(documentId: "new", pageIndex: 0, data: Data([3, 4])), isEmpty: false)
+        try db.save(InkDrawing(documentId: "old", pageIndex: 1, data: Data([5])), isEmpty: false)
+        try db.save(InkDrawing(documentId: "new", pageIndex: 2, data: Data([6])), isEmpty: false)
+        var lost: [(page: Int, data: Data)] = []
+        var updated = try XCTUnwrap(db.document(id: "old"))
+        updated.id = "new"
+        try db.rekeyDocument(from: "old", to: updated, asideInk: { source, page, data in
+            XCTAssertEqual(source, "old")
+            lost.append((page, data))
+        })
+        XCTAssertEqual(lost.count, 1, "seul le dessin du survivant sur la page disputée est offert")
+        XCTAssertEqual(lost.first?.page, 0)
+        XCTAssertEqual(lost.first?.data, Data([3, 4]))
+        XCTAssertEqual(try db.inkDrawing(documentId: "new", pageIndex: 0)?.data, Data([1, 2]), "le dessin du remplacé gagne")
+        XCTAssertEqual(try db.inkDrawing(documentId: "new", pageIndex: 1)?.data, Data([5]), "le dessin du remplacé sans conflit suit")
+        XCTAssertEqual(try db.inkDrawing(documentId: "new", pageIndex: 2)?.data, Data([6]), "le dessin du survivant sans conflit reste")
+    }
 }
