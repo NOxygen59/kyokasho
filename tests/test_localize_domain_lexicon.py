@@ -1,6 +1,8 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 NOxygen59
 import importlib.util
+import argparse
+import hashlib
 import json
 from pathlib import Path
 import tempfile
@@ -89,6 +91,68 @@ class LexiconLanguagesTests(unittest.TestCase):
         self.assertLess(check.index("bundledUpdateAvailable"), check.index("DictionaryUpdateSchedule.isDue"))
         self.assertIn("discardOtherLanguageOffers()", check)
         self.assertIn('"dictionaries.bundledOfferedRevision." + BundledLexicon.selectedLanguage.rawValue', text)
+
+
+class ManualTermsInEnglishTests(unittest.TestCase):
+    """Termes du manuel dans la version anglaise : exemples inventés, fichier hors dépôt."""
+
+    SOURCE_ROW = ["天井", "てんじょう", "wp", "", 3, ["Plafond.", {"type": "structured-content", "content": {
+        "tag": "a", "href": "https://example.org/天井", "content": "Source : Wikipédia en japonais"}}], 1, "interieur"]
+    MANUAL = [{"terme": "試験吊", "lecture": "しけんづり", "fr": "suspension d'essai", "en": "test pendant",
+               "definition_fr": "Luminaire suspendu de test.", "page": "12", "confiance": "élevée"}]
+
+    def make(self, folder, manual):
+        root = Path(folder)
+        source, extra, out = root / "source.zip", root / "termes.jsonl", root / "sortie"
+        extra.write_text("\n".join(json.dumps(item, ensure_ascii=False) for item in manual) + "\n", encoding="utf-8")
+        with zipfile.ZipFile(source, "w") as z:
+            z.writestr("index.json", json.dumps({"title": "source", "revision": "2026-11-04.2", "targetLanguage": "fr",
+                                                 "attribution": "CC BY-SA origin", "description": "source"}))
+            z.writestr("tag_bank_1.json", json.dumps([[name, "source", 0, name, 0]
+                                                      for name in ["wikt", "wp", "wd", "law", "interieur"]]))
+            z.writestr("term_bank_1.json", json.dumps([self.SOURCE_ROW], ensure_ascii=False))
+        cache = root / "cache.json"
+        cache.write_text(json.dumps({"source_sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
+                                     "translations": {"Plafond.": {"en": "Ceiling.", "zh-Hans": "天花板。"}},
+                                     "literalTranslations": {"1": "天花板"}}), encoding="utf-8")
+        return source, extra, cache, out
+
+    def build(self, folder, manual, language="en"):
+        source, extra, cache, out = self.make(folder, manual)
+        args = argparse.Namespace(source=str(source), cache=str(cache), output=str(out), language=[language],
+                                  extra=str(extra), revision="2026-11-10.1")
+        localize.build(args)
+        with zipfile.ZipFile(out / f"lexique-interieur-{language}.zip") as z:
+            return (json.loads(z.read("index.json")), json.loads(z.read("tag_bank_1.json")),
+                    json.loads(z.read("term_bank_1.json")))
+
+    def test_english_archive_gets_manual_terms_tagged_and_untranslated(self):
+        with tempfile.TemporaryDirectory() as folder:
+            index, tags, rows = self.build(folder, self.MANUAL)
+        self.assertEqual(len(rows), 2)
+        self.assertEqual(rows[0][:5], self.SOURCE_ROW[:5], "l'entrée traduite ne doit pas bouger")
+        self.assertEqual(rows[1][2], localize.lexicon.MANUAL_TAG)
+        self.assertEqual(rows[1][1], "しけんづり")
+        self.assertEqual(rows[1][5][0], "English : test pendant")
+        self.assertNotIn("Luminaire suspendu de test.", rows[1][5], "aucune définition française dans l'anglais")
+        self.assertIn("please verify", rows[1][5][1])
+        labels = {tag[0]: tag[3] for tag in tags}
+        self.assertEqual(labels[localize.lexicon.MANUAL_TAG], "Manual: automatic extraction, please verify")
+        self.assertEqual(index["revision"], "2026-11-10.1.en.1")
+        self.assertIn("CC BY-SA origin", index["attribution"])
+        self.assertIn(localize.lexicon.MANUAL_ATTRIBUTION_EN, index["attribution"])
+
+    def test_chinese_archive_stays_out_of_the_manual_scope(self):
+        with tempfile.TemporaryDirectory() as folder:
+            index, tags, rows = self.build(folder, self.MANUAL, "zh-Hans")
+        self.assertEqual(len(rows), 1, "le chinois ne reçoit pas les termes du manuel")
+        self.assertEqual(index["revision"], "2026-11-10.1.zh-Hans.1")
+
+    def test_archive_without_manual_terms_keeps_its_five_tags(self):
+        with tempfile.TemporaryDirectory() as folder:
+            index, tags, rows = self.build(folder, [])
+        self.assertEqual((len(rows), len(tags)), (1, 5))
+        self.assertEqual(index["revision"], "2026-11-10.1.en.1")
 
 
 if __name__ == "__main__":

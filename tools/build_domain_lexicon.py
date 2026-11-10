@@ -12,7 +12,8 @@ Trois étapes, toujours sur le Mac et hors du dépôt (aucun dictionnaire n'est 
   enrich : ajoute les définitions de Wikipédia en français, les libellés et la nature des pages (Wikidata, CC0)
            et des termes de Wikidata absents des catégories ;
   laws   : relève les définitions légales de e-Gov 法令検索 (loi et décret sur les normes de construction) ;
-  build  : fabrique le .zip Yomitan (index.json, tag_bank_1.json, term_bank_N.json) depuis ce brut.
+  build  : fabrique le .zip Yomitan (index.json, tag_bank_1.json, term_bank_N.json) depuis ce brut ;
+           l'option --extra y ajoute des termes relevés dans le manuel (fichier .jsonl hors dépôt).
 
 Sources sous licence CC BY-SA 4.0 : l'attribution est écrite dans index.json et chaque entrée renvoie
 à sa page. Le fichier produit se publie à part, avec l'accord de NOxygen59.
@@ -124,7 +125,26 @@ TERMS_PER_BANK = 2000
 EXCERPT_LIMIT = 160
 FRENCH_LIMIT = 320
 
+# Termes relevés dans le manuel par un modèle (fichier hors dépôt) : ajoutés au lexique avec leur page et une
+# étiquette de source distincte, parce que personne ne les a vérifiés à la main. Une entrée sourcée existante
+# n'est jamais remplacée par un relevé automatique.
+MANUAL_TAG = "man"
+MANUAL_TAG_LABEL = "Manuel — relevé automatique, à vérifier"
+MANUAL_TAG_ROW = [MANUAL_TAG, "source", 0, MANUAL_TAG_LABEL, 0]
+MANUAL_FIELDS = ("terme", "lecture", "fr", "en", "definition_fr", "page", "confiance")
+MANUAL_ATTRIBUTION = (
+    "Termes relevés dans le manuel : extraction automatique par un modèle, non vérifiée à la main ; "
+    "ils portent l'étiquette « man », le numéro de page du manuel et le niveau de confiance du relevé."
+)
+MANUAL_ATTRIBUTION_EN = (
+    "Terms taken from the manual are an automatic model extraction, not verified by hand; "
+    "they carry the «man» tag."
+)
+# Niveau de confiance du relevé, tel qu'un lecteur anglophone le lirait.
+CONFIDENCE_EN = {"élevée": "high", "moyenne": "medium", "faible": "low"}
+
 KANA = re.compile(r"^[ぁ-ゖァ-ヺー・ゝゞヽヾ]+$")
+HAS_KANA = re.compile(r"[ぁ-ゖァ-ヺー]")
 HAS_JAPANESE = re.compile(r"[ぁ-ゖァ-ヺ㐀-鿿]")
 SKIPPED_TITLE = re.compile(r"一覧|曖昧さ回避|^\d")
 # Noms propres (bâtiments, lieux, sociétés, personnes, œuvres) : ce ne sont pas des termes du métier.
@@ -260,6 +280,92 @@ def source_link(name, url):
     return {"type": "structured-content", "content": {"tag": "a", "href": url, "content": f"Source : {name}"}}
 
 
+def manual_reading(text):
+    """Lecture d'un terme relevé dans le manuel : gardée seulement si elle contient du kana.
+
+    Le relevé automatique écrit « ? » ou répète la forme latine (LED, FRP) quand il ne sait pas lire le terme.
+    Ce ne sont pas des lectures : les garder ferait chercher l'entrée par une lecture fausse.
+    """
+    text = (text or "").strip()
+    return text if text and HAS_KANA.search(text) else ""
+
+
+def read_manual_terms(path):
+    """Termes relevés dans le manuel (une ligne JSON par terme), validés avant tout ajout au lexique.
+
+    Le fichier vit hors du dépôt (données du manuel, AGENTS.md). Une ligne incomplète, un doublon ou un
+    terme hors bornes arrête la fabrication : une entrée muette serait pire qu'une entrée absente.
+    """
+    path = Path(path)
+    terms, lines = [], {}
+    for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        try:
+            item = json.loads(line)
+        except json.JSONDecodeError as error:
+            raise ValueError(f"{path.name}, ligne {number} : JSON invalide ({error.msg})") from error
+        if not isinstance(item, dict):
+            raise ValueError(f"{path.name}, ligne {number} : objet JSON attendu")
+        missing = [field for field in MANUAL_FIELDS if not str(item.get(field, "")).strip()]
+        if missing:
+            raise ValueError(f"{path.name}, ligne {number} : champs vides ({', '.join(missing)})")
+        term = str(item["terme"]).strip()
+        if len(term) > 20 or re.search(r"\s", term):
+            raise ValueError(f"{path.name}, ligne {number} : terme hors bornes ({term})")
+        if term in lines:
+            raise ValueError(f"{path.name}, ligne {number} : terme déjà relevé ligne {lines[term]} ({term})")
+        lines[term] = number
+        terms.append({"term": term, "reading": manual_reading(item["lecture"]),
+                      "fr": str(item["fr"]).strip(), "en": str(item["en"]).strip(),
+                      "definition": str(item["definition_fr"]).strip(), "page": str(item["page"]).strip(),
+                      "confidence": str(item["confiance"]).strip()})
+    return terms
+
+
+def manual_rows(terms, language="fr"):
+    """Lignes term_bank des termes du manuel : équivalent traduit, page et avertissement, aucune définition inventée.
+
+    En anglais le relevé ne fournit qu'un équivalent : pas de définition anglaise, donc pas de définition
+    française recopiée dans la version anglaise (elle serait illisible pour son lecteur).
+    """
+    rows = []
+    for item in terms:
+        if language == "en":
+            confidence = CONFIDENCE_EN.get(item["confidence"], item["confidence"])
+            glossary = [f"English : {item['en']}",
+                        f"Term found in the manual, page {item['page']} (automatic extraction, "
+                        f"{confidence} confidence; please verify)."]
+        else:
+            glossary = [f"Français : {item['fr']}", item["definition"],
+                        f"Terme relevé dans le manuel, page {item['page']} : extraction automatique, "
+                        f"à vérifier (confiance {item['confidence']})."]
+        rows.append([item["term"], item["reading"], MANUAL_TAG, "", 1, glossary, 0, "interieur"])
+    return rows
+
+
+def with_manual_tag(tags):
+    """Banc d'étiquettes complété par la source « man » : sans elle, l'étiquette des termes ajoutés reste vide."""
+    if any(tag[0] == MANUAL_TAG for tag in tags):
+        return tags
+    return tags + [list(MANUAL_TAG_ROW)]
+
+
+def merge_manual_rows(rows, terms, language="fr"):
+    """Ajoute les termes du manuel absents du lexique, puis renumérote les séquences de l'ensemble.
+
+    Une entrée déjà sourcée n'est jamais remplacée : un relevé automatique ne doit pas écraser une définition
+    de Wikipédia, du Wiktionnaire ou d'un texte de loi. Les entrées ajoutées vont à la fin, donc les séquences
+    déjà attribuées ne bougent pas.
+    """
+    known = {row[0] for row in rows}
+    added = [item for item in terms if item["term"] not in known]
+    merged = rows + manual_rows(added, language)
+    for sequence, row in enumerate(merged, start=1):
+        row[6] = sequence
+    return merged, added
+
+
 def term_rows(wiktionary_pages, wikipedia_pages, enrichment=None):
     """Lignes term_bank (format 3) : [terme, lecture, étiquettes, règles, score, sens, séquence, étiquettes du terme]."""
     enrichment = enrichment or {}
@@ -347,7 +453,8 @@ def term_rows(wiktionary_pages, wikipedia_pages, enrichment=None):
     return rows
 
 
-def build(raw, output, revision, written=None):
+def build(raw, output, revision, written=None, extra=None):
+    """Fabrique le .zip ; `extra` (liste de termes du manuel) est fusionné en dernier et marqué comme non vérifié."""
     wiktionary = json.loads((raw / "wiktionary.json").read_text(encoding="utf-8"))
     wikipedia = json.loads((raw / "wikipedia.json").read_text(encoding="utf-8"))
     enrichment_file = raw / "enrichment.json"
@@ -359,15 +466,23 @@ def build(raw, output, revision, written=None):
     if laws_file.exists():
         enrichment["laws"] = json.loads(laws_file.read_text(encoding="utf-8"))
     rows = term_rows(wiktionary, wikipedia, enrichment)
+    added = []
+    if extra:
+        rows, added = merge_manual_rows(rows, extra)
+    description = ("Termes de l'architecture, de l'intérieur, du mobilier et des matériaux. Définitions en français "
+                   "(Wikipédia, Wiktionnaire), libellés de Wikidata et première phrase de l'article japonais.")
+    attribution = ATTRIBUTION
+    if added:
+        description += " Termes relevés dans le manuel, marqués comme à vérifier."
+        attribution += " " + MANUAL_ATTRIBUTION
     index = {
         "title": TITLE,
         "revision": revision,
         "format": 3,
         "sequenced": True,
         "author": "Contributeurs du Wiktionnaire et de Wikipédia ; assemblé par NOxygen59",
-        "description": "Termes de l'architecture, de l'intérieur, du mobilier et des matériaux. Définitions en français "
-                       "(Wikipédia, Wiktionnaire), libellés de Wikidata et première phrase de l'article japonais.",
-        "attribution": ATTRIBUTION,
+        "description": description,
+        "attribution": attribution,
         "sourceLanguage": "ja",
         "targetLanguage": "fr",
     }
@@ -378,6 +493,8 @@ def build(raw, output, revision, written=None):
         ["law", "source", 0, "Textes de loi japonais, e-Gov 法令検索", 0],
         ["interieur", "domain", 0, "Design d'intérieur et architecture", 0],
     ]
+    if added:
+        tags = with_manual_tag(tags)
     output.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as archive:
         archive.writestr("index.json", json.dumps(index, ensure_ascii=False, indent=1))
@@ -547,6 +664,7 @@ def main():
     make.add_argument("--raw", type=Path, required=True)
     make.add_argument("--output", type=Path, required=True, help="fichier .zip, hors du dépôt")
     make.add_argument("--revision", default=datetime.date.today().isoformat())
+    make.add_argument("--extra", type=Path, help="termes relevés dans le manuel (.jsonl, hors dépôt) à fusionner")
     arguments = parser.parse_args()
     if arguments.command == "fetch":
         arguments.raw.mkdir(parents=True, exist_ok=True)
@@ -564,7 +682,9 @@ def main():
         (arguments.raw / "enrichment.json").write_text(json.dumps(enrichment, ensure_ascii=False, indent=1), encoding="utf-8")
         print({key: len(value) for key, value in enrichment.items()})
     else:
-        print(f"{build(arguments.raw, arguments.output, arguments.revision)} entrées : {arguments.output}")
+        extra = read_manual_terms(arguments.extra) if arguments.extra else None
+        total = build(arguments.raw, arguments.output, arguments.revision, extra=extra)
+        print(f"{total} entrées dont {sum(1 for t in (extra or []))} relevées dans le manuel : {arguments.output}")
 
 
 if __name__ == "__main__":

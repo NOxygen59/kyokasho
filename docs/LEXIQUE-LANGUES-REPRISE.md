@@ -29,7 +29,7 @@ Provenance reproductible dans le dossier externe `traductions-2026-11-04/` : sou
 - `DictionaryModel.swift` : filtre appliqué aux recherches, segmentation, préfixes et disponibilité des termes.
 - `DictionaryCatalogService.swift` : propose localement la variante manquante si une autre est déjà importée, avant l'échéance réseau hebdomadaire ; choix conservé par langue, anciennes propositions d'autres langues retirées.
 - `build_ipa.sh` et `tools/copy_bundled_lexicons.py` : FR/EN dans iOS ; helper Mac FR/EN/zh-Hans ; chemin français personnalisé historique conservé. Les variantes absentes sont signalées, pas substituées.
-- `tools/localize_domain_lexicon.py` : refuse cache incomplet, SHA source différent ou écrasement ; vérifie conservation des champs et liens.
+- `tools/localize_domain_lexicon.py` : refuse cache incomplet, SHA source différent ou écrasement ; vérifie conservation des champs et liens. `--extra` ajoute à l'anglais seulement les termes relevés dans le manuel (étiquette `man`, page, avertissement, pas de définition française recopiée) ; le chinois reste hors de ce périmètre.
 - `tools/import_lexicon_translations.py` : import atomique des lots directs, contrôles des indices, doublons et conflits.
 
 La branche Mac de Claude est plus récente et distincte. **Le helper sait préparer les ressources Mac ; son appel dans le vrai script de paquet Mac doit encore être intégré par Claude lors de sa revue.** Aucune fusion dans son worktree. La base de ce lot ne permet pas de prouver une compilation Catalyst.

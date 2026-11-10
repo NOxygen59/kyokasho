@@ -113,8 +113,11 @@ Le code original est MIT ; cela ne remplace pas les licences des composants port
 python3 tools/build_domain_lexicon.py fetch --raw <dossier-hors-dépôt>/brut
 python3 tools/build_domain_lexicon.py enrich --raw <dossier-hors-dépôt>/brut   # Wikipédia en français, Wikidata
 python3 tools/build_domain_lexicon.py laws --raw <dossier-hors-dépôt>/brut     # définitions légales, e-Gov
-python3 tools/build_domain_lexicon.py build --raw <dossier-hors-dépôt>/brut --output <dossier-hors-dépôt>/lexique-interieur.zip
+python3 tools/build_domain_lexicon.py build --raw <dossier-hors-dépôt>/brut --output <dossier-hors-dépôt>/lexique-interieur.zip \
+    [--extra <fichier-hors-dépôt>/termes-manuel.jsonl] [--revision 2026-11-10.1]
 ```
+
+`--extra` fusionne des termes relevés dans le manuel par un modèle (une ligne JSON par terme : `terme`, `lecture`, `fr`, `en`, `definition_fr`, `page`, `confiance`). Une entrée déjà sourcée n'est jamais remplacée ; les termes ajoutés portent l'étiquette `man` (« Manuel — relevé automatique, à vérifier »), leur page et leur niveau de confiance, et l'attribution le dit. Une lecture qui ne contient pas de kana (« ? ») est retirée. Le fichier de termes reste hors du dépôt : c'est une donnée du manuel.
 
 Le relevé envoie une requête par seconde et réessaie si le site demande d'attendre. Les catégories relevées sont en tête du script. Tests sur pages fabriquées : `tests/test_build_domain_lexicon.py`.
 
