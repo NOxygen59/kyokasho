@@ -131,6 +131,21 @@ public enum EnergyLog {
         }
     }
 
+    /// Fichier lu tel qu'il est sur le disque. Un octet illisible (ancienne coupe au milieu d'un caractère accentué)
+    /// ne fait perdre que sa ligne : décoder tout le fichier en UTF-8 strict rendait le résumé entièrement vide.
+    public static func parse(_ data: Data) -> [EnergySample] {
+        parse(String(decoding: data, as: UTF8.self))
+    }
+
+    /// Fichier après rotation : l'en-tête, puis la fin de `data` (`bytes` octets au plus) à partir du **début d'une
+    /// ligne**. Couper au milieu d'une ligne pouvait séparer les deux octets d'un « è » (« Bibliothèque ou réglages »)
+    /// et laisser un fichier que la lecture stricte refusait en entier (BUG-004).
+    public static func rotated(_ data: Data, keeping bytes: Int) -> Data {
+        let tail = data.suffix(max(0, bytes))
+        let start = tail.firstIndex(of: 0x0A).map { tail.index(after: $0) } ?? tail.endIndex
+        return Data((header + "\n").utf8) + tail[start...]
+    }
+
     /// Part de processeur de l'app entre deux relevés, en % d'un cœur occupé en continu. `nil` au premier relevé,
     /// après une suspension et après un relancement : le temps de calcul cumulé repart alors de zéro.
     public static func cpuPercent(previous: EnergySample?, _ current: EnergySample) -> Double? {
