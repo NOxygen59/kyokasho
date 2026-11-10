@@ -38,3 +38,24 @@ final class EnergyLogRotationTests: XCTestCase {
         XCTAssertEqual(EnergyLog.parse(data).count, 2)
     }
 }
+
+/// BUG-005 (audit Fable du 10/11/2026) : une charge courte ne terminait pas la session sur batterie.
+final class EnergyLogSessionBoundaryTests: XCTestCase {
+    private func sample(_ minute: Double, _ battery: Double, charging: Bool = false) -> EnergySample {
+        EnergySample(date: Date(timeIntervalSince1970: 1_800_000_000 + minute * 60), battery: battery,
+                     charging: charging, thermal: 0, lowPower: false, brightness: 0.5, cpuSeconds: minute,
+                     memoryMB: 900, activity: "Lecture")
+    }
+
+    func testAShortChargeEndsTheSession() {
+        // 12 minutes sur batterie, 1 minute de charge (moins que `maxGap`), puis 12 minutes sur batterie.
+        var samples = (0...12).map { sample(Double($0), 0.80 - Double($0) * 0.002) }
+        samples.append(sample(13, 0.78, charging: true))
+        samples += (14...26).map { sample(Double($0), 0.78 - Double($0 - 14) * 0.002) }
+        let sessions = EnergyLog.sessions(samples)
+        XCTAssertEqual(sessions.count, 2, "la mise en charge sépare deux sessions")
+        // Chaque session ne compte que ses minutes sur batterie.
+        XCTAssertEqual(sessions.map(\.seconds), [720, 720])
+        for session in sessions { XCTAssertEqual(session.lostPoints, 2.4, accuracy: 0.01) }
+    }
+}
