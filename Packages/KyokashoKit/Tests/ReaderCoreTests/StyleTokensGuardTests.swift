@@ -52,7 +52,9 @@ final class StyleTokensGuardTests: XCTestCase {
         // F1 : changement de moteur détecté d'après le moteur dessiné ; échec du moteur demandé → ancienne lecture retenue.
         XCTAssertTrue(display.contains("if ocrSelection.publish(ocr.engine, source: source) != nil {"))
         let ocrFile = try String(contentsOf: reader.appendingPathComponent("ReaderController+OCR.swift"), encoding: .utf8)
-        XCTAssertTrue(ocrFile.contains("if let intent { self.ocrSelection.revert(intent) }"))
+        // Revue DeepSeek #9 : une lecture annulée (`URLError.cancelled`, `NSUserCancelledError`) n'est pas un échec :
+        // elle ne révoque plus le moteur choisi pour la page, seule une vraie erreur le fait.
+        XCTAssertTrue(ocrFile.contains("if !cancelled, let intent { self.ocrSelection.revert(intent) }"))
         // F3/F4 : la correction acceptée sur un autre moteur est réévaluée tout de suite et passe avant tout choix (D7).
         let verification = try String(contentsOf: reader.appendingPathComponent("ReaderController+Verification.swift"), encoding: .utf8)
         XCTAssertTrue(verification.contains("} else if !self.closed, let candidate = await self.candidateOCR(source: source) {"))
