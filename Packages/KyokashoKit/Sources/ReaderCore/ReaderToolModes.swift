@@ -56,4 +56,17 @@ public struct ReaderToolModeStore {
     public func forget(documentId: String) {
         defaults.removeObject(forKey: Self.key(documentId: documentId))
     }
+
+    /// Remplacement d'un cours (lot C2.3, DEC-C2 = A) : les modes d'outil (Pencil, dictionnaire,
+    /// panneau d'étude) suivent le document mis à jour. Rejouable : si la clé d'arrivée existe déjà,
+    /// elle n'est **jamais** écrasée (principe « jamais écraser un fichier existant de la cible ») et
+    /// l'ancienne clé reste disponible en secours ; sinon la donnée est déplacée, clé d'origine retirée.
+    public func remap(from oldId: String, to newId: String) {
+        let oldKey = Self.key(documentId: oldId)
+        guard oldId != newId, let data = defaults.data(forKey: oldKey) else { return }
+        let newKey = Self.key(documentId: newId)
+        guard defaults.data(forKey: newKey) == nil else { return }
+        defaults.set(data, forKey: newKey)
+        defaults.removeObject(forKey: oldKey)
+    }
 }

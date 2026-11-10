@@ -42,6 +42,13 @@ enum PageShift {
         var restoration: AppDatabase.RestorationPlan? = nil
         /// Copies originales inventoriées avant le journal ; absent des anciens journaux.
         var sealedArchive: Bool? = nil
+        /// v3 (C2.3) : remplacement d'un cours Drive. `newDocumentId` = identifiant final (hash du
+        /// nouveau PDF, décidé avant le journal), `newRevision` = révision Drive à poser après la
+        /// bascule, `newSourcePath` = fichier téléchargé qui permet de finir la copie du PDF si l'app
+        /// s'est arrêtée avant la bascule. `nil` dans tous les autres journaux.
+        var newDocumentId: String? = nil
+        var newRevision: String? = nil
+        var newSourcePath: String? = nil
     }
 
     /// Correspondance d'un journal : v3 la porte ; v2 la décrit par le décalage (pages ajoutées avant les anciennes).
@@ -63,11 +70,16 @@ enum PageShift {
     private static let fm = FileManager.default
     private static var applyingDocuments: Set<String> = []
     private static var marker: URL { support.appendingPathComponent("page-shift.json") }
-    static var pendingDocumentId: String? {
+    /// Journal déchiffré, quel que soit son type (modification de pages ou remplacement de cours).
+    /// Un journal illisible reste en place : les guards le voient par son fichier.
+    private static var pending: Pending? {
         guard let data = try? Data(contentsOf: marker),
               let pending = try? JSONDecoder().decode(Pending.self, from: data) else { return nil }
-        return pending.documentId
+        return pending
     }
+    static var pendingDocumentId: String? { pending?.documentId }
+    /// Bascule de cours Drive en attente (`kind = "replacement"`, C2.3) : finie par `reconcile` au lancement.
+    static var pendingReplacement: Pending? { pending.flatMap { $0.kind == "replacement" ? $0 : nil } }
     private nonisolated static func fail(_ text: String) -> NSError {
         NSError(domain: "Kyokasho.PageShift", code: 1, userInfo: [NSLocalizedDescriptionKey: text])
     }
@@ -178,7 +190,17 @@ enum PageShift {
     }
 
     /// Le remplacement Drive utilise le même périmètre d'exclusion que les modifications de pages.
+    ///
+    /// C2.3 : quand un cours est remplacé, le journal suit le protocole des modifications de pages
+    /// (même fichier `page-shift.json`, écrit **avant** toute mutation, rejoué au lancement). La
+    /// bascule SQL — atomique et dans une seule transaction — applique d'abord la partie base
+    /// (`DocumentImporter.replace` → `rekeyDocument`, OCR effacé, cartes suivies), puis
+    /// ``completeReplacement`` déplace les fichiers nommés par l'identifiant. Une interruption
+    /// quelconque (crash compris) laisse un journal rejoué au lancement suivant, sans perte ni
+    /// double déplacement. `replacement = nil` : changement de révision du même fichier, aucune
+    /// bascule, aucun journal (comportement inchangé de la réserve du document).
     static func withDriveReplacement<T>(_ model: AppModel, documentId: String,
+                                       replacement: DriveReplacement? = nil,
                                        operation: () async throws -> T) async throws -> T {
         guard model.openDocumentId != documentId else { throw fail(String(localized: "Ferme le document avant de le remplacer.")) }
         // Comme PageShift.run : la sauvegarde complète refuse de démarrer pendant une opération de pages (garde
@@ -190,6 +212,7 @@ enum PageShift {
         defer { applyingDocuments.remove(documentId) }
         await model.drainWrites()
         await model.ocr.beginPageMutation(documentId: documentId)
+        var ownsReplacementJournal = false
         do {
             let current = model.storage.url(for: documentId)
             await Task.detached { PDFPool.release(current) }.value
@@ -199,12 +222,32 @@ enum PageShift {
                   DocumentAnalysisService.shared.progress?.documentId != documentId else {
                 throw fail(String(localized: "Le document est ouvert ou une lecture IA est en cours : remplacement arrêté."))
             }
+            if let replacement {
+                let journal = try replacementPending(documentId: documentId, replacement: replacement, model: model)
+                try save(journal) // Journal avant toute mutation DAO : c'est la seule écriture encore annulable.
+                ownsReplacementJournal = true
+            }
             let result = try await operation()
             try synchronizeCopyOwners(model.database)
             PrintedPageNumbers.set(try model.database.printedNumbers())
+            // Quand aucun remplacement n'est journalé, ces étapes-là ne connaissent pas `complete` :
+            // la bascule du même fichier n'efface rien (C2.1 ne s'applique que sur changement d'identifiant).
+            if let p = pendingReplacement, ownsReplacementJournal {
+                try complete(p, model: model)
+            }
             await model.ocr.endPageMutation(documentId: documentId)
             return result
         } catch {
+            // L'invariant garantit le repli : tant que le document d'origine existe en base, la bascule
+            // SQL n'a pas été appliquée et aucune mutation (OCR, cartes, fichiers) n'a eu lieu — le
+            // journal est retiré et la mise à jour reste relançable. S'il a disparu (crash au milieu
+            // de la bascule) : journal conservé, reprise au lancement (`reconcile`).
+            if ownsReplacementJournal, fm.fileExists(atPath: marker.path),
+               (try? model.database.document(id: documentId)).flatMap({ $0 }) != nil {
+                try? fm.removeItem(at: marker)
+            } else if fm.fileExists(atPath: marker.path), ownsReplacementJournal {
+                block(model, error)
+            }
             await model.ocr.endPageMutation(documentId: documentId)
             throw error
         }
@@ -491,6 +534,10 @@ enum PageShift {
     }
 
     private static func complete(_ p: Pending, model: AppModel) throws {
+        // C2.3 : un remplacement de cours suit un autre protocole que les modifications de pages
+        // (aucun décalage de pages, fusion possible des identifiants, fichiers servis par identifiant)
+        // mais le même journal, la même réserve et la même reprise au lancement.
+        if p.kind == "replacement" { try completeReplacement(p, model: model); return }
         let work = try workspace(p)
         guard model.persistentStorageAvailable, model.review.persistentStorageAvailable,
               p.oldCount > 0, p.version == 2 || p.version == 3, let oldHash = p.oldHash, let newHash = p.newHash,
@@ -625,6 +672,193 @@ enum PageShift {
         try fm.createDirectory(at: live.deletingLastPathComponent(), withIntermediateDirectories: true)
         try fm.moveItem(at: install, to: live)
         try hit("files.installed")
+    }
+
+    // MARK: - Remplacement d'un cours Drive (C2.3, DEC-C2 = A)
+
+    /// Plan d'un remplacement, calculé et vérifié **avant** l'écriture du journal : il lui faut
+    /// l'empreinte du nouveau PDF (identifiant final), son nombre de pages et sa taille, afin qu'une
+    /// bascule interrompue puisse être finie au lancement suivant depuis le journal seul. `source`
+    /// est le fichier téléchargé de Drive (temporaire ; le journal garde son chemin pour finir une
+    /// copie arrêtée — car l'appelant efface son dossier temporaire après sa tâche d'import).
+    struct DriveReplacement {
+        var source: URL
+        var newDocumentId: String
+        var pageCount: Int
+        var fileSize: Int64
+        var driveRevision: String?
+    }
+
+    /// Journal d'un remplacement, écrit après les garde-fous mais avant toute mutation de la base.
+    /// Réutilise la même forme et le même fichier que les modifications de pages (les garde-fous
+    /// existants le voient sans changement), avec `kind = "replacement"` et les champs spécifiques.
+    private static func replacementPending(documentId: String, replacement: DriveReplacement, model: AppModel) throws -> Pending {
+        guard safeName(documentId), safeName(replacement.newDocumentId) else {
+            throw fail(String(localized: "Identifiant de remplacement invalide : remplacement arrêté."))
+        }
+        guard replacement.newDocumentId != documentId else {
+            throw fail(String(localized: "Même fichier : aucun remplacement à journaler."))
+        }
+        guard replacement.pageCount > 0, replacement.fileSize > 0 else {
+            throw fail(String(localized: "La nouvelle version du PDF est illisible : aucun remplacement effectué."))
+        }
+        guard let old = try model.database.document(id: documentId) else {
+            throw fail(String(localized: "Document introuvable : aucun remplacement effectué."))
+        }
+        guard old.pageCount > 0 else {
+            throw fail(String(localized: "Document vide : aucun remplacement effectué."))
+        }
+        return Pending(documentId: documentId, offset: 0, oldCount: old.pageCount,
+                       oldSize: old.fileSize, newCount: replacement.pageCount,
+                       newSize: replacement.fileSize, stage: "prepared", version: 3,
+                       transaction: UUID().uuidString, oldHash: nil, newHash: nil,
+                       hasReport: false, kind: "replacement",
+                       newDocumentId: replacement.newDocumentId, newRevision: replacement.driveRevision,
+                       newSourcePath: replacement.source.path)
+    }
+
+    /// Fin d'une bascule Drive : lancée par ``withDriveReplacement`` après la bascule SQL, et rejouée
+    /// par `reconcile` au lancement si l'app s'est arrêtée entre-temps.
+    ///
+    /// Invariant de reprise : tant que le document d'origine existe en base, la bascule SQL n'a pas
+    /// été appliquée (elle est atomique, dans une transaction) et rien n'a été bougé ; s'il a
+    /// disparu, chaque étape suivante est idempotente — un déplacement refusé si la cible existe
+    /// (« jamais écraser un fichier existant de la cible : le signaler », source gardée en secours),
+    /// donc jamais de double déplacement ni de perte.
+    private static func completeReplacement(_ p: Pending, model: AppModel) throws {
+        guard let newId = p.newDocumentId, let transaction = p.transaction,
+              UUID(uuidString: transaction) != nil,
+              p.kind == "replacement", safeName(p.documentId), safeName(newId),
+              p.newCount > 0, p.newSize > 0 else {
+            throw fail(String(localized: "Journal de remplacement incomplet : reprise arrêtée sans effacer les données."))
+        }
+        guard model.persistentStorageAvailable, model.review.persistentStorageAvailable else {
+            throw fail(String(localized: "Bases persistantes indisponibles : journal conservé pour la reprise."))
+        }
+        try hit("database.before")
+        // 1. Bascule SQL, seulement si elle n'a pas encore été appliquée.
+        if let old = try model.database.document(id: p.documentId) {
+            let pdf = model.storage.url(for: newId)
+            if !fm.fileExists(atPath: pdf.path), let sourcePath = p.newSourcePath {
+                try moveWithoutOverwrite(URL(fileURLWithPath: sourcePath), pdf)
+            }
+            guard PDFDocument(url: pdf)?.pageCount == p.newCount else {
+                // Le nouveau PDF n'est plus disponible : rien n'a encore été changé, le journal est
+                // retiré et l'utilisateur relance la mise à jour Drive (l'ancienne version reste).
+                try? fm.removeItem(at: marker)
+                Diagnostics.error(String(localized: "Remplacement suspendu : nouvelle version PDF introuvable, l'ancienne version est conservée."), "pages")
+                throw fail(String(localized: "Remplacement suspendu : relance « Vérifier les mises à jour des cours » à la prochaine ouverture."))
+            }
+            var updated = old
+            updated.id = newId
+            updated.pageCount = p.newCount
+            updated.fileSize = p.newSize
+            updated.lastPageIndex = min(old.lastPageIndex, max(0, p.newCount - 1))
+            updated.driveRevision = p.newRevision ?? old.driveRevision
+            try model.database.rekeyDocument(from: p.documentId, to: updated)
+        }
+        guard try model.database.document(id: p.documentId) == nil,
+              try model.database.document(id: newId) != nil else {
+            throw fail(String(localized: "Remplacement incohérent en base : reprise arrêtée sans effacer les données."))
+        }
+        try hit("database.after")
+        // L'ancien PDF : déjà retiré par l'import pendant la bascule courante ; une reprise au
+        // lancement le retire ici (rejouable, aucune référence en base).
+        model.storage.remove(documentId: p.documentId)
+        // 2. Cartes : DEC-C2 = A (idempotent ; le reste — FSRS, historique, page source — ne bouge pas).
+        try hit("cards.before")
+        try model.review.store.remapDocumentId(from: p.documentId, to: newId)
+        try hit("cards.after")
+        // 3. Fichiers nommés par l'identifiant et caches de l'ancien identifiant.
+        try installReplacementFiles(from: p.documentId, to: newId, model: model)
+        try hit("complete.before")
+        try fm.removeItem(at: marker) // Dernière étape : tout est rejouable tant que le journal reste.
+    }
+
+    /// Fichiers servis par identifiant : brouillons de notes, lectures IA et corrections, rapport
+    /// d'analyse, modes d'outil. Le contenu ne change pas (C2.3 suit la version mise à jour telle
+    /// quelle) ; seule la clef de rangement — le nom — suit le document. Règle unique : ne jamais
+    /// écraser un fichier existant de la cible (donnée d'arrivée restée en place), garder la source
+    /// et signaler le conflit.
+    private static func installReplacementFiles(from oldId: String, to newId: String, model: AppModel) throws {
+        try hit("drafts.before")
+        try moveWithoutOverwrite(NoteDraftStore.shared.url(documentId: oldId),
+                                 NoteDraftStore.shared.url(documentId: newId))
+        try hit("drafts.after")
+        try hit("files.before")
+        try moveFolderWithoutOverwrite(from: DocumentAITextStore.folder.appendingPathComponent(oldId, isDirectory: true),
+                                       to: DocumentAITextStore.folder.appendingPathComponent(newId, isDirectory: true))
+        try moveAnalysisReport(from: oldId, to: newId)
+        try hit("files.installed")
+        try hit("modes.before")
+        ReaderToolModeStore().remap(from: oldId, to: newId)
+        try hit("modes.after")
+        // Caches de lecture portant l'ancien identifiant (même balayage qu'une modification de pages).
+        model.thumbnails.removeAll(for: oldId)
+        ScanSharpening.removeCache(documentId: oldId)
+        ScanSharpening.clearMemory()
+        FuriganaLayer.clearMemory()
+        LayoutRegionsCache.shared.clear()
+        ToneCache.clear()
+        DocumentAnalysisService.shared.reloadAfterPageShift(oldId)
+    }
+
+    /// Le rapport d'analyse contient l'identifiant de son document : réécrit sous le nouvel
+    /// identifiant (valeur finale préparée, comme pour les modifications de pages), puis la source
+    /// s'en va. Illisible : déplacé tel quel, jamais réécrit — une copie fausse serait pire.
+    private static func moveAnalysisReport(from oldId: String, to newId: String) throws {
+        let folder = DocumentAnalysisService.folder
+        let source = folder.appendingPathComponent(oldId + ".json")
+        let target = folder.appendingPathComponent(newId + ".json")
+        guard fm.fileExists(atPath: source.path) else { return }
+        // DocumentAnalysis.documentId est immuable : le champ est réécrit via le dictionnaire JSON,
+        // après validation complète du rapport (une donnée de l'utilisateur reste intacte ailleurs).
+        let data = try Data(contentsOf: source)
+        if let report = try? JSONDecoder().decode(DocumentAnalysis.self, from: data),
+           var object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] {
+            guard !fm.fileExists(atPath: target.path) else {
+                Diagnostics.error(String(localized: "Remplacement : le rapport du nouveau document existe déjà, l'ancien est gardé en secours."), "pages")
+                return
+            }
+            object["documentId"] = newId
+            try fm.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys]).write(to: target, options: .atomic)
+            try? fm.removeItem(at: source)
+        } else {
+            // Illisible : déplacé tel quel, jamais réécrit — une copie fausse serait pire.
+            try moveWithoutOverwrite(source, target)
+        }
+    }
+
+    /// Déplacement rejouable : source absente = déjà fait (la reprise ne refait rien) ; cible
+    /// présente = jamais écrasée, source gardée en secours et conflit signalé.
+    private static func moveWithoutOverwrite(_ source: URL, _ target: URL) throws {
+        guard source.path != target.path else { return }
+        guard fm.fileExists(atPath: source.path) else { return }
+        if fm.fileExists(atPath: target.path) {
+            Diagnostics.error(String(localized: "Remplacement : « \(target.lastPathComponent) » existe déjà, « \(source.lastPathComponent) » est gardé en secours."), "pages")
+            return
+        }
+        try fm.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try fm.moveItem(at: source, to: target)
+    }
+
+    /// Dossier des lectures IA : déplacé tel quel si la cible est absente, sinon fichier par
+    /// fichier (même règle « jamais écraser ») ; le dossier source ne part que s'il est vide.
+    private static func moveFolderWithoutOverwrite(from source: URL, to target: URL) throws {
+        guard source.path != target.path, fm.fileExists(atPath: source.path) else { return }
+        let names = try fm.contentsOfDirectory(atPath: source.path)
+        if !fm.fileExists(atPath: target.path) {
+            try fm.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
+            try fm.moveItem(at: source, to: target)
+            return
+        }
+        for name in names {
+            try moveWithoutOverwrite(source.appendingPathComponent(name), target.appendingPathComponent(name))
+        }
+        if (try? fm.contentsOfDirectory(atPath: source.path))?.isEmpty == true {
+            try? fm.removeItem(at: source)
+        }
     }
 
     // MARK: - Copies des opérations : conservation 30 jours, purge, place occupée
@@ -763,7 +997,7 @@ enum PageShift {
                 throw fail(String(localized: "Bases persistantes indisponibles : journal conservé pour la reprise."))
             }
             let p = try JSONDecoder().decode(Pending.self, from: Data(contentsOf: marker))
-            if p.version == 2 || p.version == 3 {
+            if p.version == 2 || p.version == 3 || p.kind == "replacement" {
                 try complete(p, model: model)
                 try synchronizeCopyOwners(model.database)
                 purgeExpired(model)

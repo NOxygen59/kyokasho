@@ -141,10 +141,18 @@ public struct DocumentImporter: Sendable {
 
     /// Remplace un document par une nouvelle version (même cours mis à jour) en gardant
     /// annotations, signets, commentaires et position de lecture.
+    /// - Parameter replacingInto: identifiant attendu du nouveau PDF (lot C2.3). Le remplacement est
+    ///   journalé avant lui (`PageShift.withDriveReplacement`) ; si le fichier téléchargé a changé
+    ///   depuis la préparation (nouvelle révision arrivée entre-temps), l'import s'arrête au lieu de
+    ///   créer un document que le journal ne décrit pas.
     @discardableResult
-    public func replace(documentId oldId: String, withFileAt source: URL, driveRevision: String? = nil) throws -> LibraryDocument {
+    public func replace(documentId oldId: String, withFileAt source: URL, driveRevision: String? = nil,
+                        replacingInto expectedId: String? = nil) throws -> LibraryDocument {
         guard var old = try database.document(id: oldId) else { throw ImportError.unreadable(String(localized: "document inconnu", bundle: .main)) }
         let hash = try Self.sha256(of: source)
+        if let expectedId, hash != expectedId {
+            throw ImportError.unreadable(String(localized: "Le fichier a changé depuis la préparation du remplacement.", bundle: .main))
+        }
         if hash == oldId {
             if let driveRevision { old.driveRevision = driveRevision; try database.save(old) }
             return old
