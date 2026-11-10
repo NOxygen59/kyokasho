@@ -39,3 +39,19 @@ public enum WebPopupPolicy {
         !linkActivated || hasSize
     }
 }
+
+/// Barre d'adresse du navigateur intégré : texte tapé → adresse, ou recherche Brave (demande de NOxygen59 du
+/// 10/11/2026, à la place de DuckDuckGo).
+public enum WebAddress {
+    public static let searchEngine = "https://search.brave.com/search"
+
+    public static func url(for text: String) -> URL? {
+        let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return nil }
+        if text.contains("://"), let url = URL(string: text) { return url }
+        if !text.contains(" "), text.contains("."), let url = URL(string: "https://" + text) { return url }
+        var parts = URLComponents(string: searchEngine)!
+        parts.queryItems = [URLQueryItem(name: "q", value: text)]
+        return parts.url
+    }
+}

@@ -208,6 +208,7 @@ struct WebPanel: View {
 
     /// Raccourcis : un appui ouvre le site.
     static let shortcuts: [(name: String, url: String)] = [
+        ("Brave", "https://search.brave.com"),
         ("Claude", "https://claude.ai/new"),
         ("ChatGPT", "https://chatgpt.com"),
         ("Jisho", "https://jisho.org"),
@@ -303,16 +304,9 @@ struct WebView: UIViewRepresentable {
         UserDefaults.standard.string(forKey: "web.lastURL").flatMap(URL.init(string:)) ?? URL(string: "https://claude.ai/new")!
     }
 
-    /// Texte tapé → adresse (avec https:// si besoin) ou recherche DuckDuckGo.
-    static func url(for text: String) -> URL? {
-        let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty else { return nil }
-        if text.contains("://"), let url = URL(string: text) { return url }
-        if !text.contains(" "), text.contains("."), let url = URL(string: "https://" + text) { return url }
-        var parts = URLComponents(string: "https://duckduckgo.com/")!
-        parts.queryItems = [URLQueryItem(name: "q", value: text)]
-        return parts.url
-    }
+    /// Texte tapé → adresse (avec https:// si besoin) ou recherche Brave (`WebAddress`, demande de NOxygen59 du
+    /// 10/11/2026 : moteur de recherche Brave à la place de DuckDuckGo).
+    static func url(for text: String) -> URL? { WebAddress.url(for: text) }
 
     /// Une seule vue web pour toute l'app : les sessions (claude.ai…) et la page restent ouvertes
     /// quand on ferme et rouvre le panneau.
