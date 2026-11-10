@@ -83,6 +83,18 @@ public struct DocumentImporter: Sendable {
         return hasher.finalize().map { String(format: "%02x", $0) }.joined()
     }
 
+    /// Taille du fichier, relue par le chemin le plus robuste disponible (revue R2, N6) : la
+    /// resource `fileSize` peut être indisponible sur un fichier pourtant lisible ; une seconde
+    /// lecture par les attributs évite de confondre « taille inconnue » et « PDF illisible ».
+    /// `0` : le fichier n'est pas accessible du tout (les gardes des appelants concluront).
+    public static func fileSize(of url: URL) -> Int64 {
+        if let size = try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize, size > 0 { return Int64(size) }
+        if let attributes = try? FileManager.default.attributesOfItem(atPath: url.path)[.size] as? NSNumber {
+            return attributes.int64Value
+        }
+        return 0
+    }
+
     /// Nombre de pages et titre (métadonnées), via CoreGraphics (léger, pas de rendu).
     public static func inspect(_ url: URL) throws -> (pageCount: Int, title: String?) {
         guard let pdf = CGPDFDocument(url as CFURL), pdf.numberOfPages > 0 else { throw ImportError.notAPDF }

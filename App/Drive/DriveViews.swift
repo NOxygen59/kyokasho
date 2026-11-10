@@ -349,16 +349,10 @@ extension AppModel {
         // identique), un simple changement de révision sans bascule.
         let plan: PageShift.DriveReplacement?
         if let existing {
+            // N6 (revue R2) : métriques strictes, mais seul le PDF lui-même fait échouer
+            // (`inspect`) — la taille, elle, est relue par deux chemins avant de conclure.
             plan = try await Task.detached(priority: .userInitiated) {
-                let hash = try DocumentImporter.sha256(of: url)
-                guard hash != existing.id else { return nil } // même fichier : simple changement de révision
-                let (pageCount, _) = try DocumentImporter.inspect(url)
-                let size = Int64((try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0)
-                guard pageCount > 0, size > 0 else {
-                    throw ImportError.unreadable(String(localized: "La nouvelle version du PDF est illisible : mise à jour refusée.", bundle: .main))
-                }
-                return PageShift.DriveReplacement(source: url, newDocumentId: hash, pageCount: pageCount,
-                                                  fileSize: size, driveRevision: file.revision)
+                try PageShift.planDriveReplacement(source: url, current: existing, driveRevision: file.revision)
             }.value
         } else {
             plan = nil
