@@ -342,16 +342,21 @@ extension AppModel {
         let existing = documents.first { $0.driveFileId == file.id }
         let targetLanguage = language ?? existing.map { OCRTargetLanguage.forDocument($0.id) } ?? .japanese
         // C2.3 : empreinte et métriques du nouveau PDF calculées AVANT le journal, pour qu'une bascule
-        // interrompue puisse être finie au lancement suivant depuis le journal seul. `nil` pour un
-        // problème de fichier (l'import d'après lèvera la vraie erreur) : rien n'est journalé.
+        // interrompue puisse être finie au lancement suivant depuis le journal seul. Calcul **strict**
+        // (revue R2, P2 n°1) : une erreur de fichier refuse la mise à jour au lieu de replacer
+        // silencieusement sans journal (revu : un remplacement sans journal ne peut ni effacer l'OCR
+        // ni suivre les données). `plan = nil` désigne un seul cas : le même fichier (empreinte
+        // identique), un simple changement de révision sans bascule.
         let plan: PageShift.DriveReplacement?
         if let existing {
-            plan = try? await Task.detached(priority: .userInitiated) {
+            plan = try await Task.detached(priority: .userInitiated) {
                 let hash = try DocumentImporter.sha256(of: url)
                 guard hash != existing.id else { return nil } // même fichier : simple changement de révision
                 let (pageCount, _) = try DocumentImporter.inspect(url)
                 let size = Int64((try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0)
-                guard pageCount > 0, size > 0 else { return nil }
+                guard pageCount > 0, size > 0 else {
+                    throw ImportError.unreadable(String(localized: "La nouvelle version du PDF est illisible : mise à jour refusée.", bundle: .main))
+                }
                 return PageShift.DriveReplacement(source: url, newDocumentId: hash, pageCount: pageCount,
                                                   fileSize: size, driveRevision: file.revision)
             }.value
@@ -362,9 +367,13 @@ extension AppModel {
             try await Task.detached(priority: .userInitiated) {
                 defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
                 if let existing {
+                    // P2 n°1 (revue R2) : l'import attend l'identifiant calculé ci-dessus, et le même
+                    // fichier quand `plan` est nil. Un fichier qui change entre les deux calculs (télé
+                    // -chargement modifié sous nos pieds) s'arrête ici : jamais de bascule de base
+                    // (rekey) sans journal.
                     let updated = try importer.replace(documentId: existing.id, withFileAt: url,
                                                        driveRevision: file.revision,
-                                                       replacingInto: plan?.newDocumentId)
+                                                       replacingInto: plan?.newDocumentId ?? existing.id)
                     return (updated, false)
                 }
                 let imported = try importer.importFile(at: url, displayName: url.lastPathComponent,
