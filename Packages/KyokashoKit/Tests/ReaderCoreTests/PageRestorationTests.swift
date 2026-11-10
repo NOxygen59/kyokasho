@@ -122,6 +122,36 @@ final class PageRestorationTests: XCTestCase {
         }
     }
 
+    func testReplayOfAlteredRemovalJournalFailsCleanly() throws {
+        try remove([2, 3], id: "s1")
+        // Journal altéré sur le disque : deux pages retirées portent le même identifiant.
+        // Une erreur propre, jamais un plantage (dictionnaire invalide autrement) — C2.4.
+        try db.writer.write { db in
+            try db.execute(sql: "UPDATE pageEdit SET pageOrderJSON = ? WHERE id = ?",
+                           arguments: [try JSONEncoder().encode(Array(repeating: "x", count: 6)), "s1"])
+        }
+        let mapping = try PageMapping.removal(oldCount: 6, removing: [2, 3])
+        XCTAssertThrowsError(try db.remapPages(documentId: "d", mapping: mapping, editId: "s1", kind: .removal,
+                                               expectedVersion: 0, fileSize: 1)) {
+            XCTAssertTrue($0.localizedDescription.contains("altéré"), $0.localizedDescription)
+        }
+        XCTAssertEqual(try notes().count, 4, "rien n'est refait")
+    }
+
+    func testReplayOfRestorationWithAlteredArchiveFailsCleanly() throws {
+        try remove([2, 3], id: "s1")
+        let original = try restore("s1", id: "r1")
+        try db.writer.write { db in
+            try db.execute(sql: "UPDATE pageEdit SET pageOrderJSON = ? WHERE id = ?",
+                           arguments: [try JSONEncoder().encode(Array(repeating: "x", count: 6)), "s1"])
+        }
+        XCTAssertThrowsError(try db.remapPages(documentId: "d", mapping: original.mapping, editId: "r1",
+                                               kind: .restoration, expectedVersion: 1, fileSize: 1,
+                                               restoring: original)) {
+            XCTAssertTrue($0.localizedDescription.contains("altéré"), $0.localizedDescription)
+        }
+    }
+
     func testRestorationRefusedAfterDriveReplacementOrPurge() throws {
         try remove([1], id: "s1")
         var doc = try XCTUnwrap(db.document(id: "d"))
