@@ -20,6 +20,8 @@ struct PageCardsView: View {
     @State private var saving = false
     @State private var message: String?
     @State private var error: String?
+    /// Mode du panneau Texte (même clé que `StudyPanel`) : « Mise en page IA » = texte d'OvisOCR2.
+    @AppStorage("study.aiLayout") private var panelShowsOvis = false
 
     init(reader: ReaderController) {
         self.reader = reader
@@ -80,11 +82,16 @@ struct PageCardsView: View {
         defer { loading = false }
         let lexicon = DomainLexicon.shared.entries
         let documentId = document.id
-        let cachedText = await Task.detached(priority: .utility) {
+        // C3.2 (audit du 09/11/2026, décision A de NOxygen59) : les termes viennent du texte affiché dans le panneau.
+        // Panneau sur un moteur OCR (texte corrigé compris) : son texte ; en « Mise en page IA » : la lecture OvisOCR2.
+        let shown = !panelShowsOvis && page == reader.focusSource && reader.ocrState == .idle ? reader.ocrPage?.text : nil
+        let cachedText = shown == nil ? await Task.detached(priority: .utility) {
             DocumentAITextStore.read(documentId: documentId, reader: ModelSpec.ovisocr2.id, page: page)
-        }.value
+        }.value : nil
         do {
-            if let cachedText, !cachedText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            if let shown, !shown.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                text = shown
+            } else if let cachedText, !cachedText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 text = cachedText
             } else if let cached = await reader.cachedOCR(source: page) {
                 text = cached.text

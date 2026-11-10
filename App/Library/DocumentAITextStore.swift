@@ -36,11 +36,23 @@ enum DocumentAITextStore {
         let target = url(documentId: documentId, reader: correctedReader, page: page)
         try FileManager.default.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
         try text.write(to: target, atomically: true, encoding: .utf8)
+        // C3.1 (audit du 09/11/2026, décision A de NOxygen59) : texte corrigé = traductions à refaire, comme une relecture.
+        removeTranslations(documentId: documentId, page: page)
     }
 
     /// Retour à la lecture d'OvisOCR2, sans rien relancer.
     static func removeCorrection(documentId: String, page: Int) {
+        guard hasCorrection(documentId: documentId, page: page) else { return }
         try? FileManager.default.removeItem(at: url(documentId: documentId, reader: correctedReader, page: page))
+        // C3.1 : la traduction suivait le texte corrigé ; elle ne correspond plus à la lecture retrouvée.
+        removeTranslations(documentId: documentId, page: page)
+    }
+
+    /// Traductions de la page (toutes langues) effacées : elles ne correspondent plus au texte japonais.
+    private static func removeTranslations(documentId: String, page: Int) {
+        for language in AIPageFile.translationReaders {
+            try? FileManager.default.removeItem(at: url(documentId: documentId, reader: language, page: page))
+        }
     }
 
     static func read(documentId: String, reader: String, page: Int) -> String? {
@@ -60,9 +72,7 @@ enum DocumentAITextStore {
         try text.write(to: target, atomically: true, encoding: .utf8)
         if reader == ModelSpec.ovisocr2.id {
             // Page relue : ses traductions ne correspondent plus, quelle que soit leur langue.
-            for language in AIPageFile.translationReaders {
-                try? FileManager.default.removeItem(at: url(documentId: documentId, reader: language, page: page))
-            }
+            removeTranslations(documentId: documentId, page: page)
         }
     }
 

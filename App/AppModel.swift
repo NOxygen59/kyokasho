@@ -175,6 +175,8 @@ final class AppModel: ObservableObject {
                     self.pendingDocuments = nil
                     self.documents = list
                 }
+                // C1.3 : un document disparu (corbeille, suppression ailleurs) n'a plus d'onglet.
+                self.tabs.keep(only: Set(list.map(\.id)))
             }
             .store(in: &cancellables)
         // « Ajouter des pages… » interrompu (app arrêtée au milieu) : annulé ou terminé.
@@ -311,6 +313,8 @@ final class AppModel: ObservableObject {
     func moveToTrash(_ document: LibraryDocument) {
         // Lecteur sur ce document : retour à la bibliothèque (son onglet disparaît avec lui de la liste).
         if openDocumentId == document.id { openDocumentId = nil }
+        // C1.3 (audit du 09/11/2026) : l'onglet restait dans la liste et faussait l'alerte mémoire (4 onglets).
+        closeTab(document.id)
         trash.put(document.id)
         saveTrash()
         documents.removeAll { $0.id == document.id }
@@ -412,6 +416,8 @@ final class AppModel: ObservableObject {
                 Task { @MainActor in
                     self.deletingIds.remove(document.id)
                     ReadingTimeTracker.shared.forget(documentId: document.id)
+                    // C1.7 (audit du 09/11/2026) : l'analyse du document supprimé restait en mémoire et sur disque.
+                    DocumentAnalysisService.shared.forget(document.id)
                     PageShift.removeCopies(documentId: document.id) // Pages supprimées gardées 30 jours (#49).
                 }
             } catch {

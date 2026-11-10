@@ -318,7 +318,11 @@ extension ReaderController {
                     // Une lecture lancée avant un choix explicite est refusée en entier (revue Codex, R2).
                     self.adoptOCR(candidate, source: source)
                 } catch {
-                    if source == self.focusSource { self.ocrState = .failed(error.localizedDescription) }
+                    // C1.9 (audit du 09/11/2026) : une lecture annulée (page tournée, document fermé) n'est pas un échec.
+                    if source == self.focusSource {
+                        self.ocrState = OCRCancellation.isCancellation(error, taskCancelled: Task.isCancelled)
+                            ? .idle : .failed(error.localizedDescription)
+                    }
                 }
             }
         }

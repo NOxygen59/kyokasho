@@ -109,10 +109,32 @@ enum ToneCache {
     /// Taille d'après les dimensions des images gardées : une estimation, pas une mesure du système.
     static var estimatedBytes: Int { lock.withLock { images.values.reduce(0) { $0 + $1.bytesPerRow * $1.height } } }
 
+    /// C1.6 (audit du 09/11/2026) : le PDF était rouvert pour chaque page préparée. Un seul document gardé ouvert ici,
+    /// reconnu par son adresse, sa taille et sa date (ajouter des pages change le fichier : il est rouvert). Pas de
+    /// `PDFPool` : il ne garde qu'un document, et l'OCR d'un autre livre le ferait rouvrir à chaque page.
+    private static let documentLock = NSLock()
+    private static var openDocument: (stamp: String, document: CGPDFDocument)?
+
+    /// À appeler sous `documentLock`.
+    private static func document(_ url: URL) -> CGPDFDocument? {
+        let values = try? url.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey])
+        let stamp = "\(url.path)|\(values?.fileSize ?? 0)|\(values?.contentModificationDate?.timeIntervalSince1970 ?? 0)"
+        if let open = openDocument, open.stamp == stamp { return open.document }
+        let document = CGPDFDocument(url as CFURL)
+        openDocument = document.map { (stamp, $0) }
+        return document
+    }
+
     /// Rend la page source (cadre `cropBox`, comme les pages nettoyées) puis la teinte. Hors du fil principal.
+    /// Sous `documentLock` d'un bout à l'autre : deux préparations (tâche annulée puis relancée) ne dessinent jamais le
+    /// même document partagé en même temps.
     static func prepare(key: String, fileURL: URL, page index: Int, tone: PageTone) -> Bool {
+        documentLock.withLock { prepareLocked(key: key, fileURL: fileURL, page: index, tone: tone) }
+    }
+
+    private static func prepareLocked(key: String, fileURL: URL, page index: Int, tone: PageTone) -> Bool {
         guard tone != .normal, image(for: key, tone: tone) == nil,
-              let document = CGPDFDocument(fileURL as CFURL), let page = document.page(at: index + 1) else { return false }
+              let document = document(fileURL), let page = document.page(at: index + 1) else { return false }
         let box = page.getBoxRect(.cropBox)
         guard box.width > 0, box.height > 0 else { return false }
         let scale = longSide / max(box.width, box.height)

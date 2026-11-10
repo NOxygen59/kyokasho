@@ -159,7 +159,7 @@ struct LookupPopup: View {
         let rendered = session.html(canAddCards: onAddCard != nil, added: added)
         let html = compact ? GlossaryRenderer.compact(rendered) : rendered
         guard let term = englishTerm else { return html }
-        let block = DefinitionTranslationHTML.block(entry: translations.entries[DefinitionTranslations.key(term)],
+        let block = DefinitionTranslationHTML.block(entry: translations.entry(for: term),
                                                     hasKey: deepl.hasKey, busy: translating, error: translateError)
         return DefinitionTranslationHTML.inject(block, into: html)
     }
@@ -229,7 +229,7 @@ struct LookupPopup: View {
         .task(id: englishTerm.map(DefinitionTranslations.key)) {
             translateError = nil
             guard autoTranslate, deepl.hasKey, let term = englishTerm,
-                  translations.entries[DefinitionTranslations.key(term)] == nil else { return }
+                  translations.entry(for: term) == nil else { return }
             await translateFrench(term)
         }
         .alert("Traduction française", isPresented: $editingFrench) {
@@ -256,13 +256,13 @@ struct LookupPopup: View {
         case .french(let action):
             guard let term = englishTerm else { return }
             let key = DefinitionTranslations.key(term)
-            let entry = translations.entries[key]
+            let entry = translations.entry(for: term)
             switch action {
             case "translate": Task { await translateFrench(term) }
             case "like":
-                if let entry { translations.set(key, .init(text: entry.text, status: entry.status == .liked ? .machine : .liked)) }
+                if let entry { translations.set(key, .init(text: entry.text, status: entry.status == .liked ? .machine : .liked, source: entry.source)) }
             case "dislike":
-                if let entry { translations.set(key, .init(text: entry.text, status: .disliked)) }
+                if let entry { translations.set(key, .init(text: entry.text, status: .disliked, source: entry.source)) }
                 frenchDraft = entry?.text ?? ""
                 editingFrench = true
             default:

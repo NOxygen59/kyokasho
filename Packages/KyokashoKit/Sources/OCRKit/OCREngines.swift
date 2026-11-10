@@ -373,3 +373,14 @@ public enum PDFPool {
         if let url { textLayer = textLayer.filter { !$0.key.hasPrefix(url.path + "#") } }
     }
 }
+
+/// C1.9 (audit du 09/11/2026) : une lecture OCR annulée (page tournée, file vidée, document fermé) ne doit pas
+/// s'afficher comme un échec.
+public enum OCRCancellation {
+    public static func isCancellation(_ error: Error, taskCancelled: Bool) -> Bool {
+        if taskCancelled || error is CancellationError { return true }
+        if let url = error as? URLError, url.code == .cancelled { return true }
+        let ns = error as NSError
+        return ns.domain == NSCocoaErrorDomain && ns.code == NSUserCancelledError
+    }
+}

@@ -213,7 +213,9 @@ struct StudyTextTab: View {
                             FormattedOCRText(page: page, regions: regions)
                         } else {
                             // Brut : une ligne par ligne lue, caractères douteux soulignés, appui long → corriger.
-                            VStack(alignment: .leading, spacing: 7) {
+                            // C1.8 (audit du 09/11/2026) : `LazyVStack`, les lignes hors écran ne sont plus créées d'un
+                            // coup sur une page dense.
+                            LazyVStack(alignment: .leading, spacing: 7) {
                                 ForEach(Array(page.lines.enumerated()), id: \.offset) { index, line in
                                     Text(Self.marked(line))
                                         .font(Atelier.jp)

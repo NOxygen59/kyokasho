@@ -403,8 +403,10 @@ struct DocumentExportSheet: View {
                     return url
                 case .cards:
                     let url = folder.appendingPathComponent(name + ".apkg")
-                    try AnkiExport.apkg(cards: cards!.cards, template: cards!.template, deckName: doc.title,
-                                        mediaRoot: cards!.mediaRoot, to: url)
+                    // C1.5 (audit du 09/11/2026) : plus de déballage forcé `cards!`.
+                    guard let cards else { throw CocoaError(.fileWriteUnknown) }
+                    try AnkiExport.apkg(cards: cards.cards, template: cards.template, deckName: doc.title,
+                                        mediaRoot: cards.mediaRoot, to: url)
                     return url
                 case .annotated:
                     let url = folder.appendingPathComponent(name + String(localized: " (annoté).pdf"))

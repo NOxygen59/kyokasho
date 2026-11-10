@@ -505,3 +505,12 @@ public final class Translator: @unchecked Sendable {
         transformer.info(forTransform: id)?.name ?? id
     }
 }
+
+/// C1.2 (audit du 09/11/2026) : une traduction automatique d'une définition n'est plus affichée si la définition du
+/// dictionnaire a changé depuis (mise à jour du dictionnaire). Une correction faite à la main reste toujours ; une
+/// traduction enregistrée avant le suivi de la source (`storedSource == nil`) reste aussi, faute de pouvoir comparer.
+public enum TranslationFreshness {
+    public static func isCurrent(edited: Bool, storedSource: String?, currentSource: String) -> Bool {
+        edited || storedSource == nil || storedSource == currentSource
+    }
+}

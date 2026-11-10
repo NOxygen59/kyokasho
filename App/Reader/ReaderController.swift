@@ -341,10 +341,13 @@ final class ReaderController: NSObject, ObservableObject {
         let folder = fm.urls(for: .cachesDirectory, in: .userDomainMask)[0].appendingPathComponent("Equalized", isDirectory: true)
         let base = folder.appendingPathComponent("\(documentId)-\(stamp)")
         let pdfFile = base.appendingPathExtension("pdf"), boxesFile = base.appendingPathExtension("json")
-        if let data = try? Data(contentsOf: boxesFile), let saved = try? JSONDecoder().decode([[CGFloat]].self, from: data) {
+        // C1.4 (audit du 09/11/2026) : un cache mal formé (ligne sans ses 4 valeurs) faisait planter l'app ; il est
+        // maintenant ignoré et la préparation refaite (`EqualizedBoxes`).
+        if let data = try? Data(contentsOf: boxesFile), let saved = try? JSONDecoder().decode([[CGFloat]].self, from: data),
+           let boxes = EqualizedBoxes.rects(saved) {
             // Déjà préparé : liste vide = rien à changer dans ce PDF.
-            guard !saved.isEmpty, let pdf = PDFDocument(url: pdfFile), pdf.pageCount == saved.count else { return nil }
-            return (pdf, saved.map { CGRect(x: $0[0], y: $0[1], width: $0[2], height: $0[3]) })
+            guard !boxes.isEmpty, let pdf = PDFDocument(url: pdfFile), pdf.pageCount == boxes.count else { return nil }
+            return (pdf, boxes)
         }
         guard let original = PDFDocument(url: url), let common = commonHeight(original) else { return nil }
         try? fm.createDirectory(at: folder, withIntermediateDirectories: true)

@@ -17,6 +17,17 @@ final class DefinitionTranslations: ObservableObject {
     struct Entry: Codable, Equatable {
         var text: String
         var status: Status
+        /// Définitions traduites (C1.2, audit du 09/11/2026) : une mise à jour du dictionnaire qui change la définition
+        /// rend la traduction automatique périmée. Absent des traductions enregistrées avant ce champ.
+        var source: String? = nil
+    }
+
+    /// Traduction à afficher pour ce mot, ou `nil` si elle ne correspond plus à la définition actuelle
+    /// (une correction à la main reste toujours ; règle dans `TranslationFreshness`).
+    func entry(for term: TermResult) -> Entry? {
+        guard let entry = entries[Self.key(term)] else { return nil }
+        return TranslationFreshness.isCurrent(edited: entry.status == .edited, storedSource: entry.source,
+                                              currentSource: Self.source(term)) ? entry : nil
     }
 
     @Published private(set) var entries: [String: Entry] = [:]
@@ -62,7 +73,7 @@ final class DefinitionTranslations: ObservableObject {
         let source = Self.source(term)
         guard !source.isEmpty else { return }
         let text = try await DeepLService.shared.translate(source, target: "FR")
-        set(Self.key(term), Entry(text: text, status: .machine))
+        set(Self.key(term), Entry(text: text, status: .machine, source: source))
     }
 
     func set(_ key: String, _ entry: Entry?) {
