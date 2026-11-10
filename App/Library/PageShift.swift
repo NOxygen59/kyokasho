@@ -164,9 +164,11 @@ enum PageShift {
         applyingDocuments.contains(documentId) || pendingDocumentId == documentId
     }
 
-    /// Une opération de pages en cours sur n'importe quel document (remplacement Drive compris) :
-    /// la garde réciproque de `LibraryBackupService.backup` (C2.7).
-    static var operationInProgress: Bool { !applyingDocuments.isEmpty }
+    /// Une opération de pages en cours sur n'importe quel document (remplacement Drive compris) ou une reprise
+    /// en attente (journal `page-shift.json`, P3 n°7 de la revue R2) : la garde réciproque de
+    /// `LibraryBackupService.backup` (C2.7). La sauvegarde vérifie aussi le journal avant ce garde ; le compter
+    /// ici fait de la garde croisée une condition unique, indépendante de l'ordre des « guard ».
+    static var operationInProgress: Bool { !applyingDocuments.isEmpty || pendingDocumentId != nil }
 
     /// Les clés IA portent l'identifiant entre séparateurs. Refuser les nouveaux travaux tant que le PDF ou
     /// ses indices sont réservés, y compris pendant l'attente d'un importeur Drive détaché.
