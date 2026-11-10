@@ -48,6 +48,15 @@ import ReviewKit
     }
     func reloadAfterPageShift(_ id: String) {}
 }
+/// C2.3 : les lectures IA vivent dans le même dossier d'analyse que le rapport, comme dans l'app
+/// (`DocumentAITextStore.folder` == `DocumentAnalysisService.folder`).
+enum DocumentAITextStore {
+    static var folder: URL { DocumentAnalysisService.folder }
+    static func url(documentId: String, reader: String, page: Int) -> URL {
+        folder.appendingPathComponent(documentId, isDirectory: true)
+            .appendingPathComponent("\(reader)-\(page).md")
+    }
+}
 @MainActor final class AITaskCenter {
     static let shared = AITaskCenter()
     struct Job { var key: String }
