@@ -281,7 +281,9 @@ extension PageShiftRecoveryTests {
     }
 
     /// Fichiers déjà présents chez l'identifiant d'arrivée (version re-importée après avoir été
-    /// retirée) : jamais écrasés, source gardée en secours, conflit signalé, bascule finie quand même.
+    /// retirée) : jamais écrasés ; les données de l'ancienne version sont mises de côté dans
+    /// `Conflits-remplacement/<ancien identifiant>/` (P2 n°4 de la revue R2), comptées pour le
+    /// rapport de fin, et la bascule finit quand même.
     func testExistingTargetFilesAreNeverOverwrittenAndSourceKept() async throws {
         try await withFixture { model, doc, root in
             let card = try seed(model, doc)
@@ -300,11 +302,26 @@ extension PageShiftRecoveryTests {
             // L'arrivée reste intacte.
             XCTAssertEqual(NoteDraftStore.shared.drafts(documentId: plan.newDocumentId), [4: "ancienne donnée"])
             XCTAssertEqual(try String(contentsOf: aiNew.appendingPathComponent("ovisocr2-0.md")), "ancienne lecture")
-            // La source est gardée sous l'ancien identifiant, jamais effacée en passant.
-            XCTAssertEqual(NoteDraftStore.shared.drafts(documentId: doc.id), [0: "brouillon 0", 1: "brouillon 1"])
-            XCTAssertEqual(try String(contentsOf: DocumentAITextStore.folder.appendingPathComponent(doc.id, isDirectory: true).appendingPathComponent("ovisocr2-0.md")), "page 0")
-            // Le reste suit : journal consommé.
+            // P2 n°4 : la donnée de l'ancienne version n'est ni écrasée ni perdue — mise de côté
+            // dans « Conflits-remplacement », sous le support injecté du harnais.
+            let kept = root.appendingPathComponent("Conflits-remplacement").appendingPathComponent(doc.id, isDirectory: true)
+            let draftsAside = kept.appendingPathComponent("Brouillons").appendingPathComponent(doc.id + ".json")
+            XCTAssertTrue(FileManager.default.fileExists(atPath: draftsAside.path), "brouillons de l'ancienne version gardés")
+            XCTAssertEqual(try NoteDraftStore.decode(Data(contentsOf: draftsAside)), [0: "brouillon 0", 1: "brouillon 1"])
+            XCTAssertEqual(try String(contentsOf: kept.appendingPathComponent("Lectures-IA")
+                .appendingPathComponent("ovisocr2-0.md")), "page 0", "lecture IA de l'ancienne version gardée")
+            // Le rapport, sans cible en place, suit normalement le document : le dossier « Rapport »
+            // du conflit n'existe pas et la donnée mise de côté a quitté sa place d'origine.
+            XCTAssertFalse(FileManager.default.fileExists(atPath: kept.appendingPathComponent("Rapport").path))
+            XCTAssertFalse(FileManager.default.fileExists(atPath: NoteDraftStore.shared.url(documentId: doc.id).path))
+            XCTAssertFalse(FileManager.default.fileExists(atPath: DocumentAnalysisService.folder
+                .appendingPathComponent(doc.id, isDirectory: true).path), "dossier lectures IA vidé par les déplacements")
+            // Le rapport vu par l'utilisateur compte le conflit, une seule fois (consommation unique).
+            XCTAssertEqual(PageShift.consumeReplacementConflicts(for: doc.id), 2)
+            XCTAssertEqual(PageShift.consumeReplacementConflicts(for: doc.id), 0)
+            // La bascule finit comme prévu : base et journal consommés.
             XCTAssertNil(try model.database.document(id: doc.id))
+            XCTAssertNotNil(try model.database.document(id: plan.newDocumentId))
             XCTAssertFalse(journalExists(root))
         }
     }

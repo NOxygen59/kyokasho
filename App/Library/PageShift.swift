@@ -676,6 +676,28 @@ enum PageShift {
 
     // MARK: - Remplacement d'un cours Drive (C2.3, DEC-C2 = A)
 
+    /// Conflits « cible déjà présente » (revue R2 P2 n°4, F4) : un fichier d'arrivée déjà présent
+    /// n'est **jamais** écrasé, et la donnée de l'ancienne version est mise de côté dans
+    /// ``conflictsBase(for:)``, où elle reste récupérable (aucune donnée inatteignable). Le
+    /// compteur par document est affiché dans le rapport de fin vu par l'utilisateur
+    /// (`checkDriveUpdates`) et consommé une seule fois par ``consumeReplacementConflicts(for:)``.
+    static var lastReplacementConflicts: [String: Int] = [:]
+    @MainActor static func consumeReplacementConflicts(for documentId: String) -> Int {
+        let count = lastReplacementConflicts[documentId] ?? 0
+        lastReplacementConflicts[documentId] = nil
+        return count
+    }
+    /// Dossier de secours des conflits, par ancien identifiant et par type de donnée
+    /// (`Brouillons`, `Lectures-IA`, `Rapport`, `PDF`) : toujours sous le support de l'app,
+    /// jamais sous un chemin construit depuis une donnée hypothétique du journal.
+    private static func conflictsBase(for documentId: String) -> URL {
+        support.appendingPathComponent("Conflits-remplacement", isDirectory: true)
+            .appendingPathComponent(documentId, isDirectory: true)
+    }
+    private static func noteConflict(_ documentId: String) {
+        lastReplacementConflicts[documentId, default: 0] += 1
+    }
+
     /// Plan d'un remplacement, calculé et vérifié **avant** l'écriture du journal : il lui faut
     /// l'empreinte du nouveau PDF (identifiant final), son nombre de pages et sa taille, afin qu'une
     /// bascule interrompue puisse être finie au lancement suivant depuis le journal seul. `source`
@@ -732,6 +754,8 @@ enum PageShift {
               p.newCount > 0, p.newSize > 0 else {
             throw fail(String(localized: "Journal de remplacement incomplet : reprise arrêtée sans effacer les données."))
         }
+        // Le compteur de conflits (P2 n°4) est réinitialisé à chaque bascule du document.
+        lastReplacementConflicts[p.documentId] = nil
         guard model.persistentStorageAvailable, model.review.persistentStorageAvailable else {
             throw fail(String(localized: "Bases persistantes indisponibles : journal conservé pour la reprise."))
         }
@@ -751,7 +775,9 @@ enum PageShift {
                 guard sourceHash == newId else {
                     throw fail(String(localized: "Journal de remplacement altéré : le fichier du nouveau PDF ne correspond pas à l'empreinte du journal, reprise arrêtée sans effacer les données."))
                 }
-                try moveWithoutOverwrite(URL(fileURLWithPath: sourcePath), pdf)
+                try moveWithoutOverwrite(URL(fileURLWithPath: sourcePath), pdf,
+                                         conflicts: (documentId: p.documentId, folder: conflictsBase(for: p.documentId)
+                                             .appendingPathComponent("PDF", isDirectory: true)))
             }
             guard PDFDocument(url: pdf)?.pageCount == p.newCount else {
                 // Le nouveau PDF n'est plus disponible : rien n'a encore été changé, le journal est
@@ -796,17 +822,21 @@ enum PageShift {
     /// Fichiers servis par identifiant : brouillons de notes, lectures IA et corrections, rapport
     /// d'analyse, modes d'outil. Le contenu ne change pas (C2.3 suit la version mise à jour telle
     /// quelle) ; seule la clef de rangement — le nom — suit le document. Règle unique : ne jamais
-    /// écraser un fichier existant de la cible (donnée d'arrivée restée en place), garder la source
-    /// et signaler le conflit.
+    /// écraser un fichier existant de la cible ; l'élément de conflit est mis de côté dans
+    /// ``conflictsBase(for:)`` (P2 n°4) et signalé au rapport de fin.
     private static func installReplacementFiles(from oldId: String, to newId: String, model: AppModel) throws {
+        let base = conflictsBase(for: oldId)
         try hit("drafts.before")
         try moveWithoutOverwrite(NoteDraftStore.shared.url(documentId: oldId),
-                                 NoteDraftStore.shared.url(documentId: newId))
+                                 NoteDraftStore.shared.url(documentId: newId),
+                                 conflicts: (documentId: oldId, folder: base.appendingPathComponent("Brouillons", isDirectory: true)))
         try hit("drafts.after")
         try hit("files.before")
         try moveFolderWithoutOverwrite(from: DocumentAITextStore.folder.appendingPathComponent(oldId, isDirectory: true),
-                                       to: DocumentAITextStore.folder.appendingPathComponent(newId, isDirectory: true))
-        try moveAnalysisReport(from: oldId, to: newId)
+                                       to: DocumentAITextStore.folder.appendingPathComponent(newId, isDirectory: true),
+                                       conflicts: (documentId: oldId, folder: base.appendingPathComponent("Lectures-IA", isDirectory: true)))
+        try moveAnalysisReport(from: oldId, to: newId,
+                               conflicts: (documentId: oldId, folder: base.appendingPathComponent("Rapport", isDirectory: true)))
         try hit("files.installed")
         try hit("modes.before")
         ReaderToolModeStore().remap(from: oldId, to: newId)
@@ -824,7 +854,8 @@ enum PageShift {
     /// Le rapport d'analyse contient l'identifiant de son document : réécrit sous le nouvel
     /// identifiant (valeur finale préparée, comme pour les modifications de pages), puis la source
     /// s'en va. Illisible : déplacé tel quel, jamais réécrit — une copie fausse serait pire.
-    private static func moveAnalysisReport(from oldId: String, to newId: String) throws {
+    private static func moveAnalysisReport(from oldId: String, to newId: String,
+                                           conflicts: (documentId: String, folder: URL)? = nil) throws {
         let folder = DocumentAnalysisService.folder
         let source = folder.appendingPathComponent(oldId + ".json")
         let target = folder.appendingPathComponent(newId + ".json")
@@ -835,7 +866,13 @@ enum PageShift {
         if let report = try? JSONDecoder().decode(DocumentAnalysis.self, from: data),
            var object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] {
             guard !fm.fileExists(atPath: target.path) else {
-                Diagnostics.error(String(localized: "Remplacement : le rapport du nouveau document existe déjà, l'ancien est gardé en secours."), "pages")
+                // P2 n°4 : la donnée de l'ancienne version est mise de côté, jamais effacée ni écrasée.
+                if let conflicts {
+                    try fm.createDirectory(at: conflicts.folder, withIntermediateDirectories: true)
+                    try fm.moveItem(at: source, to: conflicts.folder.appendingPathComponent(source.lastPathComponent))
+                    noteConflict(conflicts.documentId)
+                }
+                Diagnostics.error(String(localized: "Remplacement : le rapport du nouveau document existe déjà, l'ancien est mis de côté dans « Conflits-remplacement »."), "pages")
                 return
             }
             object["documentId"] = newId
@@ -844,17 +881,27 @@ enum PageShift {
             try? fm.removeItem(at: source)
         } else {
             // Illisible : déplacé tel quel, jamais réécrit — une copie fausse serait pire.
-            try moveWithoutOverwrite(source, target)
+            try moveWithoutOverwrite(source, target, conflicts: conflicts)
         }
     }
 
     /// Déplacement rejouable : source absente = déjà fait (la reprise ne refait rien) ; cible
-    /// présente = jamais écrasée, source gardée en secours et conflit signalé.
-    private static func moveWithoutOverwrite(_ source: URL, _ target: URL) throws {
+    /// présente = jamais écrasée. Avec un dossier de conflits (remplacement Drive, P2 n°4),
+    /// l'élément de l'ancienne version est mis de côté dans `conflicts.folder` et compté pour le
+    /// rapport de fin ; sinon il reste en place en secours, comme avant.
+    private static func moveWithoutOverwrite(_ source: URL, _ target: URL,
+                                             conflicts: (documentId: String, folder: URL)? = nil) throws {
         guard source.path != target.path else { return }
         guard fm.fileExists(atPath: source.path) else { return }
         if fm.fileExists(atPath: target.path) {
-            Diagnostics.error(String(localized: "Remplacement : « \(target.lastPathComponent) » existe déjà, « \(source.lastPathComponent) » est gardé en secours."), "pages")
+            if let conflicts {
+                try fm.createDirectory(at: conflicts.folder, withIntermediateDirectories: true)
+                try fm.moveItem(at: source, to: conflicts.folder.appendingPathComponent(source.lastPathComponent))
+                noteConflict(conflicts.documentId)
+                Diagnostics.error(String(localized: "Remplacement : « \(target.lastPathComponent) » existe déjà, « \(source.lastPathComponent) » est mis de côté dans « Conflits-remplacement »."), "pages")
+            } else {
+                Diagnostics.error(String(localized: "Remplacement : « \(target.lastPathComponent) » existe déjà, « \(source.lastPathComponent) » est gardé en secours."), "pages")
+            }
             return
         }
         try fm.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
@@ -862,8 +909,10 @@ enum PageShift {
     }
 
     /// Dossier des lectures IA : déplacé tel quel si la cible est absente, sinon fichier par
-    /// fichier (même règle « jamais écraser ») ; le dossier source ne part que s'il est vide.
-    private static func moveFolderWithoutOverwrite(from source: URL, to target: URL) throws {
+    /// fichier (même règle « jamais écraser », mise de côté au besoin) ; le dossier source ne
+    /// part que s'il est vide.
+    private static func moveFolderWithoutOverwrite(from source: URL, to target: URL,
+                                                   conflicts: (documentId: String, folder: URL)? = nil) throws {
         guard source.path != target.path, fm.fileExists(atPath: source.path) else { return }
         let names = try fm.contentsOfDirectory(atPath: source.path)
         if !fm.fileExists(atPath: target.path) {
@@ -872,7 +921,7 @@ enum PageShift {
             return
         }
         for name in names {
-            try moveWithoutOverwrite(source.appendingPathComponent(name), target.appendingPathComponent(name))
+            try moveWithoutOverwrite(source.appendingPathComponent(name), target.appendingPathComponent(name), conflicts: conflicts)
         }
         if (try? fm.contentsOfDirectory(atPath: source.path))?.isEmpty == true {
             try? fm.removeItem(at: source)

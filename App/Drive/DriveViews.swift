@@ -401,6 +401,9 @@ extension AppModel {
         guard !linked.isEmpty else { return String(localized: "Aucun document importé depuis Google Drive.") }
         var updated: [String] = []
         var failures: [String] = []
+        // P2 n°4 (revue R2) : les conflits « cible déjà présente » sont visibles dans ce rapport ;
+        // les données de l'ancienne version sont mises de côté dans « Conflits-remplacement ».
+        var conflicts: [String] = []
         for document in linked {
             guard let fileId = document.driveFileId else { continue }
             do {
@@ -409,6 +412,10 @@ extension AppModel {
                 let url = try await GoogleDrive.shared.download(file) { _ in }
                 try await importFromDrive(url: url, file: file)
                 updated.append(document.title)
+                let keptAside = PageShift.consumeReplacementConflicts(for: document.id)
+                if keptAside > 0 {
+                    conflicts.append(String(localized: "Conflits de remplacement : des données de l'ancienne version de « \(document.title) » (\(keptAside) élément(s)) sont gardées dans « Conflits-remplacement »."))
+                }
             } catch {
                 failures.append("\(document.title) : \(error.localizedDescription)")
             }
@@ -416,6 +423,7 @@ extension AppModel {
         var lines: [String] = []
         lines.append(updated.isEmpty ? String(localized: "Tout est à jour (\(linked.count) document(s)).") : String(localized: "Mis à jour : ") + updated.joined(separator: ", "))
         if !failures.isEmpty { lines.append(String(localized: "Erreurs : ") + failures.joined(separator: " ; ")) }
+        if !conflicts.isEmpty { lines.append(conflicts.joined(separator: " ; ")) }
         return lines.joined(separator: "\n")
     }
 }
