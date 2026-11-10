@@ -198,7 +198,13 @@ extension ReaderController {
         // une correction ne doit pas s'installer sur une page déplacée ou relue entre-temps.
         Task {
             let generation = await service.generation(documentId: documentId)
-            try? await service.store(page, documentId: documentId, pageIndex: source, expectedGeneration: generation)
+            do {
+                try await service.store(page, documentId: documentId, pageIndex: source, expectedGeneration: generation)
+            } catch {
+                // P3 n°5 (revue R2) : le refus de la garde est publié, jamais avalé — le panneau montrait
+                // déjà la correction, elle aurait été perdue sans un mot.
+                self.loadError = String(localized: "Correction non enregistrée : \(error.localizedDescription)")
+            }
         }
     }
 
@@ -233,7 +239,13 @@ extension ReaderController {
             // C2.5 : même garde de génération que les autres voies (annulation des corrections comprises).
             Task {
                 let generation = await service.generation(documentId: documentId)
-                try? await service.store(page, documentId: documentId, pageIndex: source, expectedGeneration: generation)
+                do {
+                    try await service.store(page, documentId: documentId, pageIndex: source, expectedGeneration: generation)
+                } catch {
+                    // P3 n°5 (revue R2) : même publication que les corrections — un refus ne se perd plus en
+                    // silence pendant que l'affichage montre déjà la page revenue en arrière.
+                    self.loadError = String(localized: "Correction non enregistrée : \(error.localizedDescription)")
+                }
             }
         }
         DocumentAITextStore.removeCorrection(documentId: document.id, page: source)

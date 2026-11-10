@@ -24,6 +24,14 @@ class ReaderStoreGenerationTests(unittest.TestCase):
                     self.assertIn("expectedGeneration", line, (path.name, line.strip()))
         self.assertGreaterEqual(len(found), 5)
 
+    def test_reader_store_never_swallowed_by_try_question_mark(self):
+        # P3 n°5 (revue R2) : un refus de la garde de génération publié (`loadError`), jamais avalé.
+        # `try?` on `.store` perdait la correction déjà affichée dans le panneau, sans un mot.
+        for path in sorted(READER.rglob("*.swift")):
+            for line in path.read_text(encoding="utf-8").splitlines():
+                if ".store(" in line and not line.lstrip().startswith("//"):
+                    self.assertFalse(line.strip().startswith("try?"), (path.name, line.strip()))
+
 
 if __name__ == "__main__":
     unittest.main()
