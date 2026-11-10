@@ -1166,6 +1166,15 @@ enum PageShift {
     /// en base ni dans les fichiers (les gardes s'arrêtent avant tout effet).
     @MainActor static func setAsideRejectedJournal(_ model: AppModel) {
         guard fm.fileExists(atPath: marker.path), applyingDocuments.isEmpty, !LibraryBackupService.inProgress else { return }
+        // Contre-revue R2 (S2) : mettre de côté seulement un journal dont **aucun effet** n'a commencé.
+        // Sinon (bascule faite en base, PDF déjà remplacé, journal illisible), l'état est à moitié appliqué :
+        // l'app reste bloquée et renvoie à la réparation sur une copie de la bibliothèque, plutôt que d'affirmer
+        // à tort que « rien n'est effacé ».
+        guard journalHadNoEffect(model) else {
+            model.storageRecoveryError = String(localized: "Ce journal a déjà commencé à modifier la bibliothèque : il ne peut pas être mis de côté sans risque. Fais une sauvegarde complète, puis demande une réparation sur une copie.")
+            Diagnostics.error(model.storageRecoveryError!, "pages")
+            return
+        }
         do {
             let folder = support.appendingPathComponent("Conflits-remplacement", isDirectory: true)
                 .appendingPathComponent("journaux-refusés", isDirectory: true)
@@ -1176,6 +1185,20 @@ enum PageShift {
         } catch {
             Diagnostics.error("pages : journal refusé non déplacé — \(error.localizedDescription)", "pages")
         }
+    }
+
+    /// Vrai si le journal décrit une opération qui n'a encore rien changé : remplacement → l'ancien document est
+    /// toujours en base et le nouveau n'y est pas ; pages → le document a toujours son ancien nombre de pages et son
+    /// PDF son ancienne taille. Journal illisible : faux (état inconnu).
+    @MainActor static func journalHadNoEffect(_ model: AppModel) -> Bool {
+        guard let data = try? Data(contentsOf: marker), let p = try? JSONDecoder().decode(Pending.self, from: data) else { return false }
+        guard let old = try? model.database.document(id: p.documentId) else { return false }
+        if p.kind == "replacement" {
+            guard let newId = p.newDocumentId else { return false }
+            return newId == p.documentId || (try? model.database.document(id: newId)) == nil
+        }
+        let size = (try? fm.attributesOfItem(atPath: model.storage.url(for: p.documentId).path)[.size] as? NSNumber)?.int64Value
+        return old.pageCount == p.oldCount && size == p.oldSize
     }
 
     static func reconcile(_ model: AppModel) {
