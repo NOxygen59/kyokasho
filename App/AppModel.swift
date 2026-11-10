@@ -405,8 +405,8 @@ final class AppModel: ObservableObject {
         // s'arrête aussi maintenant : elle écrit encore des lectures IA et le cache OCR pour ce document.
         DocumentAnalysisService.shared.cancel(documentId: document.id)
         // P3 n°6 (revue R2) : toute nouvelle tâche IA pour ce document est refusée jusqu'à la fin de
-        // son effacement (déposé par AITaskCenter.endDeletion, les deux branches ci-dessous incluses).
-        AITaskCenter.shared.beginDeletion(document.id)
+        // son effacement (retiré par AITaskCenter.endDeletion, les deux branches ci-dessous incluses).
+        AITaskCenter.shared.beginDeletion(documentId: document.id)
         deletingIds.insert(document.id)
         documents.removeAll { $0.id == document.id }
         closeTab(document.id)
@@ -424,19 +424,19 @@ final class AppModel: ObservableObject {
                 PageAdditionHistory.forget(document.id)
                 Task { @MainActor in
                     self.deletingIds.remove(document.id)
-                    AITaskCenter.shared.endDeletion(document.id)
+                    AITaskCenter.shared.endDeletion(documentId: document.id)
                     ReadingTimeTracker.shared.forget(documentId: document.id)
                     PageShift.removeCopies(documentId: document.id) // Pages supprimées gardées 30 jours (#49).
                     // C2.6 complété (P2 n°3, revue R2) : l'annulation est une demande, la tâche peut encore
                     // écrire une dernière lecture. `forget` attend donc la fin de la tâche : rien ne recrée
                     // `Analysis/<id>.json` ni `Analysis/<id>/` une fois ses fichiers effacés.
-                    await DocumentAnalysisService.shared.cancelAndFinish(document.id)
+                    await DocumentAnalysisService.shared.cancelAndFinish(documentId: document.id)
                     DocumentAnalysisService.shared.forget(document.id)
                 }
             } catch {
                 Task { @MainActor in
                     self.deletingIds.remove(document.id)
-                    AITaskCenter.shared.endDeletion(document.id)
+                    AITaskCenter.shared.endDeletion(documentId: document.id)
                     self.lastError = String(localized: "Suppression impossible : \(error.localizedDescription)")
                     self.documents = (try? self.database.allDocuments()) ?? self.documents
                 }
