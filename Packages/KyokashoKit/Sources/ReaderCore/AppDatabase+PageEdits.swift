@@ -138,7 +138,9 @@ extension AppDatabase {
     ///
     /// Rejouable : si `editId` est déjà enregistré, rien n'est refait et la fonction renvoie `false`. Sinon, le
     /// document doit être exactement dans l'état attendu (`expectedVersion` et `mapping.oldCount`), sans quoi rien
-    /// n'est modifié. Les cartes (`review.sqlite`) se remappent à part : `ReviewStore.remapSourcePages`.
+    /// n'est modifié. Les cartes (`review.sqlite`) sont dans une autre base : une modification des
+    /// pages y touche seulement via `ReviewStore.setSourcePages` ; le remplacement d'un cours
+    /// (C2.2, DEC-C2 = A) les suit via `ReviewStore.remapDocumentId(from:to:)`.
     ///
     /// `detachedCards` (suppression) : cartes dont la page est retirée → ancienne page, archivées pour la restauration.
     /// `restoring` (restauration) : plan calculé par `restorationPlan` ; il est recalculé dans la transaction et doit

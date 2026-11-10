@@ -47,6 +47,23 @@ public final class ReviewStore: @unchecked Sendable {
         }
     }
 
+    /// Remplacement d'un cours (lot C2.2, DEC-C2 = A) : les cartes suivent la version mise à jour.
+    ///
+    /// `sourceDocumentId` est une simple colonne de `card`, sans clé étrangère : la bascule SQL du
+    /// document (`AppDatabase.rekeyDocument`) ne peut pas la suivre elle-même. La planification FSRS
+    /// (`due`, `stability`, …), l'historique et `sourcePage` ne sont pas touchés : la nouvelle version
+    /// garde les mêmes numéros de page vus par l'utilisateur du livre, et une révision ratée reste
+    /// ratée. Rejouable (une reprise de bascule interrompue peut rappeler la fonction sans double effet).
+    /// Renvoie le nombre de cartes déplacées (0 si déjà fait ou si rien à faire).
+    @discardableResult
+    public func remapDocumentId(from oldId: String, to newId: String) throws -> Int {
+        guard oldId != newId else { return 0 }
+        return try writer.write { db in
+            try db.execute(sql: "UPDATE card SET sourceDocumentId = ? WHERE sourceDocumentId = ?", arguments: [newId, oldId])
+            return db.changesCount
+        }
+    }
+
     /// Images et sons des cartes (noms de fichiers plats, comme le dossier média d'Anki).
     public let mediaRoot: URL
 
