@@ -159,14 +159,14 @@ extension AppDatabase {
                     let removed = Set(archive.removedPageIds)
                     let positions = Dictionary(uniqueKeysWithValues: identities.filter { removed.contains($0.pageId) }.map { ($0.pageId, $0.position) })
                     let expected = RestorationPlan(archiveId: archive.id, mapping: done.mapping, positions: positions,
-                        originalIndices: Dictionary(uniqueKeysWithValues: archive.removedPageIds.map { ($0, archive.pageOrder.firstIndex(of: $0)!) }),
+                        originalIndices: try Self.archivedPositions(of: archive.removedPageIds, in: archive.pageOrder),
                         cards: try Self.restoredCards(db, archiveId: archive.id, positions: positions))
                     guard positions.count == removed.count, restoring == expected else {
                         throw PageEditError(String(localized: "Plan de restauration altéré : reprise arrêtée.", bundle: .main))
                     }
                 }
                 if kind == .removal {
-                    let positions = Dictionary(uniqueKeysWithValues: done.removedPageIds.map { ($0, done.pageOrder.firstIndex(of: $0)!) })
+                    let positions = try Self.archivedPositions(of: done.removedPageIds, in: done.pageOrder)
                     guard try detachedCards == Self.restoredCards(db, archiveId: done.id, positions: positions) else {
                         throw PageEditError(String(localized: "Cartes détachées altérées : reprise arrêtée.", bundle: .main))
                     }
@@ -391,6 +391,20 @@ extension AppDatabase {
         return RestorationPlan(archiveId: archiveId, mapping: mapping, positions: positions,
                                originalIndices: Dictionary(uniqueKeysWithValues: removed.map { ($0, archive.pageOrder.firstIndex(of: $0)!) }),
                                cards: cards)
+    }
+
+    /// Position d'archive (index dans l'ordre de l'opération) pour chaque page retirée, en journal rejoué.
+    /// Un identifiant absent de l'ordre enregistré, ou un même identifiant répété (Dictionary invalide), signale
+    /// un journal altéré : erreur propre de reprise, jamais un plantage par désemballage forcé (C2.4).
+    private static func archivedPositions(of pageIds: [String], in pageOrder: [String]) throws -> [String: Int] {
+        var positions: [String: Int] = [:]
+        for id in pageIds {
+            guard let index = pageOrder.firstIndex(of: id), positions[id] == nil else {
+                throw PageEditError(String(localized: "Plan de restauration altéré : reprise arrêtée.", bundle: .main))
+            }
+            positions[id] = index
+        }
+        return positions
     }
 
     /// Inventaire autoritatif des cartes : l'archive SQL, jamais un champ du journal accepté seul.
