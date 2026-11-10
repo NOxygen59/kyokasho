@@ -184,8 +184,12 @@ enum PageShift {
 
     /// Les clés IA portent l'identifiant entre séparateurs. Refuser les nouveaux travaux tant que le PDF ou
     /// ses indices sont réservés, y compris pendant l'attente d'un importeur Drive détaché.
+    /// Remplacement Drive (revue R2 P3 n°10) : le **nouvel** identifiant est réservé lui aussi —
+    /// son PDF et son dossier de fichiers apparaissent pendant les déplacements de la bascule
+    /// (reprise au lancement comprise, via le journal en attente).
     static func blocksAI(jobKey: String) -> Bool {
-        let ids = applyingDocuments.union(pendingDocumentId.map { [$0] } ?? [])
+        var ids = applyingDocuments.union(pendingDocumentId.map { [$0] } ?? [])
+        if let pending = pendingReplacement, let newId = pending.newDocumentId { ids.insert(newId) }
         return jobKey.split(separator: "|").contains { ids.contains(String($0)) }
     }
 
@@ -209,10 +213,17 @@ enum PageShift {
         guard !fm.fileExists(atPath: marker.path), applyingDocuments.insert(documentId).inserted else {
             throw fail(String(localized: "Une modification des pages est déjà en cours ou doit être reprise."))
         }
-        defer { applyingDocuments.remove(documentId) }
+        var ownsReplacementJournal = false
+        var reservedNewId: String?
+        defer {
+            applyingDocuments.remove(documentId)
+            // P3 n°10 (revue R2) : le fichier du nouvel identifiant et son dossier de lectures IA
+            // apparaissent pendant les déplacements ; il quitte la réserve avec le document,
+            // failure compris (une réserve jamais levée bloquerait ses tâches IA à jamais).
+            if let newId = reservedNewId { applyingDocuments.remove(newId) }
+        }
         await model.drainWrites()
         await model.ocr.beginPageMutation(documentId: documentId)
-        var ownsReplacementJournal = false
         do {
             let current = model.storage.url(for: documentId)
             await Task.detached { PDFPool.release(current) }.value
@@ -228,6 +239,10 @@ enum PageShift {
                 // pendant `save` — le journal est écrit au point `journal.after` — doit retrouver
                 // dans le catch le droit de le retirer (le document d'origine est encore en base).
                 ownsReplacementJournal = true
+                // P3 n°10 : le nouvel identifiant devient réservé aux tâches IA dès l'écriture
+                // du journal, avant que ses fichiers et son PDF n'apparaissent dans la bascule.
+                reservedNewId = replacement.newDocumentId
+                applyingDocuments.insert(reservedNewId!)
                 try save(journal) // Journal avant toute mutation DAO : c'est la seule écriture encore annulable.
             }
             let result = try await operation()

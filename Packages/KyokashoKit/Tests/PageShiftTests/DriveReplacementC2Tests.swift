@@ -342,6 +342,35 @@ extension PageShiftRecoveryTests {
         }
     }
 
+    /// P3 n°10 (revue R2) — pendant la bascule (et sa reprise), une tâche IA visant le **nouvel**
+    /// identifiant est refusée comme celle de l'ancien ; la réserve est levée une fois la reprise finie.
+    func testNewIdIsReservedAgainstAITasksDuringTheReplacement() async throws {
+        try await withFixture { model, doc, root in
+            _ = try seed(model, doc)
+            let (plan, newPDF) = try replacementPlan(root, pages: 3)
+            let importer = DocumentImporter(storage: model.storage, database: model.database)
+            PageShift.checkpoint = { if $0 == "cards.after" { throw PowerLoss.simulated } }
+            await assertThrowsAsync({
+                try await PageShift.withDriveReplacement(model, documentId: doc.id, replacement: plan) {
+                    try importer.replace(documentId: doc.id, withFileAt: newPDF,
+                                         driveRevision: "rév. 2", replacingInto: plan.newDocumentId)
+                }
+            })
+            PageShift.checkpoint = nil
+            XCTAssertTrue(PageShift.blocksAI(jobKey: "review|\(doc.id)"), "ancien identifiant déjà réservé")
+            XCTAssertTrue(PageShift.blocksAI(jobKey: "review|\(plan.newDocumentId)"),
+                          "le nouvel identifiant est réservé pendant les déplacements")
+            XCTAssertFalse(PageShift.blocksAI(jobKey: "review|other"), "les autres livres ne sont pas touchés")
+
+            let restarted = try AppModel(root: root)
+            PageShift.reconcile(restarted)
+            XCTAssertNil(restarted.storageRecoveryError)
+            XCTAssertFalse(PageShift.blocksAI(jobKey: "review|\(plan.newDocumentId)"),
+                           "reprise finie : la réserve est levée")
+            XCTAssertFalse(PageShift.blocksAI(jobKey: "review|\(doc.id)"))
+        }
+    }
+
     /// P2 n°3 (revue R2 F3) — un journal qui désigne un fichier qui n'est pas le nouveau PDF est
     /// refusé à la reprise : rien n'est déplacé ni retiré, le journal reste ; la reprise
     /// authentique remise en place finit normalement.
