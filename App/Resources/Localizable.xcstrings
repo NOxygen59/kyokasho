@@ -23981,24 +23981,24 @@
         }
       }
     },
-    "Le texte de cette page a changé : rien n'a été annulé. Ferme cet écran et recommence." : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "The text of this page changed: nothing was undone. Close this screen and start again."
+    "Le texte de cette page a changé : rien n'a été annulé. Ferme cet écran et recommence.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The text of this page changed: nothing was undone. Close this screen and start again."
           }
         },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Le texte de cette page a changé : rien n'a été annulé. Ferme cet écran et recommence."
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le texte de cette page a changé : rien n'a été annulé. Ferme cet écran et recommence."
           }
         },
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "此页文本已更改：未撤销任何内容。请关闭此界面后重试。"
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此页文本已更改：未撤销任何内容。请关闭此界面后重试。"
           }
         }
       }
@@ -51235,6 +51235,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "漫画空间：左侧栏不再显示复习、词典、图片转 PDF 和 OCR 测试台；这些工具保留在“书籍与教材”中。"
+          }
+        }
+      }
+    },
+    "La nouvelle version du PDF est illisible : mise à jour refusée.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The new PDF version is unreadable: update refused."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La nouvelle version du PDF est illisible : mise à jour refusée."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新版 PDF 无法读取：已拒绝更新。"
           }
         }
       }
