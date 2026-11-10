@@ -104,7 +104,16 @@ enum ToneCache {
         lock.withLock { images = images.filter { wanted.contains($0.key) } }
     }
 
-    static func clear() { lock.withLock { images = [:] } }
+    /// Vide les images **et** libère le `CGPDFDocument` gardé ouvert (revue DeepSeek #7) : alerte mémoire, fermeture du
+    /// lecteur et décalage de pages ne laissent plus un PDF remplacé ou supprimé retenu en mémoire jusqu'à la
+    /// préparation d'un autre document.
+    /// Ordre des verrous : `documentLock` puis `lock`, comme `prepare` — jamais l'inverse.
+    static func clear() {
+        documentLock.withLock {
+            openDocument = nil
+            lock.withLock { images = [:] }
+        }
+    }
 
     /// Taille d'après les dimensions des images gardées : une estimation, pas une mesure du système.
     static var estimatedBytes: Int { lock.withLock { images.values.reduce(0) { $0 + $1.bytesPerRow * $1.height } } }
