@@ -17,6 +17,24 @@
 >
 > **Dernier instantané vérifié : 27 octobre 2026, après la recette 1.3.2.** `main` à `738dceb7fd09ccfcb1b9feb454c1d695d2658d9d` (fusion de #59), avant la fusion de cette mise à jour (#62). Les PR #8 à #10, #25, #27 à #33 et #56 à #59 sont fusionnées. Le [registre des retours iPad](RETOURS-IPAD.md) contient **RET-001 à RET-042** et fait foi. La build locale **1.3.2 (42)**, non publiée, source `bfd4312` (= `main` `242be8f` + version/build), `.tipa` SHA-256 `8276afe1fe819acdc423a76241016115eaa111987c96f01c565a0385885f8f6e` a été validée par NOxygen59 **avec limites** : RET-010, RET-011 et RET-012 **confirmés iPad** (Issues #13, #14, #15 fermées) ; deux nouveaux retours ouverts, RET-041/[#60](https://github.com/NOxygen59/kyokasho/issues/60) et RET-042/[#61](https://github.com/NOxygen59/kyokasho/issues/61). **Aucune release publiée.** **GitHub Actions reste désactivé** (CI-0). Ne pas considérer cet instantané comme actuel sans interroger GitHub.
 
+## 0. Rôles et méthode au 10/11/2026
+
+**Qui fait quoi.** NOxygen59 décide, tranche et fait les essais sur l'iPad ; il ne code pas. **Claude** planifie,
+code (dont tout le travail sensible, niveau R2), vérifie et reprend le travail des autres agents. **DeepSeek 4.1 Flash**
+et **GLM 5.3 Flash** (via Hermes) analysent, relisent et peuvent coder **seulement** dans une copie de travail dédiée
+(branche `agents/<sujet>`), relue et testée par Claude avant reprise. **Codex** et **Qwen** sont mis de côté jusqu'à
+nouvel ordre ; une revue de niveau R2 faite sans Codex est notée « revue R2 sans Codex ».
+
+**Méthode.** Plan d'attaque approuvé par NOxygen59 avant tout gros chantier ; niveaux de risque R0 à R3 (R0
+documentation et outillage sans effet sur l'app, R1 correctif local et testé, R2 données, concurrence, mémoire,
+C/C++, dépendances et forks, CI, sécurité et suppressions de code, R3 changement de contrat, de données ou
+d'architecture) ; une recette après chaque étape ; avenant écrit si le périmètre change ; deux FAIL structurels
+déclenchent une analyse de dérive écrite avant de continuer.
+
+**Écart à signaler, non résolu ici.** Le lot décrit au § 3 bis est la pointe `76cd371` de la branche locale
+`claude/ipad-tableau-mesures` ; `main` lu sur le Mac de travail est à `48fff3a`. Aucun push ni fusion de ce lot n'est
+constaté par cette note : la pointe locale n'est pas `main`.
+
 ## 1. Utilisation par un nouvel agent (obligatoire)
 
 1. Vérifier sur GitHub la branche `main`, son SHA, les PR, les Issues et leurs contrôles, ainsi que la présence des documents cités. Ne pas déduire l'état actuel de cet instantané.
@@ -75,6 +93,30 @@ Le registre iPad porte le détail par retour. Cette vue indique seulement le niv
 | PORT-01 | Application macOS (.app/.dmg) | **Option de produit, non démarrée** ; packages macOS ≠ app macOS | `Packages/KyokashoKit/Package.swift`, `project.yml` | Décision produit + étude Catalyst/natif séparée, sans altérer la cible iPad |
 
 Les chantiers n'ont **pas** d'avancement en pourcentage : cela produirait une précision trompeuse. L'ordre n'est pas une promesse de calendrier.
+
+## 3 bis. Chantiers en cours au 10/11/2026 (base `76cd371`)
+
+Relevé fait en lisant uniquement les messages de `git log f85d0c0..76cd371` sur la branche locale
+`claude/ipad-tableau-mesures`. Tous ces lots sont **hors `main`, sans fusion ni push constatés, non testés iPad**.
+Les chiffres cités sont ceux qu'annoncent les commits, pas un rejeu de cette note ; les preuves rejouables sont
+décrites aux § 5 et dans [TESTS.md](TESTS.md).
+
+| Chantier | Ce que les commits établissent | Preuve annoncée dans le commit |
+|---|---|---|
+| T1 — Pencil en page seule (`15e3a6d`) | avec la transition « Glissement », le défilement du contrôleur de pages prenait le Pencil pour un doigt ; pendant le dessin, les défilements sous la vue PDF refusent le Pencil, doigt et trackpad tournent toujours la page ; règle `PencilPageTurnGuard` en `ReaderCore` | 3 tests |
+| T2 — chat du livre (`8bae17b`, corrections de la revue D-07 en `1bccd65`) | consigne déplacée dans `ReaderCore/BookChatPrompt` : extraits utilisés s'ils répondent, sinon réponse générale signalée « Explication générale, pas tirée du manuel. » ; « Pages consultées » ne liste que les pages citées | 4 tests `BookChatPromptTests` ; 2 tests ajoutés par la revue D-07 |
+| T3 — navigateur intégré (`9477599`, `28431ac`, `1bccd65`) | la connexion Google s'ouvre dans une vraie fenêtre (WKWebView fille en feuille, fermée par la page) ; liens `target="_blank"` dans la même vue ; recherche Brave dans la barre d'adresse | 3 tests `WebPopupPolicyTests` ; 1 test pour la logique `WebAddress` |
+| C1 — correctifs des audits du 09/11 (`c03494d`, puis `cf5428a`, `619c745`, `d422f07`, `0e6a75a`, `65a3704`) | C1.1 à C1.9 : traduction de définition gardée avec sa source et son avis 👍/👎, `ToneCache.clear()` libère le PDF gardé ouvert, lecture OCR annulée affichée comme repos et plus comme échec, message clair quand les cartes de l'export ont disparu, garde `StyleTokensGuardTests` alignée sur l'annulation | `TranslationFreshness`, `EqualizedBoxes`, `OCRCancellation` ; des gardes de câblage Python pour les correctifs qui touchent l'app (export des cartes, annulation OCR, `ToneCache`, avis de traduction) ; `swift test` complet vu à 627 tests dont 1 échec, celui de la garde, corrigé ensuite |
+| C2 — gardes de suppression et de sauvegarde (`e137502` à `ba261c5`) | lectures IA et analyse arrêtées avant l'effacement d'un document, nouvelles tâches IA refusées pendant l'effacement, écritures du panneau OCR avec la génération attendue, refus de correction OCR publié au lieu d'être perdu, garde réciproque sauvegarde / remplacement Drive, journal altéré refusé sans plantage | tests Python de câblage par point ; `swift test` complet à 628 exécutés, 10 ignorés, 0 échec et `xcodebuild` sans occurrence de « error: » annoncés en `e5cd68f` |
+| C3 — panneau et export (`c03494d`, `8365b78`) | C3.1 : la traduction suit le texte de la page, une réponse tardive ne s'affiche pas pour un nouveau texte ; C3.2 : « Cartes de la page » part du texte affiché | test de câblage `tests/test_study_panel_translation.py` (3 cas) |
+| T6 — conversion chinoise des lectures (`c4bb22d`) | relevé sur le manuel complet : 68 caractères non japonais restants, 62 paires ajoutées à la table `JapaneseOCRText`, 6 cas écartés faute de cible sûre | un test par paire, texte japonais correct inchangé, boîtes des lignes conservées |
+| Lexique E1 — lecture paginée (`c39baa8`) | `DictionaryDatabase.lexiconPage` : pages triées (lecture, forme, entrée), aucune coupure au milieu d'un mot, une ligne par mot, sens absent = `nil`, index imposé `term_reading` / `term_expression` | 8 tests (10 000 entrées sans doublon ni trou, mot à cheval, homographes…) |
+| Lexique — termes relevés dans le manuel (`bfb3b79`) | l'outil accepte un `.jsonl` hors dépôt (`--extra`) et ajoute ces termes avec l'étiquette « man », la page et la confiance, en français comme en anglais | 3836 → 4866 entrées, 1030 termes ajoutés par langue ; 107 tests Python réussis |
+| T5 E1 — dossiers de l'accueil (`76cd371`) | migration additive `v6-folders` (table `folder`, colonne `document.folderId`, clé étrangère `ON DELETE SET NULL`), API `AppDatabase+Folders` (créer, renommer, supprimer, ranger), appartenance hors de `LibraryDocument`, `folderId` ni exporté ni accepté dans un paquet `.kyokasho` | 7 tests (migration d'une base d'avant v6, cycle complet, espace, invariant d'enregistrement, ordre, paquets, publication) |
+
+**Ce qui manque pour clore ces lots** : la recette iPad de NOxygen59 (aucun essai constaté ici), la revue de Claude
+pour ce qui est de niveau R2, et la mise à jour de ce tableau au moment d'une fusion.
+
 
 ## 4. Dépendances et ordre suggéré
 
@@ -140,6 +182,17 @@ Une anomalie critique démontrée peut modifier cet ordre, avec justification en
 **Résolution des contradictions** : rapporter les deux sources et leur date, vérifier le code/les runs et demander une décision si nécessaire. Ne pas effacer l'historique ni mettre à jour silencieusement les anciennes notes.
 
 ## 8. Point de reprise pour le prochain chat
+
+**État au 10/11/2026 (relevé de cette note, sur le Mac de travail) :**
+
+- Copie de travail sur la branche `agents/docs-verif`, pointe `76cd371`. Le lot T1-T3 / C1-C3 / T6 / Lexique E1 /
+  T5 E1 est décrit au § 3 bis : hors `main`, sans fusion ni push constatés, **non testé iPad**. `main` lu localement
+  est à `48fff3a` (fusion locale de la PR #88) : les deux têtes divergent, ce n'est pas une fusion.
+- Preuve rejouable en une commande : `./scripts/verifier_tout.sh` (tests Swift, tests Python, compilation iOS
+  générique, contrôle documentaire ; résumé daté dans `build/verif/RESUME-<date>.md`, sort en erreur si une étape
+  échoue). GitHub Actions reste désactivé (CI-0).
+- Rôles et méthode : § 0.
+- Encore ouvert : recette iPad des lots du § 3 bis, revue de niveau R2, et la décision de NOxygen59 sur une fusion.
 
 **État de référence du 27/10/2026, après la recette 1.3.2 et le lot RET-043 à RET-047 :**
 

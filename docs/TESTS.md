@@ -87,6 +87,33 @@ Selon le lot, on ajoute :
 
 Relever le code de sortie de chaque commande. Avec `tee`, `set -o pipefail` le conserve. Résumer ensuite le tout dans la **fiche de preuve locale** de [CI-ROADMAP.md](CI-ROADMAP.md), en commentaire de la PR. Les journaux restent dans `~/kyokasho-journaux/`, hors du dépôt, et ne sont jamais publiés en entier.
 
+### Vérification complète en une commande
+
+`scripts/verifier_tout.sh` rejoue les contrôles locaux dans l'ordre, depuis la racine du dépôt, et laisse une trace
+datée : génération du projet Xcode (`xcodegen generate -q`, seulement si l'outil est présent), `swift test` du paquet
+`KyokashoKit`, `python3 -m unittest discover -s tests`, compilation iOS générique sur le simulateur
+(`xcodebuild … -derivedDataPath build/verif build CODE_SIGNING_ALLOWED=NO -quiet`) et
+`python3 scripts/check_documentation.py`.
+
+```sh
+./scripts/verifier_tout.sh; echo "code de sortie : $?"
+```
+
+- Résumé : `build/verif/RESUME-<date>.md` — SHA court et long, branche, nombre de fichiers modifiés au lancement,
+  versions de macOS, Xcode et Swift, durée, puis une ligne par étape : tests Swift exécutés / ignorés / en échec,
+  nombre de tests Python et leur verdict, résultat de la compilation avec le nombre de lignes `error:` du journal,
+  liens documentaires examinés et erreurs éventuelles.
+- Journaux complets : `build/verif/journaux/` (`xcodegen.log`, `swift.log`, `python.log`, `ios.log`,
+  `documentation.log`, plus `swift-totaux.txt`).
+- Le script exécute **toutes** les étapes même si l'une échoue, pour que le résumé dise ce qui a réellement tourné, et
+  sort en erreur (code 1) dès qu'une étape a échoué. Un résumé « toutes les étapes ont réussi » n'est donc pas une
+  preuve partielle.
+- Limites : aucun réseau ; GitHub Actions reste désactivé (CI-0, « Zéro dépense ») ; rien n'est supprimé hors de
+  `build/verif` (les journaux du lancement précédent sont réécrits, comme le résumé du jour) ; un `xcodegen` absent est
+  noté « non exécuté » sans faire échouer le script ; le résultat ne remplace **ni** la compilation iOS d'un lot
+  précis **ni** la recette iPad de NOxygen59, et ne couvre ni ASan/LSan, ni MLX/Metal sur l'appareil, ni les essais
+  MLX/ONNX avec poids.
+
 ## Couverture à ajouter par risque
 
 1. **Préservation des données** : les PR #2/#3 couvrent plusieurs injections de panne, reprises répétées et la restauration synthétique ; le cadrage [#73](https://github.com/NOxygen59/kyokasho/issues/73) ajoute la sécurité du journal et la double interruption (section « PageShift — sécurité et reprise » ci-dessous). Restent à qualifier les parcours UIKit, l’espace réellement disponible, les copies volumineuses et le conteneur TrollStore ; ne pas présenter les tests Mac comme une validation iPad. Voir les limites de [PageShift](PHASE2-STOCKAGE.md) et de [sauvegarde](PHASE2-SAUVEGARDE.md).
