@@ -52,12 +52,12 @@ class DeletionConcurrencyGuardsTests(unittest.TestCase):
         self.assertLess(run.index("deletingDocumentIds"), run.index("let job = Job("))
         source = (ROOT / "App/AppModel.swift").read_text(encoding="utf-8")
         body = body_of(source, "func delete(_ document: LibraryDocument)", "func closeTab(")
-        begin = body.index("AITaskCenter.shared.beginDeletion(document.id)")
+        begin = body.index("AITaskCenter.shared.beginDeletion(documentId: document.id)")
         self.assertLess(begin, body.index("deletingIds.insert(document.id)"), "refus posé avant le retrait de la liste")
-        end = body.index("AITaskCenter.shared.endDeletion(document.id)")
+        end = body.index("AITaskCenter.shared.endDeletion(documentId: document.id)")
         self.assertLess(begin, end, "posé avant tout retrait")
         self.assertEqual(
-            len([line for line in body.splitlines() if "AITaskCenter.shared.endDeletion(document.id)" in line]),
+            len([line for line in body.splitlines() if "AITaskCenter.shared.endDeletion(documentId: document.id)" in line]),
             2, "libéré dans les deux branches (effacement réussi ou échec)")
 
     def test_deletion_stops_document_analysis_before_erase_and_after_forget(self):
@@ -68,7 +68,7 @@ class DeletionConcurrencyGuardsTests(unittest.TestCase):
         body = body_of(source, "func delete(_ document: LibraryDocument)", "func closeTab(")
         self.assertLess(body.index("DocumentAnalysisService.shared.cancel(documentId:"),
                         body.index("ioQueue.async"), "arrêt demandé avant l'effacement des fichiers")
-        cancel = body.index("await DocumentAnalysisService.shared.cancelAndFinish(document.id)")
+        cancel = body.index("await DocumentAnalysisService.shared.cancelAndFinish(documentId: document.id)")
         forget = body.index("DocumentAnalysisService.shared.forget(document.id)")
         self.assertLess(cancel, forget, "forget seulement après la fin de la tâche arrêtée")
         service = (ROOT / "App/Library/DocumentAnalysisService.swift").read_text(encoding="utf-8")
