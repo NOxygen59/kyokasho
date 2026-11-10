@@ -283,6 +283,20 @@ final class DocumentAnalysisService: ObservableObject {
         }
     }
 
+    /// Suppression d'un document (revue R2, P2 n°3) : arrête la tâche (analyse ou traduction) **si elle porte
+    /// sur lui**, sans rien faire pour les autres documents. Appelé avant l'effacement de ses fichiers.
+    func cancel(documentId: String) {
+        guard progress?.documentId == documentId else { return }
+        cancel()
+    }
+
+    /// Même arrêt, puis attente de la fin de la tâche : l'appelant peut ensuite `forget` sans qu'une dernière
+    /// écriture (une lecture qui se termine entre-temps) recrée `Analysis/<id>.json` ni `Analysis/<id>/`.
+    func cancelAndFinish(documentId: String) async {
+        cancel(documentId: documentId)
+        await task?.value
+    }
+
     private func step(done: Int) { progress?.done = done }
 
     private func phase(_ name: String, total: Int) {

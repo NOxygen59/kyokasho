@@ -39,6 +39,21 @@ class DeletionConcurrencyGuardsTests(unittest.TestCase):
         cancel = body.index("AITaskCenter.shared.cancel(documentId:")
         self.assertLess(cancel, body.index("documents.removeAll"))
 
+    def test_deletion_stops_document_analysis_before_erase_and_after_forget(self):
+        # P2 n°3 (revue R2) : l'analyse du document entier (ou la traduction, même tâche) est arrêtée
+        # avant l'effacement ; le `forget` attend la fin de la tâche, sinon une dernière lecture
+        # recrée Analysis/<id>.json ou Analysis/<id>/ après leur suppression.
+        source = (ROOT / "App/AppModel.swift").read_text(encoding="utf-8")
+        body = body_of(source, "func delete(_ document: LibraryDocument)", "func closeTab(")
+        self.assertLess(body.index("DocumentAnalysisService.shared.cancel(documentId:"),
+                        body.index("ioQueue.async"), "arrêt demandé avant l'effacement des fichiers")
+        cancel = body.index("await DocumentAnalysisService.shared.cancelAndFinish(document.id)")
+        forget = body.index("DocumentAnalysisService.shared.forget(document.id)")
+        self.assertLess(cancel, forget, "forget seulement après la fin de la tâche arrêtée")
+        service = (ROOT / "App/Library/DocumentAnalysisService.swift").read_text(encoding="utf-8")
+        for marker in ["func cancel(documentId: String)", "func cancelAndFinish(documentId: String)"]:
+            self.assertIn(marker, service, marker)
+
 
 if __name__ == "__main__":
     unittest.main()
