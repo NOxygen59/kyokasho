@@ -705,21 +705,12 @@ enum PageShift {
 
     /// Conflits « cible déjà présente » (revue R2 P2 n°4, F4) : un fichier d'arrivée déjà présent
     /// n'est **jamais** écrasé, et la donnée de l'ancienne version est mise de côté dans
-    /// ``conflictsBase(for:)``, où elle reste récupérable (aucune donnée inatteignable). Le
-    /// compteur par document est affiché dans le rapport de fin vu par l'utilisateur
-    /// (`checkDriveUpdates`) et consommé une seule fois par ``consumeReplacementConflicts(for:)``.
-    static var lastReplacementConflicts: [String: Int] = [:]
-    @MainActor static func consumeReplacementConflicts(for documentId: String) -> Int {
-        let count = lastReplacementConflicts[documentId] ?? 0
-        lastReplacementConflicts[documentId] = nil
-        return count
-    }
-    /// Corrections manuelles mises de côté pour un document remplacé (décision DEC-C3) : lues
-    /// dans le dossier de secours (compteur sur le disque, gardé au-delà d'un arrêt), et retirées
-    /// une fois rapportées, comme les conflits ; les fichiers de correction restent disponibles
-    /// pour la remise (`OCRService.store`).
-    static func consumeReplacementCorrections(for documentId: String) -> Int {
-        CorrectionAsideStore.shared.consumeTally(documentId: documentId).corrections
+    /// ``conflictsBase(for:)``, où elle reste récupérable (aucune donnée inatteignable). Le compte
+    /// vit sur le disque (`cote.json`, N8 de la contre-revue) : une bascule finie par une reprise
+    /// au lancement reste rapportable après l'arrêt de l'app, là où la mémoire seule l'aurait
+    /// perdu au redémarrage. Consommé une fois par ``consumeReplacementAsides``.
+    private static func noteConflict(_ documentId: String) {
+        CorrectionAsideStore.shared.registerConflict(documentId: documentId)
     }
     /// Dossier de secours des conflits, par ancien identifiant et par type de donnée
     /// (`Brouillons`, `Lectures-IA`, `Rapport`, `PDF`) : toujours sous le support de l'app,
@@ -728,8 +719,17 @@ enum PageShift {
         support.appendingPathComponent("Conflits-remplacement", isDirectory: true)
             .appendingPathComponent(documentId, isDirectory: true)
     }
-    private static func noteConflict(_ documentId: String) {
-        lastReplacementConflicts[documentId, default: 0] += 1
+    /// Lit et retire le compte pas encore rapporté d'un document : conflits « cible déjà
+    /// présente » et corrections manuelles mises de côté (DEC-C3), tous deux tenus dans
+    /// `cote.json` sur le disque (N8). Les fichiers de données restent en place : récupérables
+    /// par NOxygen59, jamais effacés automatiquement.
+    static func consumeReplacementAsides(for documentId: String) -> (conflicts: Int, corrections: Int) {
+        let tally = CorrectionAsideStore.shared.consumeTally(documentId: documentId)
+        return (tally.conflicts, tally.corrections)
+    }
+    /// Le nombre de conflits seul (affiché dans le rapport « Vérifier les mises à jour »).
+    static func consumeReplacementConflicts(for documentId: String) -> Int {
+        consumeReplacementAsides(for: documentId).conflicts
     }
 
     // MARK: - Corrections de l'ancienne version mises de côté (décision DEC-C3)
@@ -833,8 +833,10 @@ enum PageShift {
               p.newCount > 0, p.newSize > 0 else {
             throw fail(String(localized: "Journal de remplacement incomplet : reprise arrêtée sans effacer les données."))
         }
-        // Le compteur de conflits (P2 n°4) est réinitialisé à chaque bascule du document.
-        lastReplacementConflicts[p.documentId] = nil
+        // N8 : le compteur des mises de côté vit sur le disque (cote.json) ; il n'y a rien à
+        // réinitialiser ici — il n'est consommé que par le rapport (consumeReplacementAsides),
+        // et une reprise rejouée ne double-compte pas (les déplacements refusés sont rejouables,
+        // pas les comptes).
         guard model.persistentStorageAvailable, model.review.persistentStorageAvailable else {
             throw fail(String(localized: "Bases persistantes indisponibles : journal conservé pour la reprise."))
         }

@@ -617,4 +617,40 @@ extension PageShiftRecoveryTests {
                            "lecture de secours cohérente pour un fichier lisible")
         }
     }
+
+    /// N8 (revue R2) : le compte des mises de côté vit sur le disque (`cote.json`) — une bascule
+    /// finie par une reprise au lancement reste rapportable même après l'arrêt de l'app, là où la
+    /// mémoire seule l'aurait perdu au redémarrage. Consommé une seule fois.
+    func testKeptAsideCountSurvivesAnAppRestart() async throws {
+        try await withFixture { model, doc, root in
+            let card = try seed(model, doc)
+            let (plan, newPDF) = try replacementPlan(root, pages: 3)
+            let modesDone = trackModeKeys(doc.id, plan.newDocumentId)
+            defer { modesDone() }
+            ReaderToolModeStore().update(documentId: doc.id) { $0.drawing = true; $0.panelMode = "floating" }
+            // L'identifiant d'arrivée a déjà son fichier de brouillons : la bascule met celui de
+            // l'ancienne version de côté (un conflit compté pendant l'opération interrompue).
+            try NoteDraftStore.shared.write([4: "ancienne donnée"], documentId: plan.newDocumentId)
+            let importer = DocumentImporter(storage: model.storage, database: model.database)
+            PageShift.checkpoint = { if $0 == "cards.after" { throw PowerLoss.simulated } }
+            await assertThrowsAsync({
+                try await PageShift.withDriveReplacement(model, documentId: doc.id, replacement: plan) {
+                    try importer.replace(documentId: doc.id, withFileAt: newPDF,
+                                         driveRevision: "rév. 2", replacingInto: plan.newDocumentId,
+                                         asideCorrections: PageShift.asideCorrections,
+                                         asideInk: PageShift.asideInkDrawing)
+                }
+            })
+            PageShift.checkpoint = nil
+            // Ici l'app s'est arrêtée (simulé) : le compte est déjà sur le disque.
+            // Une reprise au lancement — une autre « session » — le retrouve et le rapporte.
+            let restarted = try AppModel(root: root)
+            PageShift.reconcile(restarted)
+            XCTAssertNil(restarted.storageRecoveryError)
+            XCTAssertEqual(PageShift.consumeReplacementAsides(for: doc.id).conflicts, 1,
+                           "le compte des mises de côté survit à l'arrêt de l'app")
+            XCTAssertEqual(PageShift.consumeReplacementConflicts(for: doc.id), 0,
+                           "le compte est consommé une seule fois")
+        }
+    }
 }
