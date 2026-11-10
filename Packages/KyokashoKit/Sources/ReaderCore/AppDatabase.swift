@@ -272,14 +272,40 @@ extension AppDatabase {
             if oldId != newDocument.id {
                 if try LibraryDocument.exists(db, key: newDocument.id) {
                     // La nouvelle version existe déjà : on y rattache les annotations de l'ancienne.
-                    for table in ["pageTransform", "highlight", "inkDrawing", "bookmark", "pageComment"] {
+                    //
+                    // P3 n°9 (revue R2) — rotation et coupure **manuelles** : une page n'attend
+                    // qu'un réglage, les deux versions font donc concurrence ; le choix est fait
+                    // et documenté : le réglage du livre **remplacé** gagne, parce que c'est la
+                    // fiche que l'utilisateur entretient et met à jour (le survivant n'est qu'un
+                    // doublon du même fichier, reconnu à sa même empreinte). La ligne du
+                    // survivant est retirée d'abord, celle du document remplacé la reprend ;
+                    // les autres tables gardent `UPDATE OR IGNORE` : plusieurs annotations
+                    // par page peuvent coexister.
+                    try db.execute(sql: "DELETE FROM pageTransform WHERE documentId = ? AND pageIndex IN (SELECT pageIndex FROM pageTransform WHERE documentId = ?)",
+                                   arguments: [newDocument.id, oldId])
+                    try db.execute(sql: "UPDATE pageTransform SET documentId = ? WHERE documentId = ?",
+                                   arguments: [newDocument.id, oldId])
+                    for table in ["highlight", "inkDrawing", "bookmark", "pageComment"] {
                         try db.execute(sql: "UPDATE OR IGNORE \(table) SET documentId = ? WHERE documentId = ?",
                                        arguments: [newDocument.id, oldId])
                     }
                     // Archives des pages retirées (#49) : gardées avec le document qui reste, jamais effacées en passant.
                     try db.execute(sql: "UPDATE pageEdit SET documentId = ? WHERE documentId = ?", arguments: [newDocument.id, oldId])
                     _ = try LibraryDocument.deleteOne(db, key: oldId)
-                    try newDocument.update(db)
+                    // P3 n°9 (revue R2) : le survivant garde son titre, ses réglages, sa catégorie
+                    // et sa position de lecture — la fiche qui reste décrit déjà le **fichier qui
+                    // reste** (le PDF de l'arrivée est le même fichier que le survivant, reconnu à
+                    // son empreinte) ; la fusion d'annotations d'un doublon ne justifie pas de
+                    // l'écraser par la fiche remplacée. Seules les mesures du fichier réel et la
+                    // révision Drive de l'opération suivent (la révision n'écrase jamais une
+                    // valeur absente : aucune opération Drive dans ce cas).
+                    if newDocument.driveRevision == nil {
+                        try db.execute(sql: "UPDATE document SET pageCount = ?, fileSize = ? WHERE id = ?",
+                                       arguments: [newDocument.pageCount, newDocument.fileSize, newDocument.id])
+                    } else {
+                        try db.execute(sql: "UPDATE document SET pageCount = ?, fileSize = ?, driveRevision = ? WHERE id = ?",
+                                       arguments: [newDocument.pageCount, newDocument.fileSize, newDocument.driveRevision, newDocument.id])
+                    }
                 } else {
                     try db.execute(sql: "UPDATE document SET id = ? WHERE id = ?", arguments: [newDocument.id, oldId])
                     try newDocument.update(db)
