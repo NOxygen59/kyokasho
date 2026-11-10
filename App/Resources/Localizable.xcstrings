@@ -8845,6 +8845,72 @@
         }
       }
     },
+    "Donne un nom au dossier." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Give the folder a name."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Donne un nom au dossier."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请为文件夹命名。"
+          }
+        }
+      }
+    },
+    "Ce dossier n'existe plus." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This folder no longer exists."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ce dossier n'existe plus."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此文件夹已不存在。"
+          }
+        }
+      }
+    },
+    "Ce dossier appartient à l'autre espace de l'accueil." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This folder belongs to the other home space."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ce dossier appartient à l'autre espace de l'accueil."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此文件夹属于主页的另一个空间。"
+          }
+        }
+      }
+    },
     "Ce document est déjà dans ta bibliothèque. Sa version actuelle (notes, OCR, lectures IA…) sera d'abord enregistrée dans Fichiers → Kyōkasho → Paquets de sécurité, puis remplacée par celle du paquet.": {
       "localizations": {
         "en": {

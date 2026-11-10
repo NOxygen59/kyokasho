@@ -187,7 +187,10 @@ extension AppDatabase {
             for table in DocumentPackage.tables {
                 let key = table == "document" ? "id" : "documentId"
                 out[table] = try Row.fetchAll(db, sql: "SELECT * FROM \(table) WHERE \(key) = ?", arguments: [documentId]).map { row in
-                    Dictionary(uniqueKeysWithValues: row.columnNames.map { ($0, ArchivedValue(row[$0] as DatabaseValue)) })
+                    // Le dossier de l'accueil reste sur l'appareil (DEC-T5-06) : `folder` n'est pas exporté, et un
+                    // `folderId` inconnu ferait refuser le paquet à l'installation (clé étrangère).
+                    Dictionary(uniqueKeysWithValues: row.columnNames.filter { !(table == "document" && $0 == "folderId") }
+                        .map { ($0, ArchivedValue(row[$0] as DatabaseValue)) })
                 }
             }
             guard out["document"]?.count == 1 else { throw DocumentPackage.PackageError(String(localized: "Document introuvable.", bundle: .main)) }
@@ -203,14 +206,19 @@ extension AppDatabase {
             guard Set(rows.keys).isSubset(of: DocumentPackage.tables), rows["document"]?.count == 1 else {
                 throw DocumentPackage.PackageError(String(localized: "Données du paquet invalides.", bundle: .main))
             }
+            // Remplacement : le document garde son dossier de cet appareil (DEC-T5-06).
+            var keptFolder: String?
             if try LibraryDocument.exists(db, key: documentId) {
                 guard replacing else { throw DocumentPackage.PackageError(String(localized: "Ce document est déjà dans la bibliothèque.", bundle: .main)) }
+                keptFolder = try String.fetchOne(db, sql: "SELECT folderId FROM document WHERE id = ?", arguments: [documentId])
                 _ = try LibraryDocument.deleteOne(db, key: documentId) // Cascade : annotations, OCR, identités, opérations.
             }
             for table in DocumentPackage.tables {
                 let known = Set(try Row.fetchAll(db, sql: "PRAGMA table_info(\(table))").map { $0["name"] as String })
                 let key = table == "document" ? "id" : "documentId"
-                for values in rows[table] ?? [] {
+                for var values in rows[table] ?? [] {
+                    // Paquet d'une autre version qui aurait exporté le dossier : ignoré, jamais une clé étrangère cassée.
+                    if table == "document" { values["folderId"] = nil }
                     guard values[key] == .text(documentId) else {
                         throw DocumentPackage.PackageError(String(localized: "Le paquet contient des données d'un autre document.", bundle: .main))
                     }
@@ -221,6 +229,10 @@ extension AppDatabase {
                     try db.execute(sql: "INSERT INTO \(table) (\(names.joined(separator: ", "))) VALUES (\(names.map { _ in "?" }.joined(separator: ", ")))",
                                    arguments: StatementArguments(names.map { values[$0]!.databaseValue }))
                 }
+            }
+            if let keptFolder {
+                try db.execute(sql: "UPDATE document SET folderId = ? WHERE id = ? AND EXISTS (SELECT 1 FROM folder WHERE id = ?)",
+                               arguments: [keptFolder, documentId, keptFolder])
             }
         }
     }

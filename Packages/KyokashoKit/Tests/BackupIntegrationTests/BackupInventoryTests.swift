@@ -182,7 +182,7 @@ extension BackupRoundTripTests {
     }
 
     /// C1 — base `AppDatabase` au schéma `v3-page-one` (avant `v4-note-canvas-anchor`), sauvegardée et restaurée :
-    /// l'app actuelle l'ouvre, applique `v4` et `v5` et relit notes, repères et OCR, puis écrit une note ancrée.
+    /// l'app actuelle l'ouvre, applique `v4`, `v5` et `v6` (dossiers) et relit notes, repères et OCR, puis écrit une note ancrée.
     func testC1OlderAppDatabaseSchemaRestoresAndMigrates() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("kyokasho-old-schema-test-" + UUID().uuidString)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
@@ -201,6 +201,8 @@ extension BackupRoundTripTests {
         try database.writer.close()
         // Revenir au schéma v3 : colonnes de v4 et v5 retirées et migrations oubliées, comme une base jamais migrée.
         try sqlite(path, """
+            DROP INDEX document_folder; ALTER TABLE document DROP COLUMN folderId; DROP TABLE folder;
+            DELETE FROM grdb_migrations WHERE identifier = 'v6-folders';
             ALTER TABLE document DROP COLUMN category;
             DELETE FROM grdb_migrations WHERE identifier = 'v5-document-category';
             DROP TABLE pageEditRow; DROP TABLE pageEdit; DROP TABLE pageIdentity;

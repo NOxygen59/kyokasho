@@ -188,6 +188,21 @@ public final class AppDatabase: @unchecked Sendable {
             }
             try db.create(index: "pageEditRow_edit", on: "pageEditRow", columns: ["editId"])
         }
+        // Dossiers de l'accueil (PLAN-T5-001, E1) : migration additive, les documents existants restent hors dossier.
+        // L'appartenance est une colonne de `document` **absente** de `LibraryDocument` : un enregistrement du
+        // document (renommage, réglages, remplacement Drive) ne peut donc jamais l'effacer. Voir AppDatabase+Folders.
+        m.registerMigration("v6-folders") { db in
+            try db.create(table: "folder") { t in
+                t.primaryKey("id", .text)
+                t.column("name", .text).notNull()
+                t.column("space", .text).notNull()
+                t.column("createdAt", .datetime).notNull()
+            }
+            try db.alter(table: "document") { t in
+                t.add(column: "folderId", .text).references("folder", onDelete: .setNull)
+            }
+            try db.create(index: "document_folder", on: "document", columns: ["folderId"])
+        }
         return m
     }
 }
