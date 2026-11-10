@@ -453,4 +453,45 @@ extension PageShiftRecoveryTests {
             XCTAssertFalse(journalExists(root))
         }
     }
+
+    /// N1 (revue R2) — bascule directe : la lecture IA du nouveau PDF est relancée **après** la
+    /// levée de la réservation du nouvel identifiant. Dans la version P2 n°2, l'appel se trouvait
+    /// avant la levée (`completeReplacement` finit par retirer le journal, dernier gardien) : la
+    /// relance était refusée à chaque fois, et en reprise au lancement rien ne la relançait.
+    func testDirectReplacementRestartsTheAIScanAfterTheReservationIsLifted() async throws {
+        try await withFixture { model, doc, root in
+            _ = try seed(model, doc)
+            let (plan, newPDF) = try replacementPlan(root, pages: 3)
+            let importer = DocumentImporter(storage: model.storage, database: model.database)
+            DocumentScan.started = []
+            DocumentScan.startedWhileReserved = []
+            try await PageShift.withDriveReplacement(model, documentId: doc.id, replacement: plan) {
+                try importer.replace(documentId: doc.id, withFileAt: newPDF,
+                                     driveRevision: "rév. 2", replacingInto: plan.newDocumentId)
+            }
+            XCTAssertEqual(DocumentScan.started, [model.storage.url(for: plan.newDocumentId).path],
+                           "une seule relance, pour le nouveau document")
+            XCTAssertEqual(DocumentScan.startedWhileReserved, [false],
+                           "la relance n'est plus faite sous la réservation")
+        }
+    }
+
+    /// N1 (revue R2) — reprise au lancement : la lecture IA du nouveau PDF part après la levée
+    /// de la réservation, donc n'est plus refusée par le gardien des tâches IA.
+    func testRecoveredReplacementRestartsTheAIScanAfterTheReservationIsLifted() async throws {
+        try await withFixture { model, doc, root in
+            _ = try seed(model, doc)
+            let (plan, _) = try replacementPlan(root, pages: 3)
+            try writeReplacementJournal(root, oldId: doc.id, oldCount: doc.pageCount, oldSize: doc.fileSize, plan: plan)
+            let restarted = try AppModel(root: root)
+            DocumentScan.started = []
+            DocumentScan.startedWhileReserved = []
+            PageShift.reconcile(restarted)
+            XCTAssertNil(restarted.storageRecoveryError)
+            XCTAssertEqual(DocumentScan.started, [restarted.storage.url(for: plan.newDocumentId).path],
+                           "la reprise relance la lecture IA du document")
+            XCTAssertEqual(DocumentScan.startedWhileReserved, [false],
+                           "la relance n'est plus faite sous la réservation")
+        }
+    }
 }

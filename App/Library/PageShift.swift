@@ -250,10 +250,19 @@ enum PageShift {
             PrintedPageNumbers.set(try model.database.printedNumbers())
             // Quand aucun remplacement n'est journalé, ces étapes-là ne connaissent pas `complete` :
             // la bascule du même fichier n'efface rien (C2.1 ne s'applique que sur changement d'identifiant).
-            if let p = pendingReplacement, ownsReplacementJournal {
+            let pending = pendingReplacement
+            if let p = pending, ownsReplacementJournal {
                 try complete(p, model: model)
+                // N1 (revue R2) : `complete` a retiré le journal à sa dernière étape — la
+                // réservation du nouvel identifiant est donc finie. La lever dès ici : le
+                // `defer` ne la lèverait qu'au retour, trop tard pour le gardien des tâches
+                // IA qui refuse alors la relance de la lecture IA à chaque fois.
+                if let newId = reservedNewId { applyingDocuments.remove(newId) }
             }
             await model.ocr.endPageMutation(documentId: documentId)
+            if let p = pending, ownsReplacementJournal {
+                resumeAIScanAfterReplacement(newId: p.newDocumentId, model: model)
+            }
             return result
         } catch {
             // L'invariant garantit le repli : tant que le document d'origine existe en base, la bascule
@@ -852,15 +861,24 @@ enum PageShift {
         try hit("cards.after")
         // 3. Fichiers nommés par l'identifiant et caches de l'ancien identifiant.
         try installReplacementFiles(from: p.documentId, to: newId, model: model)
-        // P2 n°2 (revue R2) : le choix de langue OCR du livre et la relance de la lecture IA
-        // suivent ici, quelle que soit la voie — bascule directe (cet appel) ou reprise au
-        // lancement (`reconcile`). Sans elles, un cours mixte serait relu par défaut « Japonais ».
+        // P2 n°2 (revue R2) : le choix de langue OCR du livre suit ici, quelle que soit la voie —
+        // bascule directe (cet appel) ou reprise au lancement (`reconcile`). Sans lui, un cours
+        // mixte serait relu par défaut « Japonais ». La relance de la lecture IA (N1) ne se fait
+        // **pas** ici : le journal est encore en place jusqu'à sa dernière étape, la réservation
+        // du nouvel identifiant bloquerait la tâche à chaque fois ; elle est faite par l'appelant
+        // après la levée (`resumeAIScanAfterReplacement`).
         OCRTargetLanguage.remap(from: p.documentId, to: newId)
-        if let updated = try model.database.document(id: newId) {
-            DocumentScan.start(updated, url: model.storage.url(for: newId), ocr: model.ocr)
-        }
         try hit("complete.before")
         try fm.removeItem(at: marker) // Dernière étape : tout est rejouable tant que le journal reste.
+    }
+
+    /// N1 (revue R2) : relance de la lecture IA du nouveau PDF, **après** la levée de la
+    /// réservation du nouvel identifiant (bascule directe comme reprise au lancement). Ne fait
+    /// rien si le document n'est plus en base ; `DocumentScan.start` ignore lui-même une lecture
+    /// déjà lancée, l'option réglée sur non, un modèle absent ou une analyse en cours.
+    @MainActor private static func resumeAIScanAfterReplacement(newId: String?, model: AppModel) {
+        guard let newId, let updated = (try? model.database.document(id: newId)).flatMap({ $0 }) else { return }
+        DocumentScan.start(updated, url: model.storage.url(for: newId), ocr: model.ocr)
     }
 
     /// Fichiers servis par identifiant : brouillons de notes, lectures IA et corrections, rapport
@@ -1119,6 +1137,9 @@ enum PageShift {
             let p = try JSONDecoder().decode(Pending.self, from: Data(contentsOf: marker))
             if p.version == 2 || p.version == 3 || p.kind == "replacement" {
                 try complete(p, model: model)
+                // N1 (revue R2) : la lecture IA du nouveau PDF est relancée après la levée de la
+                // réservation — `complete` vient de retirer le journal, dernier gardien.
+                if p.kind == "replacement" { resumeAIScanAfterReplacement(newId: p.newDocumentId, model: model) }
                 try synchronizeCopyOwners(model.database)
                 purgeExpired(model)
             } else {

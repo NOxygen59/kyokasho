@@ -81,7 +81,15 @@ enum Diagnostics {
 @MainActor enum LibraryBackupService { static var inProgress = false }
 /// P2 n°2 (lot C2) : enregistreur de la relance de la lecture IA (signature exacte de l'app) ;
 /// les URLs reçues se lisent dans `DocumentScan.started` (à vider avant chaque vérification).
+/// N1 (revue R2) : l'état de la réservation (`PageShift.blocksAI`) est relevé **au moment de
+/// l'appel**, comme le fait le gardien `AITaskCenter.run` dans l'app : une relance encore
+/// réservée serait refusée et jamais rejouée.
 @MainActor enum DocumentScan {
     static var started: [String] = []
-    static func start(_ document: LibraryDocument, url: URL, ocr: OCRService) { started.append(url.path) }
+    /// `blocksAI("scan|<identifiant>")` relevé à chaque `start`, dans l'ordre des appels.
+    static var startedWhileReserved: [Bool] = []
+    static func start(_ document: LibraryDocument, url: URL, ocr: OCRService) {
+        started.append(url.path)
+        startedWhileReserved.append(PageShift.blocksAI(jobKey: "scan|\(document.id)"))
+    }
 }
