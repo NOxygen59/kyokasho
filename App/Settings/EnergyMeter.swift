@@ -119,8 +119,8 @@ enum EnergyFile {
             try? fm.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
             if let size = (try? fm.attributesOfItem(atPath: file.path)[.size] as? NSNumber)?.intValue, size > limit,
                let data = try? Data(contentsOf: file) {
-                // Trop gros : on garde la seconde moitié (la ligne coupée est ignorée à la lecture).
-                try? (Data((EnergyLog.header + "\n").utf8) + data.suffix(limit / 2)).write(to: file)
+                // Trop gros : on garde la seconde moitié, à partir du début d'une ligne (`EnergyLog.rotated`).
+                try? EnergyLog.rotated(data, keeping: limit / 2).write(to: file)
             }
             if let handle = try? FileHandle(forWritingTo: file) {
                 handle.seekToEndOfFile()
@@ -133,7 +133,7 @@ enum EnergyFile {
     }
 
     static func samples() -> [EnergySample] {
-        queue.sync { EnergyLog.parse((try? String(contentsOf: url, encoding: .utf8)) ?? "") }
+        queue.sync { EnergyLog.parse((try? Data(contentsOf: url)) ?? Data()) }
     }
 
     static func erase() {
