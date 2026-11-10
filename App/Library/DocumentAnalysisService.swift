@@ -183,6 +183,9 @@ final class DocumentAnalysisService: ObservableObject {
                             let text = try await Diagnostics.measure("\(reader) p. \(p) (≤ \(budget) jetons)", "analyse") {
                                 try await Self.read(reader, url: url, page: p, maxTokens: budget, service: service, documentId: id)
                             }
+                            // BUG-001 : arrêtée, la génération rend le texte déjà produit sans lever d'erreur. Ce
+                            // texte partiel n'est jamais gardé : le fichier ferait passer la page pour lue.
+                            guard !Task.isCancelled else { break }
                             try? DocumentAITextStore.write(text, documentId: id, reader: reader, page: p)
                         } catch {
                             errors[p] = "\(Self.name(reader)) : \(error.localizedDescription)"
@@ -272,6 +275,8 @@ final class DocumentAnalysisService: ObservableObject {
                     let translated = try await Diagnostics.measure("traduction (\(language.rawValue)) p. \(p)", "traduction") {
                         try await Qwen3VLReader().translate(markdown: md, into: language, glossary: glossary)
                     }
+                    // BUG-001 : traduction arrêtée = texte partiel, jamais gardé (la page serait comptée traduite).
+                    guard !Task.isCancelled else { break }
                     try? DocumentAITextStore.write(translated, documentId: id, reader: language.rawValue, page: p)
                 } catch {
                     self?.lastError = String(localized: "Traduction page \(p + 1) : \(error.localizedDescription)")
