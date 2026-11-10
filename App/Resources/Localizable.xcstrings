@@ -22089,6 +22089,28 @@
         }
       }
     },
+    "Journal de remplacement altéré : le fichier du nouveau PDF ne correspond pas à l'empreinte du journal, reprise arrêtée sans effacer les données.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tampered replacement journal: the new PDF file does not match the journal's fingerprint, recovery stopped without deleting any data."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Journal de remplacement altéré : le fichier du nouveau PDF ne correspond pas à l'empreinte du journal, reprise arrêtée sans effacer les données."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "替换日志已被篡改：新 PDF 文件与日志中的指纹不符，恢复已停止，未删除任何数据。"
+          }
+        }
+      }
+    },
     "Journal incomplet : reprise arrêtée sans effacer les données.": {
       "localizations": {
         "en": {
@@ -22107,6 +22129,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "日志不完整：恢复已停止，未清除数据。"
+          }
+        }
+      }
+    },
+    "Journal de remplacement incomplet : reprise arrêtée sans effacer les données.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Incomplete replacement journal: recovery stopped without deleting any data."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Journal de remplacement incomplet : reprise arrêtée sans effacer les données."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "替换日志不完整：恢复已停止，未删除任何数据。"
           }
         }
       }
@@ -51301,6 +51345,72 @@
           "stringUnit": {
             "state": "translated",
             "value": "替换：“%@”已存在，“%@”已移至“Conflits-remplacement”。"
+          }
+        }
+      }
+    },
+    "Remplacement suspendu : relance « Vérifier les mises à jour des cours » à la prochaine ouverture.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Replacement suspended: run « Vérifier les mises à jour des cours » (Check for course updates) again the next time you open the app."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remplacement suspendu : relance « Vérifier les mises à jour des cours » à la prochaine ouverture."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "替换已暂停：下次打开应用时再次运行「检查课程更新」。"
+          }
+        }
+      }
+    },
+    "Remplacement incohérent en base : reprise arrêtée sans effacer les données.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Replacement inconsistent in the database: recovery stopped without deleting any data."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remplacement incohérent en base : reprise arrêtée sans effacer les données."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "数据库中的替换不一致：恢复已停止，未删除任何数据。"
+          }
+        }
+      }
+    },
+    "Même fichier : aucun remplacement à journaler.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Same file: there is no replacement to journal."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Même fichier : aucun remplacement à journaler."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "同一文件：没有需要记录的替换。"
           }
         }
       }
