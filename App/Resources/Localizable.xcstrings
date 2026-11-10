@@ -8845,6 +8845,28 @@
         }
       }
     },
+    "Ce journal a déjà commencé à modifier la bibliothèque : il ne peut pas être mis de côté sans risque. Fais une sauvegarde complète, puis demande une réparation sur une copie." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This journal has already started changing the library: it cannot be set aside safely. Make a full backup, then ask for a repair on a copy."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ce journal a déjà commencé à modifier la bibliothèque : il ne peut pas être mis de côté sans risque. Fais une sauvegarde complète, puis demande une réparation sur une copie."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此日志已开始修改书库，无法安全地搁置。请先完整备份，然后在副本上请求修复。"
+          }
+        }
+      }
+    },
     "Ce document est déjà dans ta bibliothèque. Sa version actuelle (notes, OCR, lectures IA…) sera d'abord enregistrée dans Fichiers → Kyōkasho → Paquets de sécurité, puis remplacée par celle du paquet.": {
       "localizations": {
         "en": {
