@@ -128,7 +128,9 @@ else
   IOS_RESULTAT="échec (voir journaux/ios.log)"
   ajouter_echec "compilation iOS"
 fi
-IOS_ERREURS="$(grep -cE '(^| )error:' "$JOURNAUX/ios.log")"
+# Seules les erreurs de compilation comptent (« fichier.swift:ligne:col: error »). Les lignes « failed with exit code 0
+# but produced no further output » de xcodebuild sont un bruit connu, sans échec (analyse avant candidate 1.5.5).
+IOS_ERREURS="$(grep -cE '\.swift:[0-9]+:[0-9]+: error' "$JOURNAUX/ios.log")"
 
 # 5. Contrôle documentaire --------------------------------------------------
 printf '==> 5/5 Contrôle documentaire (scripts/check_documentation.py)\n'
@@ -172,7 +174,7 @@ précis, ni la validation sur l'iPad par NOxygen59. Aucun réseau, GitHub Action
 | Projet Xcode | $XCODEGEN_RESULTAT | \`xcodegen generate -q\` |
 | Tests Swift | $SWIFT_RESULTAT | $SWIFT_CLARIFIE |
 | Tests Python | $PYTHON_RESULTAT | $PYTHON_TOTAL tests ; $PYTHON_DETAIL |
-| Compilation iOS générique | $IOS_RESULTAT | $IOS_ERREURS ligne(s) \`error:\` dans le journal |
+| Compilation iOS générique (simulateur) | $IOS_RESULTAT | $IOS_ERREURS erreur(s) de compilation Swift |
 | Contrôle documentaire | $DOC_RESULTAT | $DOC_LIENS |
 
 **Verdict : $VERDICT** (code de sortie $CODE).

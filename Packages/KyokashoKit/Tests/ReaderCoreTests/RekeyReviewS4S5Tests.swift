@@ -41,4 +41,16 @@ final class RekeyReviewS4S5Tests: XCTestCase {
         XCTAssertEqual(files.count, 2, "même contenu = même fichier ; contenu différent = autre fichier")
         XCTAssertEqual(store.pendingCorrections(documentId: "nouveau", pageIndex: 2, engine: "vision").count, 2)
     }
+
+    /// Analyse avant candidate 1.5.5 (DeepSeek #1) : en fusion, la version qui reste est le même fichier ; son OCR et
+    /// son rognage automatique restent (rien à relire).
+    func testMergeKeepsTheSurvivorOCR() throws {
+        let database = try AppDatabase.inMemory()
+        try database.save(document("ancien"))
+        try database.save(document("survivant"))
+        try database.save(OCRResultRecord(documentId: "survivant", pageIndex: 0, engine: "vision", json: Data("{}".utf8), durationMs: 1))
+        try database.rekeyDocument(from: "ancien", to: document("survivant"), asideInk: { _, _, _ in })
+        XCTAssertNotNil(try database.ocrResult(documentId: "survivant", pageIndex: 0, engine: "vision"))
+        XCTAssertNil(try database.document(id: "ancien"))
+    }
 }

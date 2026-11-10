@@ -221,24 +221,24 @@
         }
       }
     },
-    "Le journal et le relevé de batterie prennent de la place. « Partager le relevé et le journal » les envoie ensemble, puis « Effacer » les retire.": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The journal and the battery log take up space. “Share the battery log and the journal” sends both, then “Delete” removes them."
+    "Le journal et le relevé de batterie prennent de la place. « Partager le relevé et le journal » les envoie ensemble, puis « Effacer le journal » et « Effacer le relevé » les retirent." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The journal and the battery log take up space. “Share the battery log and the journal” sends both together, then “Clear the log” and “Clear the record” remove them."
           }
         },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Le journal et le relevé de batterie prennent de la place. « Partager le relevé et le journal » les envoie ensemble, puis « Effacer » les retire."
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Le journal et le relevé de batterie prennent de la place. « Partager le relevé et le journal » les envoie ensemble, puis « Effacer le journal » et « Effacer le relevé » les retirent."
           }
         },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "日志和电池记录会占用空间。“分享电池记录和日志”会把两者一起发送，然后用“删除”移除。"
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "日志和电池记录会占用空间。“分享电池记录和日志”会把两者一起发送，然后用“清除日志”和“清除记录”移除。"
           }
         }
       }

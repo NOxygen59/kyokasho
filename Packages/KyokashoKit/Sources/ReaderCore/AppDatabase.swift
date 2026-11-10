@@ -321,8 +321,13 @@ extension AppDatabase {
                 // l'opération : les corrections manuelles seraient perdues sans lui). Jamais
                 // rejoué : la reprise ne repasse par ici qu'après une bascule annulée, où rien
                 // manquait encore (l'ancien document existait toujours).
+                // Analyse avant candidate 1.5.5 (DeepSeek #1) : en fusion, la version qui reste est le
+                // **même fichier** (l'identifiant est l'empreinte) : son OCR reste valable et n'est ni mis
+                // de côté ni effacé ; seules les corrections du livre remplacé sont mises de côté.
+                let merging = try LibraryDocument.exists(db, key: newDocument.id)
                 for record in try OCRResultRecord
-                    .filter(sql: "documentId = ? OR documentId = ?", arguments: [oldId, newDocument.id])
+                    .filter(sql: merging ? "documentId = ?" : "documentId = ? OR documentId = ?",
+                            arguments: merging ? [oldId] : [oldId, newDocument.id])
                     .fetchAll(db) {
                     try asideCorrections?(record.documentId, newDocument.id, record.pageIndex, record.engine, record.json)
                 }
@@ -383,11 +388,13 @@ extension AppDatabase {
                     try db.execute(sql: "UPDATE document SET id = ? WHERE id = ?", arguments: [newDocument.id, oldId])
                     try newDocument.update(db)
                 }
-                // DEC-C1 = A : un remplacement oppose un PDF différent. Même transaction : le cache OCR
-                // (boîtes de caractères et corrections incluses) est effacé et le rognage automatique
-                // repart de zéro. Le rognage manuel (`rotation`, `split`) reste.
-                try db.execute(sql: "DELETE FROM ocrResult WHERE documentId = ?", arguments: [newDocument.id])
-                try db.execute(sql: "UPDATE pageTransform SET autoCrop = NULL WHERE documentId = ?", arguments: [newDocument.id])
+                // DEC-C1 = A : un remplacement par un PDF différent efface, dans la même transaction, le cache
+                // OCR (boîtes de caractères et corrections, mises de côté juste avant) et remet le rognage
+                // automatique à zéro. Le rognage manuel (`rotation`, `split`) reste. Pas en fusion : même fichier.
+                if !merging {
+                    try db.execute(sql: "DELETE FROM ocrResult WHERE documentId = ?", arguments: [newDocument.id])
+                    try db.execute(sql: "UPDATE pageTransform SET autoCrop = NULL WHERE documentId = ?", arguments: [newDocument.id])
+                }
             }
             // #49 (revue Codex F1) : un autre PDF n'a pas les mêmes pages, même s'il en a autant. Les identités sont
             // refaites à la prochaine modification des pages, et la version change sans opération enregistrée : la

@@ -34,7 +34,10 @@ enum StashedCorrections {
             // Une ligne pas encore corrigée du nouveau PDF porte le texte lu : c'est à elle que
             // la correction s'applique (une ligne déjà corrigée concordait, mais son texte est
             // celui de la correction ; le rapprochement ne peut pas la viser deux fois).
-            guard let index = result.lines.firstIndex(where: { $0.originalText == nil && $0.text == candidate.entry.original })
+            // Analyse avant candidate 1.5.5 (DeepSeek #2) : le texte relu est normalisé (table T6), le texte mis
+            // de côté peut ne pas l'être (correction faite avant 1.5.5) : les deux formes sont acceptées.
+            let original = candidate.entry.original, normalizedOriginal = JapaneseOCRText.normalize(original)
+            guard let index = result.lines.firstIndex(where: { $0.originalText == nil && ($0.text == original || $0.text == normalizedOriginal) })
             else { continue }
             result.lines[index] = result.lines[index].acceptingCorrection(candidate.entry.corrected)
             applied += 1
