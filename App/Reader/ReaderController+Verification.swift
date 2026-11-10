@@ -194,7 +194,12 @@ extension ReaderController {
         ocrPage = page
         wordStartMemo.removeAll()
         let source = focusSource, documentId = document.id, service = model.ocr
-        Task { try? await service.store(page, documentId: documentId, pageIndex: source) }
+        // C2.5 : génération relue juste avant l'écriture, comme les autres voies (`acceptSuggestions`, relecture) —
+        // une correction ne doit pas s'installer sur une page déplacée ou relue entre-temps.
+        Task {
+            let generation = await service.generation(documentId: documentId)
+            try? await service.store(page, documentId: documentId, pageIndex: source, expectedGeneration: generation)
+        }
     }
 
     /// Enregistre à côté de la lecture d'OvisOCR2, jamais à sa place, et rafraîchit l'affichage sans relancer le modèle.
@@ -225,7 +230,11 @@ extension ReaderController {
             ocrPage = page
             wordStartMemo.removeAll()
             let documentId = document.id, service = model.ocr
-            Task { try? await service.store(page, documentId: documentId, pageIndex: source) }
+            // C2.5 : même garde de génération que les autres voies (annulation des corrections comprises).
+            Task {
+                let generation = await service.generation(documentId: documentId)
+                try? await service.store(page, documentId: documentId, pageIndex: source, expectedGeneration: generation)
+            }
         }
         DocumentAITextStore.removeCorrection(documentId: document.id, page: source)
         NotificationCenter.default.post(name: .aiPageRead, object: DocumentScan.PageRead(documentId: document.id, page: source))
