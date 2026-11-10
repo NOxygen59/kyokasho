@@ -224,8 +224,11 @@ enum PageShift {
             }
             if let replacement {
                 let journal = try replacementPending(documentId: documentId, replacement: replacement, model: model)
-                try save(journal) // Journal avant toute mutation DAO : c'est la seule écriture encore annulable.
+                // La propriété du journal est posée AVANT l'écriture (P3 n°6, revue R2) : une coupure
+                // pendant `save` — le journal est écrit au point `journal.after` — doit retrouver
+                // dans le catch le droit de le retirer (le document d'origine est encore en base).
                 ownsReplacementJournal = true
+                try save(journal) // Journal avant toute mutation DAO : c'est la seule écriture encore annulable.
             }
             let result = try await operation()
             try synchronizeCopyOwners(model.database)
