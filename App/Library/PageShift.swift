@@ -771,6 +771,13 @@ enum PageShift {
         try hit("cards.after")
         // 3. Fichiers nommés par l'identifiant et caches de l'ancien identifiant.
         try installReplacementFiles(from: p.documentId, to: newId, model: model)
+        // P2 n°2 (revue R2) : le choix de langue OCR du livre et la relance de la lecture IA
+        // suivent ici, quelle que soit la voie — bascule directe (cet appel) ou reprise au
+        // lancement (`reconcile`). Sans elles, un cours mixte serait relu par défaut « Japonais ».
+        OCRTargetLanguage.remap(from: p.documentId, to: newId)
+        if let updated = try model.database.document(id: newId) {
+            DocumentScan.start(updated, url: model.storage.url(for: newId), ocr: model.ocr)
+        }
         try hit("complete.before")
         try fm.removeItem(at: marker) // Dernière étape : tout est rejouable tant que le journal reste.
     }
