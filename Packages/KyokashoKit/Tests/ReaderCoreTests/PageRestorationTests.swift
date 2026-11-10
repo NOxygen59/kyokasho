@@ -152,6 +152,27 @@ final class PageRestorationTests: XCTestCase {
         }
     }
 
+    /// Ordre d'archive altéré (P2 n°2 de la revue R2) : le plan refuse proprement au lieu de désemballer
+    /// un `!` sur une donnée du journal ; la restauration s'arrête sans rien appliquer.
+    func testPlanOfAlteredArchiveOrderFailsCleanlyWithoutEffect() throws {
+        try remove([4, 5], id: "s1")
+        let order = try XCTUnwrap(db.pageEdit(id: "s1")).pageOrder
+        let rows = try db.archivedRows(editId: "s1").count
+        try db.writer.write { db in
+            // Journal altéré sur le disque : la dernière page retirée répète l'identifiant de celle d'avant,
+            // l'une des deux a donc disparu de l'ordre enregistré.
+            try db.execute(sql: "UPDATE pageEdit SET pageOrderJSON = ? WHERE id = ?",
+                           arguments: [try JSONEncoder().encode([order[0], order[1], order[2], order[3], order[4], order[4]]), "s1"])
+        }
+        XCTAssertThrowsError(try db.restorationPlan(documentId: "d", archiveId: "s1")) { error in
+            XCTAssertTrue(error is AppDatabase.PageEditError, "\(error)")
+            XCTAssertTrue(error.localizedDescription.contains("restauration arrêtée"), error.localizedDescription)
+        }
+        XCTAssertEqual(try notes(), ["0:p0", "1:p1", "2:p2", "3:p3"], "rien n'est refait")
+        XCTAssertEqual(try db.pageEdit(id: "s1")?.restoredBy, nil, "l'archive n'est pas marquée restaurée")
+        XCTAssertEqual(try db.archivedRows(editId: "s1").count, rows, "l'archive reste en place")
+    }
+
     func testRestorationRefusedAfterDriveReplacementOrPurge() throws {
         try remove([1], id: "s1")
         var doc = try XCTUnwrap(db.document(id: "d"))

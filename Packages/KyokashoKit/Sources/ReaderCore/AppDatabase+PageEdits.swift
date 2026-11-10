@@ -389,7 +389,10 @@ extension AppDatabase {
         let positions = Dictionary(uniqueKeysWithValues: removed.map { ($0, order.firstIndex(of: $0)!) })
         let cards = try restoredCards(db, archiveId: archiveId, positions: positions)
         return RestorationPlan(archiveId: archiveId, mapping: mapping, positions: positions,
-                               originalIndices: Dictionary(uniqueKeysWithValues: removed.map { ($0, archive.pageOrder.firstIndex(of: $0)!) }),
+                               // Même journal altéré que C2.4 : identifiant absent de l'ordre enregistré ou répété.
+                               // Toute cette information sort du journal : un désemballage forcé ici ferait crasher
+                               // l'app pour des données sur le point d'être restaurées (et bientôt réinsérées).
+                               originalIndices: try archivedPositions(of: removed, in: archive.pageOrder),
                                cards: cards)
     }
 
