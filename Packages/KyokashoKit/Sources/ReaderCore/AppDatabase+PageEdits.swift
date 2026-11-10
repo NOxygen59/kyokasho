@@ -50,7 +50,20 @@ extension AppDatabase {
         /// Archive effacée à l'échéance (30 jours) : plus restaurable.
         public var purgedAt: Date? = nil
         /// Identifiants des pages retirées par cette opération, dans l'ordre.
-        public var removedPageIds: [String] { mapping.removed.map { pageOrder[$0] } }
+        ///
+        /// `mappingJSON` (indices) et `pageOrderJSON` (ordre) sont lus séparément du disque : un journal
+        /// altéré peut garder des indices au-delà de `pageOrder`. L'accès lève alors « Plan de restauration
+        /// altéré » au lieu de planter par indexation hors bornes (contre-revue DeepSeek, P2 n°2) : même
+        /// classe de scénario C2.4 que l'aide `archivedPositions`. L'écran (`RemovePagesView`) dégrade via
+        /// `try?`, la base arrête la reprise ou la restauration sans rien modifier.
+        public func removedPageIds() throws -> [String] {
+            try mapping.removed.map { index -> String in
+                guard pageOrder.indices.contains(index) else {
+                    throw PageEditError(String(localized: "Plan de restauration altéré : reprise arrêtée.", bundle: .main))
+                }
+                return pageOrder[index]
+            }
+        }
     }
 
     /// Où reviennent les pages d'une suppression (S3), selon l'ordre historique de leurs identités. Ce qui a été
@@ -156,17 +169,18 @@ extension AppDatabase {
                           archive.documentId == documentId, archive.restoredBy == editId, archive.kind == .removal,
                           archive.purgedAt == nil else { throw PageEditError(String(localized: "Archive de reprise incohérente.", bundle: .main)) }
                     let identities = try PageIdentity.filter(Column("documentId") == documentId).fetchAll(db)
-                    let removed = Set(archive.removedPageIds)
+                    let removedIds = try archive.removedPageIds()
+                    let removed = Set(removedIds)
                     let positions = Dictionary(uniqueKeysWithValues: identities.filter { removed.contains($0.pageId) }.map { ($0.pageId, $0.position) })
                     let expected = RestorationPlan(archiveId: archive.id, mapping: done.mapping, positions: positions,
-                        originalIndices: try Self.archivedPositions(of: archive.removedPageIds, in: archive.pageOrder),
+                        originalIndices: try Self.archivedPositions(of: removedIds, in: archive.pageOrder),
                         cards: try Self.restoredCards(db, archiveId: archive.id, positions: positions))
                     guard positions.count == removed.count, restoring == expected else {
                         throw PageEditError(String(localized: "Plan de restauration altéré : reprise arrêtée.", bundle: .main))
                     }
                 }
                 if kind == .removal {
-                    let positions = try Self.archivedPositions(of: done.removedPageIds, in: done.pageOrder)
+                    let positions = try Self.archivedPositions(of: try done.removedPageIds(), in: done.pageOrder)
                     guard try detachedCards == Self.restoredCards(db, archiveId: done.id, positions: positions) else {
                         throw PageEditError(String(localized: "Cartes détachées altérées : reprise arrêtée.", bundle: .main))
                     }
@@ -352,7 +366,7 @@ extension AppDatabase {
             throw PageEditError(String(localized: "Le document a été remplacé depuis cette suppression : restauration impossible.", bundle: .main))
         }
         let current = try PageIdentity.filter(Column("documentId") == documentId).order(Column("position")).fetchAll(db).map(\.pageId)
-        let removed = archive.removedPageIds
+        let removed = try archive.removedPageIds()
         guard current.count == row["pageCount"] as Int, Set(current).isDisjoint(with: removed) else {
             throw PageEditError(String(localized: "Identités des pages incohérentes : restauration impossible.", bundle: .main))
         }
