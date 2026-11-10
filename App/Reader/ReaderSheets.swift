@@ -336,13 +336,70 @@ struct WebView: UIViewRepresentable {
     func updateUIView(_ uiView: WKWebView, context: Context) {}
 }
 
-/// Liens « nouvelle fenêtre » (`target="_blank"`, `window.open`) : ouverts dans la même vue.
+/// Fenêtres secondaires du navigateur intégré.
+///
+/// Un lien `target="_blank"` cliqué s'ouvre dans la même vue, comme avant. Une fenêtre ouverte par la page
+/// (`window.open`, par exemple « Continuer avec Google » sur claude.ai) devient une **vraie** vue fille, créée avec la
+/// configuration fournie par WebKit et présentée en feuille au-dessus : c'est ce lien parent → fille (`window.opener`)
+/// qui renvoie le résultat de connexion à la page d'origine. Avant (retour terrain T3 du 10/11/2026), la fenêtre était
+/// chargée à la place de la page, le lien était perdu et la connexion n'aboutissait jamais (enquête GLM
+/// `REVUES/GLM-D03-T3-CONNEXION-f85d0c0.md`). Décision pure : `WebPopupPolicy` (testée).
 final class SameViewOpener: NSObject, WKUIDelegate {
     @MainActor static let shared = SameViewOpener()
+    /// Feuilles ouvertes, par vue fille : gardent la vue en vie jusqu'à sa fermeture.
+    @MainActor private var sheets: [ObjectIdentifier: UIViewController] = [:]
 
+    @MainActor
     func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration,
                  for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
-        if navigationAction.targetFrame == nil { webView.load(navigationAction.request) }
-        return nil
+        guard navigationAction.targetFrame == nil else { return nil }
+        let realWindow = WebPopupPolicy.opensRealWindow(
+            linkActivated: navigationAction.navigationType == .linkActivated,
+            hasSize: windowFeatures.width != nil || windowFeatures.height != nil)
+        guard realWindow, let top = Self.topController() else {
+            webView.load(navigationAction.request)
+            return nil
+        }
+        // La configuration fournie doit être utilisée telle quelle : elle porte le lien avec la page parente.
+        let child = WKWebView(frame: .zero, configuration: configuration)
+        child.customUserAgent = webView.customUserAgent
+        child.uiDelegate = self
+        let holder = UIViewController()
+        holder.view = child
+        holder.navigationItem.title = navigationAction.request.url?.host
+        holder.navigationItem.rightBarButtonItem = UIBarButtonItem(
+            systemItem: .close,
+            primaryAction: UIAction { [weak self, weak child] _ in
+                if let child { self?.close(child) }
+            })
+        let navigation = UINavigationController(rootViewController: holder)
+        navigation.modalPresentationStyle = .formSheet
+        sheets[ObjectIdentifier(child)] = navigation
+        top.present(navigation, animated: true)
+        // WebKit charge lui-même la requête dans la vue renvoyée.
+        return child
+    }
+
+    /// La page a fermé sa fenêtre (`window.close()`, fin normale de la connexion Google).
+    @MainActor
+    func webViewDidClose(_ webView: WKWebView) {
+        close(webView)
+    }
+
+    @MainActor
+    private func close(_ child: WKWebView) {
+        guard let sheet = sheets.removeValue(forKey: ObjectIdentifier(child)) else { return }
+        child.stopLoading()
+        sheet.dismiss(animated: true)
+    }
+
+    /// Contrôleur visible le plus haut (feuilles empilées comprises).
+    @MainActor
+    private static func topController() -> UIViewController? {
+        guard let scene = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene })
+                .first(where: { $0.activationState == .foregroundActive }),
+              var top = scene.windows.first(where: \.isKeyWindow)?.rootViewController else { return nil }
+        while let next = top.presentedViewController, !next.isBeingDismissed { top = next }
+        return top
     }
 }
