@@ -176,5 +176,97 @@ class LexiconTests(unittest.TestCase):
                     self.assertTrue(set(row[2].split() + row[7].split()) <= tags)
 
 
+class ManualTermTests(unittest.TestCase):
+    """Termes relevés dans le manuel : jamais dans le dépôt, donc fabriqués ici avec des exemples inventés."""
+
+    TERMS = [
+        {"terme": "試験吊", "lecture": "しけんづり", "fr": "suspension d'essai", "en": "test pendant",
+         "definition_fr": "Luminaire suspendu de test.", "page": "12", "confiance": "élevée"},
+        {"terme": "試験LED", "lecture": "しけんLED", "fr": "diode de test", "en": "test light-emitting diode",
+         "definition_fr": "Diode de test.", "page": "13", "confiance": "moyenne"},
+    ]
+
+    def write(self, folder, lines):
+        path = Path(folder) / "termes.jsonl"
+        path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        return path
+
+    def test_terms_are_read_with_cleaned_reading_and_page(self):
+        with tempfile.TemporaryDirectory(prefix="kyokasho-manual-") as folder:
+            path = self.write(folder, [json.dumps(item, ensure_ascii=False) for item in self.TERMS])
+            terms = lexicon.read_manual_terms(path)
+        self.assertEqual([term["term"] for term in terms], ["試験吊", "試験LED"])
+        self.assertEqual(terms[1]["reading"], "しけんLED", "une lecture qui contient du kana est gardée")
+        self.assertEqual((terms[0]["page"], terms[0]["confidence"]), ("12", "élevée"))
+
+    def test_reading_without_kana_is_dropped(self):
+        self.assertEqual(lexicon.manual_reading("?"), "")
+        self.assertEqual(lexicon.manual_reading("TEST-LED"), "")
+        self.assertEqual(lexicon.manual_reading(" しけん "), "しけん")
+
+    def test_incomplete_or_duplicated_lines_stop_the_build(self):
+        incomplete = dict(self.TERMS[0], definition_fr="")
+        with tempfile.TemporaryDirectory(prefix="kyokasho-manual-") as folder:
+            path = self.write(folder, [json.dumps(incomplete, ensure_ascii=False)])
+            with self.assertRaises(ValueError):
+                lexicon.read_manual_terms(path)
+            path = self.write(folder, [json.dumps(item, ensure_ascii=False) for item in self.TERMS * 2])
+            with self.assertRaises(ValueError):
+                lexicon.read_manual_terms(path)
+
+    def test_manual_rows_carry_their_own_tag_page_and_warning(self):
+        with tempfile.TemporaryDirectory(prefix="kyokasho-manual-") as folder:
+            path = self.write(folder, [json.dumps(item, ensure_ascii=False) for item in self.TERMS])
+            rows = lexicon.manual_rows(lexicon.read_manual_terms(path))
+        self.assertEqual([row[2] for row in rows], [lexicon.MANUAL_TAG, lexicon.MANUAL_TAG])
+        self.assertEqual(rows[0][5][0], "Français : suspension d'essai")
+        self.assertEqual(rows[0][5][1], "Luminaire suspendu de test.")
+        self.assertIn("page 12", rows[0][5][2])
+        self.assertIn("à vérifier", rows[0][5][2])
+        self.assertEqual(rows[0][4], 1, "relevé non vérifié : score bas, après les sources")
+
+    def test_english_manual_rows_keep_no_french_definition(self):
+        rows = lexicon.manual_rows([{"term": "試験吊", "reading": "", "fr": "suspension d'essai", "en": "test pendant",
+                                     "definition": "Luminaire suspendu de test.", "page": "12", "confidence": "moyenne"}],
+                                   "en")
+        self.assertEqual(rows[0][5][0], "English : test pendant")
+        self.assertNotIn("Luminaire suspendu de test.", rows[0][5])
+        self.assertIn("page 12", rows[0][5][1])
+        self.assertIn("medium", rows[0][5][1])
+
+    def test_a_sourced_entry_is_never_replaced(self):
+        sourced = [["試験吊", "しけんづり", "wp", "", 3, ["Français : suspension de test"], 1, "interieur"]]
+        merged, added = lexicon.merge_manual_rows(sourced, [
+            {"term": "試験吊", "reading": "", "fr": "autre", "en": "other", "definition": "Autre.", "page": "12",
+             "confidence": "faible"}])
+        self.assertEqual(added, [])
+        self.assertEqual(merged, sourced)
+
+    def test_merging_renumbers_sequences_once(self):
+        sourced = [["試験間", "", "wikt", "", 2, ["Pièce de test."], 1, "interieur"]]
+        merged, added = lexicon.merge_manual_rows(sourced, [
+            {"term": f"term{number}", "reading": "", "fr": item["fr"], "en": item["en"], "definition": item["definition_fr"],
+             "page": item["page"], "confidence": item["confiance"]} for number, item in enumerate(self.TERMS)])
+        self.assertEqual(len(added), 2)
+        self.assertEqual([row[6] for row in merged], [1, 2, 3])
+
+    def test_build_adds_manual_terms_with_tag_and_attribution(self):
+        with tempfile.TemporaryDirectory(prefix="kyokasho-lexicon-synthetic-") as folder:
+            raw = Path(folder)
+            (raw / "wiktionary.json").write_text(json.dumps([{"title": "試験間", "wikitext": WIKTIONARY_PAGE}]), encoding="utf-8")
+            (raw / "wikipedia.json").write_text("[]", encoding="utf-8")
+            extra = lexicon.read_manual_terms(self.write(folder, [json.dumps(item, ensure_ascii=False) for item in self.TERMS]))
+            output = raw / "sortie" / "lexique.zip"
+            self.assertEqual(lexicon.build(raw, output, "2026-11-10.1", written={}, extra=extra), 3)
+            with zipfile.ZipFile(output) as archive:
+                index = json.loads(archive.read("index.json"))
+                tags = {tag[0]: tag[3] for tag in json.loads(archive.read("tag_bank_1.json"))}
+                rows = json.loads(archive.read("term_bank_1.json"))
+        self.assertIn(lexicon.MANUAL_TAG_LABEL, tags[lexicon.MANUAL_TAG])
+        self.assertIn(lexicon.MANUAL_ATTRIBUTION, index["attribution"])
+        self.assertIn("man", index["description"])
+        self.assertEqual([row[0] for row in rows][-2:], ["試験吊", "試験LED"])
+
+
 if __name__ == "__main__":
     unittest.main()
