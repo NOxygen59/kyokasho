@@ -84,7 +84,7 @@ final class RekeyReplacementTests: XCTestCase {
     /// P3 n°9 (revue R2) : la rotation/coupure manuelle du document remplacé ne se perd pas
     /// (elle gagne sur la page en conflit) et le survivant garde titre, catégorie, réglages et
     /// position de lecture — seules les mesures du fichier réel suivent.
-    func testRekeyToExistingDocumentClearsOCROfBothSides() throws {
+    func testRekeyToExistingDocumentKeepsTheSurvivorOCR() throws {
         try db.save(LibraryDocument(id: "old", title: "Cours", originalFileName: "c.pdf", pageCount: 3, fileSize: 1))
         var survivor = LibraryDocument(id: "new", title: "Cours", originalFileName: "c.pdf", pageCount: 4, fileSize: 2)
         survivor.category = .textbook
@@ -104,7 +104,8 @@ final class RekeyReplacementTests: XCTestCase {
         try db.rekeyDocument(from: "old", to: updated)
 
         XCTAssertNil(try db.document(id: "old"))
-        try assertOCRPurged(documentId: "new")
+        // Analyse avant 1.5.5 (DeepSeek #1) : en fusion, la version qui reste est le même fichier ; son OCR reste.
+        XCTAssertFalse(try db.ocrResults(documentId: "new").isEmpty, "OCR du survivant gardé (même fichier)")
         // P3 n°9 : manuel du remplacé sur les pages en conflit (90, pas 180…)…
         let transforms = try db.pageTransforms(documentId: "new")
         XCTAssertEqual(transforms[0]?.rotation, 0, "page en double : la ligne du document remplacé est celle qui reste")
@@ -152,9 +153,9 @@ final class RekeyReplacementTests: XCTestCase {
         XCTAssertTrue(offered.isEmpty)
     }
 
-    /// Branche fusion : les deux versions partent (cascade + effacement du survivant), chacun de
-    /// leurs résultats est offert, l'origine reste distinguable par l'identifiant reçu.
-    func testFusionOffersTheResultsOfBothSidesToTheAside() throws {
+    /// Branche fusion : le livre remplacé part (cascade) et ses résultats sont offerts à la mise de côté ; la version
+    /// qui reste est le même fichier, son OCR reste et n'est pas offert (analyse avant 1.5.5, DeepSeek #1).
+    func testFusionOffersOnlyTheReplacedResultsToTheAside() throws {
         try db.save(LibraryDocument(id: "old", title: "Cours", originalFileName: "c.pdf", pageCount: 3, fileSize: 1))
         try db.save(LibraryDocument(id: "new", title: "Cours", originalFileName: "c.pdf", pageCount: 4, fileSize: 2))
         try seedOCR(documentId: "old")
@@ -163,8 +164,8 @@ final class RekeyReplacementTests: XCTestCase {
         var updated = try XCTUnwrap(db.document(id: "old"))
         updated.id = "new"
         try db.rekeyDocument(from: "old", to: updated, asideCorrections: { old, _, _, _, _ in sources.insert(old) })
-        XCTAssertEqual(sources, ["old", "new"])
-        XCTAssertTrue(try db.ocrResults(documentId: "new").isEmpty)
+        XCTAssertEqual(sources, ["old"])
+        XCTAssertFalse(try db.ocrResults(documentId: "new").isEmpty)
     }
 
     /// N2 (revue R2) : l'encre n'attend qu'un dessin par page — en fusion, là où le survivant en
