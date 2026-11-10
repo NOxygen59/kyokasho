@@ -841,6 +841,12 @@ enum PageShift {
         try hit("modes.before")
         ReaderToolModeStore().remap(from: oldId, to: newId)
         try hit("modes.after")
+        // P3 n°5 (revue R2) : données par document restées sous l'ancien identifiant — l'historique
+        // des ajouts de pages (préférences, clé `pages.additions.`) et les temps de lecture
+        // (journal des séances, clé `stats.v2.readingSessions`). Même règle : rien d'arrivé
+        // n'est écrasé, l'ancien côté est retiré après copie ou fusion.
+        PageAdditionHistory.remap(from: oldId, to: newId)
+        ReadingTimeTracker.shared.remapDocumentId(from: oldId, to: newId)
         // Caches de lecture portant l'ancien identifiant (même balayage qu'une modification de pages).
         model.thumbnails.removeAll(for: oldId)
         ScanSharpening.removeCache(documentId: oldId)

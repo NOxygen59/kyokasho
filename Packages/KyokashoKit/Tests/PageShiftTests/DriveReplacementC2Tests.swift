@@ -111,6 +111,40 @@ extension PageShiftRecoveryTests {
         }
     }
 
+    /// Clés « historique des ajouts de pages » (format de PageAdditionHistory : `pages.additions.<id>`)
+    /// et « journal des séances de lecture » : état du harnais sauvegardé puis remis exactement.
+    func trackPerDocumentDefaults(_ ids: [String]) -> () -> () {
+        let defaults = UserDefaults.standard
+        let keys = ["pages.additions." + ids[0], "pages.additions." + ids[1], ReadingTimeTracker.sessionsKey]
+        let saved = keys.map { (key: $0, value: defaults.object(forKey: $0)) }
+        return {
+            for entry in saved {
+                if let value = entry.value { defaults.set(value, forKey: entry.key) }
+                else { defaults.removeObject(forKey: entry.key) }
+            }
+        }
+    }
+
+    /// P3 n°5 (revue R2) : ajoute un historique d'ajouts et une séance de lecture pour l'ancienne
+    /// version, à raccrocher à l'identifiant d'arrivée par la bascule.
+    func seedPerDocumentHistories(_ oldId: String, additionDate: Date) {
+        PageAdditionHistory.record(PageAddition(date: additionDate, added: 2, insertedBefore: 0,
+                                                totalAfter: 4, sources: ["f.pdf"]), documentId: oldId)
+        var sessions = ReadingSessionLog()
+        sessions.record(documentId: oldId, start: additionDate, end: additionDate.addingTimeInterval(180))
+        UserDefaults.standard.set(sessions.encoded(), forKey: ReadingTimeTracker.sessionsKey)
+    }
+
+    /// P3 n°5 : après la bascule, les deux historiques vivent sous le nouvel identifiant,
+    /// et rien ne reste sous l'ancien.
+    func verifyHistoriesFollowTheReplacement(_ oldId: String, _ newId: String) throws {
+        XCTAssertEqual(PageAdditionHistory.load(newId).entries.map(\.added), [2], "historique des ajouts suivi")
+        XCTAssertTrue(PageAdditionHistory.load(oldId).entries.isEmpty, "ancienne clé retirée")
+        let sessions = ReadingSessionLog.decode(UserDefaults.standard.data(forKey: ReadingTimeTracker.sessionsKey))
+        XCTAssertEqual(sessions.sessions.map(\.documentId), [newId], "temps de lecture suivi, durées intactes")
+        XCTAssertEqual(sessions.sessions.map(\.seconds), [180])
+    }
+
     /// Bas­cule complète : la version Drive remplace le cours et tout suit (retrace le lot C2.3 au fil du code).
     func testDriveReplacementFollowsEverything() async throws {
         try await withFixture { model, doc, root in
@@ -121,6 +155,10 @@ extension PageShiftRecoveryTests {
             OCRTargetLanguage.set(.automatic, forDocument: doc.id)
             defer { OCRTargetLanguage.forget(plan.newDocumentId); OCRTargetLanguage.forget(doc.id) }
             DocumentScan.started = []
+            // P3 n°5 : historique des ajouts et temps de lecture, à faire suivre à la bascule.
+            let defaultsDone = trackPerDocumentDefaults([doc.id, plan.newDocumentId])
+            defer { defaultsDone() }
+            seedPerDocumentHistories(doc.id, additionDate: Date(timeIntervalSince1970: 500))
             let modesDone = trackModeKeys(doc.id, plan.newDocumentId)
             defer { modesDone() }
             ReaderToolModeStore().update(documentId: doc.id) { $0.drawing = true; $0.panelMode = "floating" }
@@ -134,6 +172,7 @@ extension PageShiftRecoveryTests {
                                      driveRevision: "rév. 2", replacingInto: plan.newDocumentId)
             }
             try verifyReplacement(model, root: root, old: doc, card: card, plan: plan)
+            try verifyHistoriesFollowTheReplacement(doc.id, plan.newDocumentId)
             // P2 n°2 : la langue OCR du livre suit le nouvel identifiant, et la lecture IA est relancée.
             XCTAssertEqual(OCRTargetLanguage.forDocument(plan.newDocumentId), .automatic)
             XCTAssertEqual(OCRTargetLanguage.forDocument(doc.id), .japanese, "ancienne clé retirée")
@@ -192,6 +231,11 @@ extension PageShiftRecoveryTests {
             // P2 n°2 : le choix de langue OCR (fait à l'import initial) attend la reprise de la bascule.
             OCRTargetLanguage.set(.automatic, forDocument: doc.id)
             defer { OCRTargetLanguage.forget(plan.newDocumentId); OCRTargetLanguage.forget(doc.id) }
+            DocumentScan.started = []
+            // P3 n°5 : les historiques restent sous l'ancien identifiant jusqu'à la reprise.
+            let defaultsDone = trackPerDocumentDefaults([doc.id, plan.newDocumentId])
+            defer { defaultsDone() }
+            seedPerDocumentHistories(doc.id, additionDate: Date(timeIntervalSince1970: 500))
             try writeReplacementJournal(root, oldId: doc.id, oldCount: doc.pageCount, oldSize: doc.fileSize, plan: plan)
             // Protection : l'ancien PDF n'est pas encore remplacé dans le stockage.
             XCTAssertEqual(try model.database.document(id: doc.id)?.pageCount, 2)
@@ -209,6 +253,8 @@ extension PageShiftRecoveryTests {
             XCTAssertEqual(OCRTargetLanguage.forDocument(doc.id), .japanese)
             XCTAssertTrue(DocumentScan.started.contains(restarted.storage.url(for: plan.newDocumentId).path),
                           "la reprise relance la lecture IA du document")
+            // P3 n°5 : les historiques suivent le nouvel identifiant, reprise incluse.
+            try verifyHistoriesFollowTheReplacement(doc.id, plan.newDocumentId)
         }
     }
 
