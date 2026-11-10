@@ -771,6 +771,25 @@ enum PageShift {
         var driveRevision: String?
     }
 
+    /// N6 (revue R2) : les métriques d'un remplacement restent calculées **avant** le journal
+    /// (une bascule interrompue doit finir depuis le journal seul), mais **seul le PDF lui-même**
+    /// fait échouer : `inspect` jette quand le fichier ne s'ouvre pas. La taille du fichier est
+    /// relue par `DocumentImporter.fileSize` (deux chemins de lecture) : un fichier lisible dont
+    /// une lecture de taille a échoué n'est plus confondu avec un « PDF illisible ». `nil` :
+    /// même fichier (empreinte identique), simple changement de révision, aucune bascule.
+    nonisolated static func planDriveReplacement(source: URL, current: LibraryDocument,
+                                                 driveRevision: String?) throws -> DriveReplacement? {
+        let hash = try DocumentImporter.sha256(of: source)
+        guard hash != current.id else { return nil } // même fichier : simple changement de révision
+        let (pageCount, _) = try DocumentImporter.inspect(source)
+        let size = DocumentImporter.fileSize(of: source)
+        guard pageCount > 0, size > 0 else {
+            throw ImportError.unreadable(String(localized: "La nouvelle version du PDF est illisible : mise à jour refusée.", bundle: .main))
+        }
+        return DriveReplacement(source: source, newDocumentId: hash, pageCount: pageCount,
+                                fileSize: size, driveRevision: driveRevision)
+    }
+
     /// Journal d'un remplacement, écrit après les garde-fous mais avant toute mutation de la base.
     /// Réutilise la même forme et le même fichier que les modifications de pages (les garde-fous
     /// existants le voient sans changement), avec `kind = "replacement"` et les champs spécifiques.

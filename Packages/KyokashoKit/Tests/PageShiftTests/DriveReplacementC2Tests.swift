@@ -585,4 +585,36 @@ extension PageShiftRecoveryTests {
             try verifyReplacement(restarted, root: root, old: doc, card: card, plan: plan)
         }
     }
+
+    /// N6 (revue R2) : les métriques d'un remplacement refusent seulement un PDF qui ne s'ouvre
+    /// pas — la taille du fichier est relue par un second chemin (attributs) avant de conclure à
+    /// l'illisibilité, et le même fichier reste un simple changement de révision.
+    func testDriveReplacementPlanRefusesOnlyAnUnopenablePDF() async throws {
+        try await withFixture { model, doc, root in
+            // Un fichier texte (pas un PDF) : refus, par l'ouverture du PDF elle-même.
+            let notAPDF = root.appendingPathComponent("pas-un-pdf-" + UUID().uuidString)
+            try Data("ceci n'est pas un PDF".utf8).write(to: notAPDF)
+            defer { try? FileManager.default.removeItem(at: notAPDF) }
+            XCTAssertThrowsError(try PageShift.planDriveReplacement(source: notAPDF, current: doc, driveRevision: nil))
+
+            // Le même fichier (empreinte = identifiant du document) : plan nil, aucune bascule.
+            let sameFile = root.appendingPathComponent("meme-empreinte-" + UUID().uuidString + ".pdf")
+            try writePDF(sameFile, pages: 2)
+            defer { try? FileManager.default.removeItem(at: sameFile) }
+            let same = LibraryDocument(id: try DocumentImporter.sha256(of: sameFile), title: "Cours",
+                                       originalFileName: "c.pdf", pageCount: 2, fileSize: 1)
+            XCTAssertNil(try PageShift.planDriveReplacement(source: sameFile, current: same, driveRevision: "rév. 2"),
+                         "même fichier : simple changement de révision")
+
+            // Un PDF lisible : plan établi, taille mesurée — et le lecteur de secours (attributs)
+            // donne la même valeur que la resource `fileSize`.
+            let (plan, _) = try replacementPlan(root, pages: 3)
+            let built = try XCTUnwrap(try PageShift.planDriveReplacement(source: plan.source, current: doc, driveRevision: "rév. 2"))
+            XCTAssertEqual(built.newDocumentId, plan.newDocumentId)
+            XCTAssertEqual(built.pageCount, 3)
+            XCTAssertEqual(built.fileSize, plan.fileSize)
+            XCTAssertEqual(DocumentImporter.fileSize(of: plan.source), plan.fileSize,
+                           "lecture de secours cohérente pour un fichier lisible")
+        }
+    }
 }
