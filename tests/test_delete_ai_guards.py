@@ -39,6 +39,27 @@ class DeletionConcurrencyGuardsTests(unittest.TestCase):
         cancel = body.index("AITaskCenter.shared.cancel(documentId:")
         self.assertLess(cancel, body.index("documents.removeAll"))
 
+    def test_ai_tasks_refused_while_document_is_being_deleted(self):
+        # P3 n°6 (revue R2) : une nouvelle tâche IA pour un document en cours d'effacement est refusée.
+        # L'état vit dans AITaskCenter (couplage mince), posé et retiré par AppModel.delete.
+        center = (ROOT / "App/Reader/AITaskCenter.swift").read_text(encoding="utf-8")
+        self.assertIn("deletingDocumentIds", center)
+        self.assertIn("func beginDeletion(documentId: String)", center)
+        self.assertIn("func endDeletion(documentId: String)", center)
+        run = body_of(center, "func run(_ key: String", "func setProgress(")
+        self.assertIn("deletingDocumentIds", run, "la garde est dans run")
+        # même prédicat de clé que cancel(documentId:) et PageShift.blocksAI
+        self.assertLess(run.index("deletingDocumentIds"), run.index("let job = Job("))
+        source = (ROOT / "App/AppModel.swift").read_text(encoding="utf-8")
+        body = body_of(source, "func delete(_ document: LibraryDocument)", "func closeTab(")
+        begin = body.index("AITaskCenter.shared.beginDeletion(document.id)")
+        self.assertLess(begin, body.index("deletingIds.insert(document.id)"), "refus posé avant le retrait de la liste")
+        end = body.index("AITaskCenter.shared.endDeletion(document.id)")
+        self.assertLess(begin, end, "posé avant tout retrait")
+        self.assertEqual(
+            len([line for line in body.splitlines() if "AITaskCenter.shared.endDeletion(document.id)" in line]),
+            2, "libéré dans les deux branches (effacement réussi ou échec)")
+
     def test_deletion_stops_document_analysis_before_erase_and_after_forget(self):
         # P2 n°3 (revue R2) : l'analyse du document entier (ou la traduction, même tâche) est arrêtée
         # avant l'effacement ; le `forget` attend la fin de la tâche, sinon une dernière lecture

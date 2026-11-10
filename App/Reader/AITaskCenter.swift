@@ -45,6 +45,10 @@ final class AITaskCenter: ObservableObject {
     @Published private(set) var jobs: [Job] = []
     /// Tâches finies, la plus récente en tête (15 au plus), pour voir après coup ce qui s'est passé (#47).
     @Published private(set) var recent: [Job] = []
+    /// Documents en cours d'effacement (`AppModel.delete`, P3 n°6 de la revue R2) : toute nouvelle tâche IA
+    /// pour eux est refusée, leurs caches PDF sont sur le point d'être effacés. État gardé ici plutôt que
+    /// dans `AppModel` pour ne pas lancer une tâche sur un modèle observé depuis ce centre.
+    private(set) var deletingDocumentIds: Set<String> = []
     /// Dernière erreur par clé (affichée par la vue concernée, effacée au relancement).
     @Published private(set) var errors: [String: String] = [:]
     /// +1 à chaque tâche finie : les vues qui affichent un résultat (fichier, cache) se rechargent.
@@ -59,7 +63,9 @@ final class AITaskCenter: ObservableObject {
     func run(_ key: String, title: String, modelId: String? = nil, activity: String? = nil,
              _ work: @escaping @MainActor (_ id: UUID) async throws -> Void) -> Bool {
         // Pas de nouvelle tâche IA pendant une sauvegarde complète (#51) : ses écritures viseraient la copie en cours.
-        guard !isRunning(key), !PageShift.blocksAI(jobKey: key), !LibraryBackupService.inProgress else { return false }
+        // Ni pour un document en cours de suppression (P3 n°6, revue R2) : ses caches sont sur le point d'être effacés.
+        guard !isRunning(key), !PageShift.blocksAI(jobKey: key), !LibraryBackupService.inProgress,
+              !Self.deletionBlocks(deletingDocumentIds, jobKey: key) else { return false }
         let job = Job(key: key, title: title, modelId: modelId, activity: activity)
         jobs.append(job)
         errors[key] = nil
@@ -126,6 +132,17 @@ final class AITaskCenter: ObservableObject {
     func cancel(_ id: UUID) { tasks[id]?.cancel() }
 
     func cancel(key: String) { jobs.filter { $0.key == key }.forEach { cancel($0.id) } }
+
+    /// Même prédicat de clé que `cancel(documentId:)` et `PageShift.blocksAI(jobKey:)` : l'identifiant du
+    /// document est une composante de la clé (séparée par `|`). Utilisé par la garde de `run`.
+    static func deletionBlocks(_ deleting: Set<String>, jobKey: String) -> Bool {
+        !deleting.isEmpty && jobKey.split(separator: "|").contains { deleting.contains(String($0)) }
+    }
+
+    /// Posé par `AppModel.delete` au début puis à la fin de l'effacement : la fenêtre pendant laquelle
+    /// `run` refuse toute nouvelle tâche IA pour ce document.
+    func beginDeletion(documentId: String) { deletingDocumentIds.insert(documentId) }
+    func endDeletion(documentId: String) { deletingDocumentIds.remove(documentId) }
 
     /// Toutes les tâches IA d'un document (clé `…|<document>|…`), la suppression avant tout :
     /// leurs écritures tardives (OCR, lectures IA) ne doivent pas s'installer après l'effacement
