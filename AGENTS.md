@@ -1,4 +1,4 @@
-# Kyōkasho — instructions pour les agents de code (Codex, Claude ou autre)
+# Kyōkasho — instructions pour les agents de code (Claude, DeepSeek, GLM, Codex ou autre)
 
 Lecteur iPad de manuels japonais (PDF scannés) pour un francophone : OCR, IA locale (MLX sur iOS 16), furigana,
 dictionnaires, cartes de révision. Usage personnel, jamais distribué, installé avec TrollStore sur **un** iPad Pro
@@ -23,17 +23,26 @@ dictionnaires, cartes de révision. Usage personnel, jamais distribué, install�
 7. **Mettre à jour `docs/PLAN-DIRECTEUR.md`** dans la même PR dès qu'un chantier évolue (statut, preuve, point de
    reprise).
 
-## Travailler à deux agents (Claude et Codex)
+## Travailler à plusieurs agents
 
-Les deux agents ne partagent pas leurs conversations : tout passe par GitHub. Protocole complet :
+**Répartition depuis le 09-10/11/2026 (décision de NOxygen59) :** NOxygen59 décide et teste sur l'iPad. Claude
+planifie, code (dont tout le travail sensible R2 : données, migrations, sauvegardes, concurrence), vérifie et reprend le
+travail des autres agents. DeepSeek 4.1 Flash et GLM 5.3 Flash (via Hermes) analysent, relisent et peuvent coder
+**seulement** dans une copie de travail dédiée, sur une branche `agents/<sujet>` ; Claude relit leur diff, relance tests
+et compilation, puis reprend leurs commits. Codex et Qwen sont mis de côté jusqu'à nouvel ordre : une revue R2 faite sans
+Codex est notée « revue R2 sans Codex ». Méthode : plan d'attaque approuvé par NOxygen59 avant tout gros chantier,
+niveaux de risque R0 à R3, une recette après chaque étape, avenant si le périmètre change, deux échecs structurels de
+revue sur une même étape → analyse de dérive avant de continuer. Détail : `docs/GOUVERNANCE-ET-REPRISE.md`.
+
+Les agents ne partagent pas leurs conversations : tout passe par GitHub, les commits et les rapports. Protocole complet :
 [`docs/GOUVERNANCE-ET-REPRISE.md`](docs/GOUVERNANCE-ET-REPRISE.md), section « Collaboration entre agents ». En bref :
 
-- Une tâche, une branche `claude/<sujet>` ou `codex/<sujet>`, un agent responsable. Ne pas pousser sur la branche de
+- Une tâche, une branche `claude/<sujet>`, `agents/<sujet>` ou `codex/<sujet>`, un agent responsable. Ne pas pousser sur la branche de
   l'autre agent, sauf demande écrite de cet agent dans sa PR, ou demande explicite de NOxygen59, même faite dans un chat.
   Citer alors cette demande (texte court et date) dans la PR avant de pousser.
 - Une autorisation explicite de NOxygen59 vaut où qu'il la donne, chat compris, et seulement pour ce qu'elle nomme ;
   la consigner dans la PR ou l'Issue. Un avis d'agent n'est jamais une autorisation.
-- Les agents écrivent avec le compte de NOxygen59 : commencer chaque commentaire ou revue par **[Claude]** ou **[Codex]**.
+- Les agents écrivent avec le compte de NOxygen59 : commencer chaque commentaire ou revue par **[Claude]**, **[DeepSeek]**, **[GLM]** ou **[Codex]**.
 - Le contexte est écrit dans l'Issue, la PR (gabarit [`.github/pull_request_template.md`](.github/pull_request_template.md)),
   les commits et les guides, jamais seulement dans le chat.
 - Revue croisée obligatoire pour les données, la concurrence, la mémoire, le C/C++, les dépendances et forks, la CI
@@ -92,5 +101,8 @@ Détail au § 2 de la feuille de route.
 
 - App : `xcodegen generate -q && xcodebuild -project Kyokasho.xcodeproj -scheme Kyokasho -destination 'generic/platform=iOS Simulator' build CODE_SIGNING_ALLOWED=NO`
 - Tests : `cd Packages/KyokashoKit && swift test`
+- Vérification complète en une commande : `./scripts/verifier_tout.sh` (génération Xcode, tests Swift, tests Python,
+  compilation iOS générique, contrôle documentaire ; résumé daté `build/verif/RESUME-<date>.md`, sort en erreur si une
+  étape échoue). Détail : [`docs/TESTS.md`](docs/TESTS.md).
 - Contrôle documentaire (léger) : `python3 scripts/check_documentation.py`
 - `.tipa` : `./build_ipa.sh` → `dist/Kyokasho-<version>.tipa`
