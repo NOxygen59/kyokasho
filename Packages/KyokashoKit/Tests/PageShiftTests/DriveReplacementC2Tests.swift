@@ -15,6 +15,16 @@ import XCTest
 // fichier déjà présent chez l'identifiant d'arrivée. Tout vit dans le dossier temporaire du
 // harnais (aucune bibliothèque réelle).
 extension PageShiftRecoveryTests {
+    /// P3 n°6 (revue R2) : toutes les frontières d'un remplacement Drive — celles partagées avec
+    /// les modifications de pages, plus `journal.before` (écriture du journal) et les noms propres
+    /// au remplacement (`files.before`, `modes.before`, `modes.after`) qui n'existent pas dans
+    /// `Self.boundaries` : une coupure y est rejouée au même titre que les autres.
+    static let replacementBoundaries = ["journal.before", "journal.after", "database.before",
+                                        "database.after", "cards.before", "cards.after",
+                                        "drafts.before", "drafts.after", "files.before",
+                                        "files.installed", "modes.before", "modes.after",
+                                        "complete.before"]
+
     var journalFile: String { "page-shift.json" }
 
     /// Nouveaux PDF et plan de remplacement (métriques calculées avant le journal, comme DriveViews).
@@ -286,6 +296,49 @@ extension PageShiftRecoveryTests {
                                      driveRevision: "rév. 2", replacingInto: plan.newDocumentId)
             }
             try verifyReplacement(model, root: root, old: doc, card: card, plan: plan)
+        }
+    }
+
+    /// P3 n°6 (revue R2) — une coupure à chaque frontière du remplacement laisse soit tout
+    /// intact (avant la bascule SQL : journal retiré, mise à jour relançable), soit un journal
+    /// rejoué au lancement — même motif exhaustif que les autres opérations de pages.
+    func testReplacementSurvivesAPowerCutAtEveryStep() async throws {
+        for point in Self.replacementBoundaries {
+            try await withFixture { model, doc, root in
+                let card = try seed(model, doc)
+                let (plan, newPDF) = try replacementPlan(root, pages: 3)
+                let importer = DocumentImporter(storage: model.storage, database: model.database)
+                let modesDone = trackModeKeys(doc.id, plan.newDocumentId)
+                defer { modesDone() }
+                ReaderToolModeStore().update(documentId: doc.id) { $0.drawing = true; $0.panelMode = "floating" }
+                PageShift.checkpoint = { if $0 == point { throw PowerLoss.simulated } }
+                await assertThrowsAsync({
+                    try await PageShift.withDriveReplacement(model, documentId: doc.id, replacement: plan) {
+                        try importer.replace(documentId: doc.id, withFileAt: newPDF,
+                                             driveRevision: "rév. 2", replacingInto: plan.newDocumentId)
+                    }
+                }, point)
+                PageShift.checkpoint = nil
+                if try model.database.document(id: plan.newDocumentId) != nil {
+                    // Coupe après la bascule SQL : la reprise finit, puis un second lancement n'ajoute rien.
+                    XCTAssertTrue(journalExists(root), point)
+                    let restarted = try AppModel(root: root)
+                    PageShift.reconcile(restarted)
+                    XCTAssertNil(restarted.storageRecoveryError, point)
+                    try verifyReplacement(restarted, root: root, old: doc, card: card, plan: plan)
+                    PageShift.reconcile(restarted)
+                    try verifyReplacement(restarted, root: root, old: doc, card: card, plan: plan)
+                } else {
+                    // Coupe avant la bascule : rien d'appliqué, le journal est retiré, la relance passe.
+                    XCTAssertNil(model.storageRecoveryError, point)
+                    XCTAssertFalse(journalExists(root), point)
+                    try await PageShift.withDriveReplacement(model, documentId: doc.id, replacement: plan) {
+                        try importer.replace(documentId: doc.id, withFileAt: newPDF,
+                                             driveRevision: "rév. 2", replacingInto: plan.newDocumentId)
+                    }
+                    try verifyReplacement(model, root: root, old: doc, card: card, plan: plan)
+                }
+            }
         }
     }
 
