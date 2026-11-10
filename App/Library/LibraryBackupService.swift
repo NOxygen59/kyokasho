@@ -88,6 +88,11 @@ enum LibraryBackupService {
         guard PageShift.pendingDocumentId == nil, model.storageRecoveryError == nil else {
             throw fail(String(localized: "Une modification des pages doit être reprise avant de sauvegarder."))
         }
+        // Garde dans les deux sens (C2.7) : un remplacement Drive peut modifier les fichiers pendant la copie
+        // alors qu'aucun journal n'est encore écrit ; `operationInProgress` couvre aussi cette voie.
+        guard !PageShift.operationInProgress else {
+            throw fail(String(localized: "Une modification des pages est en cours : sauvegarde possible après sa fin."))
+        }
         guard AITaskCenter.shared.jobs.isEmpty, DocumentAnalysisService.shared.progress == nil else {
             throw fail(String(localized: "Une lecture IA ou une analyse est en cours : sauvegarde possible après sa fin."))
         }
