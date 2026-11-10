@@ -398,6 +398,9 @@ final class AppModel: ObservableObject {
         let importer = importer
         let thumbnails = thumbnails
         // Retiré de la liste tout de suite ; remis (avec le message d'erreur) si l'effacement échoue.
+        // Toutes les tâches IA de ce document arrêtées avant la suppression (C2.6) : leurs écritures
+        // tardives, même rapides, ne doivent plus viser un PDF et ses caches sur le point d'être effacés.
+        AITaskCenter.shared.cancel(documentId: document.id)
         deletingIds.insert(document.id)
         documents.removeAll { $0.id == document.id }
         closeTab(document.id)
