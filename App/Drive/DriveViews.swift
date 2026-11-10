@@ -338,6 +338,13 @@ struct DriveAccountView: View {
 
 extension AppModel {
     func importFromDrive(url: URL, file: GoogleDrive.File, language: OCRTargetLanguage? = nil) async throws {
+        // N7 (revue R2) : le dossier temporaire du téléchargement est nettoyé à la sortie de la
+        // fonction **entière**. Depuis que le calcul du plan peut jeter (P2 n°1), un refus y
+        // laissait un PDF de plusieurs centaines de Mo (iOS purge `tmp`, mais pas tout de suite) ;
+        // un refus des gardes avant l'import aussi. Le journal garde le chemin du fichier tant que
+        // la fonction n'est pas sortie — une reprise au lancement peut donc encore finir une
+        // copie arrêtée ; une fonction sortie sans bascule a retiré son journal.
+        defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
         let importer = importer
         let existing = documents.first { $0.driveFileId == file.id }
         let targetLanguage = language ?? existing.map { OCRTargetLanguage.forDocument($0.id) } ?? .japanese
@@ -359,7 +366,6 @@ extension AppModel {
         }
         let perform = { () async throws -> (document: LibraryDocument, isNew: Bool) in
             try await Task.detached(priority: .userInitiated) {
-                defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
                 if let existing {
                     // P2 n°1 (revue R2) : l'import attend l'identifiant calculé ci-dessus, et le même
                     // fichier quand `plan` est nil. Un fichier qui change entre les deux calculs (télé
