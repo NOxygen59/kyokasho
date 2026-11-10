@@ -33,6 +33,10 @@ final class DocumentAnalysisService: ObservableObject {
     /// Cache de lecture, **pas** publié : `report(for:)` peut être appelé pendant l'affichage.
     private var cache: [String: DocumentAnalysis] = [:]
     private var task: Task<Void, Never>?
+    /// Document traité par `task` (analyse, corrections OvisOCR2 ou traduction). Toutes les créations de
+    /// tâche se font derrière un garde `progress == nil`, donc une seule tâche vit à la fois et cette valeur
+    /// désigne sans ambiguïté « la tâche en cours » ; le `defer` de chaque tâche remet les deux à `nil`.
+    private var taskDocumentId: String?
     @Published private(set) var correctionsDone: Int?
 
     nonisolated static var folder: URL {
@@ -143,10 +147,16 @@ final class DocumentAnalysisService: ObservableObject {
         UIApplication.shared.isIdleTimerDisabled = true
         Diagnostics.log("analyse \(document.title) : pages \(range.lowerBound + 1)–\(range.upperBound + 1), lecteurs \(readers)\(reread ? ", relecture" : "")", "analyse")
 
+        // Toute tâche créée est marquée de son document avant la création : c'est la clé qui borne
+        // l'attente de `cancelAndFinish` au bon document (revue DeepSeek constat n°1).
+        taskDocumentId = id
         task = Task { [weak self] in
             defer {
                 UIApplication.shared.isIdleTimerDisabled = false
                 self?.progress = nil
+                // Tâche finie (normalement ou annulée) : plus rien à attendre ensuite.
+                self?.task = nil
+                self?.taskDocumentId = nil
             }
             // 1. OCR habituel (en cache le plus souvent).
             var base: [Int: OCRPage] = [:]
@@ -243,10 +253,16 @@ final class DocumentAnalysisService: ObservableObject {
         guard !pages.isEmpty else { return }
         progress = Progress(documentId: id, phase: String(localized: "Traduction (Qwen3-VL)"), done: 0, total: pages.count, phaseStarted: Date())
         UIApplication.shared.isIdleTimerDisabled = true
+        // Toute tâche créée est marquée de son document avant la création : c'est la clé qui borne
+        // l'attente de `cancelAndFinish` au bon document (revue DeepSeek constat n°1).
+        taskDocumentId = id
         task = Task { [weak self] in
             defer {
                 UIApplication.shared.isIdleTimerDisabled = false
                 self?.progress = nil
+                // Tâche finie (normalement ou annulée) : plus rien à attendre ensuite.
+                self?.task = nil
+                self?.taskDocumentId = nil
             }
             for (k, p) in pages.enumerated() {
                 guard !Task.isCancelled else { break }
@@ -290,11 +306,19 @@ final class DocumentAnalysisService: ObservableObject {
         cancel()
     }
 
-    /// Même arrêt, puis attente de la fin de la tâche : l'appelant peut ensuite `forget` sans qu'une dernière
-    /// écriture (une lecture qui se termine entre-temps) recrée `Analysis/<id>.json` ni `Analysis/<id>/`.
+    /// Même arrêt, puis attente de la fin de la tâche **qui porte sur ce document** : l'appelant peut
+    /// ensuite `forget` sans qu'une dernière écriture (une lecture qui se termine entre-temps) recrée
+    /// `Analysis/<id>.json` ni `Analysis/<id>/`.
+    ///
+    /// L'attente est bornée au document effacé (`taskDocumentId`), jamais à la dernière tâche créée
+    /// (revue DeepSeek constat n°1) : supprimer A pendant l'analyse d'un document B ne doit ni arrêter
+    /// ni attendre l'analyse de B, sinon `forget(A)` est repoussé de toute la durée de l'analyse de B
+    /// (des dizaines de minutes, jamais si l'app est quittée avant). Le `defer` de la tâche a déjà
+    /// remis `task` et `taskDocumentId` à `nil` quand l'attente se termine.
     func cancelAndFinish(documentId: String) async {
+        guard taskDocumentId == documentId, let task else { return }
         cancel(documentId: documentId)
-        await task?.value
+        await task.value
     }
 
     private func step(done: Int) { progress?.done = done }
@@ -376,8 +400,16 @@ final class DocumentAnalysisService: ObservableObject {
         progress = Progress(documentId: id, phase: String(localized: "Corrections OvisOCR2"), done: 0,
                             total: document.pageCount, phaseStarted: Date())
         Diagnostics.log("Corrections OvisOCR2 : début de \(document.pageCount) pages", "analyse")
+        // Toute tâche créée est marquée de son document avant la création : c'est la clé qui borne
+        // l'attente de `cancelAndFinish` au bon document (revue DeepSeek constat n°1).
+        taskDocumentId = id
         task = Task { [weak self] in
-            defer { self?.progress = nil }
+            defer {
+                self?.progress = nil
+                // Tâche finie (normalement ou annulée) : plus rien à attendre ensuite.
+                self?.task = nil
+                self?.taskDocumentId = nil
+            }
             var total = 0
             for source in 0..<document.pageCount {
                 guard !Task.isCancelled, let self else { return }
