@@ -29,6 +29,8 @@ struct ReaderTabsHost: View {
             // Seulement quand un onglet s'ajoute au-delà du seuil, pas à la fermeture d'un onglet.
             if count >= DocumentTabs.warningCount, count > old { showNotice() }
         }
+        // Même bannière que dans la bibliothèque : elle suit l'utilisateur dans le lecteur (10/11/2026).
+        .safeAreaInset(edge: .top, spacing: 0) { DiagnosticSizeBanner() }
         // Lecteur ouvert depuis la bibliothèque avec déjà assez d'onglets : prévenir une fois à l'ouverture.
         .onAppear { if model.tabs.showsMemoryWarning { showNotice() } }
         .onDisappear { hideTask?.cancel() }

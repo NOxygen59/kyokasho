@@ -11,6 +11,12 @@ Activer le diagnostic, reproduire le problème une fois, puis « Voir le journal
 
 Un bon rapport contient : étapes exactes, attendu, observé, fréquence, dernière version où cela fonctionnait, opération en cours et premier message d'erreur. Une capture aide au rendu ; le journal aide aux tâches et à Metal ; le `.ips` aide au crash. N'envoyer ni clé ni mot de passe. Utiliser un exemple synthétique dès que possible.
 
+## Format des fichiers de diagnostic (10/11/2026)
+
+- `journal.txt` : une ligne par événement, `heure ISO · [info|alerte|erreur] · [zone] · message`, et un en-tête `=== Lancement Kyōkasho …` à chaque lancement (version, appareil, iOS, mémoire, batterie, luminosité, lecture IA auto `scan.auto`, relecture GLM-OCR `ocr.aiReread`, furigana). Au-delà de 2 Mo, la seconde moitié est gardée et une ligne `Coupe du journal : N octets…` est écrite **en tête** : une coupe ne passe plus inaperçue.
+- `energie.csv` : une ligne par minute, 17 colonnes `date,batterie,en_charge,chaleur,economie,luminosite,cpu_s,memoire_mo,activite,cpu_pct,ecran,etat_thermique,teinte,ia_chargees,taches_ia,document,version_app`. Les 9 premières sont celles du départ : un fichier de 9 colonnes reste lisible. Une batterie inconnue s'écrit **vide**, jamais `-1`. `document` ne garde que les 8 premiers caractères de l'identifiant, et `ia_chargees` / `taches_ia` ne reprennent jamais un titre de livre.
+- « Partager le relevé et le journal » envoie les deux fichiers ensemble. Au-delà de 1,5 Mo (journal) ou 1 Mo (relevé), une bannière **permanente**, dans la bibliothèque comme dans le lecteur, propose de les partager puis de les effacer ; elle disparaît d'elle-même une fois les deux fichiers sous les seuils (décision testée : `DiagnosticFiles.warning`).
+
 ## Orienter l'enquête
 
 | Symptôme | Premiers éléments à vérifier |
