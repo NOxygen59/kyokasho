@@ -130,8 +130,13 @@ public actor OCRService {
             throw CancellationError()
         }
         let normalized = OCRTargetLanguage.forDocument(documentId) == .japanese ? JapaneseOCRText.normalize(page) : page
-        try database.save(OCRResultRecord(documentId: documentId, pageIndex: pageIndex, engine: normalized.engine,
-                                          json: try encoder.encode(normalized), durationMs: normalized.durationMs))
+        // DEC-C3 (10/11/2026) : remise des corrections manuelles mises de côté par un
+        // remplacement de document, au moment où le nouveau résultat est enregistré. Rien de
+        // tout cela hors d'un remplacement : le dossier de secours est absent, une seule
+        // vérification de contenu.
+        let final = StashedCorrections.applied(to: normalized, documentId: documentId, pageIndex: pageIndex)?.page ?? normalized
+        try database.save(OCRResultRecord(documentId: documentId, pageIndex: pageIndex, engine: final.engine,
+                                          json: try encoder.encode(final), durationMs: final.durationMs))
         NotificationCenter.default.post(name: Self.cacheUpdated, object: nil,
                                         userInfo: ["documentId": documentId, "pageIndex": pageIndex, "engine": normalized.engine])
     }

@@ -280,11 +280,34 @@ extension AppDatabase {
     /// - le document final existait déjà (fusion) : la suppression en cascade emporte l'OCR de l'ancien
     ///   identifiant, celui du survivant est effacé par la requête qui suit.
     ///
+    /// Types des « mises de côté » d'une bascule. `pageJSON` est le résultat OCR brut tel qu'en
+    /// base : seul l'appelant (qui connaît le format, `OCRKit`) sait y repérer les lignes
+    /// corrigées à la main (`OCRLine.originalText`) et les écrire de côté.
+    public typealias AsideCorrections =
+        (_ sourceDocumentId: String, _ newDocumentId: String, _ pageIndex: Int, _ engine: String, _ pageJSON: Data) throws -> Void
+
     /// Si l'identifiant ne change pas (`oldId == newDocument.id`) le contenu n'a pas varié : ce n'est
     /// pas un remplacement, aucun cache valable ne doit être effacé.
-    public func rekeyDocument(from oldId: String, to newDocument: LibraryDocument) throws {
+    ///
+    /// - Parameter asideCorrections: DEC-C3 (10/11/2026) — appelé pour **chaque** résultat OCR
+    ///   avant tout changement (renommage compris : les lignes deviendront celles du nouvel
+    ///   identifiant, puis partiront avec l'effacement ; fusion incluse, les deux versions
+    ///   partiront). Les lignes corrigées à la main y sont extraites et écrites dans
+    ///   `Corrections-remplacement/…`, jamais écrasées.
+    public func rekeyDocument(from oldId: String, to newDocument: LibraryDocument,
+                              asideCorrections: AsideCorrections? = nil) throws {
         try writer.write { db in
             if oldId != newDocument.id {
+                // DEC-C3 : AVANT la bascule et l'effacement, tous les résultats OCR des deux
+                // identifiants sont proposés à l'appelant (un résultat illisible interrompt
+                // l'opération : les corrections manuelles seraient perdues sans lui). Jamais
+                // rejoué : la reprise ne repasse par ici qu'après une bascule annulée, où rien
+                // manquait encore (l'ancien document existait toujours).
+                for record in try OCRResultRecord
+                    .filter(sql: "documentId = ? OR documentId = ?", arguments: [oldId, newDocument.id])
+                    .fetchAll(db) {
+                    try asideCorrections?(record.documentId, newDocument.id, record.pageIndex, record.engine, record.json)
+                }
                 if try LibraryDocument.exists(db, key: newDocument.id) {
                     // La nouvelle version existe déjà : on y rattache les annotations de l'ancienne.
                     //
