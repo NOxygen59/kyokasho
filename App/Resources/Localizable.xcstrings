@@ -8911,6 +8911,28 @@
         }
       }
     },
+    "Pose une question sur ce livre ou sur un mot. Je chercherai les passages lus par OvisOCR2 et citerai leurs pages ; sinon, je répondrai avec mes connaissances générales en le signalant." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ask a question about this book or a word. I'll look for the passages read by OvisOCR2 and cite their pages; otherwise I'll answer from general knowledge and say so."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pose une question sur ce livre ou sur un mot. Je chercherai les passages lus par OvisOCR2 et citerai leurs pages ; sinon, je répondrai avec mes connaissances générales en le signalant."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请就本书或某个词提问。我会查找 OvisOCR2 读取的段落并注明页码；若没有相关内容，我会用常识回答并加以说明。"
+          }
+        }
+      }
+    },
     "Ce document est déjà dans ta bibliothèque. Sa version actuelle (notes, OCR, lectures IA…) sera d'abord enregistrée dans Fichiers → Kyōkasho → Paquets de sécurité, puis remplacée par celle du paquet.": {
       "localizations": {
         "en": {

@@ -195,7 +195,7 @@ struct QwenChatView: View {
                         if messages.isEmpty, !loading {
                             Text(document == nil
                                  ? String(localized: "Pose une question sur un mot japonais, une phrase ou un sujet qui t'intéresse. Tout reste sur l'iPad.")
-                                 : String(localized: "Pose une question sur ce livre. Je chercherai les passages lus par OvisOCR2 et indiquerai les pages utilisées."))
+                                 : String(localized: "Pose une question sur ce livre ou sur un mot. Je chercherai les passages lus par OvisOCR2 et citerai leurs pages ; sinon, je répondrai avec mes connaissances générales en le signalant."))
                                 .font(.footnote).foregroundStyle(.secondary)
                             if ready { suggestions }
                         }
