@@ -442,7 +442,10 @@ final class AppModel: ObservableObject {
                     self.deletingIds.remove(document.id)
                     AITaskCenter.shared.endDeletion(documentId: document.id)
                     self.lastError = String(localized: "Suppression impossible : \(error.localizedDescription)")
-                    self.documents = (try? self.database.allDocuments()) ?? self.documents
+                    // BUG-007 : même filtre que `restoreFromTrash`. Sans lui, tous les documents de la corbeille
+                    // réapparaissaient dans la bibliothèque après un effacement en échec.
+                    self.documents = ((try? self.database.allDocuments()) ?? self.documents)
+                        .filter { !self.trash.contains($0.id) && !self.deletingIds.contains($0.id) }
                 }
             }
         }

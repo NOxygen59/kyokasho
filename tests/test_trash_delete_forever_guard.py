@@ -40,6 +40,13 @@ class DeleteForeverGuardTests(unittest.TestCase):
         self.assertEqual(refused.count("return false"), 2, "sauvegarde en cours et copies à réparer : deux refus")
         self.assertTrue(body.rstrip().endswith("return true\n    }".rstrip()) or "        return true\n    }" in body)
 
+    def test_failed_deletion_does_not_bring_trashed_documents_back(self):
+        # BUG-007 : la liste relue après un effacement en échec garde le filtre de la corbeille.
+        body = body_of(self.source, "    func delete(_ document: LibraryDocument) -> Bool {", "    func closeTab(")
+        failure = body[body.index("} catch {"):]
+        self.assertIn("!self.trash.contains($0.id) && !self.deletingIds.contains($0.id)", failure)
+        self.assertNotIn("self.documents = (try? self.database.allDocuments()) ?? self.documents\n", failure)
+
 
 if __name__ == "__main__":
     unittest.main()
