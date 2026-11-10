@@ -63,6 +63,9 @@ public struct LibraryDocument: Codable, Identifiable, Hashable, Sendable {
         // Pages modifiées (#49, R5) : chaque page garde son numéro imprimé ; sans numéro (page ajoutée, garde) :
         // chiffres romains, comme les pages avant la page 1.
         if let numbers = PrintedPageNumbers.numbers(for: id, pageCount: pageCount) {
+            // BUG-002 : une note, un repère ou une carte peut désigner une page qui n'existe plus (cours remplacé
+            // par une version plus courte). Hors bornes : même repli que sans identités, jamais un plantage.
+            guard numbers.indices.contains(index) else { return Self.roman(index + 1) }
             return numbers[index].map(String.init) ?? Self.roman(index + 1)
         }
         let n = index - firstPageIndex + 1
