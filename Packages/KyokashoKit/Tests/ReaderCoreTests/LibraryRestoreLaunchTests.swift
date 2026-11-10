@@ -35,7 +35,13 @@ final class LibraryRestoreLaunchTests: XCTestCase {
         XCTAssertTrue(try source("AppModel.swift").contains("if LibraryBackupService.restoreBlocked { storageRecoveryError = LibraryBackupService.restoreMessage }"))
         XCTAssertTrue(try source("Review/ReviewModel.swift").contains("!LibraryBackupService.restoreBlocked"))
         XCTAssertTrue(try source("Dictionary/DictionaryModel.swift").contains("LibraryBackupService.restoreBlocked ? nil"))
-        XCTAssertTrue(try source("KyokashoApp.swift").contains("if !LibraryBackupService.restoreBlocked { Button(\"Réessayer la reprise\")"))
+        let app = try source("KyokashoApp.swift")
+        XCTAssertTrue(app.contains("if !LibraryBackupService.restoreBlocked {"))
+        XCTAssertTrue(app.contains("Button(\"Réessayer la reprise\")"))
+        // N4 (revue R2) : la mise de côté d'un journal refusé reste dans ce même bloc gardé,
+        // derrière sa confirmation, pour ne jamais quitter l'écran de reprise par accident.
+        XCTAssertTrue(app.contains("Button(\"Mettre le journal de côté et repartir\", role: .destructive)"))
+        XCTAssertTrue(app.contains("PageShift.setAsideRejectedJournal(model)"))
     }
 
     /// Les réglages propres à l'iPad ne sont pas pris dans la sauvegarde.
