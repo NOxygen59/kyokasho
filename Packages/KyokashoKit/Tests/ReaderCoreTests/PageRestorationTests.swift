@@ -124,8 +124,10 @@ final class PageRestorationTests: XCTestCase {
 
     func testReplayOfAlteredRemovalJournalFailsCleanly() throws {
         try remove([2, 3], id: "s1")
-        // Journal altéré sur le disque : deux pages retirées portent le même identifiant.
-        // Une erreur propre, jamais un plantage (dictionnaire invalide autrement) — C2.4.
+        // Journal altéré sur le disque : l'ordre enregistré (pageOrderJSON) est remplacé par six fois le
+        // même identifiant « x ». Les identifiants des deux pages retirées sont donc absents de l'ordre —
+        // le scénario testé n'est pas une clé répétée. L'aide archivedPositions lève alors une erreur
+        // propre, jamais un plantage par désemballage forcé — C2.4.
         try db.writer.write { db in
             try db.execute(sql: "UPDATE pageEdit SET pageOrderJSON = ? WHERE id = ?",
                            arguments: [try JSONEncoder().encode(Array(repeating: "x", count: 6)), "s1"])
