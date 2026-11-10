@@ -82,6 +82,8 @@ extension ReaderController {
     }
 
     func pageChanged() {
+        // T1 : le contrôleur de pages vient peut-être de créer la vue de la nouvelle page.
+        applyPencilPageTurnGuard()
         guard let pdf, let page = pdfView.currentPage else { return }
         let index = pdf.index(for: page)
         guard index != NSNotFound, index != currentIndex || presented.isEmpty == false else { return }
@@ -505,5 +507,7 @@ extension ReaderController {
         ink.setEditing(on)
         applyDisplaySettings()
         DispatchQueue.main.async { [ink] in ink.showToolPicker(on) }
+        // T1 : les vues de page du contrôleur peuvent n'apparaître qu'après la mise en page.
+        DispatchQueue.main.async { [weak self] in self?.applyPencilPageTurnGuard() }
     }
 }

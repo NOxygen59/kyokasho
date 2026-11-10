@@ -56,6 +56,7 @@ extension ReaderController {
         }
         if pdfView.displayMode != mode { pdfView.displayMode = mode }
         tuneDoublePageGestures(double: double, paginated: paginated, pageController: pageController)
+        applyPencilPageTurnGuard()
         pdfView.displayDirection = paginated ? .horizontal : .vertical
         pdfView.displaysAsBook = double && s.firstPageAlone
         pdfView.displaysRTL = rtl && !double
@@ -74,6 +75,29 @@ extension ReaderController {
         if s.doubleTapZoom {
             singleTap.require(toFail: doubleTap)
         }
+    }
+
+    /// Retour terrain T1 (10/11/2026) : en page seule + Glissement, le défilement du contrôleur de pages de PDFKit
+    /// prenait l'Apple Pencil comme un doigt, et écrire faisait tourner la page. Pendant le dessin dans ce mode, tous
+    /// les défilements sous la vue PDF refusent le Pencil (le doigt et le trackpad tournent toujours la page) ; la
+    /// toile PencilKit est laissée intacte. Rappelée à chaque changement de page : le contrôleur crée de nouvelles
+    /// vues de page. Décision pure : `PencilPageTurnGuard` (testée).
+    func applyPencilPageTurnGuard() {
+        let drawing = isDrawing
+        let pageController = pdfView.isUsingPageViewController
+        func walk(_ view: UIView) {
+            for sub in view.subviews where !(sub is PKCanvasView) {
+                if let scroll = sub as? UIScrollView {
+                    let pan = scroll.panGestureRecognizer
+                    let current = pan.allowedTouchTypes.map(\.intValue)
+                    if let next = PencilPageTurnGuard.touchTypes(current: current, drawing: drawing, pageController: pageController) {
+                        pan.allowedTouchTypes = next.map { NSNumber(value: $0) }
+                    }
+                }
+                walk(sub)
+            }
+        }
+        walk(pdfView)
     }
 
     /// Double page : déplacement libre et zoom au toucher fiables (RET-043, Issue #63).
