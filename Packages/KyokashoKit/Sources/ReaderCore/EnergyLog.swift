@@ -283,7 +283,8 @@ public enum EnergyLog {
         }
     }
 
-    /// Sessions sur batterie, la plus récente d'abord : deux intervalles séparés de plus de `maxGap` sont deux sessions.
+    /// Sessions sur batterie, la plus récente d'abord : une session est une suite d'intervalles exploitables qui se
+    /// touchent. Tout intervalle écarté par `intervals` (charge, suspension, relancement, saut) la termine.
     public static func sessions(_ samples: [EnergySample]) -> [Session] {
         var result: [Session] = []
         var current: [Interval] = []
@@ -305,7 +306,10 @@ public enum EnergyLog {
         }
 
         for i in intervals(samples) {
-            if let last = current.last, i.start.timeIntervalSince(last.end) > maxGap { close() }
+            // BUG-005 : un intervalle écarté (charge, suspension, saut de mesure) termine la session, même s'il
+            // dure moins de `maxGap`. Sinon une charge d'une minute restait dans la session, et sa durée comptait
+            // des minutes dont la baisse était ignorée : le débit affiché était trop bas.
+            if let last = current.last, i.start != last.end { close() }
             current.append(i)
         }
         close()
