@@ -36,3 +36,6 @@ class PageShiftBackupMutualGuardsTests(unittest.TestCase):
         source = (ROOT / "App/Library/PageShift.swift").read_text(encoding="utf-8")
         body = body_of(source, "static var operationInProgress", "static func blocksAI")
         self.assertIn("!applyingDocuments.isEmpty", body)
+        # P3 n°7 (revue R2) : une reprise en attente (journal page-shift.json) compte aussi comme opération
+        # en cours ; la garde croisée ne dépend plus de l'ordre des « guard » dans LibraryBackupService.
+        self.assertIn("pendingDocumentId != nil", body)
