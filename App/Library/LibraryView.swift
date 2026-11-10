@@ -35,6 +35,8 @@ struct LibraryView: View {
     @State private var editingPages: PageEditTarget?
     @State private var chatDocument: LibraryDocument?
     @State private var showDictionary = false
+    /// Catégorie « Lexique » (PLAN-LEX-001, E2) : Livres & Manuels seulement, comme le dictionnaire.
+    @State private var showLexicon = false
     @State private var showDashboard = false
     @State private var renaming: LibraryDocument?
     @EnvironmentObject private var review: ReviewModel
@@ -239,6 +241,15 @@ struct LibraryView: View {
             }
             .environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review).preferredColorScheme(Theme.current.colorScheme)
         }
+        .fullScreenCover(isPresented: $showLexicon) {
+            NavigationStack {
+                LexiconView()
+                    .navigationTitle("Lexique")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar { ToolbarItem(placement: .confirmationAction) { Button("OK") { showLexicon = false } } }
+            }
+            .environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review).preferredColorScheme(Theme.current.colorScheme)
+        }
         // Fenêtre posée sur l'accueil, pas une page plein écran (recette iPad 1.5.1, point 5.1) : l'accueil reste visible
         // autour, sous un voile ; toucher le voile ou « OK » referme.
         .overlay {
@@ -406,6 +417,7 @@ struct LibraryView: View {
                               count: review.counts.total) { showReview = true }
                     actionRow(icon: "character.book.closed.ja", title: String(localized: "Dictionnaire"), tint: Atelier.Tint.japanese,
                               count: model.dictionary.notebook.saved.count) { showDictionary = true }
+                    actionRow(icon: "text.book.closed", title: String(localized: "Lexique"), tint: Atelier.Tint.japanese) { showLexicon = true }
                 }
                 actionRow(icon: "doc.on.doc", title: String(localized: "Fusionner des PDF"), tint: Atelier.Tint.cloud) { showMerge = true }
                 if space != .manga {
@@ -506,6 +518,10 @@ struct LibraryView: View {
             CapsuleButton(icon: "plus", label: String(localized: "Importer")) { showImportOptions = true }
             CapsuleButton(icon: "externaldrive.badge.icloud", label: String(localized: "Google Drive")) { showDrive = true }
             CapsuleButton(icon: "character.book.closed.ja", label: String(localized: "Dictionnaire")) { showDictionary = true }
+            // Hors périmètre en Manga (PLAN-LEX-001, § 2) : l'entrée n'existe que pour Livres & Manuels.
+            if space == .study {
+                CapsuleButton(icon: "text.book.closed", label: String(localized: "Lexique")) { showLexicon = true }
+            }
             CapsuleButton(icon: "chart.bar.fill", label: String(localized: "Tableau de bord")) { showDashboard = true }
             CapsuleButton(icon: "gearshape", label: String(localized: "Réglages")) { showSettings = true }
         }

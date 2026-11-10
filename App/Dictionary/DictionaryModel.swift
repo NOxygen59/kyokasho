@@ -175,13 +175,31 @@ final class DictionaryModel: ObservableObject {
         }.value
     }
 
+    /// Dictionnaires de mots réellement consultés : activés, avec des termes, et variante de langue du lexique fourni
+    /// retenue. **Une seule règle** pour la recherche par début de mot et pour le Lexique (PLAN-LEX-001, DEC-06) :
+    /// un dictionnaire désactivé ou en cours d'import (`termCount == 0`) n'apparaît dans aucun des deux.
+    var activeTermDictionaryIds: Set<Int64> {
+        Set(dictionaries.filter { $0.enabled && $0.termCount > 0
+            && !lookupOptions.excludedDictionaryIds.contains($0.id ?? -1) }.compactMap(\.id))
+    }
+
     func words(startingWith prefix: String) async -> [DictionaryWord] {
         guard let database else { return [] }
-        let ids = Set(dictionaries.filter { $0.enabled && $0.termCount > 0
-            && !lookupOptions.excludedDictionaryIds.contains($0.id ?? -1) }.compactMap(\.id))
+        let ids = activeTermDictionaryIds
         return await Task.detached(priority: .userInitiated) {
             (try? database.words(startingWith: prefix, dictionaryIds: ids)) ?? []
         }.value
+    }
+
+    /// Une page du Lexique (PLAN-LEX-001, E2), lue hors du fil principal. Annuler la tâche appelante arrête la
+    /// lecture entre deux lignes (`CancellationError`) : une recherche modifiée ou un écran fermé ne laisse rien tourner.
+    func lexiconPage(after cursor: LexiconCursor?, prefix: String) async throws -> LexiconPage {
+        guard let database else { return LexiconPage() }
+        let ids = activeTermDictionaryIds
+        let work = Task.detached(priority: .userInitiated) {
+            try database.lexiconPage(dictionaryIds: ids, after: cursor, prefix: prefix, limit: LexiconFeed.pageSize)
+        }
+        return try await withTaskCancellationHandler { try await work.value } onCancel: { work.cancel() }
     }
 
     func isSaved(_ entry: SavedEntry) -> Bool { notebook.saved.contains(entry) }

@@ -75,6 +75,11 @@ public struct LexiconPage: Sendable {
     public let words: [LexiconWord]
     /// `nil` : dernière page.
     public let next: LexiconCursor?
+
+    public init(words: [LexiconWord] = [], next: LexiconCursor? = nil) {
+        self.words = words
+        self.next = next
+    }
 }
 
 extension DictionaryDatabase {
