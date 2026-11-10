@@ -5,6 +5,16 @@ import Combine
 import Foundation
 import GRDB
 
+/// Refus d'une bascule de remplacement qui perdrait une donnée de l'utilisateur.
+public enum RekeyError: LocalizedError, Equatable {
+    /// Fusion : un dessin du survivant devrait être retiré sans pouvoir être mis de côté (revue R2, S4).
+    case inkWouldBeLost
+
+    public var errorDescription: String? {
+        String(localized: "Mise à jour refusée : un dessin serait perdu. Rien n'a été modifié.", bundle: .main)
+    }
+}
+
 /// Base SQLite de l'app (GRDB). Fichier : mode WAL (`DatabasePool`) → lectures concurrentes,
 /// écritures sans bloquer l'interface. Tests : base en mémoire.
 public final class AppDatabase: @unchecked Sendable {
@@ -344,7 +354,9 @@ extension AppDatabase {
                     // approximative risquerait la géométrie exacte d'un dessin de l'utilisateur.
                     for drawing in try InkDrawing.filter(Column("documentId") == oldId).fetchAll(db) {
                         if let kept = try InkDrawing.fetchOne(db, key: ["documentId": newDocument.id, "pageIndex": drawing.pageIndex]) {
-                            try asideInk?(oldId, kept.pageIndex, kept.data)
+                            // Revue R2, S4 : sans copie possible, la fusion est refusée plutôt qu'un dessin effacé.
+                            guard let asideInk else { throw RekeyError.inkWouldBeLost }
+                            try asideInk(oldId, kept.pageIndex, kept.data)
                             try kept.delete(db)
                         }
                     }

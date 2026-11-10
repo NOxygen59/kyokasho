@@ -134,9 +134,11 @@ public actor OCRService {
         // remplacement de document, au moment où le nouveau résultat est enregistré. Rien de
         // tout cela hors d'un remplacement : le dossier de secours est absent, une seule
         // vérification de contenu.
-        let final = StashedCorrections.applied(to: normalized, documentId: documentId, pageIndex: pageIndex)?.page ?? normalized
+        let stashed = StashedCorrections.applied(to: normalized, documentId: documentId, pageIndex: pageIndex)
+        let final = stashed?.page ?? normalized
         try database.save(OCRResultRecord(documentId: documentId, pageIndex: pageIndex, engine: final.engine,
                                           json: try encoder.encode(final), durationMs: final.durationMs))
+        stashed?.commit()
         NotificationCenter.default.post(name: Self.cacheUpdated, object: nil,
                                         userInfo: ["documentId": documentId, "pageIndex": pageIndex, "engine": normalized.engine])
     }

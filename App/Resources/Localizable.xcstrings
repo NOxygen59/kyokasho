@@ -9219,6 +9219,28 @@
         }
       }
     },
+    "Mise à jour refusée : un dessin serait perdu. Rien n'a été modifié." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Update refused: a drawing would be lost. Nothing was changed."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mise à jour refusée : un dessin serait perdu. Rien n'a été modifié."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已拒绝更新：会丢失一幅手绘。未做任何更改。"
+          }
+        }
+      }
+    },
     "Ce document est déjà dans ta bibliothèque. Sa version actuelle (notes, OCR, lectures IA…) sera d'abord enregistrée dans Fichiers → Kyōkasho → Paquets de sécurité, puis remplacée par celle du paquet.": {
       "localizations": {
         "en": {

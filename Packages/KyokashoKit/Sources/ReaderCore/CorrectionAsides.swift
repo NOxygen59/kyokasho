@@ -68,6 +68,9 @@ public final class CorrectionAsideStore: @unchecked Sendable {
         public let entry: KeptCorrection
     }
 
+    /// Dossier des corrections de côté d'un document (suivi d'un remplacement au suivant : revue R2, S1).
+    public func folder(documentId: String) -> URL { correctionsFolder(documentId: documentId) }
+
     private func correctionsFolder(documentId: String) -> URL {
         root.appendingPathComponent("Corrections-remplacement", isDirectory: true)
             .appendingPathComponent(documentId, isDirectory: true)
@@ -84,19 +87,30 @@ public final class CorrectionAsideStore: @unchecked Sendable {
         guard !entries.isEmpty else { return }
         let folder = correctionsFolder(documentId: documentId)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-        let file = Self.correctionFileName(pageIndex: pageIndex, engine: engine, folder: folder)
-        try JSONEncoder().encode(KeptPageFile(version: 1, pageIndex: pageIndex, engine: engine, entries: entries))
-            .write(to: file, options: .atomic)
+        let file = Self.correctionFileName(pageIndex: pageIndex, engine: engine, entries: entries, folder: folder)
         lock.lock()
         defer { lock.unlock() }
-        try bumpTally(documentId: sourceDocumentId) { $0.corrections += entries.count }
+        // Revue R2, S5 : nom tiré du contenu. Une transaction annulée puis rejouée réécrit le même
+        // fichier au lieu d'en créer un double (jamais appliqué, compté deux fois) ; un contenu
+        // différent a un autre nom, rien n'est écrasé.
+        let isNew = !FileManager.default.fileExists(atPath: file.path)
+        try JSONEncoder().encode(KeptPageFile(version: 1, pageIndex: pageIndex, engine: engine, entries: entries))
+            .write(to: file, options: .atomic)
+        if isNew { try bumpTally(documentId: sourceDocumentId) { $0.corrections += entries.count } }
     }
 
-    /// Nom de fichier : composants sûrs (le moteur vient d'un identifiant de base), terminé par un
-    /// UUID — un second résultat de la même page ne peut donc pas écraser le premier.
-    private static func correctionFileName(pageIndex: Int, engine: String, folder: URL) -> URL {
+    /// Nom de fichier : composants sûrs (le moteur vient d'un identifiant de base), terminé par une
+    /// empreinte stable du contenu (FNV-1a 64 bits) : même contenu = même nom ; un autre résultat de
+    /// la même page a un autre nom et ne peut pas écraser le premier.
+    static func correctionFileName(pageIndex: Int, engine: String, entries: [KeptCorrection], folder: URL) -> URL {
         let engineName = engine.allSatisfy { $0.isLetter || $0.isNumber || "_-.".contains($0) } ? engine : "moteur"
-        return folder.appendingPathComponent("corrections-page-\(pageIndex)-\(engineName)-\(UUID().uuidString).json")
+        var hash: UInt64 = 0xcbf29ce484222325
+        for entry in entries {
+            for byte in Array((entry.original + "\u{1}" + entry.corrected + "\u{2}").utf8) {
+                hash = (hash ^ UInt64(byte)) &* 0x100000001b3
+            }
+        }
+        return folder.appendingPathComponent("corrections-page-\(pageIndex)-\(engineName)-\(String(hash, radix: 16)).json")
     }
 
     /// Toutes les corrections en attente pour une page et son moteur, dans l'ordre d'écriture.

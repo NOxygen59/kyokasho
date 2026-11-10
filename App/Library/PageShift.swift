@@ -927,6 +927,11 @@ enum PageShift {
         try moveFolderWithoutOverwrite(from: DocumentAITextStore.folder.appendingPathComponent(oldId, isDirectory: true),
                                        to: DocumentAITextStore.folder.appendingPathComponent(newId, isDirectory: true),
                                        conflicts: (documentId: oldId, folder: base.appendingPathComponent("Lectures-IA", isDirectory: true)))
+        // Revue R2, S1 : des corrections encore de côté (remplacement précédent, page pas relue
+        // depuis) suivent ce remplacement-ci, sinon elles restaient sous un identifiant disparu.
+        try moveFolderWithoutOverwrite(from: CorrectionAsideStore.shared.folder(documentId: oldId),
+                                       to: CorrectionAsideStore.shared.folder(documentId: newId),
+                                       conflicts: (documentId: oldId, folder: base.appendingPathComponent("Corrections", isDirectory: true)))
         try moveAnalysisReport(from: oldId, to: newId,
                                conflicts: (documentId: oldId, folder: base.appendingPathComponent("Rapport", isDirectory: true)))
         try hit("files.installed")
