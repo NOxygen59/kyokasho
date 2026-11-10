@@ -739,7 +739,18 @@ enum PageShift {
         // 1. Bascule SQL, seulement si elle n'a pas encore été appliquée.
         if let old = try model.database.document(id: p.documentId) {
             let pdf = model.storage.url(for: newId)
-            if !fm.fileExists(atPath: pdf.path), let sourcePath = p.newSourcePath {
+            if !fm.fileExists(atPath: pdf.path), let sourcePath = p.newSourcePath,
+               let sourceHash = (try? DocumentImporter.sha256(of: URL(fileURLWithPath: sourcePath))) {
+                // P2 n°3 (revue R2 F3) : l'identifiant du nouveau PDF EST son empreinte SHA-256,
+                // enregistrée dans le journal avant toute mutation. Confronter le fichier relu à
+                // cette empreinte refuse un journal altéré (qui ne
+                // peut ni déplacer ni retirer le PDF d'un autre livre) ; le journal reste en
+                // place, aucune donnée n'est touchée. Fichier simplement absent ou illisible :
+                // lecture impossible, le journal reste pour le garde « PDF indisponible » du
+                // dessous (suspension, ancienne version conservée, relance possible).
+                guard sourceHash == newId else {
+                    throw fail(String(localized: "Journal de remplacement altéré : le fichier du nouveau PDF ne correspond pas à l'empreinte du journal, reprise arrêtée sans effacer les données."))
+                }
                 try moveWithoutOverwrite(URL(fileURLWithPath: sourcePath), pdf)
             }
             guard PDFDocument(url: pdf)?.pageCount == p.newCount else {
