@@ -1,6 +1,28 @@
 {
   "sourceLanguage": "fr",
   "strings": {
+    "Début d'un mot, en kana ou en kanji": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start of a word, in kana or kanji"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Début d'un mot, en kana ou en kanji"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "词语开头，假名或汉字"
+          }
+        }
+      }
+    },
     "Lexique": {
       "localizations": {
         "en": {

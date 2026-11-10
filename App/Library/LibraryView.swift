@@ -243,7 +243,10 @@ struct LibraryView: View {
         }
         .fullScreenCover(isPresented: $showLexicon) {
             NavigationStack {
-                LexiconView()
+                LexiconView(dictionary: model.dictionary) { term in
+                    model.review.add(term, sentence: nil, source: nil, image: nil, documentId: nil, page: nil,
+                                     dictionary: model.dictionary)
+                }
                     .navigationTitle("Lexique")
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbar { ToolbarItem(placement: .confirmationAction) { Button("OK") { showLexicon = false } } }
