@@ -1130,6 +1130,28 @@ enum PageShift {
         Diagnostics.error(model.storageRecoveryError!, "pages")
     }
 
+    /// N4 (revue R2) : un journal de reprise refusé (altéré, incohérent, incomplet, ambigu) ne
+    /// doit pas enfermer l'app — « Réessayer la reprise » rejoue le même refus à chaque fois,
+    /// sans issue. L'utilisateur peut mettre le journal de côté : le fichier est déplacé (jamais
+    /// effacé, jamais écrasé : son nom porte l'instant du déplacement) dans
+    /// `Conflits-remplacement/journaux-refusés/`, puis la reprise est suspendue sans erreur.
+    /// Refusé pendant une opération en cours ou une sauvegarde : le journal y est encore jouable.
+    /// Après un déplacement réussi, l'app démarre normalement — un journal refusé n'a rien changé
+    /// en base ni dans les fichiers (les gardes s'arrêtent avant tout effet).
+    @MainActor static func setAsideRejectedJournal(_ model: AppModel) {
+        guard fm.fileExists(atPath: marker.path), applyingDocuments.isEmpty, !LibraryBackupService.inProgress else { return }
+        do {
+            let folder = support.appendingPathComponent("Conflits-remplacement", isDirectory: true)
+                .appendingPathComponent("journaux-refusés", isDirectory: true)
+            try fm.createDirectory(at: folder, withIntermediateDirectories: true)
+            try fm.moveItem(at: marker, to: folder.appendingPathComponent("page-shift-" + UUID().uuidString + ".json"))
+            model.storageRecoveryError = nil
+            Diagnostics.error(String(localized: "Journal de reprise mis de côté dans « Conflits-remplacement/journaux-refusés » : l'app redémarre sans le rejouer, rien n'est effacé."), "pages")
+        } catch {
+            Diagnostics.error("pages : journal refusé non déplacé — \(error.localizedDescription)", "pages")
+        }
+    }
+
     static func reconcile(_ model: AppModel) {
         guard fm.fileExists(atPath: marker.path) else {
             do {

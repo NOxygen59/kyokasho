@@ -76,6 +76,8 @@ struct RootView: View {
     @ObservedObject private var dictionaryUpdates = DictionaryCatalogService.shared
     @Environment(\.scenePhase) private var scenePhase
     @State private var retryingStorage = false
+    /// N4 (revue R2) : confirmation avant de mettre un journal refusé de côté.
+    @State private var confirmingAside = false
 
     var body: some View {
         Group {
@@ -84,20 +86,36 @@ struct RootView: View {
                     Text("Reprise des données nécessaire").font(.title2)
                     Text(error)
                     // Restauration inachevée (#51) : seule une relance peut la reprendre, avant l'ouverture des bases.
-                    if !LibraryBackupService.restoreBlocked { Button("Réessayer la reprise") {
-                        guard !retryingStorage else { return }
-                        retryingStorage = true
-                        Task {
-                            defer { retryingStorage = false }
-                            let id = PageShift.pendingDocumentId
-                            PageShift.reconcile(model)
-                            if model.storageRecoveryError == nil, let id {
-                                model.storageRecoveryError = String(localized: "Finalisation de la reprise…")
-                                await model.ocr.endPageMutation(documentId: id)
-                                model.storageRecoveryError = nil
+                    if !LibraryBackupService.restoreBlocked {
+                        Button("Réessayer la reprise") {
+                            guard !retryingStorage else { return }
+                            retryingStorage = true
+                            Task {
+                                defer { retryingStorage = false }
+                                let id = PageShift.pendingDocumentId
+                                PageShift.reconcile(model)
+                                if model.storageRecoveryError == nil, let id {
+                                    model.storageRecoveryError = String(localized: "Finalisation de la reprise…")
+                                    await model.ocr.endPageMutation(documentId: id)
+                                    model.storageRecoveryError = nil
+                                }
                             }
+                        }.disabled(retryingStorage)
+                        // N4 (revue R2) : un journal refusé (altéré, incohérent, incomplet) rejoue
+                        // le même refus à chaque « Réessayer » — une seule action était une impasse.
+                        // Le journal peut être mis de côté (déplacé, jamais effacé) et l'app démarre.
+                        Button("Mettre le journal de côté et repartir", role: .destructive) {
+                            confirmingAside = true
                         }
-                    }.disabled(retryingStorage) }
+                        .disabled(retryingStorage)
+                        .confirmationDialog("Mettre ce journal de côté ?", isPresented: $confirmingAside,
+                                            titleVisibility: .visible) {
+                            Button("Mettre de côté", role: .destructive) { PageShift.setAsideRejectedJournal(model) }
+                            Button("Annuler", role: .cancel) {}
+                        } message: {
+                            Text("L'app redémarre sans rejouer la reprise. Le journal est déplacé dans « Conflits-remplacement/journaux-refusés » : rien n'est effacé.")
+                        }
+                    }
                 }.padding()
             } else {
                 NavigationStack {

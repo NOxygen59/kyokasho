@@ -22155,6 +22155,28 @@
         }
       }
     },
+    "Journal de reprise mis de côté dans « Conflits-remplacement/journaux-refusés » : l'app redémarre sans le rejouer, rien n'est effacé.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recovery journal set aside in « Conflits-remplacement/journaux-refusés »: the app restarts without replaying it, nothing is deleted."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Journal de reprise mis de côté dans « Conflits-remplacement/journaux-refusés » : l'app redémarre sans le rejouer, rien n'est effacé."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "恢复日志已移至“Conflits-remplacement/journaux-refusés”：应用重新启动，不再重放日志，未删除任何数据。"
+          }
+        }
+      }
+    },
     "Journal vide.": {
       "localizations": {
         "en": {
@@ -51411,6 +51433,94 @@
           "stringUnit": {
             "state": "translated",
             "value": "同一文件：没有需要记录的替换。"
+          }
+        }
+      }
+    },
+    "Mettre de côté": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Set aside"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mettre de côté"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移开"
+          }
+        }
+      }
+    },
+    "Mettre ce journal de côté ?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Set this journal aside?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mettre ce journal de côté ?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移开该日志？"
+          }
+        }
+      }
+    },
+    "Mettre le journal de côté et repartir": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Set the journal aside and restart"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mettre le journal de côté et repartir"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移开日志并重新启动"
+          }
+        }
+      }
+    },
+    "L'app redémarre sans rejouer la reprise. Le journal est déplacé dans « Conflits-remplacement/journaux-refusés » : rien n'est effacé.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The app restarts without replaying the recovery. The journal is moved to « Conflits-remplacement/journaux-refusés »: nothing is deleted."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L'app redémarre sans rejouer la reprise. Le journal est déplacé dans « Conflits-remplacement/journaux-refusés » : rien n'est effacé."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "应用重新启动，不再重放恢复。日志已移至“Conflits-remplacement/journaux-refusés”：未删除任何数据。"
           }
         }
       }
