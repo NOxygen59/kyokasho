@@ -705,6 +705,13 @@ enum PageShift {
         lastReplacementConflicts[documentId] = nil
         return count
     }
+    /// Corrections manuelles mises de côté pour un document remplacé (décision DEC-C3) : lues
+    /// dans le dossier de secours (compteur sur le disque, gardé au-delà d'un arrêt), et retirées
+    /// une fois rapportées, comme les conflits ; les fichiers de correction restent disponibles
+    /// pour la remise (`OCRService.store`).
+    static func consumeReplacementCorrections(for documentId: String) -> Int {
+        CorrectionAsideStore.shared.consumeTally(documentId: documentId).corrections
+    }
     /// Dossier de secours des conflits, par ancien identifiant et par type de donnée
     /// (`Brouillons`, `Lectures-IA`, `Rapport`, `PDF`) : toujours sous le support de l'app,
     /// jamais sous un chemin construit depuis une donnée hypothétique du journal.
@@ -714,6 +721,24 @@ enum PageShift {
     }
     private static func noteConflict(_ documentId: String) {
         lastReplacementConflicts[documentId, default: 0] += 1
+    }
+
+    // MARK: - Corrections de l'ancienne version mises de côté (décision DEC-C3)
+
+    /// Lignes corrigées à la main de l'ancienne version : `rekeyDocument` offre chaque résultat
+    /// OCR **avant** l'effacement de son cache (lignes reconnaissables à leur `originalText`).
+    /// Décode ici, puis écrit dans `Corrections-remplacement/<identifiant du nouveau document>/`,
+    /// jamais écrasé (`CorrectionAsideStore.keep`). Un résultat illisible n'a pas de lignes
+    /// lisibles : rien à mettre de côté (ses corrections, s'il y en avait, ne le seraient pas
+    /// reconnaissables), la bascule continue ; tous les résultats écrits par l'app décodent.
+    nonisolated static func asideCorrections(_ sourceDocumentId: String, _ newDocumentId: String,
+                                             _ pageIndex: Int, _ engine: String, _ pageJSON: Data) throws {
+        guard let page = try? JSONDecoder().decode(OCRPage.self, from: pageJSON) else { return }
+        let entries = page.lines.compactMap { line in
+            line.originalText.map { KeptCorrection(original: $0, corrected: line.text) }
+        }
+        try CorrectionAsideStore.shared.keep(pageIndex: pageIndex, engine: engine, entries: entries,
+                                             documentId: newDocumentId, sourceDocumentId: sourceDocumentId)
     }
 
     /// Plan d'un remplacement, calculé et vérifié **avant** l'écriture du journal : il lui faut
@@ -810,7 +835,8 @@ enum PageShift {
             updated.fileSize = p.newSize
             updated.lastPageIndex = min(old.lastPageIndex, max(0, p.newCount - 1))
             updated.driveRevision = p.newRevision ?? old.driveRevision
-            try model.database.rekeyDocument(from: p.documentId, to: updated)
+            try model.database.rekeyDocument(from: p.documentId, to: updated,
+                                             asideCorrections: PageShift.asideCorrections)
         }
         guard try model.database.document(id: p.documentId) == nil,
               try model.database.document(id: newId) != nil else {
@@ -1061,8 +1087,11 @@ enum PageShift {
         Diagnostics.log("pages : copie \(copy.folder.lastPathComponent) effacée", "pages")
     }
 
-    /// Document supprimé définitivement : ses copies partent avec lui (sa base est déjà effacée par cascade).
+    /// Document supprimé définitivement : ses copies partent avec lui (sa base est déjà effacée par cascade),
+    /// comme les lignes de corrections manuelles mises de côté pour lui (DEC-C3 : sans document, elles ne
+    /// serviraient plus jamais, la relecture qui les remettait n'a plus lieu).
     static func removeCopies(documentId: String) {
+        CorrectionAsideStore.shared.removeAllCorrections(documentId: documentId)
         for copy in copies() where copy.manifest?.documentId == documentId {
             try? fm.removeItem(at: copy.folder)
         }

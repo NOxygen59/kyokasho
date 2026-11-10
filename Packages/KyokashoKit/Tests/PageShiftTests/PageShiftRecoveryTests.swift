@@ -26,10 +26,15 @@ final class PageShiftRecoveryTests: XCTestCase {
         DocumentAnalysisService.folder = root.appendingPathComponent("Analysis")
         let savedDrafts = NoteDraftStore.shared
         NoteDraftStore.shared = NoteDraftStore(folder: root.appendingPathComponent("NoteDrafts"))
+        // DEC-C3 : même isolement pour les mises de côté d'un remplacement (corrections manuelles,
+        // encre en conflit) : harnais dans le même dossier temporaire que PageShift.
+        let savedAsides = CorrectionAsideStore.shared
+        CorrectionAsideStore.shared = CorrectionAsideStore(root: root)
         defer {
             PageShift.checkpoint = nil
             PageShift.support = saved
             NoteDraftStore.shared = savedDrafts
+            CorrectionAsideStore.shared = savedAsides
             try? FileManager.default.removeItem(at: root)
         }
         let model = try AppModel(root: root)

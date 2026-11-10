@@ -373,7 +373,11 @@ extension AppModel {
                     // (rekey) sans journal.
                     let updated = try importer.replace(documentId: existing.id, withFileAt: url,
                                                        driveRevision: file.revision,
-                                                       replacingInto: plan?.newDocumentId ?? existing.id)
+                                                       replacingInto: plan?.newDocumentId ?? existing.id,
+                                                       // DEC-C3 : les corrections manuelles de l'ancienne
+                                                       // version sont mises de côté avant l'effacement du
+                                                       // cache OCR (fichier `Corrections-remplacement/`).
+                                                       asideCorrections: PageShift.asideCorrections)
                     return (updated, false)
                 }
                 let imported = try importer.importFile(at: url, displayName: url.lastPathComponent,
@@ -415,6 +419,13 @@ extension AppModel {
                 let keptAside = PageShift.consumeReplacementConflicts(for: document.id)
                 if keptAside > 0 {
                     conflicts.append(String(localized: "Conflits de remplacement : des données de l'ancienne version de « \(document.title) » (\(keptAside) élément(s)) sont gardées dans « Conflits-remplacement »."))
+                }
+                // DEC-C3 : les lignes corrigées à la main de l'ancienne version sont mises de côté
+                // avant l'effacement du cache OCR ; le dossier reste en attente de la remise, au
+                // moment où le nouveau résultat OCR est enregistré (`OCRService.store`).
+                let keptCorrections = PageShift.consumeReplacementCorrections(for: document.id)
+                if keptCorrections > 0 {
+                    conflicts.append(String(localized: "Corrections manuelles de l'ancienne version de « \(document.title) » : \(keptCorrections) ligne(s) mises de côté dans « Corrections-remplacement » ; elles seront remises à la prochaine lecture de leur page."))
                 }
             } catch {
                 failures.append("\(document.title) : \(error.localizedDescription)")

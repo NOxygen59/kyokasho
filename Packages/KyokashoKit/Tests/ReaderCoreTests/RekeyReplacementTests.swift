@@ -120,4 +120,50 @@ final class RekeyReplacementTests: XCTestCase {
         // Les surlignages des deux versions sont rattachés, comme avant (OR IGNORE garde le survivant).
         XCTAssertEqual(try db.highlights(documentId: "new").count, 2)
     }
+
+    // MARK: DEC-C3 (10/11/2026) — corrections manuelles mises de côté
+
+    /// Avant l'effacement du cache OCR, chaque résultat en cache est offert à l'app, qui y
+    /// reconnaît les lignes corrigées à la main (`OCRLine.originalText`) et les écrit de côté.
+    /// Base jetable : ici on vérifie que **tous** les résultats sont offerts (JSON brut tel
+    /// qu'en base), que l'effacement suit, et qu'une bascule rejouée sans changement n'offre rien.
+    func testRekeyOffersEveryCachedResultToTheAsideBeforeDeleting() throws {
+        try db.save(LibraryDocument(id: "old", title: "Cours", originalFileName: "c.pdf", pageCount: 3, fileSize: 1))
+        try seedOCR(documentId: "old")
+        var offered: [(source: String, new: String, page: Int, engine: String, json: Data)] = []
+        var updated = try XCTUnwrap(db.document(id: "old"))
+        updated.id = "new"
+        try db.rekeyDocument(from: "old", to: updated, asideCorrections: { old, new, page, engine, json in
+            offered.append((old, new, page, engine, json))
+        })
+        XCTAssertEqual(offered.count, 3, "un appel par résultat en cache")
+        XCTAssertTrue(offered.allSatisfy { $0.source == "old" && $0.new == "new" })
+        XCTAssertEqual(offered.first(where: { $0.page == 0 })?.engine, "vision")
+        XCTAssertEqual(offered.first(where: { $0.page == 1 && $0.engine == "ppocr5" })?.json, Data("boîtes anciennes 2".utf8))
+        XCTAssertTrue(try db.ocrResults(documentId: "new").isEmpty, "l'effacement suit la mise de côté")
+
+        // Une bascule rejouée sans changement d'identifiant n'offre rien (ce n'est pas un remplacement).
+        offered = []
+        var again = try XCTUnwrap(db.document(id: "new"))
+        again.id = "new"
+        try db.rekeyDocument(from: "new", to: again, asideCorrections: { old, new, page, engine, json in
+            offered.append((old, new, page, engine, json))
+        })
+        XCTAssertTrue(offered.isEmpty)
+    }
+
+    /// Branche fusion : les deux versions partent (cascade + effacement du survivant), chacun de
+    /// leurs résultats est offert, l'origine reste distinguable par l'identifiant reçu.
+    func testFusionOffersTheResultsOfBothSidesToTheAside() throws {
+        try db.save(LibraryDocument(id: "old", title: "Cours", originalFileName: "c.pdf", pageCount: 3, fileSize: 1))
+        try db.save(LibraryDocument(id: "new", title: "Cours", originalFileName: "c.pdf", pageCount: 4, fileSize: 2))
+        try seedOCR(documentId: "old")
+        try seedOCR(documentId: "new")
+        var sources: Set<String> = []
+        var updated = try XCTUnwrap(db.document(id: "old"))
+        updated.id = "new"
+        try db.rekeyDocument(from: "old", to: updated, asideCorrections: { old, _, _, _, _ in sources.insert(old) })
+        XCTAssertEqual(sources, ["old", "new"])
+        XCTAssertTrue(try db.ocrResults(documentId: "new").isEmpty)
+    }
 }
