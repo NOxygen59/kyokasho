@@ -1,6 +1,292 @@
 {
   "sourceLanguage": "fr",
   "strings": {
+    "activé": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "enabled"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "activé"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "启用"
+          }
+        }
+      }
+    },
+    "désactivé": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "disabled"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "désactivé"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已关闭"
+          }
+        }
+      }
+    },
+    "inconnue": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "unknown"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "inconnue"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未知"
+          }
+        }
+      }
+    },
+    "Partager le relevé et le journal": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Share the battery log and the journal"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Partager le relevé et le journal"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "分享电池记录和日志"
+          }
+        }
+      }
+    },
+    "Par activité": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "By activity"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Par activité"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按活动"
+          }
+        }
+      }
+    },
+    "Par luminosité": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "By brightness"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Par luminosité"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "按亮度"
+          }
+        }
+      }
+    },
+    "Sessions sur batterie": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Battery sessions"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sessions sur batterie"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "电池使用时段"
+          }
+        }
+      }
+    },
+    "%lld min · %@ · CPU %lld %%": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld min · %@ · CPU %lld %%"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld min · %@ · CPU %lld %%"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 分钟 · %@ · CPU %lld %%"
+          }
+        }
+      }
+    },
+    "%lld min · %@ points de batterie · %@ · luminosité %lld %% · %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld min · %@ battery points · %@ · brightness %lld %% · %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld min · %@ points de batterie · %@ · luminosité %lld %% · %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 分钟 · %@ 格电 · %@ · 亮度 %lld %% · %@"
+          }
+        }
+      }
+    },
+    "Fichiers de diagnostic volumineux (%@ Mo) : partage-les puis efface-les.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Large diagnostic files (%@ MB): share them, then delete them."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fichiers de diagnostic volumineux (%@ Mo) : partage-les puis efface-les."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "诊断文件过大（%@ MB）：请先分享，再删除。"
+          }
+        }
+      }
+    },
+    "Le journal et le relevé de batterie prennent de la place. « Partager le relevé et le journal » les envoie ensemble, puis « Effacer » les retire.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The journal and the battery log take up space. “Share the battery log and the journal” sends both, then “Delete” removes them."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le journal et le relevé de batterie prennent de la place. « Partager le relevé et le journal » les envoie ensemble, puis « Effacer » les retire."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "日志和电池记录会占用空间。“分享电池记录和日志”会把两者一起发送，然后用“删除”移除。"
+          }
+        }
+      }
+    },
+    "Luminosité de l'écran au moment de la mesure. C'est le plus souvent elle qui explique une consommation forte : compare les tranches à activité égale.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Screen brightness at the time of the measurement. It usually explains heavy consumption: compare ranges for the same activity."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Luminosité de l'écran au moment de la mesure. C'est le plus souvent elle qui explique une consommation forte : compare les tranches à activité égale."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "测量时的屏幕亮度。耗电多通常就是它造成的：请在同一活动下比较各个区间。"
+          }
+        }
+      }
+    },
+    "Une session s'arrête à la mise en charge, à une suspension de l'app et à un saut de mesure. Les 30 plus récentes sont affichées.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A session ends at charging, when the app is suspended and on an odd measurement jump. The 30 most recent are shown."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Une session s'arrête à la mise en charge, à une suspension de l'app et à un saut de mesure. Les 30 plus récentes sont affichées."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "充电、应用挂起或测量跳变都会结束一个时段。最多显示最近 30 个。"
+          }
+        }
+      }
+    },
     "%@, page %@ sur %@": {
       "localizations": {
         "en": {

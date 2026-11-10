@@ -56,6 +56,7 @@ struct KyokashoApp: App {
                 }
                 #endif
                 .onReceive(NotificationCenter.default.publisher(for: UIApplication.didReceiveMemoryWarningNotification)) { _ in
+                    Diagnostics.alert("mémoire basse : caches et modèles libérés (empreinte \(Int(Diagnostics.footprintMB())) Mo)", "mémoire")
                     model.thumbnails.trim()
                     ONNXEngines.unload()
                     PDFPool.release()
@@ -106,6 +107,8 @@ struct RootView: View {
                                 UpdateBanner()
                                 DictionaryUpdateBanner().environmentObject(model.dictionary)
                                 AnalysisDurationBanner()
+                                // Permanente et non fermable : les fichiers de diagnostic prennent de la place.
+                                DiagnosticSizeBanner()
                             }
                         }
                 }
