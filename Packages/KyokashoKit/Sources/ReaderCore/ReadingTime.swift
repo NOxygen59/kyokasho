@@ -158,6 +158,16 @@ public struct ReadingSessionLog: Equatable, Sendable {
         }
     }
 
+    /// Remplacement d'un cours (lot C2, revue R2 P3 n°5) : les séances de lecture suivent le
+    /// document mis à jour — c'est la même activité de lecture du même livre. Rejouable :
+    /// l'ancien identifiant épuisé, un nouveau passage ne change rien.
+    public mutating func remapDocumentId(from oldId: String, to newId: String) {
+        guard oldId != newId else { return }
+        for index in sessions.indices where sessions[index].documentId == oldId {
+            sessions[index].documentId = newId
+        }
+    }
+
     /// Temps total du journal : la seule source du compteur de l'accueil et du tableau de bord.
     public var totalSeconds: TimeInterval { retired.total + TimeInterval(sessions.reduce(0) { $0 + $1.seconds }) }
 

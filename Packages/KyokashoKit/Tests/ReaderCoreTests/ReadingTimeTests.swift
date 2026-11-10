@@ -77,6 +77,22 @@ final class ReadingSessionLogTests: XCTestCase {
         XCTAssertEqual(log.sessions.map(\.seconds), [60, 90])
     }
 
+    /// Lot C2 (revue R2 P3 n°5) : un remplacement de cours fait suivre ses séances au nouvel
+    /// identifiant, durs et dates restés intacts ; rejoué, le remap ne décale rien.
+    func testRemapDocumentIdFollowsTheReplacedBookAndReplaysAsANoOp() {
+        var log = ReadingSessionLog()
+        log.record(documentId: "ancien", start: t0, end: t0.addingTimeInterval(60))
+        log.record(documentId: "autre", start: t0, end: t0.addingTimeInterval(90))
+        log.remapDocumentId(from: "ancien", to: "nouveau")
+        XCTAssertEqual(log.sessions.map(\.documentId), ["nouveau", "autre"])
+        XCTAssertEqual(log.sessions.map(\.seconds), [60, 90])
+        log.remapDocumentId(from: "ancien", to: "nouveau")
+        XCTAssertEqual(log.sessions.map(\.documentId), ["nouveau", "autre"], "reprise rejouée : rien")
+        // Même identifiant : rien à faire.
+        log.remapDocumentId(from: "nouveau", to: "nouveau")
+        XCTAssertEqual(log.sessions.count, 2)
+    }
+
     func testRoundTripAndUnreadableData() {
         var log = ReadingSessionLog()
         log.record(documentId: "a", start: t0, end: t0.addingTimeInterval(60))

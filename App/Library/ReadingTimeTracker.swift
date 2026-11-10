@@ -77,6 +77,17 @@ final class ReadingTimeTracker: ObservableObject {
         saveLog()
     }
 
+    /// Remplacement d'un cours (lot C2, revue R2 P3 n°5) : les séances de lecture suivent
+    /// l'identifiant du livre mis à jour. Le rechargement depuis les réglages standard avant le
+    /// remap garde le compte juste si ce singleton a démarré avant l'écriture du journal ; le
+    /// passage est rejouable (reprise au lancement) sans double décalage.
+    func remapDocumentId(from oldId: String, to newId: String) {
+        guard oldId != newId else { return }
+        log = ReadingSessionLog.decode(UserDefaults.standard.data(forKey: Self.sessionsKey))
+        log.remapDocumentId(from: oldId, to: newId)
+        saveLog()
+    }
+
     /// Arrière-plan ou verrouillage : pause ; retour au premier plan : reprise si un livre est ouvert.
     func scenePhaseChanged(_ phase: ScenePhase) {
         appActive = phase == .active

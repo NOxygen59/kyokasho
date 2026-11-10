@@ -22,6 +22,24 @@ enum PageAdditionHistory {
     static func forget(_ documentId: String) {
         UserDefaults.standard.removeObject(forKey: key(documentId))
     }
+
+    /// Remplacement d'un cours (lot C2, revue R2 P3 n°5) : l'historique des ajouts de pages suit
+    /// le document mis à jour. Rejouable : l'ancienne clé retirée, un nouveau passage ne fait
+    /// rien. Si l'arrivée a déjà son propre historique, rien n'est perdu ni écrasé : les ajouts
+    /// de l'ancienne version sont fusionnés à la suite (liste horodatée, sans doublon décalable).
+    static func remap(from oldId: String, to newId: String) {
+        guard oldId != newId, let data = UserDefaults.standard.data(forKey: key(oldId)) else { return }
+        if UserDefaults.standard.data(forKey: key(newId)) == nil {
+            UserDefaults.standard.set(data, forKey: key(newId))
+        } else {
+            let target = PageAdditionLog.decode(UserDefaults.standard.data(forKey: key(newId)))
+            let old = PageAdditionLog.decode(data)
+            var merged = target
+            for entry in old.entries { merged.record(entry) }
+            UserDefaults.standard.set(merged.encoded(), forKey: key(newId))
+        }
+        UserDefaults.standard.removeObject(forKey: key(oldId))
+    }
 }
 
 /// Section « Ajouts de pages » de « Ce document ».
