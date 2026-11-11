@@ -1,6 +1,28 @@
 {
   "sourceLanguage": "fr",
   "strings": {
+    "Une étiquette porte déjà ce nom.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A tag already has this name."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Une étiquette porte déjà ce nom."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已有标签使用此名称。"
+          }
+        }
+      }
+    },
     "Donne un nom.": {
       "localizations": {
         "en": {

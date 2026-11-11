@@ -267,4 +267,29 @@ final class PageRestorationTests: XCTestCase {
         try restore("s1", id: "r1")
         XCTAssertEqual(try db.organization(noteId: note.id), before)
     }
+
+    /// Revue DeepSeek R2 n°8 : une archive de page faite **avant** la v7 (JSON sans les colonnes de rangement) se
+    /// restaure avec le rangement par défaut. Et n°1 : une étiquette supprimée pendant que la page est retirée revient
+    /// ignorée (identifiant inconnu), sans erreur.
+    func testRestoringAnArchiveFromBeforeV7AndADeletedTag() throws {
+        let note = try XCTUnwrap(db.comments(documentId: "d").first { $0.pageIndex == 2 })
+        let tag = try db.noteTag(named: "Supprimée ensuite")
+        try db.apply(.addTag(tag.id), to: [note.id])
+        try remove([2], id: "s1")
+        try db.deleteNoteTag(id: tag.id)
+        try restore("s1", id: "r1")
+        XCTAssertEqual(try db.organization(noteId: note.id)?.tagIds, [])
+
+        let other = try XCTUnwrap(db.comments(documentId: "d").first { $0.pageIndex == 3 })
+        try db.apply(.priority(.high), to: [other.id])
+        try remove([3], id: "s2")
+        try db.writer.write { db in
+            try db.execute(sql: """
+                UPDATE pageEditRow SET rowJSON = CAST(json_remove(CAST(rowJSON AS TEXT), '$.dueDay', '$.priority', '$.archived',
+                '$.noteFolderId', '$.tagIds') AS BLOB) WHERE editId = 's2' AND tableName = 'pageComment'
+                """)
+        }
+        try restore("s2", id: "r2")
+        XCTAssertEqual(try db.organization(noteId: other.id), .default)
+    }
 }

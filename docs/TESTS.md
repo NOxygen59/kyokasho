@@ -231,8 +231,8 @@ Base initiale du lot : `main` `35c5242` avant la réécriture de l'historique, s
 | R2 | `test_r2_empty_large_and_read_only_files_roundtrip` (Python) | fichier vide, 64 Mo, fichier source en lecture seule : **contenus** identiques ; les **permissions ne sont pas conservées** (`shutil.copyfile` : un fichier `0444` ressort selon l'umask, par exemple `0644`) |
 | R3 | `test_r3_backup_killed_…`, `test_r3_restore_killed_…` (Python) | SIGKILL réel après la 1re copie, après la 4e, juste avant la publication : jamais de `backup/` ni de `container/` partiel, source intacte, relance réussie vers une nouvelle destination |
 | R4 | `test_r4_known_limit_…` (Python) | limite connue : une archive modifiée avec un manifeste recalculé est acceptée |
-| C1 | `testC1OlderAppDatabaseSchemaRestoresAndMigrates` (Swift) | base ramenée au schéma `v3-page-one`, sauvegardée, restaurée, ouverte par l'`AppDatabase` actuel : `v4` appliquée, données relues, note ancrée écrite |
-| C2 | — | écarté : `ReviewStore` n'a qu'une migration (`v1`), il n'existe pas de schéma plus ancien |
+| C1 | `testC1OlderAppDatabaseSchemaRestoresAndMigrates` (Swift) | base ramenée au schéma `v3-page-one`, sauvegardée, restaurée, ouverte par l'`AppDatabase` actuel : `v4` à `v7` appliquées, données relues (note d'avant = rangement par défaut), note ancrée écrite |
+| C2 | `DocumentCardsTests.testMigrationFromAPopulatedV1Database` (Swift) | base des révisions `v1` peuplée sur disque, rouverte : index `v2-card-source` ajouté, cartes et FSRS intacts |
 
 **Résultats rejoués sur ce Mac sur `465cc19` + `e9b1bf7` (base réécrite `5f5caaf`) :** `python3 -I -m unittest discover -s tests -v` : 21 tests, 0 échec. `swift test --filter BackupRoundTripTests` : 4 tests, 0 échec. `swift test` complet : 225 exécutés, 7 ignorés, 0 échec. Revue de Codex : 21 tests Python et contrôle documentaire rejoués de son côté ; Swift non rejoué par Codex (dépendances inaccessibles dans son environnement).
 

@@ -205,7 +205,7 @@ extension BackupRoundTripTests {
         let ocr = Data(#"{"edited":true}"#.utf8)
         try database.save(OCRResultRecord(documentId: doc.id, pageIndex: 0, engine: "synthetic", json: ocr, durationMs: 1))
         try database.writer.close()
-        // Revenir au schéma v3 : colonnes de v4 et v5 retirées et migrations oubliées, comme une base jamais migrée.
+        // Revenir au schéma v3 : colonnes et tables de v4 à v7 retirées et migrations oubliées, comme une base jamais migrée.
         try sqlite(path, """
             DROP INDEX pageComment_due; ALTER TABLE pageComment DROP COLUMN dueDay;
             ALTER TABLE pageComment DROP COLUMN priority; ALTER TABLE pageComment DROP COLUMN archived;
@@ -250,6 +250,8 @@ extension BackupRoundTripTests {
         XCTAssertTrue(try sqliteRows(restored, "SELECT identifier FROM grdb_migrations").contains("v4-note-canvas-anchor"))
         // v5 (RET-039, #54) appliquée aussi : document ancien non classé.
         XCTAssertTrue(try sqliteRows(restored, "SELECT identifier FROM grdb_migrations").contains("v5-document-category"))
+        XCTAssertTrue(try sqliteRows(restored, "SELECT identifier FROM grdb_migrations").contains("v6-folders"))
+        XCTAssertTrue(try sqliteRows(restored, "SELECT identifier FROM grdb_migrations").contains("v7-note-organization"))
     }
 
     // MARK: SQLite direct (sans dépendance supplémentaire à GRDB dans cette cible)

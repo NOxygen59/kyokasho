@@ -3,6 +3,8 @@
 
 # Plan directeur — professionnalisation de Kyōkasho
 
+**T4 E1 — rangement des notes en base — 11/11.** PLAN-T4-001 (approuvé le 11/11, tout A ; avenant AV-T4-01 : étiquettes et classeur dans la ligne de la note, sans table de liaison). Migration `v7-note-organization`, API `AppDatabase+NoteOrganization` (classeurs, étiquettes, échéance, priorité, archive, pastille). Revue R2 sans Codex : GLM PASS (`GLM-R2-NOTES-E1-07cd200.md`) puis DeepSeek PASS (`DEEPSEEK-R2-NOTES-E1-ed5e234.md`), points traités. Aucun écran : E2 (écran Notes, pastille) et E3 (réglages d'une note) à faire. Preuves Mac seulement.
+
 **Cartes E1 — écran « Cartes de ce document » — 11/11.** PLAN-CARTES-001 (approuvé le 11/11, tout A), branche `claude/ipad-tableau-mesures`, local. Index additif `v2-card-source` de la base des révisions (testé sur une base v1 peuplée), `cards(sourceDocumentId:query:)` sans limite, `saveEdited` (mot/lecture modifiables, clé anti-doublon suivie, seules les colonnes éditées écrites : FSRS jamais réécrit), écran par document ouvert depuis l'accueil et le lecteur, export Anki par `onDismiss`. Revue DeepSeek D-07 (`DEEPSEEK-D07-CARTES-E1-980f316.md`, PARTIAL) traitée. Preuves Mac seulement ; recette iPad à faire ; E2 (mots de la page) non commencée.
 
 **T5 E2 — dossiers sur l'accueil — 11/11.** PLAN-T5-001 (approuvé le 10/11). Dossiers en tête, ouvrir, « Déplacer vers… », sélection → « Déplacer », nouveau / renommer / supprimer ; base : espace réel relu, sortie du dossier au changement d'espace, création + rangement en une transaction, fusion Drive garde le dossier. Revue DeepSeek D-07 (`DEEPSEEK-D07-T5-E2-b8fa03e.md`, PARTIAL, données sans défaut) traitée à `f847c72`. Preuves Mac seulement ; recette iPad à faire.

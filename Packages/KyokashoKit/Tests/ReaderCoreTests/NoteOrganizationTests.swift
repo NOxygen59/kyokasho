@@ -155,4 +155,17 @@ final class NoteOrganizationTests: XCTestCase {
         XCTAssertEqual(listed.note.body, "dessin")
         XCTAssertEqual(try db.comments(documentId: "d").first { $0.id == "n3" }?.drawing, Data([1, 2, 3]))
     }
+
+    /// Revue DeepSeek n°3 et n°7 : échéance non canonique ignorée ; renommer vers un nom pris est refusé.
+    func testInvalidDueDayIsIgnoredAndRenamingIntoADuplicateIsRefused() throws {
+        let db = try database()
+        try db.writer.write { try $0.execute(sql: "UPDATE pageComment SET dueDay = '2026-1-5' WHERE id = 'n1'") }
+        XCTAssertNil(try db.organization(noteId: "n1")?.dueDay)
+        XCTAssertEqual(try db.notesToReviewCount(today: Date()), 0)
+        let a = try db.noteTag(named: "Test S46")
+        let b = try db.noteTag(named: "Autre")
+        XCTAssertThrowsError(try db.renameNoteTag(id: b.id, to: "test s46")) { XCTAssertEqual($0 as? NoteOrganizationError, .duplicateName) }
+        XCTAssertNoThrow(try db.renameNoteTag(id: a.id, to: "TEST S46"), "renommer en changeant la casse reste permis")
+        XCTAssertEqual(try db.organizedNotes(includeArchived: true, excludingDocuments: ["d"]).count, 0)
+    }
 }

@@ -18,7 +18,11 @@ import GRDB
 //   fusion de remplacement Drive) sans code de plus ;
 // - classeur et étiquettes sont référencés sans clé étrangère : un identifiant inconnu (paquet venu d'un autre appareil,
 //   classeur supprimé ailleurs) est ignoré à la lecture, jamais une erreur ; supprimer un classeur ou une étiquette
-//   les retire des notes dans la même transaction ;
+//   les retire des notes présentes dans la même transaction. Limite connue (revue DeepSeek R2 n°1) : une note dont la
+//   page est retirée vit dans l'archive des pages (`pageEditRow`), qui n'est pas réécrite ; restaurée, elle garde
+//   l'identifiant supprimé, ignoré à la lecture (aucun effet visible) ;
+// - une échéance non canonique (paquet modifié à la main) est ignorée à la lecture et par la pastille ;
+// - réorganiser une note ne change pas son `updatedAt` (revue DeepSeek n°4) : la date reste celle du contenu ;
 // - `tagIds` est un tableau JSON trié et sans doublon (forme canonique, comparable).
 
 /// Classeur de notes (un par note au plus).
@@ -94,7 +98,7 @@ public enum NoteChange: Equatable, Sendable {
 }
 
 public enum NoteOrganizationError: LocalizedError, Equatable {
-    case emptyName, invalidDay, folderNotFound, tagNotFound
+    case emptyName, invalidDay, folderNotFound, tagNotFound, duplicateName
 
     public var errorDescription: String? {
         switch self {
@@ -102,6 +106,7 @@ public enum NoteOrganizationError: LocalizedError, Equatable {
         case .invalidDay: return String(localized: "Date d'échéance invalide.", bundle: .main)
         case .folderNotFound: return String(localized: "Ce classeur n'existe plus.", bundle: .main)
         case .tagNotFound: return String(localized: "Cette étiquette n'existe plus.", bundle: .main)
+        case .duplicateName: return String(localized: "Une étiquette porte déjà ce nom.", bundle: .main)
         }
     }
 }
@@ -194,6 +199,10 @@ extension AppDatabase {
     public func renameNoteTag(id: String, to name: String) throws {
         let clean = try Self.clean(name)
         try writer.write { db in
+            // Revue DeepSeek n°7 : comme à la création, jamais deux étiquettes au même nom (sans les majuscules).
+            if try NoteTag.fetchAll(db).contains(where: { $0.id != id && $0.name.compare(clean, options: .caseInsensitive) == .orderedSame }) {
+                throw NoteOrganizationError.duplicateName
+            }
             try db.execute(sql: "UPDATE noteTag SET name = ? WHERE id = ?", arguments: [clean, id])
             guard db.changesCount == 1 else { throw NoteOrganizationError.tagNotFound }
         }
@@ -256,13 +265,14 @@ extension AppDatabase {
     /// Toutes les notes de tous les documents avec leur rangement (écran « Notes ») ; archivées seulement si demandé.
     /// Revue GLM R2 (n°2) : le dessin (`drawing`) n'est pas lu, la liste n'en a pas besoin (`note.drawing == nil`) ;
     /// ouvrir la note dans le lecteur relit la note complète.
-    public func organizedNotes(includeArchived: Bool) throws -> [OrganizedNote] {
+    /// `excludingDocuments` : documents à la corbeille (hors base), comme pour la pastille (revue DeepSeek n°2).
+    public func organizedNotes(includeArchived: Bool, excludingDocuments: Set<String> = []) throws -> [OrganizedNote] {
         try writer.read { db in
             let known = try Self.knownIds(db)
             var sql = "SELECT id, documentId, pageIndex, body, createdAt, updatedAt, anchorX, anchorY, anchorWidth, anchorHeight, anchorText, \(Self.columns) FROM pageComment"
             if !includeArchived { sql += " WHERE archived = 0" }
             sql += " ORDER BY documentId, pageIndex, createdAt"
-            return try Row.fetchAll(db, sql: sql).map { row in
+            return try Row.fetchAll(db, sql: sql).filter { !excludingDocuments.contains($0["documentId"] as String) }.map { row in
                 OrganizedNote(note: try PageComment(row: row), organization: Self.organization(row, known: known))
             }
         }
@@ -273,9 +283,9 @@ extension AppDatabase {
         guard let tomorrow = calendar.date(byAdding: .day, value: 1, to: today) else { return 0 }
         let limit = NoteDay.string(tomorrow, calendar: calendar)
         return try writer.read { db in
-            try Row.fetchAll(db, sql: "SELECT documentId FROM pageComment WHERE archived = 0 AND dueDay IS NOT NULL AND dueDay <= ?",
+            try Row.fetchAll(db, sql: "SELECT documentId, dueDay FROM pageComment WHERE archived = 0 AND dueDay IS NOT NULL AND dueDay <= ?",
                              arguments: [limit])
-                .filter { !excludingDocuments.contains($0["documentId"] as String) }.count
+                .filter { NoteDay.isValid($0["dueDay"] as String) && !excludingDocuments.contains($0["documentId"] as String) }.count
         }
     }
 
@@ -295,7 +305,8 @@ extension AppDatabase {
 
     private static func organization(_ row: Row, known: (folders: Set<String>, tags: Set<String>)) -> NoteOrganization {
         let folder: String? = row["noteFolderId"]
-        return NoteOrganization(dueDay: row["dueDay"],
+        let due: String? = row["dueDay"]
+        return NoteOrganization(dueDay: due.flatMap { NoteDay.isValid($0) ? $0 : nil },
                                 priority: NotePriority(rawValue: row["priority"] ?? 1) ?? .normal,
                                 archived: row["archived"] ?? false,
                                 folderId: folder.flatMap { known.folders.contains($0) ? $0 : nil },
