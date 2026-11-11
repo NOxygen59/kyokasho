@@ -188,7 +188,7 @@ extension BackupRoundTripTests {
     }
 
     /// C1 — base `AppDatabase` au schéma `v3-page-one` (avant `v4-note-canvas-anchor`), sauvegardée et restaurée :
-    /// l'app actuelle l'ouvre, applique `v4`, `v5` et `v6` (dossiers) et relit notes, repères et OCR, puis écrit une note ancrée.
+    /// l'app actuelle l'ouvre, applique `v4`, `v5`, `v6` (dossiers) et `v7` (rangement des notes) et relit notes, repères et OCR, puis écrit une note ancrée.
     func testC1OlderAppDatabaseSchemaRestoresAndMigrates() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("kyokasho-old-schema-test-" + UUID().uuidString)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
@@ -207,6 +207,11 @@ extension BackupRoundTripTests {
         try database.writer.close()
         // Revenir au schéma v3 : colonnes de v4 et v5 retirées et migrations oubliées, comme une base jamais migrée.
         try sqlite(path, """
+            DROP INDEX pageComment_due; ALTER TABLE pageComment DROP COLUMN dueDay;
+            ALTER TABLE pageComment DROP COLUMN priority; ALTER TABLE pageComment DROP COLUMN archived;
+            ALTER TABLE pageComment DROP COLUMN noteFolderId; ALTER TABLE pageComment DROP COLUMN tagIds;
+            DROP TABLE noteTag; DROP TABLE noteFolder;
+            DELETE FROM grdb_migrations WHERE identifier = 'v7-note-organization';
             DROP INDEX document_folder; ALTER TABLE document DROP COLUMN folderId; DROP TABLE folder;
             DELETE FROM grdb_migrations WHERE identifier = 'v6-folders';
             ALTER TABLE document DROP COLUMN category;
@@ -238,6 +243,9 @@ extension BackupRoundTripTests {
         anchored.anchorRect = .init(x: 1, y: 2, width: 3, height: 4)
         try app.save(anchored)
         XCTAssertEqual(try app.comments(documentId: doc.id).count, 2)
+        // v7 (PLAN-T4-001) : la note d'avant est « normale », sans échéance, classeur ni étiquette.
+        let old = try XCTUnwrap(app.comments(documentId: doc.id).first { $0.body == "Note d'avant v4" })
+        XCTAssertEqual(try app.organization(noteId: old.id), .default)
         try app.writer.close()
         XCTAssertTrue(try sqliteRows(restored, "SELECT identifier FROM grdb_migrations").contains("v4-note-canvas-anchor"))
         // v5 (RET-039, #54) appliquée aussi : document ancien non classé.

@@ -250,4 +250,21 @@ final class PageRestorationTests: XCTestCase {
         try db.renumberPrintedPages(documentId: "d", firstPageIndex: 2)
         XCTAssertEqual(try db.printedNumbers()["d"], [nil, nil, 1, 2, 3])
     }
+
+    /// PLAN-T4-001 E1 : une note étiquetée, datée et rangée retirée avec sa page puis restaurée garde tout son rangement
+    /// (les colonnes sont dans la ligne archivée par `SELECT *`).
+    func testRemovedThenRestoredNoteKeepsItsOrganization() throws {
+        let note = try XCTUnwrap(db.comments(documentId: "d").first { $0.pageIndex == 2 })
+        let tag = try db.noteTag(named: "Test S46")
+        let folder = try db.createNoteFolder(name: "Matériaux")
+        try db.apply(.addTag(tag.id), to: [note.id])
+        try db.apply(.folder(folder.id), to: [note.id])
+        try db.apply(.due("2026-11-18"), to: [note.id])
+        try db.apply(.priority(.high), to: [note.id])
+        let before = try XCTUnwrap(db.organization(noteId: note.id))
+        try remove([2], id: "s1")
+        XCTAssertNil(try db.organization(noteId: note.id))
+        try restore("s1", id: "r1")
+        XCTAssertEqual(try db.organization(noteId: note.id), before)
+    }
 }

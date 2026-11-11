@@ -213,6 +213,33 @@ public final class AppDatabase: @unchecked Sendable {
             }
             try db.create(index: "document_folder", on: "document", columns: ["folderId"])
         }
+        // Rangement des notes (PLAN-T4-001, E1) : migration additive ; une note existante devient « normale », sans
+        // échéance, classeur ni étiquette, non archivée. Ces colonnes sont **absentes** de `PageComment` (comme
+        // `document.folderId`) : enregistrer le texte ou le dessin d'une note ne peut jamais les effacer. Étant dans la
+        // ligne de la note, elles suivent tous les chemins qui la copient (`SELECT *` des paquets et des archives de
+        // pages retirées, fusion Drive qui ne change que `documentId`). Classeur et étiquettes sont des identifiants
+        // **sans clé étrangère** : venus d'un autre appareil (paquet), inconnus ici, ils sont ignorés à la lecture.
+        // Voir AppDatabase+NoteOrganization.
+        m.registerMigration("v7-note-organization") { db in
+            try db.create(table: "noteFolder") { t in
+                t.primaryKey("id", .text)
+                t.column("name", .text).notNull()
+                t.column("createdAt", .datetime).notNull()
+            }
+            try db.create(table: "noteTag") { t in
+                t.primaryKey("id", .text)
+                t.column("name", .text).notNull()
+                t.column("createdAt", .datetime).notNull()
+            }
+            try db.alter(table: "pageComment") { t in
+                t.add(column: "dueDay", .text)
+                t.add(column: "priority", .integer).notNull().defaults(to: 1)
+                t.add(column: "archived", .boolean).notNull().defaults(to: false)
+                t.add(column: "noteFolderId", .text)
+                t.add(column: "tagIds", .text).notNull().defaults(to: "[]")
+            }
+            try db.create(index: "pageComment_due", on: "pageComment", columns: ["archived", "dueDay"])
+        }
         return m
     }
 }
