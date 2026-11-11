@@ -342,7 +342,9 @@ final class AppModel: ObservableObject {
             if succeeded {
                 self.trash.remove(document.id)
                 self.saveTrash()
-            } else if !self.trashedDocuments.contains(where: { $0.id == document.id }) {
+            } else if self.trash.contains(document.id), !self.trashedDocuments.contains(where: { $0.id == document.id }) {
+                // Revue GLM R2 (n°1) : seulement s'il est encore marqué à la corbeille (jamais en double avec la
+                // bibliothèque si une restauration était passée entre-temps).
                 self.trashedDocuments.insert(document, at: 0)
             }
         }
