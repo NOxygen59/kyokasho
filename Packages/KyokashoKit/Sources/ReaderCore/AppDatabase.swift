@@ -238,10 +238,16 @@ extension AppDatabase {
     public func updateMangaSpace(documentId: String, inManga: Bool) throws {
         try writer.write { db in
             guard var document = try LibraryDocument.fetchOne(db, key: documentId) else { return }
+            let before = LibrarySpace(document: document)
             var settings = document.settingsOverride
             settings.mangaSpace = inManga ? true : nil
             document.settingsOverride = settings
             try db.execute(sql: "UPDATE document SET settingsJSON = ? WHERE id = ?", arguments: [document.settingsJSON, documentId])
+            // PLAN-T5-001, E2 : les dossiers sont propres à un espace (DEC-T5-02). Un document qui change d'espace
+            // sort de son dossier dans la même écriture : il ne reste jamais rangé dans un dossier de l'autre espace.
+            if LibrarySpace(document: document) != before {
+                try db.execute(sql: "UPDATE document SET folderId = NULL WHERE id = ?", arguments: [documentId])
+            }
         }
     }
 

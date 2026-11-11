@@ -136,4 +136,31 @@ final class LibraryFoldersTests: XCTestCase {
         while seen.last?.folders.count != 1, Date() < deadline { RunLoop.current.run(until: Date().addingTimeInterval(0.05)) }
         XCTAssertEqual(seen.last?.folders.map(\.name), ["Nouveau"])
     }
+
+    /// Revue GLM R2 (G1) : l'espace réel du document est relu en base, même si l'appelant annonce le mauvais.
+    func testMangaDocumentIsRefusedInAStudyFolderWhateverTheCallerSays() throws {
+        let (database, _) = try temporaryDatabase()
+        try database.save(document("a"))
+        try database.updateMangaSpace(documentId: "a", inManga: true)
+        let study = try database.createFolder(name: "Étude", space: "study")
+        XCTAssertThrowsError(try database.moveDocuments(["a"], toFolder: study.id, space: "study")) {
+            XCTAssertEqual($0 as? FolderError, .wrongSpace)
+        }
+        XCTAssertNil(try database.libraryFolders().membership["a"], "tout ou rien : rien n'est rangé")
+    }
+
+    /// PLAN-T5-001, E2 : un document qui change d'espace sort de son dossier (jamais rangé dans l'autre espace).
+    func testChangingSpaceTakesTheDocumentOutOfItsFolder() throws {
+        let (database, _) = try temporaryDatabase()
+        try database.save(document("a"))
+        try database.save(document("b"))
+        let study = try database.createFolder(name: "Étude", space: "study")
+        try database.moveDocuments(["a", "b"], toFolder: study.id, space: "study")
+        try database.updateMangaSpace(documentId: "a", inManga: true)
+        try database.updateMangaSpace(documentId: "b", inManga: false)
+        let membership = try database.libraryFolders().membership
+        XCTAssertNil(membership["a"], "passé en Manga : hors du dossier Livres & Manuels")
+        XCTAssertEqual(membership["b"], study.id, "même espace : reste dans son dossier")
+        XCTAssertEqual(try database.allDocuments().count, 2, "aucun document perdu")
+    }
 }

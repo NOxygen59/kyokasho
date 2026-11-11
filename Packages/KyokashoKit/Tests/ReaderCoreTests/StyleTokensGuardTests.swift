@@ -273,7 +273,7 @@ final class StyleTokensGuardTests: XCTestCase {
         // Panneau de gauche : outils d'étude masqués en Manga ; sections Manga puis CBZ.
         let library = try read("Library/LibraryView.swift")
         XCTAssertEqual(library.components(separatedBy: "if space != .manga {").count, 3)
-        XCTAssertTrue(library.contains("return LibrarySections.groupManga(filtered)"))
+        XCTAssertTrue(library.contains("return LibrarySections.groupManga(loose)")) // PLAN-T5-001 E2 : hors dossier
         // Tableau de bord : coins arrondis même pour un style à angles droits.
         XCTAssertTrue(library.contains("static var dashboardRadius: CGFloat { max(Atelier.corner(26), 18) }"))
         // Zoom animé en page unique : défilement zoomable de la page touchée.

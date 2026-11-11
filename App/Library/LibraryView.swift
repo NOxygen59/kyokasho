@@ -62,15 +62,50 @@ struct LibraryView: View {
     private var usesCompactDocuments: Bool { PersonalPadLibrary.isAvailable && compactDocuments }
     @State private var convertingComics: [LibraryDocument] = []
     @State private var showConvertConfirmation = false
+    /// Dossier ouvert sur l'accueil (PLAN-T5-001, E2) ; `nil` : accueil complet. Remis à `nil` au changement d'espace.
+    @State private var openFolderId: String?
+    /// Fenêtre « nom du dossier » : création (avec documents à ranger) ou renommage.
+    @State private var folderNaming: FolderNaming?
+    @State private var folderName = ""
+    @State private var deletingFolder: LibraryFolder?
 
     private var spaceDocuments: [LibraryDocument] {
         model.documents.filter { $0.isInMangaSpace == (space == .manga) }
     }
 
     /// Livres et Manuels : sections par catégorie. Manga : « Manga » (PDF) puis « CBZ » (demande de NOxygen59, 07/11/2026).
+    /// Filtre autre que « Tous » ou recherche en cours : les dossiers sans document filtré sont masqués (DEC-T5-09).
+    private var isFiltering: Bool {
+        filter != .all || !search.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    /// Dossiers en tête et documents hors dossier (PLAN-T5-001, E2 ; calcul pur testé : `LibraryFolderLayout`).
+    private var folderLayout: LibraryFolderLayout.Result {
+        LibraryFolderLayout.layout(documents: filtered, folders: model.folders, space: space, filtering: isFiltering)
+    }
+
+    /// Dossier ouvert, s'il existe encore dans l'espace affiché (supprimé ailleurs : retour à l'accueil complet).
+    private var currentFolder: LibraryFolder? {
+        guard let openFolderId else { return nil }
+        return model.folders.folders(in: space.rawValue).first { $0.id == openFolderId }
+    }
+
+    /// Documents du dossier ouvert qui passent le filtre.
+    private var currentFolderDocuments: [LibraryDocument] {
+        guard let currentFolder else { return [] }
+        return folderLayout.tiles.first { $0.folder.id == currentFolder.id }?.documents ?? []
+    }
+
+    /// Sections habituelles, pour les seuls documents hors dossier.
     private var sections: [LibrarySections.Section] {
-        guard space == .manga else { return LibrarySections.group(filtered) }
-        return LibrarySections.groupManga(filtered)
+        let loose = folderLayout.loose
+        guard space == .manga else { return LibrarySections.group(loose) }
+        return LibrarySections.groupManga(loose)
+    }
+
+    /// Documents affichés (« Tout sélectionner » ne prend que ceux-là).
+    private var visibleDocuments: [LibraryDocument] {
+        currentFolder != nil ? currentFolderDocuments : filtered
     }
 
     private var selectedComics: [LibraryDocument] {
@@ -560,6 +595,7 @@ struct LibraryView: View {
         return Button {
             guard !on else { return }
             selecting = false
+            openFolderId = nil
             batch = BatchDeletion()
             captureAppearance()
             space = value
@@ -620,6 +656,11 @@ struct LibraryView: View {
                 .padding(.horizontal, 14).padding(.vertical, 10)
                 .frame(width: 280)
                 .atelierPanel(radius: 22)
+                Button {
+                    folderName = ""
+                    folderNaming = .create(moving: [])
+                } label: { Label("Nouveau dossier", systemImage: "folder.badge.plus") }
+                    .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.read))
                 if !model.documents.isEmpty {
                     Button {
                         selecting.toggle()
@@ -632,7 +673,7 @@ struct LibraryView: View {
             }
             ZStack(alignment: .topTrailing) {
                 VStack(alignment: .leading, spacing: Atelier.gap) {
-                    if filtered.isEmpty {
+                    if filtered.isEmpty && folderLayout.tiles.isEmpty && currentFolder == nil {
                         emptyState
                     } else {
                         ScrollViewReader { proxy in
@@ -641,48 +682,41 @@ struct LibraryView: View {
                                 // Sections « Manuels », « Livres », « Non classés » (recette 1.3.2 (61), E5) : chacune s'allonge
                                 // avec ses documents, les suivantes descendent d'autant.
                                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 180, maximum: 220), spacing: 22)], spacing: 26) {
+                                    if let folder = currentFolder {
+                                        // Dossier ouvert (PLAN-T5-001, E2) : ses documents seulement, en une section.
+                                        Section {
+                                            ForEach(currentFolderDocuments) { document in
+                                                documentCard(document)
+                                            }
+                                        } header: {
+                                            openFolderHeader(folder)
+                                        }
+                                    } else {
+                                    if !folderLayout.tiles.isEmpty {
+                                        // Dossiers en tête de l'espace (DEC-T5-08 : ordre alphabétique de la base).
+                                        Section {
+                                            ForEach(folderLayout.tiles) { tile in
+                                                Button {
+                                                    if !selecting { openFolderId = tile.folder.id }
+                                                } label: {
+                                                    FolderCard(name: tile.folder.name, documents: tile.documents)
+                                                }
+                                                .buttonStyle(PressScale())
+                                                .contextMenu { if !selecting { folderMenu(tile.folder) } }
+                                            }
+                                        } header: {
+                                            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                                                AtelierLabel(String(localized: "Dossiers"), tint: Atelier.Tint.read)
+                                                Text("\(folderLayout.tiles.count)").font(Atelier.mono).foregroundStyle(Atelier.textTertiary)
+                                                Spacer()
+                                            }
+                                            .padding(.top, 8)
+                                        }
+                                    }
                                     ForEach(sections, id: \.title) { section in
                                         Section {
                                             ForEach(section.documents) { document in
-                                                Button {
-                                                    if selecting { batch.toggle(document.id) } else { model.openDocumentId = document.id }
-                                                } label: {
-                                                    DocumentCard(document: document)
-                                                }
-                                                .buttonStyle(PressScale())
-                                                .id(LibraryCardRenderIdentity(documentId: document.id,
-                                                                              category: document.category,
-                                                                              selecting: selecting,
-                                                                              manga: document.isInMangaSpace))
-                                                // La catégorie appartient à l'état courant de la bibliothèque. En la
-                                                // dessinant au-dessus du bouton, elle n'est plus retenue dans l'ancien
-                                                // rendu interne de la carte après l'import.
-                                                .overlay(alignment: .topLeading) {
-                                                    if document.isInMangaSpace {
-                                                        // Format fixe pour un .cbz ; simple rangement pour un PDF.
-                                                        mangaMark(archive: document.isComicArchive).allowsHitTesting(false)
-                                                    } else if let category = document.category {
-                                                        categoryMark(category).allowsHitTesting(false)
-                                                    }
-                                                }
-                                                // L'indicateur reste au-dessus du bouton lui-même. Dans le contenu du
-                                                // bouton, SwiftUI pouvait le masquer jusqu'à la reconstruction de la
-                                                // bibliothèque après un redémarrage (constaté sur iPad, 30/10/2026).
-                                                .overlay(alignment: .topTrailing) {
-                                                    if selecting {
-                                                        selectionMark(batch.selected.contains(document.id))
-                                                            .allowsHitTesting(false)
-                                                    }
-                                                }
-                                                .background {
-                                                    if PersonalPadLibrary.isAvailable {
-                                                        GeometryReader { card in
-                                                            Color.clear.preference(key: LibraryCardPositions.self,
-                                                                value: [document.id: card.frame(in: .named("library-grid"))])
-                                                        }
-                                                    }
-                                                }
-                                                .contextMenu { if !selecting { menu(for: document) } }
+                                                documentCard(document)
                                             }
                                         } header: {
                                             HStack(alignment: .firstTextBaseline, spacing: 8) {
@@ -693,6 +727,7 @@ struct LibraryView: View {
                                             }
                                             .padding(.top, 8)
                                         }
+                                    }
                                     }
                                 }
                                 .padding(.vertical, 6)
@@ -740,6 +775,131 @@ struct LibraryView: View {
             .animation(Self.monitorAnimation(reduceMotion), value: monitorVisible)
         }
         .padding(.horizontal, 6)
+        // Dossiers (PLAN-T5-001, E2) : nom d'un nouveau dossier (avec les documents à y ranger) ou nouveau nom.
+        .alert(folderNaming?.title ?? "", isPresented: Binding(get: { folderNaming != nil },
+                                                             set: { if !$0 { folderNaming = nil } })) {
+            TextField("Nom du dossier", text: $folderName)
+            Button("Annuler", role: .cancel) { folderNaming = nil }
+            Button("OK") {
+                switch folderNaming {
+                case .create(let moving):
+                    model.createFolder(named: folderName, in: LibraryFolderLayout.commonSpace(of: moving) ?? space,
+                                       moving: moving.map(\.id))
+                case .rename(let folder): model.renameFolder(folder, to: folderName)
+                case nil: break
+                }
+                folderNaming = nil
+            }
+            .disabled(folderName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        }
+        .alert("Supprimer ce dossier ?", isPresented: Binding(get: { deletingFolder != nil },
+                                                              set: { if !$0 { deletingFolder = nil } })) {
+            Button("Annuler", role: .cancel) { deletingFolder = nil }
+            Button("Supprimer le dossier", role: .destructive) {
+                if let deletingFolder {
+                    if openFolderId == deletingFolder.id { openFolderId = nil }
+                    model.deleteFolder(deletingFolder)
+                }
+                deletingFolder = nil
+            }
+        } message: {
+            Text("« \(deletingFolder?.name ?? "") » disparaît. Ses documents restent dans la bibliothèque, dans leur section habituelle.")
+        }
+    }
+
+    /// Carte d'un document dans la grille (sections habituelles et dossier ouvert).
+    @ViewBuilder
+    private func documentCard(_ document: LibraryDocument) -> some View {
+        Button {
+            if selecting { batch.toggle(document.id) } else { model.openDocumentId = document.id }
+        } label: {
+            DocumentCard(document: document)
+        }
+        .buttonStyle(PressScale())
+        .id(LibraryCardRenderIdentity(documentId: document.id,
+                                      category: document.category,
+                                      selecting: selecting,
+                                      manga: document.isInMangaSpace))
+        // La catégorie appartient à l'état courant de la bibliothèque. En la
+        // dessinant au-dessus du bouton, elle n'est plus retenue dans l'ancien
+        // rendu interne de la carte après l'import.
+        .overlay(alignment: .topLeading) {
+            if document.isInMangaSpace {
+                // Format fixe pour un .cbz ; simple rangement pour un PDF.
+                mangaMark(archive: document.isComicArchive).allowsHitTesting(false)
+            } else if let category = document.category {
+                categoryMark(category).allowsHitTesting(false)
+            }
+        }
+        // L'indicateur reste au-dessus du bouton lui-même. Dans le contenu du
+        // bouton, SwiftUI pouvait le masquer jusqu'à la reconstruction de la
+        // bibliothèque après un redémarrage (constaté sur iPad, 30/10/2026).
+        .overlay(alignment: .topTrailing) {
+            if selecting {
+                selectionMark(batch.selected.contains(document.id))
+                    .allowsHitTesting(false)
+            }
+        }
+        .background {
+            if PersonalPadLibrary.isAvailable {
+                GeometryReader { card in
+                    Color.clear.preference(key: LibraryCardPositions.self,
+                        value: [document.id: card.frame(in: .named("library-grid"))])
+                }
+            }
+        }
+        .contextMenu { if !selecting { menu(for: document) } }
+    }
+
+    /// En-tête du dossier ouvert : retour à l'accueil, nom, nombre, gestion du dossier.
+    private func openFolderHeader(_ folder: LibraryFolder) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Button { openFolderId = nil } label: { Label("Accueil", systemImage: "chevron.left") }
+                    .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.read))
+                Image(systemName: "folder.fill").foregroundStyle(Atelier.Tint.read)
+                Text(folder.name).font(Atelier.font(20, weight: .semibold)).foregroundStyle(Atelier.textPrimary).lineLimit(1)
+                Text("\(currentFolderDocuments.count)").font(Atelier.mono).foregroundStyle(Atelier.textTertiary)
+                Spacer()
+                Menu { folderMenu(folder) } label: { Image(systemName: "ellipsis.circle").font(Atelier.font(22)) }
+                    .accessibilityLabel(String(localized: "Gérer le dossier"))
+            }
+            if currentFolderDocuments.isEmpty {
+                Text(isFiltering ? String(localized: "Aucun document de ce dossier ne correspond au filtre.")
+                     : String(localized: "Dossier vide. Pour y ranger un document : appui long sur sa carte → « Déplacer vers… », ou « Sélectionner » puis « Déplacer »."))
+                    .font(Atelier.font(14)).foregroundStyle(Atelier.textSecondary)
+            }
+        }
+        .padding(.top, 8)
+    }
+
+    /// Renommer ou supprimer un dossier (la suppression demande confirmation ; les documents restent).
+    @ViewBuilder
+    private func folderMenu(_ folder: LibraryFolder) -> some View {
+        Button {
+            folderName = folder.name
+            folderNaming = .rename(folder)
+        } label: { Label("Renommer", systemImage: "pencil") }
+        Button(role: .destructive) { deletingFolder = folder } label: { Label("Supprimer le dossier", systemImage: "folder.badge.minus") }
+    }
+
+    /// « Déplacer vers… » : dossiers de l'espace des documents, nouveau dossier, ou sortie du dossier. Une sélection qui
+    /// mélange les deux espaces ne propose que la sortie (un dossier appartient à un seul espace, DEC-T5-02).
+    @ViewBuilder
+    private func moveMenuItems(_ documents: [LibraryDocument]) -> some View {
+        let current = Set(documents.compactMap { model.folders.membership[$0.id] })
+        if let common = LibraryFolderLayout.commonSpace(of: documents) {
+            ForEach(model.folders.folders(in: common.rawValue)) { folder in
+                Button { model.move(documents, to: folder) } label: { shelfLabel(folder.name, on: current == [folder.id]) }
+            }
+            Button {
+                folderName = ""
+                folderNaming = .create(moving: documents)
+            } label: { Label("Nouveau dossier…", systemImage: "folder.badge.plus") }
+        }
+        if !current.isEmpty {
+            Button { model.move(documents, to: nil) } label: { Label("Sortir du dossier", systemImage: "arrow.up.forward.square") }
+        }
     }
 
     /// Pastille Livre/Manuel, rendue par la grille depuis la catégorie publiée la plus récente.
@@ -783,9 +943,19 @@ struct LibraryView: View {
                 }
                 .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.japanese))
             }
+            Menu {
+                moveMenuItems(model.documents.filter { batch.selected.contains($0.id) })
+            } label: {
+                Label("Déplacer", systemImage: "folder")
+                    .font(Atelier.font(15, weight: .semibold))
+                    .padding(.horizontal, 16).padding(.vertical, 10)
+                    .foregroundStyle(Atelier.onAccentInk.opacity(0.85))
+                    .background(Atelier.Tint.read, in: RoundedRectangle(cornerRadius: Atelier.smallRadius, style: .continuous))
+            }
+            .disabled(batch.selected.isEmpty)
             Button("Tout sélectionner") {
-                let comics = DocumentImporter.conversionOrder(filtered)
-                batch.selectAll(comics.map(\.id) + filtered.filter { !$0.isComicArchive }.map(\.id))
+                let comics = DocumentImporter.conversionOrder(visibleDocuments)
+                batch.selectAll(comics.map(\.id) + visibleDocuments.filter { !$0.isComicArchive }.map(\.id))
             }
                 .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.read))
             Button(role: .destructive) {
@@ -832,6 +1002,7 @@ struct LibraryView: View {
             newTitle = document.title
             renaming = document
         } label: { Label("Renommer", systemImage: "pencil") }
+        Menu { moveMenuItems([document]) } label: { Label("Déplacer vers…", systemImage: "folder") }
         if document.capabilities.editableShelf {
             shelfPicker(for: document)
         }
@@ -1063,5 +1234,80 @@ private struct LibraryCardPositions: PreferenceKey {
 
     static func reduce(value: inout [String: CGRect], nextValue: () -> [String: CGRect]) {
         value.merge(nextValue(), uniquingKeysWith: { _, new in new })
+    }
+}
+
+/// Fenêtre de nom d'un dossier de l'accueil (PLAN-T5-001, E2).
+enum FolderNaming {
+    /// Nouveau dossier ; les documents donnés y sont rangés tout de suite (« Déplacer vers → Nouveau dossier… »).
+    case create(moving: [LibraryDocument])
+    case rename(LibraryFolder)
+
+    var title: String {
+        switch self {
+        case .create: return String(localized: "Nouveau dossier")
+        case .rename: return String(localized: "Renommer le dossier")
+        }
+    }
+}
+
+/// Tuile d'un dossier sur l'accueil : même gabarit qu'une carte de document, avec les couvertures des premiers
+/// documents en éventail (PLAN-T5-001, E2).
+struct FolderCard: View {
+    @EnvironmentObject private var model: AppModel
+    let name: String
+    let documents: [LibraryDocument]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            RoundedRectangle(cornerRadius: Atelier.corner(12), style: .continuous).fill(Atelier.surfaceHigh)
+                .aspectRatio(0.72, contentMode: .fit)
+                .frame(maxWidth: .infinity)
+                .overlay {
+                    if documents.isEmpty {
+                        Image(systemName: "folder").font(Atelier.font(44)).foregroundStyle(Atelier.Tint.read)
+                    } else {
+                        ZStack {
+                            ForEach(Array(documents.prefix(3).enumerated().reversed()), id: \.element.id) { index, document in
+                                FolderCover(document: document)
+                                    .padding(22)
+                                    .rotationEffect(.degrees(Double(index) * -5))
+                                    .offset(x: CGFloat(index) * -6, y: CGFloat(index) * 4)
+                            }
+                        }
+                    }
+                }
+                .overlay(alignment: .bottomTrailing) {
+                    Image(systemName: "folder.fill").font(Atelier.font(15, weight: .bold))
+                        .padding(8)
+                        .foregroundStyle(Atelier.onAccentInk.opacity(0.85))
+                        .background(Atelier.Tint.read, in: Circle())
+                        .padding(8)
+                }
+                .clipShape(RoundedRectangle(cornerRadius: Atelier.corner(12), style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: Atelier.corner(12), style: .continuous).strokeBorder(Atelier.hairline))
+            Text(name).font(Atelier.font(15, weight: .semibold)).lineLimit(2)
+                .foregroundStyle(Atelier.textPrimary)
+            Text("\(documents.count) document\(documents.count > 1 ? "s" : "")")
+                .font(.system(size: 11, weight: .semibold, design: .monospaced)).foregroundStyle(Atelier.textTertiary)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(String(localized: "Dossier \(name), \(documents.count) documents"))
+    }
+}
+
+/// Couverture réduite d'un document dans une tuile de dossier (vignette déjà en cache seulement : pas de rendu).
+private struct FolderCover: View {
+    @EnvironmentObject private var model: AppModel
+    let document: LibraryDocument
+
+    var body: some View {
+        Group {
+            if let image = model.thumbnails.cached(documentId: document.id, page: 0, width: 400) {
+                Image(uiImage: image).resizable().scaledToFit()
+            } else {
+                RoundedRectangle(cornerRadius: Atelier.corner(6), style: .continuous).fill(Atelier.surface)
+            }
+        }
     }
 }

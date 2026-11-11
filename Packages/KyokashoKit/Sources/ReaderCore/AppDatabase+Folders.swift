@@ -90,13 +90,19 @@ extension AppDatabase {
     }
 
     /// Range des documents dans un dossier, ou les sort de leur dossier (`folderId == nil`). Tout ou rien.
-    /// `space` : espace des documents, vérifié contre celui du dossier (DEC-T5-02).
+    /// `space` : espace annoncé par l'appelant, vérifié contre celui du dossier (DEC-T5-02). Revue GLM R2 (G1) :
+    /// l'espace **réel** de chaque document est aussi relu en base (`LibrarySpace(document:)`), pour qu'un appelant
+    /// qui se trompe d'espace ne puisse pas ranger un manga dans un dossier de Livres & Manuels.
     public func moveDocuments(_ documentIds: [String], toFolder folderId: String?, space: String) throws {
         guard !documentIds.isEmpty else { return }
         try writer.write { db in
             if let folderId {
                 guard let folder = try LibraryFolder.fetchOne(db, key: folderId) else { throw FolderError.notFound }
                 guard folder.space == space else { throw FolderError.wrongSpace }
+                for document in try LibraryDocument.fetchAll(db, keys: documentIds)
+                where LibrarySpace(document: document).rawValue != folder.space {
+                    throw FolderError.wrongSpace
+                }
             }
             for id in documentIds {
                 try db.execute(sql: "UPDATE document SET folderId = ? WHERE id = ?", arguments: [folderId, id])

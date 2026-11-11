@@ -29,6 +29,9 @@ final class AppModel: ObservableObject {
     let benchDirectory: URL
 
     @Published private(set) var documents: [LibraryDocument] = []
+    /// Dossiers de l'accueil et leurs documents (PLAN-T5-001, E2), publiés par la base à chaque changement
+    /// (`foldersPublisher`, revue GLM R2 G2 : abonnement séparé de celui des documents).
+    @Published private(set) var folders = LibraryFolders()
     @Published var appSettings: AppSettings {
         didSet {
             guard appSettings != oldValue else { return }
@@ -178,6 +181,15 @@ final class AppModel: ObservableObject {
                 // C1.3 : un document disparu (corbeille, suppression ailleurs) n'a plus d'onglet.
                 self.tabs.keep(only: Set(list.map(\.id)))
             }
+            .store(in: &cancellables)
+        database.foldersPublisher()
+            .catch { error -> Empty<LibraryFolders, Never> in
+                // Dossiers illisibles : l'accueil reste utilisable, sans dossiers (les documents restent visibles).
+                Diagnostics.error("lecture des dossiers : \(error.localizedDescription)", "bibliotheque")
+                return Empty()
+            }
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] folders in self?.folders = folders }
             .store(in: &cancellables)
         // « Ajouter des pages… » interrompu (app arrêtée au milieu) : annulé ou terminé.
         PageShift.reconcile(self)
@@ -500,6 +512,38 @@ final class AppModel: ObservableObject {
             documents[index].settingsOverride = settings
         }
         persist { try $0.updateMangaSpace(documentId: documentId, inManga: inManga) }
+    }
+
+    // MARK: Dossiers de l'accueil (PLAN-T5-001, E2)
+
+    /// Crée un dossier dans `space`, et y range tout de suite `documentIds` s'il y en a (« Déplacer vers → Nouveau
+    /// dossier… »). Écrit sur la file d'écriture ; l'accueil se redessine par `foldersPublisher`.
+    func createFolder(named name: String, in space: LibrarySpace, moving documentIds: [String] = []) {
+        persist { database in
+            let folder = try database.createFolder(name: name, space: space.rawValue)
+            try database.moveDocuments(documentIds, toFolder: folder.id, space: space.rawValue)
+        }
+    }
+
+    func renameFolder(_ folder: LibraryFolder, to name: String) {
+        persist { try $0.renameFolder(id: folder.id, to: name) }
+    }
+
+    /// Supprime le dossier ; ses documents reviennent dans leur section habituelle (DEC-T5-05), rien n'est effacé.
+    func deleteFolder(_ folder: LibraryFolder) {
+        persist { try $0.deleteFolder(id: folder.id) }
+    }
+
+    /// Range des documents dans `folder`, ou les sort de leur dossier (`nil`). Une sélection qui mélange les deux
+    /// espaces est refusée (un dossier appartient à un seul espace) ; la base revérifie l'espace de chaque document.
+    func move(_ documents: [LibraryDocument], to folder: LibraryFolder?) {
+        guard !documents.isEmpty else { return }
+        guard let space = LibraryFolderLayout.commonSpace(of: documents) else {
+            lastError = String(localized: "Choisis des documents d'un seul espace : un dossier appartient à Livres & Manuels ou à Manga.")
+            return
+        }
+        let ids = documents.map(\.id)
+        persist { try $0.moveDocuments(ids, toFolder: folder?.id, space: space.rawValue) }
     }
 
     /// Réponse « Manga » à la question posée après l'import d'un PDF.
