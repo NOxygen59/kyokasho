@@ -149,6 +149,9 @@ final class AppModel: ObservableObject {
         // Chaque nouveau résultat OCR est relu (mots du dictionnaire, caractères qui se ressemblent) avant le cache.
         ocr = OCRService(database: database, postProcess: Self.proofreader(dictionary))
         review = ReviewModel(appDatabase: database)
+        if !review.persistentStorageAvailable, !LibraryBackupService.restoreBlocked {
+            lastError = String(localized: "Les cartes de révision n'ont pas pu être ouvertes. Elles restent sur l'iPad, mais les changements faits maintenant ne seront pas gardés : quitte l'app et partage le journal de diagnostic.")
+        }
         benchDirectory = support.appendingPathComponent("Bench", isDirectory: true)
         try? FileManager.default.createDirectory(at: benchDirectory, withIntermediateDirectories: true)
         appSettings = (try? database.appSettings()) ?? AppSettings()

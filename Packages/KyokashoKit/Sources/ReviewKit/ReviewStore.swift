@@ -256,7 +256,8 @@ public final class ReviewStore: @unchecked Sendable {
         try writer.read { db in
             var request = StudyCard.filter(Column("sourceDocumentId") == sourceDocumentId)
             let q = query.trimmingCharacters(in: .whitespaces)
-            if !q.isEmpty { request = request.filter(Column("fields").like("%\(q)%") || Column("key").like("%\(q)%")) }
+            // Revue DeepSeek (n°7) : texte cherché tel quel (`instr`), « % » et « _ » ne sont pas des jokers.
+            if !q.isEmpty { request = request.filter(sql: "(instr(fields, ?) > 0 OR instr(key, ?) > 0)", arguments: [q, q]) }
             return try request.order(Column("sourcePage"), Column("createdAt")).fetchAll(db)
         }
     }
@@ -264,7 +265,10 @@ public final class ReviewStore: @unchecked Sendable {
     /// Enregistre une carte modifiée à la main (PLAN-CARTES-001, DEC-CA-07 = A). Le mot ou la lecture peuvent changer :
     /// la clé anti-doublon suit alors les champs « Mot » et « Lecture ». La planification FSRS, l'historique de
     /// révision et le `guid` Anki ne sont **jamais** touchés (réexporter met à jour la même note Anki).
-    /// Refusé (`EditError.duplicate`) si une autre carte porte déjà la nouvelle clé : jamais deux cartes pour un mot.
+    /// Refusé (`EditError.duplicate`) si une autre carte porte déjà la nouvelle clé : jamais deux cartes pour le même
+    /// couple mot + lecture (une autre lecture du même mot reste possible, comme à la création).
+    /// Revue DeepSeek (n°9) : seuls `key`, `fields`, `suspended` et `modifiedAt` sont écrits (UPDATE ciblé), jamais la
+    /// planification gardée par l'éditeur : une révision faite entre-temps ne peut pas être écrasée.
     @discardableResult
     public func saveEdited(_ card: StudyCard) throws -> StudyCard {
         try writer.write { db in
@@ -279,8 +283,8 @@ public final class ReviewStore: @unchecked Sendable {
                 c.key = key
             }
             c.modifiedAt = Date()
-            try c.update(db)
-            return c
+            try c.update(db, columns: ["key", "fields", "suspended", "modifiedAt"])
+            return try StudyCard.fetchOne(db, key: c.id) ?? c
         }
     }
 

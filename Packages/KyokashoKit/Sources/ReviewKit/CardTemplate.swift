@@ -90,6 +90,20 @@ public struct CardTemplate: Sendable, Equatable {
         }
     }
 
+    /// Champ HTML sur une ligne (écran « Cartes de ce document », revue DeepSeek Cartes E1 n°4) : les entrées d'une
+    /// liste (`</li>`) et les retours (`<br>`) deviennent « · » avant de retirer les balises, sinon « manger » et
+    /// « repas » d'une liste `<ol><li>…` se collaient.
+    public static func oneLine(_ html: String) -> String {
+        var text = html
+        for tag in ["</li>", "<br>", "<br/>", "<br />"] {
+            text = text.replacingOccurrences(of: tag, with: "\u{1F}", options: .caseInsensitive)
+        }
+        return stripHTML(text).components(separatedBy: "\u{1F}")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .joined(separator: " · ")
+    }
+
     public static func stripHTML(_ s: String) -> String {
         guard s.contains("<") || s.contains("&") else { return s }
         var out = ""

@@ -34,10 +34,14 @@ final class ReviewModel: ObservableObject {
         let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         let directory = support.appendingPathComponent("Kyokasho/Review", isDirectory: true)
         // Dernier recours : base en mémoire plutôt que de planter.
-        if !LibraryBackupService.restoreBlocked, let opened = try? ReviewStore.open(directory: directory) {
+        var openError: Error?
+        if !LibraryBackupService.restoreBlocked, let opened = { do { return try ReviewStore.open(directory: directory) }
+                                                               catch { openError = error; return nil } }() {
             store = opened
             persistentStorageAvailable = true
         } else {
+            // Revue DeepSeek Cartes E1 (n°3) : jamais en silence. Rien n'est effacé sur le disque ; l'accueil le dit.
+            if let openError { Diagnostics.error("base des cartes illisible : \(openError.localizedDescription)", "cartes") }
             store = try! ReviewStore.inMemory()
             persistentStorageAvailable = false
         }

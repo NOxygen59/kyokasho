@@ -45,7 +45,8 @@ struct DocumentCardsView: View {
             List {
                 Section {
                     LabeledContent(String(localized: "Cartes"), value: "\(cards.count)")
-                    LabeledContent(String(localized: "À réviser aujourd'hui (nouvelles comprises)"), value: "\(dueCount)")
+                    // Revue DeepSeek (n°5) : « maintenant », pas « aujourd'hui » (la pastille de révision compte autrement).
+                    LabeledContent(String(localized: "À réviser maintenant (nouvelles comprises)"), value: "\(dueCount)")
                 }
                 if loaded && cards.isEmpty {
                     Text(query.isEmpty
@@ -76,10 +77,9 @@ struct DocumentCardsView: View {
                     }
                 }
             }
-            .onAppear(perform: reload)
-            // Recherche tapée : courte pause avant d'interroger la base (comme le navigateur de cartes).
+            // Un seul chargement (revue DeepSeek n°6) : tout de suite à l'ouverture, puis après une courte pause de frappe.
             .task(id: query) {
-                try? await Task.sleep(nanoseconds: 250_000_000)
+                if loaded { try? await Task.sleep(nanoseconds: 250_000_000) }
                 if !Task.isCancelled { reload() }
             }
         }
@@ -90,7 +90,7 @@ struct DocumentCardsView: View {
         return HStack {
             VStack(alignment: .leading, spacing: 2) {
                 Text(card.title(fieldNames: names)).font(.custom("HiraginoSans-W6", size: 17))
-                let meaning = CardTemplate.stripHTML(card.fields["Sens"] ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+                let meaning = CardTemplate.oneLine(card.fields["Sens"] ?? "")
                 if !meaning.isEmpty {
                     Text(meaning).font(.caption).foregroundStyle(.secondary).lineLimit(1)
                 }

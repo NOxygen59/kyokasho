@@ -1,6 +1,50 @@
 {
   "sourceLanguage": "fr",
   "strings": {
+    "À réviser maintenant (nouvelles comprises)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To review now (new ones included)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "À réviser maintenant (nouvelles comprises)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "现在需复习（含新卡片）"
+          }
+        }
+      }
+    },
+    "Les cartes de révision n'ont pas pu être ouvertes. Elles restent sur l'iPad, mais les changements faits maintenant ne seront pas gardés : quitte l'app et partage le journal de diagnostic.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Review cards could not be opened. They stay on the iPad, but changes made now will not be kept: quit the app and share the diagnostic log."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les cartes de révision n'ont pas pu être ouvertes. Elles restent sur l'iPad, mais les changements faits maintenant ne seront pas gardés : quitte l'app et partage le journal de diagnostic."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法打开复习卡片。它们仍保存在 iPad 上，但现在所做的更改不会被保留：请退出应用并分享诊断日志。"
+          }
+        }
+      }
+    },
     "Cartes de ce document": {
       "localizations": {
         "en": {

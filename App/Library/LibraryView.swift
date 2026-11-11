@@ -70,6 +70,7 @@ struct LibraryView: View {
     @State private var deletingFolder: LibraryFolder?
     /// « Cartes de ce document » (PLAN-CARTES-001, E1).
     @State private var cardsDocument: LibraryDocument?
+    @State private var exportAfterCards: LibraryDocument?
 
     private var spaceDocuments: [LibraryDocument] {
         model.documents.filter { $0.isInMangaSpace == (space == .manga) }
@@ -350,11 +351,15 @@ struct LibraryView: View {
                 // « Fermer », tout allait bien : seule cette sortie reste, le modèle est déchargé par `onDisappear`.
                 .interactiveDismissDisabled()
         }
-        .sheet(item: $cardsDocument) { document in
+        // Export Anki demandé depuis l'écran des cartes : la feuille d'export s'ouvre à la fermeture de celui-ci
+        // (`onDismiss`, revue DeepSeek n°12), sans délai arbitraire.
+        .sheet(item: $cardsDocument, onDismiss: {
+            if let exportAfterCards { exporting = exportAfterCards }
+            exportAfterCards = nil
+        }) { document in
             DocumentCardsView(document: document) {
-                // Export Anki : la feuille d'export existante, une fois celle-ci fermée.
+                exportAfterCards = document
                 cardsDocument = nil
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { exporting = document }
             }
             .environmentObject(model).environmentObject(model.review).preferredColorScheme(Theme.current.colorScheme)
         }
@@ -1054,6 +1059,12 @@ struct LibraryView: View {
                 }
             }
         }
+        // Revue DeepSeek (n°11) : même condition que « Créer des cartes de cette page » dans le lecteur (pas les CBZ).
+        if document.capabilities.pageEditing {
+            Button {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { cardsDocument = document }
+            } label: { Label("Cartes de ce document", systemImage: "rectangle.stack") }
+        }
         if document.capabilities.pageEditing {
             Button {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { addingPages = document }
@@ -1066,12 +1077,6 @@ struct LibraryView: View {
             Button {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { exporting = document }
             } label: { Label("Exporter…", systemImage: "square.and.arrow.up") }
-            // Mêmes documents que « Créer des cartes de cette page » (lecteur) : pas les CBZ.
-            if document.capabilities.pageEditing {
-                Button {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { cardsDocument = document }
-                } label: { Label("Cartes de ce document", systemImage: "rectangle.stack") }
-            }
         }
         Button(role: .destructive) {
             // Le menu d'appui long doit finir de se fermer, sinon iOS ignore la fenêtre de confirmation.
