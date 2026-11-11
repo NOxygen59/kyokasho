@@ -69,6 +69,7 @@ struct SettingsView: View {
 /// Réglages → Lecture : réglages par défaut du lecteur.
 struct ReadingSettingsView: View {
     @EnvironmentObject private var model: AppModel
+    @AppStorage(BrightnessReminder.enabledKey) private var brightnessReminder = true
 
     var body: some View {
         Form {
@@ -77,6 +78,13 @@ struct ReadingSettingsView: View {
                     .font(.subheadline).foregroundStyle(Atelier.textSecondary)
             }
             ReaderSettingsSections(settings: $model.readerDefaults)
+            #if !targetEnvironment(macCatalyst)
+            Section {
+                Toggle("Rappel de luminosité élevée", isOn: $brightnessReminder)
+            } header: { Text("Batterie") } footer: {
+                Text("Sur batterie, une bannière du lecteur prévient quand la luminosité dépasse 90 %. Elle ne change aucun réglage.")
+            }
+            #endif
             Section {
                 NavigationLink("Options avancées") {
                     Form {

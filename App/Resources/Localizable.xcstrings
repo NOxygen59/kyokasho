@@ -1,6 +1,116 @@
 {
   "sourceLanguage": "fr",
   "strings": {
+    "Luminosité à %lld %% : la batterie descend plus vite.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Brightness at %lld %%: the battery drains faster."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Luminosité à %lld %% : la batterie descend plus vite."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "亮度为 %lld %%：电池消耗更快。"
+          }
+        }
+      }
+    },
+    "Sur cet iPad, la lecture a coûté %lld points de batterie par heure au-dessus de 90 %%, contre %lld à 60 %% ou moins.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On this iPad, reading cost %lld battery points per hour above 90 %%, against %lld at 60 %% or less."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sur cet iPad, la lecture a coûté %lld points de batterie par heure au-dessus de 90 %%, contre %lld à 60 %% ou moins."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在这台 iPad 上，亮度高于 90 %% 时阅读每小时耗电 %lld 个百分点，而在 60 %% 及以下时为 %lld 个。"
+          }
+        }
+      }
+    },
+    "Ne plus afficher": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Don't show again"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ne plus afficher"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不再显示"
+          }
+        }
+      }
+    },
+    "Rappel de luminosité élevée": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "High brightness reminder"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rappel de luminosité élevée"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "高亮度提醒"
+          }
+        }
+      }
+    },
+    "Sur batterie, une bannière du lecteur prévient quand la luminosité dépasse 90 %. Elle ne change aucun réglage.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On battery, a banner in the reader warns when brightness goes above 90 %. It changes no setting."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sur batterie, une bannière du lecteur prévient quand la luminosité dépasse 90 %. Elle ne change aucun réglage."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用电池时，亮度超过 90 % 会在阅读器中显示提示横幅。它不会更改任何设置。"
+          }
+        }
+      }
+    },
     "activé": {
       "localizations": {
         "en": {

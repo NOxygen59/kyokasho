@@ -30,7 +30,13 @@ struct ReaderTabsHost: View {
             if count >= DocumentTabs.warningCount, count > old { showNotice() }
         }
         // Même bannière que dans la bibliothèque : elle suit l'utilisateur dans le lecteur (10/11/2026).
-        .safeAreaInset(edge: .top, spacing: 0) { DiagnosticSizeBanner() }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            VStack(spacing: 0) {
+                DiagnosticSizeBanner()
+                // Rappel de luminosité (11/11/2026) : dans le lecteur seulement, c'est là que l'écran coûte.
+                BrightnessReminderBanner()
+            }
+        }
         // Lecteur ouvert depuis la bibliothèque avec déjà assez d'onglets : prévenir une fois à l'ouverture.
         .onAppear { if model.tabs.showsMemoryWarning { showNotice() } }
         .onDisappear { hideTask?.cancel() }
