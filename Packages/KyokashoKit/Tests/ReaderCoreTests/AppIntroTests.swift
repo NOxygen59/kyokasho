@@ -29,13 +29,14 @@ final class AppIntroTests: XCTestCase {
     /// Historique : de la 0.1.0 à la version en cours, 40 versions publiées et les builds de test intercalées.
     func testHistoryIsCompleteAndOrdered() {
         let all = ReleaseNotes.all
-        XCTAssertEqual(all.first?.version, "1.5.4")
+        XCTAssertEqual(all.first?.version, "1.5.6")
         XCTAssertEqual(all.last?.version, "0.1.0")
         XCTAssertEqual(all.filter(\.published).count, 40)
         XCTAssertEqual(Set(all.map(\.id)).count, all.count)
         XCTAssertEqual(all.map(\.date), all.map(\.date).sorted(by: >))
         XCTAssertTrue(all.allSatisfy { !($0.added + $0.fixed + $0.removed).isEmpty })
-        XCTAssertEqual(ReleaseNotes.notes(for: "1.5.4"), ReleaseNotes.current)
+        XCTAssertEqual(ReleaseNotes.notes(for: "1.5.6"), ReleaseNotes.current)
+        XCTAssertNotNil(ReleaseNotes.notes(for: "1.5.5"))
         // La fenêtre ne montre que la version installée, pas le cumul des précédentes.
         XCTAssertLessThan(ReleaseNotes.current.added.count, 10)
         XCTAssertFalse(ReleaseNotes.current.added.contains { $0.contains("Corbeille") })
