@@ -37,6 +37,8 @@ struct LibraryView: View {
     @State private var showDictionary = false
     /// Catégorie « Lexique » (PLAN-LEX-001, E2) : Livres & Manuels seulement, comme le dictionnaire.
     @State private var showLexicon = false
+    /// Écran « Notes » (PLAN-T4-001, E2).
+    @State private var showNotes = false
     @State private var showDashboard = false
     @State private var renaming: LibraryDocument?
     @EnvironmentObject private var review: ReviewModel
@@ -280,6 +282,13 @@ struct LibraryView: View {
             }
             .environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review).preferredColorScheme(Theme.current.colorScheme)
         }
+        .fullScreenCover(isPresented: $showNotes, onDismiss: { model.refreshNotesToReview() }) {
+            NotesView()
+                .environmentObject(model).preferredColorScheme(Theme.current.colorScheme)
+        }
+        // Pastille des notes relue au retour sur l'accueil (une échéance a pu passer, une note a pu être supprimée).
+        .onAppear { model.refreshNotesToReview() }
+        .onChange(of: model.openDocumentId) { if $0 == nil { model.refreshNotesToReview() } }
         .fullScreenCover(isPresented: $showLexicon) {
             NavigationStack {
                 LexiconView(dictionary: model.dictionary) { term in
@@ -476,6 +485,9 @@ struct LibraryView: View {
                     actionRow(icon: "character.book.closed.ja", title: String(localized: "Dictionnaire"), tint: Atelier.Tint.japanese,
                               count: model.dictionary.notebook.saved.count) { showDictionary = true }
                     actionRow(icon: "text.book.closed", title: String(localized: "Lexique"), tint: Atelier.Tint.japanese) { showLexicon = true }
+                    // Pastille : notes à revoir (échéance passée, aujourd'hui ou demain ; DEC-T4-06).
+                    actionRow(icon: "note.text", title: String(localized: "Notes"), tint: Atelier.Tint.annotate,
+                              count: model.notesToReview) { showNotes = true }
                 }
                 actionRow(icon: "doc.on.doc", title: String(localized: "Fusionner des PDF"), tint: Atelier.Tint.cloud) { showMerge = true }
                 if space != .manga {
@@ -579,6 +591,8 @@ struct LibraryView: View {
             // Hors périmètre en Manga (PLAN-LEX-001, § 2) : l'entrée n'existe que pour Livres & Manuels.
             if space == .study {
                 CapsuleButton(icon: "text.book.closed", label: String(localized: "Lexique")) { showLexicon = true }
+                CapsuleButton(icon: "note.text", label: model.notesToReview > 0
+                              ? String(localized: "Notes · \(model.notesToReview) à revoir") : String(localized: "Notes")) { showNotes = true }
             }
             CapsuleButton(icon: "chart.bar.fill", label: String(localized: "Tableau de bord")) { showDashboard = true }
             CapsuleButton(icon: "gearshape", label: String(localized: "Réglages")) { showSettings = true }

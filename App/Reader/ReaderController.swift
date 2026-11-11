@@ -251,6 +251,8 @@ final class ReaderController: NSObject, ObservableObject {
     /// Vrai pendant une reconstruction : le changement de page qui en résulte n'est pas un geste.
     var rebuilding = false
     var observers: [NSObjectProtocol] = []
+    /// Abonnements Combine du lecteur (demandes « aller à la note » de l’écran Notes).
+    var cancellables: Set<AnyCancellable> = []
     /// Fin d'une tâche IA (peut-être lancée par un lecteur précédent) : la page affichée est relue du cache.
     var aiFinished: AnyCancellable?
     /// Seul le dernier rechargement demandé peut publier après une attente du cache.
@@ -314,8 +316,16 @@ final class ReaderController: NSObject, ObservableObject {
         } catch {
             loadError = error.localizedDescription
         }
-        rebuild(keepingSource: document.lastPageIndex)
+        // Écran « Notes » (PLAN-T4-001 E2) : ouvert pour une note, le livre part de sa page, puis l'ancre clignote.
+        let jumpNote = model.noteJump.flatMap { jump in
+            jump.documentId == document.id ? notes.first { $0.id == jump.noteId } : nil
+        }
+        if jumpNote != nil { model.noteJump = nil }
+        rebuild(keepingSource: jumpNote?.pageIndex ?? document.lastPageIndex)
         markOpened()
+        if let jumpNote {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in self?.goToAnchor(jumpNote) }
+        }
     }
 
     /// Résultat de la construction (fait hors du fil principal) : document affiché + repères.
@@ -898,6 +908,16 @@ final class ReaderController: NSObject, ObservableObject {
     // MARK: Notifications
 
     func observe() {
+        // Livre déjà ouvert dans un onglet quand on choisit une de ses notes dans l'écran « Notes ».
+        // (`insert` plutôt que `.store(in:)` : un contrôle source réserve `.store(` aux écritures OCR du lecteur.)
+        cancellables.insert(model.$noteJump
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] jump in
+                guard let self, let jump, jump.documentId == self.document.id, self.pdf != nil,
+                      let note = self.notes.first(where: { $0.id == jump.noteId }) else { return }
+                self.model.noteJump = nil
+                self.goToAnchor(note)
+            })
         let center = NotificationCenter.default
         observers.append(center.addObserver(forName: .PDFViewPageChanged, object: pdfView, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated { self?.pageChanged() }

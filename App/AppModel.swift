@@ -32,6 +32,17 @@ final class AppModel: ObservableObject {
     /// Dossiers de l'accueil et leurs documents (PLAN-T5-001, E2), publiés par la base à chaque changement
     /// (`foldersPublisher`, revue GLM R2 G2 : abonnement séparé de celui des documents).
     @Published private(set) var folders = LibraryFolders()
+    /// Pastille « N notes à revoir » de l'accueil (PLAN-T4-001 E2, DEC-T4-06) : notes non archivées dont l'échéance est
+    /// passée, aujourd'hui ou demain, hors documents à la corbeille. Relue par `refreshNotesToReview`.
+    @Published private(set) var notesToReview = 0
+    /// Note à montrer à l'ouverture d'un livre depuis l'écran « Notes » : le lecteur de ce document va à sa page et
+    /// fait clignoter son ancre, puis remet la demande à `nil`.
+    @Published var noteJump: NoteJump?
+
+    struct NoteJump: Equatable {
+        let documentId: String
+        let noteId: String
+    }
     @Published var appSettings: AppSettings {
         didSet {
             guard appSettings != oldValue else { return }
@@ -518,6 +529,26 @@ final class AppModel: ObservableObject {
             documents[index].settingsOverride = settings
         }
         persist { try $0.updateMangaSpace(documentId: documentId, inManga: inManga) }
+    }
+
+    // MARK: Notes (PLAN-T4-001, E2)
+
+    /// Documents à la corbeille : leurs notes ne comptent ni dans la pastille ni dans l'écran « Notes ».
+    var trashedDocumentIds: Set<String> { Set(trashedDocuments.map(\.id)) }
+
+    func refreshNotesToReview() {
+        let database = database, excluded = trashedDocumentIds
+        Task.detached(priority: .utility) {
+            let count = (try? database.notesToReviewCount(today: Date(), excludingDocuments: excluded)) ?? 0
+            await MainActor.run { if self.notesToReview != count { self.notesToReview = count } }
+        }
+    }
+
+    /// Ouvre le livre d'une note à sa page (écran « Notes »).
+    func open(_ note: PageComment) {
+        guard documents.contains(where: { $0.id == note.documentId }) else { return }
+        noteJump = NoteJump(documentId: note.documentId, noteId: note.id)
+        openDocumentId = note.documentId
     }
 
     // MARK: Dossiers de l'accueil (PLAN-T5-001, E2)
