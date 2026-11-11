@@ -109,7 +109,16 @@ public enum NoteOrganizationError: LocalizedError, Equatable {
 /// Jours d'échéance : texte « AAAA-MM-JJ » dans le calendrier de l'appareil (une échéance est un jour, pas une heure :
 /// changer de fuseau ne la déplace pas). Fonctions pures, testées.
 public enum NoteDay {
-    public static func string(_ date: Date, calendar: Calendar = .current) -> String {
+    /// Calendrier des jours d'échéance (revue GLM R2 n°1) : toujours grégorien, au fuseau de l'appareil. Avec le
+    /// calendrier de l'iPad réglé sur « japonais », `Calendar.current` aurait écrit l'année d'ère (« 0008-… ») : tri et
+    /// comparaisons faux.
+    public static var calendar: Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .current
+        return calendar
+    }
+
+    public static func string(_ date: Date, calendar: Calendar = NoteDay.calendar) -> String {
         let c = calendar.dateComponents([.year, .month, .day], from: date)
         return String(format: "%04d-%02d-%02d", c.year ?? 0, c.month ?? 0, c.day ?? 0)
     }
@@ -126,7 +135,7 @@ public enum NoteDay {
     }
 
     /// DEC-T4-06 : à revoir = non archivée, échéance passée, aujourd'hui ou demain.
-    public static func isToReview(_ organization: NoteOrganization, today: Date, calendar: Calendar = .current) -> Bool {
+    public static func isToReview(_ organization: NoteOrganization, today: Date, calendar: Calendar = NoteDay.calendar) -> Bool {
         guard !organization.archived, let due = organization.dueDay else { return false }
         guard let tomorrow = calendar.date(byAdding: .day, value: 1, to: today) else { return false }
         return due <= string(tomorrow, calendar: calendar)
@@ -245,10 +254,12 @@ extension AppDatabase {
     }
 
     /// Toutes les notes de tous les documents avec leur rangement (écran « Notes ») ; archivées seulement si demandé.
+    /// Revue GLM R2 (n°2) : le dessin (`drawing`) n'est pas lu, la liste n'en a pas besoin (`note.drawing == nil`) ;
+    /// ouvrir la note dans le lecteur relit la note complète.
     public func organizedNotes(includeArchived: Bool) throws -> [OrganizedNote] {
         try writer.read { db in
             let known = try Self.knownIds(db)
-            var sql = "SELECT * FROM pageComment"
+            var sql = "SELECT id, documentId, pageIndex, body, createdAt, updatedAt, anchorX, anchorY, anchorWidth, anchorHeight, anchorText, \(Self.columns) FROM pageComment"
             if !includeArchived { sql += " WHERE archived = 0" }
             sql += " ORDER BY documentId, pageIndex, createdAt"
             return try Row.fetchAll(db, sql: sql).map { row in
@@ -258,7 +269,7 @@ extension AppDatabase {
     }
 
     /// Pastille de l'accueil (DEC-T4-06) : notes non archivées à revoir, hors documents donnés (corbeille).
-    public func notesToReviewCount(today: Date, calendar: Calendar = .current, excludingDocuments: Set<String> = []) throws -> Int {
+    public func notesToReviewCount(today: Date, calendar: Calendar = NoteDay.calendar, excludingDocuments: Set<String> = []) throws -> Int {
         guard let tomorrow = calendar.date(byAdding: .day, value: 1, to: today) else { return 0 }
         let limit = NoteDay.string(tomorrow, calendar: calendar)
         return try writer.read { db in

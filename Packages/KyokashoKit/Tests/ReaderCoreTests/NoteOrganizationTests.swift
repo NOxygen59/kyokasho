@@ -136,4 +136,23 @@ final class NoteOrganizationTests: XCTestCase {
         XCTAssertFalse(NoteDay.isValid("2026-1-5"))
         XCTAssertFalse(NoteDay.isValid("demain"))
     }
+
+    /// Revue GLM R2 n°1 : un iPad au calendrier japonais écrit quand même « 2026-11-11 ».
+    func testDayStringIsGregorianWhateverTheDeviceCalendar() throws {
+        var japanese = Calendar(identifier: .japanese)
+        japanese.timeZone = TimeZone(identifier: "Asia/Tokyo")!
+        let date = try XCTUnwrap(japanese.date(from: DateComponents(era: 236, year: 8, month: 11, day: 11, hour: 12)))
+        XCTAssertEqual(NoteDay.string(date), "2026-11-11")
+        XCTAssertEqual(NoteDay.calendar.identifier, .gregorian)
+    }
+
+    /// Revue GLM R2 n°2 : la liste ne charge pas les dessins.
+    func testOrganizedNotesDoNotLoadDrawings() throws {
+        let db = try database()
+        try db.save(PageComment(id: "n3", documentId: "d", pageIndex: 3, body: "dessin", drawing: Data([1, 2, 3])))
+        let listed = try XCTUnwrap(db.organizedNotes(includeArchived: true).first { $0.id == "n3" })
+        XCTAssertNil(listed.note.drawing)
+        XCTAssertEqual(listed.note.body, "dessin")
+        XCTAssertEqual(try db.comments(documentId: "d").first { $0.id == "n3" }?.drawing, Data([1, 2, 3]))
+    }
 }
