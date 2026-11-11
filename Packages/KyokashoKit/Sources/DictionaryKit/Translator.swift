@@ -68,7 +68,7 @@ public struct KanjiResult: Sendable, Equatable {
 }
 
 /// Options de recherche (une partie d'un profil).
-public struct LookupOptions: Codable, Sendable, Equatable {
+public struct LookupOptions: Codable, Sendable, Hashable {
     /// Nombre de caractères examinés à partir du point touché.
     public var scanLength = 16
     public var maxResults = 24
@@ -89,6 +89,24 @@ public struct LookupOptions: Codable, Sendable, Equatable {
     }
 }
 
+/// Mémo borné et sûr entre fils, clé texte. `Box` : `NSCache` ne garde que des objets.
+private final class Memo<Value>: @unchecked Sendable {
+    private final class Box { let value: Value; init(_ value: Value) { self.value = value } }
+    private let cache = NSCache<NSString, Box>()
+
+    init(limit: Int) { cache.countLimit = limit }
+
+    subscript(key: String) -> Value? {
+        get { cache.object(forKey: key as NSString)?.value }
+        set {
+            if let newValue { cache.setObject(Box(newValue), forKey: key as NSString) }
+            else { cache.removeObject(forKey: key as NSString) }
+        }
+    }
+
+    func removeAll() { cache.removeAllObjects() }
+}
+
 /// Recherche de mots à la Yomitan : pour chaque longueur (de la plus longue à la plus courte),
 /// variantes du texte (kana, demi-chasse, emphase…), formes de base par déconjugaison, une seule
 /// requête SQL pour toutes les formes, puis tri (plus long d'abord).
@@ -98,17 +116,35 @@ public final class Translator: @unchecked Sendable {
 
     private var dictionaryCache: [Int64: DictionaryInfo]?
     private let lock = NSLock()
+    /// Formes de base d'un texte : calcul pur, le plus coûteux de la recherche. Bornes basses : l'iPad doit garder sa
+    /// mémoire pour les modèles d'IA, et `NSCache` se vide seul sous pression.
+    private let deinflectionMemo = Memo<[Deinflection]>(limit: 2000)
+    /// Mot retenu à une position du texte, par réglages et par génération : refaire une page déjà lue ne coûte plus
+    /// rien. Sans glossaire, inutile au découpage : le mémo reste léger.
+    private let segmentMemo = Memo<TermResult?>(limit: 2000)
+    private let oneCharacterMemo = Memo<TermResult?>(limit: 2000)
+    /// Tests seulement : entre la fin d'une recherche et son écriture, le moment où une invalidation peut survenir.
+    var beforeSegmentMemoWrite: (() -> Void)?
+    /// Avancée par `invalidate()`, sous `lock`, en même temps que `dictionaryCache` est vidé. Elle entre dans la clé du
+    /// mémo : une recherche lancée avant l'invalidation écrit sous une clé que plus personne ne lit.
+    private var memoGeneration = 0
 
     public init(database: DictionaryDatabase, transformer: LanguageTransformer = .japanese) {
         self.database = database
         self.transformer = transformer
     }
 
+    /// Change à chaque invalidation : ce qui a été calculé d'après les dictionnaires ne vaut que pour cette valeur.
+    public var cacheGeneration: Int { lock.withLock { memoGeneration } }
+
     /// À appeler après un import, une suppression ou un changement d'activation/priorité.
     public func invalidate() {
         lock.lock()
         dictionaryCache = nil
+        memoGeneration += 1
         lock.unlock()
+        segmentMemo.removeAll()
+        oneCharacterMemo.removeAll()
         database.clearCaches()
     }
 
@@ -153,36 +189,85 @@ public final class Translator: @unchecked Sendable {
 
     /// Mots qui commencent au début de `text` (le texte touché et ce qui suit).
     public func findTerms(_ text: String, options: LookupOptions = LookupOptions()) throws -> [TermResult] {
-        let source = String(text.prefix(options.scanLength))
-        guard !source.isEmpty else { return [] }
+        try search(text, options: options, full: true)
+    }
+
+    /// Toutes les formes de base candidates de `raw`, mémorisées : le découpage repasse sans cesse sur les mêmes textes.
+    private func deinflections(of raw: String) -> [Deinflection] {
+        if let known = deinflectionMemo[raw] { return known }
+        let found = Self.variants(of: raw).flatMap { variant in
+            transformer.transform(variant).map {
+                Deinflection(matchedText: raw, text: $0.text, conditions: $0.conditions, rules: $0.inflectionRules)
+            }
+        }
+        deinflectionMemo[raw] = found
+        return found
+    }
+
+    /// Recherche complète : toutes les longueurs, définitions et métadonnées.
+    private func search(_ text: String, options: LookupOptions, full: Bool) throws -> [TermResult] {
+        let chars = Array(text.prefix(options.scanLength))
+        return try rank(forms(chars, lengths: stride(from: chars.count, through: 1, by: -1)), options: options, full: full)
+    }
+
+    /// Mot retenu au début de `chars` pour le découpage : le même que la recherche complète, sans lire les entrées qui ne
+    /// peuvent pas peser. Le classement met d'abord le texte reconnu le plus long. Les formes d'un seul caractère, les
+    /// plus chargées du dictionnaire (の, は…), ne comptent donc que si aucun mot plus long n'existe, ou pour les entrées
+    /// d'un groupe déjà trouvé, dont la priorité et le score départagent les mots (`wordFromLongForms`).
+    private func longestWord(_ chars: [Character], options: LookupOptions, optionsKey: String) throws -> TermResult? {
+        let short = forms(chars, lengths: stride(from: 1, through: 1, by: -1))
+        if chars.count > 1 {
+            let long = forms(chars, lengths: stride(from: chars.count, through: 2, by: -1))
+            if let word = try wordFromLongForms(long, short: short, options: options) { return word }
+        }
+        guard let first = chars.first else { return nil }
+        // Sans mot plus long, le résultat ne dépend que de ce caractère.
+        let key = optionsKey + String(first)
+        if let known = oneCharacterMemo[key] { return known }
+        let found = try rank(short, options: options, full: false).first
+        oneCharacterMemo[key] = .some(found)
+        return found
+    }
+
+    /// `nil` si aucun mot de deux caractères ou plus ne correspond. Sinon, classement comme la recherche complète : mêmes
+    /// groupes, avec les entrées de ces groupes qui ne correspondent qu'à une forme courte.
+    private func wordFromLongForms(_ long: [String: [Deinflection]], short: [String: [Deinflection]],
+                                   options: LookupOptions) throws -> TermResult? {
+        guard !long.isEmpty, let enabled = try searchScope(options)?.enabled else { return nil }
+        let rows = try database.terms(matching: Array(long.keys), dictionaryIds: enabled, withGlossary: false)
+        let found = matches(rows, byText: long, options: options)
+        guard !found.isEmpty else { return nil }
+        let groups = Set(found.map { Self.groupKey($0.row) })
+        let known = Set(rows.map(\.id))
+        let relatives = try database.terms(matching: Array(Set(found.map(\.row.expression))), dictionaryIds: enabled, withGlossary: false)
+            .filter { !known.contains($0.id) && groups.contains(Self.groupKey($0)) && (short[$0.expression] != nil || short[$0.reading] != nil) }
+        return try rank(long.merging(short) { $0 + $1 }, rows: rows + relatives, options: options, full: false).first
+    }
+
+    private static func groupKey(_ row: TermRow) -> String { row.expression + "\u{1}" + row.reading }
+
+    /// Dictionnaires consultés pour ces réglages, `nil` s'il n'y en a aucun.
+    private func searchScope(_ options: LookupOptions) throws -> (dictionaries: [Int64: DictionaryInfo], enabled: Set<Int64>)? {
         let dictionaries = try dictionaries()
         let enabled = Set(dictionaries.values.filter { $0.enabled && $0.termCount > 0 }.compactMap(\.id))
             .subtracting(options.excludedDictionaryIds)
-        guard !enabled.isEmpty else { return [] }
+        return enabled.isEmpty ? nil : (dictionaries, enabled)
+    }
 
-        // 1. Toutes les formes de base candidates, pour chaque longueur.
-        var byText: [String: [Deinflection]] = [:]
-        let chars = Array(source)
-        for length in stride(from: chars.count, through: 1, by: -1) {
-            let raw = String(chars[0..<length])
-            // Pas de mot qui commence ou finit par une ponctuation / espace.
-            if let first = raw.first, first.isWhitespace || first.isPunctuation { break }
-            for variant in Self.variants(of: raw) {
-                for t in transformer.transform(variant) {
-                    byText[t.text, default: []].append(Deinflection(matchedText: raw, text: t.text, conditions: t.conditions,
-                                                                    rules: t.inflectionRules))
-                }
-            }
-        }
+    private struct Match { let row: TermRow; let d: Deinflection }
 
-        // 2. Une requête pour toutes les formes.
-        let rows = try database.terms(matching: Array(byText.keys), dictionaryIds: enabled)
-
-        // 3. Associe chaque entrée à sa meilleure déconjugaison (plus long texte, moins de règles).
-        struct Match { let row: TermRow; let d: Deinflection }
+    /// 3. Associe chaque entrée à sa meilleure déconjugaison (plus long texte, moins de règles).
+    private func matches(_ rows: [TermRow], byText: [String: [Deinflection]], options: LookupOptions) -> [Match] {
         var matches: [Match] = []
+        var flagsByRules: [String: UInt32] = [:] // Peu de combinaisons différentes, beaucoup d'entrées.
         for row in rows {
-            let flags = transformer.conditionFlags(partsOfSpeech: row.rules.split(separator: " ").map(String.init))
+            let flags: UInt32
+            if let known = flagsByRules[row.rules] {
+                flags = known
+            } else {
+                flags = transformer.conditionFlags(partsOfSpeech: row.rules.split(separator: " ").map(String.init))
+                flagsByRules[row.rules] = flags
+            }
             var best: Deinflection?
             for d in (byText[row.expression] ?? []) + (row.reading == row.expression ? [] : (byText[row.reading] ?? [])) {
                 // Une forme conjuguée doit correspondre à la partie du discours de l'entrée.
@@ -194,11 +279,35 @@ public final class Translator: @unchecked Sendable {
             }
             if let best { matches.append(Match(row: row, d: best)) }
         }
+        return matches
+    }
+
+    /// 1. Toutes les formes de base candidates, pour chaque longueur demandée.
+    private func forms(_ chars: [Character], lengths: StrideThrough<Int>) -> [String: [Deinflection]] {
+        var byText: [String: [Deinflection]] = [:]
+        for length in lengths {
+            let raw = String(chars[0..<length])
+            // Pas de mot qui commence ou finit par une ponctuation / espace.
+            if let first = raw.first, first.isWhitespace || first.isPunctuation { break }
+            for d in deinflections(of: raw) { byText[d.text, default: []].append(d) }
+        }
+        return byText
+    }
+
+    /// `full == false`, pour le découpage : ni glossaires, ni étiquettes, ni fréquences, accents et API. Seuls comptent
+    /// le mot et son classement, qui ne dépend pas de ces données.
+    private func rank(_ byText: [String: [Deinflection]], rows known: [TermRow]? = nil,
+                      options: LookupOptions, full: Bool) throws -> [TermResult] {
+        guard !byText.isEmpty, let (dictionaries, enabled) = try searchScope(options) else { return [] }
+
+        // 2. Une requête pour toutes les formes.
+        let rows = try known ?? database.terms(matching: Array(byText.keys), dictionaryIds: enabled, withGlossary: full)
+        let matches = matches(rows, byText: byText, options: options)
 
         // 4. Regroupement par (expression, lecture).
         var groups: [String: (row: TermRow, d: Deinflection, defs: [Match])] = [:]
         for m in matches {
-            let key = m.row.expression + "\u{1}" + m.row.reading
+            let key = Self.groupKey(m.row)
             if var g = groups[key] {
                 g.defs.append(m)
                 if m.d.matchedText.count > g.d.matchedText.count { g.d = m.d }
@@ -215,16 +324,17 @@ public final class Translator: @unchecked Sendable {
                 let p1 = dictionaries[$1.row.dictionaryId]?.priority ?? 0
                 return p0 != p1 ? p0 < p1 : $0.row.score > $1.row.score
             }.map { m -> TermResult.Definition in
-                let tags = (try? database.tags(dictionaryId: m.row.dictionaryId)) ?? [:]
+                let tags = full ? (try? database.tags(dictionaryId: m.row.dictionaryId)) ?? [:] : [:]
                 func resolve(_ s: String) -> [TagRow] {
-                    s.split(separator: " ").map { name in
+                    guard full else { return [] }
+                    return s.split(separator: " ").map { name in
                         tags[String(name)] ?? TagRow(name: String(name), category: "", order: 0, notes: "", score: 0)
                     }
                 }
                 return TermResult.Definition(dictionaryId: m.row.dictionaryId,
                                              dictionaryTitle: dictionaries[m.row.dictionaryId]?.title ?? "?",
                                              tags: resolve(m.row.definitionTags), termTags: resolve(m.row.termTags),
-                                             rules: m.row.rules.split(separator: " ").map(String.init),
+                                             rules: full ? m.row.rules.split(separator: " ").map(String.init) : [],
                                              glossaryJSON: m.row.glossary, score: m.row.score, sequence: m.row.sequence)
             }
             results.append(TermResult(expression: g.row.expression, reading: g.row.reading, matchedText: g.d.matchedText,
@@ -246,7 +356,7 @@ public final class Translator: @unchecked Sendable {
         results = Array(results.prefix(options.maxResults))
 
         // 6. Fréquences, accents, API.
-        try attachMeta(&results, dictionaries: dictionaries, options: options)
+        if full { try attachMeta(&results, dictionaries: dictionaries, options: options) }
         return results
     }
 
@@ -344,11 +454,14 @@ public final class Translator: @unchecked Sendable {
         public let term: TermResult?
     }
 
-    /// Découpe un texte en mots (plus long mot à chaque position) : vocabulaire d'une page.
+    /// Découpe un texte en mots (plus long mot à chaque position) : vocabulaire d'une page. Les mots rendus ne portent
+    /// ni définitions ni fréquences : `findTerms` les donne.
     // FDR-6.1 : mémo des positions déjà cherchées pendant un appel (une recherche par caractère non trouvé). Voir § 6 étape 6.
     public func segment(_ text: String, options: LookupOptions = LookupOptions()) throws -> [Segment] {
         var opts = options
         opts.maxResults = 1
+        let generation = lock.withLock { memoGeneration }
+        let optionsKey = "\(generation)|\(opts.scanLength)|\(opts.partsOfSpeechFilter)|\(opts.excludedDictionaryIds.sorted())|"
         let chars = Array(text)
         var segments: [Segment] = []
         var i = 0
@@ -362,7 +475,19 @@ public final class Translator: @unchecked Sendable {
                 continue
             }
             let rest = String(chars[i..<min(chars.count, i + opts.scanLength)])
-            if let best = try findTerms(rest, options: opts).first {
+            let key = optionsKey + rest
+            let found: TermResult?
+            if let known = segmentMemo[key] {
+                found = known
+            } else {
+                found = try longestWord(Array(rest), options: opts, optionsKey: optionsKey).map {
+                    TermResult(expression: $0.expression, reading: $0.reading, matchedText: $0.matchedText,
+                               inflectionRules: $0.inflectionRules, definitions: [], frequencies: [], pitches: [], ipa: [])
+                }
+                beforeSegmentMemoWrite?()
+                segmentMemo[key] = .some(found)
+            }
+            if let best = found {
                 if !pending.isEmpty { segments.append(Segment(text: pending, term: nil)); pending = "" }
                 segments.append(Segment(text: best.matchedText, term: best))
                 i += max(1, best.matchLength)
@@ -378,5 +503,37 @@ public final class Translator: @unchecked Sendable {
     /// Nom lisible d'une transformation (« past », « negative »…).
     public func inflectionName(_ id: String) -> String {
         transformer.info(forTransform: id)?.name ?? id
+    }
+}
+
+/// C1.2 (audit du 09/11/2026) : une traduction automatique d'une définition n'est plus affichée si la définition du
+/// dictionnaire a changé depuis (mise à jour du dictionnaire). Une correction faite à la main reste toujours ; une
+/// traduction enregistrée avant le suivi de la source (`storedSource == nil`) reste aussi, faute de pouvoir comparer.
+public enum TranslationFreshness {
+    public static func isCurrent(edited: Bool, storedSource: String?, currentSource: String) -> Bool {
+        edited || storedSource == nil || storedSource == currentSource
+    }
+}
+
+/// Avis porté sur une traduction française de définition : donnée de l'utilisateur, gardée sur l'appareil avec le texte.
+public enum TranslationReview: String, Codable, Sendable, Equatable {
+    /// Sortie de DeepL, sans avis.
+    case machine
+    /// 👍 validée.
+    case liked
+    /// 👎 à revoir.
+    case disliked
+    /// ✏️ corrigée à la main : la correction remplace la traduction, pour toujours.
+    case edited
+
+    /// Avis gardé quand la traduction automatique est refaite parce que la définition a changé (revue DeepSeek #3) :
+    /// l'avis 👍/👎 vient de l'utilisateur, une mise à jour du dictionnaire ne doit pas l'effacer en silence. Une
+    /// traduction neutre le reste. `.edited` n'est jamais retraduit — `TranslationFreshness.isCurrent` le garde toujours
+    /// courant — et retombe ici sur `.machine` si un autre chemin l'appelait un jour.
+    public var keptWhenRetranslated: TranslationReview {
+        switch self {
+        case .liked, .disliked: return self
+        case .machine, .edited: return .machine
+        }
     }
 }

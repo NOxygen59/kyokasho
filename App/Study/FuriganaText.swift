@@ -85,10 +85,8 @@ struct FuriganaTextView: View {
     private var units: [(tag: String, text: String, row: Int?)] {
         guard formatted else { return page.lines.map { ("p", $0.text, nil) } }
         if Self.isVertical(page) {
-            // Une colonne par ligne OCR ; le mode mis en forme suit l'ordre japonais, de droite à gauche.
-            return page.lines.sorted { a, b in
-                abs(a.box.x - b.box.x) > 0.01 ? a.box.x > b.box.x : a.box.y < b.box.y
-            }.map { ("p", $0.text, nil) }
+            // Une colonne par ligne OCR ; le mode mis en forme suit l'ordre japonais, de droite à gauche, partie par partie.
+            return OCRLayout.verticalReadingOrder(page).map { ("p", $0.text, nil) }
         }
         return formattedUnits
     }
@@ -121,7 +119,7 @@ struct FuriganaTextView: View {
             guard !Task.isCancelled else { return }
             // Brut : une unité = une ligne OCR, ses caractères douteux sont soulignés.
             let doubt = formatted ? [] : Set(page.lines[u].doubt ?? [])
-            let segments = await dictionary.segment(unit.text)
+            let segments = await dictionary.segment(unit.text, cancellable: true)
             let rubies = TextFurigana.rubies(unit.text, segments: segments)
             let inner = Self.markup(unit.text, rubies: rubies, wordStarts: Self.wordStarts(unit.text, segments: segments), doubt: doubt)
             if unit.tag == "td" {

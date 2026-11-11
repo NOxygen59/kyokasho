@@ -20,6 +20,8 @@ struct PageCardsView: View {
     @State private var saving = false
     @State private var message: String?
     @State private var error: String?
+    /// Mode du panneau Texte (même clé que `StudyPanel`) : « Mise en page IA » = texte d'OvisOCR2.
+    @AppStorage("study.aiLayout") private var panelShowsOvis = false
 
     init(reader: ReaderController) {
         self.reader = reader
@@ -53,6 +55,9 @@ struct PageCardsView: View {
                         TextField("Lecture en kana (à renseigner)", text: $entry.reading)
                         TextField("Sens en français", text: $entry.meaning, axis: .vertical)
                     }
+                    // Recette 1.5.5 (5.8) : seuls les champs sont figés pendant et après l'ajout ; figer tout le
+                    // formulaire bloquait aussi son défilement (on ne voyait plus les termes du bas).
+                    .disabled(saving || message != nil)
                 }
                 if !entries.isEmpty {
                     Text("Une lecture et un sens sont nécessaires. Les corrections ici s'appliquent seulement aux cartes créées.")
@@ -61,13 +66,12 @@ struct PageCardsView: View {
                 if let error { Text(error).foregroundStyle(.red) }
                 if let message { Text(message) }
             }
-            .disabled(saving || message != nil)
             .navigationTitle("Cartes de la page")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Fermer") { dismiss() }.disabled(saving) }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(saving ? "Ajout…" : "Ajouter (\(chosen.count))") { Task { await add() } }
+                    Button(saving ? String(localized: "Ajout…") : String(localized: "Ajouter (\(chosen.count))")) { Task { await add() } }
                         .disabled(loading || saving || chosen.isEmpty || message != nil)
                 }
             }
@@ -80,11 +84,16 @@ struct PageCardsView: View {
         defer { loading = false }
         let lexicon = DomainLexicon.shared.entries
         let documentId = document.id
-        let cachedText = await Task.detached(priority: .utility) {
+        // C3.2 (audit du 09/11/2026, décision A de NOxygen59) : les termes viennent du texte affiché dans le panneau.
+        // Panneau sur un moteur OCR (texte corrigé compris) : son texte ; en « Mise en page IA » : la lecture OvisOCR2.
+        let shown = !panelShowsOvis && page == reader.focusSource && reader.ocrState == .idle ? reader.ocrPage?.text : nil
+        let cachedText = shown == nil ? await Task.detached(priority: .utility) {
             DocumentAITextStore.read(documentId: documentId, reader: ModelSpec.ovisocr2.id, page: page)
-        }.value
+        }.value : nil
         do {
-            if let cachedText, !cachedText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            if let shown, !shown.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                text = shown
+            } else if let cachedText, !cachedText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                 text = cachedText
             } else if let cached = await reader.cachedOCR(source: page) {
                 text = cached.text
@@ -100,7 +109,7 @@ struct PageCardsView: View {
             }
             try Task.checkCancellation()
             if text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                error = "La page n'a pas de texte exploitable. Relance sa lecture OCR puis réessaie."
+                error = String(localized: "La page n'a pas de texte exploitable. Relance sa lecture OCR puis réessaie.")
                 return
             }
             var seen: Set<String> = []
@@ -148,10 +157,10 @@ struct PageCardsView: View {
         }
         do {
             let added = try await review.addPageCards(fields, documentId: document.id, page: page)
-            message = "\(added) carte(s) ajoutée(s), \(fields.count - added) doublon(s) ignoré(s)."
+            message = String(localized: "\(added) carte(s) ajoutée(s), \(fields.count - added) doublon(s) ignoré(s).")
             Diagnostics.log("Cartes p. \(page) : \(added) ajoutées", "cartes")
         } catch {
-            self.error = "Ajout impossible : \(error.localizedDescription)"
+            self.error = String(localized: "Ajout impossible : \(error.localizedDescription)")
             Diagnostics.error("Cartes p. \(page) : \(error.localizedDescription)", "cartes")
         }
     }

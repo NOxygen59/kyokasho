@@ -5,6 +5,16 @@ import Combine
 import Foundation
 import GRDB
 
+/// Refus d'une bascule de remplacement qui perdrait une donnée de l'utilisateur.
+public enum RekeyError: LocalizedError, Equatable {
+    /// Fusion : un dessin du survivant devrait être retiré sans pouvoir être mis de côté (revue R2, S4).
+    case inkWouldBeLost
+
+    public var errorDescription: String? {
+        String(localized: "Mise à jour refusée : un dessin serait perdu. Rien n'a été modifié.", bundle: .main)
+    }
+}
+
 /// Base SQLite de l'app (GRDB). Fichier : mode WAL (`DatabasePool`) → lectures concurrentes,
 /// écritures sans bloquer l'interface. Tests : base en mémoire.
 public final class AppDatabase: @unchecked Sendable {
@@ -146,6 +156,90 @@ public final class AppDatabase: @unchecked Sendable {
                 t.add(column: "anchorText", .text)
             }
         }
+        // Colonne facultative (NULL = non classé) : les documents existants ne changent pas (RET-039, #54).
+        m.registerMigration("v5-document-category") { db in
+            try db.alter(table: "document") { t in
+                t.add(column: "category", .text)
+            }
+        }
+        m.registerMigration("v5-page-edits") { db in
+            // Modifications des pages (#49) : voir AppDatabase+PageEdits.swift.
+            try db.alter(table: "document") { t in
+                t.add(column: "layoutVersion", .integer).notNull().defaults(to: 0)
+            }
+            try db.create(table: "pageIdentity") { t in
+                t.column("documentId", .text).notNull().references("document", onDelete: .cascade, onUpdate: .cascade)
+                t.column("position", .integer).notNull()
+                t.column("pageId", .text).notNull()
+                t.column("printedNumber", .integer)
+                t.primaryKey(["documentId", "position"])
+                t.uniqueKey(["documentId", "pageId"])
+            }
+            try db.create(table: "pageEdit") { t in
+                t.primaryKey("id", .text)
+                t.column("documentId", .text).notNull().references("document", onDelete: .cascade, onUpdate: .cascade)
+                t.column("kind", .text).notNull()
+                t.column("versionBefore", .integer).notNull()
+                t.column("versionAfter", .integer).notNull()
+                t.column("appliedAt", .datetime).notNull()
+                t.column("mappingJSON", .blob).notNull()
+                t.column("pageOrderJSON", .blob).notNull()
+                // Suppression seulement : opération qui l'a restaurée, ou date de l'effacement de son archive (30 j).
+                // Ajoutées avant toute livraison de cette migration (branche locale) : pas de migration séparée.
+                t.column("restoredBy", .text)
+                t.column("purgedAt", .datetime)
+            }
+            try db.create(index: "pageEdit_doc", on: "pageEdit", columns: ["documentId", "appliedAt"])
+            try db.create(table: "pageEditRow") { t in
+                t.column("editId", .text).notNull().references("pageEdit", onDelete: .cascade)
+                t.column("tableName", .text).notNull()
+                t.column("pageId", .text).notNull()
+                t.column("rowJSON", .blob).notNull()
+            }
+            try db.create(index: "pageEditRow_edit", on: "pageEditRow", columns: ["editId"])
+        }
+        // Dossiers de l'accueil (PLAN-T5-001, E1) : migration additive, les documents existants restent hors dossier.
+        // L'appartenance est une colonne de `document` **absente** de `LibraryDocument` : un enregistrement du
+        // document (renommage, réglages, remplacement Drive) ne peut donc jamais l'effacer. Voir AppDatabase+Folders.
+        m.registerMigration("v6-folders") { db in
+            try db.create(table: "folder") { t in
+                t.primaryKey("id", .text)
+                t.column("name", .text).notNull()
+                t.column("space", .text).notNull()
+                t.column("createdAt", .datetime).notNull()
+            }
+            try db.alter(table: "document") { t in
+                t.add(column: "folderId", .text).references("folder", onDelete: .setNull)
+            }
+            try db.create(index: "document_folder", on: "document", columns: ["folderId"])
+        }
+        // Rangement des notes (PLAN-T4-001, E1) : migration additive ; une note existante devient « normale », sans
+        // échéance, classeur ni étiquette, non archivée. Ces colonnes sont **absentes** de `PageComment` (comme
+        // `document.folderId`) : enregistrer le texte ou le dessin d'une note ne peut jamais les effacer. Étant dans la
+        // ligne de la note, elles suivent tous les chemins qui la copient (`SELECT *` des paquets et des archives de
+        // pages retirées, fusion Drive qui ne change que `documentId`). Classeur et étiquettes sont des identifiants
+        // **sans clé étrangère** : venus d'un autre appareil (paquet), inconnus ici, ils sont ignorés à la lecture.
+        // Voir AppDatabase+NoteOrganization.
+        m.registerMigration("v7-note-organization") { db in
+            try db.create(table: "noteFolder") { t in
+                t.primaryKey("id", .text)
+                t.column("name", .text).notNull()
+                t.column("createdAt", .datetime).notNull()
+            }
+            try db.create(table: "noteTag") { t in
+                t.primaryKey("id", .text)
+                t.column("name", .text).notNull()
+                t.column("createdAt", .datetime).notNull()
+            }
+            try db.alter(table: "pageComment") { t in
+                t.add(column: "dueDay", .text)
+                t.add(column: "priority", .integer).notNull().defaults(to: 1)
+                t.add(column: "archived", .boolean).notNull().defaults(to: false)
+                t.add(column: "noteFolderId", .text)
+                t.add(column: "tagIds", .text).notNull().defaults(to: "[]")
+            }
+            try db.create(index: "pageComment_due", on: "pageComment", columns: ["archived", "dueDay"])
+        }
         return m
     }
 }
@@ -167,8 +261,43 @@ extension AppDatabase {
         try writer.write { db in try document.save(db) }
     }
 
+    /// Change seulement l'espace du document, dans une transaction : ses autres réglages ne sont pas réécrits.
+    public func updateMangaSpace(documentId: String, inManga: Bool) throws {
+        try writer.write { db in
+            guard var document = try LibraryDocument.fetchOne(db, key: documentId) else { return }
+            let before = LibrarySpace(document: document)
+            var settings = document.settingsOverride
+            settings.mangaSpace = inManga ? true : nil
+            document.settingsOverride = settings
+            try db.execute(sql: "UPDATE document SET settingsJSON = ? WHERE id = ?", arguments: [document.settingsJSON, documentId])
+            // PLAN-T5-001, E2 : les dossiers sont propres à un espace (DEC-T5-02). Un document qui change d'espace
+            // sort de son dossier dans la même écriture : il ne reste jamais rangé dans un dossier de l'autre espace.
+            if LibrarySpace(document: document) != before {
+                try db.execute(sql: "UPDATE document SET folderId = NULL WHERE id = ?", arguments: [documentId])
+            }
+        }
+    }
+
+    /// Document et correspondance d'archive enregistrés ensemble, ou pas du tout.
+    func saveComic(_ document: LibraryDocument, sources: [String: String], sourcesKey: String) throws {
+        try writer.write { db in
+            try document.save(db)
+            let json = String(decoding: try JSONEncoder.sorted.encode(sources), as: UTF8.self)
+            try db.execute(sql: "INSERT INTO setting (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+                           arguments: [sourcesKey, json])
+        }
+    }
+
     public func deleteDocument(id: String) throws {
         try writer.write { db in _ = try LibraryDocument.deleteOne(db, key: id) }
+    }
+
+    /// Change seulement la catégorie (requête ciblée) : une copie du document gardée ailleurs ne l'écrase pas, et
+    /// cette mise à jour n'écrase rien d'autre (RET-039, #54).
+    public func updateCategory(documentId: String, category: DocumentCategory?) throws {
+        try writer.write { db in
+            try db.execute(sql: "UPDATE document SET category = ? WHERE id = ?", arguments: [category?.rawValue, documentId])
+        }
     }
 
     /// Enregistre la position de lecture (appelé souvent : requête minimale).
@@ -181,20 +310,137 @@ extension AppDatabase {
 
     /// Une nouvelle version d'un document (ex. cours mis à jour sur Drive) remplace l'ancienne :
     /// toutes les annotations suivent grâce aux clés étrangères `ON UPDATE CASCADE`.
-    public func rekeyDocument(from oldId: String, to newDocument: LibraryDocument) throws {
+    ///
+    /// Décision DEC-C1 = A (10/11/2026) : après un remplacement, **tout l'OCR est relu**. L'ancienne
+    /// version est un autre PDF : ses boîtes de caractères, ses corrections et son rognage automatique
+    /// ne décriront jamais le contenu réel des nouvelles pages — les servir serait mentir à l'utilisateur
+    /// (Lot C2.1, fiche f85d0c0). Les rotations et les coupures manuelles des pages restent : ce sont des
+    /// choix de l'utilisateur, par page, pas des mesures du contenu. Effacement du cache OCR et remise
+    /// à zéro du rognage automatique (un rognage calculé de l'ancienne version est faux) sont faits
+    /// **dans la même transaction** que la bascule, pour les deux branches :
+    /// - le document final est un renommage (`ON UPDATE CASCADE` suit le renommage : le cache à effacer
+    ///   est donc celui du nouvel identifiant, après lui) ;
+    /// - le document final existait déjà (fusion) : la suppression en cascade emporte l'OCR de l'ancien
+    ///   identifiant, celui du survivant est effacé par la requête qui suit.
+    ///
+    /// Types des « mises de côté » d'une bascule. `pageJSON` est le résultat OCR brut tel qu'en
+    /// base : seul l'appelant (qui connaît le format, `OCRKit`) sait y repérer les lignes
+    /// corrigées à la main (`OCRLine.originalText`) et les écrire de côté.
+    public typealias AsideCorrections =
+        (_ sourceDocumentId: String, _ newDocumentId: String, _ pageIndex: Int, _ engine: String, _ pageJSON: Data) throws -> Void
+
+    /// Encre perdue pendant une fusion (revue R2, N2) : la page d'arrivée n'attend qu'un dessin,
+    /// celui du survivant est offert à l'appelant **avant** d'être remplacé, pour être mis de
+    /// côté (fichier `.ink` sous « Conflits-remplacement », jamais écrasé).
+    public typealias AsideInk = (_ sourceDocumentId: String, _ pageIndex: Int, _ data: Data) throws -> Void
+
+    /// Si l'identifiant ne change pas (`oldId == newDocument.id`) le contenu n'a pas varié : ce n'est
+    /// pas un remplacement, aucun cache valable ne doit être effacé.
+    ///
+    ///   - asideCorrections: DEC-C3 (10/11/2026) — appelé pour **chaque** résultat OCR
+    ///     avant tout changement (renommage compris : les lignes deviendront celles du nouvel
+    ///     identifiant, puis partiront avec l'effacement ; fusion incluse, les deux versions
+    ///     partiront). Les lignes corrigées à la main y sont extraites et écrites dans
+    ///     `Corrections-remplacement/…`, jamais écrasées.
+    ///   - asideInk: N2 (revue R2) — fusion seulement : le dessin du survivant sur une page où le
+    ///     document remplacé en a aussi un, avant que celui-là ne prenne sa place.
+    public func rekeyDocument(from oldId: String, to newDocument: LibraryDocument,
+                              asideCorrections: AsideCorrections? = nil,
+                              asideInk: AsideInk? = nil) throws {
         try writer.write { db in
-            if oldId != newDocument.id, try LibraryDocument.exists(db, key: newDocument.id) {
-                // La nouvelle version existe déjà : on y rattache les annotations de l'ancienne.
-                for table in ["pageTransform", "highlight", "inkDrawing", "bookmark", "pageComment"] {
-                    try db.execute(sql: "UPDATE OR IGNORE \(table) SET documentId = ? WHERE documentId = ?",
-                                   arguments: [newDocument.id, oldId])
+            if oldId != newDocument.id {
+                // DEC-C3 : AVANT la bascule et l'effacement, tous les résultats OCR des deux
+                // identifiants sont proposés à l'appelant (un résultat illisible interrompt
+                // l'opération : les corrections manuelles seraient perdues sans lui). Jamais
+                // rejoué : la reprise ne repasse par ici qu'après une bascule annulée, où rien
+                // manquait encore (l'ancien document existait toujours).
+                // Analyse avant candidate 1.5.5 (DeepSeek #1) : en fusion, la version qui reste est le
+                // **même fichier** (l'identifiant est l'empreinte) : son OCR reste valable et n'est ni mis
+                // de côté ni effacé ; seules les corrections du livre remplacé sont mises de côté.
+                let merging = try LibraryDocument.exists(db, key: newDocument.id)
+                for record in try OCRResultRecord
+                    .filter(sql: merging ? "documentId = ?" : "documentId = ? OR documentId = ?",
+                            arguments: merging ? [oldId] : [oldId, newDocument.id])
+                    .fetchAll(db) {
+                    try asideCorrections?(record.documentId, newDocument.id, record.pageIndex, record.engine, record.json)
                 }
-                _ = try LibraryDocument.deleteOne(db, key: oldId)
-                try newDocument.update(db)
-            } else {
-                try db.execute(sql: "UPDATE document SET id = ? WHERE id = ?", arguments: [newDocument.id, oldId])
-                try newDocument.update(db)
+                if try LibraryDocument.exists(db, key: newDocument.id) {
+                    // La nouvelle version existe déjà : on y rattache les annotations de l'ancienne.
+                    //
+                    // P3 n°9 (revue R2) — rotation et coupure **manuelles** : une page n'attend
+                    // qu'un réglage, les deux versions font donc concurrence ; le choix est fait
+                    // et documenté : le réglage du livre **remplacé** gagne, parce que c'est la
+                    // fiche que l'utilisateur entretient et met à jour (le survivant n'est qu'un
+                    // doublon du même fichier, reconnu à sa même empreinte). La ligne du
+                    // survivant est retirée d'abord, celle du document remplacé la reprend.
+                    try db.execute(sql: "DELETE FROM pageTransform WHERE documentId = ? AND pageIndex IN (SELECT pageIndex FROM pageTransform WHERE documentId = ?)",
+                                   arguments: [newDocument.id, oldId])
+                    try db.execute(sql: "UPDATE pageTransform SET documentId = ? WHERE documentId = ?",
+                                   arguments: [newDocument.id, oldId])
+                    for table in ["highlight", "bookmark", "pageComment"] {
+                        try db.execute(sql: "UPDATE OR IGNORE \(table) SET documentId = ? WHERE documentId = ?",
+                                       arguments: [newDocument.id, oldId])
+                    }
+                    // N2 (revue R2) : l'encre n'attend qu'un dessin par page (clé
+                    // `(documentId, pageIndex)`) — là où le survivant en a déjà un,
+                    // `UPDATE OR IGNORE` abandonnerait en silence le dessin du document
+                    // remplacé, exactement la classe de défaut corrigée pour la rotation.
+                    // Choix symétrique : le dessin du livre **remplacé** gagne (même règle
+                    // que la rotation), et le dessin du survivant est mis de côté par
+                    // l'appelant, jamais écrasé. Pas de fusion des deux dessins : PencilKit
+                    // n'offre pas d'assemblage public de deux `PKDrawing`, et une recomposition
+                    // approximative risquerait la géométrie exacte d'un dessin de l'utilisateur.
+                    for drawing in try InkDrawing.filter(Column("documentId") == oldId).fetchAll(db) {
+                        if let kept = try InkDrawing.fetchOne(db, key: ["documentId": newDocument.id, "pageIndex": drawing.pageIndex]) {
+                            // Revue R2, S4 : sans copie possible, la fusion est refusée plutôt qu'un dessin effacé.
+                            guard let asideInk else { throw RekeyError.inkWouldBeLost }
+                            try asideInk(oldId, kept.pageIndex, kept.data)
+                            try kept.delete(db)
+                        }
+                    }
+                    try db.execute(sql: "UPDATE inkDrawing SET documentId = ? WHERE documentId = ?",
+                                   arguments: [newDocument.id, oldId])
+                    // Archives des pages retirées (#49) : gardées avec le document qui reste, jamais effacées en passant.
+                    try db.execute(sql: "UPDATE pageEdit SET documentId = ? WHERE documentId = ?", arguments: [newDocument.id, oldId])
+                    // T5 E2 (revue DeepSeek n°6) : le survivant sans dossier prend celui du document remplacé ; un
+                    // survivant déjà rangé garde le sien (sa fiche décrit le fichier qui reste, comme ci-dessous).
+                    try db.execute(sql: """
+                        UPDATE document SET folderId = (SELECT folderId FROM document WHERE id = ?)
+                        WHERE id = ? AND folderId IS NULL
+                        """, arguments: [oldId, newDocument.id])
+                    _ = try LibraryDocument.deleteOne(db, key: oldId)
+                    // P3 n°9 (revue R2) : le survivant garde son titre, ses réglages, sa catégorie
+                    // et sa position de lecture — la fiche qui reste décrit déjà le **fichier qui
+                    // reste** (le PDF de l'arrivée est le même fichier que le survivant, reconnu à
+                    // son empreinte) ; la fusion d'annotations d'un doublon ne justifie pas de
+                    // l'écraser par la fiche remplacée. Seules les mesures du fichier réel et la
+                    // révision Drive de l'opération suivent (la révision n'écrase jamais une
+                    // valeur absente : aucune opération Drive dans ce cas).
+                    if newDocument.driveRevision == nil {
+                        try db.execute(sql: "UPDATE document SET pageCount = ?, fileSize = ? WHERE id = ?",
+                                       arguments: [newDocument.pageCount, newDocument.fileSize, newDocument.id])
+                    } else {
+                        try db.execute(sql: "UPDATE document SET pageCount = ?, fileSize = ?, driveRevision = ? WHERE id = ?",
+                                       arguments: [newDocument.pageCount, newDocument.fileSize, newDocument.driveRevision, newDocument.id])
+                    }
+                } else {
+                    try db.execute(sql: "UPDATE document SET id = ? WHERE id = ?", arguments: [newDocument.id, oldId])
+                    try newDocument.update(db)
+                }
+                // DEC-C1 = A : un remplacement par un PDF différent efface, dans la même transaction, le cache
+                // OCR (boîtes de caractères et corrections, mises de côté juste avant) et remet le rognage
+                // automatique à zéro. Le rognage manuel (`rotation`, `split`) reste. Pas en fusion : même fichier.
+                if !merging {
+                    try db.execute(sql: "DELETE FROM ocrResult WHERE documentId = ?", arguments: [newDocument.id])
+                    try db.execute(sql: "UPDATE pageTransform SET autoCrop = NULL WHERE documentId = ?", arguments: [newDocument.id])
+                }
             }
+            // #49 (revue Codex F1) : un autre PDF n'a pas les mêmes pages, même s'il en a autant. Les identités sont
+            // refaites à la prochaine modification des pages, et la version change sans opération enregistrée : la
+            // chaîne des versions est rompue, donc une archive d'avant le remplacement n'est plus restaurable telle
+            // quelle (S2/S3 le vérifient). Les archives elles-mêmes restent jusqu'à leur échéance.
+            try db.execute(sql: "DELETE FROM pageIdentity WHERE documentId = ?", arguments: [newDocument.id])
+            try db.execute(sql: "UPDATE document SET layoutVersion = layoutVersion + 1 WHERE id = ?", arguments: [newDocument.id])
         }
     }
 
@@ -275,6 +521,33 @@ extension AppDatabase {
         try writer.write { db in for t in transforms { try t.save(db) } }
     }
 
+    /// Applique les rotations choisies et invalide, dans la même transaction, l'OCR des pages concernées.
+    /// Les autres propriétés de la page (découpe, rognage) sont conservées.
+    /// `keepingOCR` (JSON, ancienne rotation, nouvelle rotation) : JSON à garder pour un résultat, `nil` pour l'effacer.
+    /// ReaderCore ne connaît pas le format OCR : `OCRPage.jsonKeepingManualEdits` protège les corrections manuelles.
+    public func applyPageRotations(documentId: String, rotations: [Int: Int],
+                                   keepingOCR: (Data, Int, Int) -> Data? = { _, _, _ in nil }) throws {
+        guard !rotations.isEmpty else { return }
+        try writer.write { db in
+            for (page, value) in rotations {
+                var transform = try PageTransform.fetchOne(db, key: ["documentId": documentId, "pageIndex": page])
+                    ?? PageTransform(documentId: documentId, pageIndex: page)
+                let previous = transform.rotation
+                transform.rotation = PageTransform.normalizedRotation(value)
+                try transform.save(db)
+                let records = try OCRResultRecord.filter(Column("documentId") == documentId && Column("pageIndex") == page).fetchAll(db)
+                for var record in records {
+                    if let kept = keepingOCR(record.json, previous, transform.rotation) {
+                        record.json = kept
+                        try record.save(db)
+                    } else {
+                        try record.delete(db)
+                    }
+                }
+            }
+        }
+    }
+
     public func highlights(documentId: String) throws -> [Highlight] {
         try writer.read { db in
             try Highlight.filter(Column("documentId") == documentId).order(Column("pageIndex"), Column("createdAt")).fetchAll(db)
@@ -330,7 +603,7 @@ extension AppDatabase {
     /// Pages insérées **avant** les pages d'un document (« Ajouter des pages… ») : tout ce qui est rangé par numéro
     /// de page avance de `offset` (OCR, surlignages, dessins, repères, notes, transformations, position de lecture,
     /// page 1), puis nombre de pages et taille du PDF. Une seule transaction : tout ou rien. `offset` négatif =
-    /// retour en arrière (opération interrompue). Les cartes sont dans `review.sqlite` : `ReviewStore.shiftSourcePages`.
+    /// retour en arrière (opération interrompue). Les cartes sont dans `review.sqlite` : `ReviewStore.setSourcePages`.
     public func shiftPages(documentId: String, by offset: Int, pageCount: Int, fileSize: Int64,
                            expectedPageCount: Int? = nil) throws {
         try writer.write { db in
@@ -338,7 +611,7 @@ extension AppDatabase {
                 let current = try LibraryDocument.fetchOne(db, key: documentId)?.pageCount
                 if current == pageCount { return } // Effet déjà commis, journal encore présent.
                 guard current == expectedPageCount else {
-                    throw NSError(domain: "Kyokasho.PageShift", code: 2, userInfo: [NSLocalizedDescriptionKey: "Nombre de pages inattendu en base."])
+                    throw NSError(domain: "Kyokasho.PageShift", code: 2, userInfo: [NSLocalizedDescriptionKey: String(localized: "Nombre de pages inattendu en base.", bundle: .main)])
                 }
             }
             if offset != 0 {

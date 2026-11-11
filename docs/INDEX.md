@@ -11,11 +11,13 @@ Ce dossier organise la reprise du projet à partir de **v1.3, build 40**. L'audi
 |---|---|
 | **Reprendre ou piloter le projet** (agents : lire d'abord [AGENTS.md](../AGENTS.md)) | [Plan directeur](PLAN-DIRECTEUR.md) |
 | Apprendre à utiliser l'app | [Guide utilisateur](GUIDE-UTILISATEUR.md) |
+| Trouver un réglage ou comprendre son rangement | [Organisation des réglages](REGLAGES.md) |
 | Comprendre les capacités et les preuves disponibles | [Audit v1.3](AUDIT-V1.3.md) |
 | Installer l'environnement et comprendre les modules | [Guide développeur et architecture](GUIDE-DEVELOPPEUR.md) |
 | Comprendre ce qui est conservé, exporté ou effacé | [Données et sauvegardes](DONNEES-ET-SAUVEGARDES.md) |
 | Préparer les essais iPad PageShift et sauvegarde, sans données personnelles | [Recette QA-02 et fiches GitHub](RECETTE-IPAD-QA-02.md) |
 | Suivre un retour d'usage réel, de l'Issue à la confirmation iPad | [Registre des retours iPad](RETOURS-IPAD.md) |
+| Savoir ce que chaque version embarque | [Les trois versions](VERSIONS-PLATEFORMES.md) |
 | Vérifier une modification | [Stratégie de tests et recette iPad](TESTS.md) |
 | Automatiser progressivement les contrôles | [CI et livraison](CI-ET-LIVRAISON.md) |
 | Zéro dépense GitHub, tests locaux et future CI | [Plan d'automatisation CI](CI-ROADMAP.md) |
@@ -31,6 +33,8 @@ Ce dossier organise la reprise du projet à partir de **v1.3, build 40**. L'audi
 - [Histoire du développement](HISTOIRE-DU-DEVELOPPEMENT.md) : récit et sources historiques, pas une preuve d'essai actuel.
 - [Feuille de route](FEUILLE-DE-ROUTE.md) : consignes du propriétaire, passations, backlog historique et décisions. Les sections anciennes peuvent décrire une fonction remplacée.
 - [Architecture de lecture](ARCHITECTURE-LECTURE.md) : contrats du pipeline texte et positions.
+- [Chaîne OCR → furigana](CHAINE-OCR-FURIGANA.md) : du texte de la page aux lectures dessinées, étape par étape (#46).
+- [Styles : jetons et inventaire](STYLES-JETONS.md) : catalogue des jetons visuels, valeurs directes restantes, jetons prévus.
 - [OCR](OCR.md) : moteurs et fonctionnement détaillé.
 - [IA locale](IA-LOCALE.md) : rétroportages MLX/iOS 16, procédures et mesures datées.
 - [Grammaire](GRAMMAIRE.md) : proposition, sans engagement d'implémentation.

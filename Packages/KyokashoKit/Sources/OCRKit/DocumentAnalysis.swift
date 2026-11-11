@@ -42,10 +42,33 @@ public struct DocumentAnalysis: Codable, Sendable {
         }
     }
 
+    /// Un lancement d'analyse (« Dernière analyse : … », #41).
+    public struct Run: Codable, Sendable, Equatable {
+        public var date: Date
+        public var engines: [String]
+        /// Pages lues, de `firstPage` à `lastPage` (indices source, inclus).
+        public var firstPage: Int
+        public var lastPage: Int
+        /// Pages déjà lues relues quand même.
+        public var reread: Bool
+
+        public init(date: Date, engines: [String], firstPage: Int, lastPage: Int, reread: Bool) {
+            self.date = date
+            self.engines = engines
+            self.firstPage = firstPage
+            self.lastPage = lastPage
+            self.reread = reread
+        }
+    }
+
     public let documentId: String
     public var date = Date()
     public var engines: [String] = []
     public var pages: [Int: Page] = [:]
+    /// Lancements, du plus ancien au plus récent (20 au plus) ; absent des rapports d'avant #41.
+    public var runs: [Run]?
+    /// PDF à texte intégré : lignes lues par OvisOCR2 absentes de ce texte (texte des images d'illustration), par page.
+    public var imageText: [Int: [String]]?
 
     public init(documentId: String) { self.documentId = documentId }
 
@@ -67,7 +90,9 @@ public struct DocumentAnalysis: Codable, Sendable {
 
     /// Vote d'une page. `readings` : pour chaque autre modèle, son Markdown de la page.
     /// `tieBreak` : parmi plusieurs textes à égalité, celui que le dictionnaire préfère (moins de mots inconnus).
-    public static func vote(source: Int, base: OCRPage, readings: [String: String],
+    /// `preferred` : lecteur conseillé d'abord (OvisOCR2, décision de NOxygen59 du 28/10, #41) : sa lecture est
+    /// conseillée sauf si deux autres lectures s'accordent contre elle ; sans lui, majorité puis dictionnaire.
+    public static func vote(source: Int, base: OCRPage, readings: [String: String], preferred: String? = nil,
                             tieBreak: ([String]) async -> String?) async -> Page {
         var page = Page(source: source, baseEngine: base.engine)
         let aligned = readings.mapValues { OCRReferenceDiff.align(base, reference: $0) }
@@ -89,9 +114,45 @@ public struct DocumentAnalysis: Codable, Sendable {
                 continue
             }
             var advised: String?
-            if best >= 2, leaders.count == 1 { advised = leaders[0] } else { advised = await tieBreak(Array(votes.keys).sorted()) }
+            if let preferred, let favourite = others[preferred], !(best >= 2 && leaders.count == 1 && leaders[0] != favourite) {
+                advised = favourite
+            } else if best >= 2, leaders.count == 1 {
+                advised = leaders[0]
+            } else {
+                advised = await tieBreak(Array(votes.keys).sorted())
+            }
             page.disagreements.append(LineVote(line: l, base: line.text, readings: others, advised: advised))
         }
         return page
+    }
+
+    /// Note un lancement (20 gardés au plus).
+    public mutating func recordRun(_ run: Run) {
+        var list = runs ?? []
+        list.append(run)
+        if list.count > 20 { list.removeFirst(list.count - 20) }
+        runs = list
+    }
+
+    /// Lignes de `reading` (Markdown d'un modèle) qui n'apparaissent pas dans `base` (texte intégré au PDF) : le
+    /// texte que seul le modèle voit, en pratique celui des images. Comparaison sans espaces ni ponctuation ignorée
+    /// par ``OCRReferenceDiff`` ; les lignes de moins de deux caractères utiles, et celles déjà contenues dans une
+    /// ligne relevée, sont laissées de côté.
+    public static func textOutsideBase(_ base: String, reading: String) -> [String] {
+        func key(_ text: String) -> String { text.filter { !$0.isWhitespace && !OCRReferenceDiff.ignored.contains($0) } }
+        let baseKey = key(base)
+        var seen: [String] = []
+        return reading.split(whereSeparator: \.isNewline).compactMap { raw in
+            var line = String(raw).trimmingCharacters(in: .whitespaces)
+            if line.hasPrefix("![") { return nil }                         // image décrite, pas du texte
+            while let first = line.first, "#>*-|+".contains(first) { line.removeFirst() }
+            line = line.replacingOccurrences(of: "|", with: " ").replacingOccurrences(of: "**", with: "")
+                .trimmingCharacters(in: .whitespaces)
+            let k = key(line)
+            // Déjà relevée, même dans une ligne plus longue (cellule de tableau répétée en liste…).
+            guard k.count >= 2, !baseKey.contains(k), !seen.contains(where: { $0.contains(k) }) else { return nil }
+            seen.append(k)
+            return line
+        }
     }
 }

@@ -6,31 +6,6 @@ import Foundation
 
 // MARK: - Zones de tap
 
-public enum TapAction: Equatable, Sendable {
-    case previous, next, toggleBars
-}
-
-public enum TapZones {
-    /// Action d'un tap à la position horizontale `x` (0 = bord gauche, 1 = bord droit).
-    /// Tiers gauche / tiers droit = tourner la page, centre = afficher ou masquer les barres.
-    /// En lecture de droite à gauche, le côté gauche avance (comme un livre japonais).
-    public static func action(atFraction x: Double, settings: ReaderSettings) -> TapAction {
-        guard settings.tapZonesEnabled else { return .toggleBars }
-        let side: TapAction
-        if x < 1.0 / 3.0 {
-            side = .previous
-        } else if x > 2.0 / 3.0 {
-            side = .next
-        } else {
-            return .toggleBars
-        }
-        var forward = side == .next
-        if settings.direction == .rightToLeft { forward.toggle() }
-        if settings.invertTapZones { forward.toggle() }
-        return forward ? .next : .previous
-    }
-}
-
 // MARK: - Pages présentées (découpe des scans de double page)
 
 /// Une page telle qu'affichée : une page source entière, ou l'une de ses deux moitiés.
@@ -76,12 +51,27 @@ public enum PresentationLayout {
     }
 
     /// Rectangle visible d'une moitié dans la boîte de la page (coordonnées PDF, y vers le haut).
-    public static func box(for part: PresentedPage.Part, in box: CGRect) -> CGRect {
-        switch part {
-        case .whole: return box
-        case .left: return CGRect(x: box.minX, y: box.minY, width: box.width / 2, height: box.height)
-        case .right: return CGRect(x: box.midX, y: box.minY, width: box.width / 2, height: box.height)
+    /// Défilement de trackpad assez long et assez horizontal pour tourner la page plutôt que déplacer la vue.
+    public static func isPageTurnScroll(_ translation: CGPoint) -> Bool {
+        abs(translation.x) >= 60 && abs(translation.x) >= abs(translation.y) * 2
+    }
+
+    /// `rotation` : sens d'affichage de la page. « Gauche » et « droite » sont ceux de l'écran : sur une page tournée,
+    /// ils correspondent à d'autres côtés de la boîte (même convention que `PageGeometry.pageToView`).
+    public static func box(for part: PresentedPage.Part, in box: CGRect, rotation: Int = 0) -> CGRect {
+        guard part != .whole else { return box }
+        let lowHalf: Bool
+        let splitsHeight: Bool
+        switch ((rotation % 360) + 360) % 360 {
+        case 90: lowHalf = part == .left; splitsHeight = true
+        case 180: lowHalf = part == .right; splitsHeight = false
+        case 270: lowHalf = part == .right; splitsHeight = true
+        default: lowHalf = part == .left; splitsHeight = false
         }
+        if splitsHeight {
+            return CGRect(x: box.minX, y: lowHalf ? box.minY : box.midY, width: box.width, height: box.height / 2)
+        }
+        return CGRect(x: lowHalf ? box.minX : box.midX, y: box.minY, width: box.width / 2, height: box.height)
     }
 
     /// Ordre des pages pour afficher une double page de droite à gauche **sans** l'option RTL de
@@ -161,6 +151,13 @@ public enum ContentBounds {
 // MARK: - Géométrie de page
 
 public enum PageGeometry {
+    /// Repère de page PDF → surcouche `PDFPageOverlayViewProvider`, posée par PDFKit dans le repère non tourné de la
+    /// page puis tournée avec elle (constat sur iPad, recette 1.3.2 (74)) : `box` et `overlayWidth` sans rotation.
+    public static func pageToOverlay(box: CGRect, overlayWidth: CGFloat) -> CGAffineTransform {
+        let scale = overlayWidth > 0 && box.width > 0 ? overlayWidth / box.width : 1
+        return pageToView(box: box, rotation: 0).concatenating(CGAffineTransform(scaleX: scale, y: scale))
+    }
+
     /// Transformation du repère de page PDF (points, y vers le haut) vers le repère d'une vue
     /// (y vers le bas, origine en haut à gauche de la boîte visible), rotation comprise.
     /// Les dessins sont stockés dans le repère PDF : ils restent justes si on change le rognage,
@@ -197,13 +194,13 @@ public enum MarkdownExporter {
         formatter.dateStyle = .long
         formatter.timeStyle = .none
 
-        var out = "# \(title)\n\n_Notes exportées le \(formatter.string(from: date))._\n"
+        var out = String(localized: "# \(title)\n\n_Notes exportées le \(formatter.string(from: date))._\n", bundle: .main)
         let pages = Set(comments.map(\.pageIndex)).union(highlights.map(\.pageIndex)).union(bookmarks.map(\.pageIndex)).sorted()
         if pages.isEmpty {
-            return out + "\nAucune note.\n"
+            return out + String(localized: "\nAucune note.\n", bundle: .main)
         }
         for page in pages {
-            out += "\n## Page \(page + 1)\n"
+            out += String(localized: "\n## Page \(page + 1)\n", bundle: .main)
             for bookmark in bookmarks where bookmark.pageIndex == page {
                 out += "\n🔖 \(bookmark.title)\n"
             }

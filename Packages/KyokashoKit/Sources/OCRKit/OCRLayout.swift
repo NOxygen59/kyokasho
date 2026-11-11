@@ -117,6 +117,65 @@ public enum OCRLayout {
         return items.enumerated().sorted { ($0.element.order, $0.offset) < ($1.element.order, $1.offset) }.map(\.element.block)
     }
 
+    /// Colonnes d'une page verticale dans l'ordre de lecture, sans dépendre de l'ordre du moteur : les lignes voisines
+    /// forment des blocs, les blocs à la même hauteur une bande. Bandes de haut en bas, blocs de droite à gauche.
+    public static func verticalReadingOrder(_ page: OCRPage) -> [OCRLine] {
+        let lines = page.lines
+        let groups = readingGroups(lines)
+        struct Section { let lines: [OCRLine]; let top: Double; let bottom: Double; let right: Double; let vertical: Bool }
+        let sections = groups.values.map { group in
+            Section(lines: sorted(group), top: group.map(\.box.y).min() ?? 0,
+                    bottom: group.map { $0.box.y + $0.box.h }.max() ?? 0, right: group.map { $0.box.x + $0.box.w }.max() ?? 0,
+                    vertical: group.contains(where: \.vertical))
+        }.sorted { ($0.top, -$0.right) < ($1.top, -$1.right) }
+        var bands: [(bottom: Double, top: Double, sections: [Section])] = []
+        for section in sections {
+            if let last = bands.indices.last,
+               overlap(bands[last].top, bands[last].bottom, section.top, section.bottom) > 0.5 * min(bands[last].bottom - bands[last].top, section.bottom - section.top) {
+                bands[last].sections.append(section)
+                bands[last].bottom = max(bands[last].bottom, section.bottom)
+            } else {
+                bands.append((section.bottom, section.top, [section]))
+            }
+        }
+        // Une bande sans aucun vertical (colonnes horizontales d'une page mixte) se lit de gauche à droite.
+        return bands.flatMap { band in
+            let rightToLeft = band.sections.contains(where: \.vertical)
+            return band.sections.sorted { rightToLeft ? $0.right > $1.right : $0.right < $1.right }.flatMap(\.lines)
+        }
+    }
+
+    /// Blocs de lignes voisines. Balayage presque linéaire sur une vraie page ; quadratique seulement si toutes les lignes
+    /// se chevauchent, ce qu'une page ne fait pas : limite acceptée, une page garde quelques centaines de lignes.
+    static func readingGroups(_ lines: [OCRLine]) -> [Int: [OCRLine]] {
+        var parent = Array(lines.indices)
+        func root(_ i: Int) -> Int {
+            var i = i
+            while parent[i] != i { parent[i] = parent[parent[i]]; i = parent[i] }
+            return i
+        }
+        // Balayage : `sameBlock` exige un écart inférieur à 1,2 fois la plus grande taille. Triées par début, les lignes
+        // au-delà de cette distance sont donc ignorées, ainsi que toutes les suivantes. Seules les voisines sont comparées.
+        let reach = (lines.map(size).max() ?? 0) * 1.2
+        for vertical in [true, false] {
+            func start(_ i: Int) -> Double { vertical ? lines[i].box.x : lines[i].box.y }
+            func end(_ i: Int) -> Double { vertical ? lines[i].box.x + lines[i].box.w : lines[i].box.y + lines[i].box.h }
+            let order = lines.indices.filter { lines[$0].vertical == vertical }.sorted { start($0) < start($1) }
+            var active: [Int] = []
+            for j in order {
+                active.removeAll { start(j) - end($0) >= reach }
+                for i in active where sameBlock(lines[i], lines[j]) {
+                    let a = root(i), b = root(j)
+                    if a != b { parent[b] = a }
+                }
+                active.append(j)
+            }
+        }
+        var groups: [Int: [OCRLine]] = [:]
+        for i in lines.indices { groups[root(i), default: []].append(lines[i]) }
+        return groups
+    }
+
     public static func markdown(_ page: OCRPage) -> String {
         markdown(blocks(page))
     }

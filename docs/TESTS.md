@@ -87,6 +87,41 @@ Selon le lot, on ajoute :
 
 Relever le code de sortie de chaque commande. Avec `tee`, `set -o pipefail` le conserve. Résumer ensuite le tout dans la **fiche de preuve locale** de [CI-ROADMAP.md](CI-ROADMAP.md), en commentaire de la PR. Les journaux restent dans `~/kyokasho-journaux/`, hors du dépôt, et ne sont jamais publiés en entier.
 
+### Vérification complète en une commande
+
+`scripts/verifier_tout.sh` rejoue les contrôles locaux dans l'ordre, depuis la racine du dépôt, et laisse une trace
+datée : génération du projet Xcode (`xcodegen generate -q`, seulement si l'outil est présent), `swift test` du paquet
+`KyokashoKit`, `python3 -m unittest discover -s tests`, compilation iOS générique sur le simulateur
+(`xcodebuild … -derivedDataPath build/verif build CODE_SIGNING_ALLOWED=NO -quiet`) et
+`python3 scripts/check_documentation.py`.
+
+```sh
+./scripts/verifier_tout.sh; echo "code de sortie : $?"
+```
+
+- Résumé : `build/verif/RESUME-<date>.md` — SHA court et long, branche, nombre de fichiers modifiés au lancement,
+  versions de macOS, Xcode et Swift, durée, puis une ligne par étape : tests Swift exécutés / ignorés / en échec,
+  nombre de tests Python et leur verdict, résultat de la compilation avec le nombre de lignes `error:` du journal,
+  liens documentaires examinés et erreurs éventuelles.
+- Journaux complets : `build/verif/journaux/` (`xcodegen.log`, `swift.log`, `python.log`, `ios.log`,
+  `documentation.log`, plus `swift-totaux.txt`).
+- Le script exécute **toutes** les étapes même si l'une échoue, pour que le résumé dise ce qui a réellement tourné, et
+  sort en erreur (code 1) dès qu'une étape a échoué. Un résumé « toutes les étapes ont réussi » n'est donc pas une
+  preuve partielle.
+- Limites : aucun réseau ; GitHub Actions reste désactivé (CI-0, « Zéro dépense ») ; rien n'est supprimé hors de
+  `build/verif` (les journaux du lancement précédent sont réécrits, comme le résumé du jour) ; un `xcodegen` absent est
+  noté « non exécuté » sans faire échouer le script ; le résultat ne remplace **ni** la compilation iOS d'un lot
+  précis **ni** la recette iPad de NOxygen59, et ne couvre ni ASan/LSan, ni MLX/Metal sur l'appareil, ni les essais
+  MLX/ONNX avec poids.
+
+**Premier relevé de ce script (10/11/2026)** : lancé sur la branche `agents/docs-verif` (macOS 27.2 arm64,
+Xcode 27.2, Swift 6.4.2), résumé `build/verif/RESUME-2026-11-10.md` : `xcodegen` réussi, **653 tests Swift exécutés,
+10 ignorés, 0 échec** (643 lignes « Test Case … passed » recoupées), **107 tests Python** (`OK`), compilation iOS
+générique réussie (produit `Kyokasho.app` écrit, aucune ligne `error:`), **170 liens locaux, 0 erreur** ; code de
+sortie 0. Le chemin d'échec a été éprouvé à part, sur une copie jetable dont l'étape documentaire était forcée en
+échec : code de sortie 1 et résumé nommant l'étape. Ces nombres décrivent cet arbre sur ce Mac : ils ne sont ni une
+validation iPad, ni une preuve pour un autre SHA.
+
 ## Couverture à ajouter par risque
 
 1. **Préservation des données** : les PR #2/#3 couvrent plusieurs injections de panne, reprises répétées et la restauration synthétique ; le cadrage [#73](https://github.com/NOxygen59/kyokasho/issues/73) ajoute la sécurité du journal et la double interruption (section « PageShift — sécurité et reprise » ci-dessous). Restent à qualifier les parcours UIKit, l’espace réellement disponible, les copies volumineuses et le conteneur TrollStore ; ne pas présenter les tests Mac comme une validation iPad. Voir les limites de [PageShift](PHASE2-STOCKAGE.md) et de [sauvegarde](PHASE2-SAUVEGARDE.md).
@@ -196,8 +231,8 @@ Base initiale du lot : `main` `35c5242` avant la réécriture de l'historique, s
 | R2 | `test_r2_empty_large_and_read_only_files_roundtrip` (Python) | fichier vide, 64 Mo, fichier source en lecture seule : **contenus** identiques ; les **permissions ne sont pas conservées** (`shutil.copyfile` : un fichier `0444` ressort selon l'umask, par exemple `0644`) |
 | R3 | `test_r3_backup_killed_…`, `test_r3_restore_killed_…` (Python) | SIGKILL réel après la 1re copie, après la 4e, juste avant la publication : jamais de `backup/` ni de `container/` partiel, source intacte, relance réussie vers une nouvelle destination |
 | R4 | `test_r4_known_limit_…` (Python) | limite connue : une archive modifiée avec un manifeste recalculé est acceptée |
-| C1 | `testC1OlderAppDatabaseSchemaRestoresAndMigrates` (Swift) | base ramenée au schéma `v3-page-one`, sauvegardée, restaurée, ouverte par l'`AppDatabase` actuel : `v4` appliquée, données relues, note ancrée écrite |
-| C2 | — | écarté : `ReviewStore` n'a qu'une migration (`v1`), il n'existe pas de schéma plus ancien |
+| C1 | `testC1OlderAppDatabaseSchemaRestoresAndMigrates` (Swift) | base ramenée au schéma `v3-page-one`, sauvegardée, restaurée, ouverte par l'`AppDatabase` actuel : `v4` à `v7` appliquées, données relues (note d'avant = rangement par défaut), note ancrée écrite |
+| C2 | `DocumentCardsTests.testMigrationFromAPopulatedV1Database` (Swift) | base des révisions `v1` peuplée sur disque, rouverte : index `v2-card-source` ajouté, cartes et FSRS intacts |
 
 **Résultats rejoués sur ce Mac sur `465cc19` + `e9b1bf7` (base réécrite `5f5caaf`) :** `python3 -I -m unittest discover -s tests -v` : 21 tests, 0 échec. `swift test --filter BackupRoundTripTests` : 4 tests, 0 échec. `swift test` complet : 225 exécutés, 7 ignorés, 0 échec. Revue de Codex : 21 tests Python et contrôle documentaire rejoués de son côté ; Swift non rejoué par Codex (dépendances inaccessibles dans son environnement).
 

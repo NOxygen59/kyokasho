@@ -71,10 +71,10 @@ public enum MemoryState: Int, Codable, Sendable, CaseIterable {
 
     public var label: String {
         switch self {
-        case .new: return "Nouvelle"
-        case .learning: return "En apprentissage"
-        case .review: return "À réviser"
-        case .relearning: return "Réapprentissage"
+        case .new: return String(localized: "Nouvelle", bundle: .main)
+        case .learning: return String(localized: "En apprentissage", bundle: .main)
+        case .review: return String(localized: "À réviser", bundle: .main)
+        case .relearning: return String(localized: "Réapprentissage", bundle: .main)
         }
     }
 }
@@ -87,10 +87,10 @@ public enum Grade: Int, Codable, Sendable, CaseIterable, Identifiable {
 
     public var label: String {
         switch self {
-        case .again: return "À revoir"
-        case .hard: return "Difficile"
-        case .good: return "Bien"
-        case .easy: return "Facile"
+        case .again: return String(localized: "À revoir", bundle: .main)
+        case .hard: return String(localized: "Difficile", bundle: .main)
+        case .good: return String(localized: "Bien", bundle: .main)
+        case .easy: return String(localized: "Facile", bundle: .main)
         }
     }
 }
@@ -155,6 +155,15 @@ public struct StudyCard: Codable, Identifiable, Hashable, Sendable, FetchableRec
     public mutating func didInsert(_ inserted: InsertionSuccess) { id = inserted.rowID }
 
     public static func key(expression: String, reading: String) -> String { expression + "|" + reading }
+
+    /// Clé d'une carte modifiée à la main : celle des champs « Mot » et « Lecture » (texte sans HTML), comme à la
+    /// création ; `nil` si le mot est vide (gabarit sans champ « Mot » : la clé ne change pas).
+    public static func editedKey(fields: [String: String]) -> String? {
+        let plain = { (name: String) in CardTemplate.stripHTML(fields[name] ?? "").trimmingCharacters(in: .whitespacesAndNewlines) }
+        let word = plain("Mot")
+        guard !word.isEmpty else { return nil }
+        return key(expression: word, reading: plain("Lecture"))
+    }
 
     /// Premier champ non vide (titre de la carte dans les listes).
     public func title(fieldNames: [String]) -> String {

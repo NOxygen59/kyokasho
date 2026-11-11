@@ -18,6 +18,8 @@ import ReviewKit
     var openDocumentId: String?
     var lastError: String?
     let thumbnails = ThumbnailCache()
+    var onDrain: (() async -> Void)?
+    func drainWrites() async { await onDrain?() }
     init(root: URL) throws {
         database = try .open(at: root.appendingPathComponent("kyokasho.sqlite"))
         ocr = OCRService(database: database)
@@ -46,6 +48,15 @@ import ReviewKit
     }
     func reloadAfterPageShift(_ id: String) {}
 }
+/// C2.3 : les lectures IA vivent dans le même dossier d'analyse que le rapport, comme dans l'app
+/// (`DocumentAITextStore.folder` == `DocumentAnalysisService.folder`).
+enum DocumentAITextStore {
+    static var folder: URL { DocumentAnalysisService.folder }
+    static func url(documentId: String, reader: String, page: Int) -> URL {
+        folder.appendingPathComponent(documentId, isDirectory: true)
+            .appendingPathComponent("\(reader)-\(page).md")
+    }
+}
 @MainActor final class AITaskCenter {
     static let shared = AITaskCenter()
     struct Job { var key: String }
@@ -58,8 +69,27 @@ enum ScanSharpening {
 }
 enum FuriganaLayer { static func clearMemory() {} }
 enum ToneCache { static func clear() {} }
-enum Diagnostics { static func error(_ message: String, _ area: String = "app") {} }
+enum Diagnostics {
+    static func error(_ message: String, _ area: String = "app") {}
+    static func log(_ message: @autoclosure () -> String, _ area: String = "app") {}
+}
 @MainActor final class LayoutRegionsCache {
     static let shared = LayoutRegionsCache()
     func clear() {}
+}
+/// Sauvegarde complète (#51) : jamais en cours dans le harnais.
+@MainActor enum LibraryBackupService { static var inProgress = false }
+/// P2 n°2 (lot C2) : enregistreur de la relance de la lecture IA (signature exacte de l'app) ;
+/// les URLs reçues se lisent dans `DocumentScan.started` (à vider avant chaque vérification).
+/// N1 (revue R2) : l'état de la réservation (`PageShift.blocksAI`) est relevé **au moment de
+/// l'appel**, comme le fait le gardien `AITaskCenter.run` dans l'app : une relance encore
+/// réservée serait refusée et jamais rejouée.
+@MainActor enum DocumentScan {
+    static var started: [String] = []
+    /// `blocksAI("scan|<identifiant>")` relevé à chaque `start`, dans l'ordre des appels.
+    static var startedWhileReserved: [Bool] = []
+    static func start(_ document: LibraryDocument, url: URL, ocr: OCRService) {
+        started.append(url.path)
+        startedWhileReserved.append(PageShift.blocksAI(jobKey: "scan|\(document.id)"))
+    }
 }

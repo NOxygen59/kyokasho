@@ -72,12 +72,16 @@ struct UpdateBanner: View {
     @Environment(\.openURL) private var openURL
     @State private var installFailed = false
 
+    /// Lu pour être redessiné quand la palette change (voir `EnvironmentValues.themeRevision`) : sans cela, le texte
+    /// gardait l'encre claire d'un thème sombre sur un thème clair (recette iPad 1.5.1, point 1.1).
+    @Environment(\.themeRevision) private var themeRevision
     var body: some View {
+        let _ = themeRevision
         if let latest = update.available {
             HStack(spacing: 12) {
-                Image(systemName: "arrow.down.app.fill").font(.system(size: 22)).foregroundStyle(Atelier.Tint.read)
+                Image(systemName: "arrow.down.app.fill").font(Atelier.font(22)).foregroundStyle(Atelier.Tint.read)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Kyōkasho \(latest.version) disponible").font(.system(size: 15, weight: .semibold))
+                    Text("Kyōkasho \(latest.version) disponible").font(Atelier.font(15, weight: .semibold))
                         .foregroundStyle(Atelier.textPrimary)
                     if let notes = latest.notes {
                         Text(notes).font(.footnote).foregroundStyle(Atelier.textSecondary).lineLimit(2)

@@ -45,9 +45,9 @@ public struct ModelSpec: Identifiable, Sendable, Equatable {
 public extension ModelSpec {
     /// PP-OCRv5 mobile (PaddleOCR, Apache-2.0), version ONNX de RapidOCR. Chinois, japonais, anglais.
     static let ppocr5 = ModelSpec(
-        id: "ppocr5", title: "PP-OCRv5 (PaddleOCR)",
-        summary: "Petit et rapide. Japonais, chinois, anglais, horizontal et vertical.",
-        license: "Apache-2.0 (PaddlePaddle, RapidAI)",
+        id: "ppocr5", title: String(localized: "PP-OCRv5 (PaddleOCR)", bundle: .main),
+        summary: String(localized: "Petit et rapide. Japonais, chinois, anglais, horizontal et vertical.", bundle: .main),
+        license: String(localized: "Apache-2.0 (PaddlePaddle, RapidAI)", bundle: .main),
         files: [
             File(name: "det.onnx",
                  url: URL(string: "https://www.modelscope.cn/models/RapidAI/RapidOCR/resolve/v3.10.0/onnx/PP-OCRv5/det/ch_PP-OCRv5_det_mobile.onnx")!,
@@ -62,9 +62,9 @@ public extension ModelSpec {
 
     /// NDLOCR-Lite (Bibliothèque nationale de la Diète, CC-BY-4.0) : livres japonais, vertical.
     static let ndlocr = ModelSpec(
-        id: "ndlocr", title: "NDLOCR-Lite (Bibliothèque nationale du Japon)",
-        summary: "Fait pour les livres japonais : mise en page, colonnes verticales, furigana.",
-        license: "CC-BY-4.0 (National Diet Library, Japon)",
+        id: "ndlocr", title: String(localized: "NDLOCR-Lite (Bibliothèque nationale du Japon)", bundle: .main),
+        summary: String(localized: "Fait pour les livres japonais : mise en page, colonnes verticales, furigana.", bundle: .main),
+        license: String(localized: "CC-BY-4.0 (National Diet Library, Japon)", bundle: .main),
         files: [
             File(name: "deim.onnx", url: ndl("src/model/deim-s-1024x1024.onnx"),
                  size: 40_256_763, sha256: "c156ce0c4e704bc3bf7e4016d0a87b949cffa8b3724f4b4cc696b8284c3c7373"),
@@ -80,9 +80,9 @@ public extension ModelSpec {
 
     /// GLM-OCR (Zhipu AI, MIT), version MLX 4 bits : modèle IA qui relit les lignes (lent, précis).
     static let glmocr = ModelSpec(
-        id: "glmocr", title: "GLM-OCR (IA, précis et lent)",
-        summary: "Petit modèle IA (0,9 milliard de paramètres). Relit les lignes douteuses en fond ; peut aussi lire une page entière (lent : plusieurs secondes par page).",
-        license: "MIT (Zhipu AI) — conversion MLX : mlx-community",
+        id: "glmocr", title: String(localized: "GLM-OCR (IA, précis et lent)", bundle: .main),
+        summary: String(localized: "Petit modèle IA (0,9 milliard de paramètres). Relit les lignes douteuses en fond ; peut aussi lire une page entière (lent : plusieurs secondes par page).", bundle: .main),
+        license: String(localized: "MIT (Zhipu AI) — conversion MLX : mlx-community", bundle: .main),
         files: ["config.json", "generation_config.json", "model.safetensors.index.json", "preprocessor_config.json",
                 "processor_config.json", "tokenizer.json", "tokenizer_config.json", "chat_template.jinja"]
             .map { File(name: $0, url: glm($0), size: 0, sha256: nil) }
@@ -93,9 +93,9 @@ public extension ModelSpec {
     /// par tokimoa (vérifiée sur des documents japonais). Lit une page entière en Markdown, dans l'ordre de lecture.
     /// Seulement à la demande (« Vérifier la double page ») : lent et ≈ 1,5 Go de mémoire pendant la lecture.
     static let ovisocr2 = ModelSpec(
-        id: "ovisocr2", title: "OvisOCR2 (IA, vérification de page)",
-        summary: "Modèle IA spécialisé japonais (0,9 milliard de paramètres) qui relit une page entière. Sert à vérifier le texte de la double page, à la demande : compte quelques dizaines de secondes par page.",
-        license: "Apache-2.0 (ATH-MaaS) — conversion MLX 8 bits : tokimoa",
+        id: "ovisocr2", title: String(localized: "OvisOCR2 (IA, vérification de page)", bundle: .main),
+        summary: String(localized: "Modèle IA spécialisé japonais (0,9 milliard de paramètres) qui relit une page entière. Sert à vérifier le texte de la double page, à la demande : compte quelques dizaines de secondes par page.", bundle: .main),
+        license: String(localized: "Apache-2.0 (ATH-MaaS) — conversion MLX 8 bits : tokimoa", bundle: .main),
         files: ["config.json", "model.safetensors.index.json", "preprocessor_config.json", "processor_config.json",
                 "video_preprocessor_config.json", "tokenizer_config.json", "chat_template.jinja", "vocab.json", "LICENSE"]
             .map { File(name: $0, url: ovis($0), size: 0, sha256: nil) }
@@ -107,9 +107,9 @@ public extension ModelSpec {
     /// Qwen3-VL-4B-Instruct (Alibaba, Apache-2.0), MLX 4 bits (mlx-community) : le « gros » lecteur de l'analyse
     /// du document entier. ≈ 3,1 Go sur le disque, ≈ 3,5 Go de mémoire pendant la lecture.
     static let qwen3vl4b = ModelSpec(
-        id: "qwen3vl4b", title: "Qwen3-VL-4B (IA, analyse du document)",
-        summary: "Gros modèle IA (4 milliards de paramètres) qui comprend le sens de la page. Troisième lecture, la plus lourde, de « Analyser le document entier » : à lancer branché, l'iPad chauffe.",
-        license: "Apache-2.0 (Alibaba Qwen) — conversion MLX 4 bits : mlx-community",
+        id: "qwen3vl4b", title: String(localized: "Qwen3-VL-4B (IA, analyse du document)", bundle: .main),
+        summary: String(localized: "Gros modèle IA (4 milliards de paramètres) qui comprend le sens de la page. Troisième lecture, la plus lourde, de « Analyser le document entier » : à lancer branché, l'iPad chauffe.", bundle: .main),
+        license: String(localized: "Apache-2.0 (Alibaba Qwen) — conversion MLX 4 bits : mlx-community", bundle: .main),
         files: ["added_tokens.json", "chat_template.jinja", "chat_template.json", "config.json", "generation_config.json",
                 "merges.txt", "model.safetensors.index.json", "preprocessor_config.json", "special_tokens_map.json",
                 "tokenizer_config.json", "video_preprocessor_config.json", "vocab.json"]
@@ -122,9 +122,9 @@ public extension ModelSpec {
     /// Qwen3.5-4B : modèle de conversation optionnel. Les pages restent lues par OvisOCR2 ;
     /// aucun poids n'est inclus dans l'app. Conversion MLX 4 bits épinglée et vérifiée.
     static let qwen35chat4b = ModelSpec(
-        id: "qwen35chat4b", title: "Qwen3.5-4B (chat du livre)",
-        summary: "Modèle de conversation pour discuter des pages lues par OvisOCR2. Environ 3,1 Go à télécharger ; un seul modèle IA est chargé à la fois.",
-        license: "Apache-2.0 (Alibaba Qwen) — conversion MLX 4 bits : mlx-community",
+        id: "qwen35chat4b", title: String(localized: "Qwen3.5-4B (chat du livre)", bundle: .main),
+        summary: String(localized: "Modèle de conversation pour discuter des pages lues par OvisOCR2. Environ 3,1 Go à télécharger ; un seul modèle IA est chargé à la fois.", bundle: .main),
+        license: String(localized: "Apache-2.0 (Alibaba Qwen) — conversion MLX 4 bits : mlx-community", bundle: .main),
         files: ["chat_template.jinja", "config.json", "model.safetensors.index.json", "preprocessor_config.json",
                 "processor_config.json", "tokenizer_config.json", "video_preprocessor_config.json", "vocab.json"]
             .map { File(name: $0, url: qwen35($0), size: 0, sha256: nil) }
@@ -138,17 +138,17 @@ public extension ModelSpec {
     /// PP-DocLayout v3 (PaddleOCR / PP-Structure, Apache-2.0), version ONNX de RapidLayout :
     /// zones de la page (titre, texte, tableau, légende…) **et ordre de lecture**.
     static let ppdoclayout = ModelSpec(
-        id: "ppdoclayout", title: "PP-DocLayout v3 (mise en page)",
-        summary: "Repère titres, paragraphes, colonnes, tableaux et légendes, avec l'ordre de lecture. Pour le texte mis en forme.",
-        license: "Apache-2.0 (PaddlePaddle) — conversion ONNX : RapidAI/RapidLayout",
+        id: "ppdoclayout", title: String(localized: "PP-DocLayout v3 (mise en page)", bundle: .main),
+        summary: String(localized: "Repère titres, paragraphes, colonnes, tableaux et légendes, avec l'ordre de lecture. Pour le texte mis en forme.", bundle: .main),
+        license: String(localized: "Apache-2.0 (PaddlePaddle) — conversion ONNX : RapidAI/RapidLayout", bundle: .main),
         files: [File(name: "layout.onnx", url: URL(string: "https://www.modelscope.cn/models/RapidAI/RapidLayout/resolve/v1.2.0/onnx/pp_doc_layout/pp_doc_layoutv3.onnx")!,
                      size: 130_502_330, sha256: "250dbad1dfb9e4983fab75e1bf5085cd56ec3f41d5c7d0f8623ec74856e7aa67")])
 
     /// DocLayout-YOLO DocStructBench (OpenDataLab, modèle de mise en page de MinerU), version ONNX de RapidLayout.
     static let doclayoutyolo = ModelSpec(
-        id: "doclayoutyolo", title: "DocLayout-YOLO (mise en page de MinerU)",
-        summary: "Repère titres, texte, tableaux, figures et légendes ; écarte en-têtes et pieds de page. Pour le texte mis en forme.",
-        license: "AGPL-3.0 (OpenDataLab) — conversion ONNX : RapidAI/RapidLayout",
+        id: "doclayoutyolo", title: String(localized: "DocLayout-YOLO (mise en page de MinerU)", bundle: .main),
+        summary: String(localized: "Repère titres, texte, tableaux, figures et légendes ; écarte en-têtes et pieds de page. Pour le texte mis en forme.", bundle: .main),
+        license: String(localized: "AGPL-3.0 (OpenDataLab) — conversion ONNX : RapidAI/RapidLayout", bundle: .main),
         files: [File(name: "layout.onnx", url: URL(string: "https://www.modelscope.cn/models/RapidAI/RapidLayout/resolve/v1.2.0/onnx/doclayout/doclayout_yolo_docstructbench_imgsz1024.onnx")!,
                      size: 75_324_621, sha256: "3b452baef10ecabd615491bc82cc4d49475fbc2cd7a8e535044f2c6bb28fb9fe")])
 
@@ -158,9 +158,9 @@ public extension ModelSpec {
     /// (tuiles 256×256) par `tools/degan_to_onnx.py`, publiés (avec la licence) sur le dépôt public
     /// NOxygen59/kyokasho-models (release `degan-v1`).
     static let degan = ModelSpec(
-        id: "degan", title: "DE-GAN (netteté des scans)",
-        summary: "Nettoie le fond (taches, jaunissement) et rend les caractères noirs et nets sur les pages scannées.",
-        license: "GPL-3.0 (M. A. Souibgui, Y. Kessentini) — conversion ONNX : tools/degan_to_onnx.py",
+        id: "degan", title: String(localized: "DE-GAN (netteté des scans)", bundle: .main),
+        summary: String(localized: "Nettoie le fond (taches, jaunissement) et rend les caractères noirs et nets sur les pages scannées.", bundle: .main),
+        license: String(localized: "GPL-3.0 (M. A. Souibgui, Y. Kessentini) — conversion ONNX : tools/degan_to_onnx.py", bundle: .main),
         files: [File(name: "degan-binarize.onnx",
                      url: URL(string: "https://github.com/NOxygen59/kyokasho-models/releases/download/degan-v1/degan-binarize.onnx")!,
                      size: 124_131_855, sha256: "b75e185e92c98e77b314f979ef339121a63fec9ac3a500f8b3b7e717ffe996c8")])
@@ -200,8 +200,8 @@ public final class ModelStore: @unchecked Sendable {
         case badChecksum(String), httpStatus(Int)
         public var errorDescription: String? {
             switch self {
-            case .badChecksum(let name): return "Fichier abîmé (\(name)) : empreinte différente. Relance le téléchargement."
-            case .httpStatus(let code): return "Le serveur a répondu \(code)."
+            case .badChecksum(let name): return String(localized: "Fichier abîmé (\(name)) : empreinte différente. Relance le téléchargement.", bundle: .main)
+            case .httpStatus(let code): return String(localized: "Le serveur a répondu \(code).", bundle: .main)
             }
         }
     }

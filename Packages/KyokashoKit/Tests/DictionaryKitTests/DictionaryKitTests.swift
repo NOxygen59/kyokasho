@@ -125,6 +125,132 @@ final class DictionaryKitTests: XCTestCase {
         XCTAssertEqual(segments.map(\.text).joined(), "部屋の照明を書いた。")
     }
 
+    /// Le mémo du découpage ne change aucun résultat, à réglages égaux comme différents.
+    func testSegmentationMemoKeepsResultsAndHonoursOptions() throws {
+        let text = "部屋の照明を書いた。"
+        let first = try translator.segment(text)
+        XCTAssertEqual(try translator.segment(text), first)
+        var excluded = LookupOptions()
+        excluded.excludedDictionaryIds = Set(try db.dictionaries().compactMap(\.id))
+        XCTAssertTrue(try translator.segment(text, options: excluded).allSatisfy { $0.term == nil },
+                      "réglages différents : le mot mémorisé ne doit pas ressortir")
+        XCTAssertEqual(try translator.segment(text), first)
+    }
+
+    /// Un dictionnaire retiré ou désactivé ne doit plus répondre depuis le mémo.
+    func testSegmentationMemoIsClearedByInvalidate() throws {
+        let text = "部屋の照明を書いた。"
+        XCTAssertFalse(try translator.segment(text).compactMap(\.term).isEmpty)
+        for dictionary in try db.dictionaries() {
+            try db.setEnabled(false, dictionaryId: try XCTUnwrap(dictionary.id))
+        }
+        translator.invalidate()
+        XCTAssertTrue(try translator.segment(text).allSatisfy { $0.term == nil })
+    }
+
+    /// Revue Codex de 40952cf : une recherche lancée avant l'invalidation finit après elle. Son résultat ne doit pas
+    /// ressortir pour les appels suivants, alors que le dictionnaire est désactivé.
+    func testSegmentationStartedBeforeInvalidateIsNotReused() throws {
+        let text = "照明"
+        let ids = try db.dictionaries().compactMap(\.id)
+        translator.beforeSegmentMemoWrite = { [translator, db] in
+            translator!.beforeSegmentMemoWrite = nil
+            for id in ids { try? db!.setEnabled(false, dictionaryId: id) }
+            translator!.invalidate()
+        }
+        XCTAssertFalse(try translator.segment(text).compactMap(\.term).isEmpty, "calcul commencé avant la désactivation")
+        XCTAssertTrue(try translator.segment(text).allSatisfy { $0.term == nil }, "résultat périmé repris du mémo")
+    }
+
+    /// Le découpage allégé choisit le même mot que la recherche complète.
+    func testSegmentationPicksTheSameWordAsFullSearch() throws {
+        for text in ["部屋の照明を書いた。", "照明", "書いた", "天井の部屋"] {
+            var options = LookupOptions()
+            options.maxResults = 1
+            let chars = Array(text)
+            var offset = 0
+            for segment in try translator.segment(text) {
+                defer { offset += segment.text.count }
+                guard let term = segment.term else { continue }
+                let best = try XCTUnwrap(translator.findTerms(String(chars[offset...]), options: options).first)
+                XCTAssertEqual([term.expression, term.reading, term.matchedText], [best.expression, best.reading, best.matchedText])
+                XCTAssertEqual(term.inflectionRules, best.inflectionRules)
+                XCTAssertTrue(term.definitions.isEmpty)
+            }
+        }
+    }
+
+    /// Revue Codex de 502383c : une entrée trouvée seulement par une forme courte pèse quand même sur le classement de son
+    /// groupe. Le découpage choisit donc le même mot que la recherche complète.
+    func testSegmentationKeepsShortFormEntriesInTheirGroup() throws {
+        let database = try DictionaryDatabase.inMemory()
+        try database.writer.write { connection in
+            for (title, priority, expression, reading, rules, score) in [
+                ("A-low", 5, "する", "し", "vs", 100), ("A-high", 0, "する", "し", "n", 500), ("B-mid", 2, "為る", "する", "vs", 200),
+            ] {
+                try DictionaryInfo(title: title, revision: "1", format: 3, priority: priority, termCount: 1).insert(connection)
+                try connection.execute(sql: """
+                    INSERT INTO term(dictionaryId,expression,reading,definitionTags,rules,score,glossary,sequence,termTags)
+                    VALUES (?,?,?,'',?,?,'[]',1,'')
+                    """, arguments: [connection.lastInsertedRowID, expression, reading, rules, score])
+            }
+        }
+        let translator = Translator(database: database)
+        let direct = try XCTUnwrap(translator.findTerms("した").first)
+        XCTAssertEqual([direct.expression, direct.reading], ["する", "し"])
+        let term = try XCTUnwrap(translator.segment("した").first?.term)
+        XCTAssertEqual([term.expression, term.reading, term.matchedText], [direct.expression, direct.reading, direct.matchedText])
+    }
+
+    func testTermsWithoutGlossaryKeepEverythingElse() throws {
+        let ids = Set(try db.dictionaries().compactMap(\.id))
+        let full = try db.terms(matching: ["照明"], dictionaryIds: ids).sorted { $0.id < $1.id }
+        let light = try db.terms(matching: ["照明"], dictionaryIds: ids, withGlossary: false).sorted { $0.id < $1.id }
+        XCTAssertFalse(full.isEmpty)
+        XCTAssertEqual(full.map(\.id), light.map(\.id))
+        XCTAssertEqual(full.map(\.rules), light.map(\.rules))
+        XCTAssertEqual(full.map(\.score), light.map(\.score))
+        XCTAssertTrue(light.allSatisfy { $0.glossary.isEmpty })
+    }
+
+    /// Le découpage ne charge pas les fréquences ; une recherche directe du même texte les garde.
+    func testFindTermsStillAttachesMetaAfterSegmentation() throws {
+        let before = try translator.findTerms("照明")
+        _ = try translator.segment("照明")
+        XCTAssertEqual(try translator.findTerms("照明").map(\.frequencies), before.map(\.frequencies))
+    }
+
+    /// Recette 1.4.5 : sur un thème clair, les furigana restaient blancs (`--fg2` non dérivé de l'encre du thème).
+    func testLightThemeDerivesFuriganaInkFromThemeInk() {
+        var renderer = GlossaryRenderer(inflectionName: { $0 })
+        renderer.palette = ["fg": "#1b2226", "bg": "#ffffff"]
+        XCTAssertTrue(renderer.paletteCSS.contains("--fg2:rgba(27,34,38,0.66)"))
+        XCTAssertTrue(renderer.paletteCSS.contains("color-scheme:light"))
+        XCTAssertTrue(renderer.paletteCSS.contains(".tag{background:rgba(0,0,0,.08)}"))
+        renderer.palette = ["fg": "#eff4f2", "bg": "#1c252a"]
+        XCTAssertTrue(renderer.paletteCSS.contains("--fg2:rgba(239,244,242,0.66)"))
+        XCTAssertTrue(renderer.paletteCSS.contains("color-scheme:dark"))
+        XCTAssertFalse(renderer.paletteCSS.contains(".tag{"))
+    }
+
+    /// Revue Codex de 2b55bd9 : encres atténuées à 4,5:1 au moins, sur Sépia et Terre où l'opacité fixe échouait.
+    func testSecondaryInkReachesReadableContrast() {
+        func luminance(_ v: [Double]) -> Double {
+            let c = v.map { $0 / 255 <= 0.03928 ? $0 / 255 / 12.92 : pow(($0 / 255 + 0.055) / 1.055, 2.4) }
+            return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]
+        }
+        for (ink, surface) in [((59, 42, 26), (248, 240, 225)), ((59, 42, 26), (230, 216, 190)), ((46, 42, 36), (243, 238, 229)), ((46, 42, 36), (221, 211, 195))] {
+            for start in [0.66, 0.46] {
+                let a = GlossaryRenderer.opacity(of: (ink.0, ink.1, ink.2), from: start, on: [(surface.0, surface.1, surface.2)])
+                let mixed = [ink.0, ink.1, ink.2].enumerated().map { i, v in
+                    Double(v) * a + Double([surface.0, surface.1, surface.2][i]) * (1 - a)
+                }
+                let one = luminance(mixed), two = luminance([Double(surface.0), Double(surface.1), Double(surface.2)])
+                XCTAssertGreaterThanOrEqual((max(one, two) + 0.05) / (min(one, two) + 0.05), 4.5)
+            }
+        }
+    }
+
     func testRendering() throws {
         let results = try translator.findTerms("照明")
         let renderer = GlossaryRenderer(inflectionName: { [translator] in translator!.inflectionName($0) })

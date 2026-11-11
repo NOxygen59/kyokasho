@@ -13,19 +13,29 @@ import UIKit
 extension ReaderController {
     // MARK: Rotation et découpe de la page courante
 
-    func rotateCurrentPage() {
+    var pageRotations: [Int: Int] {
+        Dictionary(uniqueKeysWithValues: (0..<document.pageCount).map { ($0, transforms[$0]?.rotation ?? 0) })
+    }
+
+    func applyPageRotations(_ rotations: [Int: Int], rereading: Bool) async throws {
         let source = currentSourcePage
-        var t = transforms[source] ?? PageTransform(documentId: document.id, pageIndex: source)
-        t.rotation = (t.rotation + 90) % 360
-        transforms[source] = t
-        model.persist { try $0.save(t) }
-        // Page entière, sans découpe automatique en jeu : on tourne sur place (pas de reconstruction).
-        if !isBuilding, let pdf, !settings.splitWidePages, !splitSources.contains(source), let base = originalRotations[source] {
-            for page in pages(forSource: source, in: pdf) { page.rotation = ((base + t.rotation) % 360 + 360) % 360 }
-            pdfView.layoutDocumentView()
-            if pdfView.isAtFit { pdfView.fitToPage() }
-            return
+        // Une lecture en cours pour l'ancienne orientation ne doit plus s'afficher.
+        cancelEnsureOCR()
+        furiganaTask?.cancel()
+        try await model.applyPageRotations(rotations, to: document, rereading: rereading)
+        transforms = try model.database.pageTransforms(documentId: document.id)
+        ocrPage = nil
+        // Mémoires de l'ancienne orientation : leurs boîtes normalisées, redessinées sur la page tournée,
+        // tomberaient là où était le texte avant la rotation (recette 1.3.2 (72), essai 3.6).
+        for page in rotations.keys {
+            ink.setOCR(nil, source: page)
+            realOCRMemo[page] = nil
+            ocrSelection.forget(page)
+            furiganaGeneration[page, default: 0] += 1
+            pageFuriganaTasks[page]?.cancel()
         }
+        LayoutRegionsCache.shared.clear()
+        FuriganaLayer.clearMemory()
         rebuild(keepingSource: source)
     }
 

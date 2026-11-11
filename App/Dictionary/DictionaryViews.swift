@@ -52,12 +52,12 @@ struct DictionarySearchView: View {
                         shelf = item
                         session.clear()
                     } label: {
-                        Text(item.rawValue)
-                            .font(.system(size: compact ? 12 : 14, weight: .semibold))
+                        Text(ui: item.rawValue)
+                            .font(Atelier.font(compact ? 12 : 14, weight: .semibold))
                             .lineLimit(1)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 9)
-                            .foregroundStyle(shelf == item ? Color.black.opacity(0.85) : Atelier.textSecondary)
+                            .foregroundStyle(shelf == item ? Atelier.onAccentInk.opacity(0.85) : Atelier.textSecondary)
                             .background(shelf == item ? Atelier.Tint.japanese : Atelier.surfaceHigh,
                                         in: Capsule())
                     }
@@ -111,7 +111,7 @@ struct DictionarySearchView: View {
                     } }
             }
             .environmentObject(dictionaryModel)
-            .preferredColorScheme(.dark)
+            .preferredColorScheme(Theme.current.colorScheme)
         }
         .sheet(isPresented: $showLexicon) {
             NavigationStack {
@@ -120,14 +120,14 @@ struct DictionarySearchView: View {
                         Button("OK") { showLexicon = false }
                     } }
             }
-            .preferredColorScheme(.dark)
+            .preferredColorScheme(Theme.current.colorScheme)
         }
     }
 
     private var searchField: some View {
         HStack(spacing: 8) {
             Image(systemName: "magnifyingglass").foregroundStyle(Atelier.Tint.japanese)
-            TextField(shelf == .kanji ? "Chercher un kanji" : "Mot ou lecture en japonais", text: $query)
+            TextField(shelf == .kanji ? String(localized: "Chercher un kanji") : String(localized: "Mot ou lecture en japonais"), text: $query)
                 .focused($focused)
                 .font(.custom("HiraginoSans-W3", size: compact ? 15 : 19))
                 .submitLabel(.search)
@@ -152,24 +152,24 @@ struct DictionarySearchView: View {
     private var wordShelf: some View {
         Group {
             if !dictionaryModel.hasTermDictionaries {
-                emptyState("Aucun dictionnaire de mots",
-                           "Importe un dictionnaire Yomitan dans Réglages → Japonais → Dictionnaires.")
+                emptyState(String(localized: "Aucun dictionnaire de mots"),
+                           String(localized: "Importe un dictionnaire Yomitan dans Réglages → Japonais → Dictionnaires."))
             } else if !query.isEmpty {
-                AtelierLabel("Mots trouvés · \(suggestions.count)", tint: Atelier.Tint.japanese)
+                AtelierLabel(String(localized: "Mots trouvés · \(suggestions.count)"), tint: Atelier.Tint.japanese)
                 if suggestions.isEmpty && !searching {
-                    emptyState("Aucun mot à ce début", "Essaie la forme de base ou une lecture en kana.")
+                    emptyState(String(localized: "Aucun mot à ce début"), String(localized: "Essaie la forme de base ou une lecture en kana."))
                 }
                 ForEach(suggestions) { word in
                     wordRow(word.expression, reading: word.reading, gloss: word.gloss)
                 }
             } else {
                 if !dictionaryModel.notebook.saved.filter({ $0.kind == .word }).isEmpty {
-                    AtelierLabel("Mots enregistrés", tint: Atelier.Tint.japanese)
+                    AtelierLabel(String(localized: "Mots enregistrés"), tint: Atelier.Tint.japanese)
                     ForEach(dictionaryModel.notebook.saved.filter { $0.kind == .word }.prefix(8)) { entry in
                         wordRow(entry.expression, reading: entry.reading)
                     }
                 }
-                AtelierLabel("Récemment consultés", tint: Atelier.Tint.japanese)
+                AtelierLabel(String(localized: "Récemment consultés"), tint: Atelier.Tint.japanese)
                 let recent = dictionaryModel.notebook.recent.filter { $0.kind == .word }
                 if recent.isEmpty {
                     Text("Cherche un mot pour commencer. Les dernières recherches apparaîtront ici.")
@@ -189,20 +189,20 @@ struct DictionarySearchView: View {
                 (0x3400...0x9FFF).contains($0.value)
             } })).sorted()
             if !characters.isEmpty {
-                AtelierLabel("Kanji saisis", tint: Atelier.Tint.japanese)
+                AtelierLabel(String(localized: "Kanji saisis"), tint: Atelier.Tint.japanese)
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 58))], spacing: 8) {
                     ForEach(characters, id: \.self) { character in
                         Button { openKanji(String(character)) } label: {
                             Text(String(character)).font(.custom("HiraMinProN-W6", size: 28))
                                 .frame(maxWidth: .infinity, minHeight: 56)
                                 .foregroundStyle(Atelier.textPrimary)
-                                .background(Atelier.surfaceHigh, in: RoundedRectangle(cornerRadius: 10))
+                                .background(Atelier.surfaceHigh, in: RoundedRectangle(cornerRadius: Atelier.corner(10)))
                         }
                         .buttonStyle(.plain)
                     }
                 }
             }
-            AtelierLabel("Kanji enregistrés", tint: Atelier.Tint.japanese)
+            AtelierLabel(String(localized: "Kanji enregistrés"), tint: Atelier.Tint.japanese)
             let saved = dictionaryModel.notebook.saved.filter { $0.kind == .kanji }
             if saved.isEmpty {
                 Text("Saisis un kanji ou touche-en un dans une fiche pour voir ses lectures et ses sens.")
@@ -213,7 +213,7 @@ struct DictionarySearchView: View {
                         Button { openKanji(entry.expression) } label: {
                             Text(entry.expression).font(.custom("HiraMinProN-W6", size: 25))
                                 .padding(10).foregroundStyle(Atelier.textPrimary)
-                                .background(Atelier.surfaceHigh, in: RoundedRectangle(cornerRadius: 10))
+                                .background(Atelier.surfaceHigh, in: RoundedRectangle(cornerRadius: Atelier.corner(10)))
                         }
                         .buttonStyle(.plain)
                     }
@@ -228,11 +228,11 @@ struct DictionarySearchView: View {
                 query.isEmpty || $0.expression.localizedCaseInsensitiveContains(query)
                     || $0.reading.localizedCaseInsensitiveContains(query)
             }
-            AtelierLabel("Ma liste · \(saved.count)", tint: Atelier.Tint.japanese)
+            AtelierLabel(String(localized: "Ma liste · \(saved.count)"), tint: Atelier.Tint.japanese)
             if saved.isEmpty {
-                emptyState(query.isEmpty ? "Ta liste est vide" : "Aucun élément trouvé",
-                           query.isEmpty ? "Touche l'étoile d'une fiche ou d'un mot pour l'enregistrer ici."
-                                         : "Essaie un autre mot ou une autre lecture.")
+                emptyState(query.isEmpty ? String(localized: "Ta liste est vide") : String(localized: "Aucun élément trouvé"),
+                           query.isEmpty ? String(localized: "Touche l'étoile d'une fiche ou d'un mot pour l'enregistrer ici.")
+                                         : String(localized: "Essaie un autre mot ou une autre lecture."))
             } else {
                 ForEach(saved) { entry in
                     if entry.kind == .kanji {
@@ -242,7 +242,7 @@ struct DictionarySearchView: View {
                     }
                 }
             }
-            AtelierLabel("Lexique personnel · \(lexicon.entries.count)", tint: Atelier.Tint.japanese)
+            AtelierLabel(String(localized: "Lexique personnel · \(lexicon.entries.count)"), tint: Atelier.Tint.japanese)
             Text("Tes termes spécialisés, leurs lectures et leurs sens en français.")
                 .font(.subheadline).foregroundStyle(Atelier.textSecondary)
             ForEach(lexicon.entries.prefix(compact ? 4 : 8)) { entry in
@@ -299,7 +299,7 @@ struct DictionarySearchView: View {
                     .foregroundStyle(Atelier.Tint.japanese).frame(width: 32, height: 32)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(dictionaryModel.isSaved(entry) ? "Retirer de ma liste" : "Enregistrer")
+            .accessibilityLabel(dictionaryModel.isSaved(entry) ? String(localized: "Retirer de ma liste") : String(localized: "Enregistrer"))
         }
         .padding(.horizontal, 10).padding(.vertical, 8)
         .background(Atelier.surfaceHigh.opacity(0.65),
@@ -372,6 +372,8 @@ struct FlowLayout: Layout {
 
 struct DictionaryManagerView: View {
     @EnvironmentObject private var dictionaryModel: DictionaryModel
+    @AppStorage(DictionaryModel.firstLanguageKey) private var firstLanguage = "fr"
+    @State private var showCatalog = false
     @State private var showImporter = false
     @State private var deleting: DictionaryInfo?
 
@@ -413,6 +415,17 @@ struct DictionaryManagerView: View {
                 Text("Mettre à jour : réimporte le nouveau .zip d'un dictionnaire (même titre) ; son ordre est gardé. Les dictionnaires ne sont jamais chargés entièrement en mémoire.")
             }
             Section {
+                // Catalogue (#50) : un bouton et une feuille, pas un lien : la liste est toujours en mode « réordonner »,
+                // qui grise les liens (recette 1.3.2 (67), D6).
+                Button { showCatalog = true } label: {
+                    Label("Catalogue : télécharger des dictionnaires", systemImage: "books.vertical")
+                }
+                // Langue des définitions qui passe en premier (#50, D2) ; réordonne les dictionnaires du catalogue.
+                Picker("Langue en premier", selection: $firstLanguage) {
+                    Text("Français").tag("fr")
+                    Text("Anglais").tag("en")
+                }
+                .onChange(of: firstLanguage) { _ in dictionaryModel.applyFirstLanguage() }
                 Button { showImporter = true } label: { Label("Importer des dictionnaires (.zip)", systemImage: "plus") }
                     .disabled(dictionaryModel.importState != nil)
             }
@@ -428,6 +441,13 @@ struct DictionaryManagerView: View {
             }
         }
         .environment(\.editMode, .constant(.active))
+        .sheet(isPresented: $showCatalog) {
+            NavigationStack {
+                DictionaryCatalogView()
+                    .toolbar { ToolbarItem(placement: .confirmationAction) { Button("OK") { showCatalog = false } } }
+            }
+            .environmentObject(dictionaryModel)
+        }
         .navigationTitle("Dictionnaires")
         .fileImporter(isPresented: $showImporter, allowedContentTypes: [.zip], allowsMultipleSelection: true) { result in
             if case .success(let urls) = result { dictionaryModel.importDictionaries(urls) }
@@ -443,10 +463,10 @@ struct DictionaryManagerView: View {
 
     private func counts(_ d: DictionaryInfo) -> String {
         var parts: [String] = []
-        if d.termCount > 0 { parts.append("\(d.termCount.formatted()) termes") }
-        if d.kanjiCount > 0 { parts.append("\(d.kanjiCount.formatted()) kanji") }
-        if d.termMetaCount > 0 { parts.append("\(d.termMetaCount.formatted()) méta") }
-        if d.mediaCount > 0 { parts.append("\(d.mediaCount) images") }
+        if d.termCount > 0 { parts.append(String(localized: "\(d.termCount.formatted()) termes")) }
+        if d.kanjiCount > 0 { parts.append(String(localized: "\(d.kanjiCount.formatted()) kanji")) }
+        if d.termMetaCount > 0 { parts.append(String(localized: "\(d.termMetaCount.formatted()) méta")) }
+        if d.mediaCount > 0 { parts.append(String(localized: "\(d.mediaCount) images")) }
         return parts.joined(separator: ", ")
     }
 }
@@ -468,7 +488,7 @@ struct ProfileSettings: View {
                 Button("Créer") {
                     var copy = dictionaryModel.profile
                     copy.id = UUID().uuidString
-                    copy.name = newName.isEmpty ? "Profil" : newName
+                    copy.name = newName.isEmpty ? String(localized: "Profil") : newName
                     dictionaryModel.profiles.profiles.append(copy)
                     dictionaryModel.profiles.activeId = copy.id
                     newName = ""
@@ -515,7 +535,7 @@ struct AudioSettings: View {
                 TextField("URL avec {term} et {reading}", text: $template)
                 Button("Annuler", role: .cancel) {}
                 Button("Ajouter") {
-                    dictionaryModel.profile.audioSources.append(AudioSource(name: name.isEmpty ? "Source" : name, kind: .url, template: template))
+                    dictionaryModel.profile.audioSources.append(AudioSource(name: name.isEmpty ? String(localized: "Source") : name, kind: .url, template: template))
                     name = ""
                     template = "https://"
                 }

@@ -98,14 +98,6 @@ public enum JapaneseText {
         return japaneseRanges.contains { $0.contains(v) }
     }
 
-    public static func isEntirelyKana(_ s: String) -> Bool {
-        !s.isEmpty && s.allSatisfy(isKana)
-    }
-
-    public static func isPartiallyJapanese(_ s: String) -> Bool {
-        s.contains(where: isJapanese)
-    }
-
     // MARK: Mores et accent
 
     public static func isMoraPitchHigh(_ moraIndex: Int, downstep: Int) -> Bool {
@@ -392,53 +384,4 @@ public enum JapaneseText {
         return segmentize(readingChars, normalized, groups, 0) ?? [FuriganaSegment(term, reading)]
     }
 
-    static func stemLength(_ a: [Character], _ b: [Character]) -> Int {
-        var i = 0
-        while i < a.count && i < b.count && a[i] == b[i] { i += 1 }
-        return i
-    }
-
-    /// Furigana pour une forme conjuguée : 食べた (source) d'après 食べる/たべる.
-    public static func distributeFuriganaInflected(_ term: String, _ reading: String, source: String) -> [FuriganaSegment] {
-        let termN = Array(katakanaToHiragana(term))
-        var readingC = Array(reading)
-        let readingN = Array(katakanaToHiragana(reading))
-        let sourceC = Array(source)
-        let sourceN = Array(katakanaToHiragana(source))
-        var mainText = Array(term)
-        var stem = stemLength(termN, sourceN)
-        let readingStem = stemLength(readingN, sourceN)
-        if readingStem > 0 && readingStem >= stem {
-            mainText = readingC
-            stem = readingStem
-            readingC = Array(sourceC[..<stem]) + Array(readingC[min(stem, readingC.count)...])
-        }
-        var segments: [FuriganaSegment] = []
-        if stem > 0 {
-            mainText = Array(sourceC[..<stem]) + Array(mainText[min(stem, mainText.count)...])
-            var consumed = 0
-            for segment in distributeFurigana(String(mainText), String(readingC)) {
-                let start = consumed
-                consumed += segment.text.count
-                if consumed < stem {
-                    segments.append(segment)
-                } else if consumed == stem {
-                    segments.append(segment)
-                    break
-                } else {
-                    if start < stem { segments.append(FuriganaSegment(String(mainText[start..<stem]), "")) }
-                    break
-                }
-            }
-        }
-        if stem < sourceC.count {
-            let remainder = String(sourceC[stem...])
-            if let last = segments.last, last.reading.isEmpty {
-                segments[segments.count - 1].text += remainder
-            } else {
-                segments.append(FuriganaSegment(remainder, ""))
-            }
-        }
-        return segments
-    }
 }

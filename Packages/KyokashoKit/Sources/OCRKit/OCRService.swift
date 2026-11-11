@@ -61,9 +61,16 @@ public actor OCRService {
     /// Résultat en cache, sans rien calculer.
     public func cached(documentId: String, pageIndex: Int, engine: String) -> OCRPage? {
         guard let record = try? database.ocrResult(documentId: documentId, pageIndex: pageIndex, engine: engine) else { return nil }
-        guard let page = try? decoder.decode(OCRPage.self, from: record.json),
-              page.version >= OCRPage.currentVersion else { return nil }
-        return OCRTargetLanguage.forDocument(documentId) == .japanese ? JapaneseOCRText.normalize(page) : page
+        guard let stored = try? decoder.decode(OCRPage.self, from: record.json),
+              let page = stored.readable(atAdditionalRotation: additionalRotation(documentId: documentId, pageIndex: pageIndex))
+        else { return nil }
+        var fixed = OCRTargetLanguage.forDocument(documentId) == .japanese ? JapaneseOCRText.normalize(page) : page
+        fixed.lines = fixed.lines.map { $0.downgradingDuplicateBoxes() }
+        return fixed
+    }
+
+    public func additionalRotation(documentId: String, pageIndex: Int) -> Int {
+        (try? database.pageTransforms(documentId: documentId)[pageIndex]?.rotation) ?? 0
     }
 
     /// Résultat de la page (cache, sinon calcul + mise en cache).
@@ -71,7 +78,8 @@ public actor OCRService {
         guard documentsBeingReplaced[documentId] == nil else { throw CancellationError() }
         let generation = documentGeneration[documentId, default: 0]
         if !force, let hit = cached(documentId: documentId, pageIndex: pageIndex, engine: engine) { return hit }
-        let key = "\(documentId)#\(pageIndex)#\(engine)"
+        let rotation = additionalRotation(documentId: documentId, pageIndex: pageIndex)
+        let key = "\(documentId)#\(pageIndex)#\(engine)#r\(rotation)"
         if let existing = running[key] {
             let result = try await existing.value
             guard documentsBeingReplaced[documentId] == nil,
@@ -84,7 +92,8 @@ public actor OCRService {
         let japanese = OCRTargetLanguage.forDocument(documentId) == .japanese
         // Relecture dans la même tâche : un second appel pour la même page reçoit le résultat déjà relu.
         let task = Task.detached(priority: .userInitiated) {
-            var result = try await implementation.recognize(.pdfPage(url: url, index: pageIndex))
+            var result = try await implementation.recognize(.pdfPage(url: url, index: pageIndex,
+                                                                      additionalRotation: rotation))
             if japanese { result = JapaneseOCRText.normalize(result) }
             if result.engine != OCREngineID.pdfText, let process { result = await process(result) }
             if japanese { result = JapaneseOCRText.normalize(result) }
@@ -103,12 +112,33 @@ public actor OCRService {
         return result
     }
 
+    /// Génération des index de pages du document : change à chaque ajout ou suppression de pages (`beginPageMutation`).
+    /// À capturer au début d'un travail qui écrira dans le cache, puis à passer à `store(expectedGeneration:)`.
+    public func generation(documentId: String) -> UInt64 {
+        documentGeneration[documentId, default: 0]
+    }
+
     /// Remplace le résultat en cache (relecture par l'IA, correction à la main).
-    public func store(_ page: OCRPage, documentId: String, pageIndex: Int) throws {
+    /// - Parameters:
+    ///   - expectedGeneration: génération capturée au début du travail. Si les pages ont changé depuis, l'index
+    ///     `pageIndex` peut désigner une autre page : l'écriture est refusée (`CancellationError`), sans notification
+    ///     (étape 2 de la reconstruction de l'OCR ; revue Codex de d87e048, §2). `nil` : refus seulement pendant le
+    ///     changement de pages, comme avant.
+    public func store(_ page: OCRPage, documentId: String, pageIndex: Int, expectedGeneration: UInt64? = nil) throws {
         guard documentsBeingReplaced[documentId] == nil else { throw CancellationError() }
+        if let expectedGeneration, documentGeneration[documentId, default: 0] != expectedGeneration {
+            throw CancellationError()
+        }
         let normalized = OCRTargetLanguage.forDocument(documentId) == .japanese ? JapaneseOCRText.normalize(page) : page
-        try database.save(OCRResultRecord(documentId: documentId, pageIndex: pageIndex, engine: normalized.engine,
-                                          json: try encoder.encode(normalized), durationMs: normalized.durationMs))
+        // DEC-C3 (10/11/2026) : remise des corrections manuelles mises de côté par un
+        // remplacement de document, au moment où le nouveau résultat est enregistré. Rien de
+        // tout cela hors d'un remplacement : le dossier de secours est absent, une seule
+        // vérification de contenu.
+        let stashed = StashedCorrections.applied(to: normalized, documentId: documentId, pageIndex: pageIndex)
+        let final = stashed?.page ?? normalized
+        try database.save(OCRResultRecord(documentId: documentId, pageIndex: pageIndex, engine: final.engine,
+                                          json: try encoder.encode(final), durationMs: final.durationMs))
+        stashed?.commit()
         NotificationCenter.default.post(name: Self.cacheUpdated, object: nil,
                                         userInfo: ["documentId": documentId, "pageIndex": pageIndex, "engine": normalized.engine])
     }
@@ -123,8 +153,9 @@ public actor OCRService {
         var bestByPage: [Int: OCRPage] = [:]
         for record in records {
             guard let rank = engines.firstIndex(of: record.engine),
-                  let page = try? decoder.decode(OCRPage.self, from: record.json),
-                  page.version >= OCRPage.currentVersion else { continue }
+                  let stored = try? decoder.decode(OCRPage.self, from: record.json),
+                  let page = stored.readable(atAdditionalRotation: additionalRotation(documentId: documentId, pageIndex: record.pageIndex))
+            else { continue }
             if let current = bestByPage[record.pageIndex], let currentRank = engines.firstIndex(of: current.engine),
                currentRank <= rank { continue }
             bestByPage[record.pageIndex] = japanese ? JapaneseOCRText.normalize(page) : page
@@ -155,8 +186,12 @@ public actor OCRService {
         for task in tasks { _ = await task.result }
     }
 
+    /// Rouvre l'entrée. La génération change aussi ici : une génération lue **pendant** le changement (l'acteur est
+    /// réentrant pendant l'attente des moteurs dans `beginPageMutation`) ne doit pas rester valable après lui
+    /// (relecture indépendante de e438892, B1).
     public func endPageMutation(documentId: String) {
         guard let count = documentsBeingReplaced[documentId] else { return }
+        documentGeneration[documentId, default: 0] &+= 1
         if count == 1 { documentsBeingReplaced[documentId] = nil }
         else { documentsBeingReplaced[documentId] = count - 1 }
     }

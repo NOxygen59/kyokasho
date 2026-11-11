@@ -24,9 +24,9 @@ public struct AudioSource: Codable, Identifiable, Hashable, Sendable {
     }
 
     public static let defaults: [AudioSource] = [
-        AudioSource(id: "local", name: "Fichiers audio de l'iPad", kind: .localFolder,
+        AudioSource(id: "local", name: String(localized: "Fichiers audio de l'iPad", bundle: .main), kind: .localFolder,
                     template: "{term}_{reading}.mp3|{term}.mp3|{reading}.mp3|{term}_{reading}.m4a|{reading}.m4a"),
-        AudioSource(id: "jpod101", name: "JapanesePod101 (en ligne)", kind: .url,
+        AudioSource(id: "jpod101", name: String(localized: "JapanesePod101 (en ligne)", bundle: .main), kind: .url,
                     template: "https://assets.languagepod101.com/dictionary/japanese/audiomp3.php?kanji={term}&kana={reading}"),
     ]
 
@@ -63,7 +63,7 @@ public struct DictionaryProfile: Codable, Identifiable, Equatable, Sendable {
         self.autoPlayAudio = autoPlayAudio
     }
 
-    public static let standard = DictionaryProfile(id: "default", name: "Standard")
+    public static let standard = DictionaryProfile(id: "default", name: String(localized: "Standard", bundle: .main))
 }
 
 /// Liste des profils + profil actif (enregistrés dans la base de l'app).

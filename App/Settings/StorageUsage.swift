@@ -36,7 +36,7 @@ enum StorageUsage {
             if bytes > 0 { items.append(Item(name: name, detail: detail, bytes: bytes)) }
         }
 
-        add("Documents (PDF)", "Tes PDF importés", [app.appendingPathComponent("Documents", isDirectory: true)])
+        add(String(localized: "Documents (PDF)"), String(localized: "Tes PDF importés"), [app.appendingPathComponent("Documents", isDirectory: true)])
         // Un élément par modèle d'IA installé (les petits ensemble).
         let titles = Dictionary(uniqueKeysWithValues: [ModelSpec.ndlocr, .ppocr5, .glmocr, .ovisocr2, .qwen3vl4b,
                                                        .qwen35chat4b].map { ($0.id, $0.title) })
@@ -44,24 +44,24 @@ enum StorageUsage {
         for folder in (try? fm.contentsOfDirectory(at: models, includingPropertiesForKeys: nil)) ?? [] {
             if folder.lastPathComponent == "unidic" { continue }
             if size(of: folder) >= 200 * 1_048_576 {
-                add(titles[folder.lastPathComponent] ?? folder.lastPathComponent, "Modèle d'IA", [folder])
+                add(titles[folder.lastPathComponent] ?? folder.lastPathComponent, String(localized: "Modèle d'IA"), [folder])
             } else {
                 small.append(folder)
             }
         }
-        add("Autres modèles", "Mise en page, nettoyage des scans…", small)
-        add("UniDic (furigana)", "Dictionnaire de MeCab", [models.appendingPathComponent("unidic", isDirectory: true)])
-        add("Dictionnaires", "Yomitan importés", [app.appendingPathComponent("Dictionaries", isDirectory: true)])
-        add("Analyses IA", "Lectures IA, traductions, rapports", [support.appendingPathComponent("Analysis", isDirectory: true)])
+        add(String(localized: "Autres modèles"), String(localized: "Mise en page, nettoyage des scans…"), small)
+        add(String(localized: "UniDic (furigana)"), String(localized: "Dictionnaire de MeCab"), [models.appendingPathComponent("unidic", isDirectory: true)])
+        add(String(localized: "Dictionnaires"), String(localized: "Yomitan importés"), [app.appendingPathComponent("Dictionaries", isDirectory: true)])
+        add(String(localized: "Analyses IA"), String(localized: "Lectures IA, traductions, rapports"), [support.appendingPathComponent("Analysis", isDirectory: true)])
         let base = ((try? fm.contentsOfDirectory(at: app, includingPropertiesForKeys: nil)) ?? [])
             .filter { $0.lastPathComponent.hasPrefix("kyokasho.sqlite") }
-        add("Base (OCR, notes, cartes)", "Textes lus, corrections, notes, surlignages, révisions", base)
-        add("Caches", "Vignettes, pages nettoyées, téléchargements (régénérables)", [caches])
-        add("Temporaires", "Exports, fichiers en cours", [fm.temporaryDirectory])
+        add(String(localized: "Base (OCR, notes, cartes)"), String(localized: "Textes lus, corrections, notes, surlignages, révisions"), base)
+        add(String(localized: "Caches"), String(localized: "Vignettes, pages nettoyées, téléchargements (régénérables)"), [caches])
+        add(String(localized: "Temporaires"), String(localized: "Exports, fichiers en cours"), [fm.temporaryDirectory])
         // Tout le reste du conteneur (données WebKit, réglages, journal…).
         let rest = size(of: library) + size(of: documents) - counted.filter { $0.path.hasPrefix(library.path) || $0.path.hasPrefix(documents.path) }
             .reduce(Int64(0)) { $0 + size(of: $1) }
-        if rest > 0 { items.append(Item(name: "Autres", detail: "Réglages, journal, données web", bytes: rest)) }
+        if rest > 0 { items.append(Item(name: String(localized: "Autres"), detail: String(localized: "Réglages, journal, données web"), bytes: rest)) }
         return items.sorted { $0.bytes > $1.bytes }
     }
 
@@ -142,7 +142,7 @@ struct StorageUsageView: View {
                         .chartYAxis(.hidden)
                         .chartLegend(.hidden)
                         .frame(height: 28)
-                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                        .clipShape(RoundedRectangle(cornerRadius: Atelier.corner(6)))
                     }
                     .padding(.vertical, 6)
                 }
@@ -165,7 +165,7 @@ struct StorageUsageView: View {
                 Section("Détail") {
                     ForEach(Array(items.enumerated()), id: \.element.id) { i, item in
                         HStack(spacing: 12) {
-                            RoundedRectangle(cornerRadius: 3).fill(colors(items.count)[i]).frame(width: 14, height: 14)
+                            RoundedRectangle(cornerRadius: Atelier.corner(3)).fill(colors(items.count)[i]).frame(width: 14, height: 14)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(item.name)
                                 Text(item.detail).font(.caption).foregroundStyle(.secondary)

@@ -27,13 +27,13 @@ enum DocumentScan {
     /// Lance la lecture si OvisOCR2 est installé et qu'il reste des pages ; rien si elle tourne déjà ou si l'analyse
     /// du document entier (qui lit les mêmes pages) est en cours.
     static func start(_ document: LibraryDocument, url: URL, ocr: OCRService) {
-        guard UserDefaults.standard.object(forKey: autoKey) as? Bool ?? true, OvisOCR2Reader().isAvailable,
+        guard document.capabilities.study, UserDefaults.standard.object(forKey: autoKey) as? Bool ?? true, OvisOCR2Reader().isAvailable,
               DocumentAnalysisService.shared.progress?.documentId != document.id else { return }
         let id = document.id
         let pages = (0..<document.pageCount).filter { !FileManager.default.fileExists(atPath: file(id, $0).path) }
         guard !pages.isEmpty else { return }
         let language = OCRTargetLanguage.forDocument(id)
-        AITaskCenter.shared.run(key(id), title: "Lecture IA de « \(document.title) »", modelId: ModelSpec.ovisocr2.id, activity: "lecture") { job in
+        AITaskCenter.shared.run(key(id), title: String(localized: "Lecture IA de « \(document.title) »"), modelId: ModelSpec.ovisocr2.id, activity: "lecture") { job in
             let center = AITaskCenter.shared
             center.log(job, "\(pages.count) page(s) à lire sur \(document.pageCount)")
             // Une lecture de document à la fois (import de plusieurs PDF) : un seul modèle, pas de va-et-vient.
@@ -57,8 +57,10 @@ enum DocumentScan {
                 let start = Date()
                 do {
                     let budget = await budget(id, page, ocr: ocr)
+                    let rotation = await ocr.additionalRotation(documentId: id, pageIndex: page)
                     let text = try await Diagnostics.measure("scan IA p. \(page)", "scan") {
-                        try await OvisOCR2Reader(language: language).read(.pdfPage(url: url, index: page), maxTokens: budget)
+                        try await OvisOCR2Reader(language: language)
+                            .read(.pdfPage(url: url, index: page, additionalRotation: rotation), maxTokens: budget)
                     }
                     // Arrêtée : texte partiel, jamais gardé.
                     try Task.checkCancellation()
@@ -78,7 +80,7 @@ enum DocumentScan {
             }
             try Task.checkCancellation()
             center.setProgress(job, done: pages.count, total: pages.count)
-            center.log(job, failures == 0 ? "Terminé." : "Terminé, \(failures) page(s) en erreur (relancées à la prochaine ouverture).")
+            center.log(job, failures == 0 ? String(localized: "Terminé.") : String(localized: "Terminé, \(failures) page(s) en erreur (relancées à la prochaine ouverture)."))
         }
     }
 

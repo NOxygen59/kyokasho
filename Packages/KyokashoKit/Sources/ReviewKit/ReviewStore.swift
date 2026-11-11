@@ -8,13 +8,6 @@ import GRDB
 public final class ReviewStore: @unchecked Sendable {
     public let writer: any DatabaseWriter
 
-    /// Pages insérées avant celles d'un document (« Ajouter des pages… ») : page d'origine des cartes décalée.
-    public func shiftSourcePages(documentId: String, by offset: Int) throws {
-        try writer.write { db in
-            try db.execute(sql: "UPDATE card SET sourcePage = sourcePage + ? WHERE sourceDocumentId = ? AND sourcePage IS NOT NULL",
-                           arguments: [offset, documentId])
-        }
-    }
     /// Instantané sans limite de pagination ; seuls les liens vers les pages sont capturés.
     public func sourcePages(documentId: String) throws -> [Int64: Int] {
         try writer.read { db in
@@ -24,14 +17,50 @@ public final class ReviewStore: @unchecked Sendable {
     }
 
     /// Installe des valeurs finales : une reprise ne touche ni la planification FSRS ni l'historique.
-    public func setSourcePages(documentId: String, pages: [Int64: Int]) throws {
+    /// `nil` = carte gardée **sans page** (page retirée du document, #49) ; elle reste liée à son document, ce qui la
+    /// distingue d'une carte sans document. Omettre une carte laisserait son ancienne page : toutes les cartes du
+    /// document concernées par l'opération doivent donc figurer dans `pages`.
+    public func setSourcePages(documentId: String, pages: [Int64: Int?]) throws {
         try writer.write { db in
             for (id, page) in pages {
                 try db.execute(sql: "UPDATE card SET sourcePage = ? WHERE id = ? AND sourceDocumentId = ?", arguments: [page, id, documentId])
                 guard db.changesCount == 1 else {
-                    throw NSError(domain: "Kyokasho.PageShift", code: 3, userInfo: [NSLocalizedDescriptionKey: "Carte absente ou associée à un autre document."])
+                    throw NSError(domain: "Kyokasho.PageShift", code: 3, userInfo: [NSLocalizedDescriptionKey: String(localized: "Carte absente ou associée à un autre document.", bundle: .main)])
                 }
             }
+        }
+    }
+
+    /// Restauration de pages (#49) : rattache une carte détachée à sa page revenue, **seulement** si elle est toujours
+    /// sans page et liée au même document (une carte rattachée ailleurs entre-temps n'est pas touchée). Rejouable.
+    /// Ne touche ni FSRS ni l'historique. Renvoie le nombre de cartes rattachées.
+    @discardableResult
+    public func reattachSourcePages(documentId: String, pages: [Int64: Int]) throws -> Int {
+        try writer.write { db in
+            var count = 0
+            for (id, page) in pages {
+                try db.execute(sql: "UPDATE card SET sourcePage = ? WHERE id = ? AND sourceDocumentId = ? AND sourcePage IS NULL",
+                               arguments: [page, id, documentId])
+                count += db.changesCount
+            }
+            return count
+        }
+    }
+
+    /// Remplacement d'un cours (lot C2.2, DEC-C2 = A) : les cartes suivent la version mise à jour.
+    ///
+    /// `sourceDocumentId` est une simple colonne de `card`, sans clé étrangère : la bascule SQL du
+    /// document (`AppDatabase.rekeyDocument`) ne peut pas la suivre elle-même. La planification FSRS
+    /// (`due`, `stability`, …), l'historique et `sourcePage` ne sont pas touchés : la nouvelle version
+    /// garde les mêmes numéros de page vus par l'utilisateur du livre, et une révision ratée reste
+    /// ratée. Rejouable (une reprise de bascule interrompue peut rappeler la fonction sans double effet).
+    /// Renvoie le nombre de cartes déplacées (0 si déjà fait ou si rien à faire).
+    @discardableResult
+    public func remapDocumentId(from oldId: String, to newId: String) throws -> Int {
+        guard oldId != newId else { return 0 }
+        return try writer.write { db in
+            try db.execute(sql: "UPDATE card SET sourceDocumentId = ? WHERE sourceDocumentId = ?", arguments: [newId, oldId])
+            return db.changesCount
         }
     }
 
@@ -114,6 +143,10 @@ public final class ReviewStore: @unchecked Sendable {
             }
             try db.create(index: "reviewLog_card", on: "reviewLog", columns: ["cardId"])
             try db.create(index: "reviewLog_date", on: "reviewLog", columns: ["reviewedAt"])
+        }
+        // PLAN-CARTES-001, E1 : écran « Cartes de ce document ». Index additif, aucune donnée touchée.
+        m.registerMigration("v2-card-source") { db in
+            try db.create(index: "card_source", on: "card", columns: ["sourceDocumentId", "sourcePage"])
         }
         return m
     }
@@ -214,6 +247,52 @@ public final class ReviewStore: @unchecked Sendable {
         guard !keys.isEmpty else { return [] }
         return try writer.read { db in
             Set(try String.fetchAll(db, StudyCard.select(Column("key")).filter(keys.contains(Column("key")))))
+        }
+    }
+
+    /// Cartes créées depuis un document (PLAN-CARTES-001, E1), par page puis date de création, **sans limite** : l'écran
+    /// d'un livre doit les montrer toutes. `query` cherche dans les champs, comme le navigateur.
+    public func cards(sourceDocumentId: String, query: String = "") throws -> [StudyCard] {
+        try writer.read { db in
+            var request = StudyCard.filter(Column("sourceDocumentId") == sourceDocumentId)
+            let q = query.trimmingCharacters(in: .whitespaces)
+            // Revue DeepSeek (n°7) : texte cherché tel quel (`instr`), « % » et « _ » ne sont pas des jokers.
+            if !q.isEmpty { request = request.filter(sql: "(instr(fields, ?) > 0 OR instr(key, ?) > 0)", arguments: [q, q]) }
+            return try request.order(Column("sourcePage"), Column("createdAt")).fetchAll(db)
+        }
+    }
+
+    /// Enregistre une carte modifiée à la main (PLAN-CARTES-001, DEC-CA-07 = A). Le mot ou la lecture peuvent changer :
+    /// la clé anti-doublon suit alors les champs « Mot » et « Lecture ». La planification FSRS, l'historique de
+    /// révision et le `guid` Anki ne sont **jamais** touchés (réexporter met à jour la même note Anki).
+    /// Refusé (`EditError.duplicate`) si une autre carte porte déjà la nouvelle clé : jamais deux cartes pour le même
+    /// couple mot + lecture (une autre lecture du même mot reste possible, comme à la création).
+    /// Revue DeepSeek (n°9) : seuls `key`, `fields`, `suspended` et `modifiedAt` sont écrits (UPDATE ciblé), jamais la
+    /// planification gardée par l'éditeur : une révision faite entre-temps ne peut pas être écrasée.
+    @discardableResult
+    public func saveEdited(_ card: StudyCard) throws -> StudyCard {
+        try writer.write { db in
+            var c = card
+            // La clé ne bouge que si « Mot » ou « Lecture » ont été modifiés : à la création, elle vient du dictionnaire
+            // (lecture en kana), pas forcément du texte du champ ; corriger le sens ne doit jamais la changer.
+            let stored = try StudyCard.fetchOne(db, key: c.id)
+            let before = stored.flatMap { StudyCard.editedKey(fields: $0.fields) }
+            if let key = StudyCard.editedKey(fields: c.fields), key != before, key != c.key {
+                let other = try StudyCard.filter(Column("key") == key).fetchOne(db)
+                if let other, other.id != c.id { throw EditError.duplicate }
+                c.key = key
+            }
+            c.modifiedAt = Date()
+            try c.update(db, columns: ["key", "fields", "suspended", "modifiedAt"])
+            return try StudyCard.fetchOne(db, key: c.id) ?? c
+        }
+    }
+
+    public enum EditError: LocalizedError, Equatable {
+        case duplicate
+
+        public var errorDescription: String? {
+            String(localized: "Une autre carte existe déjà pour ce mot et cette lecture.", bundle: .main)
         }
     }
 

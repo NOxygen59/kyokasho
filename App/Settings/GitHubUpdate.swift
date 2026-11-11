@@ -36,14 +36,14 @@ final class GitHubAccount: ObservableObject {
     /// Demande un code à GitHub, puis attend que tu l'aies validé sur github.com.
     func connect() {
         error = nil
-        guard !clientID.isEmpty else { error = "Colle d'abord le Client ID de ta GitHub App."; return }
+        guard !clientID.isEmpty else { error = String(localized: "Colle d'abord le Client ID de ta GitHub App."); return }
         pollTask?.cancel()
         pollTask = Task {
             do {
                 let start = try await Self.form("https://github.com/login/device/code", ["client_id": clientID])
                 guard let device = start["device_code"] as? String, let user = start["user_code"] as? String,
                       let uri = (start["verification_uri"] as? String).flatMap(URL.init(string:)) else {
-                    throw Failure.message(start["error_description"] as? String ?? "Réponse inattendue de GitHub.")
+                    throw Failure.message(start["error_description"] as? String ?? String(localized: "Réponse inattendue de GitHub."))
                 }
                 let code = DeviceCode(userCode: user, verification: uri, deviceCode: device,
                                       interval: start["interval"] as? Int ?? 5,
@@ -85,11 +85,11 @@ final class GitHubAccount: ObservableObject {
             switch reply["error"] as? String {
             case "authorization_pending": continue
             case "slow_down": interval += 5
-            case "access_denied": throw Failure.message("Connexion refusée sur GitHub.")
-            case let other: throw Failure.message(reply["error_description"] as? String ?? other ?? "Erreur GitHub.")
+            case "access_denied": throw Failure.message(String(localized: "Connexion refusée sur GitHub."))
+            case let other: throw Failure.message(reply["error_description"] as? String ?? other ?? String(localized: "Erreur GitHub."))
             }
         }
-        throw Failure.message("Code expiré : recommence.")
+        throw Failure.message(String(localized: "Code expiré : recommence."))
     }
 
     enum Failure: LocalizedError {
@@ -111,7 +111,7 @@ final class GitHubAccount: ObservableObject {
 
     /// Requête à l'API GitHub avec le jeton.
     func apiRequest(_ path: String, accept: String = "application/vnd.github+json") throws -> URLRequest {
-        guard let token else { throw Failure.message("Connecte GitHub dans Réglages → À propos.") }
+        guard let token else { throw Failure.message(String(localized: "Connecte GitHub dans Réglages → À propos.")) }
         var request = URLRequest(url: URL(string: "https://api.github.com" + path)!)
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.setValue(accept, forHTTPHeaderField: "Accept")
@@ -163,16 +163,16 @@ final class UpdateInstaller: ObservableObject {
             let tag = latest.version.hasPrefix("v") ? latest.version : "v" + latest.version
             let (data, response) = try await URLSession.shared.data(for: GitHubAccount.shared.apiRequest("/repos/\(GitHubAccount.repo)/releases/tags/\(tag)"))
             guard (response as? HTTPURLResponse)?.statusCode == 200 else {
-                throw GitHubAccount.Failure.message("Release \(tag) introuvable (\((response as? HTTPURLResponse)?.statusCode ?? 0)).")
+                throw GitHubAccount.Failure.message(String(localized: "Release \(tag) introuvable (\((response as? HTTPURLResponse)?.statusCode ?? 0))."))
             }
             struct Release: Decodable { struct Asset: Decodable { let id: Int; let name: String }; let assets: [Asset] }
             guard let asset = try JSONDecoder().decode(Release.self, from: data).assets.first(where: { $0.name.hasSuffix(".tipa") }) else {
-                throw GitHubAccount.Failure.message("Pas de .tipa dans la release \(tag).")
+                throw GitHubAccount.Failure.message(String(localized: "Pas de .tipa dans la release \(tag)."))
             }
             assetID = asset.id
             let signed = try await signedURL(asset: asset.id)
             let (temp, reply) = try await URLSession.shared.download(from: signed, delegate: nil)
-            guard (reply as? HTTPURLResponse)?.statusCode == 200 else { throw GitHubAccount.Failure.message("Téléchargement refusé.") }
+            guard (reply as? HTTPURLResponse)?.statusCode == 200 else { throw GitHubAccount.Failure.message(String(localized: "Téléchargement refusé.")) }
             try FileManager.default.createDirectory(at: Self.folder, withIntermediateDirectories: true)
             let target = Self.folder.appendingPathComponent(asset.name)
             try? FileManager.default.removeItem(at: target)
@@ -192,7 +192,7 @@ final class UpdateInstaller: ObservableObject {
         let (_, response) = try await URLSession.shared.data(for: request, delegate: NoRedirect())
         guard let http = response as? HTTPURLResponse, (300..<400).contains(http.statusCode),
               let location = http.value(forHTTPHeaderField: "Location"), let url = URL(string: location) else {
-            throw GitHubAccount.Failure.message("Lien de téléchargement non obtenu.")
+            throw GitHubAccount.Failure.message(String(localized: "Lien de téléchargement non obtenu."))
         }
         return url
     }
@@ -224,7 +224,7 @@ struct GitHubUpdateSection: View {
     var body: some View {
         Section {
             if account.isConnected {
-                LabeledContent("GitHub", value: "connecté")
+                LabeledContent("GitHub", value: String(localized: "connecté"))
                 Button("Se déconnecter", role: .destructive) { account.disconnect() }
             } else if let code = account.pending {
                 VStack(alignment: .leading, spacing: 8) {

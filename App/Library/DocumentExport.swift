@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 NOxygen59
 
+import GLMOCRKit
 import OCRKit
 import PDFKit
 import PencilKit
@@ -13,24 +14,26 @@ import UIKit
 /// choisies. Tout est fait hors du fil principal ; le fichier part dans `tmp/Export` puis dans la feuille de partage.
 enum DocumentExport {
     enum Format: String, CaseIterable, Identifiable {
-        case original, annotated, markdown, images, cards
+        case original, annotated, markdown, images, cards, package
         var id: String { rawValue }
         var title: String {
             switch self {
-            case .original: return "PDF d'origine"
-            case .annotated: return "PDF annoté"
-            case .markdown: return "Texte (Markdown)"
-            case .images: return "Images PNG (zip)"
-            case .cards: return "Cartes Anki (.apkg)"
+            case .original: return String(localized: "PDF d'origine")
+            case .annotated: return String(localized: "PDF annoté")
+            case .markdown: return String(localized: "Texte (Markdown)")
+            case .images: return String(localized: "Images PNG (zip)")
+            case .cards: return String(localized: "Cartes Anki (.apkg)")
+            case .package: return String(localized: "Paquet Kyōkasho (tout le document)")
             }
         }
         var detail: String {
             switch self {
-            case .original: return "Le fichier importé, tel quel."
-            case .annotated: return "Surlignages, dessins au stylet et notes posés sur les pages ; notes en fin de fichier."
-            case .markdown: return "Mise en page IA (sinon texte de l'OCR), traduction française si elle existe, notes."
-            case .images: return "Une image par page (avec annotations), dans un fichier zip."
-            case .cards: return "Les cartes de révision créées depuis ce document."
+            case .original: return String(localized: "Le fichier importé, tel quel.")
+            case .annotated: return String(localized: "Surlignages, dessins au stylet et notes posés sur les pages ; notes en fin de fichier.")
+            case .markdown: return String(localized: "Mise en page IA (sinon texte de l'OCR), traductions française et anglaise si elles existent, notes.")
+            case .images: return String(localized: "Une image par page (avec annotations), dans un fichier zip.")
+            case .cards: return String(localized: "Les cartes de révision créées depuis ce document.")
+            case .package: return String(localized: "PDF, notes, surlignages, dessins, OCR et retouches, lectures IA, traductions, analyse et brouillons : à réimporter tel quel dans Kyōkasho sur un autre appareil. Sans cartes, conversations ni réglages de l'app.")
             }
         }
         var icon: String {
@@ -40,10 +43,11 @@ enum DocumentExport {
             case .markdown: return "text.alignleft"
             case .images: return "photo.on.rectangle"
             case .cards: return "rectangle.stack"
+            case .package: return "shippingbox"
             }
         }
         /// Pas de choix de pages pour le fichier d'origine ni les cartes.
-        var usesPages: Bool { self != .original && self != .cards }
+        var usesPages: Bool { self != .original && self != .cards && self != .package }
     }
 
     /// Ce qu'il faut lire dans la base, pris sur le fil principal (la base est partagée).
@@ -52,6 +56,13 @@ enum DocumentExport {
         var comments: [PageComment] = []
         var ink: [Int: Data] = [:]
         var ocr: [Int: OCRPage] = [:]
+    }
+
+    /// Échec déjà expliqué à l'utilisateur (revue DeepSeek #11) : l'export des cartes repart de ce qui a été lu sur le
+    /// fil principal ; si ces cartes ont disparu entre-temps (écran d'export rouvert, cartes supprimées), le message
+    /// doit le dire — `CocoaError(.fileWriteUnknown)` n'affichait qu'une phrase système (« The file couldn't be saved »).
+    struct CardsUnavailable: LocalizedError {
+        var errorDescription: String? { String(localized: "Cartes indisponibles : rouvre l'écran d'export.") }
     }
 
     /// Dossier propre à chaque export (`tmp/Export/<uuid>`, vidé par le système) : deux exports ne se gênent pas.
@@ -171,7 +182,7 @@ enum DocumentExport {
             let anchor = note.anchorText.map { " « \($0) »" } ?? ""
             text.append(NSAttributedString(string: "p. \(label) — n° \(counter[note.pageIndex]!)\(anchor)\n",
                                            attributes: [.font: UIFont.boldSystemFont(ofSize: 12)]))
-            text.append(NSAttributedString(string: note.body.isEmpty ? "(dessin seulement)\n\n" : note.body + "\n\n",
+            text.append(NSAttributedString(string: note.body.isEmpty ? String(localized: "(dessin seulement)\n\n") : note.body + "\n\n",
                                            attributes: [.font: UIFont.systemFont(ofSize: 12)]))
         }
         let setter = CTFramesetterCreateWithAttributedString(text)
@@ -235,29 +246,34 @@ enum DocumentExport {
     // MARK: Markdown
 
     static func markdown(documentId: String, title: String, pages: ClosedRange<Int>, _ a: Annotations,
-                         labels: [Int: String], aiFile: (Int) -> URL, frenchFile: (Int) -> URL) -> String {
+                         labels: [Int: String], aiFile: (Int) -> URL, frenchFile: (Int) -> URL,
+                         englishFile: ((Int) -> URL)? = nil) -> String {
         var out = "# \(title)\n"
         for index in pages {
             let label = labels[index] ?? String(index + 1)
-            out += "\n---\n\n## Page \(label)\n\n"
+            out += String(localized: "\n---\n\n## Page \(label)\n\n")
             if let ai = try? String(contentsOf: aiFile(index), encoding: .utf8), !ai.isEmpty {
                 // Images de la mise en page IA : leurs coordonnées n'ont pas de sens hors de l'app.
                 out += ai.replacingOccurrences(of: "<img[^>]*>", with: "", options: .regularExpression) + "\n"
             } else if let ocr = a.ocr[index] {
                 out += ocr.lines.map(\.text).joined(separator: "\n") + "\n"
             } else {
-                out += "_(page pas encore lue)_\n"
+                out += String(localized: "_(page pas encore lue)_\n")
             }
             if let fr = try? String(contentsOf: frenchFile(index), encoding: .utf8), !fr.isEmpty {
-                out += "\n### Traduction\n\n" + fr.replacingOccurrences(of: "<img[^>]*>", with: "", options: .regularExpression) + "\n"
+                out += String(localized: "\n### Traduction\n\n") + fr.replacingOccurrences(of: "<img[^>]*>", with: "", options: .regularExpression) + "\n"
+            }
+            // Traduction anglaise, si la page en a une (en plus ou à la place de la française).
+            if let englishFile, let en = try? String(contentsOf: englishFile(index), encoding: .utf8), !en.isEmpty {
+                out += String(localized: "\n### Translation (English)\n\n") + en.replacingOccurrences(of: "<img[^>]*>", with: "", options: .regularExpression) + "\n"
             }
             let highlights = a.highlights.filter { $0.pageIndex == index && !$0.text.isEmpty }
             if !highlights.isEmpty {
-                out += "\n### Surlignages\n\n" + highlights.map { "- \($0.text)" }.joined(separator: "\n") + "\n"
+                out += String(localized: "\n### Surlignages\n\n") + highlights.map { "- \($0.text)" }.joined(separator: "\n") + "\n"
             }
             let notes = a.comments.filter { $0.pageIndex == index && !$0.body.isEmpty }
             if !notes.isEmpty {
-                out += "\n### Notes\n\n" + notes.map { n in
+                out += String(localized: "\n### Notes\n\n") + notes.map { n in
                     (n.anchorText.map { "- **\($0)** : " } ?? "- ") + n.body.replacingOccurrences(of: "\n", with: " ")
                 }.joined(separator: "\n") + "\n"
             }
@@ -315,13 +331,26 @@ struct DocumentExportSheet: View {
                             Text("Préparation… \(working.done) / \(working.total)")
                         }
                     } else if let result {
+                        Label("Fichier prêt : \(result.lastPathComponent)", systemImage: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
                         ShareLink(item: result) {
-                            Label("Partager \(result.lastPathComponent)", systemImage: "square.and.arrow.up")
+                            Label("Enregistrer ou envoyer le fichier", systemImage: "square.and.arrow.up")
+                                .font(.headline)
                         }
                     } else {
-                        Button { start() } label: { Label("Exporter", systemImage: "square.and.arrow.up.on.square") }
+                        Button { start() } label: { Label("Préparer le fichier", systemImage: "doc.badge.gearshape") }
                     }
                     if let error { Text(error).font(.caption).foregroundStyle(.red) }
+                } header: {
+                    Text(verbatim: result == nil ? String(localized: "Étape 1 sur 2 : préparer") : String(localized: "Étape 2 sur 2 : enregistrer ou envoyer"))
+                } footer: {
+                    if working != nil {
+                        Text("Garde cette fenêtre ouverte : la fermer annule la préparation.")
+                    } else if result != nil {
+                        Text("Le fichier n'est pas encore enregistré : touche le bouton ci-dessus pour choisir où le mettre.")
+                    } else {
+                        Text("Rien n'est enregistré à cette étape. Un bouton apparaîtra ici quand le fichier sera prêt.")
+                    }
                 }
             }
             .navigationTitle("Exporter « \(document.title) »")
@@ -350,16 +379,22 @@ struct DocumentExportSheet: View {
         var cards: (cards: [StudyCard], template: NoteTemplate, mediaRoot: URL)?
         if format == .cards {
             guard let template = review.defaultTemplate, let templateId = template.id else {
-                error = "Aucun modèle de carte."; return
+                error = String(localized: "Aucun modèle de carte."); return
             }
             let list = ((try? review.store.cards(limit: 1_000_000)) ?? [])
                 .filter { $0.templateId == templateId && $0.sourceDocumentId == doc.id }
-            guard !list.isEmpty else { error = "Aucune carte créée depuis ce document."; return }
+            guard !list.isEmpty else { error = String(localized: "Aucune carte créée depuis ce document."); return }
             cards = (list, template, review.store.mediaRoot)
         }
+        // Paquet complet : valeurs de l'app lues ici, fichier écrit hors du fil principal.
+        let database = model.database
+        let drafts = NoteDraftStore.shared.drafts(documentId: doc.id)
+        let preferences = DocumentPackageService.preferences(documentId: doc.id)
+        let dictionaries = model.dictionary.dictionaries.map(\.title)
         let total = format.usesPages ? pages.count : 1
         let lower = pages.lowerBound
         let ai = pages.map { DocumentScan.file(doc.id, $0) }, fr = pages.map { DocumentAnalysisService.rawURL(doc.id, "fr", $0) }
+        let en = pages.map { DocumentAnalysisService.rawURL(doc.id, TranslationLanguage.english.rawValue, $0) }
         working = (0, total)
         task = Task.detached(priority: .userInitiated) {
             // Progression ignorée une fois l'export fini ou remplacé (aucun retour à « Préparation… »).
@@ -375,11 +410,14 @@ struct DocumentExportSheet: View {
                     return url
                 case .cards:
                     let url = folder.appendingPathComponent(name + ".apkg")
-                    try AnkiExport.apkg(cards: cards!.cards, template: cards!.template, deckName: doc.title,
-                                        mediaRoot: cards!.mediaRoot, to: url)
+                    // C1.5 (audit du 09/11/2026) : plus de déballage forcé `cards!`. Revue DeepSeek #11 : l'absence de
+                    // cartes préparées reçoit une phrase en français, pas le message système de `CocoaError`.
+                    guard let cards else { throw DocumentExport.CardsUnavailable() }
+                    try AnkiExport.apkg(cards: cards.cards, template: cards.template, deckName: doc.title,
+                                        mediaRoot: cards.mediaRoot, to: url)
                     return url
                 case .annotated:
-                    let url = folder.appendingPathComponent(name + " (annoté).pdf")
+                    let url = folder.appendingPathComponent(name + String(localized: " (annoté).pdf"))
                     try DocumentExport.annotatedPDF(source: source, pages: pages, annotations, title: doc.title,
                                                     labels: labels, to: url, progress: report)
                     return url
@@ -391,10 +429,13 @@ struct DocumentExportSheet: View {
                     let url = folder.appendingPathComponent(name + " (images).zip")
                     try DocumentExport.zip(dir, to: url)
                     return url
+                case .package:
+                    return try DocumentPackageService.export(doc, database: database, pdf: source, drafts: drafts,
+                                                             preferences: preferences, dictionaries: dictionaries, to: folder)
                 case .markdown:
                     let text = DocumentExport.markdown(documentId: doc.id, title: doc.title, pages: pages, annotations,
                                                        labels: labels, aiFile: { ai[$0 - lower] },
-                                                       frenchFile: { fr[$0 - lower] })
+                                                       frenchFile: { fr[$0 - lower] }, englishFile: { en[$0 - lower] })
                     let url = folder.appendingPathComponent(name + ".md")
                     try text.write(to: url, atomically: true, encoding: .utf8)
                     return url
@@ -406,7 +447,9 @@ struct DocumentExportSheet: View {
                 switch outcome {
                 case .success(let url): result = url
                 case .failure(is CancellationError): break
-                case .failure(let e): error = "Export impossible : \(e.localizedDescription)"
+                // Déjà une phrase pour l'utilisateur : pas de préfixe « Export impossible : » devant (revue DeepSeek #11).
+                case .failure(let e as DocumentExport.CardsUnavailable): error = e.localizedDescription
+                case .failure(let e): error = String(localized: "Export impossible : \(e.localizedDescription)")
                 }
             }
         }

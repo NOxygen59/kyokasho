@@ -1,0 +1,1002 @@
+{
+  "不燃材料": {
+    "reading": "ふねんざいりょう",
+    "french": "matériau incombustible",
+    "definition": "Catégorie légale japonaise (loi sur les normes de construction). Matériau qui, exposé au feu d'un incendie ordinaire, résiste 20 minutes sans brûler, sans se déformer ou se fissurer au point de nuire à la protection contre le feu et, en intérieur, sans dégager de fumée ni de gaz nocifs."
+  },
+  "準不燃材料": {
+    "reading": "じゅんふねんざいりょう",
+    "french": "matériau quasi incombustible",
+    "definition": "Catégorie légale japonaise, un cran en dessous du matériau incombustible : les mêmes exigences s'appliquent, mais pendant 10 minutes au lieu de 20."
+  },
+  "難燃材料": {
+    "reading": "なんねんざいりょう",
+    "french": "matériau difficilement inflammable",
+    "definition": "Catégorie légale japonaise, la moins exigeante des trois : les mêmes exigences que pour un matériau incombustible s'appliquent, mais pendant 5 minutes."
+  },
+  "不燃": {
+    "reading": "ふねん",
+    "french": "incombustible",
+    "definition": "Qui ne brûle pas. En construction, s'emploie surtout dans 不燃材料, matériau incombustible au sens de la loi."
+  },
+  "準不燃": {
+    "reading": "じゅんふねん",
+    "french": "quasi incombustible",
+    "definition": "Niveau de résistance au feu d'un matériau, inférieur à l'incombustible : voir 準不燃材料."
+  },
+  "難燃": {
+    "reading": "なんねん",
+    "french": "difficilement inflammable",
+    "definition": "Qui s'enflamme difficilement. En construction, voir 難燃材料."
+  },
+  "防炎": {
+    "reading": "ぼうえん",
+    "french": "ignifugé, résistant à la flamme",
+    "definition": "Se dit d'un textile, comme un rideau ou une moquette, traité pour ne pas propager la flamme. Certains bâtiments recevant du public doivent en utiliser au titre de la loi sur la lutte contre l'incendie."
+  },
+  "防火": {
+    "reading": "ぼうか",
+    "french": "protection contre l'incendie",
+    "definition": "Ensemble des mesures qui empêchent un feu de se déclarer ou de se propager, par exemple avec des portes coupe-feu ou des matériaux résistants."
+  },
+  "準耐火": {
+    "reading": "じゅんたいか",
+    "french": "quasi résistant au feu",
+    "definition": "Niveau de résistance au feu d'une construction, inférieur à celui d'une construction résistante au feu (耐火) : elle retarde la propagation de l'incendie pendant une durée fixée par la réglementation."
+  },
+  "内装": {
+    "reading": "ないそう",
+    "french": "aménagement intérieur, finitions intérieures",
+    "definition": "Finitions et revêtements de l'intérieur d'un bâtiment, comme les murs, les plafonds et les sols. Le mot désigne aussi les travaux qui les mettent en place."
+  },
+  "内装材": {
+    "reading": "ないそうざい",
+    "french": "matériau de finition intérieure",
+    "definition": "Matériau employé pour les surfaces intérieures : papier peint, plâtre, bois, revêtements de sol, etc."
+  },
+  "内装制限": {
+    "reading": "ないそうせいげん",
+    "french": "restriction sur les finitions intérieures",
+    "definition": "Règle de la loi sur les normes de construction qui impose, dans certains locaux, des matériaux résistants au feu pour les murs et les plafonds, afin de ralentir un incendie et de faciliter l'évacuation."
+  },
+  "床材": {
+    "reading": "ゆかざい",
+    "french": "revêtement de sol",
+    "definition": "Matériau de finition du sol : parquet, tatami, moquette, carrelage, revêtement vinyle, etc."
+  },
+  "材料": {
+    "reading": "ざいりょう",
+    "french": "matériau, matière",
+    "definition": "Ce qui sert à fabriquer ou à construire quelque chose. En construction, le bois, le béton, l'acier, le verre, etc."
+  },
+  "採光": {
+    "reading": "さいこう",
+    "french": "éclairage naturel",
+    "definition": "Fait de faire entrer la lumière du jour dans une pièce, par les fenêtres ou les puits de lumière. Au Japon, la loi impose une surface minimale d'ouverture dans les pièces d'habitation."
+  },
+  "耐震": {
+    "reading": "たいしん",
+    "french": "résistance aux séismes",
+    "definition": "Capacité d'un bâtiment à supporter un séisme grâce à une structure solide, par exemple des murs porteurs renforcés."
+  },
+  "制震": {
+    "reading": "せいしん",
+    "french": "amortissement des séismes",
+    "definition": "Technique qui absorbe l'énergie d'un séisme avec des amortisseurs placés dans la structure, pour réduire les oscillations du bâtiment."
+  },
+  "結露": {
+    "reading": "けつろ",
+    "french": "condensation",
+    "definition": "Formation de gouttes d'eau sur une surface froide, comme une vitre ou un mur, quand l'air humide s'y refroidit. Elle peut favoriser les moisissures."
+  },
+  "間取り": {
+    "reading": "まどり",
+    "french": "plan de distribution des pièces",
+    "definition": "Disposition et nombre des pièces d'un logement. On l'exprime souvent par un code comme 2LDK : deux chambres, plus un séjour, un coin repas et une cuisine."
+  },
+  "間仕切り": {
+    "reading": "まじきり",
+    "french": "cloison",
+    "definition": "Élément qui divise un espace intérieur en plusieurs parties : cloison fixe, panneau ou paroi coulissante."
+  },
+  "洋室": {
+    "reading": "ようしつ",
+    "french": "pièce de style occidental",
+    "definition": "Pièce au sol en parquet ou en moquette, meublée à l'occidentale, par opposition au 和室, la pièce japonaise à tatamis."
+  },
+  "便所": {
+    "reading": "べんじょ",
+    "french": "toilettes",
+    "definition": "Local équipé de cuvettes ou d'urinoirs. Le mot トイレ est aujourd'hui plus courant dans la vie quotidienne."
+  },
+  "サッシ": {
+    "reading": "サッシ",
+    "french": "châssis de fenêtre",
+    "definition": "Cadre qui maintient le vitrage d'une fenêtre ou d'une porte-fenêtre, le plus souvent en aluminium, en PVC ou en bois."
+  },
+  "ドア": {
+    "reading": "ドア",
+    "french": "porte",
+    "definition": "Porte, en particulier une porte battante qui pivote sur des charnières, par opposition à la porte coulissante (引き戸)."
+  },
+  "鴨居": {
+    "reading": "かもい",
+    "french": "linteau rainuré",
+    "definition": "Pièce de bois horizontale en haut d'une ouverture de pièce japonaise. Ses rainures guident les panneaux coulissants, comme les fusuma et les shoji. Elle fait pendant au seuil 敷居."
+  },
+  "欄間": {
+    "reading": "らんま",
+    "french": "imposte, panneau ajouré",
+    "definition": "Ouverture ou panneau, souvent de bois sculpté ou ajouré, placé entre le linteau et le plafond. Il laisse passer l'air et la lumière entre deux pièces et sert de décor."
+  },
+  "梁": {
+    "reading": "はり",
+    "french": "poutre",
+    "definition": "Élément horizontal de la structure qui porte le plancher ou la toiture et reporte les charges sur les poteaux ou les murs."
+  },
+  "土台": {
+    "reading": "どだい",
+    "french": "sablière basse",
+    "definition": "Pièce de bois horizontale posée sur les fondations d'une maison à ossature bois, sur laquelle reposent les poteaux. Au sens large, le mot veut aussi dire « base »."
+  },
+  "左官": {
+    "reading": "さかん",
+    "french": "plâtrier-enduiseur",
+    "definition": "Artisan qui applique à la truelle les enduits sur les murs et les sols : terre, plâtre, chaux, mortier. Le mot désigne aussi ce travail."
+  },
+  "フローリング": {
+    "reading": "フローリング",
+    "french": "parquet, sol en lames de bois",
+    "definition": "Revêtement de sol en bois, massif ou contrecollé, posé en lames. C'est le sol habituel des pièces de style occidental au Japon."
+  },
+  "ダウンライト": {
+    "reading": "ダウンライト",
+    "french": "spot encastré",
+    "definition": "Luminaire encastré dans le plafond, dont la lumière est dirigée vers le bas. Il reste discret et laisse le plafond dégagé."
+  },
+  "演色性": {
+    "reading": "えんしょくせい",
+    "french": "rendu des couleurs",
+    "definition": "Capacité d'une source de lumière à montrer fidèlement les couleurs des objets par rapport à une lumière de référence. Il se mesure par l'indice Ra, jusqu'à 100."
+  },
+  "平面図": {
+    "reading": "へいめんず",
+    "french": "plan (vue en plan)",
+    "definition": "Dessin d'un étage vu de dessus, comme coupé horizontalement à hauteur d'environ 1 à 1,5 m. Il montre les murs, les ouvertures et la disposition des pièces."
+  },
+  "立面図": {
+    "reading": "りつめんず",
+    "french": "élévation",
+    "definition": "Dessin d'une façade du bâtiment vue de face, sans perspective, pour en montrer l'aspect extérieur et les hauteurs."
+  },
+  "断面図": {
+    "reading": "だんめんず",
+    "french": "coupe",
+    "definition": "Dessin du bâtiment comme tranché verticalement, qui montre les hauteurs sous plafond, les planchers et la toiture."
+  },
+  "用途地域": {
+    "reading": "ようとちいき",
+    "french": "zone d'affectation",
+    "definition": "Zonage d'urbanisme japonais, en 13 catégories résidentielles, commerciales et industrielles, qui fixe les usages et le gabarit autorisés des constructions."
+  },
+  "建蔽率": {
+    "reading": "けんぺいりつ",
+    "french": "coefficient d'emprise au sol",
+    "definition": "Rapport entre la surface occupée au sol par le bâtiment et la surface du terrain. Sa limite dépend de la zone."
+  },
+  "建ぺい率": {
+    "reading": "けんぺいりつ",
+    "french": "coefficient d'emprise au sol",
+    "definition": "Autre graphie de 建蔽率 : rapport entre la surface occupée au sol par le bâtiment et la surface du terrain."
+  },
+  "容積率": {
+    "reading": "ようせきりつ",
+    "french": "coefficient d'occupation du sol",
+    "definition": "Rapport entre la surface totale de plancher du bâtiment, tous étages compris, et la surface du terrain. Sa limite dépend de la zone."
+  },
+  "建築基準法": {
+    "reading": "けんちくきじゅんほう",
+    "french": "loi japonaise sur les normes de construction",
+    "definition": "Loi de 1950 qui fixe les exigences minimales sur le terrain, la structure, les équipements et l'usage des bâtiments, pour protéger la vie, la santé et les biens."
+  },
+  "消防法": {
+    "reading": "しょうぼうほう",
+    "french": "loi japonaise sur la lutte contre l'incendie",
+    "definition": "Loi de 1948 sur la prévention et la lutte contre les incendies. Elle régit notamment les équipements de sécurité incendie et les textiles ignifugés de certains bâtiments."
+  },
+  "建築士": {
+    "reading": "けんちくし",
+    "french": "architecte diplômé d'État",
+    "definition": "Professionnel titulaire d'une qualification nationale japonaise pour concevoir et superviser des constructions. Il existe trois niveaux : première classe, deuxième classe et construction en bois."
+  },
+  "インテリアコーディネーター": {
+    "reading": "インテリアコーディネーター",
+    "french": "conseiller en aménagement intérieur",
+    "definition": "Spécialiste qui conseille sur l'aménagement d'un intérieur : matériaux, couleurs, mobilier, éclairage. C'est aussi une qualification japonaise délivrée par l'association professionnelle du secteur (インテリア産業協会)."
+  },
+  "動線": {
+    "reading": "どうせん",
+    "french": "circulation, trajet des déplacements",
+    "definition": "Parcours que les personnes suivent dans un espace. On le trace sur le plan pour organiser les pièces et éviter les trajets longs ou qui se croisent."
+  },
+  "給排水": {
+    "reading": "きゅうはいすい",
+    "french": "alimentation en eau et évacuation",
+    "definition": "Ensemble des installations qui amènent l'eau propre dans le bâtiment et évacuent les eaux usées."
+  },
+  "遮音": {
+    "reading": "しゃおん",
+    "french": "isolation phonique",
+    "definition": "Fait de bloquer le son pour l'empêcher de traverser une paroi, grâce à des matériaux lourds et étanches. À ne pas confondre avec 吸音, l'absorption du son."
+  },
+  "吸音": {
+    "reading": "きゅうおん",
+    "french": "absorption acoustique",
+    "definition": "Fait d'absorber le son à la surface d'un matériau poreux pour réduire les échos dans une pièce. À ne pas confondre avec 遮音, qui bloque le son."
+  },
+  "防音": {
+    "reading": "ぼうおん",
+    "french": "insonorisation",
+    "definition": "Ensemble des mesures qui empêchent le bruit d'entrer ou de sortir d'un espace, en combinant isolation phonique et absorption acoustique."
+  },
+  "通風": {
+    "reading": "つうふう",
+    "french": "ventilation naturelle",
+    "definition": "Circulation de l'air dans un bâtiment grâce aux ouvertures, sans appareil. Elle aide à renouveler l'air et à limiter l'humidité."
+  },
+  "収納": {
+    "reading": "しゅうのう",
+    "french": "rangement",
+    "definition": "Espace ou meuble où l'on range les affaires : placard, penderie, étagères. Le mot désigne aussi l'action de ranger."
+  },
+  "ダイニング": {
+    "reading": "ダイニング",
+    "french": "salle à manger, coin repas",
+    "definition": "Espace où l'on prend les repas. C'est le D de codes de logement comme LDK (séjour, repas, cuisine)."
+  },
+  "クロス": {
+    "reading": "クロス",
+    "french": "revêtement mural, papier peint",
+    "definition": "Au Japon, dans le bâtiment, revêtement collé sur les murs et les plafonds, en vinyle, en papier ou en tissu. Hors de ce contexte, le mot a d'autres sens, comme « croix » ou « tissu »."
+  },
+  "巾木": {
+    "reading": "はばき",
+    "french": "plinthe",
+    "definition": "Bande posée au bas d'un mur, à la jonction avec le sol. Elle protège le mur des chocs et cache le joint."
+  },
+  "廻り縁": {
+    "reading": "まわりぶち",
+    "french": "moulure de plafond",
+    "definition": "Baguette posée en haut d'un mur, à la jonction avec le plafond. Elle masque le joint et finit la pièce."
+  },
+  "無垢材": {
+    "reading": "むくざい",
+    "french": "bois massif",
+    "definition": "Bois d'une seule pièce, tiré directement du tronc, par opposition au contreplaqué et au bois lamellé-collé."
+  },
+  "クッションフロア": {
+    "reading": "クッションフロア",
+    "french": "revêtement de sol vinyle souple",
+    "definition": "Revêtement de sol en rouleau, en vinyle avec une couche souple. Il résiste à l'eau et s'emploie souvent dans les toilettes, les salles d'eau et les cuisines."
+  },
+  "輝度": {
+    "reading": "きど",
+    "french": "luminance",
+    "definition": "Quantité de lumière émise ou réfléchie par une surface dans une direction donnée, en candelas par mètre carré. Elle correspond à l'impression d'éclat, alors que l'éclairement (照度) mesure la lumière reçue."
+  },
+  "シャッター": {
+    "reading": "シャッター",
+    "french": "rideau métallique, volet roulant",
+    "definition": "Fermeture à lames qui s'enroule en haut d'une ouverture, sur une vitrine, un garage ou une fenêtre. Certains modèles servent aussi de protection contre le feu."
+  },
+  "特殊建築物": {
+    "reading": "とくしゅけんちくぶつ",
+    "french": "bâtiment à usage particulier",
+    "definition": "Catégorie légale : écoles, hôpitaux, théâtres, grands magasins, hôtels, immeubles collectifs, usines, entrepôts, etc. Ces bâtiments reçoivent des règles plus strictes, notamment contre l'incendie."
+  },
+  "建築設備": {
+    "reading": "けんちくせつび",
+    "french": "équipements du bâtiment",
+    "definition": "Installations fixes : électricité, gaz, eau, évacuation, ventilation, chauffage, climatisation, extinction, désenfumage, ainsi que cheminées, ascenseurs et paratonnerres."
+  },
+  "居室": {
+    "reading": "きょしつ",
+    "french": "pièce de vie ou de travail",
+    "definition": "Pièce utilisée de façon continue pour habiter, travailler, se réunir ou se divertir. Une salle de bains ou un couloir n'en sont en général pas, et des règles comme celle de l'éclairage naturel visent ces pièces."
+  },
+  "主要構造部": {
+    "reading": "しゅようこうぞうぶ",
+    "french": "parties principales de la structure",
+    "definition": "Murs, poteaux, planchers, poutres, toiture et escaliers, hors éléments secondaires comme les cloisons non porteuses ou les auvents. La loi s'en sert surtout pour la résistance au feu."
+  },
+  "延焼のおそれのある部分": {
+    "reading": "えんしょうのおそれのあるぶぶん",
+    "french": "partie exposée à la propagation du feu",
+    "definition": "Partie d'un bâtiment proche d'une limite de terrain, de l'axe d'une rue ou d'un autre bâtiment : à moins de 3 m au rez-de-chaussée et de 5 m aux étages, avec des exceptions."
+  },
+  "耐火構造": {
+    "reading": "たいかこうぞう",
+    "french": "construction résistante au feu",
+    "definition": "Structure qui résiste jusqu'à la fin d'un incendie ordinaire, sans effondrement ni propagation. Exemple : le béton armé, selon les normes officielles."
+  },
+  "準耐火構造": {
+    "reading": "じゅんたいかこうぞう",
+    "french": "construction quasi résistante au feu",
+    "definition": "Structure qui ralentit la propagation d'un incendie ordinaire, avec des exigences moindres que la construction résistante au feu."
+  },
+  "防火構造": {
+    "reading": "ぼうかこうぞう",
+    "french": "construction de protection contre le feu extérieur",
+    "definition": "Murs extérieurs et dessous de toit conçus pour limiter la propagation d'un incendie venu des alentours, par exemple avec un enduit au mortier sur grillage."
+  },
+  "耐火建築物": {
+    "reading": "たいかけんちくぶつ",
+    "french": "bâtiment résistant au feu",
+    "definition": "Bâtiment dont les parties principales de la structure résistent au feu et dont les ouvertures exposées ont des protections contre le feu."
+  },
+  "準耐火建築物": {
+    "reading": "じゅんたいかけんちくぶつ",
+    "french": "bâtiment quasi résistant au feu",
+    "definition": "Bâtiment autre que résistant au feu, dont la structure principale ralentit l'incendie ou offre une performance équivalente, avec des protections sur les ouvertures exposées."
+  },
+  "設計図書": {
+    "reading": "せっけいとしょ",
+    "french": "dossier de conception",
+    "definition": "Plans d'exécution et cahier des charges d'un bâtiment ou de son terrain, sans les dessins à taille réelle."
+  },
+  "大規模の修繕": {
+    "reading": "だいきぼのしゅうぜん",
+    "french": "réparation de grande ampleur",
+    "definition": "Réparation portant sur plus de la moitié d'au moins un type de partie principale de la structure : murs, poteaux, planchers, poutres, toiture ou escaliers."
+  },
+  "大規模の模様替": {
+    "reading": "だいきぼのもようがえ",
+    "french": "transformation de grande ampleur",
+    "definition": "Transformation portant sur plus de la moitié d'au moins un type de partie principale de la structure, sans simple remise en état à l'identique."
+  },
+  "敷地": {
+    "reading": "しきち",
+    "french": "terrain d'assiette",
+    "definition": "Terrain d'un seul tenant qui porte un bâtiment, ou plusieurs bâtiments dont les usages sont indissociables."
+  },
+  "地階": {
+    "reading": "ちかい",
+    "french": "niveau en sous-sol",
+    "definition": "Niveau dont le plancher est sous le sol, et dont la hauteur enterrée atteint au moins le tiers de la hauteur sous plafond."
+  },
+  "構造耐力上主要な部分": {
+    "reading": "こうぞうたいりょくじょうしゅようなぶぶん",
+    "french": "parties porteuses principales",
+    "definition": "Fondations, pieux, murs, poteaux, charpente de toit, sablière basse, contreventements, dalles et poutres qui supportent le poids du bâtiment, les charges, la neige, le vent, la terre, l'eau et les séismes."
+  },
+  "耐水材料": {
+    "reading": "たいすいざいりょう",
+    "french": "matériau résistant à l'eau",
+    "definition": "Matériau de construction résistant à l'eau : brique, pierre, pierre artificielle, béton, asphalte, céramique, verre, etc."
+  },
+  "構法": {
+    "reading": "こうほう",
+    "french": "mode de construction",
+    "definition": "Manière d'assembler les éléments d'un bâtiment (ossature, parois, planchers). À distinguer de 工法, la façon d'exécuter les travaux sur le chantier."
+  },
+  "下地": {
+    "reading": "したじ",
+    "french": "support, sous-couche",
+    "definition": "Couche ou ossature cachée sur laquelle on pose la finition d'un mur, d'un sol ou d'un plafond."
+  },
+  "開口部": {
+    "reading": "かいこうぶ",
+    "french": "baie, ouverture",
+    "definition": "Ouverture ménagée dans un mur ou un toit pour une fenêtre, une porte ou un lanterneau."
+  },
+  "部材": {
+    "reading": "ぶざい",
+    "french": "élément de construction",
+    "definition": "Pièce qui entre dans un ouvrage : poteau, poutre, panneau, montant."
+  },
+  "施工": {
+    "reading": "せこう",
+    "french": "mise en œuvre, exécution des travaux",
+    "definition": "Réalisation concrète de l'ouvrage sur le chantier, d'après les plans."
+  },
+  "造作": {
+    "reading": "ぞうさく",
+    "french": "menuiserie intérieure, aménagements fixes",
+    "definition": "Ouvrages de finition en bois fixés au bâtiment : encadrements, plinthes, placards intégrés, escaliers."
+  },
+  "根太": {
+    "reading": "ねだ",
+    "french": "solive",
+    "definition": "Pièce horizontale qui porte directement le plancher, posée en général sur les 大引."
+  },
+  "大引": {
+    "reading": "おおびき",
+    "french": "poutrelle de plancher",
+    "definition": "Pièce horizontale du plancher bas qui reçoit les solives (根太) et repose sur les 床束."
+  },
+  "床束": {
+    "reading": "ゆかづか",
+    "french": "potelet de plancher",
+    "definition": "Court poteau vertical qui soutient le 大引 du plancher bas depuis le sol."
+  },
+  "胴差": {
+    "reading": "どうざし",
+    "french": "poutre de ceinture d'étage",
+    "definition": "Pièce horizontale qui court sur les murs extérieurs à la hauteur de l'étage et relie les poteaux."
+  },
+  "管柱": {
+    "reading": "くだばしら",
+    "french": "poteau d'un seul niveau",
+    "definition": "Poteau interrompu à chaque étage, par opposition au 通し柱, qui monte d'un seul tenant."
+  },
+  "軒桁": {
+    "reading": "のきげた",
+    "french": "sablière",
+    "definition": "Pièce horizontale en haut des murs extérieurs, parallèle au faîtage, qui reçoit le bas de la charpente."
+  },
+  "母屋": {
+    "reading": "もや",
+    "french": "panne",
+    "definition": "Pièce de charpente parallèle au faîtage qui porte les chevrons. Le même mot désigne aussi le corps de bâtiment principal."
+  },
+  "野地板": {
+    "reading": "のじいた",
+    "french": "voligeage",
+    "definition": "Panneaux ou planches posés sur les chevrons, qui servent de support à la couverture."
+  },
+  "横架材": {
+    "reading": "おうかざい",
+    "french": "pièce horizontale de structure",
+    "definition": "Nom général des éléments horizontaux de la structure bois : poutres, sablières, entraits."
+  },
+  "軸組": {
+    "reading": "じくぐみ",
+    "french": "ossature poteaux-poutres",
+    "definition": "Ensemble formé par les poteaux, les poutres et les contreventements d'un bâtiment."
+  },
+  "在来軸組構法": {
+    "reading": "ざいらいじくぐみこうほう",
+    "french": "construction bois traditionnelle poteaux-poutres",
+    "definition": "Mode de construction courant des maisons en bois au Japon : la structure repose sur des poteaux et des poutres, renforcés par des contreventements."
+  },
+  "枠組壁工法": {
+    "reading": "わくぐみかべこうほう",
+    "french": "ossature plateforme (2×4)",
+    "definition": "Construction par murs porteurs : des cadres en bois sont revêtus de panneaux. Le nom courant est ツーバイフォー."
+  },
+  "ツーバイフォー": {
+    "reading": "ツーバイフォー",
+    "french": "système 2×4",
+    "definition": "Nom courant de la construction à ossature plateforme, d'après la section nominale des bois : 2 × 4 pouces."
+  },
+  "小屋組": {
+    "reading": "こやぐみ",
+    "french": "charpente de toit",
+    "definition": "Ensemble des pièces qui forment la structure du toit."
+  },
+  "和小屋": {
+    "reading": "わごや",
+    "french": "charpente japonaise",
+    "definition": "Charpente où des potelets (小屋束) posés sur de grosses poutres portent les pannes. Les efforts travaillent surtout en flexion."
+  },
+  "洋小屋": {
+    "reading": "ようごや",
+    "french": "charpente occidentale à fermes",
+    "definition": "Charpente faite de fermes triangulées, dont les pièces travaillent surtout en traction et en compression."
+  },
+  "仕口": {
+    "reading": "しぐち",
+    "french": "assemblage en angle",
+    "definition": "Assemblage de deux pièces de bois qui se rencontrent en angle, par exemple un poteau et une poutre."
+  },
+  "継手": {
+    "reading": "つぎて",
+    "french": "enture",
+    "definition": "Assemblage de deux pièces de bois mises bout à bout pour en allonger la longueur."
+  },
+  "野縁": {
+    "reading": "のぶち",
+    "french": "lambourde de plafond",
+    "definition": "Baguette de l'ossature cachée du plafond, sur laquelle on fixe le parement."
+  },
+  "内法": {
+    "reading": "うちのり",
+    "french": "cote intérieure, mesure entre faces",
+    "definition": "Distance mesurée entre les faces intérieures de deux éléments. Dans une pièce japonaise, désigne aussi la hauteur du bas de la traverse haute (鴨居) au seuil (敷居)."
+  },
+  "長押": {
+    "reading": "なげし",
+    "french": "traverse décorative",
+    "definition": "Pièce horizontale fixée sur les poteaux, au-dessus du 鴨居, dans une pièce japonaise. Son rôle aujourd'hui est surtout décoratif."
+  },
+  "床柱": {
+    "reading": "とこばしら",
+    "french": "poteau du tokonoma",
+    "definition": "Poteau décoratif placé sur le côté du 床の間, souvent choisi pour la beauté de son bois."
+  },
+  "床框": {
+    "reading": "とこがまち",
+    "french": "traverse avant du tokonoma",
+    "definition": "Pièce horizontale qui ferme le devant du sol surélevé du 床の間."
+  },
+  "床脇": {
+    "reading": "とこわき",
+    "french": "alcôve latérale du tokonoma",
+    "definition": "Espace à côté du 床の間, souvent garni d'étagères décalées et de petits placards."
+  },
+  "竿縁天井": {
+    "reading": "さおぶちてんじょう",
+    "french": "plafond à baguettes apparentes",
+    "definition": "Plafond japonais traditionnel : de fines planches reposent sur des baguettes parallèles laissées visibles."
+  },
+  "畳寄": {
+    "reading": "たたみよせ",
+    "french": "cale de rive du tatami",
+    "definition": "Pièce de bois qui comble l'écart entre le bord du tatami et le mur."
+  },
+  "雑巾摺": {
+    "reading": "ぞうきんずり",
+    "french": "baguette de bas de mur",
+    "definition": "Fine baguette posée au bas du mur, par exemple dans un placard ou un tokonoma, qui protège des frottements du nettoyage."
+  },
+  "框戸": {
+    "reading": "かまちど",
+    "french": "porte à cadre",
+    "definition": "Porte faite d'un cadre de montants et de traverses, garni de panneaux ou de vitrage."
+  },
+  "舞良戸": {
+    "reading": "まいらど",
+    "french": "porte coulissante à fines lattes",
+    "definition": "Porte coulissante traditionnelle en bois, dont le panneau est tenu par de fines lattes horizontales rapprochées."
+  },
+  "丁番": {
+    "reading": "ちょうばん",
+    "french": "charnière, paumelle",
+    "definition": "Ferrure articulée qui relie un vantail à son cadre et permet de le faire pivoter."
+  },
+  "段板": {
+    "reading": "だんいた",
+    "french": "marche",
+    "definition": "Planche horizontale d'une marche, celle sur laquelle on pose le pied."
+  },
+  "踏面": {
+    "reading": "ふみづら",
+    "french": "giron",
+    "definition": "Profondeur utile d'une marche, mesurée horizontalement."
+  },
+  "段鼻": {
+    "reading": "だんばな",
+    "french": "nez de marche",
+    "definition": "Bord avant de la marche, souvent muni d'une bande antidérapante."
+  },
+  "ノンスリップ": {
+    "reading": "ノンスリップ",
+    "french": "bande antidérapante",
+    "definition": "Profilé posé au nez de marche pour éviter de glisser."
+  },
+  "ガラリ": {
+    "reading": "ガラリ",
+    "french": "persienne de ventilation",
+    "definition": "Grille à lames inclinées, sur une porte ou un mur, qui laisse passer l'air et arrête la vue et la pluie."
+  },
+  "トップライト": {
+    "reading": "トップライト",
+    "french": "lanterneau, fenêtre de toit",
+    "definition": "Ouverture vitrée placée dans la toiture pour éclairer une pièce par le haut."
+  },
+  "心材": {
+    "reading": "しんざい",
+    "french": "duramen, bois de cœur",
+    "definition": "Partie centrale du tronc, souvent plus colorée, en général plus résistante à la pourriture et aux insectes que l'aubier."
+  },
+  "辺材": {
+    "reading": "へんざい",
+    "french": "aubier",
+    "definition": "Partie extérieure du tronc, claire et riche en eau, en général moins durable que le bois de cœur."
+  },
+  "木取": {
+    "reading": "きどり",
+    "french": "débit du bois",
+    "definition": "Manière de découper un tronc en planches et en pièces. Elle détermine le dessin du fil et le retrait du bois."
+  },
+  "柾目": {
+    "reading": "まさめ",
+    "french": "bois sur quartier",
+    "definition": "Débit qui donne des veines droites et parallèles. Ce bois se déforme peu."
+  },
+  "板目": {
+    "reading": "いため",
+    "french": "bois sur dosse",
+    "definition": "Débit qui donne des veines en arcs ou en flammes. Ce bois se déforme plus que le bois sur quartier."
+  },
+  "木口": {
+    "reading": "こぐち",
+    "french": "bois de bout",
+    "definition": "Face d'une pièce de bois coupée perpendiculairement au fil, où l'on voit les cernes."
+  },
+  "針葉樹": {
+    "reading": "しんようじゅ",
+    "french": "résineux",
+    "definition": "Arbres à aiguilles, comme le cyprès du Japon (ヒノキ) ou le cèdre du Japon (スギ). Leur bois sert beaucoup en structure."
+  },
+  "広葉樹": {
+    "reading": "こうようじゅ",
+    "french": "feuillus",
+    "definition": "Arbres à larges feuilles, comme le chêne, le zelkova (ケヤキ) ou le teck. Leur bois, souvent dur, sert notamment aux sols et aux meubles."
+  },
+  "含水率": {
+    "reading": "がんすいりつ",
+    "french": "taux d'humidité du bois",
+    "definition": "Masse d'eau contenue dans le bois rapportée à sa masse à l'état anhydre, exprimée en %."
+  },
+  "繊維飽和点": {
+    "reading": "せんいほうわてん",
+    "french": "point de saturation des fibres",
+    "definition": "Taux d'humidité, environ 25 à 30 %, en dessous duquel le bois commence à se rétracter en séchant."
+  },
+  "気乾状態": {
+    "reading": "きかんじょうたい",
+    "french": "état sec à l'air",
+    "definition": "État du bois en équilibre avec l'air ambiant. Son taux d'humidité tourne autour de 15 % au Japon."
+  },
+  "腐朽菌": {
+    "reading": "ふきゅうきん",
+    "french": "champignon lignivore",
+    "definition": "Champignon qui décompose le bois et lui fait perdre sa résistance, surtout en milieu humide."
+  },
+  "躯体": {
+    "reading": "くたい",
+    "french": "gros œuvre, structure porteuse",
+    "definition": "Partie du bâtiment qui assure sa stabilité : fondations, poteaux, poutres, murs porteurs, planchers."
+  },
+  "スラブ": {
+    "reading": "スラブ",
+    "french": "dalle",
+    "definition": "Plancher plat en béton armé."
+  },
+  "型枠": {
+    "reading": "かたわく",
+    "french": "coffrage",
+    "definition": "Moule temporaire dans lequel on coule le béton frais."
+  },
+  "配筋": {
+    "reading": "はいきん",
+    "french": "ferraillage",
+    "definition": "Disposition des armatures d'acier dans le béton armé."
+  },
+  "ブレース": {
+    "reading": "ブレース",
+    "french": "contreventement en diagonale",
+    "definition": "Pièce posée en diagonale dans l'ossature pour résister aux efforts horizontaux dus au séisme et au vent."
+  },
+  "耐火被覆": {
+    "reading": "たいかひふく",
+    "french": "protection incendie de l'acier",
+    "definition": "Revêtement qui protège la structure en acier de l'échauffement en cas d'incendie."
+  },
+  "プレカット": {
+    "reading": "プレカット",
+    "french": "taille en usine",
+    "definition": "Découpe et usinage à la machine, en atelier, des pièces de charpente avant leur arrivée sur le chantier."
+  },
+  "乾式工法": {
+    "reading": "かんしきこうほう",
+    "french": "mise en œuvre à sec",
+    "definition": "Pose sans eau ni mortier, à l'aide de panneaux, de vis ou de fixations. Le chantier avance vite, sans temps de séchage."
+  },
+  "湿式工法": {
+    "reading": "しっしきこうほう",
+    "french": "mise en œuvre humide",
+    "definition": "Pose avec des matériaux gâchés à l'eau, comme le mortier ou l'enduit. Il faut prévoir un temps de séchage."
+  },
+  "間仕切": {
+    "reading": "まじきり",
+    "french": "cloison",
+    "definition": "Paroi qui sépare les pièces à l'intérieur d'un logement."
+  },
+  "防湿層": {
+    "reading": "ぼうしつそう",
+    "french": "pare-vapeur",
+    "definition": "Couche qui empêche la vapeur d'eau de pénétrer dans l'isolant, pour éviter la condensation dans la paroi."
+  },
+  "勾配": {
+    "reading": "こうばい",
+    "french": "pente",
+    "definition": "Inclinaison d'un toit, d'un escalier ou d'un sol. Au Japon, celle d'un toit s'exprime souvent en hauteur pour 10 de longueur horizontale."
+  },
+  "見切": {
+    "reading": "みきり",
+    "french": "baguette de finition, joint de transition",
+    "definition": "Limite entre deux matériaux ou deux surfaces, ou la pièce qui soigne cette limite."
+  },
+  "面取": {
+    "reading": "めんとり",
+    "french": "chanfrein",
+    "definition": "Abattage de l'arête d'une pièce, qui l'adoucit et limite les éclats."
+  },
+  "目透": {
+    "reading": "めすかし",
+    "french": "joint creux",
+    "definition": "Pose qui laisse un petit écart régulier entre deux panneaux ou deux planches."
+  },
+  "目地": {
+    "reading": "めじ",
+    "french": "joint",
+    "definition": "Espace entre carreaux, pierres ou panneaux, le plus souvent rempli d'un matériau de jointoiement."
+  },
+  "化粧": {
+    "reading": "けしょう",
+    "french": "apparent, de parement",
+    "definition": "Se dit d'un élément laissé visible et traité pour être beau, par opposition à ce qui est caché."
+  },
+  "ラスボード": {
+    "reading": "ラスボード",
+    "french": "plaque de plâtre perforée",
+    "definition": "Plaque de plâtre à la surface creusée de petits trous, servant de support aux enduits."
+  },
+  "シーラー": {
+    "reading": "シーラー",
+    "french": "impression, primaire d'accrochage",
+    "definition": "Sous-couche qui limite l'absorption du support et améliore l'adhérence de la peinture."
+  },
+  "エマルションペイント": {
+    "reading": "エマルションペイント",
+    "french": "peinture en émulsion",
+    "definition": "Peinture à l'eau où de fines particules de résine sont dispersées. Elle dégage peu d'odeur et sert beaucoup pour les murs et les plafonds."
+  },
+  "テラゾー": {
+    "reading": "テラゾー",
+    "french": "terrazzo",
+    "definition": "Matériau fait d'éclats de pierre liés au ciment ou à la résine, poncé puis poli."
+  },
+  "本磨": {
+    "reading": "ほんみがき",
+    "french": "poli miroir",
+    "definition": "Finition de pierre polie jusqu'au brillant, qui fait bien ressortir la couleur et le veinage."
+  },
+  "水磨": {
+    "reading": "みずみがき",
+    "french": "adouci",
+    "definition": "Finition de pierre poncée à l'eau, lisse mais sans brillant marqué."
+  },
+  "割肌": {
+    "reading": "わりはだ",
+    "french": "clivé, éclaté",
+    "definition": "Finition de pierre qui garde la surface brute obtenue en la fendant."
+  },
+  "磁器質タイル": {
+    "reading": "じきしつタイル",
+    "french": "carreau de grès cérame",
+    "definition": "Carreau cuit à haute température, très peu absorbant et résistant."
+  },
+  "火成岩": {
+    "reading": "かせいがん",
+    "french": "roche magmatique",
+    "definition": "Roche formée par le refroidissement du magma, comme le granit ou l'andésite."
+  },
+  "水成岩": {
+    "reading": "すいせいがん",
+    "french": "roche sédimentaire",
+    "definition": "Roche formée par l'accumulation de dépôts, comme le grès ou le calcaire. Le terme courant est 堆積岩."
+  },
+  "変成岩": {
+    "reading": "へんせいがん",
+    "french": "roche métamorphique",
+    "definition": "Roche transformée par la chaleur et la pression, comme le marbre ou la serpentinite."
+  },
+  "安山岩": {
+    "reading": "あんざんがん",
+    "french": "andésite",
+    "definition": "Roche volcanique grise et dure, utilisée pour les sols et les revêtements."
+  },
+  "グレモンボルト": {
+    "reading": "グレモンボルト",
+    "french": "crémone",
+    "definition": "Fermeture qui bloque un vantail en haut et en bas au moyen de deux tiges actionnées par une poignée."
+  },
+  "デッドボルト": {
+    "reading": "デッドボルト",
+    "french": "pêne dormant",
+    "definition": "Pêne qui ne sort et ne rentre qu'à la clé ou au bouton, et qui verrouille la porte."
+  },
+  "ラッチ": {
+    "reading": "ラッチ",
+    "french": "pêne demi-tour",
+    "definition": "Pêne biseauté à ressort qui maintient la porte fermée sans la verrouiller et se libère avec la poignée."
+  },
+  "フロアヒンジ": {
+    "reading": "フロアヒンジ",
+    "french": "pivot de sol à ferme-porte",
+    "definition": "Mécanisme encastré dans le sol qui porte la porte et règle sa fermeture."
+  },
+  "ドレーキップ": {
+    "reading": "ドレーキップ",
+    "french": "oscillo-battant",
+    "definition": "Fenêtre qui s'ouvre à la française ou bascule vers l'intérieur selon la position de la poignée."
+  },
+  "熱伝導率": {
+    "reading": "ねつでんどうりつ",
+    "french": "conductivité thermique",
+    "definition": "Aptitude d'un matériau à laisser passer la chaleur, en W/(m·K). Plus elle est faible, plus il isole."
+  },
+  "熱伝達率": {
+    "reading": "ねつでんたつりつ",
+    "french": "coefficient d'échange superficiel",
+    "definition": "Facilité avec laquelle la chaleur passe entre l'air et la surface d'une paroi, en W/(m²·K)."
+  },
+  "熱貫流率": {
+    "reading": "ねつかんりゅうりつ",
+    "french": "coefficient de transmission thermique (U)",
+    "definition": "Quantité de chaleur qui traverse une paroi par m² et par degré d'écart entre les deux côtés, en W/(m²·K). Plus elle est faible, mieux la paroi isole."
+  },
+  "熱抵抗": {
+    "reading": "ねつていこう",
+    "french": "résistance thermique",
+    "definition": "Capacité d'une couche à freiner le passage de la chaleur, en m²·K/W : épaisseur divisée par la conductivité."
+  },
+  "熱容量": {
+    "reading": "ねつようりょう",
+    "french": "capacité thermique",
+    "definition": "Chaleur nécessaire pour élever d'un degré la température d'un corps, en J/K. Un fort volume de béton en a beaucoup."
+  },
+  "露点温度": {
+    "reading": "ろてんおんど",
+    "french": "température de rosée",
+    "definition": "Température à laquelle l'air, en se refroidissant, atteint la saturation et où la vapeur commence à se condenser."
+  },
+  "絶対湿度": {
+    "reading": "ぜったいしつど",
+    "french": "humidité absolue",
+    "definition": "Masse de vapeur d'eau contenue dans l'air, exprimée en général en kg par kg d'air sec."
+  },
+  "相対湿度": {
+    "reading": "そうたいしつど",
+    "french": "humidité relative",
+    "definition": "Rapport, en %, entre la vapeur présente dans l'air et le maximum qu'il peut contenir à cette température."
+  },
+  "空気線図": {
+    "reading": "くうきせんず",
+    "french": "diagramme de l'air humide",
+    "definition": "Graphique qui relie température, humidité et point de rosée de l'air. Sert notamment à prévoir la condensation."
+  },
+  "表面結露": {
+    "reading": "ひょうめんけつろ",
+    "french": "condensation de surface",
+    "definition": "Condensation sur la face visible d'une paroi froide, à distinguer de la condensation interne (内部結露)."
+  },
+  "着衣量": {
+    "reading": "ちゃくいりょう",
+    "french": "isolation vestimentaire",
+    "definition": "Pouvoir isolant des vêtements, exprimé en clo. Un des facteurs du confort thermique."
+  },
+  "代謝量": {
+    "reading": "たいしゃりょう",
+    "french": "métabolisme",
+    "definition": "Chaleur produite par le corps selon l'activité, exprimée en met. Un des facteurs du confort thermique."
+  },
+  "温熱環境六要素": {
+    "reading": "おんねつかんきょうろくようそ",
+    "french": "six facteurs du confort thermique",
+    "definition": "Température de l'air, humidité, vitesse de l'air, rayonnement, vêtements et activité."
+  },
+  "作用温度": {
+    "reading": "さようおんど",
+    "french": "température opérative",
+    "definition": "Indice qui combine la température de l'air et celle des parois autour de la personne."
+  },
+  "必要換気量": {
+    "reading": "ひつようかんきりょう",
+    "french": "débit de ventilation nécessaire",
+    "definition": "Quantité d'air neuf à apporter pour garder l'air de la pièce sain, en m³/h."
+  },
+  "換気回数": {
+    "reading": "かんきかいすう",
+    "french": "taux de renouvellement d'air",
+    "definition": "Nombre de fois par heure où le volume d'air de la pièce est renouvelé : débit divisé par volume."
+  },
+  "自然換気": {
+    "reading": "しぜんかんき",
+    "french": "ventilation naturelle",
+    "definition": "Renouvellement de l'air par le vent et par les écarts de température, sans ventilateur."
+  },
+  "機械換気": {
+    "reading": "きかいかんき",
+    "french": "ventilation mécanique",
+    "definition": "Renouvellement de l'air à l'aide de ventilateurs."
+  },
+  "風力換気": {
+    "reading": "ふうりょくかんき",
+    "french": "ventilation par le vent",
+    "definition": "Ventilation naturelle produite par la différence de pression du vent entre deux ouvertures."
+  },
+  "シックハウス": {
+    "reading": "シックハウス",
+    "french": "syndrome du bâtiment malsain",
+    "definition": "Troubles de santé liés à l'air intérieur, notamment aux produits chimiques qu'émettent les matériaux."
+  },
+  "外皮平均日射熱取得率": {
+    "reading": "がいひへいきんにっしゃねつしゅとくりつ",
+    "french": "taux moyen d'apport solaire de l'enveloppe (ηAC)",
+    "definition": "Indicateur japonais de la part du rayonnement solaire qui entre dans le logement par son enveloppe."
+  },
+  "日射侵入率": {
+    "reading": "にっしゃしんにゅうりつ",
+    "french": "facteur solaire",
+    "definition": "Part du rayonnement solaire qu'un vitrage laisse entrer dans la pièce."
+  },
+  "直達日射": {
+    "reading": "ちょくたつにっしゃ",
+    "french": "rayonnement solaire direct",
+    "definition": "Rayonnement reçu directement du soleil, à distinguer de celui diffusé par le ciel (天空日射)."
+  },
+  "残響時間": {
+    "reading": "ざんきょうじかん",
+    "french": "durée de réverbération",
+    "definition": "Temps que met un son à baisser de 60 dB dans une salle, une fois la source arrêtée."
+  },
+  "透過損失": {
+    "reading": "とうかそんしつ",
+    "french": "indice d'affaiblissement acoustique",
+    "definition": "Baisse du niveau sonore, en dB, quand le son traverse une paroi. Plus elle est élevée, mieux la paroi isole."
+  },
+  "吸音率": {
+    "reading": "きゅうおんりつ",
+    "french": "coefficient d'absorption acoustique",
+    "definition": "Part de l'énergie sonore reçue par une surface qui n'est pas réfléchie : de 0 (tout est réfléchi) à 1."
+  },
+  "コインシデンス効果": {
+    "reading": "コインシデンスこうか",
+    "french": "effet de coïncidence",
+    "definition": "Baisse de l'isolation d'une paroi à certaines fréquences, quand le son fait vibrer la paroi en phase avec lui."
+  },
+  "デシベル": {
+    "reading": "デシベル",
+    "french": "décibel",
+    "definition": "Unité logarithmique (dB) utilisée notamment pour exprimer un niveau sonore."
+  },
+  "ラウドネス": {
+    "reading": "ラウドネス",
+    "french": "sonie",
+    "definition": "Force d'un son telle que l'oreille la perçoit, qui dépend de sa fréquence."
+  },
+  "カンデラ": {
+    "reading": "カンデラ",
+    "french": "candela",
+    "definition": "Unité d'intensité lumineuse (cd)."
+  },
+  "光束発散度": {
+    "reading": "こうそくはっさんど",
+    "french": "exitance lumineuse",
+    "definition": "Flux lumineux émis par unité de surface, en lm/m²."
+  },
+  "視感度": {
+    "reading": "しかんど",
+    "french": "sensibilité visuelle",
+    "definition": "Sensibilité de l'œil selon la longueur d'onde de la lumière."
+  },
+  "明所視": {
+    "reading": "めいしょし",
+    "french": "vision photopique",
+    "definition": "Vision en lumière suffisante, assurée par les cônes, qui distingue les couleurs."
+  },
+  "暗所視": {
+    "reading": "あんしょし",
+    "french": "vision scotopique",
+    "definition": "Vision en très faible lumière, assurée par les bâtonnets, qui ne distingue pas les couleurs."
+  },
+  "錐状体": {
+    "reading": "すいじょうたい",
+    "french": "cônes de la rétine",
+    "definition": "Cellules de l'œil qui fonctionnent en pleine lumière et perçoivent les couleurs."
+  },
+  "杆状体": {
+    "reading": "かんじょうたい",
+    "french": "bâtonnets de la rétine",
+    "definition": "Cellules de l'œil très sensibles, qui permettent de voir en faible lumière."
+  },
+  "光幕反射": {
+    "reading": "こうまくはんしゃ",
+    "french": "réflexion voilante",
+    "definition": "Reflet d'une source lumineuse sur la surface observée, qui baisse le contraste et gêne la lecture."
+  }
+}

@@ -45,7 +45,7 @@ extension ReaderController {
     }
 
     func search(_ query: String) {
-        guard let pdf else { return }
+        guard document.capabilities.textAnalysis, let pdf else { return }
         pdf.cancelFindString()
         searchResults = []
         pendingResults = []
@@ -78,7 +78,7 @@ extension ReaderController {
 
     /// Lit (OCR) toutes les pages qui n'ont pas encore de texte, en tâche de fond.
     func ocrWholeDocument() {
-        guard documentOCRTask == nil else { return }
+        guard documentOCRTask == nil, document.capabilities.textAnalysis else { return }
         let url = fileURL
         let documentId = document.id
         let count = document.pageCount

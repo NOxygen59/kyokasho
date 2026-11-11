@@ -181,6 +181,15 @@ final class ServiceTests: XCTestCase {
                                     json: Data(#"{"engine":"old","lines":[],"durationMs":1}"#.utf8), durationMs: 1))
         let stale = await service.cached(documentId: "d", pageIndex: 0, engine: "old")
         XCTAssertNil(stale)
+        // Le dernier ancien format reste utilisable sans rotation, mais doit être refait dès que la page est tournée.
+        let version5 = OCRPage(engine: "v5", lines: [], durationMs: 1, version: 5)
+        try db.save(OCRResultRecord(documentId: "d", pageIndex: 0, engine: "v5",
+                                    json: try JSONEncoder().encode(version5), durationMs: 1))
+        let unrotatedV5 = await service.cached(documentId: "d", pageIndex: 0, engine: "v5")
+        XCTAssertNotNil(unrotatedV5)
+        try db.save(PageTransform(documentId: "d", pageIndex: 0, rotation: 90))
+        let rotatedV5 = await service.cached(documentId: "d", pageIndex: 0, engine: "v5")
+        XCTAssertNil(rotatedV5)
         try db.clearOCRCache(documentId: "d")
         XCTAssertEqual(try db.ocrCacheStats().results, 0)
     }

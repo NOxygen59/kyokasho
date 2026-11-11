@@ -105,6 +105,24 @@ Pour mettre à jour : lot dédié, état initial des deux résolutions, examen d
 
 Le code original est MIT ; cela ne remplace pas les licences des composants portés, modèles ou dictionnaires. Consulter `THIRD_PARTY_NOTICES.md`, `LICENSES/` et les crédits de l'app. La séparation d'un module GPL ne suffit pas, à elle seule, à conclure aux conditions d'une éventuelle redistribution ; tout changement de distribution demande une revue spécifique.
 
+### Lexique du design d'intérieur (sources ouvertes)
+
+`tools/build_domain_lexicon.py` fabrique, sur le Mac, un petit dictionnaire Yomitan tiré du Wiktionnaire en français (sens en français) et de Wikipédia en japonais (titres équivalents en français et en anglais, première phrase). Les deux sources sont sous CC BY-SA 4.0 : l'attribution est écrite dans `index.json` et chaque entrée donne l'adresse de sa page. Le dossier de travail et le `.zip` restent **hors du dépôt** ; le fichier se publie à part, avec l'accord de NOxygen59.
+
+```bash
+python3 tools/build_domain_lexicon.py fetch --raw <dossier-hors-dépôt>/brut
+python3 tools/build_domain_lexicon.py enrich --raw <dossier-hors-dépôt>/brut   # Wikipédia en français, Wikidata
+python3 tools/build_domain_lexicon.py laws --raw <dossier-hors-dépôt>/brut     # définitions légales, e-Gov
+python3 tools/build_domain_lexicon.py build --raw <dossier-hors-dépôt>/brut --output <dossier-hors-dépôt>/lexique-interieur.zip \
+    [--extra <fichier-hors-dépôt>/termes-manuel.jsonl] [--revision 2026-11-10.1]
+```
+
+`--extra` fusionne des termes relevés dans le manuel par un modèle (une ligne JSON par terme : `terme`, `lecture`, `fr`, `en`, `definition_fr`, `page`, `confiance`). Une entrée déjà sourcée n'est jamais remplacée ; les termes ajoutés portent l'étiquette `man` (« Manuel — relevé automatique, à vérifier »), leur page et leur niveau de confiance, et l'attribution le dit. Une lecture qui ne contient pas de kana (« ? ») est retirée. Le fichier de termes reste hors du dépôt : c'est une donnée du manuel.
+
+Le relevé envoie une requête par seconde et réessaie si le site demande d'attendre. Les catégories relevées sont en tête du script. Tests sur pages fabriquées : `tests/test_build_domain_lexicon.py`.
+
+**Fourni avec l'app** (décision de NOxygen59 du 29/10/2026) : `build_ipa.sh` copie `../dictionnaires-construits/lexique-interieur/lexique-interieur.zip` (ou le fichier donné par `KYOKASHO_LEXIQUE`) dans `Kyokasho.app` au moment de faire le paquet. Sans ce fichier, le paquet se construit quand même et l'app affiche « Absent de cette version de l'app ». Dans l'app : Réglages > Dictionnaires > Catalogue > « Fourni avec l'app » > Installer (import depuis le paquet, sans réseau ; `BundledLexicon` dans DictionaryKit). Une nouvelle version du fichier propose « Mettre à jour » ; le titre ne change pas, donc elle garde sa place dans l'ordre.
+
 ## Documenter Swift, C et C++
 
 Un commentaire utile explique un contrat, la propriété mémoire, un invariant, une limite de plateforme ou la raison d'un choix. Commenter chaque ligne répète le code, masque les précautions utiles et devient rapidement faux lors des modifications. Préférer des noms clairs et des fonctions courtes, puis documenter les interfaces et décisions.

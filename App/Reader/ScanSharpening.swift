@@ -17,10 +17,10 @@ enum ScanSharpening {
         var id: String { rawValue }
         var title: String {
             switch self {
-            case .off: return "Aucun"
-            case .color: return "Papier blanc (couleurs gardées)"
-            case .mono: return "Noir et blanc net"
-            case .degan: return "DE-GAN (modèle)"
+            case .off: return String(localized: "Aucun")
+            case .color: return String(localized: "Papier blanc (couleurs gardées)")
+            case .mono: return String(localized: "Noir et blanc net")
+            case .degan: return String(localized: "DE-GAN (modèle)")
             }
         }
     }
@@ -60,6 +60,9 @@ enum ScanSharpening {
             while order.count > memoryLimit { images[order.removeFirst()] = nil }
         }
     }
+
+    /// Taille d'après les dimensions des images gardées : une estimation, pas une mesure du système.
+    static var estimatedBytes: Int { lock.withLock { images.values.reduce(0) { $0 + $1.bytesPerRow * $1.height } } }
 
     static func clearMemory() { lock.withLock { images = [:]; order = [] } }
 

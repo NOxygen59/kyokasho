@@ -13,11 +13,16 @@ public struct ReaderToolModes: Codable, Equatable, Sendable {
     public var lookup = false
     /// Le Pencil cherche le mot touché au lieu de dessiner.
     public var pencilLookup = false
+    /// Position du panneau d'étude dans ce livre (valeur brute de `StudyPanelMode` côté app : `docked`, `floating`,
+    /// `full`) ; `nil` : réglage général (recette 1.3.2 (61), M2). Facultatif pour relire les modes enregistrés
+    /// avant ce champ.
+    public var panelMode: String?
 
-    public init(drawing: Bool = false, lookup: Bool = false, pencilLookup: Bool = false) {
+    public init(drawing: Bool = false, lookup: Bool = false, pencilLookup: Bool = false, panelMode: String? = nil) {
         self.drawing = drawing
         self.lookup = lookup
         self.pencilLookup = pencilLookup
+        self.panelMode = panelMode
     }
 }
 
@@ -50,5 +55,18 @@ public struct ReaderToolModeStore {
     /// Document supprimé de la bibliothèque : ses modes sont oubliés.
     public func forget(documentId: String) {
         defaults.removeObject(forKey: Self.key(documentId: documentId))
+    }
+
+    /// Remplacement d'un cours (lot C2.3, DEC-C2 = A) : les modes d'outil (Pencil, dictionnaire,
+    /// panneau d'étude) suivent le document mis à jour. Rejouable : si la clé d'arrivée existe déjà,
+    /// elle n'est **jamais** écrasée (principe « jamais écraser un fichier existant de la cible ») et
+    /// l'ancienne clé reste disponible en secours ; sinon la donnée est déplacée, clé d'origine retirée.
+    public func remap(from oldId: String, to newId: String) {
+        let oldKey = Self.key(documentId: oldId)
+        guard oldId != newId, let data = defaults.data(forKey: oldKey) else { return }
+        let newKey = Self.key(documentId: newId)
+        guard defaults.data(forKey: newKey) == nil else { return }
+        defaults.set(data, forKey: newKey)
+        defaults.removeObject(forKey: oldKey)
     }
 }

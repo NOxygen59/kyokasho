@@ -8,11 +8,18 @@ import UniformTypeIdentifiers
 /// Sélecteur de l'app Fichiers. `asCopy: true` : le système télécharge d'abord les fichiers
 /// « en ligne seulement » (Google Drive, iCloud…) puis nous donne une copie locale complète.
 struct DocumentPicker: UIViewControllerRepresentable {
+    /// PDF d'office ; images pour « Images vers PDF » ; paquet Kyōkasho (un seul fichier).
+    var types: [UTType] = [.pdf]
+    /// Comics, déclaré dans `Info.plist` : .cbz seulement, pas tout fichier ZIP.
+    static let comicArchive = UTType(importedAs: "fr.noxygen59.kyokasho.cbz")
+    var multiple = true
+    /// `false` : ouvrir sur place (dossier de sauvegarde gardé par signet) au lieu d'une copie dans l'app.
+    var asCopy = true
     var onPick: ([URL]) -> Void
 
     func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
-        let picker = UIDocumentPickerViewController(forOpeningContentTypes: [.pdf], asCopy: true)
-        picker.allowsMultipleSelection = true
+        let picker = UIDocumentPickerViewController(forOpeningContentTypes: types, asCopy: asCopy)
+        picker.allowsMultipleSelection = multiple
         picker.delegate = context.coordinator
         picker.shouldShowFileExtensions = true
         return picker

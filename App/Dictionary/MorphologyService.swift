@@ -137,7 +137,7 @@ struct MorphologySection: View {
                 HStack {
                     Text("MeCab + UniDic-lite").font(.body.bold())
                     Text("Recommandé").font(.caption2.bold()).padding(.horizontal, 6).padding(.vertical, 2)
-                        .foregroundStyle(Color.black).background(Color.green, in: Capsule())
+                        .foregroundStyle(Atelier.onAccentInk).background(Color.green, in: Capsule())
                     Spacer()
                     if service.state == .ready {
                         Label("Installé", systemImage: "checkmark.circle.fill").font(.caption.bold()).foregroundStyle(.green)

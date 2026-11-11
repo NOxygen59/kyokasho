@@ -71,9 +71,22 @@ public struct NoteDraftStore: Sendable {
         try Self.encode(drafts).write(to: url(documentId: documentId), options: .atomic)
     }
 
+    /// Pages dont le brouillon n'est pas encore ajouté comme note, dans l'ordre du document (fonction pure).
+    /// Sert à l'avertissement de l'onglet Notes (RET-051) ; un texte blanc, qui ne vient pas de ``setDraft(_:documentId:page:)``
+    /// mais peut se trouver dans un fichier ancien ou décalé, ne compte pas.
+    public static func pendingPages(_ drafts: [Int: String]) -> [Int] {
+        drafts.filter { !$0.value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.keys.sorted()
+    }
+
     /// Brouillons après insertion de `offset` pages **avant** le document (fonction pure, pour PageShift).
     public static func shifted(_ drafts: [Int: String], by offset: Int) -> [Int: String] {
         Dictionary(uniqueKeysWithValues: drafts.map { ($0.key + offset, $0.value) })
+    }
+
+    /// Brouillons suivant une modification des pages (#49). Ceux des pages retirées ne sont pas dans le résultat :
+    /// l'appelant les archive avant (le fichier d'origine est gardé dans la copie de l'opération).
+    public static func remapped(_ drafts: [Int: String], with mapping: PageMapping) -> [Int: String] {
+        Dictionary(uniqueKeysWithValues: drafts.compactMap { page, text in mapping.target(of: page).map { ($0, text) } })
     }
 
     /// Format disque versionné : `{"version":1,"pages":{"3":"texte"}}`.

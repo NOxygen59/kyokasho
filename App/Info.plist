@@ -4,8 +4,82 @@
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>fr</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>fr</string>
+		<string>en</string>
+		<string>zh-Hans</string>
+	</array>
 	<key>CFBundleDisplayName</key>
 	<string>Kyōkasho</string>
+	<key>CFBundleIcons</key>
+	<dict>
+		<key>CFBundleAlternateIcons</key>
+		<dict>
+			<key>AppIconCharcoal</key>
+			<dict>
+				<key>CFBundleIconFiles</key>
+				<array><string>AppIconCharcoal</string></array>
+				<key>CFBundleIconName</key>
+				<string>AppIconCharcoal</string>
+			</dict>
+			<key>AppIconJade</key>
+			<dict>
+				<key>CFBundleIconFiles</key>
+				<array><string>AppIconJade</string></array>
+				<key>CFBundleIconName</key>
+				<string>AppIconJade</string>
+			</dict>
+			<key>AppIconNavy</key>
+			<dict>
+				<key>CFBundleIconFiles</key>
+				<array><string>AppIconNavy</string></array>
+				<key>CFBundleIconName</key>
+				<string>AppIconNavy</string>
+			</dict>
+		</dict>
+		<key>CFBundlePrimaryIcon</key>
+		<dict>
+			<key>CFBundleIconFiles</key>
+			<array><string>AppIcon</string></array>
+			<key>CFBundleIconName</key>
+			<string>AppIcon</string>
+		</dict>
+	</dict>
+	<key>CFBundleIcons~ipad</key>
+	<dict>
+		<key>CFBundleAlternateIcons</key>
+		<dict>
+			<key>AppIconCharcoal</key>
+			<dict>
+				<key>CFBundleIconFiles</key>
+				<array><string>AppIconCharcoal</string></array>
+				<key>CFBundleIconName</key>
+				<string>AppIconCharcoal</string>
+			</dict>
+			<key>AppIconJade</key>
+			<dict>
+				<key>CFBundleIconFiles</key>
+				<array><string>AppIconJade</string></array>
+				<key>CFBundleIconName</key>
+				<string>AppIconJade</string>
+			</dict>
+			<key>AppIconNavy</key>
+			<dict>
+				<key>CFBundleIconFiles</key>
+				<array><string>AppIconNavy</string></array>
+				<key>CFBundleIconName</key>
+				<string>AppIconNavy</string>
+			</dict>
+		</dict>
+		<key>CFBundlePrimaryIcon</key>
+		<dict>
+			<key>CFBundleIconFiles</key>
+			<array><string>AppIcon</string></array>
+			<key>CFBundleIconName</key>
+			<string>AppIcon</string>
+		</dict>
+	</dict>
 	<key>CFBundleDocumentTypes</key>
 	<array>
 		<dict>
@@ -18,7 +92,62 @@
 			<key>LSItemContentTypes</key>
 			<array>
 				<string>com.adobe.pdf</string>
+				<string>fr.noxygen59.kyokasho.cbz</string>
 			</array>
+		</dict>
+		<dict>
+			<key>CFBundleTypeName</key>
+			<string>Paquet Kyōkasho</string>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>LSHandlerRank</key>
+			<string>Owner</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>fr.noxygen59.kyokasho.package</string>
+			</array>
+		</dict>
+	</array>
+	<key>UTImportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeIdentifier</key>
+			<string>fr.noxygen59.kyokasho.cbz</string>
+			<key>UTTypeDescription</key>
+			<string>Comic Book Archive</string>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.zip-archive</string>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>cbz</string>
+				</array>
+			</dict>
+		</dict>
+	</array>
+	<key>UTExportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeIdentifier</key>
+			<string>fr.noxygen59.kyokasho.package</string>
+			<key>UTTypeDescription</key>
+			<string>Paquet Kyōkasho</string>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+				<string>public.content</string>
+			</array>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>public.filename-extension</key>
+				<array>
+					<string>kyokasho</string>
+				</array>
+			</dict>
 		</dict>
 	</array>
 	<key>CFBundleExecutable</key>

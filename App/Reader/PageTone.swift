@@ -1,24 +1,27 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 NOxygen59
 
-import CoreImage
 import PDFKit
+import ReaderCore
 import UIKit
 
-/// Fond des pages PDF : blanc d'origine, adouci (crème, tamisé) ou inversé (sombre confortable).
+/// Fond des pages PDF : blanc d'origine, adouci (crème, tamisé) ou inversé (sombre confortable, sépia nuit).
 /// Appliqué au dessin de chaque page (aucun calcul à part, aucun fichier modifié).
+///
+/// « Sombre intelligent (expérimental) » a été retiré (RET-027, #42) : `migrateStoredSetting()` remplace l'ancienne
+/// valeur enregistrée au lancement.
 enum PageTone: String, CaseIterable, Identifiable {
-    case normal, cream, dim, dark, smartDark
+    case normal, cream, dim, dark, sepiaNight
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
-        case .normal: return "Blanc (d'origine)"
-        case .cream: return "Crème"
-        case .dim: return "Tamisé"
-        case .dark: return "Sombre (inversé)"
-        case .smartDark: return "Sombre intelligent (expérimental)"
+        case .normal: return String(localized: "Blanc (d'origine)")
+        case .cream: return String(localized: "Crème")
+        case .dim: return String(localized: "Tamisé")
+        case .dark: return String(localized: "Sombre (inversé)")
+        case .sepiaNight: return String(localized: "Sépia nuit")
         }
     }
 
@@ -28,11 +31,20 @@ enum PageTone: String, CaseIterable, Identifiable {
         case .cream: return "cup.and.saucer"
         case .dim: return "sun.min"
         case .dark: return "moon"
-        case .smartDark: return "moon.stars"
+        case .sepiaNight: return "moon.haze"
         }
     }
 
     static let storageKey = "reader.pageTone"
+
+    /// Au lancement, avant toute lecture du réglage : une valeur retirée devient la teinte qui la remplace
+    /// (`PageToneMigration`), au lieu de retomber sur « Blanc ».
+    static func migrateStoredSetting() {
+        let defaults = UserDefaults.standard
+        guard let replacement = PageToneMigration.migrated(defaults.string(forKey: storageKey)) else { return }
+        defaults.set(replacement, forKey: storageKey)
+        Diagnostics.log("Fond des pages : réglage retiré remplacé par « \(replacement) »", "lecteur")
+    }
 
     /// Lu par PDFKit depuis ses fils de dessin : protégé par un verrou.
     private static let lock = NSLock()
@@ -58,12 +70,17 @@ enum PageTone: String, CaseIterable, Identifiable {
             blend(.multiply, 1.0, 0.94, 0.82)
         case .dim:
             blend(.multiply, 0.80, 0.78, 0.74)
-        case .dark, .smartDark:
+        case .dark:
             // Inverser, puis fond gris très foncé (pas noir pur) et texte blanc cassé (moins éblouissant).
-            // (Sombre intelligent : seulement en attendant son image préparée, voir `ToneCache`.)
             blend(.difference, 1, 1, 1)
             blend(.screen, 0.11, 0.11, 0.12)
             blend(.multiply, 0.86, 0.84, 0.80)
+        case .sepiaNight:
+            // Inverser, puis fond brun sépia foncé et texte beige chaud : ni blanc pur ni noir pur, contraste
+            // plus faible que « Sombre » et moins de bleu le soir (RET-027, #42).
+            blend(.difference, 1, 1, 1)
+            blend(.screen, 0.17, 0.12, 0.07)
+            blend(.multiply, 0.90, 0.78, 0.60)
         }
         context.restoreGState()
     }
@@ -87,12 +104,46 @@ enum ToneCache {
         lock.withLock { images = images.filter { wanted.contains($0.key) } }
     }
 
-    static func clear() { lock.withLock { images = [:] } }
+    /// Vide les images **et** libère le `CGPDFDocument` gardé ouvert (revue DeepSeek #7) : alerte mémoire, fermeture du
+    /// lecteur et décalage de pages ne laissent plus un PDF remplacé ou supprimé retenu en mémoire jusqu'à la
+    /// préparation d'un autre document.
+    /// Ordre des verrous : `documentLock` puis `lock`, comme `prepare` — jamais l'inverse.
+    static func clear() {
+        documentLock.withLock {
+            openDocument = nil
+            lock.withLock { images = [:] }
+        }
+    }
+
+    /// Taille d'après les dimensions des images gardées : une estimation, pas une mesure du système.
+    static var estimatedBytes: Int { lock.withLock { images.values.reduce(0) { $0 + $1.bytesPerRow * $1.height } } }
+
+    /// C1.6 (audit du 09/11/2026) : le PDF était rouvert pour chaque page préparée. Un seul document gardé ouvert ici,
+    /// reconnu par son adresse, sa taille et sa date (ajouter des pages change le fichier : il est rouvert). Pas de
+    /// `PDFPool` : il ne garde qu'un document, et l'OCR d'un autre livre le ferait rouvrir à chaque page.
+    private static let documentLock = NSLock()
+    private static var openDocument: (stamp: String, document: CGPDFDocument)?
+
+    /// À appeler sous `documentLock`.
+    private static func document(_ url: URL) -> CGPDFDocument? {
+        let values = try? url.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey])
+        let stamp = "\(url.path)|\(values?.fileSize ?? 0)|\(values?.contentModificationDate?.timeIntervalSince1970 ?? 0)"
+        if let open = openDocument, open.stamp == stamp { return open.document }
+        let document = CGPDFDocument(url as CFURL)
+        openDocument = document.map { (stamp, $0) }
+        return document
+    }
 
     /// Rend la page source (cadre `cropBox`, comme les pages nettoyées) puis la teinte. Hors du fil principal.
+    /// Sous `documentLock` d'un bout à l'autre : deux préparations (tâche annulée puis relancée) ne dessinent jamais le
+    /// même document partagé en même temps.
     static func prepare(key: String, fileURL: URL, page index: Int, tone: PageTone) -> Bool {
+        documentLock.withLock { prepareLocked(key: key, fileURL: fileURL, page: index, tone: tone) }
+    }
+
+    private static func prepareLocked(key: String, fileURL: URL, page index: Int, tone: PageTone) -> Bool {
         guard tone != .normal, image(for: key, tone: tone) == nil,
-              let document = CGPDFDocument(fileURL as CFURL), let page = document.page(at: index + 1) else { return false }
+              let document = document(fileURL), let page = document.page(at: index + 1) else { return false }
         let box = page.getBoxRect(.cropBox)
         guard box.width > 0, box.height > 0 else { return false }
         let scale = longSide / max(box.width, box.height)
@@ -109,29 +160,9 @@ enum ToneCache {
         ctx.translateBy(x: -box.minX, y: -box.minY)
         ctx.drawPDFPage(page)
         ctx.restoreGState()
-        guard var result = ctx.makeImage() else { return false }
-        if tone == .smartDark {
-            // Clair ↔ sombre inversés, teintes gardées (inversion puis rotation de teinte d'un demi-tour), puis le
-            // même adoucissement que « Sombre » (fond gris très foncé, blanc cassé).
-            let inverted = CIImage(cgImage: result).applyingFilter("CIColorInvert")
-                .applyingFilter("CIHueAdjust", parameters: [kCIInputAngleKey: Double.pi])
-            guard let smart = CIContext(options: [.cacheIntermediates: false]).createCGImage(inverted, from: inverted.extent)
-            else { return false }
-            ctx.draw(smart, in: rect)
-            ctx.saveGState()
-            ctx.setBlendMode(.screen)
-            ctx.setFillColor(red: 0.11, green: 0.11, blue: 0.12, alpha: 1)
-            ctx.fill(rect)
-            ctx.setBlendMode(.multiply)
-            ctx.setFillColor(red: 0.86, green: 0.84, blue: 0.80, alpha: 1)
-            ctx.fill(rect)
-            ctx.restoreGState()
-        } else {
-            tone.apply(in: ctx, rect: rect)
-        }
+        tone.apply(in: ctx, rect: rect)
         guard let toned = ctx.makeImage() else { return false }
-        result = toned
-        lock.withLock { images[full(key, tone)] = result }
+        lock.withLock { images[full(key, tone)] = toned }
         return true
     }
 }
@@ -147,7 +178,12 @@ final class TonedPage: PDFPage {
     /// commune du livre : les furigana (calculés sur l'origine) sont alors agrandis d'autant.
     var sourceBox: CGRect = .zero
 
+    /// Lancé par PDFKit sur ses fils de dessin : c'est ici qu'on voit le coût réel de l'affichage des pages.
     override func draw(with box: PDFDisplayBox, to context: CGContext) {
+        ActivityCenter.shared.measure(.pageRender) { drawPage(with: box, to: context) }
+    }
+
+    private func drawPage(with box: PDFDisplayBox, to context: CGContext) {
         let tone = PageTone.current
         // Page teintée déjà prête (et assez nette pour le zoom actuel) : posée telle quelle, pas de teinte après coup.
         if tone != .normal, let key = pageKey, ScanSharpening.image(for: key) == nil,
@@ -182,7 +218,7 @@ final class TonedPage: PDFPage {
     }
 
     private func drawFurigana(_ box: PDFDisplayBox, in context: CGContext) {
-        guard let key = pageKey, let marks = FuriganaLayer.marks(for: key), !marks.isEmpty else { return }
+        guard let key = pageKey, let page = FuriganaLayer.prepared(for: key), !page.marks.isEmpty else { return }
         context.saveGState()
         context.concatenate(transform(for: box))
         context.clip(to: bounds(for: box))
@@ -192,7 +228,7 @@ final class TonedPage: PDFPage {
             context.scaleBy(x: f, y: f)
             context.translateBy(x: -sourceBox.minX, y: -sourceBox.minY)
         }
-        FuriganaLayer.draw(marks, in: context)
+        FuriganaLayer.draw(page, in: context)
         context.restoreGState()
     }
 

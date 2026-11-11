@@ -171,7 +171,7 @@ extension ReaderController {
             bookmarks.removeAll { $0.id == existing.id }
             model.persist { try $0.deleteBookmark(id: existing.id) }
         } else {
-            let bookmark = Bookmark(documentId: document.id, pageIndex: page, title: "Page \(document.pageLabel(page))")
+            let bookmark = Bookmark(documentId: document.id, pageIndex: page, title: String(localized: "Page \(document.pageLabel(page))"))
             bookmarks.append(bookmark)
             bookmarks.sort { $0.pageIndex < $1.pageIndex }
             model.persist { try $0.save(bookmark) }

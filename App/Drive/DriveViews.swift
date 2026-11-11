@@ -33,7 +33,7 @@ private struct DriveHome: View {
     var body: some View {
         List {
             Section {
-                NavigationLink { DriveFolderView(location: .folder(id: "root", name: "Mon Drive")) } label: {
+                NavigationLink { DriveFolderView(location: .folder(id: "root", name: String(localized: "Mon Drive"))) } label: {
                     Label("Mon Drive", systemImage: "externaldrive")
                 }
                 NavigationLink { DriveFolderView(location: .sharedWithMe) } label: {
@@ -44,7 +44,7 @@ private struct DriveHome: View {
                 NavigationLink("Mises à jour et compte") { DriveAccountView() }
             }
         }
-        .searchable(text: $search, prompt: "Chercher dans Drive")
+        .searchable(text: $search, prompt: String(localized: "Chercher dans Drive"))
         .navigationDestination(isPresented: Binding(get: { !submitted.isEmpty }, set: { if !$0 { submitted = "" } })) {
             DriveFolderView(location: .search(submitted))
         }
@@ -68,7 +68,7 @@ struct DriveFolderView: View {
     private var title: String {
         switch location {
         case .folder(_, let name): return name
-        case .sharedWithMe: return "Partagés avec moi"
+        case .sharedWithMe: return String(localized: "Partagés avec moi")
         case .search(let text): return "« \(text) »"
         }
     }
@@ -145,7 +145,7 @@ struct DriveFolderView: View {
             if let progress = downloading[file.id] {
                 ProgressView(value: progress).frame(width: 80)
             } else if let imported {
-                Text(imported.driveRevision == file.revision ? "Importé" : "Mise à jour")
+                Text(imported.driveRevision == file.revision ? String(localized: "Importé") : String(localized: "Mise à jour"))
                     .font(.caption.bold())
                     .foregroundStyle(imported.driveRevision == file.revision ? Color.secondary : Color.accentColor)
             } else {
@@ -184,7 +184,7 @@ private struct DriveSignIn: View {
 
     var body: some View {
         VStack(spacing: 18) {
-            Image(systemName: "externaldrive.badge.icloud").font(.system(size: 52)).foregroundStyle(.secondary)
+            Image(systemName: "externaldrive.badge.icloud").font(Atelier.font(52)).foregroundStyle(.secondary)
             Text("Connecte ton compte Google").font(.title2.bold())
             Text("Accès en lecture seule à ton Drive, pour importer tes cours et récupérer leurs nouvelles versions.")
                 .multilineTextAlignment(.center).foregroundStyle(.secondary).frame(maxWidth: 420)
@@ -213,13 +213,13 @@ struct DriveSetupHelp: View {
     @State private var done: Set<Int> = []
 
     private let steps: [(String, String, String)] = [
-        ("Crée un projet", "Nom : Kyokasho. Un seul projet suffit, c'est gratuit.",
+        (String(localized: "Crée un projet"), String(localized: "Nom : Kyokasho. Un seul projet suffit, c'est gratuit."),
          "https://console.cloud.google.com/projectcreate"),
-        ("Active l'API Google Drive", "Bouton « Activer ».",
+        (String(localized: "Active l'API Google Drive"), String(localized: "Bouton « Activer »."),
          "https://console.cloud.google.com/apis/library/drive.googleapis.com"),
-        ("Écran de connexion", "Nom de l'app : Kyokasho, ton e-mail. Audience : Externe, puis « Publier l'application » (sinon Google te déconnecte tous les 7 jours).",
+        (String(localized: "Écran de connexion"), String(localized: "Nom de l'app : Kyokasho, ton e-mail. Audience : Externe, puis « Publier l'application » (sinon Google te déconnecte tous les 7 jours)."),
          "https://console.cloud.google.com/auth/branding"),
-        ("Crée l'identifiant", "Type : iOS. ID de bundle : fr.noxygen59.kyokasho. Copie l'« ID client ».",
+        (String(localized: "Crée l'identifiant"), String(localized: "Type : iOS. ID de bundle : fr.noxygen59.kyokasho. Copie l'« ID client »."),
          "https://console.cloud.google.com/auth/clients/create"),
     ]
 
@@ -227,7 +227,7 @@ struct DriveSetupHelp: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 VStack(alignment: .leading, spacing: 6) {
-                    AtelierLabel("Google Drive · une seule fois", tint: Atelier.Tint.cloud)
+                    AtelierLabel(String(localized: "Google Drive · une seule fois"), tint: Atelier.Tint.cloud)
                     Text("Relie ton Drive en 5 minutes").font(Atelier.display(26)).foregroundStyle(Atelier.textPrimary)
                     Text("Google demande que chaque app ait son identifiant. Ouvre chaque étape, fais-la, coche, puis colle l'identifiant en bas.")
                         .foregroundStyle(Atelier.textSecondary)
@@ -241,7 +241,7 @@ struct DriveSetupHelp: View {
                             ZStack {
                                 Circle().fill(done.contains(i) ? Atelier.Tint.cloud : Atelier.surfaceHigh).frame(width: 34, height: 34)
                                 if done.contains(i) {
-                                    Image(systemName: "checkmark").font(.system(size: 14, weight: .bold)).foregroundStyle(.black.opacity(0.85))
+                                    Image(systemName: "checkmark").font(Atelier.font(14, weight: .bold)).foregroundStyle(Atelier.onAccentInk.opacity(0.85))
                                 } else {
                                     Text("\(i + 1)").font(Atelier.mono).foregroundStyle(Atelier.textPrimary)
                                 }
@@ -249,8 +249,8 @@ struct DriveSetupHelp: View {
                         }
                         .buttonStyle(PressScale())
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(step.0).font(.system(size: 16, weight: .semibold)).foregroundStyle(Atelier.textPrimary)
-                            Text(step.1).font(.system(size: 14)).foregroundStyle(Atelier.textSecondary)
+                            Text(step.0).font(Atelier.font(16, weight: .semibold)).foregroundStyle(Atelier.textPrimary)
+                            Text(step.1).font(Atelier.font(14)).foregroundStyle(Atelier.textSecondary)
                         }
                         Spacer()
                         Button {
@@ -260,17 +260,17 @@ struct DriveSetupHelp: View {
                             .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.cloud))
                     }
                     .padding(14)
-                    .background(Atelier.surfaceHigh.opacity(0.5), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .background(Atelier.surfaceHigh.opacity(0.5), in: RoundedRectangle(cornerRadius: Atelier.corner(14), style: .continuous))
                 }
                 VStack(alignment: .leading, spacing: 10) {
-                    AtelierLabel("5 · Colle l'identifiant", tint: Atelier.Tint.cloud)
+                    AtelierLabel(String(localized: "5 · Colle l'identifiant"), tint: Atelier.Tint.cloud)
                     HStack {
                         TextField("xxxx.apps.googleusercontent.com", text: $pasted)
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
                             .font(Atelier.mono)
                             .padding(12)
-                            .background(Atelier.surfaceHigh, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+                            .background(Atelier.surfaceHigh, in: RoundedRectangle(cornerRadius: Atelier.smallRadius, style: .continuous))
                         Button {
                             pasted = UIPasteboard.general.string ?? pasted
                         } label: { Label("Coller", systemImage: "doc.on.clipboard") }
@@ -307,7 +307,7 @@ struct DriveAccountView: View {
                 if !drive.isConfigured {
                     NavigationLink("Configurer Google Drive") { DriveSetupHelp() }
                 } else if drive.isSignedIn {
-                    LabeledContent("Connecté", value: drive.accountEmail ?? "compte Google")
+                    LabeledContent("Connecté", value: drive.accountEmail ?? String(localized: "compte Google"))
                     Button("Se déconnecter", role: .destructive) { drive.signOut() }
                     NavigationLink("Changer d'identifiant Google") { DriveSetupHelp() }
                 } else {
@@ -338,19 +338,63 @@ struct DriveAccountView: View {
 
 extension AppModel {
     func importFromDrive(url: URL, file: GoogleDrive.File, language: OCRTargetLanguage? = nil) async throws {
+        // N7 (revue R2) : le dossier temporaire du téléchargement est nettoyé à la sortie de la
+        // fonction **entière**. Depuis que le calcul du plan peut jeter (P2 n°1), un refus y
+        // laissait un PDF de plusieurs centaines de Mo (iOS purge `tmp`, mais pas tout de suite) ;
+        // un refus des gardes avant l'import aussi. Le journal garde le chemin du fichier tant que
+        // la fonction n'est pas sortie — une reprise au lancement peut donc encore finir une
+        // copie arrêtée ; une fonction sortie sans bascule a retiré son journal.
+        defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
         let importer = importer
         let existing = documents.first { $0.driveFileId == file.id }
         let targetLanguage = language ?? existing.map { OCRTargetLanguage.forDocument($0.id) } ?? .japanese
-        let result: (document: LibraryDocument, isNew: Bool) = try await Task.detached(priority: .userInitiated) {
-            defer { try? FileManager.default.removeItem(at: url.deletingLastPathComponent()) }
-            if let existing {
-                let updated = try importer.replace(documentId: existing.id, withFileAt: url, driveRevision: file.revision)
-                return (updated, false)
-            }
-            let imported = try importer.importFile(at: url, displayName: url.lastPathComponent,
-                                                   driveFileId: file.id, driveRevision: file.revision)
-            return (imported.document, imported.isNew)
-        }.value
+        // C2.3 : empreinte et métriques du nouveau PDF calculées AVANT le journal, pour qu'une bascule
+        // interrompue puisse être finie au lancement suivant depuis le journal seul. Calcul **strict**
+        // (revue R2, P2 n°1) : une erreur de fichier refuse la mise à jour au lieu de replacer
+        // silencieusement sans journal (revu : un remplacement sans journal ne peut ni effacer l'OCR
+        // ni suivre les données). `plan = nil` désigne un seul cas : le même fichier (empreinte
+        // identique), un simple changement de révision sans bascule.
+        let plan: PageShift.DriveReplacement?
+        if let existing {
+            // N6 (revue R2) : métriques strictes, mais seul le PDF lui-même fait échouer
+            // (`inspect`) — la taille, elle, est relue par deux chemins avant de conclure.
+            plan = try await Task.detached(priority: .userInitiated) {
+                try PageShift.planDriveReplacement(source: url, current: existing, driveRevision: file.revision)
+            }.value
+        } else {
+            plan = nil
+        }
+        let perform = { () async throws -> (document: LibraryDocument, isNew: Bool) in
+            try await Task.detached(priority: .userInitiated) {
+                if let existing {
+                    // P2 n°1 (revue R2) : l'import attend l'identifiant calculé ci-dessus, et le même
+                    // fichier quand `plan` est nil. Un fichier qui change entre les deux calculs (télé
+                    // -chargement modifié sous nos pieds) s'arrête ici : jamais de bascule de base
+                    // (rekey) sans journal.
+                    let updated = try importer.replace(documentId: existing.id, withFileAt: url,
+                                                       driveRevision: file.revision,
+                                                       replacingInto: plan?.newDocumentId ?? existing.id,
+                                                       // DEC-C3 : les corrections manuelles de l'ancienne
+                                                       // version sont mises de côté avant l'effacement du
+                                                       // cache OCR (fichier `Corrections-remplacement/`).
+                                                       asideCorrections: PageShift.asideCorrections,
+                                                       // N2 : l'encre du survivant sur une page disputée
+                                                       // part dans « Conflits-remplacement/…/Encre/ ».
+                                                       asideInk: PageShift.asideInkDrawing)
+                    return (updated, false)
+                }
+                let imported = try importer.importFile(at: url, displayName: url.lastPathComponent,
+                                                       driveFileId: file.id, driveRevision: file.revision)
+                return (imported.document, imported.isNew)
+            }.value
+        }
+        let result: (document: LibraryDocument, isNew: Bool)
+        if let existing {
+            result = try await PageShift.withDriveReplacement(self, documentId: existing.id,
+                                                              replacement: plan, operation: perform)
+        } else {
+            result = try await perform()
+        }
         let document = result.document
         if result.isNew || existing != nil { OCRTargetLanguage.set(targetLanguage, forDocument: document.id) }
         if let existing, existing.id != document.id { OCRTargetLanguage.forget(existing.id) }
@@ -361,9 +405,12 @@ extension AppModel {
     /// Compare chaque document importé de Drive avec sa version en ligne, télécharge ceux qui ont changé.
     func checkDriveUpdates() async -> String {
         let linked = documents.filter { $0.driveFileId != nil }
-        guard !linked.isEmpty else { return "Aucun document importé depuis Google Drive." }
+        guard !linked.isEmpty else { return String(localized: "Aucun document importé depuis Google Drive.") }
         var updated: [String] = []
         var failures: [String] = []
+        // P2 n°4 (revue R2) : les conflits « cible déjà présente » sont visibles dans ce rapport ;
+        // les données de l'ancienne version sont mises de côté dans « Conflits-remplacement ».
+        var conflicts: [String] = []
         for document in linked {
             guard let fileId = document.driveFileId else { continue }
             do {
@@ -372,13 +419,27 @@ extension AppModel {
                 let url = try await GoogleDrive.shared.download(file) { _ in }
                 try await importFromDrive(url: url, file: file)
                 updated.append(document.title)
+                // N8 (revue R2) : conflits et corrections mises de côté sont lus dans le compteur
+                // sur le disque (`cote.json`) — une bascule finie par une reprise au lancement est
+                // encore rapportable ici, même après l'arrêt de l'app entre-temps.
+                let keptAside = PageShift.consumeReplacementAsides(for: document.id)
+                if keptAside.conflicts > 0 {
+                    conflicts.append(String(localized: "Conflits de remplacement : des données de l'ancienne version de « \(document.title) » (\(keptAside.conflicts) élément(s)) sont gardées dans « Conflits-remplacement »."))
+                }
+                // DEC-C3 : les lignes corrigées à la main de l'ancienne version sont mises de côté
+                // avant l'effacement du cache OCR ; le dossier reste en attente de la remise, au
+                // moment où le nouveau résultat OCR est enregistré (`OCRService.store`).
+                if keptAside.corrections > 0 {
+                    conflicts.append(String(localized: "Corrections manuelles de l'ancienne version de « \(document.title) » : \(keptAside.corrections) ligne(s) mises de côté dans « Corrections-remplacement » ; elles seront remises à la prochaine lecture de leur page."))
+                }
             } catch {
                 failures.append("\(document.title) : \(error.localizedDescription)")
             }
         }
         var lines: [String] = []
-        lines.append(updated.isEmpty ? "Tout est à jour (\(linked.count) document(s))." : "Mis à jour : " + updated.joined(separator: ", "))
-        if !failures.isEmpty { lines.append("Erreurs : " + failures.joined(separator: " ; ")) }
+        lines.append(updated.isEmpty ? String(localized: "Tout est à jour (\(linked.count) document(s)).") : String(localized: "Mis à jour : ") + updated.joined(separator: ", "))
+        if !failures.isEmpty { lines.append(String(localized: "Erreurs : ") + failures.joined(separator: " ; ")) }
+        if !conflicts.isEmpty { lines.append(conflicts.joined(separator: " ; ")) }
         return lines.joined(separator: "\n")
     }
 }

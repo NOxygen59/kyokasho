@@ -34,7 +34,7 @@ struct BenchView: View {
                         let cer = mine.map(\.cer).reduce(0, +) / Double(mine.count)
                         let time = mine.map(\.durationMs).reduce(0, +) / mine.count
                         LabeledContent(OCREngineID.displayName(engine.id),
-                                       value: "erreur \(percent(cer)) · \(time) ms · \(mine.count) image(s)")
+                                       value: String(localized: "erreur \(percent(cer)) · \(time) ms · \(mine.count) image(s)"))
                     }
                 }
                 Button {
@@ -66,7 +66,7 @@ struct BenchView: View {
         .onChange(of: photo) { item in
             guard let item else { return }
             Task {
-                if let data = try? await item.loadTransferable(type: Data.self) { addImage(data, title: "Photo") }
+                if let data = try? await item.loadTransferable(type: Data.self) { addImage(data, title: String(localized: "Photo")) }
                 photo = nil
             }
         }
@@ -134,7 +134,7 @@ struct BenchView: View {
     private func runAll() {
         let todo = samples.filter { !$0.referenceText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
         guard !todo.isEmpty else {
-            model.lastError = "Ajoute d'abord le texte de référence des images."
+            model.lastError = String(localized: "Ajoute d'abord le texte de référence des images.")
             return
         }
         running = (0, todo.count * engines.count)
@@ -218,7 +218,7 @@ struct BenchThumbnail: View {
 
     var body: some View {
         ZStack {
-            RoundedRectangle(cornerRadius: 6).fill(Color(white: 0.15))
+            RoundedRectangle(cornerRadius: Atelier.corner(6)).fill(Color(white: 0.15))
             if let image { Image(uiImage: image).resizable().scaledToFit() }
         }
         .task(id: url) {

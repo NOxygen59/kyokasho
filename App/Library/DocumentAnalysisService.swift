@@ -33,6 +33,10 @@ final class DocumentAnalysisService: ObservableObject {
     /// Cache de lecture, **pas** publié : `report(for:)` peut être appelé pendant l'affichage.
     private var cache: [String: DocumentAnalysis] = [:]
     private var task: Task<Void, Never>?
+    /// Document traité par `task` (analyse, corrections OvisOCR2 ou traduction). Toutes les créations de
+    /// tâche se font derrière un garde `progress == nil`, donc une seule tâche vit à la fois et cette valeur
+    /// désigne sans ambiguïté « la tâche en cours » ; le `defer` de chaque tâche remet les deux à `nil`.
+    private var taskDocumentId: String?
     @Published private(set) var correctionsDone: Int?
 
     nonisolated static var folder: URL {
@@ -66,18 +70,6 @@ final class DocumentAnalysisService: ObservableObject {
         guard var r = report(for: id) else { return }
         change(&r)
         save(r)
-    }
-
-    /// Pages insérées avant celles du document (`PageShift`) : rapport renuméroté de `offset`.
-    func shiftReport(_ id: String, by offset: Int) {
-        guard offset != 0 else { return }
-        update(id) { r in
-            r.pages = Dictionary(uniqueKeysWithValues: r.pages.map { page, value in
-                var value = value
-                value.source = page + offset
-                return (page + offset, value)
-            })
-        }
     }
 
     /// Le protocole PageShift installe un rapport final sur disque : oublier uniquement son cache.
@@ -120,26 +112,51 @@ final class DocumentAnalysisService: ObservableObject {
         return list
     }
 
-    func start(_ document: LibraryDocument, model: AppModel) {
-        guard progress == nil else { return }
+    /// Relance choisie (#41) : modèles, plage de pages, relecture des pages déjà lues. `nil` : tout, sans relire.
+    struct Options: Equatable {
+        var readers: [String]
+        var pages: ClosedRange<Int>
+        var reread = false
+    }
+
+    func start(_ document: LibraryDocument, model: AppModel, options: Options? = nil) {
+        guard document.capabilities.study else { return }
+        guard progress == nil, !PageShift.isBusy(document.id), !LibraryBackupService.inProgress else { return }
         lastError = nil
         let id = document.id
         let url = model.storage.url(for: id)
         let choice = model.settings(for: document).ocrEngine
         let service = model.ocr
         let dictionary = model.dictionary
-        let pages = Array(0..<document.pageCount)
-        let readers = Self.readers
+        let all = 0...max(0, document.pageCount - 1)
+        let range = options.map { $0.pages.clamped(to: all) } ?? all
+        let pages = document.pageCount > 0 ? Array(range) : []
+        // Ordre de `readers` gardé (le plus lourd en dernier), filtré par le choix.
+        let readers = Self.readers.filter { options?.readers.contains($0) ?? true }
+        let reread = options?.reread ?? false
+        let ovis = ModelSpec.ovisocr2.id
         if report(for: id) == nil { save(DocumentAnalysis(documentId: id)) }
-        update(id) { $0.engines = readers }
-        progress = Progress(documentId: id, phase: "Lecture OCR", done: 0, total: pages.count, phaseStarted: Date())
+        update(id) {
+            $0.engines = Array(Set($0.engines + readers)).sorted { a, b in
+                (Self.readers.firstIndex(of: a) ?? 99) < (Self.readers.firstIndex(of: b) ?? 99)
+            }
+            $0.recordRun(.init(date: Date(), engines: readers, firstPage: range.lowerBound, lastPage: range.upperBound,
+                               reread: reread))
+        }
+        progress = Progress(documentId: id, phase: String(localized: "Lecture OCR"), done: 0, total: pages.count, phaseStarted: Date())
         UIApplication.shared.isIdleTimerDisabled = true
-        Diagnostics.log("analyse \(document.title) : \(pages.count) pages, lecteurs \(readers)", "analyse")
+        Diagnostics.log("analyse \(document.title) : pages \(range.lowerBound + 1)–\(range.upperBound + 1), lecteurs \(readers)\(reread ? ", relecture" : "")", "analyse")
 
+        // Toute tâche créée est marquée de son document avant la création : c'est la clé qui borne
+        // l'attente de `cancelAndFinish` au bon document (revue DeepSeek constat n°1).
+        taskDocumentId = id
         task = Task { [weak self] in
             defer {
                 UIApplication.shared.isIdleTimerDisabled = false
                 self?.progress = nil
+                // Tâche finie (normalement ou annulée) : plus rien à attendre ensuite.
+                self?.task = nil
+                self?.taskDocumentId = nil
             }
             // 1. OCR habituel (en cache le plus souvent).
             var base: [Int: OCRPage] = [:]
@@ -148,22 +165,27 @@ final class DocumentAnalysisService: ObservableObject {
                 guard !Task.isCancelled, let self else { return }
                 let engine = await Task.detached { OCRService.resolve(choice, url: url, pageIndex: p) }.value
                 do { base[p] = try await service.page(documentId: id, url: url, pageIndex: p, engine: engine) }
-                catch { errors[p] = "OCR : \(error.localizedDescription)" }
+                catch { errors[p] = String(localized: "OCR : \(error.localizedDescription)") }
                 self.step(done: p + 1)
             }
             // 2. Chaque modèle lit toutes les pages, l'un après l'autre (un seul modèle en mémoire).
             for reader in readers {
                 guard let self, !Task.isCancelled else { return }
-                self.phase("Lecture \(Self.name(reader))", total: pages.count)
+                self.phase(String(localized: "Lecture \(Self.name(reader))"), total: pages.count)
                 for p in pages {
                     guard !Task.isCancelled else { break }
                     let file = Self.rawURL(id, reader, p)
-                    if let b = base[p], b.engine != OCREngineID.pdfText, !FileManager.default.fileExists(atPath: file.path) {
+                    // Texte intégré au PDF : seul OvisOCR2 lit quand même la page, pour le texte des images (#41).
+                    let wanted = base[p].map { $0.engine != OCREngineID.pdfText || reader == ovis } ?? false
+                    if let b = base[p], wanted, reread || !FileManager.default.fileExists(atPath: file.path) {
                         do {
                             let budget = Self.tokenBudget(b)
                             let text = try await Diagnostics.measure("\(reader) p. \(p) (≤ \(budget) jetons)", "analyse") {
                                 try await Self.read(reader, url: url, page: p, maxTokens: budget, service: service, documentId: id)
                             }
+                            // BUG-001 : arrêtée, la génération rend le texte déjà produit sans lever d'erreur. Ce
+                            // texte partiel n'est jamais gardé : le fichier ferait passer la page pour lue.
+                            guard !Task.isCancelled else { break }
                             try? DocumentAITextStore.write(text, documentId: id, reader: reader, page: p)
                         } catch {
                             errors[p] = "\(Self.name(reader)) : \(error.localizedDescription)"
@@ -175,16 +197,18 @@ final class DocumentAnalysisService: ObservableObject {
             }
             // 3. Vote (calcul lourd : hors du fil principal).
             guard let self, !Task.isCancelled else { return }
-            self.phase("Vote", total: pages.count)
+            self.phase(String(localized: "Vote"), total: pages.count)
             for p in pages {
                 guard !Task.isCancelled else { return }
                 var page: DocumentAnalysis.Page
                 if let b = base[p], b.engine != OCREngineID.pdfText {
-                    let readings = readers.reduce(into: [String: String]()) { r, reader in
+                    // Toutes les lectures gardées comptent, même d'un modèle non relancé cette fois.
+                    let readings = Self.readers.reduce(into: [String: String]()) { r, reader in
                         r[reader] = DocumentAITextStore.read(documentId: id, reader: reader, page: p)
                     }
                     page = await Task.detached {
-                        await DocumentAnalysis.vote(source: p, base: b, readings: readings) { candidates in
+                        // OvisOCR2 conseillé d'abord (#41), surtout utile sur les scans.
+                        await DocumentAnalysis.vote(source: p, base: b, readings: readings, preferred: ovis) { candidates in
                             await DocumentAnalysisService.preferred(candidates, dictionary: dictionary)
                         }
                     }.value
@@ -192,7 +216,18 @@ final class DocumentAnalysisService: ObservableObject {
                     page = .init(source: p, baseEngine: base[p]?.engine ?? "")
                 }
                 page.error = errors[p]
+                // PDF à texte intégré : ce qu'Ovis voit en plus (images d'illustration).
+                var extra: [String]?
+                if let b = base[p], b.engine == OCREngineID.pdfText,
+                   let reading = DocumentAITextStore.read(documentId: id, reader: ovis, page: p) {
+                    extra = DocumentAnalysis.textOutsideBase(b.text, reading: reading)
+                }
                 self.update(id) { report in
+                    if let extra {
+                        var map = report.imageText ?? [:]
+                        map[p] = extra.isEmpty ? nil : extra
+                        report.imageText = map
+                    }
                     // Désaccords déjà réglés (appliqués ou « garder tel quel ») : ils le restent.
                     let settled = Set(report.pages[p]?.disagreements.filter(\.settled).map(\.line) ?? [])
                     for i in page.disagreements.indices where settled.contains(page.disagreements[i].line) {
@@ -209,31 +244,42 @@ final class DocumentAnalysisService: ObservableObject {
         }
     }
 
-    /// Traduit en français (Qwen3-VL, hors ligne) toutes les pages déjà mises en page par OvisOCR2 et pas encore
-    /// traduites ; même écran de progression que l'analyse (reprise possible).
-    func translateAll(_ document: LibraryDocument) {
+    /// Traduit (Qwen3-VL, hors ligne) dans `language` toutes les pages déjà mises en page par OvisOCR2 et pas encore
+    /// traduites dans cette langue ; même écran de progression que l'analyse (reprise possible).
+    func translateAll(_ document: LibraryDocument, into language: TranslationLanguage = .french) {
         guard progress == nil, Qwen3VLReader().isAvailable else { return }
         let id = document.id
         let pages = (0..<document.pageCount).filter {
             FileManager.default.fileExists(atPath: Self.rawURL(id, ModelSpec.ovisocr2.id, $0).path)
-                && !FileManager.default.fileExists(atPath: Self.rawURL(id, "fr", $0).path)
+                && !FileManager.default.fileExists(atPath: Self.rawURL(id, language.rawValue, $0).path)
         }
         guard !pages.isEmpty else { return }
-        progress = Progress(documentId: id, phase: "Traduction (Qwen3-VL)", done: 0, total: pages.count, phaseStarted: Date())
+        progress = Progress(documentId: id, phase: String(localized: "Traduction (Qwen3-VL)"), done: 0, total: pages.count, phaseStarted: Date())
         UIApplication.shared.isIdleTimerDisabled = true
+        // Toute tâche créée est marquée de son document avant la création : c'est la clé qui borne
+        // l'attente de `cancelAndFinish` au bon document (revue DeepSeek constat n°1).
+        taskDocumentId = id
         task = Task { [weak self] in
             defer {
                 UIApplication.shared.isIdleTimerDisabled = false
                 self?.progress = nil
+                // Tâche finie (normalement ou annulée) : plus rien à attendre ensuite.
+                self?.task = nil
+                self?.taskDocumentId = nil
             }
             for (k, p) in pages.enumerated() {
                 guard !Task.isCancelled else { break }
                 guard let md = DocumentAITextStore.read(documentId: id, reader: ModelSpec.ovisocr2.id, page: p) else { continue }
                 do {
-                    let fr = try await Diagnostics.measure("traduction p. \(p)", "traduction") { try await Qwen3VLReader().translate(markdown: md, glossary: DomainLexicon.shared.glossary) }
-                    try? DocumentAITextStore.write(fr, documentId: id, reader: "fr", page: p)
+                    let glossary = language == .french ? DomainLexicon.shared.glossary : []
+                    let translated = try await Diagnostics.measure("traduction (\(language.rawValue)) p. \(p)", "traduction") {
+                        try await Qwen3VLReader().translate(markdown: md, into: language, glossary: glossary)
+                    }
+                    // BUG-001 : traduction arrêtée = texte partiel, jamais gardé (la page serait comptée traduite).
+                    guard !Task.isCancelled else { break }
+                    try? DocumentAITextStore.write(translated, documentId: id, reader: language.rawValue, page: p)
                 } catch {
-                    self?.lastError = "Traduction page \(p + 1) : \(error.localizedDescription)"
+                    self?.lastError = String(localized: "Traduction page \(p + 1) : \(error.localizedDescription)")
                 }
                 self?.step(done: k + 1)
             }
@@ -242,9 +288,9 @@ final class DocumentAnalysisService: ObservableObject {
     }
 
     /// Pages traduites / pages mises en page par OvisOCR2.
-    static func translationCount(_ document: LibraryDocument) -> (done: Int, total: Int) {
+    static func translationCount(_ document: LibraryDocument, in language: TranslationLanguage = .french) -> (done: Int, total: Int) {
         let laid = (0..<document.pageCount).filter { FileManager.default.fileExists(atPath: rawURL(document.id, ModelSpec.ovisocr2.id, $0).path) }
-        return (laid.filter { FileManager.default.fileExists(atPath: rawURL(document.id, "fr", $0).path) }.count, laid.count)
+        return (laid.filter { FileManager.default.fileExists(atPath: rawURL(document.id, language.rawValue, $0).path) }.count, laid.count)
     }
 
     /// Arrête après la lecture en cours (le modèle n'est libéré qu'une fois la lecture vraiment finie).
@@ -256,6 +302,28 @@ final class DocumentAnalysisService: ObservableObject {
             await task.value
             for reader in [ModelSpec.ovisocr2.id, OCREngineID.glmocr, ModelSpec.qwen3vl4b.id] { await Self.unload(reader) }
         }
+    }
+
+    /// Suppression d'un document (revue R2, P2 n°3) : arrête la tâche (analyse ou traduction) **si elle porte
+    /// sur lui**, sans rien faire pour les autres documents. Appelé avant l'effacement de ses fichiers.
+    func cancel(documentId: String) {
+        guard progress?.documentId == documentId else { return }
+        cancel()
+    }
+
+    /// Même arrêt, puis attente de la fin de la tâche **qui porte sur ce document** : l'appelant peut
+    /// ensuite `forget` sans qu'une dernière écriture (une lecture qui se termine entre-temps) recrée
+    /// `Analysis/<id>.json` ni `Analysis/<id>/`.
+    ///
+    /// L'attente est bornée au document effacé (`taskDocumentId`), jamais à la dernière tâche créée
+    /// (revue DeepSeek constat n°1) : supprimer A pendant l'analyse d'un document B ne doit ni arrêter
+    /// ni attendre l'analyse de B, sinon `forget(A)` est repoussé de toute la durée de l'analyse de B
+    /// (des dizaines de minutes, jamais si l'app est quittée avant). Le `defer` de la tâche a déjà
+    /// remis `task` et `taskDocumentId` à `nil` quand l'attente se termine.
+    func cancelAndFinish(documentId: String) async {
+        guard taskDocumentId == documentId, let task else { return }
+        cancel(documentId: documentId)
+        await task.value
     }
 
     private func step(done: Int) { progress?.done = done }
@@ -286,13 +354,14 @@ final class DocumentAnalysisService: ObservableObject {
     }
 
     private static func read(_ reader: String, url: URL, page: Int, maxTokens: Int, service: OCRService, documentId: String) async throws -> String {
+        let rotation = await service.additionalRotation(documentId: documentId, pageIndex: page)
         switch reader {
         case ModelSpec.ovisocr2.id:
             return try await OvisOCR2Reader(language: OCRTargetLanguage.forDocument(documentId))
-                .read(.pdfPage(url: url, index: page), maxTokens: maxTokens)
+                .read(.pdfPage(url: url, index: page, additionalRotation: rotation), maxTokens: maxTokens)
         case ModelSpec.qwen3vl4b.id:
             return try await Qwen3VLReader(language: OCRTargetLanguage.forDocument(documentId))
-                .read(.pdfPage(url: url, index: page), maxTokens: maxTokens)
+                .read(.pdfPage(url: url, index: page, additionalRotation: rotation), maxTokens: maxTokens)
         default:
             let glm = try await service.page(documentId: documentId, url: url, pageIndex: page, engine: OCREngineID.glmocr)
             return glm.lines.map(\.text).joined(separator: "\n")
@@ -325,6 +394,7 @@ final class DocumentAnalysisService: ObservableObject {
     /// Accepte les différences déjà lues par Ovis sur tout le livre, sans lancer de nouvelle IA.
     /// Les corrections manuelles et les lignes mathématiques restent intactes.
     func applyOvisToDocument(_ document: LibraryDocument, model: AppModel) {
+        guard document.capabilities.study else { return }
         guard progress == nil else { return }
         let id = document.id
         let url = model.storage.url(for: id)
@@ -332,11 +402,19 @@ final class DocumentAnalysisService: ObservableObject {
         let ocr = model.ocr
         correctionsDone = nil
         lastError = nil
-        progress = Progress(documentId: id, phase: "Corrections OvisOCR2", done: 0,
+        progress = Progress(documentId: id, phase: String(localized: "Corrections OvisOCR2"), done: 0,
                             total: document.pageCount, phaseStarted: Date())
         Diagnostics.log("Corrections OvisOCR2 : début de \(document.pageCount) pages", "analyse")
+        // Toute tâche créée est marquée de son document avant la création : c'est la clé qui borne
+        // l'attente de `cancelAndFinish` au bon document (revue DeepSeek constat n°1).
+        taskDocumentId = id
         task = Task { [weak self] in
-            defer { self?.progress = nil }
+            defer {
+                self?.progress = nil
+                // Tâche finie (normalement ou annulée) : plus rien à attendre ensuite.
+                self?.task = nil
+                self?.taskDocumentId = nil
+            }
             var total = 0
             for source in 0..<document.pageCount {
                 guard !Task.isCancelled, let self else { return }
@@ -369,8 +447,8 @@ final class DocumentAnalysisService: ObservableObject {
                     total += changed
                     self.invalidatePage(source, documentId: id)
                 } catch {
-                    self.lastError = "Page \(document.pageLabel(source)) : \(error.localizedDescription)"
-                    Diagnostics.error(error.localizedDescription, "corrections OvisOCR2 p. \(document.pageLabel(source))")
+                    self.lastError = String(localized: "Page \(document.pageLabel(source)) : \(error.localizedDescription)")
+                    Diagnostics.error(error.localizedDescription, String(localized: "corrections OvisOCR2 p. \(document.pageLabel(source))"))
                 }
             }
             self?.correctionsDone = total

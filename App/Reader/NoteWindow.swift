@@ -52,9 +52,9 @@ struct NoteWindow: View {
         .background(Atelier.surface)
         .clipShape(RoundedRectangle(cornerRadius: Atelier.radius, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: Atelier.radius, style: .continuous)
-            .strokeBorder(Atelier.Tint.annotate.opacity(0.45), lineWidth: 1))
+            .strokeBorder(Atelier.Tint.annotate.opacity(0.45), lineWidth: Atelier.border(1)))
         .overlay(alignment: .bottomTrailing) { resizeHandle(w: w, h: h) }
-        .shadow(color: .black.opacity(0.5), radius: 20, y: 8)
+        .atelierShapeShadow(RoundedRectangle(cornerRadius: Atelier.radius, style: .continuous), opacity: 0.5, radius: 20, y: 8)
         .offset(x: left, y: top)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .transaction { if move != .zero || resize != .zero { $0.animation = nil } }
@@ -66,9 +66,9 @@ struct NoteWindow: View {
         HStack(spacing: 10) {
             Image(systemName: "line.3.horizontal").foregroundStyle(Atelier.textTertiary)
             Text("Note · p. \(reader.document.pageLabel(current.pageIndex))")
-                .font(.system(size: 13, weight: .semibold)).foregroundStyle(Atelier.textSecondary).lineLimit(1)
+                .font(Atelier.font(13, weight: .semibold)).foregroundStyle(Atelier.textSecondary).lineLimit(1)
             Spacer(minLength: 4)
-            toolButton(.pen(.black), icon: "pencil.tip", color: .white)
+            toolButton(.pen(.black), icon: "pencil.tip", color: Atelier.contrastInk)
             toolButton(.pen(.systemRed), icon: "pencil.tip", color: .red)
             toolButton(.pen(.systemBlue), icon: "pencil.tip", color: .blue)
             toolButton(.eraser, icon: "eraser", color: Atelier.textSecondary)
@@ -76,12 +76,12 @@ struct NoteWindow: View {
                 Image(systemName: fingerDraws ? "hand.draw.fill" : "hand.draw")
                     .foregroundStyle(fingerDraws ? Atelier.Tint.annotate : Atelier.textSecondary)
             }
-            .accessibilityLabel(fingerDraws ? "Le doigt écrit du texte" : "Dessiner au doigt ou à la souris")
+            .accessibilityLabel(fingerDraws ? String(localized: "Le doigt écrit du texte") : String(localized: "Dessiner au doigt ou à la souris"))
             anchorButton
             Button { reader.openNote = nil } label: { Image(systemName: "xmark").foregroundStyle(Atelier.textSecondary) }
                 .accessibilityLabel("Fermer la note")
         }
-        .font(.system(size: 14, weight: .semibold))
+        .font(Atelier.font(14, weight: .semibold))
         .buttonStyle(.plain)
         .padding(.horizontal, 12).padding(.vertical, 9)
         .background(Atelier.surfaceHigh.opacity(0.6))
@@ -122,14 +122,14 @@ struct NoteWindow: View {
             Image(systemName: icon)
                 .foregroundStyle(color)
                 .padding(3)
-                .background(tool == target ? Atelier.Tint.annotate.opacity(0.35) : .clear, in: RoundedRectangle(cornerRadius: 5))
+                .background(tool == target ? Atelier.Tint.annotate.opacity(0.35) : .clear, in: RoundedRectangle(cornerRadius: Atelier.corner(5)))
         }
     }
 
     private func resizeHandle(w: CGFloat, h: CGFloat) -> some View {
         Image(systemName: "arrow.down.right.and.arrow.up.left")
             .rotationEffect(.degrees(90))
-            .font(.system(size: 11, weight: .bold))
+            .font(Atelier.font(11, weight: .bold))
             .foregroundStyle(Atelier.textTertiary)
             .frame(width: 30, height: 30)
             .contentShape(Rectangle())

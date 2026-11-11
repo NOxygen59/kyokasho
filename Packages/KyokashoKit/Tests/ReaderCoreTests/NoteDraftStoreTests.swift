@@ -66,10 +66,34 @@ final class NoteDraftStoreTests: XCTestCase {
         XCTAssertEqual(NoteDraftStore(folder: folder).drafts(documentId: "doc"), [0: "nouveau"])
     }
 
+    /// RET-051 : un avertissement par brouillon non ajouté, dans l'ordre des pages.
+    func testPendingPagesListsEveryNonBlankDraftInPageOrder() {
+        XCTAssertEqual(NoteDraftStore.pendingPages([12: "b", 3: "a", 7: "  \n"]), [3, 12])
+        XCTAssertEqual(NoteDraftStore.pendingPages([:]), [])
+    }
+
+    /// RET-051 : « Ajouter » efface le brouillon, l'avertissement de sa page disparaît.
+    func testPendingPageDisappearsOnceTheNoteIsAdded() throws {
+        let store = NoteDraftStore(folder: folder)
+        try store.setDraft("à ajouter", documentId: "doc", page: 4)
+        try store.setDraft("autre", documentId: "doc", page: 9)
+        XCTAssertEqual(NoteDraftStore.pendingPages(store.drafts(documentId: "doc")), [4, 9])
+        try store.setDraft("", documentId: "doc", page: 4)
+        XCTAssertEqual(NoteDraftStore.pendingPages(store.drafts(documentId: "doc")), [9])
+    }
+
     func testDiskFormatIsVersionedAndRoundTrips() throws {
         let data = try NoteDraftStore.encode([2: "x", 10: "y"])
         XCTAssertEqual(String(decoding: data, as: UTF8.self), #"{"pages":{"10":"y","2":"x"},"version":1}"#)
         XCTAssertEqual(try NoteDraftStore.decode(data), [2: "x", 10: "y"])
         XCTAssertThrowsError(try NoteDraftStore.decode(Data(#"{"version":1,"pages":{"p":"x"}}"#.utf8)))
+    }
+
+    /// #49 : les brouillons suivent leur page ; celui d'une page retirée sort du résultat (archivé par l'appelant).
+    func testRemappedFollowsPagesAndDropsRemovedOnes() throws {
+        let drafts = [0: "a", 2: "b", 3: "c"]
+        XCTAssertEqual(NoteDraftStore.remapped(drafts, with: try PageMapping.removal(oldCount: 4, removing: [2])), [0: "a", 2: "c"])
+        XCTAssertEqual(NoteDraftStore.remapped(drafts, with: try PageMapping.insertion(oldCount: 4, inserted: 2, at: 0)),
+                       NoteDraftStore.shifted(drafts, by: 2))
     }
 }

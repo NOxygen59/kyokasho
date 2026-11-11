@@ -13,6 +13,14 @@ ROOT="$(cd -- "$(dirname -- "$0")" && pwd)"
 cd "$ROOT"
 
 VERSION="$(grep -m1 'MARKETING_VERSION' project.yml | sed -E 's/.*"([^"]+)".*/\1/')"
+# Recette 1.5.5 : la candidate est partie sans ses notes, et la fenêtre « Nouveautés » ne s'est pas affichée.
+# On refuse donc de construire un paquet dont la version n'est pas celle de `ReleaseNotes.current`.
+NOTES="$(grep -m1 'public static let current = ReleaseNotes(' Packages/KyokashoKit/Sources/ReaderCore/AppIntro.swift \
+  | sed -E 's/.*ReleaseNotes\("([^"]+)".*/\1/')"
+if [[ "$NOTES" != "$VERSION" ]]; then
+  print -u2 "Notes de version absentes : ReleaseNotes.current est $NOTES, la version est $VERSION (AppIntro.swift)."
+  exit 1
+fi
 BUILD="$ROOT/build/ipa"
 ARCHIVE="$BUILD/Kyokasho.xcarchive"
 OUT="$ROOT/dist/Kyokasho-$VERSION.tipa"
@@ -45,6 +53,24 @@ print "==> 3/5 Dossier Payload"
 [[ ! -e "$BUILD/Payload" ]] || trash "$BUILD/Payload"
 mkdir -p "$BUILD/Payload"
 cp -R "$APP" "$BUILD/Payload/"
+# Lexique du design d'intérieur (#50, D4 piste B ; décision de NOxygen59 du 29/10/2026) : construit sur le Mac par
+# tools/build_domain_lexicon.py, jamais versionné. Ajouté au paquet s'il existe ; sinon l'app indique qu'il manque.
+LEXIQUE="${KYOKASHO_LEXIQUE:-$ROOT/../dictionnaires-construits/lexique-interieur/lexique-interieur.zip}"
+# Conserver le chemin français historique ; ses variantes sont cherchées dans le même dossier.
+python3 "$ROOT/tools/copy_bundled_lexicons.py" --source "${LEXIQUE:h}" \
+  --french "$LEXIQUE" --app "$BUILD/Payload/Kyokasho.app" --platform ios
+
+# Pas de chinois sur iPad (décision de NOxygen59, 04/11/2026) : le catalogue commun le produit, le paquet le retire.
+find "$BUILD/Payload/Kyokasho.app" -type d -name 'zh-Hans.lproj' -prune -print0 | xargs -0 -r trash
+/usr/libexec/PlistBuddy -c "Print :CFBundleLocalizations" "$BUILD/Payload/Kyokasho.app/Info.plist" | grep -q zh-Hans && python3 -I - "$BUILD/Payload/Kyokasho.app/Info.plist" <<'PY'
+import plistlib, sys
+with open(sys.argv[1], "rb") as source:
+    info = plistlib.load(source)
+info["CFBundleLocalizations"] = [code for code in info["CFBundleLocalizations"] if code != "zh-Hans"]
+with open(sys.argv[1], "wb") as target:
+    plistlib.dump(info, target)
+PY
+python3 "$ROOT/tools/check_ipad_package.py" "$BUILD/Payload/Kyokasho.app"
 
 print "==> 4/5 Pseudo-signature (ldid)"
 # Frameworks embarqués d'abord (s'il y en a), puis l'app avec ses entitlements.

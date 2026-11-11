@@ -39,11 +39,11 @@ final class GoogleDrive: NSObject, ObservableObject {
 
         var errorDescription: String? {
             switch self {
-            case .notConfigured: return "Google Drive n'est pas encore configuré (identifiant client manquant). Voir README → Google Drive."
-            case .notSignedIn: return "Connecte-toi à Google Drive d'abord."
-            case .http(let code, let message): return "Erreur Google Drive (\(code)) : \(message)"
-            case .cancelled: return "Connexion annulée."
-            case .badResponse: return "Réponse inattendue de Google."
+            case .notConfigured: return String(localized: "Google Drive n'est pas encore configuré (identifiant client manquant). Voir README → Google Drive.")
+            case .notSignedIn: return String(localized: "Connecte-toi à Google Drive d'abord.")
+            case .http(let code, let message): return String(localized: "Erreur Google Drive (\(code)) : \(message)")
+            case .cancelled: return String(localized: "Connexion annulée.")
+            case .badResponse: return String(localized: "Réponse inattendue de Google.")
             }
         }
     }

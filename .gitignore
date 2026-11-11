@@ -24,3 +24,6 @@ xcuserdata/
 
 # Outils Python locaux
 __pycache__/
+
+# Vibeflow (base de connaissances locale, hors dépôt)
+.vibeflow/

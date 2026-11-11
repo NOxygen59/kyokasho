@@ -30,7 +30,8 @@ public struct PageVLMReader: Sendable {
         }
         let image: CGImage
         switch input {
-        case .pdfPage(let url, let index): image = try PageRenderer.render(url: url, pageIndex: index, longSide: longSide)
+        case .pdfPage(let url, let index, let rotation):
+            image = try PageRenderer.render(url: url, pageIndex: index, longSide: longSide, additionalRotation: rotation)
         case .image(let cg): image = cg
         }
         let user = UserInput(chat: [.user(prompt, images: [.ciImage(CIImage(cgImage: image))])], additionalContext: context)
@@ -133,20 +134,22 @@ public struct Qwen3VLReader: Sendable {
         ("畳", "tatami"), ("押入れ", "placard japonais (oshiire)"), ("縁側", "véranda (engawa)"),
     ]
 
-    /// Traduit en français le Markdown d'une page (texte seul, pas d'image), **structure gardée** : mêmes titres,
-    /// listes, tableaux et balises `<img>` ; glossaire imposé. Même modèle que la lecture (déjà téléchargé).
-    public func translate(markdown: String, glossary: [(String, String)] = defaultGlossary, maxTokens: Int? = nil) async throws -> String {
+    /// Traduit le Markdown d'une page (texte seul, pas d'image) en français ou en anglais, **structure gardée** :
+    /// mêmes titres, listes, tableaux et balises `<img>` ; glossaire imposé (il est en français : l'app n'en passe
+    /// pas pour l'anglais). Même modèle que la lecture (déjà téléchargé).
+    public func translate(markdown: String, into language: TranslationLanguage = .french,
+                          glossary: [(String, String)] = defaultGlossary, maxTokens: Int? = nil) async throws -> String {
         guard isAvailable else { throw OCRError.modelMissing(base.spec.title) }
         if let free = PageVLMReader.availableMemory(), free < base.minimumFreeMemory {
             throw OCRError.engineFailed("Pas assez de mémoire libre pour la traduction (\(free / 1_048_576) Mo libres).")
         }
         let terms = glossary.filter { markdown.contains($0.0) }.map { "- \($0.0) → \($0.1)" }.joined(separator: "\n")
         let prompt = """
-        Translate this page of a Japanese textbook on interior design (interior coordinator) into French.
+        Translate this page of a Japanese textbook on interior design (interior coordinator) into \(language.englishName).
         Rules:
         - Keep EXACTLY the same structure: same Markdown headings (#), lists, paragraph breaks, HTML <table> rows and cells, and copy every <img ...> tag unchanged.
         - Translate only the text, naturally and precisely, in a technical textbook register. Keep numbers, figure references (図表 → Figure) and units.
-        - Output only the French page, nothing else.
+        - Output only the \(language.englishName) page, nothing else.
         \(terms.isEmpty ? "" : "Glossary (always use these translations):\n" + terms + "\n")
         Page:
         \(markdown)
@@ -165,4 +168,15 @@ public struct Qwen3VLReader: Sendable {
         }
         }
     }
+}
+
+/// Langue des traductions de pages (Qwen3-VL, hors ligne). `rawValue` = nom du lecteur dans `DocumentAITextStore`
+/// (`fr-<page>.md`, `en-<page>.md`) : les deux traductions d'une page coexistent.
+public enum TranslationLanguage: String, CaseIterable, Sendable, Identifiable {
+    case french = "fr", english = "en"
+    public var id: String { rawValue }
+    /// Nom donné au modèle dans la consigne (écrite en anglais).
+    public var englishName: String { self == .french ? "French" : "English" }
+    /// Nom affiché dans l'app.
+    public var title: String { self == .french ? "Français" : "English" }
 }

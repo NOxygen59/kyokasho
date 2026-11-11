@@ -65,9 +65,9 @@ Source : message de NOxygen59 du 27/10/2026. Build observée : QA02 « 1.3 (40) 
 | RET-016 | 5 | 2026-10-27 | Ergonomie | Boutons de page plus discrets | à confirmer | rapporté | [#19](https://github.com/NOxygen59/kyokasho/issues/19) | — | — |
 | RET-017 | 4 | 2026-10-27 | Bug (énergie) | 60 % de batterie en 1 h 30 avec l'IA locale | à confirmer | rapporté | [#20](https://github.com/NOxygen59/kyokasho/issues/20) | — | — |
 | RET-018 | 4 | 2026-10-27 | Fonction | Avertissement sur la consommation de l'IA locale à l'accueil | — | rapporté | [#21](https://github.com/NOxygen59/kyokasho/issues/21) | — | — |
-| RET-019 | 5 | 2026-10-27 | Fonction | Date et heure des notes, groupées par jour | — | rapporté | [#22](https://github.com/NOxygen59/kyokasho/issues/22) | — | — |
+| RET-019 | 5 | 2026-10-27 | Fonction | Date et heure des notes, groupées par jour | `claude/notes-heure-par-jour` `72c392c`, tests Mac | compilé iOS | [#22](https://github.com/NOxygen59/kyokasho/issues/22) | — (PR à ouvrir à la réouverture de GitHub) | cadrage NOxygen59 du 28/10 : heure de création discrète, notes groupées par jour (`createdAt` existant, aucune migration) ; `NoteDayGroups`, 3 tests ; compilé iOS ; non testé iPad |
 | RET-020 | 5 | 2026-10-26 | Fonction | Surligner directement les zones OCR détectées (accès facile, portable sur Mac) | — | rapporté | [#23](https://github.com/NOxygen59/kyokasho/issues/23) | — | — |
-| RET-021 | 5 | 2026-10-26 | Fonction | Survol Yomitan seulement pendant l'appui sur Maj | — | rapporté | [#24](https://github.com/NOxygen59/kyokasho/issues/24) | — | — |
+| RET-021 | 5 | 2026-10-26 | Fonction | Survol Yomitan seulement pendant l'appui sur Maj | `claude/survol-maj-page` `f4a759f`, tests Mac | compilé iOS | [#24](https://github.com/NOxygen59/kyokasho/issues/24) | — (PR à ouvrir à la réouverture de GitHub) | panneau Texte : fait par #57, confirmé iPad ; page PDF : Maj tenue active le survol même bouton éteint, relâcher Maj ferme la bulle ainsi ouverte, bouton allumé inchangé (`HoverLookupMode`, 4 tests) ; compilé iOS ; non testé iPad |
 
 ### Recette du 27/10/2026 — build de test 1.3.1 (41)
 
@@ -80,12 +80,12 @@ Le document de feedback complet du 26/10 (13 observations O01–O13, 10 proposit
 | ID | Alias | Date | Type | Retour (résumé) | Build | État | Issue | PR | Preuve |
 |---|---|---|---|---|---|---|---|---|---|
 | RET-022 | O04 | 2026-10-26 | Fonction (IA) | Le chat ne sait pas résumer une page | QA02 1.3 (40), `431f1c6` | rapporté | [#37](https://github.com/NOxygen59/kyokasho/issues/37) | — | — |
-| RET-023 | O06 | 2026-10-26 | Ergonomie | Boutons de la fenêtre OCR redondants (quatre états à clarifier) | QA02 1.3 (40), `431f1c6` | rapporté | [#38](https://github.com/NOxygen59/kyokasho/issues/38) | — | — |
+| RET-023 | O06 | 2026-10-26 | Ergonomie | Boutons de la fenêtre OCR redondants (quatre états à clarifier) | QA02 1.3 (40), `431f1c6` ; correctif `d963011` | compilé iOS | [#38](https://github.com/NOxygen59/kyokasho/issues/38) | — (PR à ouvrir à la réouverture de GitHub) | bouton « − » et choix « Réduite en pastille » retirés (× masque) ; panneau resté réduit remis à sa dernière position au lancement (`StudyPanelModeMigration`, 3 tests) ; compilé iOS ; non testé iPad ; suppression de code : revue croisée requise |
 | RET-024 | O08 | 2026-10-26 | Ergonomie | Choix du moteur OCR peu clair, Apple Vision d'office | QA02 1.3 (40), `431f1c6` | rapporté | [#39](https://github.com/NOxygen59/kyokasho/issues/39) | — | — |
 | RET-025 | O09 | 2026-10-26 | Ergonomie | Moniteur de performances trop long | QA02 1.3 (40), `431f1c6` | rapporté | [#40](https://github.com/NOxygen59/kyokasho/issues/40) | — | — |
 | RET-026 | O11 | 2026-10-26 | Ergonomie | Analyse : choix visible, annulation, critères, relance paramétrable | QA02 1.3 (40), `431f1c6` | rapporté | [#41](https://github.com/NOxygen59/kyokasho/issues/41) | — | — |
-| RET-027 | O12 | 2026-10-26 | Ergonomie | Rendu expérimental de « couverture » à retirer | QA02 1.3 (40), `431f1c6` | rapporté | [#42](https://github.com/NOxygen59/kyokasho/issues/42) | — | — |
-| RET-028 | O13 | 2026-10-26 | Bug (texte) | Aide des signets : étoile au lieu de marque-page | QA02 1.3 (40), `431f1c6` | rapporté | [#43](https://github.com/NOxygen59/kyokasho/issues/43) | — | — |
+| RET-027 | O12 | 2026-10-26 | Ergonomie | Rendu expérimental de « couverture » à retirer | QA02 1.3 (40), `431f1c6` ; correctif `4ccc6cd` | compilé iOS | [#42](https://github.com/NOxygen59/kyokasho/issues/42) | — (PR à ouvrir à la réouverture de GitHub) | cadrage NOxygen59 du 28/10 : « Sombre intelligent » retiré (réglage basculé vers « Sombre », `PageToneMigration`, 2 tests), « Sépia nuit » ajouté ; compilé iOS ; non testé iPad ; suppression de code : revue croisée requise |
+| RET-028 | O13 | 2026-10-26 | Bug (texte) | Aide des signets : étoile au lieu de marque-page | `claude/aide-signets-marque-page` `910975e`, tests Mac | compilé iOS | [#43](https://github.com/NOxygen59/kyokasho/issues/43) | — (PR à ouvrir à la réouverture de GitHub) | l'aide affiche le symbole `bookmark` du bouton « Signet » ; compilé iOS ; non testé iPad |
 | RET-029 | P01 | 2026-10-26 | Conception | Fenêtres natives ou personnalisées | QA02 1.3 (40), `431f1c6` | rapporté | [#44](https://github.com/NOxygen59/kyokasho/issues/44) | — | — |
 | RET-030 | P02 | 2026-10-26 | Fonction (IA) | Paramètres IA avancés, consignes, formules | QA02 1.3 (40), `431f1c6` | rapporté | [#45](https://github.com/NOxygen59/kyokasho/issues/45) | — | — |
 | RET-031 | P03 | 2026-10-26 | Documentation | Chaîne OCR → zones → furigana → affichage | QA02 1.3 (40), `431f1c6` | rapporté | [#46](https://github.com/NOxygen59/kyokasho/issues/46) | — | — |
@@ -94,9 +94,9 @@ Le document de feedback complet du 26/10 (13 observations O01–O13, 10 proposit
 | RET-034 | P05 | 2026-10-26 | Conception (données) | Suppression de pages | QA02 1.3 (40), `431f1c6` | rapporté | [#49](https://github.com/NOxygen59/kyokasho/issues/49) | — | — |
 | RET-035 | P06 | 2026-10-26 | Fonction | Dictionnaires téléchargeables, lexique design d'intérieur | QA02 1.3 (40), `431f1c6` | rapporté | [#50](https://github.com/NOxygen59/kyokasho/issues/50) | — | — |
 | RET-036 | P07 | 2026-10-26 | Conception (données) | Sauvegarde cloud, restauration, import OCR | QA02 1.3 (40), `431f1c6` | rapporté | [#51](https://github.com/NOxygen59/kyokasho/issues/51) | — | — |
-| RET-037 | P08 | 2026-10-26 | Fonction | Temps passé à la place de la progression | QA02 1.3 (40), `431f1c6` | rapporté | [#52](https://github.com/NOxygen59/kyokasho/issues/52) | — | — |
+| RET-037 | P08 | 2026-10-26 | Fonction | Temps passé à la place de la progression | QA02 1.3 (40), `431f1c6` ; correctif `b2b1cc7` | compilé iOS | [#52](https://github.com/NOxygen59/kyokasho/issues/52) | — (PR à ouvrir à la réouverture de GitHub) | cadrage NOxygen59 du 28/10 : temps de lecture active (lecteur ouvert, app au premier plan), à partir de zéro, total dans `UserDefaults` ; `ReadingClock`, 4 tests ; compilé iOS ; non testé iPad |
 | RET-038 | P09 | 2026-10-26 | Design | Nouvelle icône | QA02 1.3 (40), `431f1c6` | rapporté | [#53](https://github.com/NOxygen59/kyokasho/issues/53) | — | — |
-| RET-039 | P10 | 2026-10-26 | Fonction | Catégorie livre / manuel | QA02 1.3 (40), `431f1c6` | rapporté | [#54](https://github.com/NOxygen59/kyokasho/issues/54) | — | — |
+| RET-039 | P10 | 2026-10-26 | Fonction | Catégorie livre / manuel | QA02 1.3 (40), `431f1c6` ; correctif `9f1e90f` | compilé iOS | [#54](https://github.com/NOxygen59/kyokasho/issues/54) | — (PR à ouvrir à la réouverture de GitHub) | cadrage NOxygen59 du 28/10 : question à chaque import, pastille sur l'accueil, choix dans « Ce document » ; migration `v5-document-category` (colonne facultative), 3 tests sur bases jetables + test de sauvegarde C1 adapté ; compilé iOS ; non testé iPad ; données : revue croisée requise |
 | RET-040 | Pensées | 2026-10-26 | Conception | Version Mac (PORT-01) | QA02 1.3 (40), `431f1c6` | rapporté | [#55](https://github.com/NOxygen59/kyokasho/issues/55) | — | — |
 
 ### Correspondance complète O/P → registre
@@ -141,8 +141,8 @@ Build **non publiée**, construite depuis le commit local `bfd4312` (= `main` `2
 
 | ID | Alias | Date | Type | Retour (résumé) | Build | État | Issue | PR | Preuve |
 |---|---|---|---|---|---|---|---|---|---|
-| RET-041 | — | 2026-10-27 | Bug (affichage) | La pastille « Apple Vision », lorsqu'elle est sélectionnée, semble recharger son libellé à chaque changement de page : elle se redimensionne pendant une fraction de seconde puis reprend sa taille (cause à confirmer) | 1.3.2 (42) locale, `bfd4312` | rapporté, symptôme précisé | [#60](https://github.com/NOxygen59/kyokasho/issues/60) | — | observation iPad de NOxygen59 ; reproduction ciblée encore nécessaire |
-| RET-042 | — | 2026-10-27 | Ergonomie | Survol avec Maj peu fiable quand le curseur bouge vite ; s'inspirer de Yomitan (GPL-3.0, licence à respecter) | 1.3.2 (42) locale, `bfd4312` | rapporté | [#61](https://github.com/NOxygen59/kyokasho/issues/61) | — | — |
+| RET-041 | — | 2026-10-27 | Bug (affichage) | La pastille « Apple Vision », lorsqu'elle est sélectionnée, semble recharger son libellé à chaque changement de page : elle se redimensionne pendant une fraction de seconde puis reprend sa taille (cause à confirmer) | 1.3.2 (42) locale, `bfd4312` | compilé iOS | [#60](https://github.com/NOxygen59/kyokasho/issues/60) | — (PR à ouvrir à la réouverture de GitHub) | observation iPad de NOxygen59 ; cause établie dans le code : au changement de page, `pageSettled` efface `ocrPage` puis le recharge du cache, la pastille disparaît et revient ; correctif `2483f86` (`OCRPillHold`, 4 tests) : le dernier moteur reste affiché 1 s ; compilé iOS ; non testé iPad |
+| RET-042 | — | 2026-10-27 | Ergonomie | Survol avec Maj peu fiable quand le curseur bouge vite ; s'inspirer de Yomitan (GPL-3.0, licence à respecter) | 1.3.2 (42) locale, `bfd4312` ; correctif `969bd6a` | compilé iOS | [#61](https://github.com/NOxygen59/kyokasho/issues/61) | — (PR à ouvrir à la réouverture de GitHub) | cause établie dans le code : la fermeture différée (0,2 s) d'un mot quitté fermait la bulle du mot suivant ; génération par ouverture (`HoverBubbleGate`, 4 tests) et bulle gardée d'un mot à l'autre sans réapparition (couvre aussi la remarque de la recette 53) ; compilé iOS ; non testé iPad |
 
 ### Retours du 27/10/2026 — après la recette 1.3.2 (lot clos par les fusions #66, #68, #70, #72)
 
@@ -150,7 +150,7 @@ Build **non publiée**, construite depuis le commit local `bfd4312` (= `main` `2
 |---|---|---|---|---|---|---|---|---|---|
 | RET-043 | — | 2026-10-27 | Bug (navigation) | Pincement difficile et déplacement bloqué sur un axe en double page (mode lecture) ; cause mesurée : verrou de direction et pan à deux doigts du `PDFScrollView` de PDFKit | 1.3.2 (50) locale, `d1480fe` | confirmé iPad | [#63](https://github.com/NOxygen59/kyokasho/issues/63) (fermée) | [#68](https://github.com/NOxygen59/kyokasho/pull/68) (fusionnée) | candidates de diagnostic 2a à 2g (journaux iPad) ; 2d + 2g validées par NOxygen59 ; correctif `c7d20c8` compilé iOS ; recette 1.3.2 (50) : double page OK, page simple et mode écriture inchangés |
 | RET-044 | — | 2026-10-27 | Bug (affichage) | La fiabilité de l'analyse du document affiche toujours 0,0 % ; cause démontrée (entier formaté avec %.1f) | 1.3.2 (50) locale, `d1480fe` | confirmé iPad | [#65](https://github.com/NOxygen59/kyokasho/issues/65) (fermée) | [#66](https://github.com/NOxygen59/kyokasho/pull/66) (fusionnée) | 3 tests + suite Swift 191 réussis, iOS générique ; recette NOxygen59 1.3.2 (50) OK |
-| RET-045 | — | 2026-10-27 | Bug (performance) | « Voir le journal » met plus de 30 s à s'ouvrir quand le journal est long | 1.3.2 (47), diagnostic local | rapporté | [#67](https://github.com/NOxygen59/kyokasho/issues/67) | — | — |
+| RET-045 | — | 2026-10-27 | Bug (performance) | « Voir le journal » met plus de 30 s à s'ouvrir quand le journal est long | `claude/journal-long-rapide` `f669707`, tests Mac | compilé iOS | [#67](https://github.com/NOxygen59/kyokasho/issues/67) | — (PR à ouvrir à la réouverture de GitHub) | seule la fin du journal (200 Ko, 1 000 lignes) est lue hors du fil principal et affichée dans une liste paresseuse ; `DiagnosticLogSnapshot.readTail`, 4 tests dont un journal synthétique de 2 Mo ; compilé iOS ; non testé iPad |
 | RET-046 | — | 2026-10-27 | Ergonomie (animation) | Fermeture brusque de la fenêtre OCR intégrée ; cause établie : choix volontaire du 23/10 (`5efd2ca`, `.animation(nil, value: side)`), remplacé par une animation en deux temps sans redimensionner PDFKit à chaque image | 1.3.2 (51) locale, `d751205` | confirmé iPad | [#69](https://github.com/NOxygen59/kyokasho/issues/69) (fermée) | [#70](https://github.com/NOxygen59/kyokasho/pull/70) (fusionnée) | revue croisée Codex favorable ; recette NOxygen59 1.3.2 (51) : 9 tests OK |
 | RET-047 | — | 2026-10-27 | Ergonomie | Bulle Yomitan de la fenêtre OCR : sources trop grosses, définitions sous le pli ; mode compact (mot, FR, définitions ; accents, fréquences, IPA, dictionnaires et étiquettes masqués) | 1.3.2 (52) locale, `91d4898` | confirmé iPad | [#71](https://github.com/NOxygen59/kyokasho/issues/71) (fermée) | [#72](https://github.com/NOxygen59/kyokasho/pull/72) (fusionnée) | 3 tests `CompactBubbleTests` ; recette NOxygen59 1.3.2 (52) : « c'est bon nickel » |
 
@@ -174,4 +174,24 @@ Build **non publiée**, construite depuis le commit local `bfd4312` (= `main` `2
 |---|---|---|---|---|---|---|---|---|---|
 | RET-050 | — | 2026-10-28 | Bug (navigation clavier) | Les flèches gauche et droite ciblent désormais les champs de saisie au lieu de changer de page lorsque l’utilisateur ne cherche pas à modifier un champ | 1.3.2 (59) et (60) locales, `5200a3c` | confirmé iPad | [#81](https://github.com/NOxygen59/kyokasho/issues/81) | [#85](https://github.com/NOxygen59/kyokasho/pull/85) | retour direct de NOxygen59 ; cause : `keyboardShortcut` de SwiftUI perdait face au focus clavier d'iPadOS, remplacé par des `UIKeyCommand` prioritaires retirés pendant la saisie et côté Web ; compilé iOS ; recette NOxygen59 1.3.2 (59) B1–B8 et C1–C6 OK, 1.3.2 (60) R2–R3 OK ; lié à la demande de navigation clavier [#18](https://github.com/NOxygen59/kyokasho/issues/18) |
 
-Prochain identifiant libre : **RET-051**.
+### Demande du 28/10/2026 — recette 1.3.2 (59), point B4
+
+| ID | Alias | Date | Type | Retour (résumé) | Build | État | Issue | PR | Preuve |
+|---|---|---|---|---|---|---|---|---|---|
+| RET-051 | — | 2026-10-28 | Ergonomie (notes) | Dans les notes, afficher un petit avertissement pour chaque brouillon non ajouté, avec la page concernée, jusqu'à l'appui sur le bouton qui ajoute réellement la note | `claude/notes-brouillons-avertissement` `8f7bcc8`, tests Mac | compilé iOS | [#87](https://github.com/NOxygen59/kyokasho/issues/87) | [#88](https://github.com/NOxygen59/kyokasho/pull/88) (brouillon) | demande de NOxygen59 pendant la recette 1.3.2 (59), point B4 ; compilé iOS, suite Swift 232 (7 ignorés), 2 tests `NoteDraftStoreTests` ; non testé iPad |
+
+### Recette du 03/11/2026 — candidate locale 1.3.2 (72)
+
+Fiche et rapport de plantage hors dépôt : `recettes/RECETTE-IPAD-1.3.2-72.md`, `recettes/CRASH-1.3.2-72-2026-11-02.txt`.
+
+| ID | Alias | Date | Type | Retour (résumé) | Build | État | Issue | PR | Preuve |
+|---|---|---|---|---|---|---|---|---|---|
+| RET-060 | — | 2026-11-03 | Bug (plantage, orientation) | L'app plante en appliquant une orientation différente de 0°. Cause probable : `PDFPage.rotation` modifié hors du fil principal (`_AssertAutoLayoutOnAllowedThreadsOnly`). Les furigana sont aussi mal placés sur la page tournée | 1.3.2 (72) | confirmé iPad | — | — | candidate locale 1.3.2 (75), recette du 03/11/2026 |
+| RET-061 | — | 2026-11-03 | Bug (zones OCR) | À l'envers, les zones OCR restent celles de la page à l'endroit. Mémoires de l'ancienne orientation vidées ; cette cause n'explique pas forcément le cas suivi d'un plantage | 1.3.2 (72) | confirmé iPad | — | — | candidate locale 1.3.2 (75), recette du 03/11/2026 |
+| RET-062 | — | 2026-11-03 | Ergonomie (orientation) | Afficher dès l'analyse l'alerte qui empêche de tourner le document, sans attendre l'essai de rotation | 1.3.2 (72) | confirmé iPad | — | — | candidate locale 1.3.2 (75), recette du 03/11/2026 |
+| RET-063 | — | 2026-11-03 | Bug à qualifier (gestes) | En double page dézoomée, le balayage du trackpad ne change pas de page. Régression non établie | 1.3.2 (72) | confirmé iPad | — | — | candidate locale 1.3.2 (75), essais 6.1 et 6.2 |
+| RET-064 | — | 2026-11-03 | Bug (furigana) | Sur une page orientée à gauche ou à droite, les furigana s'affichent en longueur au lieu de suivre la ligne | 1.3.2 (75) | corrigé localement, à recetter | — | — | `claude/rotation-crash-ocr`, candidate locale 1.3.2 (76) ; aucune preuve iPad |
+
+Les notes locales de `patchs-en-attente` emploient déjà RET-052, 053, 056 et 057 sur des branches non publiées : numérotation reprise à RET-060.
+
+Prochain identifiant libre : **RET-065**.

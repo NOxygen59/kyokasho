@@ -17,6 +17,10 @@ struct StudyPanel: View {
     @ObservedObject var reader: ReaderController
     @Binding var tab: Tab
     var openSearch: () -> Void
+    /// Présentée par `ReaderScreen` : ce panneau est recréé quand l'iPad tourne, et la fenêtre fermée avec lui.
+    var openLineEditor: () -> Void
+    /// Feuille des réglages du document, ouverte depuis le menu du panneau Texte.
+    var openDocumentSettings: (() -> Void)? = nil
     var close: () -> Void
     /// Colonne de droite : largeur fixe ; fenêtre ou plein écran (`DetachedPanel`) : toute la place donnée.
     var fixedWidth = true
@@ -31,9 +35,9 @@ struct StudyPanel: View {
                             let on = source == reader.focusSource
                             Button { reader.focus(source) } label: {
                                 Text("p. \(reader.document.pageLabel(source))")
-                                    .font(.system(size: 13, weight: .semibold))
+                                    .font(Atelier.font(13, weight: .semibold))
                                     .padding(.horizontal, 12).padding(.vertical, 5)
-                                    .foregroundStyle(on ? Color.black.opacity(0.85) : Atelier.textSecondary)
+                                    .foregroundStyle(on ? Atelier.onAccentInk.opacity(0.85) : Atelier.textSecondary)
                                     .background(Capsule().fill(on ? Atelier.Tint.japanese : Atelier.surfaceHigh))
                             }
                             .buttonStyle(.plain)
@@ -41,27 +45,28 @@ struct StudyPanel: View {
                         }
                     }
                 } else if tab == .vocab || tab == .chat {
-                    AtelierLabel(tab == .chat ? "Chat du livre" : "Dictionnaire", tint: tab == .chat ? Atelier.Tint.ai : Atelier.Tint.japanese)
+                    AtelierLabel(tab == .chat ? String(localized: "Chat du livre") : String(localized: "Dictionnaire"), tint: tab == .chat ? Atelier.Tint.ai : Atelier.Tint.japanese)
                 } else {
-                    AtelierLabel("Étude · page \(reader.document.pageLabel(reader.focusSource))", tint: Atelier.textSecondary)
+                    AtelierLabel(String(localized: "Étude · page \(reader.document.pageLabel(reader.focusSource))"), tint: Atelier.textSecondary)
                 }
                 Spacer()
                 StudyWindowButtons()
                 Button(action: close) {
-                    Image(systemName: "xmark").font(.system(size: 14, weight: .semibold))
+                    Image(systemName: "xmark").font(Atelier.font(14, weight: .semibold))
                         .foregroundStyle(Atelier.textSecondary)
                         .frame(minWidth: 22, minHeight: 22)
                 }
                 .padding(.leading, 6)
                 .accessibilityLabel("Fermer le panneau d'étude")
             }
-            PillTabs(items: [(Tab.text, "character.ja", "Texte"), (.vocab, "character.book.closed.ja", "Dico"),
-                             (.notes, "text.bubble", "Notes"), (.marks, "bookmark", "Repères"),
-                             (.chat, "bubble.left.and.bubble.right", "Chat")],
+            PillTabs(items: [(Tab.text, "character.ja", String(localized: "Texte")), (.vocab, "character.book.closed.ja", String(localized: "Dico")),
+                             (.notes, "text.bubble", String(localized: "Notes")), (.marks, "bookmark", String(localized: "Repères")),
+                             (.chat, "bubble.left.and.bubble.right", String(localized: "Chat"))]
+                                .filter { $0.0 != .chat || reader.document.capabilities.chat },
                      selection: $tab, tint: tint)
             Group {
                 switch tab {
-                case .text: StudyTextTab(reader: reader)
+                case .text: StudyTextTab(reader: reader, openLineEditor: openLineEditor, openDocumentSettings: openDocumentSettings)
                 case .vocab:
                     DictionarySearchView(dictionary: model.dictionary, added: model.review.keys, compact: true) { term in
                         let sentence = reader.ocrPage?.lines.first { $0.text.contains(term.matchedText) }?.text
@@ -75,9 +80,15 @@ struct StudyPanel: View {
                     }
                 case .notes: StudyNotesTab(reader: reader)
                 case .marks: StudyMarksTab(reader: reader, openSearch: openSearch)
+                // Onglet repris d'un document précédent : pas de chat sur un manga.
+                case .chat where !reader.document.capabilities.chat: StudyTextTab(reader: reader, openLineEditor: openLineEditor, openDocumentSettings: openDocumentSettings)
                 case .chat: QwenChatView(document: reader.document, embedded: true,
                                          focusPage: reader.document.pageLabel(reader.focusSource),
-                                         openPage: { reader.go(toSource: $0) })
+                                         openPage: { reader.go(toSource: $0) },
+                                         saveToNotes: { text in
+                                             reader.saveNote(PageComment(documentId: reader.document.id, pageIndex: reader.focusSource,
+                                                                         body: String(localized: "Chat IA :\n") + text))
+                                         }, database: model.database)
                 }
             }
             .frame(maxHeight: .infinity, alignment: .top)
@@ -86,6 +97,16 @@ struct StudyPanel: View {
         .frame(width: fixedWidth ? Atelier.panelWidth : nil)
         .frame(maxWidth: fixedWidth ? nil : .infinity, maxHeight: .infinity)
         .atelierPanel()
+        // Onglet Chat repris d'un document qui l'avait : ramené sur Texte dès la reprise, titre et pilules compris
+        // (revue après recette 1.4.8, P3 1).
+        .onAppear(perform: normalizeTab)
+        .onChange(of: reader.document.id) { _ in normalizeTab() }
+        // Même document rangé en Manga pendant la lecture : la capacité Chat disparaît sans changer d'identifiant.
+        .onChange(of: reader.document.capabilities.chat) { _ in normalizeTab() }
+    }
+
+    private func normalizeTab() {
+        if tab == .chat && !reader.document.capabilities.chat { tab = .text }
     }
 
     private var tint: Color {
@@ -103,10 +124,16 @@ struct StudyPanel: View {
 struct StudyTextTab: View {
     @EnvironmentObject private var model: AppModel
     @ObservedObject var reader: ReaderController
+    var openLineEditor: () -> Void
+    /// « Pagination et réglages de ce document », présentée par `ReaderScreen` (recette 1.5.3 : aussi dans le menu Texte).
+    var openDocumentSettings: (() -> Void)? = nil
     /// `reader.rereading` vient d'ici.
     @ObservedObject private var aiTasks = AITaskCenter.shared
     @ObservedObject private var deepl = DeepLService.shared
     @State private var translation: String?
+    /// Texte qui a servi à `translation` : une correction du texte de la page (C3.1) rend la traduction périmée, elle
+    /// n'est plus affichée (revue DeepSeek #10).
+    @State private var translatedText: String?
     /// Texte mis en forme (titres, paragraphes, tableaux) ou tel que lu, ligne par ligne.
     @AppStorage("study.formattedText") private var formatted = true
     /// 3e affichage : la page mise en forme par OvisOCR2 (`AILayoutView`).
@@ -127,6 +154,8 @@ struct StudyTextTab: View {
     @State private var bubble: PanelBubble?
     /// Pointeur (souris, trackpad) au-dessus de la bulle : elle ne se ferme pas tant qu'il y reste.
     @State private var pointerInBubble = false
+    /// Annule les fermetures différées devenues caduques (RET-042, #61).
+    @State private var hoverGate = HoverBubbleGate()
     /// Incrémenté à chaque fermeture : la vue web oublie le mot survolé (sinon il ne rouvrirait pas).
     @State private var hoverReset = 0
     @ObservedObject private var shift = ShiftKey.shared
@@ -136,9 +165,24 @@ struct StudyTextTab: View {
     @State private var showCompare = false
     @State private var query = ""
     @State private var matches: [PageTextSearch.Match] = []
-    @State private var editingLine: Int?
+    /// Les indices de lignes ne valent que pour cet OCR et cette page, capturés à l'ouverture du dialogue.
+    private struct LineCorrectionDraft {
+        let index: Int
+        let page: OCRPage
+        let source: Int
+    }
+    @State private var editingLine: LineCorrectionDraft?
     @State private var showVerify = false
     @State private var lineDraft = ""
+    /// Dernier appui sur « Copier » : le bouton affiche « Copié » (ou « Rien à copier ») un instant.
+    @State private var copiedAt: Date?
+    private enum CopyFeedback { case copied, nothing }
+    /// Dernier appui sur le petit bouton du bloc Traduction.
+    @State private var translationCopiedAt: Date?
+    @State private var copyFeedback = CopyFeedback.copied
+    /// Réglages d'`AILayoutView` (mêmes clés) : la traduction affichée est celle que copie le bouton.
+    @AppStorage("study.aiLayoutFrench") private var aiLayoutTranslation = false
+    @AppStorage("study.translationLanguage") private var translationLanguage = TranslationLanguage.french.rawValue
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -172,7 +216,9 @@ struct StudyTextTab: View {
                             FormattedOCRText(page: page, regions: regions)
                         } else {
                             // Brut : une ligne par ligne lue, caractères douteux soulignés, appui long → corriger.
-                            VStack(alignment: .leading, spacing: 7) {
+                            // C1.8 (audit du 09/11/2026) : `LazyVStack`, les lignes hors écran ne sont plus créées d'un
+                            // coup sur une page dense.
+                            LazyVStack(alignment: .leading, spacing: 7) {
                                 ForEach(Array(page.lines.enumerated()), id: \.offset) { index, line in
                                     Text(Self.marked(line))
                                         .font(Atelier.jp)
@@ -180,7 +226,10 @@ struct StudyTextTab: View {
                                         .textSelection(.enabled)
                                         .frame(maxWidth: .infinity, alignment: .leading)
                                         .contextMenu {
-                                            Button { lineDraft = line.text; editingLine = index } label: {
+                                            Button {
+                                                lineDraft = line.text
+                                                editingLine = LineCorrectionDraft(index: index, page: page, source: reader.focusSource)
+                                            } label: {
                                                 Label("Corriger cette ligne", systemImage: "pencil")
                                             }
                                         }
@@ -195,8 +244,11 @@ struct StudyTextTab: View {
                     }
                     documentOCRRow
                 }
+                // Place pour le bouton Copier posé en bas à droite : la fin du texte reste lisible.
+                .padding(.bottom, reader.ocrPage == nil ? 0 : 44)
             }
         }
+        .overlay(alignment: .bottomTrailing) { copyButton }
         .task(id: "\(query)|\(reader.focusSource)|\(reader.ocrPage?.hashValue ?? 0)") {
             guard let page = reader.ocrPage, !query.isEmpty else { matches = []; return }
             try? await Task.sleep(nanoseconds: 150_000_000)
@@ -207,9 +259,22 @@ struct StudyTextTab: View {
         }
         .onChange(of: reader.focusSource) { _ in
             translation = nil
+            translatedText = nil
             translateError = nil
+            // Coches « copié » d'une autre page : ne pas les montrer sur la nouvelle (revue DeepSeek de 55ef23a).
+            translationCopiedAt = nil
+            copiedAt = nil
         }
         .task(id: "\(reader.focusSource)|\(layoutEngineRaw)|\(formatted)|\(reader.ocrPage != nil)") { await loadRegions() }
+        // OvisOCR2 par défaut, une seule fois (#39) ; ensuite le choix de l'utilisateur reste.
+        .onAppear {
+            let defaults = UserDefaults.standard
+            if OvisDefaultView.shouldSwitch(ovisInstalled: OvisOCR2Reader().isAvailable,
+                                            alreadyApplied: defaults.bool(forKey: OvisDefaultView.appliedKey)) {
+                aiLayout = true
+                defaults.set(true, forKey: OvisDefaultView.appliedKey)
+            }
+        }
         .overlay(alignment: .topLeading) { bubbleOverlay }
         .onChange(of: shift.pressed) { pressed in
             // Bulle ouverte au survol avec Maj : relâcher Maj la ferme (Issue #13).
@@ -226,19 +291,22 @@ struct StudyTextTab: View {
             }, close: { presentedLookup = nil })
             .environmentObject(model.dictionary)
             .presentationDetents([.medium, .large])
-            .preferredColorScheme(.dark)
+            .preferredColorScheme(Theme.current.colorScheme)
         }
         .alert("Corriger la ligne", isPresented: Binding(get: { editingLine != nil }, set: { if !$0 { editingLine = nil } })) {
             TextField("Texte de la ligne", text: $lineDraft)
             Button("Annuler", role: .cancel) { editingLine = nil }
             Button("Garder") {
-                if let editingLine { reader.correctOCRLine(editingLine, text: lineDraft) }
+                if let editingLine {
+                    reader.correctOCRLine(editingLine.index, text: lineDraft,
+                                          original: editingLine.page, source: editingLine.source)
+                }
                 editingLine = nil
             }
         } message: {
             Text("Ta correction est gardée ; la relecture automatique n'y touchera plus.")
         }
-        .sheet(isPresented: $showVerify) { VerifySheet(reader: reader).preferredColorScheme(.dark) }
+        .sheet(isPresented: $showVerify) { VerifySheet(reader: reader).preferredColorScheme(Theme.current.colorScheme) }
         .sheet(isPresented: $showCompare) { CompareEnginesView(reader: reader).environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review) }
     }
 
@@ -255,7 +323,7 @@ struct StudyTextTab: View {
                     }
                     showVerify = true
                 } label: {
-                    Label(count > 0 ? "Corrections IA (\(count))" : "Corrections IA",
+                    Label(count > 0 ? String(localized: "Corrections IA (\(count))") : String(localized: "Corrections IA"),
                           systemImage: "checkmark.seal")
                 }
                 Button {
@@ -271,13 +339,21 @@ struct StudyTextTab: View {
             Text("Comparer au texte OCR de la page · accepter les corrections dans la vérification.")
                 .font(.caption2).foregroundStyle(Atelier.textTertiary)
         }
+        // Hors de la condition : corriger le texte ne dépend d'aucun modèle.
+        Button { openLineEditor() } label: {
+            Label("Corriger le texte", systemImage: "pencil")
+        }
+        .font(.caption.weight(.semibold))
+        .foregroundStyle(Atelier.Tint.ai)
+        .disabled(reader.ocrPage == nil || reader.ocrState == .running)
     }
 
     /// Zones de mise en page de la page de travail (modèle choisi, gardées en mémoire par page).
     // MARK: Bulle de contexte du dictionnaire (Issue #13)
 
     struct PanelBubble: Identifiable {
-        let id = UUID()
+        /// Gardé d'un mot à l'autre au survol (`HoverBubbleGate.reusesBubble`) : pas de nouvelle apparition à chaque mot.
+        var id = UUID()
         let session: LookupSession
         /// Mot en coordonnées de la fenêtre (`.global`).
         let wordRect: CGRect
@@ -296,12 +372,22 @@ struct StudyTextTab: View {
             if let bubble, bubble.hover, hover, bubble.wordRect == wordRect { return }
             session.start(text)
             pointerInBubble = false
-            withAnimation(bubbleAnimation) { bubble = PanelBubble(session: session, wordRect: wordRect, hover: hover) }
+            hoverGate.opened()
+            if let current = bubble, HoverBubbleGate.reusesBubble(currentIsHover: current.hover, incomingIsHover: hover) {
+                // Autre mot survolé : la même bulle suit le pointeur, sans rejouer son apparition (RET-042, #61).
+                var moved = PanelBubble(session: session, wordRect: wordRect, hover: hover)
+                moved.id = current.id
+                bubble = moved
+            } else {
+                withAnimation(bubbleAnimation) { bubble = PanelBubble(session: session, wordRect: wordRect, hover: hover) }
+            }
         case .hoverEnd:
             guard bubble?.hover == true else { return }
-            // Laisser le temps au pointeur d'entrer dans la bulle (elle est collée au mot).
+            // Laisser le temps au pointeur d'entrer dans la bulle (elle est collée au mot). Si un autre mot s'ouvre
+            // entre-temps, cette fermeture ne s'applique plus (RET-042, #61).
+            let token = hoverGate.token
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                if bubble?.hover == true, !pointerInBubble { closeBubble() }
+                if hoverGate.shouldClose(token: token), bubble?.hover == true, !pointerInBubble { closeBubble() }
             }
         case .tapOutside:
             closeBubble()
@@ -364,7 +450,7 @@ struct StudyTextTab: View {
         guard formatted, reader.ocrPage != nil, engine != .geometry else { regions = []; return }
         guard engine.isAvailable() else {
             regions = []
-            layoutError = "\(engine.title) n'est pas téléchargé (Réglages → Modèles) : mise en page par géométrie."
+            layoutError = String(localized: "\(engine.title) n'est pas téléchargé (Réglages → Modèles) : mise en page par géométrie.")
             return
         }
         let key = "\(reader.document.id)-\(reader.focusSource)-\(engine.rawValue)"
@@ -372,8 +458,11 @@ struct StudyTextTab: View {
         // Zones de l'ancienne page / de l'autre moteur : retirées tout de suite (géométrie en attendant).
         regions = []
         let url = reader.fileURL, page = reader.focusSource
+        let rotation = await reader.model.ocr.additionalRotation(documentId: reader.document.id, pageIndex: page)
         let work = Task.detached(priority: .userInitiated) {
-            Result { try LayoutDetector.regions(.pdfPage(url: url, index: page), engine: engine) }
+            Result {
+                try LayoutDetector.regions(.pdfPage(url: url, index: page, additionalRotation: rotation), engine: engine)
+            }
         }
         let result = await withTaskCancellationHandler { await work.value } onCancel: { work.cancel() }
         guard !Task.isCancelled else { return }
@@ -383,76 +472,229 @@ struct StudyTextTab: View {
             regions = found
         case .failure(let error):
             regions = []
-            layoutError = "Mise en page : \(error.localizedDescription) (géométrie utilisée)."
+            layoutError = String(localized: "Mise en page : \(error.localizedDescription) (géométrie utilisée).")
         }
     }
 
+    /// Moteur affiché, moteur choisi et correction (recette iPad 1.5.3, retour 2.10) : voir `OCREngineIndicator`.
+    private var indicator: OCREngineIndicator {
+        OCREngineIndicator(page: reader.ocrPage, pinned: reader.pinnedEngines[reader.focusSource], setting: reader.settings.ocrEngine)
+    }
+
+    /// En-tête du texte : menu des moteurs, affichage, mise en page, furigana. Recette iPad 1.5.3 (retour 2.10) : dans la
+    /// colonne de droite, tout tenait sur une ligne et s'écrasait. `ViewThatFits` garde une ligne quand la place suffit
+    /// (fenêtre large, plein écran) et passe sur deux lignes sinon ; il mesure la place réellement donnée, donc suit le
+    /// mode du panneau et la rotation sans connaître ce mode.
     private var engineRow: some View {
-        HStack(spacing: 8) {
-            Menu {
-                ForEach([OCREngineID.pdfText, OCREngineID.vision] + OCREngineMenu.extra, id: \.self) { id in
-                    Button { reader.runOCR(engine: id) } label: {
-                        Label(OCREngineID.displayName(id), systemImage: OCREngineMenu.icon(id))
+        VStack(alignment: .leading, spacing: 6) {
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 8) {
+                    engineMenu
+                    displayPicker.frame(maxWidth: 230)
+                    layoutMenu
+                    furiganaToggle
+                    Spacer(minLength: 0)
+                }
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 8) {
+                        engineMenu
+                        Spacer(minLength: 0)
+                        layoutMenu
+                        furiganaToggle
                     }
+                    displayPicker.frame(maxWidth: .infinity)
                 }
-                Divider()
-                Button("Relancer") { reader.runOCR(engine: reader.ocrPage?.engine, force: true) }
-                Button("Comparer les moteurs") { showCompare = true }
-                if OvisOCR2Reader().isAvailable {
-                    Button {
-                        reader.verifyShownPages()
-                        showVerify = true
-                    } label: {
-                        Label(reader.shownSources.count > 1 ? "Vérifier la double page (OvisOCR2)" : "Vérifier la page (OvisOCR2)",
-                              systemImage: "checkmark.seal")
-                    }
-                }
-            } label: {
-                // Icône seule (le nom s'écrivait en colonne dans le panneau étroit) ; le nom est dans le menu.
-                HStack(spacing: 4) {
-                    Image(systemName: OCREngineMenu.icon(reader.ocrPage?.engine))
-                    Image(systemName: "chevron.down").font(.system(size: 10, weight: .bold))
-                }
-                .font(.system(size: 13, weight: .semibold))
-                .padding(.horizontal, 10).padding(.vertical, 6)
-                .background(Atelier.surfaceHigh, in: Capsule())
             }
-            Picker("Affichage", selection: Binding(get: { aiLayout ? 2 : (formatted ? 0 : 1) },
-                                                   set: { aiLayout = $0 == 2; if $0 < 2 { formatted = $0 == 0 } })) {
-                Text("Mis en forme").tag(0)
-                Text("Brut").tag(1)
-                Image(systemName: "sparkles").tag(2).accessibilityLabel("Mise en page IA")
-            }
-            .pickerStyle(.segmented)
-            .frame(maxWidth: 230)
-            if formatted && !aiLayout {
-                Menu {
-                    LayoutEnginePicker(selection: $layoutEngineRaw)
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "rectangle.3.group")
-                        Text(LayoutEngineMenu.engine(layoutEngineRaw).shortTitle)
-                            .strikethrough(!LayoutEngineMenu.engine(layoutEngineRaw).isAvailable())
-                    }
-                    .font(.system(size: 13, weight: .semibold))
-                    .padding(.horizontal, 8).padding(.vertical, 6)
-                    .background(Atelier.surfaceHigh, in: Capsule())
-                }
-                .accessibilityLabel("Moteur de mise en page : \(LayoutEngineMenu.engine(layoutEngineRaw).title)")
-            }
-            Toggle(isOn: $furigana) { Text("ふりがな").font(.system(size: 13, weight: .semibold)) }
-                .toggleStyle(.button)
-                .accessibilityLabel("Furigana sur le texte extrait")
-            Spacer()
-            Button {
-                guard let page = reader.ocrPage else { return }
-                UIPasteboard.general.string = formatted ? OCRLayout.markdown(page) : page.text
-            } label: { Image(systemName: "doc.on.doc") }
-                .disabled(reader.ocrPage == nil)
-                .accessibilityLabel(formatted ? "Copier en Markdown" : "Copier le texte")
+            engineMismatchNote
         }
         .foregroundStyle(Atelier.textPrimary)
     }
+
+    /// Menu du panneau Texte. Ordre demandé par NOxygen59 (recette 1.5.3, retour 2.10) : OvisOCR2 en haut (mise en page
+    /// IA, vérification), puis les moteurs, puis les actions, puis les réglages du document.
+    private var engineMenu: some View {
+        let indicator = indicator
+        return Menu {
+            if OvisOCR2Reader().isAvailable {
+                // Sa lecture s'affiche dans « Mise en page IA » (#39).
+                Button { aiLayout = true } label: {
+                    Label("OvisOCR2 (mise en page IA)", systemImage: "sparkles.rectangle.stack")
+                }
+                Button {
+                    reader.verifyShownPages()
+                    showVerify = true
+                } label: {
+                    Label(reader.shownSources.count > 1 ? String(localized: "Vérifier la double page (OvisOCR2)") : String(localized: "Vérifier la page (OvisOCR2)"),
+                          systemImage: "checkmark.seal")
+                }
+                Divider()
+            }
+            ForEach([OCREngineID.pdfText, OCREngineID.vision] + OCREngineMenu.extra, id: \.self) { id in
+                // Quitter la mise en page IA : sinon le texte du moteur choisi resterait caché.
+                Button { aiLayout = false; reader.runOCR(engine: id) } label: {
+                    // Coche : le moteur du texte affiché, le même que le libellé du menu. Ni coche ni « (choisi) » en
+                    // « Mise en page IA » : le texte lu vient d'OvisOCR2 (revue DeepSeek de 2a9da9e, A5).
+                    Label(!aiLayout && indicator.differs && id == indicator.chosen
+                            ? String(localized: "\(OCREngineID.displayName(id)) (choisi)") : OCREngineID.displayName(id),
+                          systemImage: !aiLayout && id == indicator.shown ? "checkmark" : OCREngineMenu.icon(id))
+                }
+            }
+            Divider()
+            // Moteur choisi ci-dessus : retenu pour cette page seulement ; ici, pour tout le document.
+            if let pinned = reader.pinnedEngines[reader.focusSource], reader.settings.ocrEngine.rawValue != pinned {
+                Button {
+                    reader.keepPinnedEngineForDocument()
+                } label: {
+                    Label("Garder \(OCREngineID.displayName(pinned)) pour ce document", systemImage: "pin")
+                }
+            }
+            Button { reader.runOCR(engine: reader.ocrPage?.engine, force: true) } label: {
+                Label("Relancer", systemImage: "arrow.clockwise")
+            }
+            Button { showCompare = true } label: {
+                Label("Comparer les moteurs", systemImage: "square.split.2x1")
+            }
+            if let openDocumentSettings {
+                Divider()
+                Button(action: openDocumentSettings) {
+                    Label("Pagination et réglages de ce document", systemImage: "slider.horizontal.3")
+                }
+            }
+        } label: {
+            // Icône et nom du moteur du texte **affiché** ; crayon si ce texte est corrigé à la main.
+            HStack(spacing: 5) {
+                Image(systemName: OCREngineMenu.icon(indicator.shown))
+                Text(indicator.shown.map(OCREngineID.displayName) ?? String(localized: "Moteur"))
+                    .lineLimit(1)
+                if indicator.corrected { Image(systemName: "pencil").font(Atelier.font(11, weight: .bold)) }
+                Image(systemName: "chevron.down").font(Atelier.font(10, weight: .bold))
+            }
+            .font(Atelier.font(13, weight: .semibold))
+            .padding(.horizontal, 10).padding(.vertical, 6)
+            .background(Atelier.surfaceHigh, in: Capsule())
+        }
+        .fixedSize()
+        .accessibilityLabel(engineAccessibilityLabel(indicator))
+    }
+
+    /// VoiceOver annonce aussi la correction et l'écart avec le choix (audit DeepSeek du 08/11/2026).
+    private func engineAccessibilityLabel(_ indicator: OCREngineIndicator) -> String {
+        guard let shown = indicator.shown else { return String(localized: "Moteur OCR") }
+        var label = String(localized: "Moteur OCR : \(OCREngineID.displayName(shown))")
+        if indicator.corrected { label += String(localized: ", corrigé à la main") }
+        if indicator.differs, let chosen = indicator.chosen { label += String(localized: ", choisi : \(OCREngineID.displayName(chosen))") }
+        return label
+    }
+
+    /// Le texte affiché ne vient pas du moteur choisi : le dire au lieu de laisser un logo qui semble contredire le choix.
+    /// Pas en « Mise en page IA » : le texte lu vient alors d'OvisOCR2, le moteur OCR n'y décide pas de l'affichage ; ni sans
+    /// texte lu (revue DeepSeek de 39d31d3) ; ni pendant une lecture ou après un échec, quand le panneau n'affiche pas ce
+    /// texte (revue DeepSeek de 2a9da9e, A4).
+    @ViewBuilder
+    private var engineMismatchNote: some View {
+        let indicator = indicator
+        if aiLayout || reader.ocrPage == nil || reader.ocrState != .idle {
+            EmptyView()
+        } else if indicator.differs, let shown = indicator.shown, let chosen = indicator.chosen {
+            Text(indicator.corrected
+                 ? String(localized: "Choisi : \(OCREngineID.displayName(chosen)). Affiché : ta correction (sur \(OCREngineID.displayName(shown))), qui passe toujours d'abord.")
+                 : String(localized: "Choisi : \(OCREngineID.displayName(chosen)). Affiché : \(OCREngineID.displayName(shown)), la dernière lecture réussie."))
+                .font(.caption2).foregroundStyle(Atelier.textTertiary)
+                .fixedSize(horizontal: false, vertical: true)
+        } else if let pinned = reader.pinnedEngines[reader.focusSource], reader.settings.ocrEngine.rawValue != pinned {
+            // Relecture de 6cc15fc (P3-a) : un moteur choisi dans le menu ne vaut que pour sa page (décision D2) ; la
+            // page suivante revient au réglage. Le dire avant qu'on tourne la page.
+            Text("Choix valable pour cette page seulement. « Garder \(OCREngineID.displayName(pinned)) pour ce document » dans le menu l'étend à tout le document.")
+                .font(.caption2).foregroundStyle(Atelier.textTertiary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private var displayPicker: some View {
+        Picker("Affichage", selection: Binding(get: { aiLayout ? 2 : (formatted ? 0 : 1) },
+                                               set: { aiLayout = $0 == 2; if $0 < 2 { formatted = $0 == 0 } })) {
+            Text("Mis en forme").tag(0)
+            Text("Brut").tag(1)
+            Image(systemName: "sparkles").tag(2).accessibilityLabel("Mise en page IA")
+        }
+        .pickerStyle(.segmented)
+    }
+
+    @ViewBuilder
+    private var layoutMenu: some View {
+        if formatted && !aiLayout {
+            Menu {
+                LayoutEnginePicker(selection: $layoutEngineRaw)
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "rectangle.3.group")
+                    Text(LayoutEngineMenu.engine(layoutEngineRaw).shortTitle)
+                        .strikethrough(!LayoutEngineMenu.engine(layoutEngineRaw).isAvailable())
+                        .lineLimit(1)
+                }
+                .font(Atelier.font(13, weight: .semibold))
+                .padding(.horizontal, 8).padding(.vertical, 6)
+                .background(Atelier.surfaceHigh, in: Capsule())
+            }
+            .fixedSize()
+            .accessibilityLabel("Moteur de mise en page : \(LayoutEngineMenu.engine(layoutEngineRaw).title)")
+        }
+    }
+
+    private var furiganaToggle: some View {
+        Toggle(isOn: $furigana) { Text("ふりがな").font(Atelier.font(13, weight: .semibold)) }
+            .toggleStyle(.button)
+            .fixedSize()
+            .accessibilityLabel("Furigana sur le texte extrait")
+    }
+
+    /// Bouton « Copier » en bas à droite du panneau (recette iPad 1.5.3, 7.1 à 7.4) : la copie depuis la page échoue ou
+    /// reste inexacte sur les scans (PDFKit n'y a pas de vrai texte) ; NOxygen59 a préféré un bouton qui copie le texte
+    /// OCR affiché dans le panneau. Mis en forme : Markdown (titres, tableaux) ; sinon le texte ligne par ligne.
+    @ViewBuilder
+    private var copyButton: some View {
+        // Ni pendant une lecture, ni après un échec : le texte de la lecture précédente n'est plus à l'écran (relecture
+        // de 6cc15fc, P3-c). Ni pendant une recherche : le panneau montre les résultats, pas la page (revue DeepSeek
+        // de 39d31d3).
+        if reader.ocrPage != nil, reader.ocrState == .idle, query.isEmpty {
+            Button {
+                // Lu au moment du toucher : le texte d'OvisOCR2 et sa traduction sont des fichiers (`DocumentAITextStore`).
+                let ovis = aiLayout ? DocumentAITextStore.read(documentId: reader.document.id, reader: ModelSpec.ovisocr2.id, page: reader.focusSource) : nil
+                let translation = aiLayout && aiLayoutTranslation
+                    ? DocumentAITextStore.read(documentId: reader.document.id, reader: translationLanguage, page: reader.focusSource) : nil
+                let mode: OCRPanelCopy.Mode = aiLayout ? .aiLayout : (formatted ? .formatted : .raw)
+                if let text = OCRPanelCopy.text(mode: mode, page: reader.ocrPage, ovis: ovis, translation: translation,
+                                                showTranslation: aiLayoutTranslation) {
+                    UIPasteboard.general.string = text
+                    copyFeedback = .copied
+                } else {
+                    copyFeedback = .nothing
+                }
+                copiedAt = Date()
+            } label: {
+                Label(copyFeedback == .nothing && copied ? String(localized: "Rien à copier") : copied ? String(localized: "Copié") : String(localized: "Copier"),
+                      systemImage: copyFeedback == .nothing && copied ? "xmark" : copied ? "checkmark" : "doc.on.doc")
+                    .font(Atelier.font(13, weight: .semibold))
+                    .padding(.horizontal, 12).padding(.vertical, 8)
+                    .foregroundStyle(Atelier.textPrimary)
+                    .background(Atelier.surfaceHigh, in: Capsule())
+                    .overlay(Capsule().stroke(Atelier.hairline))
+                    .atelierShapeShadow(Capsule(), opacity: 0.12, radius: 6, y: 2)
+            }
+            .buttonStyle(.plain)
+            .padding(4)
+            .accessibilityLabel(aiLayout ? String(localized: "Copier la mise en page IA")
+                                : formatted ? String(localized: "Copier en Markdown") : String(localized: "Copier le texte"))
+            .task(id: copiedAt) {
+                // « Copié » le temps de le voir, puis retour à « Copier ».
+                guard copiedAt != nil else { return }
+                try? await Task.sleep(nanoseconds: 1_500_000_000)
+                if !Task.isCancelled { copiedAt = nil }
+            }
+        }
+    }
+
+    private var copied: Bool { copiedAt != nil }
 
     /// Ligne avec ses caractères douteux soulignés (orange).
     static func marked(_ line: OCRLine) -> AttributedString {
@@ -484,7 +726,7 @@ struct StudyTextTab: View {
         } else if !lines.isEmpty {
             HStack(spacing: 8) {
                 Image(systemName: "exclamationmark.triangle").foregroundStyle(.orange)
-                Text(count > 0 ? "\(count) caractère\(count > 1 ? "s" : "") douteux" : "\(lines.count) ligne\(lines.count > 1 ? "s" : "") peu sûre\(lines.count > 1 ? "s" : "")")
+                Text(count > 0 ? String(localized: "\(count) caractère\(count > 1 ? "s" : "") douteux") : String(localized: "\(lines.count) ligne\(lines.count > 1 ? "s" : "") peu sûre\(lines.count > 1 ? "s" : "")"))
                     .font(.caption)
                 Spacer()
                 if GLMOCREngine().isAvailable {
@@ -503,23 +745,52 @@ struct StudyTextTab: View {
 
     @ViewBuilder
     private func translationBlock(for text: String) -> some View {
+        // Revue DeepSeek #10 : la traduction n'est montrée que pour le texte dont elle vient. Une correction de la page
+        // (C3.1) change le texte ; l'ancienne traduction disparaît alors sans être perdue, et revient si le texte
+        // redevient le même (correction annulée).
+        let shown = translatedText == text ? translation : nil
         VStack(alignment: .leading, spacing: 8) {
-            AtelierLabel("Traduction", tint: Atelier.Tint.ai)
-            if let translation {
-                Text(translation)
-                    .font(.system(size: 15))
+            HStack {
+                AtelierLabel(String(localized: "Traduction"), tint: Atelier.Tint.ai)
+                Spacer(minLength: 0)
+                // Choix de NOxygen59 du 08/11/2026 (analyse DeepSeek de 2a9da9e, option O2) : le japonais et la traduction
+                // sont visibles ensemble ; le grand bouton copie le japonais, celui-ci seulement la traduction.
+                if let shown {
+                    Button {
+                        UIPasteboard.general.string = shown
+                        translationCopiedAt = Date()
+                    } label: {
+                        Image(systemName: translationCopiedAt == nil ? "doc.on.doc" : "checkmark")
+                            .font(Atelier.font(13, weight: .semibold))
+                            .foregroundStyle(Atelier.Tint.ai)
+                            // 44 pt : cible tactile recommandée, c'est le seul geste pour copier la traduction.
+                            .frame(minWidth: 44, minHeight: 44)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Copier la traduction")
+                    .task(id: translationCopiedAt) {
+                        guard translationCopiedAt != nil else { return }
+                        try? await Task.sleep(nanoseconds: 1_500_000_000)
+                        if !Task.isCancelled { translationCopiedAt = nil }
+                    }
+                }
+            }
+            if let shown {
+                Text(shown)
+                    .font(Atelier.font(15))
                     .foregroundStyle(Atelier.textPrimary)
                     .textSelection(.enabled)
                 Text("DeepL").font(.caption2).foregroundStyle(Atelier.textTertiary)
             } else if let translateError {
                 Text(translateError).font(.footnote).foregroundStyle(Atelier.textSecondary)
             }
-            if translation == nil {
+            if shown == nil {
                 if deepl.hasKey {
                     Button {
                         Task { await translate(text) }
                     } label: {
-                        HStack { if translating { ProgressView().tint(.black) }; Text("Traduire en français") }
+                        HStack { if translating { ProgressView().tint(Atelier.onAccentInk) }; Text("Traduire en français") }
                     }
                     .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.ai))
                     .disabled(translating)
@@ -546,7 +817,7 @@ struct StudyTextTab: View {
             } else {
                 Button { reader.ocrWholeDocument() } label: {
                     Label("Lire tout le document", systemImage: "doc.text.viewfinder")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(Atelier.font(14, weight: .semibold))
                 }
                 .foregroundStyle(Atelier.Tint.japanese)
                 Text("Rend les pages photo (scans) cherchables. Une seule fois : le résultat est gardé.")
@@ -559,7 +830,12 @@ struct StudyTextTab: View {
         translating = true
         translateError = nil
         defer { translating = false }
-        do { translation = try await DeepLService.shared.translate(text) }
+        do {
+            translation = try await DeepLService.shared.translate(text)
+            // Le texte de départ est noté avec la traduction : si la page est corrigée pendant l'attente de DeepL, le
+            // résultat ne s'affiche pas pour le nouveau texte (revue DeepSeek #10).
+            translatedText = text
+        }
         catch { translateError = error.localizedDescription }
     }
 }
@@ -572,7 +848,7 @@ enum LayoutEngineMenu {
 extension LayoutDetector.Engine {
     var shortTitle: String {
         switch self {
-        case .geometry: return "Géo"
+        case .geometry: return String(localized: "Géo")
         case .ppDocLayout: return "PP"
         case .docLayoutYOLO: return "YOLO"
         }
@@ -586,7 +862,7 @@ struct LayoutEnginePicker: View {
     var body: some View {
         Picker("Mise en page", selection: $selection) {
             ForEach(LayoutDetector.Engine.allCases, id: \.rawValue) { engine in
-                Text(engine.isAvailable() ? engine.title : "\(engine.title) — à télécharger (Modèles)")
+                Text(engine.isAvailable() ? engine.title : String(localized: "\(engine.title) — à télécharger (Modèles)"))
                     .tag(engine.rawValue)
                     .disabled(!engine.isAvailable())
             }
@@ -607,7 +883,7 @@ struct FormattedOCRText: View {
             ForEach(blocks.indices, id: \.self) { i in
                 switch blocks[i] {
                 case .heading(let level, let text):
-                    Text(text).font(.system(size: level == 1 ? 22 : 18, weight: .bold))
+                    Text(text).font(Atelier.font(level == 1 ? 22 : 18, weight: .bold))
                         .foregroundStyle(Atelier.textPrimary).padding(.top, i == 0 ? 0 : 6)
                 case .paragraph(let text):
                     Text(text).font(Atelier.jp).lineSpacing(7).foregroundStyle(Atelier.textPrimary)
@@ -619,7 +895,7 @@ struct FormattedOCRText: View {
                                     Text(rows[r][c]).font(r == 0 ? Atelier.jp.bold() : Atelier.jp)
                                         .padding(.horizontal, 8).padding(.vertical, 5)
                                         .frame(maxWidth: .infinity, alignment: .leading)
-                                        .overlay(Rectangle().strokeBorder(Atelier.hairline, lineWidth: 1))
+                                        .overlay(Rectangle().strokeBorder(Atelier.hairline, lineWidth: Atelier.border(1)))
                                 }
                             }
                         }
@@ -648,6 +924,14 @@ struct StudyNotesTab: View {
     /// modification ne soit jamais enregistrée sur la page qu'on vient de quitter.
     @State private var draftPage: Int?
     @FocusState private var focused: Bool
+    /// Pages dont le brouillon n'est pas encore ajouté (RET-051). Relu depuis `NoteDraftStore` à l'ouverture,
+    /// au changement de page et après chaque enregistrement : le disque reste la seule source de vérité.
+    @State private var pendingPages: [Int] = []
+    @State private var markdownFile: SharedFile?
+    /// Note en cours de modification dans la liste, et son texte (recette 1.3.2 (62), N1).
+    @State private var editingID: String?
+    @State private var editText = ""
+    @FocusState private var editFocused: Bool
 
     private var page: Int { reader.focusSource }
     private let drafts = NoteDraftStore.shared
@@ -672,36 +956,66 @@ struct StudyNotesTab: View {
                     .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.annotate))
                     .disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 Button { reader.newNote() } label: { Label("Flottante", systemImage: "note.text.badge.plus") }
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(Atelier.font(13, weight: .semibold))
                     .foregroundStyle(Atelier.Tint.annotate)
                 Spacer()
-                ShareLink(item: MarkdownFile(name: reader.document.title) { [reader] in
-                              MarkdownExporter.export(title: reader.document.title, comments: reader.notes,
-                                                      highlights: reader.allHighlights, bookmarks: reader.bookmarks)
-                          },
-                          preview: SharePreview("\(reader.document.title).md")) {
-                    Label("Markdown", systemImage: "square.and.arrow.up").font(.system(size: 13, weight: .semibold))
+                // Notes, surlignages et signets du livre en fichier `.md`, écrit d'abord puis partagé (recette
+                // 1.3.2 (61) : l'ancien partage n'ouvrait rien sur l'iPad).
+                Button { shareMarkdown() } label: {
+                    Label("Markdown", systemImage: "square.and.arrow.up").font(Atelier.font(13, weight: .semibold))
                 }
                 .foregroundStyle(Atelier.Tint.annotate)
+                .accessibilityHint("Partage les notes, surlignages et signets du livre en fichier Markdown")
             }
             ScrollView {
                 VStack(alignment: .leading, spacing: 10) {
+                    // Un avertissement par brouillon : il reste tant que « Ajouter » n'a pas créé la note.
+                    ForEach(pendingPages, id: \.self) { pendingWarning($0) }
                     let here = reader.notes.filter { $0.pageIndex == page }
                     let others = reader.notes.filter { $0.pageIndex != page }
                     if here.isEmpty { Text("Aucune note sur cette page.").font(.footnote).foregroundStyle(Atelier.textTertiary) }
-                    ForEach(here) { note($0) }
+                    dayGroups(here, showPage: false)
                     if !others.isEmpty {
-                        AtelierLabel("Autres pages").padding(.top, 6)
-                        ForEach(others) { note($0, showPage: true) }
+                        AtelierLabel(String(localized: "Autres pages")).padding(.top, 6)
+                        dayGroups(others, showPage: true)
                     }
                 }
             }
         }
-        .onAppear { loadDraft(page) }
-        .onChange(of: page) { loadDraft($0) }
+        .sheet(item: $markdownFile) { ActivityShareSheet(url: $0.url) }
+        .onAppear { loadDraft(page); refreshPending() }
+        .onChange(of: page) { loadDraft($0); refreshPending() }
+    }
+
+    private func refreshPending() {
+        pendingPages = NoteDraftStore.pendingPages(drafts.drafts(documentId: reader.document.id))
+    }
+
+    /// Petit avertissement d'un brouillon non ajouté ; toucher celui d'une autre page y mène.
+    private func pendingWarning(_ pending: Int) -> some View {
+        Button { if pending != page { reader.go(toSource: pending) } } label: {
+            Label(pending == page ? String(localized: "Brouillon non ajouté sur cette page")
+                                  : String(localized: "Brouillon non ajouté · p. \(reader.document.pageLabel(pending))"),
+                  systemImage: "exclamationmark.triangle.fill")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.orange)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .buttonStyle(.plain)
+        .accessibilityHint(pending == page ? String(localized: "Touche Ajouter pour créer la note") : String(localized: "Ouvre la page du brouillon"))
     }
 
     /// Affiche le brouillon de `page`. Celui de la page quittée est déjà sur disque (écrit à chaque frappe).
+    private func shareMarkdown() {
+        let text = MarkdownExporter.export(title: reader.document.title, comments: reader.notes,
+                                           highlights: reader.allHighlights, bookmarks: reader.bookmarks)
+        do {
+            markdownFile = SharedFile(url: try MarkdownShareFile.write(text, title: reader.document.title))
+        } catch {
+            Diagnostics.error("Export Markdown impossible : \(error.localizedDescription)", "notes")
+        }
+    }
+
     private func loadDraft(_ page: Int) {
         guard draftPage != page else { return }
         draftPage = page
@@ -716,36 +1030,91 @@ struct StudyNotesTab: View {
         } catch {
             Diagnostics.error("Brouillon de note non enregistré : \(error.localizedDescription)", "notes")
         }
+        refreshPending()
     }
 
     /// Toucher : ouvrir la note dans la fenêtre flottante ; ＊ : aller au mot ancré.
+    /// Notes séparées par jour de création (« Aujourd'hui », « Hier », date), du plus récent au plus ancien
+    /// (RET-019, #22).
+    @ViewBuilder private func dayGroups(_ notes: [PageComment], showPage: Bool) -> some View {
+        ForEach(NoteDayGroups.group(notes), id: \.day) { group in
+            Text(group.title).font(.caption.weight(.semibold)).foregroundStyle(Atelier.textTertiary).padding(.top, 2)
+            ForEach(group.notes) { note($0, showPage: showPage) }
+        }
+    }
+
     private func note(_ comment: PageComment, showPage: Bool = false) -> some View {
         HStack(alignment: .top, spacing: 10) {
-            RoundedRectangle(cornerRadius: 2).fill(Atelier.Tint.annotate).frame(width: 3)
+            RoundedRectangle(cornerRadius: Atelier.corner(2)).fill(Atelier.Tint.annotate).frame(width: 3)
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
                     if showPage { Text("p. \(reader.document.pageLabel(comment.pageIndex))").font(Atelier.mono).foregroundStyle(Atelier.textTertiary) }
                     if comment.drawing != nil { Image(systemName: "scribble").font(.caption).foregroundStyle(Atelier.textTertiary) }
                     if comment.anchorRect != nil {
                         Button { reader.goToAnchor(comment) } label: {
-                            Text("＊ \(comment.anchorText ?? "ancre")").font(.caption.weight(.semibold)).foregroundStyle(Atelier.Tint.annotate)
+                            Text("＊ \(comment.anchorText ?? String(localized: "ancre"))").font(.caption.weight(.semibold)).foregroundStyle(Atelier.Tint.annotate)
                         }
                         .buttonStyle(.plain)
                     }
                 }
-                Text(comment.body.isEmpty ? "(note sans texte)" : comment.body)
-                    .foregroundStyle(comment.body.isEmpty ? Atelier.textTertiary : Atelier.textPrimary)
-                    .lineLimit(4)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                if editingID == comment.id {
+                    // Modification sur place : la fenêtre flottante ne montrait pas le texte (recette 62, N1).
+                    TextEditor(text: $editText)
+                        .focused($editFocused)
+                        .scrollContentBackground(.hidden)
+                        .frame(minHeight: 70, maxHeight: 160)
+                        .padding(4)
+                        .background(Atelier.surfaceHigh, in: RoundedRectangle(cornerRadius: Atelier.smallRadius, style: .continuous))
+                    HStack {
+                        Button("Enregistrer") { saveEdit(comment) }
+                            .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.annotate))
+                            .keyboardShortcut(.return, modifiers: .command)
+                        Button("Annuler") { editingID = nil }
+                            .font(Atelier.font(13, weight: .semibold))
+                            .keyboardShortcut(.cancelAction)
+                    }
+                } else {
+                    Text(comment.body.isEmpty ? String(localized: "(note sans texte)") : comment.body)
+                        .foregroundStyle(comment.body.isEmpty ? Atelier.textTertiary : Atelier.textPrimary)
+                        .lineLimit(4)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+            VStack(alignment: .trailing, spacing: 6) {
+                // Heure de création, discrète sur le côté (RET-019, #22).
+                Text(NoteDayGroups.time(comment.createdAt)).font(Atelier.mono).foregroundStyle(Atelier.textTertiary)
+                    .accessibilityLabel("créée à \(NoteDayGroups.time(comment.createdAt))")
+                // Modifier : le texte se modifie ici même (recette 1.3.2 (62), N1). Toucher la note ouvre toujours
+                // sa fenêtre flottante, pour le dessin.
+                Button { startEdit(comment) } label: {
+                    Image(systemName: "square.and.pencil").font(Atelier.font(13, weight: .semibold))
+                        .foregroundStyle(Atelier.Tint.annotate)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Modifier la note")
             }
         }
         .contentShape(Rectangle())
-        .onTapGesture { reader.openNote = comment }
+        .onTapGesture { if editingID != comment.id { reader.openNote = comment } }
         .contextMenu {
-            Button { reader.openNote = comment } label: { Label("Ouvrir", systemImage: "macwindow") }
+            Button { startEdit(comment) } label: { Label("Modifier le texte", systemImage: "square.and.pencil") }
+            Button { reader.openNote = comment } label: { Label("Ouvrir en fenêtre (dessin)", systemImage: "macwindow") }
             if showPage { Button { reader.go(toSource: comment.pageIndex) } label: { Label("Aller à la page", systemImage: "arrow.right") } }
             Button(role: .destructive) { reader.deleteNote(comment) } label: { Label("Supprimer", systemImage: "trash") }
         }
+    }
+
+    private func startEdit(_ comment: PageComment) {
+        editText = comment.body
+        editingID = comment.id
+        editFocused = true
+    }
+
+    /// Enregistre seulement un vrai changement ; la note relue dans `reader.notes` (une fenêtre a pu la changer).
+    private func saveEdit(_ comment: PageComment) {
+        let current = reader.notes.first { $0.id == comment.id } ?? comment
+        if let edited = current.editing(body: editText) { reader.saveNote(edited) }
+        editingID = nil
     }
 
     private func add() {
@@ -771,14 +1140,17 @@ struct StudyMarksTab: View {
                         .background(Atelier.surfaceHigh, in: RoundedRectangle(cornerRadius: Atelier.smallRadius, style: .continuous))
                 }
                 .foregroundStyle(Atelier.textPrimary)
-                AtelierLabel("Signets · \(reader.bookmarks.count)", tint: Atelier.Tint.read)
+                AtelierLabel(String(localized: "Signets · \(reader.bookmarks.count)"), tint: Atelier.Tint.read)
                 if reader.bookmarks.isEmpty {
-                    Text("Touche ★ en haut pour marquer une page.").font(.footnote).foregroundStyle(Atelier.textTertiary)
+                    // Même symbole que le bouton « Signet » de la barre du haut (`bookmark`), pas une étoile (RET-028, #43).
+                    Text("Touche \(Image(systemName: "bookmark")) en haut pour marquer une page.")
+                        .font(.footnote).foregroundStyle(Atelier.textTertiary)
+                        .accessibilityLabel("Touche le bouton Signet en haut pour marquer une page.")
                 }
                 ForEach(reader.bookmarks) { b in
                     row(icon: "bookmark.fill", tint: Atelier.Tint.read, title: b.title, page: b.pageIndex)
                 }
-                AtelierLabel("Surlignages · \(reader.allHighlights.count)", tint: Atelier.Tint.annotate)
+                AtelierLabel(String(localized: "Surlignages · \(reader.allHighlights.count)"), tint: Atelier.Tint.annotate)
                 ForEach(reader.allHighlights) { h in
                     row(icon: "highlighter", tint: Color(h.color.uiColor), title: h.text.isEmpty ? "—" : h.text, page: h.pageIndex)
                 }
@@ -820,3 +1192,124 @@ final class LayoutRegionsCache {
 
 /// Identité d'objet : `sheet(item:)` présente la session elle-même (RET-009).
 extension LookupSession: Identifiable {}
+
+/// Correction du texte de la page : lignes de l'OCR, ou lecture OvisOCR2 entière. Écran à part : dans le panneau,
+/// l'appui long sur une ligne sélectionnable est pris par la sélection de texte et le menu « Corriger cette ligne »
+/// n'apparaît pas. Travaille sur le résultat présent à l'ouverture : les numéros de ligne ne valent que pour lui.
+struct OCRLineEditor: View {
+    private enum Source: Hashable { case ocr, ovis }
+
+    @ObservedObject var reader: ReaderController
+    @Environment(\.dismiss) private var dismiss
+    private let original: OCRPage?
+    private let source: Int
+    private let ovisOriginal: String?
+    @State private var drafts: [Int: String] = [:]
+    @State private var ovisDraft: String
+    @State private var kind: Source
+    @State private var outdated = false
+    @State private var confirmingUndo = false
+    @State private var confirmingDiscard = false
+
+    /// Saisie non enregistrée : la fermeture demande confirmation, y compris d'un toucher à côté.
+    private var isDirty: Bool {
+        if let ovisOriginal, ovisDraft != ovisOriginal { return true }
+        guard let original else { return false }
+        return drafts.contains { original.lines.indices.contains($0.key) && original.lines[$0.key].text != $0.value }
+    }
+
+    init(reader: ReaderController) {
+        self.reader = reader
+        original = reader.ocrPage
+        source = reader.focusSource
+        let ovis = DocumentAITextStore.read(documentId: reader.document.id, reader: ModelSpec.ovisocr2.id, page: reader.focusSource)
+        ovisOriginal = ovis
+        _ovisDraft = State(initialValue: ovis ?? "")
+        _kind = State(initialValue: ovis == nil ? .ocr : .ovis)
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                if outdated {
+                    Label("Le texte de cette page a changé pendant ta correction : rien n'a été enregistré. Ferme cet écran et recommence.",
+                          systemImage: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.orange)
+                }
+                if ovisOriginal != nil, original != nil {
+                    Picker("Texte", selection: $kind) {
+                        Text("Lecture OvisOCR2").tag(Source.ovis)
+                        Text("Lignes de l'OCR").tag(Source.ocr)
+                    }
+                    .pickerStyle(.segmented)
+                }
+                switch kind {
+                case .ovis:
+                    TextEditor(text: $ovisDraft).font(Atelier.jp).frame(minHeight: 320)
+                case .ocr:
+                    ForEach(Array((original?.lines ?? []).enumerated()), id: \.offset) { index, line in
+                        TextField("Texte de la ligne", text: Binding(
+                            get: { drafts[index] ?? line.text },
+                            set: { drafts[index] = $0 }
+                        ), axis: .vertical)
+                        .font(Atelier.jp)
+                    }
+                }
+            }
+            // Barre fixe en haut : dans la liste il s'affichait coupé (recette 1.4.1, 2.3), en bas la barre du clavier le
+            // cachait (recette 1.4.5, 5.1).
+            .safeAreaInset(edge: .top, spacing: 0) {
+                if reader.hasCorrections {
+                    Button("Annuler mes corrections de cette page", role: .destructive) { confirmingUndo = true }
+                        .buttonStyle(.bordered)
+                        .frame(maxWidth: .infinity)
+                        .padding(12)
+                        .background(.bar)
+                }
+            }
+            .navigationTitle("Corriger le texte")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Fermer") { if isDirty { confirmingDiscard = true } else { dismiss() } }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Garder") { save() }.disabled(outdated)
+                }
+            }
+            .interactiveDismissDisabled(isDirty)
+            .alert("Abandonner les modifications ?", isPresented: $confirmingDiscard) {
+                Button("Abandonner", role: .destructive) { dismiss() }
+                Button("Continuer", role: .cancel) {}
+            } message: {
+                Text("Le texte que tu viens de corriger ne sera pas enregistré.")
+            }
+            .alert("Annuler les corrections ?", isPresented: $confirmingUndo) {
+                Button("Annuler les corrections", role: .destructive) {
+                    reader.undoCorrections()
+                    dismiss()
+                }
+                Button("Retour", role: .cancel) {}
+            } message: {
+                Text("La page revient à ce que l'OCR et OvisOCR2 avaient lu, sans rien relancer.")
+            }
+        }
+    }
+
+    private func save() {
+        // Contrôle d'abord : le message « rien n'a été enregistré » doit rester vrai.
+        if let original, !reader.ocrUnchanged(since: original, source: source) {
+            outdated = true
+            return
+        }
+        if let ovisOriginal, ovisDraft != ovisOriginal,
+           !ovisDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            reader.saveOvisCorrection(ovisDraft, source: source)
+        }
+        if let original {
+            let changes = drafts.filter { original.lines.indices.contains($0.key) && original.lines[$0.key].text != $0.value }
+            reader.correctOCRLines(changes, ifStill: original, source: source)
+        }
+        dismiss()
+    }
+}

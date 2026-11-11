@@ -12,6 +12,16 @@ enum StudyPanelMode: String {
     static let storageKey = "study.panelMode"
     /// Mode à retrouver en touchant la pastille du panneau réduit.
     static let restoreKey = "study.panelRestore"
+
+    /// Au lancement : le bouton « − » est retiré (RET-023, #38), un panneau resté réduit reprend sa dernière position.
+    /// Le cas `minimized` reste géré plus bas par prudence (valeur écrite par une ancienne version pendant la session).
+    static func migrateStoredSetting() {
+        let defaults = UserDefaults.standard
+        guard let mode = StudyPanelModeMigration.migrated(mode: defaults.string(forKey: storageKey),
+                                                          restore: defaults.string(forKey: restoreKey)) else { return }
+        defaults.set(mode, forKey: storageKey)
+        Diagnostics.log("Panneau d'étude : position « réduite » retirée, remplacée par « \(mode) »", "ocr-panel")
+    }
 }
 
 /// Transitions visuelles des panneaux ; la géométrie du PDF est recalée séparément.
@@ -37,13 +47,12 @@ struct StudyWindowButtons: View {
 
     var body: some View {
         HStack(spacing: 14) {
-            button("minus", "Réduire le panneau") { restore = mode; mode = .minimized }
-            if mode != .floating { button("macwindow", "Détacher le panneau en fenêtre") { mode = .floating } }
-            if mode != .docked { button("sidebar.trailing", "Ancrer le panneau à droite") { mode = .docked } }
+            if mode != .floating { button("macwindow", String(localized: "Détacher le panneau en fenêtre")) { mode = .floating } }
+            if mode != .docked { button("sidebar.trailing", String(localized: "Ancrer le panneau à droite")) { mode = .docked } }
             if mode != .full {
-                button("arrow.up.left.and.arrow.down.right", "Panneau en plein écran") { mode = .full }
+                button("arrow.up.left.and.arrow.down.right", String(localized: "Panneau en plein écran")) { mode = .full }
             } else {
-                button("arrow.down.right.and.arrow.up.left", "Quitter le plein écran") { mode = .floating }
+                button("arrow.down.right.and.arrow.up.left", String(localized: "Quitter le plein écran")) { mode = .floating }
             }
         }
     }
@@ -52,7 +61,7 @@ struct StudyWindowButtons: View {
         Button {
             withAnimation(StudyPanelMotion.animation(enabled: animateTransitions, reduceMotion: reduceMotion)) { action() }
         } label: {
-            Image(systemName: icon).font(.system(size: 14, weight: .semibold)).foregroundStyle(Atelier.textSecondary)
+            Image(systemName: icon).font(Atelier.font(14, weight: .semibold)).foregroundStyle(Atelier.textSecondary)
                 .frame(minWidth: 22, minHeight: 22)
                 .contentShape(Rectangle())
         }
@@ -99,9 +108,10 @@ struct DetachedPanel<Content: View>: View {
         let top = full ? gap : (stableGestures ? preview.minY : min(max(0, y + move.height), max(0, area.height - h)))
         return content()
             .frame(width: w, height: h)
+            .atelierShapeShadow(RoundedRectangle(cornerRadius: Atelier.radius, style: .continuous),
+                                opacity: floating ? 0.5 : 0, radius: 20, y: 8)
             .overlay(alignment: .top) { if floating { grip(base: base, left: left, top: top, w: w, h: h) } }
             .overlay(alignment: .bottomTrailing) { if floating { resizeHandle(base: base, w: w, h: h) } }
-            .shadow(color: .black.opacity(floating ? 0.5 : 0), radius: 20, y: 8)
             .offset(x: left, y: top)
             .opacity(mode == .minimized ? 0 : 1)
             .allowsHitTesting(mode != .minimized)
@@ -134,7 +144,7 @@ struct DetachedPanel<Content: View>: View {
     private func resizeHandle(base: CGRect, w: CGFloat, h: CGFloat) -> some View {
         Image(systemName: "arrow.down.right.and.arrow.up.left")
             .rotationEffect(.degrees(90))
-            .font(.system(size: 11, weight: .bold))
+            .font(Atelier.font(11, weight: .bold))
             .foregroundStyle(Atelier.textTertiary)
             .frame(width: 28, height: 28)
             .background(Circle().fill(Atelier.surfaceHigh))
@@ -171,7 +181,7 @@ struct DetachedPanel<Content: View>: View {
             }
         } label: {
             Label("Étude", systemImage: "sidebar.trailing")
-                .font(.system(size: 14, weight: .semibold))
+                .font(Atelier.font(14, weight: .semibold))
                 .foregroundStyle(Atelier.textPrimary)
                 .padding(.horizontal, 14).padding(.vertical, 9)
                 .atelierPanel(radius: 20)

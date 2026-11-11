@@ -31,9 +31,9 @@ public struct CardTemplate: Sendable, Equatable {
 
         public var description: String {
             switch self {
-            case .unclosed(let n): return "Bloc « \(n) » jamais fermé."
-            case .unexpectedClose(let n): return "Fermeture « \(n) » sans ouverture."
-            case .unterminatedTag: return "Accolades {{ … }} pas fermées."
+            case .unclosed(let n): return String(localized: "Bloc « \(n) » jamais fermé.", bundle: .main)
+            case .unexpectedClose(let n): return String(localized: "Fermeture « \(n) » sans ouverture.", bundle: .main)
+            case .unterminatedTag: return String(localized: "Accolades {{ … }} pas fermées.", bundle: .main)
             }
         }
     }
@@ -90,7 +90,21 @@ public struct CardTemplate: Sendable, Equatable {
         }
     }
 
-    static func stripHTML(_ s: String) -> String {
+    /// Champ HTML sur une ligne (écran « Cartes de ce document », revue DeepSeek Cartes E1 n°4) : les entrées d'une
+    /// liste (`</li>`) et les retours (`<br>`) deviennent « · » avant de retirer les balises, sinon « manger » et
+    /// « repas » d'une liste `<ol><li>…` se collaient.
+    public static func oneLine(_ html: String) -> String {
+        var text = html
+        for tag in ["</li>", "<br>", "<br/>", "<br />"] {
+            text = text.replacingOccurrences(of: tag, with: "\u{1F}", options: .caseInsensitive)
+        }
+        return stripHTML(text).components(separatedBy: "\u{1F}")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .joined(separator: " · ")
+    }
+
+    public static func stripHTML(_ s: String) -> String {
         guard s.contains("<") || s.contains("&") else { return s }
         var out = ""
         var inTag = false
@@ -125,23 +139,6 @@ public struct CardTemplate: Sendable, Equatable {
                 return "{{\(name)}}"
             }
         }.joined()
-    }
-
-    /// Champs utilisés par le template (pour vérifier qu'ils existent).
-    public var referencedFields: Set<String> {
-        var set = Set<String>()
-        func walk(_ nodes: [Node]) {
-            for n in nodes {
-                switch n {
-                case .text: break
-                case .variable(let name, _): if !["this", ".", "@index", "FrontSide"].contains(name) { set.insert(name) }
-                case .condition(let name, _, let a, let b): if name != "this" { set.insert(name) }; walk(a); walk(b)
-                case .each(let name, let body): set.insert(name); walk(body)
-                }
-            }
-        }
-        walk(nodes)
-        return set
     }
 
     // MARK: Analyse

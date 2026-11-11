@@ -31,11 +31,16 @@ struct ReaderScreen: View {
     /// Annule une étape différée devenue obsolète (appuis rapides, rotation).
     @State private var dockGeneration = 0
     @State private var autoOpenedSide = false
+    /// Lecteur ouvert par un changement d'onglet : pas d'animation du panneau le temps de s'installer.
+    @State private var arrivingFromTab = false
     @AppStorage(StudyPanelMotion.storageKey) private var animateTransitions = true
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var studyTab: StudyPanel.Tab = .text
     @AppStorage(StudyPanelMode.storageKey) private var studyMode = StudyPanelMode.docked
     @AppStorage(StudyPanelMode.restoreKey) private var studyRestore = StudyPanelMode.docked
+    /// Réglage général du panneau à l'ouverture du livre, rétabli à la fermeture : la position choisie dans un livre
+    /// reste à ce livre (recette 1.3.2 (61), M2).
+    @State private var generalPanelMode: StudyPanelMode?
     /// Choix gardé entre les sessions. L'affichage passe par `filmstripVisible` : un changement d'`@AppStorage`
     /// arrive par la notification de `UserDefaults`, hors de la transaction `withAnimation`, et la bande apparaissait
     /// sans transition (RET-049, Issue #79).
@@ -53,20 +58,39 @@ struct ReaderScreen: View {
     @ObservedObject private var deepl = DeepLService.shared
     @AppStorage(ResourceMonitor.enabledKey) private var monitorEnabled = false
     @AppStorage(ResourceMonitor.shownKey) private var monitorShown = false
+    /// Couleur du mode « Surligner l'OCR » (#23), choisie par appui long sur son bouton.
+    @AppStorage("highlight.ocrColor") private var ocrHighlightColor = HighlightColor.yellow
     @State private var pageField = ""
-    @ObservedObject private var keyboard = HardwareKeyboard.shared
+    @ObservedObject private var shift = ShiftKey.shared
+    @Environment(\.scenePhase) private var scenePhase
 
     enum Sheet: String, Identifiable {
-        case search, ai, settings, pageCards
+        case search, ai, settings, pageCards, documentCards, pageOrientation, lineEditor, gestureHelp
         var id: String { rawValue }
     }
 
     enum Side: Equatable { case study, web }
+    private var capabilities: DocumentCapabilities { reader.document.capabilities }
+    /// Ce que l'aide aux gestes doit décrire pour ce document, avec ses réglages du moment (rien n'est enregistré).
+    private var gestureHelpContext: ReaderGestureHelp.Context {
+        ReaderGestureHelp.Context(textAnalysis: capabilities.textAnalysis, annotations: capabilities.annotations,
+                                  continuousScroll: reader.settings.scrollMode == .continuous,
+                                  rightToLeft: reader.settings.direction == .rightToLeft,
+                                  doubleTapZoom: reader.settings.doubleTapZoom)
+    }
+    @State private var keyboardFreeSize = CGSize.zero
 
     init(document: LibraryDocument, model: AppModel) {
         self.model = model
         _reader = StateObject(wrappedValue: ReaderController(document: document, model: model))
         _lookup = StateObject(wrappedValue: LookupSession(dictionary: model.dictionary))
+        // Changement d'onglet (recette 1.3.2 (64), point 1) : le panneau reprend tel quel, sans animation d'arrivée.
+        if let handoff = ReaderTabHandoff.shared.take() {
+            _side = State(initialValue: handoff.side)
+            _studyTab = State(initialValue: handoff.studyTab)
+            _autoOpenedSide = State(initialValue: true)
+            _arrivingFromTab = State(initialValue: true)
+        }
     }
 
     private var chromeVisible: Bool { reader.barsVisible || reader.isDrawing }
@@ -77,7 +101,7 @@ struct ReaderScreen: View {
     }
 
     private var panelAnimation: Animation? {
-        StudyPanelMotion.animation(enabled: animateTransitions, reduceMotion: reduceMotion)
+        arrivingFromTab ? nil : StudyPanelMotion.animation(enabled: animateTransitions, reduceMotion: reduceMotion)
     }
 
     private var panelTransition: AnyTransition {
@@ -86,7 +110,10 @@ struct ReaderScreen: View {
 
     var body: some View {
         GeometryReader { geo in
-            let landscape = geo.size.width > geo.size.height
+            // Taille sans le clavier : le clavier virtuel en portrait réduit la hauteur, et la page passait pour un paysage
+            // (panneau recréé, fenêtre de correction fermée, disposition recalculée).
+            let measured = keyboardFreeSize == .zero ? geo.size : keyboardFreeSize
+            let landscape = measured.width > measured.height
             let reservesSide = reservedSide == .web || (reservedSide == .study && landscape)
             let panelWidth: CGFloat = (reservedSide ?? docked) == .web ? 440 : Atelier.panelWidth
             let inset: CGFloat = reservesSide ? Atelier.gap : 0
@@ -98,10 +125,22 @@ struct ReaderScreen: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .clipShape(RoundedRectangle(cornerRadius: docked == nil ? 0 : Atelier.radius, style: .continuous))
                     LookupHighlightLayer(rects: reader.lookupHighlight)
+                    if reader.ocrHighlightMode {
+                        OCRHighlightDragLayer(reader: reader, color: ocrHighlightColor)
+                        OCRHighlightControls(reader: reader)
+                            .frame(maxHeight: .infinity, alignment: .bottom)
+                            .padding(.bottom, chromeVisible ? 110 : 24)
+                            .transition(.move(edge: .bottom).combined(with: .opacity))
+                    }
                     if chromeVisible {
                         // Portrait : la bande des pages s'arrête au bord du panneau d'étude flottant (recette 1.3.2 (59), A11).
                         chrome(filmstripTrailing: FilmstripLayout.trailingInset(
                             portraitPanelShown: docked == .study && !landscape, panelWidth: panelWidth, gap: Atelier.gap))
+                            .transition(.opacity)
+                    } else {
+                        ReaderStatusBadge()
+                            .transition(.opacity)
+                        restoreBarsButton
                             .transition(.opacity)
                     }
                     if let request = reader.lookupRequest {
@@ -122,21 +161,13 @@ struct ReaderScreen: View {
                             .keyboardShortcut(.escape, modifiers: [])
                             .opacity(0).allowsHitTesting(false)
                     }
-                    // Flèches pour tourner les pages : avec les barres affichées, ou toujours si un clavier
-                    // est branché. ← → au clavier : `ReaderArrowKeys`, indépendamment de ces boutons.
-                    if keyboard.connected || chromeVisible {
-                        HStack {
-                            pageArrow(left: true)
-                            Spacer()
-                            pageArrow(left: false)
-                        }
-                        .padding(.horizontal, 8)
-                    }
+                    // Plus de flèches sur les bords de la page (#19) : elles sont rangées de part et d'autre du champ
+                    // « page », en haut à droite. ← → au clavier : `ReaderArrowKeys` ; glisser tourne aussi les pages.
                     // Construction du document en tâche de fond (gros PDF, réglages, page coupée).
                     if reader.isBuilding {
                         HStack(spacing: 10) {
                             ProgressView().tint(Atelier.Tint.read)
-                            Text("Préparation des pages…").font(.system(size: 14, weight: .medium))
+                            Text("Préparation des pages…").font(Atelier.font(14, weight: .medium))
                                 .foregroundStyle(Atelier.textSecondary)
                         }
                         .padding(.horizontal, 18).padding(.vertical, 12)
@@ -150,7 +181,8 @@ struct ReaderScreen: View {
                 .frame(width: documentWidth, height: documentHeight)
                 .clipped()
                 .overlay(alignment: .bottomLeading) {
-                    AITaskPill()
+                    // Moniteur fixé puis pastilles IA (#47) ; plus de moniteur flottant à déplacer.
+                    ActivityDock(showsMonitor: false)
                         .padding(.leading, Atelier.gap)
                         .padding(.bottom, chromeVisible && filmstripVisible && !reader.isDrawing ? 120 : Atelier.gap)
                 }
@@ -178,11 +210,16 @@ struct ReaderScreen: View {
                 finishDockTransition()
             }
             .onChange(of: docked) { syncDock(to: $0) }
+            // Chaque livre retient sa position du panneau ; le réglage général reste celui des livres sans choix.
+            .onChange(of: studyMode) { mode in
+                guard mode != .minimized, generalPanelMode != nil else { return }
+                reader.toolModes.update(documentId: reader.document.id) { $0.panelMode = mode.rawValue }
+            }
             .onAppear {
                 reservedSide = docked
                 reader.adaptLayout(portrait: !landscape)
                 // Paysage (taille réelle de la vue, pas l'orientation de la scène) : panneau d'étude ouvert d'office.
-                if landscape, !autoOpenedSide { autoOpenedSide = true; side = .study }
+                if landscape, !autoOpenedSide, capabilities.study { autoOpenedSide = true; side = .study }
             }
             .overlay(alignment: .trailing) {
                 // En portrait seulement, le panneau reste flottant sur la page.
@@ -200,8 +237,8 @@ struct ReaderScreen: View {
                 ZStack {
                     if side == .study, studyMode != .docked {
                         DetachedPanel(area: geo.size) {
-                            StudyPanel(reader: reader, tab: $studyTab, openSearch: { sheet = .search },
-                                       close: { self.side = nil }, fixedWidth: false)
+                            StudyPanel(reader: reader, tab: $studyTab, openSearch: { sheet = .search }, openLineEditor: { sheet = .lineEditor },
+                                       openDocumentSettings: { sheet = .settings }, close: { self.side = nil }, fixedWidth: false)
                         }
                         .transition(.opacity)
                     }
@@ -214,18 +251,58 @@ struct ReaderScreen: View {
         // ←/→ du clavier physique, prioritaires sur le focus des champs (RET-050, Issue #81).
         .background(ReaderArrowKeysHost(reader: reader).frame(width: 0, height: 0))
         .onChange(of: side) { ReaderArrowKeys.shared.webOpen = $0 == .web }
+        // État du panneau confié au prochain lecteur si l'on change d'onglet (lu une seule fois par son `init`).
+        .onAppear {
+            ReaderTabHandoff.shared.current = { [side, studyTab] in (side, studyTab) }
+            if arrivingFromTab {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { arrivingFromTab = false }
+            }
+        }
+        .onChange(of: side) { new in ReaderTabHandoff.shared.current = { [studyTab] in (new, studyTab) } }
+        // Document rangé en Manga (ou retiré) pendant la lecture : le lecteur garde sa copie, elle suit ici
+        // (contre-revue du chantier 1.5.0, P2 8).
+        .onReceive(model.$documents) { documents in
+            guard let current = documents.first(where: { $0.id == reader.document.id }) else { return }
+            reader.syncClassification(mangaSpace: current.settingsOverride.mangaSpace)
+        }
+        .onChange(of: studyTab) { new in ReaderTabHandoff.shared.current = { [side] in (side, new) } }
         .statusBarHidden(!chromeVisible)
         .persistentSystemOverlays(chromeVisible ? .automatic : .hidden)
         .onAppear {
+            // Position du panneau propre à ce livre, sinon le réglage général (recette 1.3.2 (61), M2).
+            generalPanelMode = studyMode
+            if let raw = reader.toolModes.modes(documentId: reader.document.id).panelMode,
+               let saved = StudyPanelMode(rawValue: raw), saved != .minimized, saved != studyMode {
+                studyMode = saved
+            }
             reader.load()
             ReaderArrowKeys.shared.webOpen = side == .web
+            ReadingTimeTracker.shared.readerOpened(document: reader.document)
         }
-        .onDisappear { reader.close() }
+        .onDisappear {
+            reader.close()
+            ReadingTimeTracker.shared.readerClosed(documentId: reader.document.id)
+            // Réglage général rétabli pour les autres livres ; `nil` d'abord, pour ne pas l'enregistrer dans celui-ci.
+            if let general = generalPanelMode {
+                generalPanelMode = nil
+                if studyMode != general { studyMode = general }
+            }
+        }
+        // Temps de lecture active (accueil) : pause en arrière-plan ou iPad verrouillé (RET-037, #52).
+        .onChange(of: scenePhase) { ReadingTimeTracker.shared.scenePhaseChanged($0) }
         .task { await deepl.refreshUsage() }
         .onChange(of: reader.lookupRequest) { request in
             if let request { lookup.start(request.text) } else { lookup.clear() }
         }
         .onChange(of: lookup.matchedLength) { reader.setLookupMatchLength($0) }
+        .onChange(of: shift.pressed) { pressed in
+            // Bulle ouverte au survol avec Maj seule : relâcher Maj la ferme, comme dans le panneau Texte (RET-021, #24).
+            if !pressed, HoverLookupMode.closesOnShiftRelease(toggleOn: reader.hoverLookup,
+                                                             openedByShiftOnly: reader.lookupOpenedByShiftOnly,
+                                                             bubbleOpen: reader.lookupRequest != nil) {
+                reader.endLookup()
+            }
+        }
         .animation(.spring(response: 0.3, dampingFraction: 0.86), value: reader.lookupRequest)
         .onReceive(model.$readerDefaults.removeDuplicates().dropFirst()) { defaults in
             reader.update(settings: defaults.applying(reader.document.settingsOverride))
@@ -239,17 +316,32 @@ struct ReaderScreen: View {
                        NSNumber(value: UITouch.TouchType.indirectPointer.rawValue)]
             }
         }
+        .background {
+            GeometryReader { Color.clear.preference(key: KeyboardFreeSizeKey.self, value: $0.size) }
+                .ignoresSafeArea(.keyboard)
+        }
+        .onPreferenceChange(KeyboardFreeSizeKey.self) { keyboardFreeSize = $0 }
         .sheet(item: $sheet) { sheet in
             Group {
                 switch sheet {
                 case .search: SearchSheet(reader: reader, close: { self.sheet = nil })
                 case .ai: AIPageSheet(reader: reader, openWeb: { self.sheet = nil; side = .web })
                 case .settings: DocumentSettingsSheet(reader: reader)
+                case .lineEditor: OCRLineEditor(reader: reader)
+                case .gestureHelp: ReaderGestureHelpSheet(context: gestureHelpContext, close: { self.sheet = nil })
                 case .pageCards: PageCardsView(reader: reader)
+                // PLAN-CARTES-001, E1 : sans export ici (l'export se fait depuis l'accueil, livre fermé).
+                case .documentCards: DocumentCardsView(document: reader.document)
+                case .pageOrientation:
+                    PageOrientationView(document: reader.document, selectedPage: reader.currentSourcePage,
+                                        rotations: reader.pageRotations) {
+                        try await reader.applyPageRotations($0, rereading: $1)
+                    }
                 }
             }
             .environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review)
-            .preferredColorScheme(.dark)
+            .preferredColorScheme(Theme.current.colorScheme)
+            .atelierSheet()
         }
         .confirmationDialog("Surlignage", isPresented: Binding(get: { reader.tappedHighlight != nil },
                                                                set: { if !$0 { reader.tappedHighlight = nil } })) {
@@ -264,8 +356,27 @@ struct ReaderScreen: View {
 
     // MARK: Chrome flottant
 
+    /// Toute petite flèche, toujours là quand les barres sont cachées : un chemin de retour qui ne dépend d'aucun geste
+    /// sur la page (recette iPad 1.4.7). Discrète à l'œil, mais assez grande au doigt ; le reste de l'écran reste à PDFKit.
+    private var restoreBarsButton: some View {
+        Button { reader.barsVisible = true } label: {
+            Image(systemName: "chevron.down").font(Atelier.font(11, weight: .bold))
+                .frame(width: 24, height: 24)
+                .foregroundStyle(Atelier.textPrimary.opacity(0.75))
+                .background(Atelier.surfaceHigh.opacity(0.65), in: Circle())
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(PressScale())
+        .accessibilityLabel("Afficher les barres")
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+    }
+
     private func chrome(filmstripTrailing: CGFloat) -> some View {
         VStack(spacing: 0) {
+            DocumentTabsBar(current: reader.document.id)
+                .padding(.horizontal, Atelier.gap)
+                .padding(.top, 6)
             HStack(alignment: .top, spacing: Atelier.gap) {
                 titleCapsule
                 Spacer(minLength: 8)
@@ -274,24 +385,30 @@ struct ReaderScreen: View {
                         .transition(.scale.combined(with: .opacity))
                 }
                 actionsCapsule
+                    // La capsule garde la hauteur de sa ligne de boutons dans la mise en page : en s'allongeant vers
+                    // le bas (moniteur, puis courbe), elle passe par-dessus la page sans pousser la barre d'outils.
+                    // Taille idéale : la largeur reste celle des boutons (le moniteur s'y adapte, sans élargir).
+                    .fixedSize()
+                    .frame(height: Self.actionsRowHeight, alignment: .top)
+                    .zIndex(1)
             }
             .padding(.horizontal, Atelier.gap)
             .padding(.top, 8)
             GeometryReader { area in
                 ZStack(alignment: .topLeading) {
-                    FloatingToolbar(area: area.size) { vertical in toolItems(vertical: vertical) }
-                    if monitorEnabled && monitorShown {
-                        ResourceMonitorPanel(area: area.size)
+                    // Lecture visuelle : la barre d'outils n'a rien à proposer (dessin, dictionnaire, surlignage, étude, IA).
+                    if capabilities.annotations {
+                        FloatingToolbar(area: area.size) { vertical in toolItems(vertical: vertical) }
                     }
                     if let note = reader.openNote {
                         NoteWindow(reader: reader, note: note, area: area.size)
                     }
                     if reader.placingAnchorFor != nil {
                         HStack(spacing: 10) {
-                            Text("Touche le mot de la page où ancrer la note").font(.system(size: 14, weight: .semibold))
+                            Text("Touche le mot de la page où ancrer la note").font(Atelier.font(14, weight: .semibold))
                             Button("Annuler") { reader.placingAnchorFor = nil }.fontWeight(.bold)
                         }
-                        .foregroundStyle(Color.black.opacity(0.85))
+                        .foregroundStyle(Atelier.onAccentInk.opacity(0.85))
                         .padding(.horizontal, 14).padding(.vertical, 8)
                         .background(Atelier.Tint.annotate, in: Capsule())
                         .frame(maxWidth: .infinity, alignment: .top)
@@ -305,13 +422,26 @@ struct ReaderScreen: View {
                         PageFilmstrip(reader: reader)
                             .overlay(alignment: .topTrailing) {
                                 Button { setFilmstrip(false) } label: {
-                                    Image(systemName: "chevron.down").font(.system(size: 12, weight: .bold))
+                                    Image(systemName: "chevron.down").font(Atelier.font(12, weight: .bold))
                                         .frame(width: 28, height: 28).foregroundStyle(Atelier.textPrimary)
                                         .background(Atelier.surfaceHigh, in: Circle())
                                 }
                                 .buttonStyle(PressScale())
                                 .accessibilityLabel("Rentrer la bande des pages")
                                 .offset(x: -10, y: -12)
+                            }
+                            .overlay(alignment: .topLeading) {
+                                if capabilities.pageEditing {
+                                    // #49 : supprimer des pages ferme le lecteur, puis ouvre « Pages du document » sur la page.
+                                    Button { model.requestPageEdit(documentId: reader.document.id, page: reader.focusSource) } label: {
+                                        Image(systemName: "trash").font(Atelier.font(12, weight: .bold))
+                                            .frame(width: 28, height: 28).foregroundStyle(Atelier.textPrimary)
+                                            .background(Atelier.surfaceHigh, in: Circle())
+                                    }
+                                    .buttonStyle(PressScale())
+                                    .accessibilityLabel("Supprimer des pages")
+                                    .offset(x: 10, y: -12)
+                                }
                             }
                             .padding(.horizontal, Atelier.gap)
                             .padding(.bottom, 10)
@@ -325,7 +455,7 @@ struct ReaderScreen: View {
                     }
                     if !filmstripVisible {
                         Button { setFilmstrip(true) } label: {
-                            Label("Pages", systemImage: "chevron.up").font(.system(size: 13, weight: .semibold))
+                            Label("Pages", systemImage: "chevron.up").font(Atelier.font(13, weight: .semibold))
                                 .padding(.horizontal, 14).padding(.vertical, 8)
                                 .foregroundStyle(Atelier.textPrimary)
                                 .atelierPanel(radius: 18)
@@ -356,9 +486,9 @@ struct ReaderScreen: View {
 
     private var titleCapsule: some View {
         HStack(spacing: 4) {
-            CapsuleButton(icon: "chevron.left", label: "Bibliothèque") { dismiss() }
+            CapsuleButton(icon: "chevron.left", label: String(localized: "Bibliothèque")) { dismiss() }
             VStack(alignment: .leading, spacing: 1) {
-                Text(reader.document.title).font(.system(size: 15, weight: .semibold)).lineLimit(1)
+                Text(reader.document.title).font(Atelier.font(15, weight: .semibold)).lineLimit(1)
                     .foregroundStyle(Atelier.textPrimary)
                 HStack(spacing: 6) {
                     Text("\(reader.document.pageLabel(reader.currentSourcePage)) / \(reader.document.pageLabel(reader.document.pageCount - 1))")
@@ -374,8 +504,30 @@ struct ReaderScreen: View {
         .frame(maxWidth: 420, alignment: .leading)
     }
 
+    /// Hauteur de la ligne de boutons de la capsule d'actions (bouton de 44 pt + marges).
+    static let actionsRowHeight: CGFloat = 52
+
+    /// Capsule d'actions ; le moniteur en est le prolongement vers le bas (captures de NOxygen59, recette 64) : la
+    /// forme s'allonge pour la ligne CPU / RAM / FPS, puis encore pour la courbe, d'un même mouvement.
     private var actionsCapsule: some View {
+        VStack(spacing: 0) {
+            actionsRow
+            if monitorEnabled && monitorShown {
+                Rectangle().fill(Atelier.hairline).frame(height: 1).padding(.horizontal, 10)
+                    .transition(.opacity)
+                ResourceMonitorPanel(expandsDown: true, fillsWidth: true, embedded: true)
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+        .padding(4)
+        .atelierPanel(radius: 26)
+        .animation(reduceMotion ? .easeOut(duration: 0.15) : .spring(response: 0.42, dampingFraction: 0.9),
+                   value: monitorEnabled && monitorShown)
+    }
+
+    private var actionsRow: some View {
         HStack(spacing: 0) {
+            pageArrow(left: true)
             TextField(reader.document.pageLabel(reader.currentSourcePage), text: $pageField)
                 .font(Atelier.mono)
                 .multilineTextAlignment(.center)
@@ -387,13 +539,25 @@ struct ReaderScreen: View {
                 .background(Atelier.surfaceHigh, in: Capsule())
                 .accessibilityLabel("Aller à la page")
                 .padding(.horizontal, 4)
-            CapsuleButton(icon: "magnifyingglass", label: "Rechercher") { sheet = .search }
-            CapsuleButton(icon: reader.isCurrentPageBookmarked ? "bookmark.fill" : "bookmark", label: "Signet",
+            pageArrow(left: false)
+            if capabilities.textAnalysis {
+                CapsuleButton(icon: "magnifyingglass", label: String(localized: "Rechercher")) { sheet = .search }
+            }
+            CapsuleButton(icon: reader.isCurrentPageBookmarked ? "bookmark.fill" : "bookmark", label: String(localized: "Signet"),
                           active: reader.isCurrentPageBookmarked) { reader.toggleBookmark() }
-            CapsuleButton(icon: "character.ja", label: furigana ? "Masquer les furigana de la page" : "Afficher les furigana de la page",
-                          active: furigana, tint: Atelier.Tint.japanese) {
-                furigana.toggle()
-                reader.setFurigana(furigana)
+            if capabilities.textAnalysis {
+                // Manga : masqués par défaut, choix propre à ce document ; ailleurs, réglage général (`furigana`, lu ici pour
+                // redessiner le bouton quand il change).
+                let pageFurigana = reader.document.isInMangaSpace ? reader.pageFuriganaOn : furigana
+                CapsuleButton(icon: "character.ja", label: pageFurigana ? String(localized: "Masquer les furigana de la page") : String(localized: "Afficher les furigana de la page"),
+                              active: pageFurigana, tint: Atelier.Tint.japanese) {
+                    if reader.document.isInMangaSpace {
+                        reader.setFurigana(!pageFurigana)
+                    } else {
+                        furigana.toggle()
+                        reader.setFurigana(furigana)
+                    }
+                }
             }
             Menu {
                 // Rangé par thème : affichage (pour tous les livres), cette page, ce document.
@@ -404,81 +568,96 @@ struct ReaderScreen: View {
                         Label("Fond de page", systemImage: "circle.lefthalf.filled")
                     }
                     .pickerStyle(.menu)
-                    Picker(selection: Binding(get: { furiganaTint }, set: { furiganaTint = $0; reader.setFuriganaTint($0) })) {
-                        ForEach(FuriganaLayer.Tint.allCases) { Text($0.title).tag($0) }
-                    } label: {
-                        Label("Couleur des furigana", systemImage: "paintpalette")
-                    }
-                    .pickerStyle(.menu)
-                    Picker(selection: Binding(get: { scanCleaning }, set: { scanCleaning = $0; reader.setScanCleaning($0) })) {
-                        ForEach(ScanSharpening.Method.allCases.filter { $0 != .degan || ScanSharpening.isInstalled }) {
-                            Text($0.title).tag($0)
+                    if capabilities.textAnalysis {
+                        Picker(selection: Binding(get: { furiganaTint }, set: { furiganaTint = $0; reader.setFuriganaTint($0) })) {
+                            ForEach(FuriganaLayer.Tint.allCases) { Text($0.title).tag($0) }
+                        } label: {
+                            Label("Couleur des furigana", systemImage: "paintpalette")
                         }
-                    } label: {
-                        Label("Nettoyage des scans", systemImage: "wand.and.stars")
-                    }
-                    .pickerStyle(.menu)
-                    Button { reader.setShowOCRBoxes(!showOCRBoxes) } label: {
-                        Label(showOCRBoxes ? "Masquer les zones OCR" : "Montrer les zones OCR",
-                              systemImage: "rectangle.dashed")
+                        .pickerStyle(.menu)
+                        Picker(selection: Binding(get: { scanCleaning }, set: { scanCleaning = $0; reader.setScanCleaning($0) })) {
+                            ForEach(ScanSharpening.Method.allCases.filter { $0 != .degan || ScanSharpening.isInstalled }) {
+                                Text($0.title).tag($0)
+                            }
+                        } label: {
+                            Label("Nettoyage des scans", systemImage: "wand.and.stars")
+                        }
+                        .pickerStyle(.menu)
+                        Button { reader.setShowOCRBoxes(!showOCRBoxes) } label: {
+                            Label(showOCRBoxes ? String(localized: "Masquer les zones OCR") : String(localized: "Montrer les zones OCR"),
+                                  systemImage: "rectangle.dashed")
+                        }
                     }
                 } label: {
                     Label("Affichage", systemImage: "eye")
                 }
-                Menu {
-                    Button { sheet = .pageCards } label: {
-                        Label("Créer des cartes de cette page", systemImage: "rectangle.stack.badge.plus")
-                    }
-                    Button { reader.rotateCurrentPage() } label: { Label("Pivoter la page", systemImage: "rotate.right") }
-                    Button { reader.toggleSplitCurrentPage() } label: {
-                        Label(reader.isCurrentPageSplit ? "Ne plus couper la page" : "Couper la page en deux",
-                              systemImage: "rectangle.split.2x1")
-                    }
-                    Button { reader.setFirstPage(reader.currentSourcePage) } label: {
-                        Label("Cette page est la page 1", systemImage: "1.circle")
-                    }
-                    if reader.document.firstPageIndex != 0 {
-                        Button { reader.setFirstPage(0) } label: {
-                            Label("Numéros du PDF (page 1 = début)", systemImage: "arrow.uturn.backward")
+                if capabilities.pageEditing {
+                    Menu {
+                        Button { sheet = .pageCards } label: {
+                            Label("Créer des cartes de cette page", systemImage: "rectangle.stack.badge.plus")
                         }
+                        Button { sheet = .documentCards } label: {
+                            Label("Cartes de ce document", systemImage: "rectangle.stack")
+                        }
+                        Button { sheet = .pageOrientation } label: {
+                            Label("Orientation des pages…", systemImage: "rotate.right")
+                        }
+                        Button { reader.toggleSplitCurrentPage() } label: {
+                            Label(reader.isCurrentPageSplit ? String(localized: "Ne plus couper la page") : String(localized: "Couper la page en deux"),
+                                  systemImage: "rectangle.split.2x1")
+                        }
+                        Button { reader.setFirstPage(reader.currentSourcePage) } label: {
+                            Label("Cette page est la page 1", systemImage: "1.circle")
+                        }
+                        if reader.document.firstPageIndex != 0 {
+                            Button { reader.setFirstPage(0) } label: {
+                                Label("Numéros du PDF (page 1 = début)", systemImage: "arrow.uturn.backward")
+                            }
+                        }
+                    } label: {
+                        Label("Cette page", systemImage: "doc")
                     }
-                } label: {
-                    Label("Cette page", systemImage: "doc")
                 }
-                Button { openStudy(.notes) } label: { Label("Notes de la page", systemImage: "text.bubble") }
-                Button { reader.newNote() } label: { Label("Nouvelle note flottante", systemImage: "note.text.badge.plus") }
+                if capabilities.annotations {
+                    Button { openStudy(.notes) } label: { Label("Notes de la page", systemImage: "text.bubble") }
+                    Button { reader.newNote() } label: { Label("Nouvelle note flottante", systemImage: "note.text.badge.plus") }
+                }
                 if monitorEnabled {
                     Toggle(isOn: $monitorShown) { Label("Moniteur de ressources", systemImage: "gauge.with.dots.needle.33percent") }
                 }
                 if deepl.hasKey {
                     // Information seulement (mise à jour à l'ouverture du livre et après chaque traduction).
                     Button { Task { await deepl.refreshUsage() } } label: {
-                        Label(deepl.usageText.map { "DeepL : \($0)" } ?? "DeepL : quota inconnu (toucher pour actualiser)",
+                        Label(deepl.usageText.map { String(localized: "DeepL : \($0)") } ?? String(localized: "DeepL : quota inconnu (toucher pour actualiser)"),
                               systemImage: "character.bubble")
                     }
                 }
                 Divider()
+                // Aide aux gestes (FEAT-AIDE) : dans le menu, pour ne rien ajouter à une barre déjà pleine en portrait.
+                Button { sheet = .gestureHelp } label: {
+                    Label("Aide : gestes de lecture", systemImage: "questionmark.circle")
+                }
                 Button { sheet = .settings } label: {
                     Label("Pagination et réglages de ce document", systemImage: "slider.horizontal.3")
                 }
             } label: {
-                Image(systemName: "ellipsis").font(.system(size: 17, weight: .semibold))
+                Image(systemName: "ellipsis").font(Atelier.font(17, weight: .semibold))
                     .frame(width: 40, height: 40).foregroundStyle(Atelier.textPrimary)
             }
-            Rectangle().fill(Atelier.hairline).frame(width: 1, height: 22).padding(.horizontal, 4)
-            CapsuleButton(icon: "sidebar.trailing", label: "Panneau d'étude", active: side == .study,
-                          tint: Atelier.Tint.japanese) {
-                // Panneau réduit en pastille : le bouton le rouvre au lieu de le fermer.
-                if studyMode == .minimized {
-                    studyMode = studyRestore == .minimized ? .docked : studyRestore
-                    side = .study
-                } else {
-                    side = side == .study ? nil : .study
+            if capabilities.study {
+                Rectangle().fill(Atelier.hairline).frame(width: 1, height: 22).padding(.horizontal, 4)
+                CapsuleButton(icon: "sidebar.trailing", label: String(localized: "Panneau d'étude"), active: side == .study,
+                              tint: Atelier.Tint.japanese) {
+                    // Panneau réduit en pastille : le bouton le rouvre au lieu de le fermer.
+                    if studyMode == .minimized {
+                        studyMode = studyRestore == .minimized ? .docked : studyRestore
+                        side = .study
+                    } else {
+                        side = side == .study ? nil : .study
+                    }
                 }
             }
         }
-        .padding(4)
-        .atelierPanel(radius: 26)
     }
 
     private func railDivider(_ vertical: Bool) -> some View {
@@ -490,10 +669,10 @@ struct ReaderScreen: View {
     /// Outils, une couleur par fonction : lecture, annotation, japonais, IA.
     @ViewBuilder
     private func toolItems(vertical: Bool) -> some View {
-            ToolButton(icon: "hand.point.up.left", label: "Lire", tint: Atelier.Tint.read, active: !reader.isDrawing) {
+            ToolButton(icon: "hand.point.up.left", label: String(localized: "Lire"), tint: Atelier.Tint.read, active: !reader.isDrawing) {
                 if reader.isDrawing { reader.setDrawing(false) }
             }
-            ToolButton(icon: "pencil.tip", label: "Dessiner (Apple Pencil)", tint: Atelier.Tint.annotate,
+            ToolButton(icon: "pencil.tip", label: String(localized: "Dessiner (Apple Pencil)"), tint: Atelier.Tint.annotate,
                        active: reader.isDrawing) {
                 reader.setDrawing(!reader.isDrawing)
             }
@@ -505,7 +684,7 @@ struct ReaderScreen: View {
             } label: {
                 Text("辞").font(.custom("HiraMinProN-W6", size: 21))
                     .frame(width: 46, height: 46)
-                    .foregroundStyle(reader.lookupMode ? Color.black.opacity(0.85) : Atelier.textPrimary)
+                    .foregroundStyle(reader.lookupMode ? Atelier.onAccentInk.opacity(0.85) : Atelier.textPrimary)
                     .background(reader.lookupMode ? Atelier.Tint.japanese : Color.clear,
                                 in: RoundedRectangle(cornerRadius: Atelier.smallRadius, style: .continuous))
                     .contentShape(Rectangle())
@@ -514,45 +693,59 @@ struct ReaderScreen: View {
             .accessibilityLabel("Dictionnaire au toucher")
             // Survol au curseur : visible dès que la page a du texte (intégré ou analysé par l'OCR).
             if reader.pageHasText {
-                ToolButton(icon: "cursorarrow.rays", label: "Dictionnaire au survol (curseur)",
+                ToolButton(icon: "cursorarrow.rays", label: String(localized: "Dictionnaire au survol (curseur)"),
                            tint: Atelier.Tint.japanese, active: reader.hoverLookup) {
                     reader.hoverLookup.toggle()
                     if !reader.hoverLookup { reader.endLookup() }
                 }
             }
+            // Surligner en glissant sur les zones de l'OCR (#23) ; appui long : couleur.
+            ToolButton(icon: "highlighter", label: String(localized: "Surligner l'OCR en glissant"), tint: Color(ocrHighlightColor.uiColor),
+                       active: reader.ocrHighlightMode) {
+                reader.setOCRHighlightMode(!reader.ocrHighlightMode)
+            }
+            .contextMenu {
+                Picker("Couleur", selection: $ocrHighlightColor) {
+                    ForEach(HighlightColor.allCases, id: \.self) { Text(Self.colorName($0)).tag($0) }
+                }
+            }
             // Pencil → dictionnaire : seulement si l'option est activée dans les réglages.
             if pencilOption {
-                ToolButton(icon: "applepencil", label: "Le Pencil cherche dans le dictionnaire",
+                ToolButton(icon: "applepencil", label: String(localized: "Le Pencil cherche dans le dictionnaire"),
                            tint: Atelier.Tint.japanese, active: reader.pencilLookup) {
                     reader.pencilLookup.toggle()
                     if reader.pencilLookup, reader.isDrawing { reader.setDrawing(false) }
                 }
             }
             railDivider(vertical)
-            ToolButton(icon: "character.ja", label: "Texte de la page", tint: Atelier.Tint.japanese,
+            ToolButton(icon: "character.ja", label: String(localized: "Texte de la page"), tint: Atelier.Tint.japanese,
                        active: side == .study && studyTab == .text) { openStudy(.text) }
-            ToolButton(icon: "character.book.closed.ja", label: "Dictionnaire", tint: Atelier.Tint.japanese,
+            ToolButton(icon: "character.book.closed.ja", label: String(localized: "Dictionnaire"), tint: Atelier.Tint.japanese,
                        active: side == .study && studyTab == .vocab) { openStudy(.vocab) }
             railDivider(vertical)
-            ToolButton(icon: "sparkles", label: "Page vers IA", tint: Atelier.Tint.ai) { sheet = .ai }
-            ToolButton(icon: "globe", label: "Navigateur à côté", tint: Atelier.Tint.ai, active: side == .web) {
+            ToolButton(icon: "sparkles", label: String(localized: "Page vers IA"), tint: Atelier.Tint.ai) { sheet = .ai }
+            ToolButton(icon: "globe", label: String(localized: "Navigateur à côté"), tint: Atelier.Tint.ai, active: side == .web) {
                 side = side == .web ? nil : .web
             }
     }
 
-    /// Flèche de bord : la gauche recule en lecture gauche → droite, avance en droite → gauche.
+    /// Flèche à côté du champ « page » (#19) : la gauche recule en lecture gauche → droite, avance en droite → gauche.
     private func pageArrow(left: Bool) -> some View {
         let forward = (reader.settings.direction == .rightToLeft) == left
-        return Button { forward ? reader.next() : reader.previous() } label: {
-            Image(systemName: left ? "chevron.left" : "chevron.right")
-                .font(.system(size: 20, weight: .semibold))
-                .frame(width: 40, height: 64)
-                .foregroundStyle(Atelier.textPrimary)
-                .background(Atelier.surface.opacity(0.7), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        return CapsuleButton(icon: left ? "chevron.left" : "chevron.right",
+                             label: forward ? String(localized: "Page suivante") : String(localized: "Page précédente")) {
+            forward ? reader.next() : reader.previous()
         }
-        .buttonStyle(PressScale())
-        .opacity(chromeVisible ? 1 : 0.35)
-        .accessibilityLabel(forward ? "Page suivante" : "Page précédente")
+    }
+
+    static func colorName(_ color: HighlightColor) -> String {
+        switch color {
+        case .yellow: return String(localized: "Jaune")
+        case .green: return String(localized: "Vert")
+        case .blue: return String(localized: "Bleu")
+        case .pink: return String(localized: "Rose")
+        case .orange: return String(localized: "Orange")
+        }
     }
 
     /// Champ « page » : numéro imprimé (ou chiffre romain des pages d'avant).
@@ -569,6 +762,7 @@ struct ReaderScreen: View {
     }
 
     private func openStudy(_ tab: StudyPanel.Tab) {
+        guard capabilities.study else { return } // Lecture visuelle : ni panneau de texte, ni étude.
         if side == .study && studyTab == tab {
             side = nil
         } else {
@@ -639,7 +833,8 @@ struct ReaderScreen: View {
     private func sidePanel(_ side: Side) -> some View {
         switch side {
         case .study:
-            StudyPanel(reader: reader, tab: $studyTab, openSearch: { sheet = .search }, close: { self.side = nil })
+            StudyPanel(reader: reader, tab: $studyTab, openSearch: { sheet = .search }, openLineEditor: { sheet = .lineEditor },
+                       openDocumentSettings: { sheet = .settings }, close: { self.side = nil })
         case .web:
             WebPanel(onClose: { self.side = nil })
                 .frame(width: 440)
@@ -700,11 +895,11 @@ struct FilmstripCell: View {
     var body: some View {
         VStack(spacing: 3) {
             ZStack {
-                RoundedRectangle(cornerRadius: 5).fill(Atelier.surfaceHigh)
-                if let image { Image(uiImage: image).resizable().scaledToFit().clipShape(RoundedRectangle(cornerRadius: 4)) }
+                RoundedRectangle(cornerRadius: Atelier.corner(5)).fill(Atelier.surfaceHigh)
+                if let image { Image(uiImage: image).resizable().scaledToFit().clipShape(RoundedRectangle(cornerRadius: Atelier.corner(4))) }
             }
             .frame(width: 46, height: 62)
-            .overlay(RoundedRectangle(cornerRadius: 5).strokeBorder(visible ? Self.visibleMark : .clear, lineWidth: 3))
+            .overlay(RoundedRectangle(cornerRadius: Atelier.corner(5)).strokeBorder(visible ? Self.visibleMark : .clear, lineWidth: Atelier.border(3)))
             Text(label).font(.system(size: 10, weight: visible ? .bold : .semibold, design: .monospaced))
                 .foregroundStyle(visible ? Self.visibleMark : Atelier.textTertiary)
         }
@@ -723,22 +918,45 @@ struct FilmstripCell: View {
 /// Pastille d'état OCR à côté du numéro de page.
 struct OCRStatusDot: View {
     @ObservedObject var reader: ReaderController
+    /// Moteur affiché, gardé un instant quand le résultat OCR est effacé au changement de page (RET-041, #60).
+    @State private var engine: String?
+    @State private var clearTask: Task<Void, Never>?
 
     var body: some View {
-        switch reader.ocrState {
-        case .running:
-            HStack(spacing: 4) { ProgressView().controlSize(.mini).tint(Atelier.Tint.japanese); Text("lecture…") }
-                .font(.system(size: 11))
-        case .failed:
-            Label("OCR", systemImage: "exclamationmark.triangle.fill").font(.system(size: 11)).foregroundStyle(.orange)
-        case .idle:
-            if let page = reader.ocrPage {
-                HStack(spacing: 4) {
-                    Circle().fill(Atelier.Tint.japanese).frame(width: 6, height: 6)
-                    Text(OCREngineID.displayName(page.engine)).font(.system(size: 11))
+        Group {
+            switch reader.ocrState {
+            case .running:
+                HStack(spacing: 4) { ProgressView().controlSize(.mini).tint(Atelier.Tint.japanese); Text("lecture…") }
+                    .font(Atelier.font(11))
+            case .failed:
+                Label("OCR", systemImage: "exclamationmark.triangle.fill").font(Atelier.font(11)).foregroundStyle(.orange)
+            case .idle:
+                if let engine {
+                    HStack(spacing: 4) {
+                        Circle().fill(Atelier.Tint.japanese).frame(width: 6, height: 6)
+                        Text(OCREngineID.displayName(engine)).font(Atelier.font(11))
+                    }
                 }
             }
         }
+        .onAppear { engine = reader.ocrPage?.engine }
+        .onChange(of: reader.ocrPage?.engine) { incoming in
+            switch OCRPillHold.step(shown: engine, incoming: incoming) {
+            case .show(let shown):
+                clearTask?.cancel()
+                engine = shown
+            case .holdThenClear:
+                clearTask?.cancel()
+                clearTask = Task { @MainActor in
+                    try? await Task.sleep(nanoseconds: UInt64(OCRPillHold.holdDelay * 1_000_000_000))
+                    // Toujours rien pour la nouvelle page : la pastille disparaît.
+                    if !Task.isCancelled, reader.ocrPage == nil { engine = nil }
+                }
+            case .keep:
+                break
+            }
+        }
+        .onDisappear { clearTask?.cancel() }
     }
 }
 
@@ -803,7 +1021,7 @@ struct HighlightMenu: View {
             ForEach(HighlightColor.allCases, id: \.self) { color in
                 Button { onPick(color) } label: {
                     Circle().fill(Color(color.uiColor)).frame(width: 26, height: 26)
-                        .overlay(Circle().stroke(.white.opacity(0.5), lineWidth: 1))
+                        .overlay(Circle().stroke(Atelier.contrastInk.opacity(0.5), lineWidth: Atelier.border(1)))
                 }
                 .buttonStyle(PressScale())
                 .accessibilityLabel("Surligner en \(color.frenchName)")
@@ -817,11 +1035,11 @@ struct HighlightMenu: View {
 extension HighlightColor {
     var frenchName: String {
         switch self {
-        case .yellow: return "jaune"
-        case .green: return "vert"
-        case .blue: return "bleu"
-        case .pink: return "rose"
-        case .orange: return "orange"
+        case .yellow: return String(localized: "jaune")
+        case .green: return String(localized: "vert")
+        case .blue: return String(localized: "bleu")
+        case .pink: return String(localized: "rose")
+        case .orange: return String(localized: "orange")
         }
     }
 }
@@ -867,4 +1085,79 @@ enum PopupPlacement {
         let y = useBelow ? word.maxY + gap : max(margin, word.minY - gap - h)
         return CGRect(x: x, y: y, width: w, height: h)
     }
+}
+
+/// Mode « Surligner l'OCR » (#23) : capte le glisser (doigt, Pencil, souris ou trackpad cliqué) au-dessus de la page
+/// et montre l'aperçu ; le défilement à un doigt est suspendu tant que le mode est actif (‹ › et ← → tournent les
+/// pages). Repère : celui de la vue PDF (même `ZStack`, comme `LookupHighlightLayer`).
+struct OCRHighlightDragLayer: View {
+    @ObservedObject var reader: ReaderController
+    let color: HighlightColor
+
+    var body: some View {
+        // Dessin seul : les gestes sont sur la vue PDF (`handleHighlightPan`), pour garder le zoom à deux doigts.
+        Canvas { context, _ in
+            for r in reader.ocrHighlightPreview where r.width > 0 {
+                context.fill(Path(roundedRect: r.insetBy(dx: -1, dy: -1), cornerRadius: 2),
+                             with: .color(Color(color.uiColor).opacity(0.45)))
+            }
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+}
+
+/// Commandes du mode « Surligner l'OCR » (recette 1.3.2 (62), L5) : surligner ou gommer, annuler (⌘Z), terminer.
+struct OCRHighlightControls: View {
+    @ObservedObject var reader: ReaderController
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Picker("Outil", selection: $reader.ocrHighlightErasing) {
+                Label("Surligner", systemImage: "highlighter").tag(false)
+                Label("Gomme", systemImage: "eraser").tag(true)
+            }
+            .pickerStyle(.segmented)
+            .frame(width: 200)
+            Button { reader.undoHighlight() } label: { Image(systemName: "arrow.uturn.backward") }
+                .keyboardShortcut("z", modifiers: .command)
+                .disabled(reader.highlightUndo.isEmpty)
+                .accessibilityLabel("Annuler (⌘ Z)")
+            Button("Terminé") { reader.setOCRHighlightMode(false) }
+                .fontWeight(.semibold)
+                .keyboardShortcut(.escape, modifiers: [])
+        }
+        .font(Atelier.font(14))
+        .padding(.horizontal, 14).padding(.vertical, 8)
+        .atelierPanel(radius: 20)
+    }
+}
+
+/// Passage d'un lecteur à l'autre par les onglets (recette 1.3.2 (64), point 1) : le panneau d'étude (ouvert ou non,
+/// onglet Texte, Notes…) est repris tel quel par le lecteur suivant, sans animation d'arrivée. `prepare()` est appelé
+/// juste avant le changement d'onglet ; le `init` du nouveau lecteur le consomme avec `take()`.
+@MainActor
+final class ReaderTabHandoff {
+    static let shared = ReaderTabHandoff()
+    struct State { let side: ReaderScreen.Side?; let studyTab: StudyPanel.Tab }
+
+    /// Lecture de l'état du lecteur affiché (fournie par lui).
+    var current: (() -> (ReaderScreen.Side?, StudyPanel.Tab))?
+    private var pending: State?
+
+    func prepare() {
+        guard let (side, tab) = current?() else { return }
+        pending = State(side: side, studyTab: tab)
+    }
+
+    func take() -> State? {
+        defer { pending = nil }
+        return pending
+    }
+}
+
+/// Taille du lecteur en ignorant le clavier (voir `ReaderScreen.body`).
+private struct KeyboardFreeSizeKey: PreferenceKey {
+    static var defaultValue: CGSize { .zero }
+    static func reduce(value: inout CGSize, nextValue: () -> CGSize) { value = nextValue() }
 }

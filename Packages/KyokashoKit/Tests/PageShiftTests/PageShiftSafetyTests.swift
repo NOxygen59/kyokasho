@@ -212,6 +212,97 @@ extension PageShiftRecoveryTests {
         }
     }
 
+    /// #49 — un journal v2 écrit par une version précédente de l'app est toujours repris par l'ancien chemin.
+    func testVersion2JournalFromAnEarlierBuildIsStillCompleted() async throws {
+        try await withFixture { model, doc, root in
+            let card = try seed(model, doc)
+            try await interruptedApply(model, doc, root, at: "journal.after")
+            var p = try journal(root)
+            XCTAssertEqual(p.version, 3)
+            p.version = 2
+            p.cardPages = p.cardTargets?.compactMapValues { $0 }
+            p.cardTargets = nil
+            p.mapping = nil
+            p.expectedLayoutVersion = nil
+            try writeJournal(p, root)
+            let restarted = try AppModel(root: root)
+            for _ in 0..<3 { PageShift.reconcile(restarted) }
+            XCTAssertNil(restarted.storageRecoveryError)
+            try verify(restarted, doc, card)
+            XCTAssertNil(try restarted.database.pageEdit(id: p.transaction!), "v2 : pas d'opération enregistrée")
+        }
+    }
+
+    /// Revue Codex F4 — journal v3 d'un ajout : une carte mise à `null`, ou une page d'origine falsifiée, est refusée
+    /// avant toute modification ; la reprise authentique reste possible ensuite.
+    func testF4CardTargetsMustBeTheExactImageOfTheirSourcePage() async throws {
+        for tamper in ["nil", "source", "inventaire"] {
+            try await withFixture { model, doc, root in
+                let card = try seed(model, doc)
+                try await interruptedApply(model, doc, root, at: "journal.after")
+                let authentic = try journal(root)
+                var p = authentic
+                switch tamper {
+                case "nil": p.cardTargets = [card.id!: nil]
+                case "source": p.cardSources = [card.id!: 1]
+                default: p.cardTargets = [:]; p.cardSources = [:]
+                }
+                try writeJournal(p, root)
+                let restarted = try AppModel(root: root)
+                for _ in 0..<3 { PageShift.reconcile(restarted) }
+                XCTAssertNotNil(restarted.storageRecoveryError, tamper)
+                try assertUnshifted(restarted, doc, card)
+                try writeJournal(authentic, root)
+                PageShift.reconcile(restarted)
+                XCTAssertNil(restarted.storageRecoveryError, tamper)
+                try verify(restarted, doc, card)
+            }
+        }
+    }
+
+    /// v2 repris après des effets déjà commis (base et PDF installés, puis coupure) : rien n'est décalé deux fois.
+    func testVersion2JournalResumedAfterCommittedEffects() async throws {
+        for point in ["pdf.after", "files.backup", "cards.after"] {
+            try await withFixture { model, doc, root in
+                let card = try seed(model, doc)
+                try await interruptedApply(model, doc, root, at: "journal.after")
+                var p = try journal(root)
+                p.version = 2
+                p.cardPages = p.cardTargets?.compactMapValues { $0 }
+                p.cardTargets = nil; p.cardSources = nil; p.mapping = nil; p.expectedLayoutVersion = nil
+                try writeJournal(p, root)
+                let restarted = try AppModel(root: root)
+                PageShift.checkpoint = { if $0 == point { throw PowerLoss.simulated } }
+                PageShift.reconcile(restarted)
+                PageShift.checkpoint = nil
+                XCTAssertNotNil(restarted.storageRecoveryError, point)
+                let again = try AppModel(root: root)
+                for _ in 0..<3 { PageShift.reconcile(again) }
+                XCTAssertNil(again.storageRecoveryError, point)
+                try verify(again, doc, card)
+                XCTAssertEqual(try again.database.layoutVersion(documentId: doc.id), 0, "v2 : pas de nouvelle version")
+            }
+        }
+    }
+
+    /// #49 — journal v3 : l'opération est enregistrée une seule fois, même après plusieurs reprises.
+    func testVersion3RecordsTheEditOnceAcrossRepeatedRecoveries() async throws {
+        try await withFixture { model, doc, root in
+            let card = try seed(model, doc)
+            try await interruptedApply(model, doc, root, at: "pdf.after")
+            let p = try journal(root)
+            let restarted = try AppModel(root: root)
+            for _ in 0..<3 { PageShift.reconcile(restarted) }
+            XCTAssertNil(restarted.storageRecoveryError)
+            try verify(restarted, doc, card)
+            let edit = try XCTUnwrap(restarted.database.pageEdit(id: p.transaction!))
+            XCTAssertEqual(edit.kind, .insertion)
+            XCTAssertEqual([edit.versionBefore, edit.versionAfter], [0, 1])
+            XCTAssertEqual(try restarted.database.layoutVersion(documentId: doc.id), 1)
+            XCTAssertEqual(try restarted.database.pageIdentities(documentId: doc.id).count, 4)
+        }
+    }
+
     /// S5 — pages de cartes du journal modifiées hors plage : blocage, FSRS et annotations intacts.
     func testS5TamperedCardPagesInJournalAreRefused() async throws {
         for bad in [99, 0, 1, 4] {
@@ -220,6 +311,7 @@ extension PageShiftRecoveryTests {
                 try await interruptedApply(model, doc, root, at: "journal.after")
                 var p = try journal(root)
                 p.cardPages = [card.id!: bad]
+                p.cardTargets = [card.id!: bad] // Journal v3 (#49) : même refus.
                 try writeJournal(p, root)
                 let restarted = try AppModel(root: root)
                 for _ in 0..<3 { PageShift.reconcile(restarted) }
@@ -358,7 +450,7 @@ extension PageShiftRecoveryTests {
             async let second: String? = { do { _ = try await PageShift.apply(model, document: doc, merged: merged, offset: 2, newCount: 4); return nil } catch { return error.localizedDescription } }()
             let errors = await [first, second]
             XCTAssertEqual(errors.filter { $0 == nil }.count, 1, "\(errors)")
-            XCTAssertEqual(errors.compactMap { $0 }, ["Un ajout de pages de ce document est déjà en cours."], "\(errors)")
+            XCTAssertEqual(errors.compactMap { $0 }, ["Une modification des pages de ce document est déjà en cours."], "\(errors)")
             XCTAssertFalse(FileManager.default.fileExists(atPath: root.appendingPathComponent(journalName).path))
             try verify(model, doc, card)
         }

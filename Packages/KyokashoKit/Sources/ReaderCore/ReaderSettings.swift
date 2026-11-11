@@ -93,10 +93,24 @@ public struct ReaderSettingsOverride: Codable, Equatable, Sendable {
     public var doubleTapZoom: Bool?
     public var hideBarsOnScroll: Bool?
     public var ocrEngine: OCREngineChoice?
+    /// Rangé dans l'espace Manga. Dans ce JSON : il suit le document dans ses paquets, et une version plus ancienne
+    /// de l'app l'ignore sans rien casser.
+    public var mangaSpace: Bool?
+    /// Furigana ajoutés sur la page d'un manga : masqués par défaut (`nil`), affichés seulement par choix (décision de
+    /// NOxygen59 du 06/11/2026). Les lectures restent dans le panneau Texte. Sans effet hors de l'espace Manga.
+    public var pageFurigana: Bool?
 
     public init() {}
 
     public var isEmpty: Bool { self == ReaderSettingsOverride() }
+
+    /// Y a-t-il un choix de lecture à réinitialiser ? L'espace Manga est un rangement, pas un réglage.
+    public var hasReaderOverrides: Bool {
+        var settings = self
+        settings.mangaSpace = nil
+        settings.pageFurigana = nil
+        return !settings.isEmpty
+    }
 }
 
 /// Thème de l'interface.

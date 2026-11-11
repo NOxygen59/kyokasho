@@ -24,7 +24,18 @@ final class ReaderController: NSObject, ObservableObject {
     @Published var pdf: PDFDocument?
     @Published private(set) var presented: [PresentedPage] = []
     @Published var currentIndex = 0
-    @Published var barsVisible = true
+    @Published var barsVisible = true {
+        didSet {
+            barsChangedAt = ProcessInfo.processInfo.systemUptime
+            // La flèche ou un autre geste a déjà décidé : un toucher encore en attente d'OCR ne doit plus rien changer.
+            tapLookupGeneration += 1
+        }
+    }
+    /// Change à chaque geste qui rend périmée une recherche lancée par un toucher (nouveau toucher, page, mode, fermeture).
+    /// L'OCR peut durer plusieurs secondes : sans cela, le toucher agirait sur une page que l'utilisateur a déjà quittée.
+    var tapLookupGeneration = 0
+    /// Dernier changement des barres : voir `ReaderBarsPolicy.settleDelay`.
+    var barsChangedAt: TimeInterval = 0
     @Published var isDrawing = false
     @Published var hasSelection = false
     @Published var bookmarks: [Bookmark] = []
@@ -57,6 +68,8 @@ final class ReaderController: NSObject, ObservableObject {
 
     /// Dernier calcul de furigana OCR lancé par page (`showOCR`).
     var furiganaGeneration: [Int: Int] = [:]
+    /// Calcul en cours par page : annulé quand un plus récent le remplace, il ne consomme plus pour rien.
+    var pageFuriganaTasks: [Int: Task<Void, Never>] = [:]
     /// Orientation de l'écran du lecteur (`adaptLayout`) ; `nil` tant qu'elle n'est pas connue.
     var portraitMode: Bool?
     /// Préparation des pages teintées voisines (`scheduleTone`).
@@ -83,7 +96,10 @@ final class ReaderController: NSObject, ObservableObject {
 
     /// Outil « dictionnaire » actif : un tap sur un caractère cherche le mot.
     @Published var lookupMode = false {
-        didSet { toolModes.update(documentId: document.id) { [lookupMode] in $0.lookup = lookupMode } }
+        didSet {
+            toolModes.update(documentId: document.id) { [lookupMode] in $0.lookup = lookupMode }
+            tapLookupGeneration += 1
+        }
     }
     /// Mode dessin à rétablir une fois le document installé (les surcouches PencilKit doivent exister).
     var pendingDrawingRestore = false
@@ -91,6 +107,26 @@ final class ReaderController: NSObject, ObservableObject {
     @Published var lookupRequest: LookupRequest?
     /// Rectangles (repère de la vue PDF) du texte touché puis du mot reconnu.
     @Published var lookupHighlight: [CGRect] = []
+    /// Mode « Surligner l'OCR » (#23) : glisser sur les zones de l'OCR surligne au lieu de faire défiler.
+    @Published var ocrHighlightMode = false
+    /// Geste à un doigt du mode surlignage, créé à sa première activation.
+    var ocrHighlightPan: UIPanGestureRecognizer?
+    /// Toucher simple de la gomme, à côté du glisser (revue après recette 1.4.8, P2 5).
+    var ocrEraseTap: UITapGestureRecognizer?
+    /// Double page paginée : pan interne limité à un doigt pour laisser démarrer le pincement (`tuneDoublePageGestures`).
+    var doublePagePanTuned = false
+    /// Recalage « page entière » prévu après le zoom arrière animé ; annulé par la prochaine interaction.
+    var pendingFitToPage: DispatchWorkItem?
+    /// Aperçu du surlignage en cours (repère de la vue PDF).
+    @Published var ocrHighlightPreview: [CGRect] = []
+    /// Glisser en cours : page, OCR, cadre et premier caractère (fixés à l'appui).
+    var ocrHighlightDrag: OCRHighlightDrag?
+    /// +1 à chaque relâchement : un appui dont la lecture de l'OCR finit après le relâchement est ignoré.
+    var ocrHighlightGeneration = 0
+    /// Gomme du mode « Surligner l'OCR » (recette 62, L5) : glisser efface les surlignages touchés.
+    @Published var ocrHighlightErasing = false
+    /// Annulation (⌘Z ou bouton) des surlignages faits ou effacés dans le mode, le plus récent en dernier.
+    @Published var highlightUndo: [HighlightChange] = []
 
     struct LookupRequest: Equatable {
         let id = UUID()
@@ -119,6 +155,20 @@ final class ReaderController: NSObject, ObservableObject {
     var pageStringCache: (index: Int, string: NSString, map: [Int], hasText: Bool)?
     /// `realOCR` des pages hors panneau (évite une lecture du cache SQLite à chaque survol) ; vidé à chaque OCR.
     var realOCRMemo: [Int: OCRPage?] = [:]
+    /// OCR retenu de chaque page, versionné (`OCRPageSelection`) : moteur choisi dans le menu du panneau Texte (décision
+    /// D2 de NOxygen59 du 07/11/2026), moteur retenu, révision par page. Seul `adoptOCR` y adopte un nouveau moteur ; une
+    /// lecture demandée avant une intention plus récente est refusée (revue Codex de d87e048, R1). Remis à zéro quand le
+    /// réglage du moteur change.
+    @Published var ocrSelection = OCRPageSelection()
+    /// Moteur choisi dans le menu du panneau pour chaque page (lecture seule : `ocrSelection.pin`).
+    var pinnedEngines: [Int: String] { ocrSelection.pinned }
+    /// Moteur de l'**OCR retenu** de chaque page. Seul un résultat de ce moteur alimente zones, furigana et panneau
+    /// (enquête furigana iPad / Mac du 07/11/2026 : 223 lectures, puis 74).
+    var selectedEngines: [Int: String] { ocrSelection.selected }
+    /// Tâche de la page posée (caches des pages visibles) : annulée à la page posée suivante.
+    var settleOCRTask: Task<Void, Never>?
+    /// Jeton de la file `ensureOCR` : seule la file courante se retire à sa fin.
+    var ensureGeneration = 0
     /// Début de mot par caractère, par ligne de texte (découpage du dictionnaire), pour le survol.
     var wordStartMemo: [String: [Int]] = [:]
     var pageTextTask: Task<Void, Never>?
@@ -147,6 +197,9 @@ final class ReaderController: NSObject, ObservableObject {
         pencilTap?.isEnabled = pencilLookup
     }
     var hoverTask: Task<Void, Never>?
+    /// Dernière recherche au survol lancée grâce à Maj seule (bouton de survol éteint) : relâcher Maj la ferme
+    /// (RET-021, #24).
+    var lookupOpenedByShiftOnly = false
     private var lookupDiagnosticTimes: [String: Date] = [:]
 
     /// Trace bornée du trajet du pointeur, sans texte, titre ou identifiant du document.
@@ -198,6 +251,10 @@ final class ReaderController: NSObject, ObservableObject {
     /// Vrai pendant une reconstruction : le changement de page qui en résulte n'est pas un geste.
     var rebuilding = false
     var observers: [NSObjectProtocol] = []
+    /// Note dont l'ancre clignotera une fois les pages installées (ouverture depuis l'écran « Notes »).
+    var pendingAnchorNote: PageComment?
+    /// Abonnements Combine du lecteur (demandes « aller à la note » de l’écran Notes).
+    var cancellables: Set<AnyCancellable> = []
     /// Fin d'une tâche IA (peut-être lancée par un lecteur précédent) : la page affichée est relue du cache.
     var aiFinished: AnyCancellable?
     /// Seul le dernier rechargement demandé peut publier après une attente du cache.
@@ -206,9 +263,11 @@ final class ReaderController: NSObject, ObservableObject {
     var cropTask: Task<Void, Never>?
     var ocrTask: Task<Void, Never>?
     var settleWork: DispatchWorkItem?
+    var pointerSelect: UIPanGestureRecognizer!
     var singleTap: UITapGestureRecognizer!
     var doubleTap: UITapGestureRecognizer!
     var swipeLeft: UISwipeGestureRecognizer!
+    var trackpadPageTurn: UIPanGestureRecognizer!
     /// Appui long en cours ou terminé (sélection de texte de PDFKit) : le tap qui suit est ignoré.
     var pressWasLong = false
     /// Début d'une sélection au doigt (page, point dans la page).
@@ -259,8 +318,18 @@ final class ReaderController: NSObject, ObservableObject {
         } catch {
             loadError = error.localizedDescription
         }
-        rebuild(keepingSource: document.lastPageIndex)
+        // Écran « Notes » (PLAN-T4-001 E2) : ouvert pour une note, le livre part de sa page, puis l'ancre clignote.
+        // La demande est consommée dans tous les cas (revue DeepSeek F2) : une note supprimée entre-temps ne laisse pas
+        // une demande pendante qu'un prochain ouvrage du livre suivrait sans raison.
+        var jumpNote: PageComment?
+        if let jump = model.noteJump, jump.documentId == document.id {
+            jumpNote = notes.first { $0.id == jump.noteId }
+            model.noteJump = nil
+        }
+        rebuild(keepingSource: jumpNote?.pageIndex ?? document.lastPageIndex)
         markOpened()
+        // Le clignotement attend la fin de la construction des pages (`install`, revue DeepSeek F8).
+        pendingAnchorNote = jumpNote
     }
 
     /// Résultat de la construction (fait hors du fil principal) : document affiché + repères.
@@ -270,6 +339,10 @@ final class ReaderController: NSObject, ObservableObject {
         let rotations: [Int: Int]
         let splits: Set<Int>
         let presented: [PresentedPage]
+        /// Rotations à poser sur le fil principal (voir `install`), moitiés de pages découpées comprises.
+        let pendingRotations: [(page: PDFPage, degrees: Int)]
+        /// Cadres à poser sur le fil principal : `setBounds` notifie UIKit comme `rotation` (découpe, recette 1.3.2 (74)).
+        let pendingBounds: [(page: PDFPage, box: CGRect)]
     }
 
     /// PDF aux pages de même hauteur (`Caches/Equalized/<id>-<taille>-<date>.pdf`) et cadres d'origine des pages
@@ -282,10 +355,13 @@ final class ReaderController: NSObject, ObservableObject {
         let folder = fm.urls(for: .cachesDirectory, in: .userDomainMask)[0].appendingPathComponent("Equalized", isDirectory: true)
         let base = folder.appendingPathComponent("\(documentId)-\(stamp)")
         let pdfFile = base.appendingPathExtension("pdf"), boxesFile = base.appendingPathExtension("json")
-        if let data = try? Data(contentsOf: boxesFile), let saved = try? JSONDecoder().decode([[CGFloat]].self, from: data) {
+        // C1.4 (audit du 09/11/2026) : un cache mal formé (ligne sans ses 4 valeurs) faisait planter l'app ; il est
+        // maintenant ignoré et la préparation refaite (`EqualizedBoxes`).
+        if let data = try? Data(contentsOf: boxesFile), let saved = try? JSONDecoder().decode([[CGFloat]].self, from: data),
+           let boxes = EqualizedBoxes.rects(saved) {
             // Déjà préparé : liste vide = rien à changer dans ce PDF.
-            guard !saved.isEmpty, let pdf = PDFDocument(url: pdfFile), pdf.pageCount == saved.count else { return nil }
-            return (pdf, saved.map { CGRect(x: $0[0], y: $0[1], width: $0[2], height: $0[3]) })
+            guard !boxes.isEmpty, let pdf = PDFDocument(url: pdfFile), pdf.pageCount == boxes.count else { return nil }
+            return (pdf, boxes)
         }
         guard let original = PDFDocument(url: url), let common = commonHeight(original) else { return nil }
         try? fm.createDirectory(at: folder, withIntermediateDirectories: true)
@@ -346,7 +422,13 @@ final class ReaderController: NSObject, ObservableObject {
         guard let doc = PDFDocument(data: data as Data) else { return nil }
         doc.delegate = TonedPageProvider.shared
         guard let scaled = doc.page(at: 0) else { return nil }
-        scaled.rotation = page.rotation
+        // `PDFPage.rotation` notifie UIKit de façon synchrone (voir `install`). Cette page est recopiée dans le PDF
+        // préparé, qui doit garder sa rotation : on attend le fil principal, jamais bloqué sur cette construction.
+        let rotation = page.rotation
+        if rotation != 0 {
+            if Thread.isMainThread { scaled.rotation = rotation }
+            else { DispatchQueue.main.sync { scaled.rotation = rotation } }
+        }
         return (scaled, doc)
     }
 
@@ -399,6 +481,8 @@ final class ReaderController: NSObject, ObservableObject {
         var rotations: [Int: Int] = [:]
         let rtl = settings.direction == .rightToLeft
         var splitPages = Set<Int>()
+        var pendingRotations: [(page: PDFPage, degrees: Int)] = []
+        var pendingBounds: [(page: PDFPage, box: CGRect)] = []
         let count = pdf.pageCount
         boxes.reserveCapacity(count)
         rotations.reserveCapacity(count)
@@ -420,24 +504,27 @@ final class ReaderController: NSObject, ObservableObject {
             (page as? TonedPage)?.pageKey = pageKey
             (page as? TonedPage)?.originalBox = box
             let transform = transforms[index]
-            if let extra = transform?.rotation, extra % 360 != 0 {
-                page.rotation = ((page.rotation + extra) % 360 + 360) % 360
-            }
-            let visibleSize = page.rotation % 180 == 0 ? box.size : CGSize(width: box.height, height: box.width)
+            // Calculée ici, posée par `install` : `PDFPage.rotation` notifie UIKit de façon synchrone, et cette
+            // construction tourne hors du fil principal (crash de la recette 1.3.2 (72), 02/11/2026).
+            let shownRotation = PageTransform.effectiveRotation(intrinsic: page.rotation, additional: transform?.rotation ?? 0)
+            let rotationChanged = shownRotation != page.rotation
+            if rotationChanged { pendingRotations.append((page, shownRotation)) }
+            let visibleSize = shownRotation % 180 == 0 ? box.size : CGSize(width: box.height, height: box.width)
             let split = transform?.split ?? false || (settings.splitWidePages && PresentationLayout.isWide(visibleSize))
             if split, let copy = page.copy() as? PDFPage {
+                if rotationChanged { pendingRotations.append((copy, shownRotation)) }
                 splitPages.insert(index)
                 let first: PresentedPage.Part = rtl ? .right : .left
                 let second: PresentedPage.Part = rtl ? .left : .right
-                page.setBounds(PresentationLayout.box(for: first, in: box), for: .cropBox)
-                copy.setBounds(PresentationLayout.box(for: second, in: box), for: .cropBox)
+                pendingBounds.append((page, PresentationLayout.box(for: first, in: box, rotation: shownRotation)))
+                pendingBounds.append((copy, PresentationLayout.box(for: second, in: box, rotation: shownRotation)))
                 // `copy()` ne recopie pas les propriétés Swift.
                 (copy as? TonedPage)?.pageKey = pageKey
                 (copy as? TonedPage)?.originalBox = box
                 (copy as? TonedPage)?.sourceBox = sourceBox
                 ordered.append(copy)
             } else if settings.autoCrop, let crop = transform?.autoCrop {
-                page.setBounds(ContentBounds.apply(crop, to: box), for: .cropBox)
+                pendingBounds.append((page, ContentBounds.apply(crop, to: box)))
             }
         }
         var presented = PresentationLayout.pages(pageCount: boxes.count, splitPages: splitPages, rightToLeft: rtl)
@@ -458,7 +545,8 @@ final class ReaderController: NSObject, ObservableObject {
             for i in stride(from: pdf.pageCount - 1, through: 0, by: -1) { pdf.removePage(at: i) }
             for (i, page) in ordered.enumerated() { pdf.insert(page, at: i) }
         }
-        return Built(pdf: pdf, boxes: boxes, rotations: rotations, splits: splitPages, presented: presented)
+        return Built(pdf: pdf, boxes: boxes, rotations: rotations, splits: splitPages, presented: presented,
+                     pendingRotations: pendingRotations, pendingBounds: pendingBounds)
     }
 
     func install(_ built: Built?, source: Int, generation: Int) {
@@ -467,14 +555,22 @@ final class ReaderController: NSObject, ObservableObject {
         // Page tournée pendant la construction : on reste où l'utilisateur est allé.
         let target = pdf == nil ? source : currentSourcePage
         guard let built else {
-            loadError = "Impossible d'ouvrir ce PDF."
+            loadError = String(localized: "Impossible d'ouvrir ce PDF.")
             return
+        }
+        if let note = pendingAnchorNote {
+            pendingAnchorNote = nil
+            // Après la fin de cette installation (même tour de boucle) : PDF et pages sont en place.
+            DispatchQueue.main.async { [weak self] in self?.goToAnchor(note) }
         }
         originalBoxes = built.boxes
         originalRotations = built.rotations
         splitSources = built.splits
         presented = built.presented
         let pdf = built.pdf
+        // Avant `pdfView.document` : la vue découvre les pages déjà dans leur sens.
+        for (page, degrees) in built.pendingRotations { page.rotation = degrees }
+        for (page, bounds) in built.pendingBounds { page.setBounds(bounds, for: .cropBox) }
         // Rognages calculés pendant la construction (l'instantané des transformations était plus ancien).
         if settings.autoCrop {
             var pagesBySource: [Int: [PDFPage]] = [:]
@@ -530,8 +626,14 @@ final class ReaderController: NSObject, ObservableObject {
     /// Cherche le texte sous `point` (vue PDF) : texte intégré du PDF, sinon OCR (fait si besoin).
     /// `fromHover` : survol au curseur → jamais d'OCR lancé (trop lent), et rien ne se ferme
     /// quand le pointeur passe sur un blanc (pour pouvoir aller jusqu'au popup).
-    func lookup(at point: CGPoint, fromHover: Bool = false) async {
+    /// `tapGeneration` : le toucher qui a lancé la recherche. Devenu périmé pendant l'attente de l'OCR, il n'ouvre plus de fenêtre.
+    func lookup(at point: CGPoint, fromHover: Bool = false, tapGeneration: Int? = nil) async {
+        guard document.capabilities.textAnalysis else { return } // Ce chemin lancerait l'OCR.
+        // Toute source de recherche (toucher, stylet, survol) devient périmée au prochain geste, changement de page ou fermeture.
+        let generation = tapGeneration ?? tapLookupGeneration
+        func isStale() -> Bool { generation != tapLookupGeneration || closed || Task.isCancelled }
         traceLookup("Recherche lancée ; survol=\(fromHover)")
+        if !fromHover { lookupOpenedByShiftOnly = false }
         guard let pdf, let page = pdfView.page(for: point, nearest: false) else { return }
         let index = pdf.index(for: page)
         guard presented.indices.contains(index) else { return }
@@ -564,7 +666,7 @@ final class ReaderController: NSObject, ObservableObject {
             let glyph = page.characterIndex(at: pagePoint)
             // Point hors du texte (marge, image) : rien à chercher, et surtout pas l'OCR d'une page numérique.
             guard glyph >= 0, glyph < map.count, let i = Self.stringIndex(near: map[glyph], glyph: glyph, on: page, string: ns) else {
-                if !fromHover { lookupHighlight = [] }
+                if !fromHover, !isStale() { lookupHighlight = [] }
                 return
             }
             do {
@@ -607,10 +709,11 @@ final class ReaderController: NSObject, ObservableObject {
                     let context = LookupContext(source: source, presentedIndex: index,
                                                 sentence: line?.string?.trimmingCharacters(in: .whitespacesAndNewlines) ?? text,
                                                 lineRect: line?.bounds(for: page) ?? .zero, vertical: false)
+                    guard !isStale() else { return }
                     present(text: text, rects: rects, anchor: point, context: context)
                     return
                 }
-                if !fromHover { lookupHighlight = [] }
+                if !fromHover, !isStale() { lookupHighlight = [] }
                 return
             }
         }
@@ -628,12 +731,16 @@ final class ReaderController: NSObject, ObservableObject {
         if ocr == nil {
             let focused = source == focusSource
             if focused { ocrState = .running }
+            // Ticket pris avant les attentes : un choix fait entre-temps dans le menu garde la page (revue Codex, R1).
+            let ticket = ocrSelection.ticket(for: source)
             let engine = await scanEngine(source: source)
             ocr = try? await model.ocr.page(documentId: document.id, url: fileURL, pageIndex: source, engine: engine)
             if focused, focusSource == source { ocrState = .idle }
-            if let ocr { if source == focusSource { ocrPage = ocr }; showOCR(ocr, source: source) }
+            // `ocrState` revient toujours au repos. Le résultat, lui, reste au cache : un geste plus récent garde l'écran.
+            if let ocr, !isStale() { adoptOCR(OCRCandidate(page: ocr, ticket: ticket, fromCache: false), source: source) }
         }
-        guard let ocr else { return }
+        // L'OCR a pu durer plusieurs secondes : un résultat périmé reste au cache mais ne touche plus à l'écran.
+        guard let ocr, !isStale() else { return }
         // Rotation intrinsèque comprise (photos de pages) : sans elle, le toucher visait à côté.
         let normalized = frame.normalized(pagePoint)
         // Marge de toucher : ~14 pt au doigt, ~4 pt au curseur, convertis en fraction de la page affichée.
@@ -643,7 +750,7 @@ final class ReaderController: NSObject, ObservableObject {
         let tolerance = Double(margin / max(shownWidth * pdfView.scaleFactor, 1))
         guard let hit = ocr.character(at: normalized, tolerance: tolerance) else {
             traceLookup("Aucun caractère OCR sous le pointeur")
-            if !fromHover { lookupHighlight = [] }
+            if !fromHover { lookupHighlight = [] }  // Aucune attente depuis le contrôle ci-dessus.
             return
         }
         let hitLine = ocr.lines[hit.line]
@@ -673,6 +780,7 @@ final class ReaderController: NSObject, ObservableObject {
             line += 1
             start = 0
         }
+        guard !isStale() else { return }  // `wordStart` attend le dictionnaire.
         present(text: text, rects: rects, anchor: point, context: context)
     }
 
@@ -718,6 +826,7 @@ final class ReaderController: NSObject, ObservableObject {
         }
         traceLookup("Présentation du dictionnaire")
         lookupRequest = LookupRequest(text: text, anchor: anchor, wordRect: first, vertical: vertical)
+        ReadingTimeTracker.shared.wordLookedUp()
     }
 
     /// Le dictionnaire a reconnu `length` caractères : on surligne exactement le mot.
@@ -746,14 +855,14 @@ final class ReaderController: NSObject, ObservableObject {
     /// jamais « texte du PDF » ici (on n'arrive là que si le texte intégré n'a rien donné).
     func scanEngine(source: Int) async -> String {
         let choice = settings.ocrEngine
-        let url = fileURL
-        let resolved = await Task.detached(priority: .userInitiated) {
-            OCRService.resolve(choice == .pdfText ? .auto : choice, url: url, pageIndex: source)
-        }.value
-        guard resolved == OCREngineID.pdfText else { return resolved }
-        for id in [OCREngineID.ndlocr, OCREngineID.ppocr5] where OCRService.engine(id)?.isAvailable == true { return id }
-        return OCREngineID.vision
+        let id = OCRSelectionPolicy.engineToRead(choice: choice == .pdfText ? .auto : choice, pinned: pinnedEngines[source],
+                                                 hasTextLayer: false, isInstalled: Self.isInstalled)
+        guard id == OCREngineID.pdfText else { return id }
+        return OCRSelectionPolicy.engineToRead(choice: .auto, pinned: nil, hasTextLayer: false, isInstalled: Self.isInstalled)
     }
+
+    /// Modèle d'OCR présent sur l'appareil (Vision et le texte du PDF le sont toujours).
+    nonisolated static func isInstalled(_ id: String) -> Bool { OCRService.engine(id)?.isAvailable == true }
 
     /// « Titre · p. N » (numéro imprimé) de la page du mot cherché.
     var lookupSourceLabel: String? {
@@ -798,12 +907,27 @@ final class ReaderController: NSObject, ObservableObject {
 
     /// Repère des résultats OCR d'une page source (cadre d'origine + rotation intrinsèque du PDF).
     func pageFrame(ofSource source: Int) -> PageFrame? {
-        originalBoxes[source].map { PageFrame(box: $0, rotation: originalRotations[source] ?? 0) }
+        originalBoxes[source].map {
+            PageFrame(box: $0, rotation: PageTransform.effectiveRotation(
+                intrinsic: originalRotations[source] ?? 0,
+                additional: transforms[source]?.rotation ?? 0))
+        }
     }
 
     // MARK: Notifications
 
     func observe() {
+        // Livre déjà ouvert quand une de ses notes est choisie. Aujourd'hui l'écran « Notes » ne s'ouvre que lecteur
+        // fermé (revue DeepSeek F11) : ce chemin servira quand on pourra l'atteindre depuis le lecteur (E3).
+        // (`insert` plutôt que `.store(in:)` : un contrôle source réserve `.store(` aux écritures OCR du lecteur.)
+        cancellables.insert(model.$noteJump
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] jump in
+                guard let self, let jump, jump.documentId == self.document.id, self.pdf != nil,
+                      let note = self.notes.first(where: { $0.id == jump.noteId }) else { return }
+                self.model.noteJump = nil
+                self.goToAnchor(note)
+            })
         let center = NotificationCenter.default
         observers.append(center.addObserver(forName: .PDFViewPageChanged, object: pdfView, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated { self?.pageChanged() }
@@ -811,8 +935,7 @@ final class ReaderController: NSObject, ObservableObject {
         observers.append(center.addObserver(forName: .PDFViewSelectionChanged, object: pdfView, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated {
                 guard let self else { return }
-                let text = self.pdfView.currentSelection?.string ?? ""
-                self.hasSelection = !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                self.hasSelection = ReaderBarsPolicy.isVisibleSelection(self.pdfView.currentSelection?.string)
             }
         })
         // Corrections depuis l'analyse : elles ne passent pas par AITaskCenter.finished.
@@ -821,8 +944,10 @@ final class ReaderController: NSObject, ObservableObject {
                   let source = note.userInfo?["pageIndex"] as? Int,
                   let engine = note.userInfo?["engine"] as? String else { return }
             MainActor.assumeIsolated {
-                guard let self, !self.closed, id == self.document.id, source == self.focusSource,
-                      engine == self.ocrPage?.engine else { return }
+                guard let self, !self.closed, id == self.document.id else { return }
+                // Double page : l'autre page affichée suit aussi (étape 2).
+                guard source == self.focusSource else { self.reloadShownPage(source, engine: engine); return }
+                guard engine == self.ocrPage?.engine else { return }
                 Diagnostics.log("Cache OCR enregistré : rafraîchissement p. \(source + 1)", "ocr-ui")
                 self.reloadOCRAfterAITask()
             }
@@ -913,10 +1038,69 @@ final class ReaderPDFView: PDFView {
         walk(self)
     }
 
+    /// Résultats de tâches de fond (nettoyage, teinte, furigana) : ils arrivent coup sur coup après chaque page posée,
+    /// et chacun ferait redessiner et redécoder toute la page. Un seul redessin les regroupe. Les changements de
+    /// réglage, eux, gardent le redessin immédiat.
+    func requestRedraw() {
+        guard !redrawRequested else { return }
+        redrawRequested = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.redrawDelay) { [weak self] in
+            self?.redrawRequested = false
+            self?.redrawVisiblePages()
+        }
+    }
+
+    private static let redrawDelay: TimeInterval = 0.12
+    private var redrawRequested = false
+
+    /// « Tout sélectionner » (⌘A, clic droit) : les pages affichées. PDFKit prendrait tout le document, jusqu'à figer un gros livre.
+    override func selectAll(_ sender: Any?) {
+        let selection = PDFSelection(document: document ?? PDFDocument())
+        for page in visiblePages {
+            if let text = page.selection(for: page.bounds(for: .cropBox)) { selection.add(text) }
+        }
+        guard selection.string?.isEmpty == false else { return }
+        setCurrentSelection(selection, animate: false)
+    }
+
+    /// « Copier » : le texte de la sélection, écrit nous-mêmes. Une sélection bâtie page par page (`selectAll`)
+    /// donnait à PDFKit un presse-papiers vide alors que son texte existait (recette iPad 1.5.0, point 1.2).
+    override func copy(_ sender: Any?) {
+        guard copySelectionText() else { return super.copy(sender) }
+    }
+
+    /// Texte brut de la sélection dans le presse-papiers, seul type écrit : une app qui préfère le texte riche ne
+    /// colle plus un contenu vide. Faux si rien n'est sélectionné.
+    @discardableResult
+    func copySelectionText() -> Bool {
+        guard let text = currentSelection?.string, ReaderBarsPolicy.isVisibleSelection(text) else { return false }
+        UIPasteboard.general.string = text
+        return true
+    }
+
     override func buildMenu(with builder: UIMenuBuilder) {
         super.buildMenu(with: builder)
+        // « Copier » du menu (clic droit, appui) part vers une vue interne de PDFKit, pas vers `copy(_:)` ci-dessus :
+        // la copie restait vide (recette iPad 1.5.1, points 3.1 et 3.2). L'entrée du menu est donc remplacée par la nôtre.
+        if ReaderBarsPolicy.isVisibleSelection(currentSelection?.string) {
+            let copyAction = UIAction(title: String(localized: "Copier"), image: UIImage(systemName: "doc.on.doc")) { [weak self] _ in
+                self?.copySelectionText()
+            }
+            var replaced = false
+            builder.replaceChildren(ofMenu: .standardEdit) { children in
+                children.map { element in
+                    if let command = element as? UICommand, command.action == #selector(UIResponderStandardEditActions.copy(_:)) {
+                        replaced = true
+                        return copyAction
+                    }
+                    return element
+                }
+            }
+            // Menu sans entrée « Copier » reconnue : la nôtre est ajoutée en tête, pour ne jamais rester sans copie.
+            if !replaced { builder.insertChild(UIMenu(options: .displayInline, children: [copyAction]), atStartOfMenu: .root) }
+        }
         guard let onLookupSelection, currentSelection?.string?.isEmpty == false else { return }
-        let action = UIAction(title: "Dictionnaire", image: UIImage(systemName: "character.book.closed.ja")) { _ in
+        let action = UIAction(title: String(localized: "Dictionnaire"), image: UIImage(systemName: "character.book.closed.ja")) { _ in
             onLookupSelection()
         }
         builder.insertSibling(UIMenu(options: .displayInline, children: [action]), beforeMenu: .standardEdit)
@@ -924,6 +1108,9 @@ final class ReaderPDFView: PDFView {
     static let preserveViewportKey = "reader.preserveViewport"
     private var lastFit: CGFloat = 0
     private var layoutWork: DispatchWorkItem?
+    /// Appelé quand un recalage différé est terminé (revue D-07 de T1 : PDFKit peut recréer les vues de page pendant ce
+    /// recalage ; la garde du Pencil est alors réappliquée).
+    var onLayoutSettled: (() -> Void)?
     private var pendingViewport: ViewportSnapshot?
     private var layoutGeneration = 0
     private var requiresFit = false
@@ -979,6 +1166,7 @@ final class ReaderPDFView: PDFView {
         requiresFit = viewport == nil
         let work = DispatchWorkItem { [weak self] in
             guard let self, generation == self.layoutGeneration else { return }
+            defer { self.onLayoutSettled?() }
             self.pendingViewport = nil
             self.requiresFit = false
             self.layoutWork = nil

@@ -3,6 +3,7 @@
 
 import CoreGraphics
 import Foundation
+import ReaderCore
 
 /// Rectangle normalisé (0…1) dans la page source, **origine en haut à gauche**, y vers le bas.
 /// Référence : la `cropBox` d'origine de la page (avant rognage, découpe ou rotation de l'app),
@@ -51,11 +52,24 @@ public struct OCRLine: Codable, Hashable, Sendable {
     public var doubt: [Int]?
     /// Ligne corrigée à la main (jamais retouchée ensuite par la relecture automatique).
     public var edited: Bool?
+    /// Furigana déjà imprimés à côté de cette ligne (manga) : l'app n'en ajoute pas par-dessus.
+    public var hasPrintedRuby: Bool?
+    /// État d'avant la première correction, pour pouvoir y revenir sans relancer l'OCR.
+    public var originalText: String?
+    public var originalCharBoxes: [NormBox]?
+    public var originalMeasuredCharBoxes: Bool?
+    public var originalDoubt: [Int]?
 
     /// Choix explicite de l'utilisateur, y compris « Garder tel quel » : persiste l'acceptation.
     /// Les positions mesurées restent utilisables si la longueur ne change pas.
     public func acceptingCorrection(_ text: String) -> OCRLine {
         var line = self
+        if line.originalText == nil, text != line.text {
+            line.originalText = line.text
+            line.originalCharBoxes = line.charBoxes
+            line.originalMeasuredCharBoxes = line.measuredCharBoxes
+            line.originalDoubt = line.doubt
+        }
         if text.count != line.charBoxes.count {
             line.charBoxes = CharacterLayout.proportional(text, in: line.box, vertical: line.vertical)
             line.measuredCharBoxes = false
@@ -63,6 +77,34 @@ public struct OCRLine: Codable, Hashable, Sendable {
         line.text = text
         line.edited = true
         line.doubt = []
+        return line
+    }
+
+    /// La ligne telle que l'OCR l'avait lue, ou elle-même si elle n'a pas été corrigée.
+    public var revertingCorrection: OCRLine {
+        guard let originalText else { return self }
+        var line = self
+        line.text = originalText
+        line.charBoxes = originalCharBoxes ?? CharacterLayout.proportional(originalText, in: box, vertical: vertical)
+        line.measuredCharBoxes = originalMeasuredCharBoxes ?? false
+        line.originalText = nil
+        line.originalCharBoxes = nil
+        line.originalMeasuredCharBoxes = nil
+        line.doubt = originalDoubt
+        line.originalDoubt = nil
+        line.edited = nil
+        // La géométrie d'origine peut venir d'un ancien résultat : mêmes règles que le cache (contre-revue 5a0f68f, P2 1).
+        return line.downgradingDuplicateBoxes()
+    }
+
+    /// Ancien résultat : des boîtes de caractères en double ne sont pas des mesures. Texte et corrections gardés, cases
+    /// proportionnelles marquées estimées (contre-revue du chantier 1.5.0, P2 3).
+    public func downgradingDuplicateBoxes() -> OCRLine {
+        guard measuredCharBoxes, CharacterLayout.hasDuplicates(charBoxes) || CharacterLayout.hasSharedOrigins(charBoxes)
+        else { return self }
+        var line = self
+        line.charBoxes = CharacterLayout.proportional(text, in: box, vertical: vertical)
+        line.measuredCharBoxes = false
         return line
     }
 
@@ -81,7 +123,10 @@ public struct OCRPage: Codable, Hashable, Sendable {
     /// Version du format/rendu : un résultat plus ancien en cache est refait automatiquement.
     /// 4 : boîtes de caractères de NDLOCR mesurées par PP-OCRv5 (si installé).
     /// 5 : texte intégré dans le repère tourné (pages /Rotate), comme le rendu OCR.
-    public static let currentVersion = 5
+    /// 6 : la rotation supplémentaire choisie dans Kyōkasho entre dans le rendu et les boîtes OCR.
+    public static let currentVersion = 6
+    /// Les résultats v5 restent valides tant qu'aucune rotation propre à Kyōkasho n'est appliquée à la page.
+    public static let unrotatedMinimumVersion = 5
 
     public var engine: String
     public var lines: [OCRLine]
@@ -138,6 +183,67 @@ public struct OCRPage: Codable, Hashable, Sendable {
     }
 }
 
+public extension OCRPage {
+    /// Tourne les boîtes normalisées déjà extraites (cas du texte intégré au PDF).
+    func rotatedClockwise(_ degrees: Int) -> OCRPage {
+        let rotation = PageTransform.normalizedRotation(degrees)
+        guard rotation != 0 else { return self }
+        func rotate(_ box: NormBox) -> NormBox {
+            switch rotation {
+            case 90: return NormBox(x: 1 - box.y - box.h, y: box.x, w: box.h, h: box.w)
+            case 180: return NormBox(x: 1 - box.x - box.w, y: 1 - box.y - box.h, w: box.w, h: box.h)
+            case 270: return NormBox(x: box.y, y: 1 - box.x - box.w, w: box.h, h: box.w)
+            default: return box
+            }
+        }
+        var page = self
+        page.lines = lines.map { source in
+            var line = source
+            line.box = rotate(line.box)
+            line.charBoxes = line.charBoxes.map(rotate)
+            line.originalCharBoxes = line.originalCharBoxes?.map(rotate)
+            if rotation == 90 || rotation == 270 { line.vertical.toggle() }
+            return line
+        }
+        return page
+    }
+}
+
+public extension OCRPage {
+    var hasManualEdits: Bool { lines.contains { $0.edited == true } }
+
+    /// Résultat utilisable sur une page portant cette rotation Kyōkasho, ou `nil` s'il faut refaire l'OCR.
+    /// Un résultat v5 ignorait cette rotation : refait, sauf s'il porte des corrections manuelles, qui ne se
+    /// recalculent pas. Ses boîtes sont alors remises dans le repère tourné.
+    func readable(atAdditionalRotation rotation: Int) -> OCRPage? {
+        if rotation % 360 == 0 { return version >= Self.unrotatedMinimumVersion ? self : nil }
+        if version >= Self.currentVersion { return self }
+        guard version >= Self.unrotatedMinimumVersion, hasManualEdits else { return nil }
+        var page = rotatedClockwise(rotation)
+        page.version = Self.currentVersion
+        return page
+    }
+
+    /// JSON à garder en base quand la rotation d'une page change : seuls les résultats corrigés à la main sont
+    /// conservés, tournés avec la page. `nil` : le résultat est à effacer, l'OCR sera refait.
+    /// Un résultat trop ancien pour être converti sans risque, ou illisible, est gardé tel quel : une rotation ne
+    /// doit jamais être ce qui efface une correction. Il reste ignoré à l'affichage, comme avant la rotation.
+    static func jsonKeepingManualEdits(_ json: Data, fromRotation previous: Int, toRotation new: Int) -> Data? {
+        guard let stored = try? JSONDecoder().decode(OCRPage.self, from: json) else { return json }
+        return stored.hasManualEdits ? jsonFollowingRotation(json, fromRotation: previous, toRotation: new) : nil
+    }
+
+    /// Choix par défaut d'une rotation : tous les résultats tournent avec la page, rien n'est à recalculer.
+    /// Un résultat non convertible n'est effacé que s'il ne porte aucune correction (déjà ignoré à l'affichage).
+    static func jsonFollowingRotation(_ json: Data, fromRotation previous: Int, toRotation new: Int) -> Data? {
+        guard let stored = try? JSONDecoder().decode(OCRPage.self, from: json) else { return json }
+        guard let current = stored.readable(atAdditionalRotation: previous) else { return stored.hasManualEdits ? json : nil }
+        var page = current.rotatedClockwise(new - previous)
+        page.version = currentVersion
+        return try? JSONEncoder().encode(page)
+    }
+}
+
 /// Identifiants des moteurs (stockés en base).
 public enum OCREngineID {
     public static let pdfText = "pdfText"
@@ -148,11 +254,11 @@ public enum OCREngineID {
 
     public static func displayName(_ id: String) -> String {
         switch id {
-        case pdfText: return "Texte du PDF"
-        case vision: return "Apple Vision"
+        case pdfText: return String(localized: "Texte du PDF", bundle: .main)
+        case vision: return String(localized: "Apple Vision", bundle: .main)
         case ppocr5: return "PP-OCRv5"
         case ndlocr: return "NDLOCR-Lite"
-        case glmocr: return "GLM-OCR (IA)"
+        case glmocr: return String(localized: "GLM-OCR (IA)", bundle: .main)
         default: return id
         }
     }
@@ -168,11 +274,11 @@ public enum OCRError: LocalizedError, Equatable {
 
     public var errorDescription: String? {
         switch self {
-        case .pageUnavailable: return "Page introuvable dans le PDF."
-        case .noTextLayer: return "Cette page n'a pas de texte intégré (c'est probablement une image) : utilise Apple Vision."
-        case .renderFailed: return "Impossible de préparer l'image de la page."
-        case .cancelled: return "OCR annulé."
-        case .modelMissing(let name): return "Modèle « \(name) » pas téléchargé : Réglages → Modèles d'IA et outils."
+        case .pageUnavailable: return String(localized: "Page introuvable dans le PDF.", bundle: .main)
+        case .noTextLayer: return String(localized: "Cette page n'a pas de texte intégré (c'est probablement une image) : utilise Apple Vision.", bundle: .main)
+        case .renderFailed: return String(localized: "Impossible de préparer l'image de la page.", bundle: .main)
+        case .cancelled: return String(localized: "OCR annulé.", bundle: .main)
+        case .modelMissing(let name): return String(localized: "Modèle « \(name) » pas téléchargé : Réglages → Modèles d'IA et outils.", bundle: .main)
         case .engineFailed(let message): return message
         }
     }
@@ -189,6 +295,12 @@ public struct PageFrame: Sendable, Equatable {
     public init(box: CGRect, rotation: Int) {
         self.box = box
         self.rotation = ((rotation % 360) + 360) % 360
+    }
+
+    /// Sens d'une ligne OCR dans le repère de la page. Les furigana y sont dessinés et tournent avec elle, alors que
+    /// `OCRLine.vertical` décrit l'image lue, déjà tournée : à 90° ou 270°, une ligne horizontale de la page y paraît verticale.
+    public func isVerticalOnPage(lineVertical: Bool) -> Bool {
+        rotation % 180 == 0 ? lineVertical : !lineVertical
     }
 
     /// Point de la page (repère PDF, y vers le haut) → point normalisé du rendu OCR (haut-gauche, y vers le bas).

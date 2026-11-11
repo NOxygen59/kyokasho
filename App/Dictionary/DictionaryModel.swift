@@ -59,7 +59,16 @@ final class DictionaryModel: ObservableObject {
         set { profiles.active = newValue }
     }
 
-    var hasTermDictionaries: Bool { dictionaries.contains { $0.enabled && $0.termCount > 0 } }
+    var lookupOptions: LookupOptions {
+        var options = profile.lookup
+        options.excludedDictionaryIds.formUnion(BundledLexicon.excludedDictionaryIds(in: dictionaries, language: BundledLexicon.selectedLanguage))
+        return options
+    }
+
+    var hasTermDictionaries: Bool {
+        let excluded = lookupOptions.excludedDictionaryIds
+        return dictionaries.contains { $0.enabled && $0.termCount > 0 && !excluded.contains($0.id ?? -1) }
+    }
 
     init(appDatabase: AppDatabase) {
         self.appDatabase = appDatabase
@@ -68,7 +77,9 @@ final class DictionaryModel: ObservableObject {
         let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         audioFolder = documents.appendingPathComponent("Audio", isDirectory: true)
         try? FileManager.default.createDirectory(at: audioFolder, withIntermediateDirectories: true)
-        let db = try? DictionaryDatabase.open(directory: support.appendingPathComponent("Dictionaries", isDirectory: true))
+        // Restauration inachevée (#51) : ne rien créer à la place de la bibliothèque mise de côté.
+        let db = LibraryBackupService.restoreBlocked ? nil
+            : try? DictionaryDatabase.open(directory: support.appendingPathComponent("Dictionaries", isDirectory: true))
         database = db
         translator = db.map { Translator(database: $0) }
         profiles = (try? appDatabase.storedValue(DictionaryProfiles.self, forKey: "dictionary.profiles")) ?? DictionaryProfiles()
@@ -91,7 +102,7 @@ final class DictionaryModel: ObservableObject {
                 let scoped = url.startAccessingSecurityScopedResource()
                 defer { if scoped { url.stopAccessingSecurityScopedResource() } }
                 let name = url.lastPathComponent
-                await MainActor.run { self?.importState = ImportState(fileName: name, step: "Ouverture", fraction: 0) }
+                await MainActor.run { self?.importState = ImportState(fileName: name, step: String(localized: "Ouverture"), fraction: 0) }
                 var lastReport = Date.distantPast
                 do {
                     try DictionaryImporter(database: database).importDictionary(at: url) { p in
@@ -118,7 +129,7 @@ final class DictionaryModel: ObservableObject {
 
     func delete(_ dictionary: DictionaryInfo) {
         guard let database, let id = dictionary.id else { return }
-        importState = ImportState(fileName: dictionary.title, step: "Suppression", fraction: 0)
+        importState = ImportState(fileName: dictionary.title, step: String(localized: "Suppression"), fraction: 0)
         Task.detached(priority: .userInitiated) { [weak self] in
             try? database.deleteDictionary(id: id)
             await MainActor.run {
@@ -134,6 +145,19 @@ final class DictionaryModel: ObservableObject {
         reload()
     }
 
+    static let firstLanguageKey = "dictionary.firstLanguage"
+
+    /// Langue des définitions qui passe en premier (#50, D2) : réordonne les dictionnaires du catalogue.
+    func applyFirstLanguage() {
+        let raw = UserDefaults.standard.string(forKey: Self.firstLanguageKey) ?? CatalogEntry.Language.french.rawValue
+        let first = CatalogEntry.Language(rawValue: raw) ?? .french
+        let list = dictionaries
+        let order = DictionaryCatalog.ordered(titles: list.map(\.title), first: first)
+        guard order != Array(list.indices) else { return }
+        try? database?.setOrder(order.compactMap { list[$0].id })
+        reload()
+    }
+
     func move(from source: IndexSet, to destination: Int) {
         var list = dictionaries
         list.move(fromOffsets: source, toOffset: destination)
@@ -145,19 +169,49 @@ final class DictionaryModel: ObservableObject {
 
     func lookup(_ text: String) async -> [TermResult] {
         guard let translator else { return [] }
-        let options = profile.lookup
+        let options = lookupOptions
         return await Task.detached(priority: .userInitiated) {
             (try? translator.findTerms(text, options: options)) ?? []
         }.value
     }
 
+    /// Dictionnaires de mots réellement consultés : activés, avec des termes, et variante de langue du lexique fourni
+    /// retenue. **Une seule règle** pour la recherche par début de mot et pour le Lexique (PLAN-LEX-001, DEC-06) :
+    /// un dictionnaire désactivé ou en cours d'import (`termCount == 0`) n'apparaît dans aucun des deux.
+    var activeTermDictionaryIds: Set<Int64> {
+        Set(dictionaries.filter { $0.enabled && $0.termCount > 0
+            && !lookupOptions.excludedDictionaryIds.contains($0.id ?? -1) }.compactMap(\.id))
+    }
+
     func words(startingWith prefix: String) async -> [DictionaryWord] {
         guard let database else { return [] }
-        let ids = Set(dictionaries.filter { $0.enabled && $0.termCount > 0
-            && !profile.lookup.excludedDictionaryIds.contains($0.id ?? -1) }.compactMap(\.id))
+        let ids = activeTermDictionaryIds
         return await Task.detached(priority: .userInitiated) {
             (try? database.words(startingWith: prefix, dictionaryIds: ids)) ?? []
         }.value
+    }
+
+    /// Une page du Lexique (PLAN-LEX-001, E2), lue hors du fil principal. Annuler la tâche appelante arrête la
+    /// lecture entre deux lignes (`CancellationError`) : une recherche modifiée ou un écran fermé ne laisse rien tourner.
+    func lexiconPage(after cursor: LexiconCursor?, prefix: String) async throws -> LexiconPage {
+        guard let database else { return LexiconPage() }
+        let ids = activeTermDictionaryIds
+        let work = Task.detached(priority: .userInitiated) {
+            try database.lexiconPage(dictionaryIds: ids, after: cursor, prefix: prefix, limit: LexiconFeed.pageSize)
+        }
+        return try await withTaskCancellationHandler { try await work.value } onCancel: { work.cancel() }
+    }
+
+    /// Mots enregistrés d'une étoile, tels que le Lexique les affiche (filtre « Mes mots »), lus hors du fil principal
+    /// dans les mêmes dictionnaires que la liste. Un mot enregistré absent de ces dictionnaires n'est pas renvoyé.
+    func savedLexiconWords() async throws -> [LexiconWord] {
+        guard let database else { return [] }
+        let ids = activeTermDictionaryIds
+        let entries = notebook.saved.filter { $0.kind == .word }.map { (expression: $0.expression, reading: $0.reading) }
+        let work = Task.detached(priority: .userInitiated) {
+            try database.lexiconWords(dictionaryIds: ids, entries: entries)
+        }
+        return try await withTaskCancellationHandler { try await work.value } onCancel: { work.cancel() }
     }
 
     func isSaved(_ entry: SavedEntry) -> Bool { notebook.saved.contains(entry) }
@@ -181,10 +235,15 @@ final class DictionaryModel: ObservableObject {
         return await Task.detached(priority: .userInitiated) { try? translator.findKanji(character) }.value
     }
 
-    func segment(_ text: String) async -> [Translator.Segment] {
+    /// - Parameter cancellable: pour l'affichage seulement : une tâche annulée (page quittée) arrête le calcul et
+    ///   reçoit un découpage partiel, qu'elle doit jeter. La relecture OCR et l'analyse, qui en déduisent des
+    ///   données, gardent le découpage complet.
+    func segment(_ text: String, cancellable: Bool = false) async -> [Translator.Segment] {
         guard let translator else { return [] }
-        let options = profile.lookup
-        return await Task.detached(priority: .utility) { (try? translator.segment(text, options: options)) ?? [] }.value
+        let options = lookupOptions
+        let work = Task.detached(priority: .utility) { (try? translator.segment(text, options: options)) ?? [] }
+        guard cancellable else { return await work.value }
+        return await withTaskCancellationHandler { await work.value } onCancel: { work.cancel() }
     }
 
     func renderer(canAddCards: Bool = false, added: Set<String> = []) -> GlossaryRenderer {

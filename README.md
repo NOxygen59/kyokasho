@@ -1,9 +1,9 @@
 > [!WARNING]
-> **Projet personnel « vibecodé ».** Le code initial a été écrit par **Claude** (Anthropic, via Claude Code), puis **ChatGPT Codex** a rejoint le développement, à la demande de [@NOxygen59](https://github.com/NOxygen59), pour **son appareil précis** :
+> **Projet personnel « vibecodé ».** Le code a été écrit par des IA, à la demande de [@NOxygen59](https://github.com/NOxygen59), qui ne code pas : décide, teste sur son iPad et valide chaque version. **Claude** (Anthropic, via Claude Code) a écrit le code initial et reste l'auteur principal ; **ChatGPT Codex** a rejoint le développement jusqu'au 09/11/2026 ; depuis, **DeepSeek** et **GLM** (via Hermes) analysent et relisent, et une session **Claude Fable** a fait un audit. Le tout pour **un appareil précis** :
 >
 > **iPad Pro 12,9" 5ᵉ génération (puce M1) — 512 Go de stockage, 8 Go de RAM — iOS 16.6.1, jailbreak Dopamine (rootless) + TrollStore.**
 >
-> Rien n'est testé ni prévu pour un autre appareil. Dépôt privé de travail personnel, sans distribution publique ni support pour d'autres appareils.
+> Rien n'est testé ni prévu pour un autre appareil. Dépôt de travail personnel : pas de distribution, pas de support pour d'autres appareils.
 
 # Kyōkasho
 
@@ -13,25 +13,28 @@ Dictionnaires Yomitan, fiches de mots et de kanji, et cartes de révision FSRS i
 Plan complet : [PLAN.md](PLAN.md).
 Parcours du développement : [histoire du projet et sources](docs/HISTOIRE-DU-DEVELOPPEMENT.md).
 
-**Documentation de reprise v1.3 :** [index des guides](docs/INDEX.md) ·
-[guide utilisateur](docs/GUIDE-UTILISATEUR.md) · [architecture](docs/GUIDE-DEVELOPPEUR.md) ·
-[tests et recette iPad](docs/TESTS.md) · [contribution](CONTRIBUTING.md).
+**Pilotage et état réel :** [plan directeur](docs/PLAN-DIRECTEUR.md) (chantiers, preuves, point de reprise) ·
+[index des guides](docs/INDEX.md) · [guide utilisateur](docs/GUIDE-UTILISATEUR.md) ·
+[architecture](docs/GUIDE-DEVELOPPEUR.md) · [tests et recette iPad](docs/TESTS.md) · [contribution](CONTRIBUTING.md) ·
+[règles des agents](AGENTS.md).
 
-**Écart de visibilité constaté le 25/10/2026 :** GitHub indique actuellement ce dépôt comme public.
-Les mentions historiques de dépôt privé ci-dessous décrivent son contexte et l'intention initiale ;
-voir [l'audit de reprise](docs/AUDIT-V1.3.md). Aucune visibilité n'a été modifiée par cet audit.
+**Usage strictement personnel, jamais distribué.** Aucun PDF, dictionnaire, modèle d'IA ni donnée tierce dans
+ce dépôt (`*.pdf` est ignoré par Git) : dictionnaires et modèles sont téléchargés à la demande, sur l'iPad.
 
-**Usage strictement personnel, jamais distribué.** Aucun PDF, dictionnaire ni donnée tierce dans
-ce dépôt (`*.pdf` est ignoré par Git).
+**Licence :** code original sous **MIT** ([LICENSE](LICENSE), en-tête `SPDX-License-Identifier: MIT` dans chaque
+fichier). Exceptions, chacune avec sa licence d'origine et son en-tête SPDX :
+- **GPL-3.0-or-later** : le module `Packages/KyokashoKit/Sources/YomitanKit` (portage de Yomitan) ; l'app compilée
+  qui l'inclut est donc soumise à la GPL-3.0 ([LICENSES/GPL-3.0-only.txt](LICENSES/GPL-3.0-only.txt)) ;
+- **BSD** : MeCab, copié sans changement dans `Packages/KyokashoKit/Sources/MeCabC` ;
+- **MIT** de tiers : code adapté de mlx-swift-lm (ml-explore) et de DuoBar (Mike Li).
 
-**Licence :** code original sous MIT ([LICENSE](LICENSE)). Le code qui sera porté de projets GPL
-(Yomitan, Aidoku, Hoshi Reader, jiten…) gardera sa licence d'origine, dans un module séparé.
-Textes des licences : [LICENSES/](LICENSES/) ; attributions : [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+Textes des licences : [LICENSES/](LICENSES/) ; attributions complètes : [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ## Versions
 
 | Version | Release | Contenu |
 |---|---|---|
+| **1.4.0 → 1.5.6** | builds de test, non publiées | Candidates installées et recettées sur l'iPad (builds 77 à 94) : OCR des pages reconstruit (un moteur par page, corrections à la main prioritaires), CBZ et espace Manga, thèmes et identités, tableau de bord et moniteur, sauvegarde et restauration complètes prouvées, panneau Texte et copie, remplacement des cours Google Drive sans perte, Lexique (tous les mots des dictionnaires), aide des gestes, rappel de luminosité, diagnostic de batterie. Détail : fenêtre « Nouveautés » de l'app et [plan directeur](docs/PLAN-DIRECTEUR.md) |
 | **1.3** | [v1.3](https://github.com/NOxygen59/kyokasho/releases/tag/v1.3) | OCR japonais mieux normalisé, langue du document choisie à l'import, réglages OCR réorganisés |
 | **1.2.4** | [v1.2.4](https://github.com/NOxygen59/kyokasho/releases/tag/v1.2.4) | Chat sur la page demandée, corrections OCR du livre entier, formules lisibles, fenêtre OCR et trackpad améliorés |
 | **1.2.3** | [v1.2.3](https://github.com/NOxygen59/kyokasho/releases/tag/v1.2.3) | Chat recentré sur les questions, texte vertical avec furigana, bascule rapide et relecture OCR accessible |
@@ -75,7 +78,16 @@ Textes des licences : [LICENSES/](LICENSES/) ; attributions : [THIRD_PARTY_NOTIC
 
 Les `.tipa` sont joints aux [Releases](https://github.com/NOxygen59/kyokasho/releases).
 
-## Fonctions (V1)
+## Fonctions
+
+Depuis la V1 (liste ci-dessous), l'app a gagné : OCR japonais (NDLOCR-Lite, PP-OCRv5, Apple Vision, texte du PDF) et
+IA locale sur l'iPad (OvisOCR2, GLM-OCR, Qwen3-VL / Qwen3.5 via MLX) pour lire, mettre en page, traduire et discuter
+d'un livre ; furigana (MeCab/UniDic) ; dictionnaires Yomitan au toucher et Lexique ; cartes de révision FSRS et export
+Anki ; notes ancrées, surlignages, dessin ; thèmes ; espace Manga et CBZ ; sauvegarde complète. En cours (11/11/2026,
+non encore livrés) : dossiers sur l'accueil, cartes par document, écran « Notes » avec échéances et étiquettes, Google
+Drive par l'app Fichiers.
+
+Fonctions de la V1 :
 
 - **Bibliothèque** : import depuis Fichiers (y compris Google Drive via l'app Drive : le fichier
   est téléchargé puis copié dans l'app), identification par empreinte SHA-256 (pas de doublon),
@@ -98,7 +110,7 @@ Les `.tipa` sont joints aux [Releases](https://github.com/NOxygen59/kyokasho/rel
 
 ## Compiler et installer sur l'iPad
 
-Prérequis sur le Mac : Xcode (testé avec Xcode 27.1), [XcodeGen](https://github.com/yonaskolb/XcodeGen)
+Prérequis sur le Mac : Xcode (testé avec Xcode 27.2), [XcodeGen](https://github.com/yonaskolb/XcodeGen)
 et [ldid](https://github.com/ProcursusTeam/ldid) : `brew install xcodegen ldid`.
 
 ```bash
@@ -120,13 +132,16 @@ Sur l'iPad : ouvrir le `.tipa` avec **TrollStore** → Installer.
 xcodegen generate                       # crée Kyokasho.xcodeproj
 open Kyokasho.xcodeproj                 # puis lancer sur un simulateur iPad
 cd Packages/KyokashoKit && swift test   # tests unitaires du cœur (sur le Mac)
+./scripts/verifier_tout.sh              # tout d'un coup : Xcode, Swift, Python, compilation iOS, docs
 swift scripts/make_sample_pdf.swift build/samples/test.pdf   # PDF de test (texte original)
 ```
 
 ## Google Drive : configuration (une seule fois)
 
 L'import via l'app **Fichiers** marche sans rien configurer (si l'app Google Drive est installée).
-Pour l'accès **direct** dans Kyōkasho, il faut un identifiant client OAuth (gratuit) :
+**En cours de remplacement** (plan PLAN-DRIVE-002, approuvé le 11/11/2026) : un explorateur propre à Kyōkasho lira le
+Drive de l'app Fichiers, plusieurs comptes compris, sans projet Google Cloud ; l'accès direct ci-dessous sera retiré
+après la transition. Pour l'accès **direct** actuel, il faut un identifiant client OAuth (gratuit) :
 
 1. Ouvrir <https://console.cloud.google.com/> avec ton compte Google → **Nouveau projet**
    (ex. « Kyokasho »).
@@ -147,13 +162,23 @@ que tu déclenches partent vers Google.
 ## Organisation du code
 
 ```
-App/                    écrans SwiftUI, lecteur PDFKit, dessin PencilKit, Google Drive (MIT)
-Packages/KyokashoKit/   cœur testable : modèles, base GRDB, import, logique pure (MIT)
-packaging/              entitlements TrollStore
-scripts/                icône et PDF de test générés en code
+App/                       écrans SwiftUI, lecteur PDFKit, dessin PencilKit, Google Drive, notes, révisions (MIT)
+Packages/KyokashoKit/      cœur testable sur Mac :
+  Sources/ReaderCore       modèles, base GRDB et migrations, import, sauvegarde, logique pure (MIT)
+  Sources/DictionaryKit    dictionnaires, Lexique, fiches (MIT)
+  Sources/ReviewKit        cartes FSRS, export Anki (MIT)
+  Sources/OCRKit, ONNXOCRKit, MorphologyKit   OCR et analyse japonaise (MIT)
+  Sources/YomitanKit       portage de Yomitan (GPL-3.0-or-later)
+  Sources/MeCabC           MeCab, sans changement (BSD)
+Packages/GLMOCRKit/        IA locale MLX : OvisOCR2, GLM-OCR, Qwen (MIT, code adapté de ml-explore)
+tests/                     contrôles Python (sources, scripts, catalogue de traductions)
+tools/, scripts/           paquet .tipa, lexique, icônes, vérification complète
+packaging/                 entitlements TrollStore
 ```
 
-## État de la V1 (honnête)
+## État réel (honnête)
 
-Voir les notes de la release v0.1.0 : ce qui est testé dans le simulateur, ce qui ne l'est pas
-(Apple Pencil, Google Drive réel, iOS 16 réel, gros manuels) et ce qui reste fragile.
+Trois preuves, jamais confondues : tests sur le Mac, compilation iOS générique, et **recette sur l'iPad** par
+NOxygen59 — seule cette dernière vaut pour les gestes, PDFKit, la mémoire, MLX et TrollStore. Chaque chantier, ses
+preuves et ce qui n'est pas vérifié sont tenus à jour dans le [plan directeur](docs/PLAN-DIRECTEUR.md).
+Ce qui fut écrit pour la V1 reste dans les notes de la release v0.1.0.

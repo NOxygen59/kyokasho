@@ -81,3 +81,15 @@ Copyright (C) 2024-2026 Yomitan Authors, (C) 2020-2022 Yomichan Authors. https:/
 - **Qwen3.5-4B** (Alibaba Qwen, Apache-2.0), conversion MLX 4 bits par mlx-community. **Pas dans le dépôt ni
   dans l'app** : téléchargé à la demande depuis Hugging Face (`mlx-community/Qwen3.5-4B-4bit`, commit
   `0e7ffd5c629ef7719d4cbc04069232580bfa9d9c` ; poids et tokenizer vérifiés par SHA-256).
+
+## Batterie du lecteur (05/11/2026)
+
+- **DuoBar** (Mike Li, MIT, https://github.com/Mikeli7666/DuoBar) — géométrie de l'anneau de l'iPhone Duo, proportions
+  (trait, ouverture, éclair) et règle de couleur reprises et réécrites pour iPadOS dans `DuoBatteryRing.swift` et
+  `ReaderStatusBadge.swift`. Licence : `LICENSES/MIT.txt`, Copyright (c) 2026 Mike Li.
+
+## Autres dépendances transitives (11/11/2026)
+
+Tirées par mlx-swift-lm et swift-transformers, épinglées dans les `Package.resolved` : **swift-numerics** (Apple,
+Apache-2.0), **swift-asn1** (Apple, Apache-2.0), **swift-syntax** (Apple, Apache-2.0, à la compilation seulement),
+**eventsource** (mattt, MIT). Aucun code copié.

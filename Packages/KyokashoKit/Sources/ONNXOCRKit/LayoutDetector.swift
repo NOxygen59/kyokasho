@@ -20,9 +20,9 @@ public enum LayoutDetector {
 
         public var title: String {
             switch self {
-            case .geometry: return "Géométrie (intégré)"
+            case .geometry: return String(localized: "Géométrie (intégré)", bundle: .main)
             case .ppDocLayout: return "PP-DocLayout"
-            case .docLayoutYOLO: return "DocLayout-YOLO (MinerU)"
+            case .docLayoutYOLO: return String(localized: "DocLayout-YOLO (MinerU)", bundle: .main)
             }
         }
 

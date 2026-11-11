@@ -159,7 +159,7 @@ struct LookupPopup: View {
         let rendered = session.html(canAddCards: onAddCard != nil, added: added)
         let html = compact ? GlossaryRenderer.compact(rendered) : rendered
         guard let term = englishTerm else { return html }
-        let block = DefinitionTranslationHTML.block(entry: translations.entries[DefinitionTranslations.key(term)],
+        let block = DefinitionTranslationHTML.block(entry: translations.entry(for: term),
                                                     hasKey: deepl.hasKey, busy: translating, error: translateError)
         return DefinitionTranslationHTML.inject(block, into: html)
     }
@@ -193,11 +193,11 @@ struct LookupPopup: View {
                         Image(systemName: dictionaryModel.isSaved(entry) ? "star.fill" : "star")
                             .foregroundStyle(Atelier.Tint.japanese)
                     }
-                    .accessibilityLabel(dictionaryModel.isSaved(entry) ? "Retirer des mots enregistrés" : "Enregistrer")
+                    .accessibilityLabel(dictionaryModel.isSaved(entry) ? String(localized: "Retirer des mots enregistrés") : String(localized: "Enregistrer"))
                 }
                 Button(action: close) { Image(systemName: "xmark") }.accessibilityLabel("Fermer")
             }
-            .font(.system(size: 15, weight: .semibold))
+            .font(Atelier.font(15, weight: .semibold))
             .foregroundStyle(Atelier.textSecondary)
             .padding(.horizontal, 14).padding(.vertical, 10)
             Divider().overlay(Atelier.hairline)
@@ -217,7 +217,7 @@ struct LookupPopup: View {
         }
         .overlay(alignment: .bottom) {
             if let toast {
-                Text(toast).font(.system(size: 14, weight: .semibold)).foregroundStyle(Atelier.textPrimary)
+                Text(toast).font(Atelier.font(14, weight: .semibold)).foregroundStyle(Atelier.textPrimary)
                     .padding(.horizontal, 14).padding(.vertical, 8)
                     .background(Atelier.surfaceHigh, in: Capsule())
                     .padding(.bottom, 14)
@@ -229,7 +229,7 @@ struct LookupPopup: View {
         .task(id: englishTerm.map(DefinitionTranslations.key)) {
             translateError = nil
             guard autoTranslate, deepl.hasKey, let term = englishTerm,
-                  translations.entries[DefinitionTranslations.key(term)] == nil else { return }
+                  translations.entry(for: term) == nil else { return }
             await translateFrench(term)
         }
         .alert("Traduction française", isPresented: $editingFrench) {
@@ -244,8 +244,8 @@ struct LookupPopup: View {
         }
         .background(Atelier.surface)
         .clipShape(RoundedRectangle(cornerRadius: Atelier.radius, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: Atelier.radius, style: .continuous).strokeBorder(Atelier.Tint.japanese.opacity(0.35), lineWidth: 1))
-        .shadow(color: .black.opacity(0.55), radius: 24, y: 10)
+        .overlay(RoundedRectangle(cornerRadius: Atelier.radius, style: .continuous).strokeBorder(Atelier.Tint.japanese.opacity(0.35), lineWidth: Atelier.border(1)))
+        .atelierShapeShadow(RoundedRectangle(cornerRadius: Atelier.radius, style: .continuous), opacity: 0.55, radius: 24, y: 10)
     }
 
     private func handle(_ message: LookupMessage) {
@@ -256,13 +256,13 @@ struct LookupPopup: View {
         case .french(let action):
             guard let term = englishTerm else { return }
             let key = DefinitionTranslations.key(term)
-            let entry = translations.entries[key]
+            let entry = translations.entry(for: term)
             switch action {
             case "translate": Task { await translateFrench(term) }
             case "like":
-                if let entry { translations.set(key, .init(text: entry.text, status: entry.status == .liked ? .machine : .liked)) }
+                if let entry { translations.set(key, .init(text: entry.text, status: entry.status == .liked ? .machine : .liked, source: entry.source)) }
             case "dislike":
-                if let entry { translations.set(key, .init(text: entry.text, status: .disliked)) }
+                if let entry { translations.set(key, .init(text: entry.text, status: .disliked, source: entry.source)) }
                 frenchDraft = entry?.text ?? ""
                 editingFrench = true
             default:

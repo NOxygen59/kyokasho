@@ -20,6 +20,23 @@ public struct DocumentStorage: Sendable {
     public func remove(documentId: String) {
         try? FileManager.default.removeItem(at: url(for: documentId))
     }
+
+    /// Fichiers d'un import interrompu par un arrêt brutal (`<UUID>.partial`, `<UUID>.page`). Seuls ces noms privés, assez
+    /// anciens pour ne pas être en cours d'écriture ; jamais un PDF, ni un dossier, ni un autre nom.
+    @discardableResult
+    public func removeAbandonedTemporaries(olderThan age: TimeInterval = 3600, now: Date = Date()) -> Int {
+        let fm = FileManager.default
+        let keys: Set<URLResourceKey> = [.isRegularFileKey, .contentModificationDateKey]
+        guard let files = try? fm.contentsOfDirectory(at: root, includingPropertiesForKeys: Array(keys)) else { return 0 }
+        var removed = 0
+        for file in files where ["partial", "page"].contains(file.pathExtension)
+            && UUID(uuidString: file.deletingPathExtension().lastPathComponent) != nil {
+            guard let values = try? file.resourceValues(forKeys: keys), values.isRegularFile == true,
+                  let date = values.contentModificationDate, now.timeIntervalSince(date) >= age else { continue }
+            if (try? fm.removeItem(at: file)) != nil { removed += 1 }
+        }
+        return removed
+    }
 }
 
 public enum ImportError: LocalizedError, Equatable {
@@ -28,8 +45,8 @@ public enum ImportError: LocalizedError, Equatable {
 
     public var errorDescription: String? {
         switch self {
-        case .notAPDF: return "Ce fichier n'est pas un PDF lisible."
-        case .unreadable(let reason): return "Lecture du fichier impossible : \(reason)"
+        case .notAPDF: return String(localized: "Ce fichier n'est pas un PDF lisible.", bundle: .main)
+        case .unreadable(let reason): return String(localized: "Lecture du fichier impossible : \(reason)", bundle: .main)
         }
     }
 }
@@ -38,6 +55,8 @@ public struct ImportResult: Equatable, Sendable {
     public var document: LibraryDocument
     /// `false` si le même fichier était déjà dans la bibliothèque.
     public var isNew: Bool
+    /// Comics : images illisibles ou trop lourdes laissées de côté.
+    public var skippedPages = 0
 }
 
 /// Importe un PDF : empreinte SHA-256 (lue par blocs, mémoire constante), copie dans le stockage
@@ -62,6 +81,18 @@ public struct DocumentImporter: Sendable {
             hasher.update(data: chunk)
         }
         return hasher.finalize().map { String(format: "%02x", $0) }.joined()
+    }
+
+    /// Taille du fichier, relue par le chemin le plus robuste disponible (revue R2, N6) : la
+    /// resource `fileSize` peut être indisponible sur un fichier pourtant lisible ; une seconde
+    /// lecture par les attributs évite de confondre « taille inconnue » et « PDF illisible ».
+    /// `0` : le fichier n'est pas accessible du tout (les gardes des appelants concluront).
+    public static func fileSize(of url: URL) -> Int64 {
+        if let size = try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize, size > 0 { return Int64(size) }
+        if let attributes = try? FileManager.default.attributesOfItem(atPath: url.path)[.size] as? NSNumber {
+            return attributes.int64Value
+        }
+        return 0
     }
 
     /// Nombre de pages et titre (métadonnées), via CoreGraphics (léger, pas de rendu).
@@ -122,10 +153,25 @@ public struct DocumentImporter: Sendable {
 
     /// Remplace un document par une nouvelle version (même cours mis à jour) en gardant
     /// annotations, signets, commentaires et position de lecture.
+    /// - Parameters:
+    ///   - replacingInto: identifiant attendu du nouveau PDF (lot C2.3). Le remplacement est
+    ///     journalé avant lui (`PageShift.withDriveReplacement`) ; si le fichier téléchargé a changé
+    ///     depuis la préparation (nouvelle révision arrivée entre-temps), l'import s'arrête au lieu de
+    ///     créer un document que le journal ne décrit pas.
+    ///   - asideCorrections: DEC-C3 — remis à `rekeyDocument`, voir sa fiche ; l'app passe
+    ///     `PageShift.asideCorrections` pour mettre de côté les lignes corrigées à la main.
+    ///   - asideInk: N2 (revue R2) — fusion seulement : le dessin du survivant sur une page
+    ///     disputée, mis de côté par l'app (`PageShift.asideInkDrawing`) avant d'être remplacé.
     @discardableResult
-    public func replace(documentId oldId: String, withFileAt source: URL, driveRevision: String? = nil) throws -> LibraryDocument {
-        guard var old = try database.document(id: oldId) else { throw ImportError.unreadable("document inconnu") }
+    public func replace(documentId oldId: String, withFileAt source: URL, driveRevision: String? = nil,
+                        replacingInto expectedId: String? = nil,
+                        asideCorrections: AppDatabase.AsideCorrections? = nil,
+                        asideInk: AppDatabase.AsideInk? = nil) throws -> LibraryDocument {
+        guard var old = try database.document(id: oldId) else { throw ImportError.unreadable(String(localized: "document inconnu", bundle: .main)) }
         let hash = try Self.sha256(of: source)
+        if let expectedId, hash != expectedId {
+            throw ImportError.unreadable(String(localized: "Le fichier a changé depuis la préparation du remplacement.", bundle: .main))
+        }
         if hash == oldId {
             if let driveRevision { old.driveRevision = driveRevision; try database.save(old) }
             return old
@@ -144,7 +190,7 @@ public struct DocumentImporter: Sendable {
         updated.fileSize = size
         updated.lastPageIndex = min(old.lastPageIndex, max(0, pageCount - 1))
         updated.driveRevision = driveRevision ?? old.driveRevision
-        try database.rekeyDocument(from: oldId, to: updated)
+        try database.rekeyDocument(from: oldId, to: updated, asideCorrections: asideCorrections, asideInk: asideInk)
         storage.remove(documentId: oldId)
         return updated
     }

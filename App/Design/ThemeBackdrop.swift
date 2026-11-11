@@ -7,6 +7,8 @@ import SwiftUI
 /// très peu opaques, sans image ni animation (batterie) ; le hasard est fixé (même dessin à chaque affichage).
 struct ThemeBackdrop: View {
     let theme: Theme
+    /// La palette reste indépendante du style ; les aperçus de palettes passent explicitement nil.
+    var style: AppStyle? = .current
     @AppStorage("appearance.themePatterns") private var patternsEnabled = true
 
     var body: some View {
@@ -18,8 +20,19 @@ struct ThemeBackdrop: View {
             let light = CGPoint(x: size.width * 0.95, y: 0)
             context.fill(rect, with: .radialGradient(Gradient(colors: [theme.read.opacity(0.065), .clear]),
                          center: light, startRadius: 0, endRadius: max(size.width, size.height) * 0.9))
-            switch theme.backdrop {
+            switch effectiveBackdrop {
+            case .plain: break
             case .grid: Self.grid(&context, size, color: theme.read, minor: 0.035, major: 0.075, spacing: 32)
+            case .paper: Self.paper(&context, size, theme)
+            case .engraving: Self.engraving(&context, size, theme)
+            case .blocks: Self.blocks(&context, size, theme)
+            case .swiss: Self.swiss(&context, size, theme)
+            case .neon: Self.neon(&context, size, theme)
+            case .earth: Self.earth(&context, size, theme)
+            case .forest: Self.forest(&context, size, theme)
+            case .embers: Self.embers(&context, size, theme)
+            case .dunes: Self.contours(&context, size, theme, water: false)
+            case .waves: Self.contours(&context, size, theme, water: true)
             case .washi: Self.washi(&context, size, theme)
             case .blueprint: Self.blueprint(&context, size, theme)
             case .floorplan: Self.floorplan(&context, size, theme)
@@ -27,9 +40,23 @@ struct ThemeBackdrop: View {
             case .ink: Self.ink(&context, size, theme)
             case .sakura: Self.sakura(&context, size, theme)
             }
+            if let style { Self.signature(&context, size, theme, style) }
         }
         .allowsHitTesting(false)
         .accessibilityHidden(true)
+    }
+
+    /// La palette garde son motif (Sakura reste Sakura) et le style ajoute sa signature. Seuls les styles dont l'identité
+    /// tient au fond l'imposent : le verre reste nu, et les styles numériques ne récupèrent ni feuilles ni vagues.
+    /// Aucune préférence enregistrée n'est réécrite.
+    private var effectiveBackdrop: Theme.Backdrop {
+        switch style?.id {
+        case "cybercore", "cyberpunk", "pixel": return .grid
+        case "glass": return .plain
+        case "minimalism", "editorial", "clay", "neumorphism": return .plain
+        case "scrapbook": return .paper
+        default: return theme.backdrop
+        }
     }
 
     // MARK: Motifs
@@ -59,7 +86,7 @@ struct ThemeBackdrop: View {
                    with: .radialGradient(Gradient(colors: [t.ink.opacity(0.035), .clear]), center: center,
                                          startRadius: 0, endRadius: r))
         }
-        let count = min(1800, Int(size.width * size.height / 650))
+        let count = min(600, Int(size.width * size.height / 1100))
         var fibers = Path(), long = Path()
         for i in 0..<count {
             let start = CGPoint(x: CGFloat(rng.next(0, 1)) * size.width, y: CGFloat(rng.next(0, 1)) * size.height)
@@ -103,7 +130,7 @@ struct ThemeBackdrop: View {
             let center = CGPoint(x: size.width * a, y: size.height - 30)
             c.stroke(Path(ellipseIn: CGRect(x: center.x - 10, y: center.y - 10, width: 20, height: 20)),
                      with: .color(ink), lineWidth: 0.8)
-            c.draw(Text(String(UnicodeScalar(65 + i)!)).font(.system(size: 10, weight: .semibold)).foregroundColor(ink),
+            c.draw(Text(String(UnicodeScalar(65 + i)!)).font(.system(size: 10, weight: .semibold, design: .monospaced)).foregroundColor(ink),
                    at: center)
         }
     }
@@ -204,7 +231,7 @@ struct ThemeBackdrop: View {
                         control2: CGPoint(x: size.width * 0.89, y: size.height * 0.25))
         c.stroke(branch, with: .color(t.japanese.opacity(0.11)), style: StrokeStyle(lineWidth: 1.2, lineCap: .round))
         var rng = Seeded(11)
-        let count = max(18, Int(size.width * size.height / 14000))
+        let count = min(72, max(12, Int(size.width * size.height / 14000)))
         for _ in 0..<count {
             // Tirage biaisé vers le coin haut droit.
             let u = rng.next(0, 1), v = rng.next(0, 1)

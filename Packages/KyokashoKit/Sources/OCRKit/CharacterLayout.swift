@@ -58,13 +58,25 @@ public enum CharacterLayout {
     }
 
     /// Boîtes mesurées par le moteur jugées fiables ?
+    /// Deux boîtes à la même place (au dix-millième près).
+    public static func hasDuplicates(_ boxes: [NormBox]) -> Bool {
+        let keys = boxes.map { "\(($0.x * 1e4).rounded()),\(($0.y * 1e4).rounded()),\(($0.w * 1e4).rounded()),\(($0.h * 1e4).rounded())" }
+        return Set(keys).count < keys.count
+    }
+
+    /// Deux boîtes qui partent du même point, même de tailles différentes : boîte de mot répétée, pas des mesures.
+    public static func hasSharedOrigins(_ boxes: [NormBox]) -> Bool {
+        let keys = boxes.map { "\(($0.x * 1e4).rounded()),\(($0.y * 1e4).rounded())" }
+        return Set(keys).count < keys.count
+    }
+
     public static func validate(_ boxes: [NormBox?], count: Int, vertical: Bool) -> Bool {
         guard boxes.count == count, count > 0 else { return false }
         let real = boxes.compactMap { $0 }
         guard real.count == count, real.allSatisfy({ $0.w > 0 && $0.h > 0 }) else { return false }
         if count == 1 { return true }
-        // Toutes identiques = boîte de mot répétée : pas des boîtes par caractère.
-        if Set(real.map { "\(($0.x * 1e4).rounded()),\(($0.y * 1e4).rounded())" }).count == 1 { return false }
+        // Une boîte répétée, même pour deux caractères seulement : boîte de mot, pas des boîtes par caractère.
+        if hasDuplicates(real) || hasSharedOrigins(real) { return false }
         // Ordre de lecture croissant (tolérance pour les chevauchements légers).
         let positions = real.map { vertical ? $0.midY : $0.midX }
         return zip(positions, positions.dropFirst()).allSatisfy { $1 >= $0 - 0.002 }

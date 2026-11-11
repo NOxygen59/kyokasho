@@ -36,38 +36,12 @@ struct SearchSheet: View {
                     .buttonStyle(.plain)
                 }
             }
-            .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: "Mot ou phrase")
+            .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: String(localized: "Mot ou phrase"))
             .onSubmit(of: .search) { reader.search(query) }
             .onChange(of: query) { if $0.isEmpty { reader.search("") } }
-            .navigationTitle(reader.searchResults.isEmpty ? "Rechercher" : "\(reader.searchResults.count) résultat(s)")
+            .navigationTitle(reader.searchResults.isEmpty ? String(localized: "Rechercher") : String(localized: "\(reader.searchResults.count) résultat(s)"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("OK") { close() } } }
-        }
-    }
-}
-
-/// Fichier Markdown partageable (nom de fichier propre, type .md).
-struct MarkdownFile: Transferable {
-    /// Texte construit seulement au moment du partage (pas à chaque redessin de la vue).
-    let make: @MainActor @Sendable () -> String
-    let name: String
-
-    init(name: String, make: @escaping @MainActor @Sendable () -> String) {
-        self.name = name
-        self.make = make
-    }
-
-    init(text: String, name: String) {
-        self.init(name: name) { text }
-    }
-
-    static var transferRepresentation: some TransferRepresentation {
-        FileRepresentation(exportedContentType: UTType(filenameExtension: "md") ?? .plainText) { file in
-            let safe = file.name.replacingOccurrences(of: "/", with: "-")
-            let url = FileManager.default.temporaryDirectory.appendingPathComponent("\(safe).md")
-            let text = await file.make()
-            try text.write(to: url, atomically: true, encoding: .utf8)
-            return SentTransferredFile(url)
         }
     }
 }
@@ -88,7 +62,7 @@ struct AIPageSheet: View {
 
     private var pageTitle: String {
         let labels = chosen.map { reader.document.pageLabel($0) }
-        return labels.count > 1 ? "Pages \(labels.joined(separator: " et "))" : "Page \(labels.first ?? reader.document.pageLabel(reader.currentSourcePage))"
+        return labels.count > 1 ? String(localized: "Pages \(labels.joined(separator: " et "))") : String(localized: "Page \(labels.first ?? reader.document.pageLabel(reader.currentSourcePage))")
     }
 
     var body: some View {
@@ -111,7 +85,7 @@ struct AIPageSheet: View {
                             if let image { Image(uiImage: image).resizable().scaledToFit() } else { ProgressView() }
                         }
                         .frame(width: 160, height: 210)
-                        .background(Color(white: 0.15), in: RoundedRectangle(cornerRadius: 8))
+                        .background(Color(white: 0.15), in: RoundedRectangle(cornerRadius: Atelier.corner(8)))
                         VStack(alignment: .leading, spacing: 10) {
                             Text(pageTitle).font(.headline)
                             Button { copyImage() } label: { Label("Copier la page en image", systemImage: "photo.on.rectangle") }
@@ -149,7 +123,7 @@ struct AIPageSheet: View {
             .overlay(alignment: .bottom) {
                 if let copied {
                     Text("Copié : \(copied)").padding(.horizontal, 16).padding(.vertical, 10)
-                        .background(.regularMaterial, in: Capsule()).padding(.bottom, 20)
+                        .background(Atelier.material(.regularMaterial), in: Capsule()).padding(.bottom, 20)
                 }
             }
             .sheet(item: $editingPrompt) { prompt in
@@ -177,7 +151,7 @@ struct AIPageSheet: View {
     private func copyImage() {
         guard let image else { return }
         UIPasteboard.general.image = image
-        flash("image de la page")
+        flash(String(localized: "image de la page"))
     }
 
     private func copy(_ text: String, label: String) {
@@ -190,7 +164,7 @@ struct AIPageSheet: View {
     private func copyBoth(_ prompt: AIPrompt) {
         guard let image, let png = image.pngData() else { return }
         UIPasteboard.general.setItems([[UTType.png.identifier: png], [UTType.utf8PlainText.identifier: prompt.body]])
-        flash("image + « \(prompt.title) »")
+        flash(String(localized: "image + « \(prompt.title) »"))
     }
 
     private func deletePrompt(_ prompt: AIPrompt) {
@@ -234,6 +208,7 @@ struct WebPanel: View {
 
     /// Raccourcis : un appui ouvre le site.
     static let shortcuts: [(name: String, url: String)] = [
+        ("Brave", "https://search.brave.com"),
         ("Claude", "https://claude.ai/new"),
         ("ChatGPT", "https://chatgpt.com"),
         ("Jisho", "https://jisho.org"),
@@ -257,7 +232,7 @@ struct WebPanel: View {
                     Button { if state.loading { state.view.stopLoading() } else { state.view.reload() } } label: {
                         Image(systemName: state.loading ? "xmark" : "arrow.clockwise")
                     }
-                    .accessibilityLabel(state.loading ? "Arrêter" : "Recharger")
+                    .accessibilityLabel(state.loading ? String(localized: "Arrêter") : String(localized: "Recharger"))
                     Button { if let url = state.url { openURL(url) } } label: { Image(systemName: "safari") }
                         .accessibilityLabel("Ouvrir dans Safari")
                     Button(action: onClose) { Image(systemName: "xmark.circle.fill") }.accessibilityLabel("Fermer")
@@ -266,7 +241,7 @@ struct WebPanel: View {
                     HStack(spacing: 6) {
                         ForEach(Self.shortcuts, id: \.url) { site in
                             Button(site.name) { go(site.url) }
-                                .font(.system(size: 13, weight: .medium))
+                                .font(Atelier.font(13, weight: .medium))
                                 .padding(.horizontal, 10).padding(.vertical, 5)
                                 .background(Capsule().fill(Atelier.surfaceHigh))
                         }
@@ -274,7 +249,7 @@ struct WebPanel: View {
                 }
             }
             .padding(12)
-            .background(.ultraThinMaterial)
+            .background(Atelier.material(.ultraThinMaterial))
             if state.loading {
                 ProgressView(value: state.progress).progressViewStyle(.linear).tint(Atelier.Tint.ai)
             }
@@ -329,16 +304,9 @@ struct WebView: UIViewRepresentable {
         UserDefaults.standard.string(forKey: "web.lastURL").flatMap(URL.init(string:)) ?? URL(string: "https://claude.ai/new")!
     }
 
-    /// Texte tapé → adresse (avec https:// si besoin) ou recherche DuckDuckGo.
-    static func url(for text: String) -> URL? {
-        let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty else { return nil }
-        if text.contains("://"), let url = URL(string: text) { return url }
-        if !text.contains(" "), text.contains("."), let url = URL(string: "https://" + text) { return url }
-        var parts = URLComponents(string: "https://duckduckgo.com/")!
-        parts.queryItems = [URLQueryItem(name: "q", value: text)]
-        return parts.url
-    }
+    /// Texte tapé → adresse (avec https:// si besoin) ou recherche Brave (`WebAddress`, demande de NOxygen59 du
+    /// 10/11/2026 : moteur de recherche Brave à la place de DuckDuckGo).
+    static func url(for text: String) -> URL? { WebAddress.url(for: text) }
 
     /// Une seule vue web pour toute l'app : les sessions (claude.ai…) et la page restent ouvertes
     /// quand on ferme et rouvre le panneau.
@@ -362,13 +330,82 @@ struct WebView: UIViewRepresentable {
     func updateUIView(_ uiView: WKWebView, context: Context) {}
 }
 
-/// Liens « nouvelle fenêtre » (`target="_blank"`, `window.open`) : ouverts dans la même vue.
-final class SameViewOpener: NSObject, WKUIDelegate {
+/// Fenêtres secondaires du navigateur intégré.
+///
+/// Un lien `target="_blank"` cliqué s'ouvre dans la même vue, comme avant. Une fenêtre ouverte par la page
+/// (`window.open`, par exemple « Continuer avec Google » sur claude.ai) devient une **vraie** vue fille, créée avec la
+/// configuration fournie par WebKit et présentée en feuille au-dessus : c'est ce lien parent → fille (`window.opener`)
+/// qui renvoie le résultat de connexion à la page d'origine. Avant (retour terrain T3 du 10/11/2026), la fenêtre était
+/// chargée à la place de la page, le lien était perdu et la connexion n'aboutissait jamais (enquête GLM
+/// `REVUES/GLM-D03-T3-CONNEXION-f85d0c0.md`). Décision pure : `WebPopupPolicy` (testée).
+final class SameViewOpener: NSObject, WKUIDelegate, UIAdaptivePresentationControllerDelegate {
     @MainActor static let shared = SameViewOpener()
+    /// Feuilles ouvertes, par vue fille : gardent la vue en vie jusqu'à sa fermeture.
+    @MainActor private var sheets: [ObjectIdentifier: UIViewController] = [:]
 
+    @MainActor
     func webView(_ webView: WKWebView, createWebViewWith configuration: WKWebViewConfiguration,
                  for navigationAction: WKNavigationAction, windowFeatures: WKWindowFeatures) -> WKWebView? {
-        if navigationAction.targetFrame == nil { webView.load(navigationAction.request) }
-        return nil
+        guard navigationAction.targetFrame == nil else { return nil }
+        let realWindow = WebPopupPolicy.opensRealWindow(
+            linkActivated: navigationAction.navigationType == .linkActivated,
+            hasSize: windowFeatures.width != nil || windowFeatures.height != nil)
+        // Revue D-07 : panneau web caché (vue hors écran) → pas de feuille surgissant au-dessus du lecteur.
+        guard realWindow, webView.window != nil, let top = Self.topController() else {
+            webView.load(navigationAction.request)
+            return nil
+        }
+        // La configuration fournie doit être utilisée telle quelle : elle porte le lien avec la page parente.
+        let child = WKWebView(frame: .zero, configuration: configuration)
+        child.customUserAgent = webView.customUserAgent
+        child.uiDelegate = self
+        child.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        let holder = UIViewController()
+        holder.view = child
+        holder.navigationItem.title = navigationAction.request.url?.host
+        holder.navigationItem.rightBarButtonItem = UIBarButtonItem(
+            systemItem: .close,
+            primaryAction: UIAction { [weak self, weak child] _ in
+                if let child { self?.close(child) }
+            })
+        let navigation = UINavigationController(rootViewController: holder)
+        navigation.modalPresentationStyle = .formSheet
+        // Revue D-07 : feuille fermée en glissant vers le bas → vue fille libérée aussi.
+        navigation.presentationController?.delegate = self
+        sheets[ObjectIdentifier(child)] = navigation
+        top.present(navigation, animated: true)
+        // WebKit charge lui-même la requête dans la vue renvoyée.
+        return child
+    }
+
+    /// La page a fermé sa fenêtre (`window.close()`, fin normale de la connexion Google).
+    @MainActor
+    func webViewDidClose(_ webView: WKWebView) {
+        close(webView)
+    }
+
+    /// Feuille fermée au doigt : la vue fille et son contrôleur ne restent pas retenus.
+    @MainActor
+    func presentationControllerDidDismiss(_ presentationController: UIPresentationController) {
+        guard let entry = sheets.first(where: { $0.value === presentationController.presentedViewController }) else { return }
+        sheets.removeValue(forKey: entry.key)
+        ((entry.value as? UINavigationController)?.viewControllers.first?.view as? WKWebView)?.stopLoading()
+    }
+
+    @MainActor
+    private func close(_ child: WKWebView) {
+        guard let sheet = sheets.removeValue(forKey: ObjectIdentifier(child)) else { return }
+        child.stopLoading()
+        sheet.dismiss(animated: true)
+    }
+
+    /// Contrôleur visible le plus haut (feuilles empilées comprises).
+    @MainActor
+    private static func topController() -> UIViewController? {
+        guard let scene = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene })
+                .first(where: { $0.activationState == .foregroundActive }),
+              var top = scene.windows.first(where: \.isKeyWindow)?.rootViewController else { return nil }
+        while let next = top.presentedViewController, !next.isBeingDismissed { top = next }
+        return top
     }
 }

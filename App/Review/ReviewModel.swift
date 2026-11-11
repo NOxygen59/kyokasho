@@ -34,10 +34,14 @@ final class ReviewModel: ObservableObject {
         let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         let directory = support.appendingPathComponent("Kyokasho/Review", isDirectory: true)
         // Dernier recours : base en mémoire plutôt que de planter.
-        if let opened = try? ReviewStore.open(directory: directory) {
+        var openError: Error?
+        if !LibraryBackupService.restoreBlocked, let opened = { do { return try ReviewStore.open(directory: directory) }
+                                                               catch { openError = error; return nil } }() {
             store = opened
             persistentStorageAvailable = true
         } else {
+            // Revue DeepSeek Cartes E1 (n°3) : jamais en silence. Rien n'est effacé sur le disque ; l'accueil le dit.
+            if let openError { Diagnostics.error("base des cartes illisible : \(openError.localizedDescription)", "cartes") }
             store = try! ReviewStore.inMemory()
             persistentStorageAvailable = false
         }
@@ -75,7 +79,7 @@ final class ReviewModel: ObservableObject {
         let key = StudyCard.key(expression: term.expression, reading: term.reading)
         if keys.contains(key) || pending.contains(key) || (try? store.card(key: key)) != nil {
             keys.insert(key)
-            return "Déjà dans tes cartes"
+            return String(localized: "Déjà dans tes cartes")
         }
         pending.insert(key)
         let wantsAudio = settings.includeAudio
@@ -93,7 +97,7 @@ final class ReviewModel: ObservableObject {
     func addPageCards(_ fields: [[String: String]], documentId: String, page: Int) async throws -> Int {
         guard let deckId = defaultDeckId, let templateId = defaultTemplate?.id else {
             throw NSError(domain: "Kyokasho.Cartes", code: 1,
-                          userInfo: [NSLocalizedDescriptionKey: "Choisis un paquet et un modèle dans les réglages des cartes."])
+                          userInfo: [NSLocalizedDescriptionKey: String(localized: "Choisis un paquet et un modèle dans les réglages des cartes.")])
         }
         let cards = fields.map { fields in
             StudyCard(deckId: deckId, templateId: templateId,

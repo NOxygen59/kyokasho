@@ -15,6 +15,11 @@ public final class QwenChat: @unchecked Sendable {
         public enum Role: String, Codable, Sendable { case user, assistant }
         public var role: Role
         public var text: String
+        /// Pages source consultées pour cette réponse (base 0) et version de mise en page du document à ce moment
+        /// (#49, R4) : après une suppression ou une restauration, les liens suivent leur page ou se désactivent.
+        /// Absents des messages enregistrés avant : ceux-là gardent leurs liens seulement si les pages n'ont pas changé.
+        public var pages: [Int]? = nil
+        public var layoutVersion: Int? = nil
         public init(role: Role, text: String) { self.role = role; self.text = text }
     }
 
@@ -23,7 +28,8 @@ public final class QwenChat: @unchecked Sendable {
         clairement et brièvement. Ne suppose pas le sujet du document ni celui de la question. Quand des extraits \
         sont fournis, appuie chaque affirmation sur eux et cite les pages. Pour un mot japonais, donne sa lecture \
         en hiragana et son sens seulement si tu peux les établir. Si les extraits ne répondent pas à la question, \
-        dis-le sans inventer. Si la demande porte uniquement sur des mots-clés de recherche, renvoie uniquement ces mots-clés.
+        dis-le, puis réponds avec tes connaissances générales en le signalant clairement (T2, 10/11/2026) ; n'invente \
+        jamais de page ni de référence. Si la demande porte uniquement sur des mots-clés de recherche, renvoie uniquement ces mots-clés.
         """
 
     /// Lexique du domaine (terme → sens) et lectures sûres (terme → kana), fournis par l'app (lexique modifiable).
@@ -42,21 +48,26 @@ public final class QwenChat: @unchecked Sendable {
 
     public var isAvailable: Bool { store.isInstalled(model) }
 
-    public func start(history: [Message], grounded: Bool = false) async throws {
+    /// `settings` : consigne et paramètres choisis pour ce modèle (#37, #45) ; par défaut, ceux d'avant.
+    public func start(history: [Message], grounded: Bool = false, settings: AIChatSettings = AIChatSettings()) async throws {
         guard session == nil else { return }
         guard model.id == ModelSpec.qwen3vl4b.id || model.id == ModelSpec.qwen35chat4b.id else {
-            throw OCRError.engineFailed("Ce modèle ne sait pas discuter.")
+            throw OCRError.engineFailed(String(localized: "Ce modèle ne sait pas discuter.", bundle: .main))
         }
         guard isAvailable else { throw OCRError.modelMissing(model.title) }
         if let free = PageVLMReader.availableMemory(), free < 3_800 * 1_048_576 {
-            throw OCRError.engineFailed("Pas assez de mémoire libre pour \(model.title) (\(free / 1_048_576) Mo libres). Ferme les autres apps et réessaie.")
+            throw OCRError.engineFailed(String(localized: "Pas assez de mémoire libre pour \(model.title) (\(free / 1_048_576) Mo libres). Ferme les autres apps et réessaie.", bundle: .main))
         }
         let container = try await GLMModel.shared.acquire(directory: store.directory(model), extraEOSTokens: [])
         holding = true
         let past: [Chat.Message] = history.map { $0.role == .user ? .user($0.text) : .assistant($0.text) }
-        session = ChatSession(container, instructions: Self.instructions, history: past,
-                              generateParameters: GenerateParameters(maxTokens: 1024, temperature: grounded ? 0 : 0.3),
-                              additionalContext: model.id == ModelSpec.qwen35chat4b.id ? ["enable_thinking": false] : nil)
+        let parameters = GenerateParameters(maxTokens: settings.maxTokens,
+                                            temperature: Float(settings.effectiveTemperature(grounded: grounded)),
+                                            topP: Float(settings.topP), topK: settings.topK,
+                                            repetitionPenalty: settings.repetitionPenalty.map { Float($0) })
+        session = ChatSession(container, instructions: settings.effectiveInstructions(default: Self.instructions), history: past,
+                              generateParameters: parameters,
+                              additionalContext: model.id == ModelSpec.qwen35chat4b.id ? ["enable_thinking": settings.thinking] : nil)
     }
 
     /// Aide fiable ajoutée à la question (le modèle de 4 milliards invente souvent les lectures, ex. 天井 « あまね ») :
@@ -86,7 +97,7 @@ public final class QwenChat: @unchecked Sendable {
         var prompt = Self.hints(for: prompt, glossary: glossary, knownReadings: readings).map { prompt + "\n\n" + $0 } ?? prompt
         if let context { prompt += "\n\n" + context }
         guard let session else {
-            return AsyncThrowingStream { $0.finish(throwing: OCRError.engineFailed("Conversation pas démarrée.")) }
+            return AsyncThrowingStream { $0.finish(throwing: OCRError.engineFailed(String(localized: "Conversation pas démarrée.", bundle: .main))) }
         }
         return AsyncThrowingStream { continuation in
             let task = Task {

@@ -12,11 +12,25 @@ final class DefinitionTranslations: ObservableObject {
     static let shared = DefinitionTranslations()
     static let autoKey = "dictionary.autoTranslateFR"
 
-    enum Status: String, Codable { case machine, liked, disliked, edited }
+    /// Avis sur la traduction : 👍 validée, 👎 à revoir, ✏️ corrigée à la main (la correction remplace la traduction,
+    /// pour toujours). Défini dans `DictionaryKit` (`TranslationReview`) : la règle de conservation d'un avis lors d'une
+    /// nouvelle traduction automatique y est testée.
+    typealias Status = TranslationReview
 
     struct Entry: Codable, Equatable {
         var text: String
         var status: Status
+        /// Définitions traduites (C1.2, audit du 09/11/2026) : une mise à jour du dictionnaire qui change la définition
+        /// rend la traduction automatique périmée. Absent des traductions enregistrées avant ce champ.
+        var source: String? = nil
+    }
+
+    /// Traduction à afficher pour ce mot, ou `nil` si elle ne correspond plus à la définition actuelle
+    /// (une correction à la main reste toujours ; règle dans `TranslationFreshness`).
+    func entry(for term: TermResult) -> Entry? {
+        guard let entry = entries[Self.key(term)] else { return nil }
+        return TranslationFreshness.isCurrent(edited: entry.status == .edited, storedSource: entry.source,
+                                              currentSource: Self.source(term)) ? entry : nil
     }
 
     @Published private(set) var entries: [String: Entry] = [:]
@@ -62,7 +76,14 @@ final class DefinitionTranslations: ObservableObject {
         let source = Self.source(term)
         guard !source.isEmpty else { return }
         let text = try await DeepLService.shared.translate(source, target: "FR")
-        set(Self.key(term), Entry(text: text, status: .machine))
+        // Revue DeepSeek #3 (C1.2) : la définition a changé, la traduction d'avant ne s'affiche donc plus — mais l'avis
+        // 👍/👎 donné par l'utilisateur ne doit pas disparaître en silence quand la traduction automatique est refaite.
+        // Il passe sur la nouvelle traduction (le texte, lui, est bien remplacé : il ne correspond plus à la définition).
+        // Une correction ✏️ n'arrive jamais ici : `entry(for:)` la garde toujours courante, donc aucun écran ne propose
+        // de la retraduire.
+        let key = Self.key(term)
+        let review = entries[key]?.status.keptWhenRetranslated ?? .machine
+        set(key, Entry(text: text, status: review, source: source))
     }
 
     func set(_ key: String, _ entry: Entry?) {
@@ -83,15 +104,15 @@ enum DefinitionTranslationHTML {
         if let entry {
             let liked = entry.status == .liked || entry.status == .edited
             h += "<span class=\"fr-text\">\(esc(entry.text))</span><span class=\"fr-act\">"
-            h += "<button data-fr=\"like\" class=\"\(liked ? "on" : "")\" title=\"Bonne traduction\">👍</button>"
-            h += "<button data-fr=\"dislike\" class=\"\(entry.status == .disliked ? "on" : "")\" title=\"Mauvaise : corriger\">👎</button>"
-            h += "<button data-fr=\"edit\" title=\"Modifier\">✏️</button></span>"
+            h += "<button data-fr=\"like\" class=\"\(liked ? "on" : "")\" title=\"\(String(localized: "Bonne traduction"))\">👍</button>"
+            h += "<button data-fr=\"dislike\" class=\"\(entry.status == .disliked ? "on" : "")\" title=\"\(String(localized: "Mauvaise : corriger"))\">👎</button>"
+            h += "<button data-fr=\"edit\" title=\"\(String(localized: "Modifier"))\">✏️</button></span>"
         } else if busy {
-            h += "<span class=\"fr-text dim\">Traduction…</span>"
+            h += "<span class=\"fr-text dim\">\(String(localized: "Traduction…"))</span>"
         } else if hasKey {
-            h += "<button data-fr=\"translate\" class=\"fr-go\">Traduire en français</button>"
+            h += "<button data-fr=\"translate\" class=\"fr-go\">\(String(localized: "Traduire en français"))</button>"
         } else {
-            h += "<span class=\"fr-text dim\">Ajoute ta clé DeepL (Réglages → Traduction) pour la traduction française.</span>"
+            h += "<span class=\"fr-text dim\">\(String(localized: "Ajoute ta clé DeepL (Réglages → Traduction) pour la traduction française."))</span>"
         }
         if let error { h += "<div class=\"fr-text dim\">\(esc(error))</div>" }
         return h + "</div>"

@@ -40,7 +40,9 @@ public struct GlossaryRenderer: Sendable {
     public func page(terms: [TermResult], dictionaries: [DictionaryInfo], query: String? = nil) -> String {
         var body = ""
         if terms.isEmpty {
-            body = "<div class=\"empty\">Aucun résultat\(query.map { " pour « \(escape($0)) »" } ?? "").</div>"
+            let empty = query.map { String(localized: "Aucun résultat pour « \(escape($0)) ».", bundle: .main) }
+                ?? String(localized: "Aucun résultat.", bundle: .main)
+            body = "<div class=\"empty\">\(empty)</div>"
         }
         for (i, term) in terms.enumerated() { body += renderTerm(term, index: i) }
         return document(body: body, dictionaries: dictionaries)
@@ -61,7 +63,7 @@ public struct GlossaryRenderer: Sendable {
             }
             html += "</section>"
         }
-        html += "<div class=\"hint\">Ordre des traits : non fourni par les dictionnaires de kanji habituels.</div></article>"
+        html += "<div class=\"hint\">\(String(localized: "Ordre des traits : non fourni par les dictionnaires de kanji habituels.", bundle: .main))</div></article>"
         return document(body: html, dictionaries: [])
     }
 
@@ -73,8 +75,8 @@ public struct GlossaryRenderer: Sendable {
         h += "<button class=\"btn audio\" data-term=\"\(attr(t.expression))\" data-reading=\"\(attr(t.reading))\" title=\"Prononciation\">▶︎</button>"
         if options.canAddCards {
             h += addedTermIds.contains(t.id)
-                ? "<button class=\"btn done\" title=\"Déjà dans tes cartes\">✓</button>"
-                : "<button class=\"btn card\" data-index=\"\(index)\" title=\"Créer une carte\">＋</button>"
+                ? "<button class=\"btn done\" title=\"\(String(localized: "Déjà dans tes cartes", bundle: .main))\">✓</button>"
+                : "<button class=\"btn card\" data-index=\"\(index)\" title=\"\(String(localized: "Créer une carte", bundle: .main))\">＋</button>"
         }
         h += "</div></header>"
         if !t.inflectionRules.isEmpty {
@@ -318,7 +320,58 @@ public struct GlossaryRenderer: Sendable {
             key.allSatisfy { $0.isLetter || $0.isNumber } && value.allSatisfy { $0.isHexDigit || "#(),. %rgba".contains($0) }
         }
         guard !safe.isEmpty else { return "" }
-        return ":root{" + safe.sorted { $0.key < $1.key }.map { "--\($0.key):\($0.value);" }.joined() + "}"
+        let variables = safe.sorted { $0.key < $1.key }.map { "--\($0.key):\($0.value);" }.joined()
+        return ":root{" + variables + derivedVariables(safe) + "}" + (Self.isLight(safe["bg"]) ? Self.lightTagsCSS : "")
+    }
+
+    /// Encres atténuées et filets tirés de l'encre du thème. Laissés aux valeurs d'origine, blanches, ils rendaient les
+    /// furigana invisibles sur les thèmes clairs (recette 1.4.5).
+    private func derivedVariables(_ palette: [String: String]) -> String {
+        guard let ink = palette["fg"].flatMap(Self.rgb) else { return "" }
+        let color = "\(ink.r),\(ink.g),\(ink.b)"
+        let surfaces = [palette["bg"], palette["bg2"]].compactMap { $0.flatMap(Self.rgb) }
+        // Texte informatif, même atténué : au moins 4,5:1 sur les deux fonds où il se pose.
+        func readable(from opacity: Double) -> String {
+            String(format: "%.2f", Self.opacity(of: ink, from: opacity, on: surfaces))
+        }
+        return "--fg2:rgba(\(color),\(readable(from: 0.66)));--fg3:rgba(\(color),\(readable(from: 0.46)));--line:rgba(\(color),.12);"
+            + "color-scheme:\(Self.isLight(palette["bg"]) ? "light" : "dark");"
+    }
+
+    /// Plus petite opacité, à partir de `start`, qui atteint 4,5:1 sur chaque fond.
+    static func opacity(of ink: (r: Int, g: Int, b: Int), from start: Double, on surfaces: [(r: Int, g: Int, b: Int)]) -> Double {
+        func luminance(_ c: (r: Double, g: Double, b: Double)) -> Double {
+            func channel(_ v: Double) -> Double { v <= 0.03928 ? v / 12.92 : pow((v + 0.055) / 1.055, 2.4) }
+            return 0.2126 * channel(c.r / 255) + 0.7152 * channel(c.g / 255) + 0.0722 * channel(c.b / 255)
+        }
+        var opacity = start
+        while opacity < 1 {
+            let passes = surfaces.allSatisfy { surface in
+                func mix(_ a: Int, _ b: Int) -> Double { Double(a) * opacity + Double(b) * (1 - opacity) }
+                let one = luminance((mix(ink.r, surface.r), mix(ink.g, surface.g), mix(ink.b, surface.b)))
+                let two = luminance((Double(surface.r), Double(surface.g), Double(surface.b)))
+                return (max(one, two) + 0.05) / (min(one, two) + 0.05) >= 4.5
+            }
+            if passes { return opacity }
+            opacity += 0.01
+        }
+        return 1
+    }
+
+    /// Étiquettes : les fonds d'origine sont sombres, illisibles sous une encre foncée.
+    private static let lightTagsCSS = """
+        .tag{background:rgba(0,0,0,.08)} .tag.cat-partOfSpeech{background:rgba(30,130,115,.20)}
+        .tag.cat-popular,.tag.cat-frequent{background:rgba(190,100,50,.20)} .tag.cat-archaism,.tag.cat-dictionary{background:rgba(100,80,180,.18)}
+        """
+
+    private static func rgb(_ hex: String) -> (r: Int, g: Int, b: Int)? {
+        guard hex.count == 7, hex.hasPrefix("#"), let value = Int(hex.dropFirst(), radix: 16) else { return nil }
+        return (value >> 16 & 255, value >> 8 & 255, value & 255)
+    }
+
+    private static func isLight(_ hex: String?) -> Bool {
+        guard let color = hex.flatMap(rgb) else { return false }
+        return 299 * color.r + 587 * color.g + 114 * color.b > 128_000
     }
 
     static let baseCSS = """

@@ -40,13 +40,30 @@ extension BackupRoundTripTests {
         "App/Settings/AIModelViews.swift": ("persistant : Kyokasho/Chats/ (qwen-<id>.json, book-<id>.json)",
                                             ["Kyokasho/Chats/qwen\\(document.map { ", "book-\\($0.id).json"]),
         "Packages/KyokashoKit/Sources/ReaderCore/NoteDraftStore.swift": ("persistant : Kyokasho/NoteDrafts/", ["Kyokasho", "NoteDrafts"]),
+        "Packages/KyokashoKit/Sources/ReaderCore/CorrectionAsides.swift": ("mises de côté d'un remplacement (DEC-C3) : corrections manuelles Kyokasho/Corrections-remplacement/<nouvel identifiant>/corrections-page-<page>-<moteur>-<empreinte du contenu>.json ; encre en conflit (N2) Kyokasho/Conflits-remplacement/<ancien identifiant>/Encre/page-<page>(-<UUID>).ink ; compteur du rapport Kyokasho/Conflits-remplacement/<ancien identifiant>/cote.json (N8)",
+                                                                          ["Corrections-remplacement", "Conflits-remplacement", "Encre", "Kyokasho",
+                                                                           "cote.json", "corrections-page-\\(pageIndex)-\\(engineName)-\\(String(hash, radix: 16)).json",
+                                                                           "page-\\(pageIndex).ink", "page-\\(pageIndex)-\\(UUID().uuidString).ink"]),
         "Packages/KyokashoKit/Sources/OCRKit/ModelStore.swift": ("modèles : Kyokasho/Models/ (omissible, retéléchargeable)", ["Kyokasho/Models", "model-"]),
         "App/Dictionary/MorphologyService.swift": ("modèles : Kyokasho/Models/unidic ; temporaire : tmp/unidic-lite.tar.gz",
                                                    ["unidic", "unidic-lite.tar.gz"]),
-        "App/Library/PageShift.swift": ("transaction : Kyokasho/page-shift.json (sauvegarde refusée) ; secours : Kyokasho/PageShift/<UUID>/",
-                                        [".page-shift-\\(p.transaction!).pdf", "Kyokasho", "PageShift/", "drafts.json", "files", "install-files",
+        "App/Library/PageShift.swift": ("transaction : Kyokasho/page-shift.json (sauvegarde refusée) ; copies 30 jours (#49) : Kyokasho/PageShift/<opération>/ avec manifest.json ; temporaire : tmp/PageEdit-<UUID>/ ; conflits du remplacement Drive : Kyokasho/Conflits-remplacement/<ancien identifiant>/<Brouillons|Lectures-IA|Rapport|PDF>/ (P2 n°4 du lot C2, données gardées)",
+                                        ["Brouillons", "Conflits-remplacement", "Corrections", "Lectures-IA", "PDF", "Rapport",
+                                         ".page-shift-\\(p.transaction!).pdf", "journaux-refusés", "page-shift-",
+                                         "Kyokasho", "PageShift/", "drafts.json", "files", "install-files",
                                          "merged.pdf", "original-drafts.json", "original-files", "original-report.json", "original.pdf",
-                                         "page-shift.json", "report.json"]),
+                                         "page-shift.json", "report.json", "PageEdit-\\(UUID().uuidString)", "PageShift",
+                                         "PageShift/\\($0.archiveId)", "PageShift/\\(archiveId)/original.pdf",
+                                         "\\(stem[..<dash])-\\(position).md", "manifest.json"]),
+        "App/Library/DocumentPackageService.swift": ("export complet : Documents/Paquets de sécurité/<date>/ (avant remplacement) ; temporaire : tmp/PackageImport-<UUID>/ ; installation : .package-<UUID>(.pdf) à côté de la cible, échangé ensuite",
+                                                     [".package-\\(UUID().uuidString)", ".package-\\(UUID().uuidString).pdf",
+                                                      "PackageImport-\\(UUID().uuidString)", "Paquets de sécurité"]),
+        "Packages/KyokashoKit/Sources/ReaderCore/DocumentPackage.swift": ("export complet : temporaire tmp/PackageWrite-<UUID>/data",
+                                                                          ["PackageWrite-\\(UUID().uuidString)", "data"]),
+        "App/Library/LibraryBackupService.swift": ("sauvegarde complète (#51) : lit tout Kyokasho/ (sauf Models, page-shift.json), Analysis/, definition-translations.json, réglages ; temporaire tmp/BackupApp-<UUID>/ ; écrit dans le dossier choisi (signet)",
+                                                   ["BackupApp-\\(UUID().uuidString)", "Kyokasho", "Models", "definition-translations.json", "preferences.plist"]),
+        "Packages/KyokashoKit/Sources/ReaderCore/LibraryBackup.swift": ("sauvegarde complète (#51) : temporaire tmp/BackupWrite-<UUID>/ (copies des bases, relecture check/)",
+                                                                        ["BackupWrite-\\(UUID().uuidString)", "check", "db-\\(index).sqlite"]),
         "App/Settings/Diagnostics.swift": ("diagnostic : Documents/Diagnostics/journal.txt", ["Diagnostics", "journal.txt"]),
         "App/Settings/StorageUsage.swift": ("lecture seule (calcul de l'espace)", ["Analysis", "Dictionaries", "Documents", "Kyokasho", "unidic"]),
         "App/Settings/GitHubUpdate.swift": ("cache : Caches/Update", ["Update"]),
@@ -55,8 +72,12 @@ extension BackupRoundTripTests {
         "App/Drive/GoogleDrive.swift": ("temporaire : tmp/<UUID>/", []),
         "App/Library/AddPagesView.swift": ("temporaire : tmp/AddPages-<UUID>/", ["AddPages-\\(UUID().uuidString)", "merged.pdf"]),
         "App/Library/PDFMergeView.swift": ("temporaire : tmp/Merge-<UUID>/", ["Merge-\\(UUID().uuidString)"]),
+        "App/Library/ImagesToPDFView.swift": ("temporaire : tmp/Images-<UUID>/", ["Images-\\(UUID().uuidString)"]),
+        "App/Dictionary/DictionaryCatalogService.swift": ("temporaire : tmp/DictionaryDownload-<UUID>/ (dictionnaire téléchargé, effacé après import)",
+                                                          ["DictionaryDownload-\\(UUID().uuidString)", "\\(entry.id).zip"]),
         "App/Library/DocumentExport.swift": ("temporaire : tmp/Export/", ["Export"]),
-        "App/Reader/ReaderSheets.swift": ("temporaire : tmp/<titre>.md (partage)", ["\\(safe).md"]),
+        "Packages/KyokashoKit/Sources/ReaderCore/AIReadingExport.swift": ("temporaire : tmp/partage-lectures-<UUID>/<titre> - lectures <modèle>.txt (partage)", ["\\(base) - lectures \\(reader).txt", "partage-lectures-"]),
+        "Packages/KyokashoKit/Sources/ReaderCore/MarkdownShareFile.swift": ("temporaire : tmp/partage-markdown-<UUID>/<titre>.md (partage)", ["partage-markdown-"]),
         "App/Review/ReviewSettingsView.swift": ("temporaire : tmp/Export/", ["Export", "Kyokasho.\\(apkg ? "]),
         "Packages/KyokashoKit/Sources/ReviewKit/Exporters.swift": ("temporaire : tmp/apkg-<UUID>/", ["apkg-", "collection.anki2"]),
     ]
@@ -167,7 +188,7 @@ extension BackupRoundTripTests {
     }
 
     /// C1 — base `AppDatabase` au schéma `v3-page-one` (avant `v4-note-canvas-anchor`), sauvegardée et restaurée :
-    /// l'app actuelle l'ouvre, applique `v4` et relit notes, repères et OCR, puis écrit une note ancrée.
+    /// l'app actuelle l'ouvre, applique `v4`, `v5`, `v6` (dossiers) et `v7` (rangement des notes) et relit notes, repères et OCR, puis écrit une note ancrée.
     func testC1OlderAppDatabaseSchemaRestoresAndMigrates() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("kyokasho-old-schema-test-" + UUID().uuidString)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
@@ -184,8 +205,20 @@ extension BackupRoundTripTests {
         let ocr = Data(#"{"edited":true}"#.utf8)
         try database.save(OCRResultRecord(documentId: doc.id, pageIndex: 0, engine: "synthetic", json: ocr, durationMs: 1))
         try database.writer.close()
-        // Revenir au schéma v3 : colonnes de v4 retirées et migration oubliée, comme une base jamais migrée.
+        // Revenir au schéma v3 : colonnes et tables de v4 à v7 retirées et migrations oubliées, comme une base jamais migrée.
         try sqlite(path, """
+            DROP INDEX pageComment_due; ALTER TABLE pageComment DROP COLUMN dueDay;
+            ALTER TABLE pageComment DROP COLUMN priority; ALTER TABLE pageComment DROP COLUMN archived;
+            ALTER TABLE pageComment DROP COLUMN noteFolderId; ALTER TABLE pageComment DROP COLUMN tagIds;
+            DROP TABLE noteTag; DROP TABLE noteFolder;
+            DELETE FROM grdb_migrations WHERE identifier = 'v7-note-organization';
+            DROP INDEX document_folder; ALTER TABLE document DROP COLUMN folderId; DROP TABLE folder;
+            DELETE FROM grdb_migrations WHERE identifier = 'v6-folders';
+            ALTER TABLE document DROP COLUMN category;
+            DELETE FROM grdb_migrations WHERE identifier = 'v5-document-category';
+            DROP TABLE pageEditRow; DROP TABLE pageEdit; DROP TABLE pageIdentity;
+            ALTER TABLE document DROP COLUMN layoutVersion;
+            DELETE FROM grdb_migrations WHERE identifier = 'v5-page-edits';
             ALTER TABLE pageComment DROP COLUMN drawing; ALTER TABLE pageComment DROP COLUMN anchorX;
             ALTER TABLE pageComment DROP COLUMN anchorY; ALTER TABLE pageComment DROP COLUMN anchorWidth;
             ALTER TABLE pageComment DROP COLUMN anchorHeight; ALTER TABLE pageComment DROP COLUMN anchorText;
@@ -201,6 +234,7 @@ extension BackupRoundTripTests {
         let restored = target.appendingPathComponent("container/Library/Application Support/Kyokasho/kyokasho.sqlite")
         let app = try AppDatabase.open(at: restored)
         XCTAssertEqual(try app.document(id: doc.id)?.title, "Ancien")
+        XCTAssertNil(try app.document(id: doc.id)?.category)
         XCTAssertEqual(try app.comments(documentId: doc.id).map(\.body), ["Note d'avant v4"])
         XCTAssertNil(try app.comments(documentId: doc.id).first?.anchorRect)
         XCTAssertEqual(try app.bookmarks(documentId: doc.id).first?.pageIndex, 1)
@@ -209,8 +243,15 @@ extension BackupRoundTripTests {
         anchored.anchorRect = .init(x: 1, y: 2, width: 3, height: 4)
         try app.save(anchored)
         XCTAssertEqual(try app.comments(documentId: doc.id).count, 2)
+        // v7 (PLAN-T4-001) : la note d'avant est « normale », sans échéance, classeur ni étiquette.
+        let old = try XCTUnwrap(app.comments(documentId: doc.id).first { $0.body == "Note d'avant v4" })
+        XCTAssertEqual(try app.organization(noteId: old.id), .default)
         try app.writer.close()
         XCTAssertTrue(try sqliteRows(restored, "SELECT identifier FROM grdb_migrations").contains("v4-note-canvas-anchor"))
+        // v5 (RET-039, #54) appliquée aussi : document ancien non classé.
+        XCTAssertTrue(try sqliteRows(restored, "SELECT identifier FROM grdb_migrations").contains("v5-document-category"))
+        XCTAssertTrue(try sqliteRows(restored, "SELECT identifier FROM grdb_migrations").contains("v6-folders"))
+        XCTAssertTrue(try sqliteRows(restored, "SELECT identifier FROM grdb_migrations").contains("v7-note-organization"))
     }
 
     // MARK: SQLite direct (sans dépendance supplémentaire à GRDB dans cette cible)

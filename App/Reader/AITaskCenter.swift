@@ -3,6 +3,7 @@
 
 import GLMOCRKit
 import OCRKit
+import ReaderCore
 import SwiftUI
 
 /// Toutes les tâches IA lancées depuis le lecteur (relecture GLM-OCR, vérification et mise en page OvisOCR2,
@@ -23,8 +24,10 @@ final class AITaskCenter: ObservableObject {
         let modelId: String?
         let activity: String?
         var progress: (done: Int, total: Int)?
-        /// Journal en direct (« Voir le détail »), 200 lignes au plus.
+        /// Journal en direct (« Voir le détail »), 200 lignes au plus, recopié dans le journal de diagnostic (zone `ia`).
         var log: [String] = []
+        /// Fin de la tâche (« Terminées récemment ») : `nil` tant qu'elle tourne.
+        var outcome: String?
 
         init(key: String, title: String, modelId: String?, activity: String?) {
             self.key = key
@@ -40,6 +43,12 @@ final class AITaskCenter: ObservableObject {
     }
 
     @Published private(set) var jobs: [Job] = []
+    /// Tâches finies, la plus récente en tête (15 au plus), pour voir après coup ce qui s'est passé (#47).
+    @Published private(set) var recent: [Job] = []
+    /// Documents en cours d'effacement (`AppModel.delete`, P3 n°6 de la revue R2) : toute nouvelle tâche IA
+    /// pour eux est refusée, leurs caches PDF sont sur le point d'être effacés. État gardé ici plutôt que
+    /// dans `AppModel` pour ne pas lancer une tâche sur un modèle observé depuis ce centre.
+    private(set) var deletingDocumentIds: Set<String> = []
     /// Dernière erreur par clé (affichée par la vue concernée, effacée au relancement).
     @Published private(set) var errors: [String: String] = [:]
     /// +1 à chaque tâche finie : les vues qui affichent un résultat (fichier, cache) se rechargent.
@@ -53,18 +62,32 @@ final class AITaskCenter: ObservableObject {
     @discardableResult
     func run(_ key: String, title: String, modelId: String? = nil, activity: String? = nil,
              _ work: @escaping @MainActor (_ id: UUID) async throws -> Void) -> Bool {
-        guard !isRunning(key) else { return false }
+        // Pas de nouvelle tâche IA pendant une sauvegarde complète (#51) : ses écritures viseraient la copie en cours.
+        // Ni pour un document en cours de suppression (P3 n°6, revue R2) : ses caches sont sur le point d'être effacés.
+        guard !isRunning(key), !PageShift.blocksAI(jobKey: key), !LibraryBackupService.inProgress,
+              !Self.deletionBlocks(deletingDocumentIds, jobKey: key) else { return false }
         let job = Job(key: key, title: title, modelId: modelId, activity: activity)
         jobs.append(job)
         errors[key] = nil
+        // Début et fin écrits pour toutes les tâches, même celles qui ne journalisent rien d'autre (#47).
+        log(job.id, String(localized: "Démarrée") + (modelId.map { " avec \(Self.modelName($0))" } ?? "")
+            + (activity.map { " : \(AIActivityText.explain($0))" } ?? ""))
         tasks[job.id] = Task { [weak self] in
+            var failure: String?
+            var cancelled = false
             do {
                 try await work(job.id)
             } catch is CancellationError {
+                cancelled = true
             } catch {
-                if !Task.isCancelled { self?.errors[key] = error.localizedDescription }
+                if Task.isCancelled { cancelled = true } else {
+                    failure = error.localizedDescription
+                    self?.errors[key] = failure
+                }
             }
-            self?.jobs.removeAll { $0.id == job.id }
+            if Task.isCancelled { cancelled = true }
+            self?.finish(job.id, AIActivityText.outcome(seconds: Date().timeIntervalSince(job.started),
+                                                         cancelled: cancelled, error: failure))
             self?.tasks[job.id] = nil
             self?.finished += 1
         }
@@ -81,6 +104,28 @@ final class AITaskCenter: ObservableObject {
         let time = Date().formatted(date: .omitted, time: .standard)
         jobs[i].log.append("\(time)  \(line)")
         if jobs[i].log.count > 200 { jobs[i].log.removeFirst(jobs[i].log.count - 200) }
+        Diagnostics.log("\(jobs[i].title) · \(line)", "ia")
+    }
+
+    /// Retire la tâche de la liste en cours et la garde dans `recent`, avec sa fin écrite au journal.
+    private func finish(_ id: UUID, _ outcome: String) {
+        log(id, outcome)
+        guard let i = jobs.firstIndex(where: { $0.id == id }) else { return }
+        var job = jobs.remove(at: i)
+        job.outcome = outcome
+        recent.insert(job, at: 0)
+        if recent.count > 15 { recent.removeLast(recent.count - 15) }
+    }
+
+    /// Nom affiché d'un modèle (pastilles, journal).
+    static func modelName(_ id: String) -> String {
+        switch id {
+        case ModelSpec.ovisocr2.id: return "OvisOCR2"
+        case ModelSpec.glmocr.id: return "GLM-OCR"
+        case ModelSpec.qwen3vl4b.id: return "Qwen3-VL"
+        case ModelSpec.qwen35chat4b.id: return "Qwen3.5"
+        default: return id
+        }
     }
 
     /// Arrêt demandé par l'utilisateur (la génération s'arrête au jeton suivant).
@@ -88,12 +133,30 @@ final class AITaskCenter: ObservableObject {
 
     func cancel(key: String) { jobs.filter { $0.key == key }.forEach { cancel($0.id) } }
 
+    /// Même prédicat de clé que `cancel(documentId:)` et `PageShift.blocksAI(jobKey:)` : l'identifiant du
+    /// document est une composante de la clé (séparée par `|`). Utilisé par la garde de `run`.
+    static func deletionBlocks(_ deleting: Set<String>, jobKey: String) -> Bool {
+        !deleting.isEmpty && jobKey.split(separator: "|").contains { deleting.contains(String($0)) }
+    }
+
+    /// Posé par `AppModel.delete` au début puis à la fin de l'effacement : la fenêtre pendant laquelle
+    /// `run` refuse toute nouvelle tâche IA pour ce document.
+    func beginDeletion(documentId: String) { deletingDocumentIds.insert(documentId) }
+    func endDeletion(documentId: String) { deletingDocumentIds.remove(documentId) }
+
+    /// Toutes les tâches IA d'un document (clé `…|<document>|…`), la suppression avant tout :
+    /// leurs écritures tardives (OCR, lectures IA) ne doivent pas s'installer après l'effacement
+    /// de ses PDF et bases. Même prédicat de clé que `PageShift.blocksAI(jobKey:)`.
+    func cancel(documentId: String) {
+        for job in jobs where job.key.split(separator: "|").contains(where: { $0 == documentId }) { cancel(job.id) }
+    }
+
     /// Remplacement par une version plus récente (pas un arrêt de l'utilisateur) : la tâche quitte la liste tout de
     /// suite, son résultat sera jeté.
     func cancel(prefix: String) {
         for job in jobs where job.key.hasPrefix(prefix) {
             cancel(job.id)
-            jobs.removeAll { $0.id == job.id }
+            finish(job.id, String(localized: "Remplacée par une demande plus récente"))
         }
     }
 
@@ -146,6 +209,7 @@ struct AITaskPill: View {
     @AppStorage(AITaskPill.visibleKey) private var visible = true
     @State private var showList = false
     @State private var showJournal = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// Tâches dont le journal est déplié (« Voir le détail »).
     @State private var expanded: Set<UUID> = []
     /// Tâche à arrêter (`nil` + `stopAll` = toutes) : 1re puis 2e confirmation.
@@ -153,6 +217,7 @@ struct AITaskPill: View {
     @State private var stopAll = false
     @State private var confirm1 = false
     @State private var confirm2 = false
+    @State private var confirmAnalysisStop = false
 
     var body: some View {
         // Conteneur permanent : la dernière tâche peut finir pendant la confirmation.
@@ -163,8 +228,8 @@ struct AITaskPill: View {
                         HStack(spacing: 5) {
                             Circle().fill(badge.active ? Atelier.Tint.ai : Atelier.textSecondary)
                                 .frame(width: 5, height: 5)
-                            Text("\(badge.name) · \(badge.activity)")
-                                .font(.system(size: 11, weight: .medium))
+                            Text("\(badge.name) · \(AIActivityText.label(badge.activity))")
+                                .font(Atelier.font(11, weight: .medium))
                                 .lineLimit(1)
                         }
                         .foregroundStyle(Atelier.textPrimary)
@@ -173,10 +238,14 @@ struct AITaskPill: View {
                         .opacity(badge.active ? 0.82 : 0.48)
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel("\(badge.name), \(badge.activity)")
+                    .accessibilityLabel("\(badge.name), \(AIActivityText.label(badge.activity))")
+                    // Sort de la gauche (du moniteur, #47) ; fondu seul si « Réduire les animations ».
+                    .transition(reduceMotion ? .opacity : .move(edge: .leading).combined(with: .opacity))
                 }
             }
         }
+        .animation(reduceMotion ? .easeOut(duration: 0.15) : .spring(response: 0.4, dampingFraction: 0.85),
+                   value: badges.map(\.id))
         .onAppear { if visible { monitor.start() } }
         .onDisappear { if visible { monitor.stop() } }
         .onChange(of: visible) { enabled in
@@ -192,6 +261,12 @@ struct AITaskPill: View {
         } message: {
             Text("Le travail déjà fait sur la page en cours sera perdu.")
         }
+        .alert("Arrêter l'analyse du document ?", isPresented: $confirmAnalysisStop) {
+            Button("Continuer", role: .cancel) {}
+            Button("Arrêter", role: .destructive) { analysis.cancel() }
+        } message: {
+            Text("Le travail déjà fait sur la page en cours sera perdu.")
+        }
         .alert("Vraiment arrêter ?", isPresented: $confirm2) {
             Button("Non, continuer", role: .cancel) {}
             Button("Oui, arrêter", role: .destructive) {
@@ -203,7 +278,7 @@ struct AITaskPill: View {
     }
 
     private var stopTitle: String {
-        stopAll ? "Arrêter toutes les tâches IA ?" : "Arrêter « \(stopping?.title ?? "") » ?"
+        stopAll ? String(localized: "Arrêter toutes les tâches IA ?") : String(localized: "Arrêter « \(stopping?.title ?? "") » ?")
     }
 
     private struct Badge: Identifiable {
@@ -224,10 +299,10 @@ struct AITaskPill: View {
             let jobs = center.jobs.filter { $0.modelId == spec.id }
             let phase = analysis.progress?.phase ?? ""
             let analysisActivity: String? = switch spec.id {
-            case ModelSpec.ovisocr2.id where phase == "Lecture OvisOCR2": "analyse"
-            case ModelSpec.glmocr.id where phase == "Lecture GLM-OCR": "analyse"
-            case ModelSpec.qwen3vl4b.id where phase == "Lecture Qwen3-VL-4B": "analyse"
-            case ModelSpec.qwen3vl4b.id where phase == "Traduction (Qwen3-VL)": "traduction"
+            case ModelSpec.ovisocr2.id where phase == String(localized: "Lecture OvisOCR2"): "analyse"
+            case ModelSpec.glmocr.id where phase == String(localized: "Lecture GLM-OCR"): "analyse"
+            case ModelSpec.qwen3vl4b.id where phase == String(localized: "Lecture Qwen3-VL-4B"): "analyse"
+            case ModelSpec.qwen3vl4b.id where phase == String(localized: "Traduction (Qwen3-VL)"): "traduction"
             default: nil
             }
             if monitor.status?.loading == url { return Badge(id: spec.id, name: name, activity: "chargement", active: true) }
@@ -250,15 +325,35 @@ struct AITaskPill: View {
             Text("Activité des IA").font(.headline)
             Button("Voir le journal de diagnostic") { showJournal = true }
                 .font(.subheadline)
-            Text("Le détail ci-dessous concerne les tâches en cours. Le journal conserve les événements enregistrés.")
+            Text("Ce que fait chaque IA maintenant, puis les tâches en cours et terminées. Tout est aussi écrit dans le journal de diagnostic (zone « ia »).")
                 .font(.caption).foregroundStyle(.secondary)
-            if center.jobs.isEmpty {
+            // En clair, modèle par modèle (#47) : la pastille seule ne disait pas ce qui se passait.
+            ForEach(badges) { badge in
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Circle().fill(badge.active ? Atelier.Tint.ai : Atelier.textSecondary).frame(width: 6, height: 6)
+                    Text("**\(badge.name)** \(AIActivityText.explain(badge.activity))").font(.subheadline)
+                }
+            }
+            if let p = analysis.progress {
+                // L'analyse du document entier n'est pas une tâche de la liste : la montrer quand même.
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack {
+                        Text("Analyse du document entier").font(.subheadline.weight(.semibold))
+                        Spacer()
+                        // Elle n'est pas dans `center.jobs` : sans ce bouton, rien ne l'arrêtait depuis cette liste.
+                        Button("Arrêter", role: .destructive) {
+                            showList = false
+                            // Popover fermé avant l'alerte (sinon iOS 16 n'affiche rien, recette 1.4.2, essai 4.4).
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { confirmAnalysisStop = true }
+                        }
+                    }
+                    Text("\(p.phase) · page \(p.done) sur \(p.total) · étape commencée il y a \(AIActivityText.duration(Date().timeIntervalSince(p.phaseStarted)))\(p.cancelling ? String(localized: " · arrêt demandé") : "")")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            if center.jobs.isEmpty && analysis.progress == nil {
                 Text("Aucune tâche IA en cours.")
                     .font(.subheadline).foregroundStyle(.secondary)
-            }
-            if let loaded = badges.first(where: { $0.activity == "chargée" }) {
-                Text("\(loaded.name) reste brièvement en mémoire pour une prochaine demande.")
-                    .font(.caption).foregroundStyle(.secondary)
             }
             ForEach(center.jobs) { job in
                 VStack(alignment: .leading, spacing: 6) {
@@ -298,6 +393,30 @@ struct AITaskPill: View {
             if center.jobs.count > 1 {
                 Button("Tout arrêter", role: .destructive) { ask(nil) }.font(.subheadline.weight(.semibold))
             }
+            if !center.recent.isEmpty {
+                Divider()
+                Text("Terminées récemment").font(.subheadline.weight(.semibold))
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 8) {
+                        ForEach(center.recent) { job in
+                            DisclosureGroup {
+                                VStack(alignment: .leading, spacing: 3) {
+                                    ForEach(Array(job.log.enumerated()), id: \.offset) { _, line in
+                                        Text(line).font(.caption2.monospaced()).foregroundStyle(.secondary)
+                                            .frame(maxWidth: .infinity, alignment: .leading)
+                                    }
+                                }
+                            } label: {
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text(job.title).font(.caption.weight(.semibold))
+                                    Text(job.outcome ?? "").font(.caption2).foregroundStyle(.secondary)
+                                }
+                            }
+                        }
+                    }
+                }
+                .frame(maxHeight: 220)
+            }
         }
         .padding(16)
         .frame(minWidth: 360)
@@ -307,8 +426,8 @@ struct AITaskPill: View {
 
     private func detail(_ job: AITaskCenter.Job) -> String {
         let minutes = Int(Date().timeIntervalSince(job.started) / 60)
-        var text = minutes < 1 ? "Démarrée il y a moins d'une minute" : "Démarrée il y a \(minutes) min"
-        if let p = job.progress { text += " · \(p.done) sur \(p.total)" }
+        var text = minutes < 1 ? String(localized: "Démarrée il y a moins d'une minute") : String(localized: "Démarrée il y a \(minutes) min")
+        if let p = job.progress { text += String(localized: " · \(p.done) sur \(p.total)") }
         return text
     }
 

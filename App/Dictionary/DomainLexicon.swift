@@ -87,6 +87,7 @@ struct DomainLexiconView: View {
     @ObservedObject private var lexicon = DomainLexicon.shared
     @State private var search = ""
     @State private var editing: DomainLexicon.Entry?
+    @State private var showHarvest = false
 
     private var shown: [DomainLexicon.Entry] {
         guard !search.isEmpty else { return lexicon.entries }
@@ -112,10 +113,12 @@ struct DomainLexiconView: View {
                 Text("\(lexicon.entries.count) termes. Un terme du lexique compte comme un mot connu pour la relecture de l'OCR (moins de faux « caractères douteux ») et l'analyse ; son sens est imposé aux traductions de Qwen3-VL ; lecture et sens aident le chat.")
             }
             Section {
+                // Lexique du design d'intérieur (#50, D4) : termes relevés dans les manuels ou importés, à valider.
+                Button { showHarvest = true } label: { Label("Enrichir : relever dans mes manuels, importer un glossaire", systemImage: "sparkles") }
                 Button("Remettre les termes de départ manquants") { lexicon.restoreStarter() }
             }
         }
-        .searchable(text: $search, prompt: "Chercher un terme")
+        .searchable(text: $search, prompt: String(localized: "Chercher un terme"))
         .navigationTitle("Lexique du domaine")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
@@ -123,6 +126,7 @@ struct DomainLexiconView: View {
             }
         }
         .sheet(item: $editing) { entry in LexiconEntryEditor(entry: entry) }
+        .sheet(isPresented: $showHarvest) { LexiconHarvestView() }
     }
 }
 
@@ -137,7 +141,7 @@ private struct LexiconEntryEditor: View {
                 TextField("Lecture en kana (ex. のぶち)", text: $entry.reading)
                 TextField("Sens en français (ex. tasseau de plafond)", text: $entry.meaning, axis: .vertical)
             }
-            .navigationTitle(entry.term.isEmpty ? "Nouveau terme" : entry.term)
+            .navigationTitle(entry.term.isEmpty ? String(localized: "Nouveau terme") : entry.term)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Annuler") { dismiss() } }

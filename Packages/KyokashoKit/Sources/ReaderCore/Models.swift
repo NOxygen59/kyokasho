@@ -4,6 +4,18 @@
 import Foundation
 import GRDB
 
+/// Catégorie choisie à l'import, pour se repérer sur l'accueil (RET-039, #54). Modifiable dans « Ce document ».
+public enum DocumentCategory: String, Codable, CaseIterable, Sendable {
+    case book, textbook
+
+    public var title: String {
+        switch self {
+        case .book: return String(localized: "Livre", bundle: .main)
+        case .textbook: return String(localized: "Manuel", bundle: .main)
+        }
+    }
+}
+
 /// Un PDF importé. `id` = empreinte SHA-256 du fichier (hexadécimal) : un même fichier importé
 /// deux fois n'est stocké qu'une fois. Le fichier lui-même vit dans `DocumentStorage`, jamais modifié.
 public struct LibraryDocument: Codable, Identifiable, Hashable, Sendable {
@@ -23,11 +35,13 @@ public struct LibraryDocument: Codable, Identifiable, Hashable, Sendable {
     public var driveRevision: String?
     /// Index (base 0) de la page source qui porte le numéro 1 imprimé (manuels avec pages de garde).
     public var firstPageIndex: Int
+    /// Livre ou manuel (`nil` : pas encore choisi, documents d'avant la migration `v5-document-category`).
+    public var category: DocumentCategory?
 
     public init(id: String, title: String, originalFileName: String, pageCount: Int, fileSize: Int64,
                 importedAt: Date = Date(), lastOpenedAt: Date? = nil, lastPageIndex: Int = 0,
                 settingsJSON: String? = nil, driveFileId: String? = nil, driveRevision: String? = nil,
-                firstPageIndex: Int = 0) {
+                firstPageIndex: Int = 0, category: DocumentCategory? = nil) {
         self.id = id
         self.title = title
         self.originalFileName = originalFileName
@@ -40,18 +54,31 @@ public struct LibraryDocument: Codable, Identifiable, Hashable, Sendable {
         self.driveFileId = driveFileId
         self.driveRevision = driveRevision
         self.firstPageIndex = firstPageIndex
+        self.category = category
     }
 
     /// Numéro affiché pour une page source : la page `firstPageIndex` porte « 1 » ;
     /// les pages d'avant (couverture, sommaire…) sont en chiffres romains, comme dans les livres.
     public func pageLabel(_ index: Int) -> String {
+        // Pages modifiées (#49, R5) : chaque page garde son numéro imprimé ; sans numéro (page ajoutée, garde) :
+        // chiffres romains, comme les pages avant la page 1.
+        if let numbers = PrintedPageNumbers.numbers(for: id, pageCount: pageCount) {
+            // BUG-002 : une note, un repère ou une carte peut désigner une page qui n'existe plus (cours remplacé
+            // par une version plus courte). Hors bornes : même repli que sans identités, jamais un plantage.
+            guard numbers.indices.contains(index) else { return Self.roman(index + 1) }
+            return numbers[index].map(String.init) ?? Self.roman(index + 1)
+        }
         let n = index - firstPageIndex + 1
         return n >= 1 ? String(n) : Self.roman(index + 1)
     }
 
     /// Page source pour un numéro imprimé (borné au document).
     public func sourceIndex(forPrintedPage n: Int) -> Int {
-        max(0, min(pageCount - 1, n - 1 + firstPageIndex))
+        if let numbers = PrintedPageNumbers.numbers(for: id, pageCount: pageCount) {
+            // Numéro exact, sinon la première page qui vient après (numéro retiré avec sa page), sinon la dernière.
+            return numbers.firstIndex(of: n) ?? numbers.firstIndex { ($0 ?? .min) > n } ?? pageCount - 1
+        }
+        return max(0, min(pageCount - 1, n - 1 + firstPageIndex))
     }
 
     static func roman(_ value: Int) -> String {
@@ -105,6 +132,23 @@ public struct PageTransform: Codable, Hashable, Sendable {
         self.autoCrop = autoCrop
     }
 
+}
+
+public extension PageTransform {
+    /// Rotation canonique comprise entre 0 et 270 degrés, par pas de 90.
+    static func normalizedRotation(_ value: Int) -> Int {
+        let normalized = ((value % 360) + 360) % 360
+        return (normalized / 90) * 90
+    }
+
+    /// Rotation réellement affichée : celle du PDF, puis celle choisie dans Kyōkasho.
+    static func effectiveRotation(intrinsic: Int, additional: Int) -> Int {
+        normalizedRotation(intrinsic + additional)
+    }
+
+    mutating func rotate(by degrees: Int) {
+        rotation = Self.normalizedRotation(rotation + degrees)
+    }
 }
 
 extension PageTransform: FetchableRecord, PersistableRecord {
@@ -274,16 +318,16 @@ public struct AIPrompt: Codable, Identifiable, Hashable, Sendable {
     }
 
     public static let defaults: [AIPrompt] = [
-        AIPrompt(title: "Expliquer la slide",
+        AIPrompt(title: String(localized: "Expliquer la slide", bundle: .main),
                  body: "Explique cette slide en français, simplement. Ajoute les furigana aux kanji et propose un petit schéma si ça aide.",
                  position: 0),
-        AIPrompt(title: "Traduire la page",
+        AIPrompt(title: String(localized: "Traduire la page", bundle: .main),
                  body: "Traduis cette page de cours en français, en gardant la mise en forme. Mets les furigana aux kanji difficiles.",
                  position: 1),
-        AIPrompt(title: "Vocabulaire",
+        AIPrompt(title: String(localized: "Vocabulaire", bundle: .main),
                  body: "Liste le vocabulaire important de cette page : mot, lecture en hiragana, sens en français, et une phrase d'exemple.",
                  position: 2),
-        AIPrompt(title: "Questions de révision",
+        AIPrompt(title: String(localized: "Questions de révision", bundle: .main),
                  body: "À partir de cette page, écris 5 questions de révision avec leurs réponses, en français.",
                  position: 3),
     ]
@@ -371,4 +415,36 @@ public struct BenchRun: Codable, Identifiable, Hashable, Sendable {
 
 extension BenchRun: FetchableRecord, PersistableRecord {
     public static let databaseTableName = "benchRun"
+}
+
+extension PageComment {
+    /// Texte modifié dans la liste des notes (recette 1.3.2 (62), N1) : `nil` si rien ne change, ou si le texte
+    /// deviendrait vide sur une note sans dessin (une note vide ne sert à rien ; « Supprimer » existe pour ça).
+    public func editing(body newBody: String, at date: Date = Date()) -> PageComment? {
+        let trimmed = newBody.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed != body, !trimmed.isEmpty || drawing != nil else { return nil }
+        var note = self
+        note.body = trimmed
+        note.updatedAt = date
+        return note
+    }
+}
+
+/// Numéros imprimés des pages des documents dont les pages ont été modifiées (#49, R5), tenus à jour par l'app depuis
+/// `AppDatabase.printedNumbers()` (au lancement et après chaque modification des pages ou de la page 1). Un document
+/// absent, ou dont le nombre de pages ne correspond pas (valeur périmée), garde la numérotation par `firstPageIndex`.
+public enum PrintedPageNumbers {
+    private static let lock = NSLock()
+    nonisolated(unsafe) private static var table: [String: [Int?]] = [:]
+
+    public static func set(_ numbers: [String: [Int?]]) {
+        lock.lock(); defer { lock.unlock() }
+        table = numbers
+    }
+
+    public static func numbers(for documentId: String, pageCount: Int) -> [Int?]? {
+        lock.lock(); defer { lock.unlock() }
+        guard let numbers = table[documentId], numbers.count == pageCount else { return nil }
+        return numbers
+    }
 }

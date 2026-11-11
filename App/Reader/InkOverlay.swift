@@ -158,6 +158,13 @@ final class InkStore: NSObject, PDFPageOverlayViewProvider {
             overlay.setEditing(editing, toolPicker: toolPicker, finger: model.drawWithFinger)
             liveViews.add(overlay)
             scheduleToolPickerFocus()
+            // Recette iPad 1.5.5 (1.1) : en page simple + Glissement, PDFKit recrée la vue de la page (avec son propre
+            // défilement zoomable) après l'activation du dessin ; ce défilement neuf prenait encore le Pencil et faisait
+            // glisser la page jusqu'au premier tour de page. La garde est réappliquée dès qu'une page apparaît, au tour
+            // suivant de la boucle (la vue est alors dans la hiérarchie de la vue PDF).
+            if editing {
+                DispatchQueue.main.async { [weak controller] in controller?.applyPencilPageTurnGuard() }
+            }
             return overlay
         }
     }
@@ -216,7 +223,8 @@ final class InkPageView: UIView, PKCanvasViewDelegate {
 
     /// Zones OCR (lignes en orange, caractères en bleu) ; `nil` pour les masquer.
     func showOCR(_ page: OCRPage?) {
-        ocrPage = page
+        // Zones dessinées : sans les bouts de dessin ; le résultat complet reste au panneau et à la recherche.
+        ocrPage = page?.withoutDrawingFragments()
         drawOCR()
     }
 
@@ -226,7 +234,9 @@ final class InkPageView: UIView, PKCanvasViewDelegate {
             ocrCharLayer.path = nil
             return
         }
-        let transform = pageTransform
+        // PDFKit pose cette surcouche dans le repère non tourné de la page et la tourne lui-même : la rotation ne
+        // doit pas être appliquée une seconde fois (recette 1.3.2 (74) : zones hors du texte ou coupées).
+        let transform = PageGeometry.pageToOverlay(box: box, overlayWidth: bounds.width)
         func path(_ boxes: [NormBox]) -> CGPath {
             let p = CGMutablePath()
             for b in boxes {
