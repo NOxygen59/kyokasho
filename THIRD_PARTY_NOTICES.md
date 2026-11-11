@@ -87,3 +87,9 @@ Copyright (C) 2024-2026 Yomitan Authors, (C) 2020-2022 Yomichan Authors. https:/
 - **DuoBar** (Mike Li, MIT, https://github.com/Mikeli7666/DuoBar) — géométrie de l'anneau de l'iPhone Duo, proportions
   (trait, ouverture, éclair) et règle de couleur reprises et réécrites pour iPadOS dans `DuoBatteryRing.swift` et
   `ReaderStatusBadge.swift`. Licence : `LICENSES/MIT.txt`, Copyright (c) 2026 Mike Li.
+
+## Autres dépendances transitives (11/11/2026)
+
+Tirées par mlx-swift-lm et swift-transformers, épinglées dans les `Package.resolved` : **swift-numerics** (Apple,
+Apache-2.0), **swift-asn1** (Apple, Apache-2.0), **swift-syntax** (Apple, Apache-2.0, à la compilation seulement),
+**eventsource** (mattt, MIT). Aucun code copié.
