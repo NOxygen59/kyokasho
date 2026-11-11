@@ -3,6 +3,8 @@
 
 # Plan directeur — professionnalisation de Kyōkasho
 
+**Lexique : étoile, carte et « Mes mots » — 11/11.** Lot local sur `agents/fable-lexique-etoile`, au-dessus de `agents/fable-lexique` (`01c4e20`, E2 et E3 non relues) ; choix de NOxygen59 du 11/11, hors du plan PLAN-LEX-001 (qui excluait les favoris propres au Lexique : ici ce sont les mots enregistrés du dictionnaire, la même liste). Chaque ligne du Lexique porte une étoile et « + carte » ; un filtre « Mes mots » ne garde que les mots enregistrés présents dans les dictionnaires actifs. Lecture seule côté dictionnaires ; la carte passe par le chemin existant. Preuves Mac seulement (`LexiconSavedWordsTests`, compilation iOS générique) ; recette iPad à faire. Ni fusion ni candidate.
+
 **Lexique E2 et E3 — 10/11.** Lot local sur `agents/fable-lexique`, base `f912b88` (plan PLAN-LEX-001 approuvé le 10/11). Dans Livres & Manuels, l'entrée « Lexique » ouvre la liste paginée des mots des dictionnaires installés et actifs (forme, lecture au-dessus des kanji, sens français et anglais, « — » si absent) ; toucher un mot ouvre la fiche du dictionnaire, un champ cherche par début de mot. Lecture seule, aucune migration. Preuves Mac seulement (tests `LexiconFeedTests`, `LexiconSearchTests`, compilation iOS générique) ; recette iPad E2 et E3 à faire, revue D-07 à faire, E4 non commencée. Ni fusion ni candidate.
 
 **Accueil iPad et thèmes — 06/11.** Lot local sur `codex/accueil-themes`, base `0bfd81b`. Dans Réglages → Thèmes, la pilule Kyōkasho | Manga affiche les cartes de l’espace choisi. La palette suit le document dans le lecteur, puis l’espace affiché au retour. L’accueil garde une carte repère par espace et fond un cliché de la fenêtre lors de la bascule. Recette iPad et revue Claude à faire.

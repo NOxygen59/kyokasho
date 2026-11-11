@@ -134,6 +134,40 @@ extension DictionaryDatabase {
         }
     }
 
+    /// Mots précis du Lexique (filtre « Mes mots » : les mots que l'utilisateur a enregistrés d'une étoile), triés
+    /// comme la liste (lecture, puis forme). Un mot absent des dictionnaires passés (désactivé, autre variante de
+    /// langue, mot enregistré depuis un dictionnaire supprimé) n'est pas renvoyé : rien n'est inventé pour lui.
+    ///
+    /// - Parameter entries: (forme, lecture) ; une lecture vide vaut la forme, comme à l'import des dictionnaires.
+    ///
+    /// Lecture seule, à appeler hors du fil principal ; une tâche annulée arrête la lecture (`CancellationError`).
+    public func lexiconWords(dictionaryIds: Set<Int64>,
+                             entries: [(expression: String, reading: String)]) throws -> [LexiconWord] {
+        guard !dictionaryIds.isEmpty, !entries.isEmpty else { return [] }
+        let ids = dictionaryIds.sorted()
+        return try writer.read { db in
+            let infos = try DictionaryInfo.filter(ids.contains(Column("id"))).fetchAll(db)
+            var titles: [Int64: String] = [:]
+            var priorities: [Int64: Int] = [:]
+            for info in infos {
+                guard let id = info.id else { continue }
+                titles[id] = info.title
+                priorities[id] = info.priority
+            }
+            var seen = Set<WordKey>()
+            var words: [LexiconWord] = []
+            for entry in entries {
+                if Task.isCancelled { throw CancellationError() }
+                let key = WordKey(reading: entry.reading.isEmpty ? entry.expression : entry.reading, expression: entry.expression)
+                guard seen.insert(key).inserted else { continue }
+                let rows = try Self.lexiconRows(db, ids: ids, word: key)
+                guard !rows.isEmpty else { continue }
+                words.append(Self.word(key, rows: rows, titles: titles, priorities: priorities))
+            }
+            return words.sorted { ($0.sortReading, $0.expression) < ($1.sortReading, $1.expression) }
+        }
+    }
+
     // MARK: - Lecture
 
     struct LexiconRow {

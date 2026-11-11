@@ -1,6 +1,138 @@
 {
   "sourceLanguage": "fr",
   "strings": {
+    "Tous les mots": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "All words"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tous les mots"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全部词语"
+          }
+        }
+      }
+    },
+    "Mes mots · %lld": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "My words · %lld"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mes mots · %lld"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "我的词语 · %lld"
+          }
+        }
+      }
+    },
+    "Carte ajoutée": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Card added"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carte ajoutée"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已添加卡片"
+          }
+        }
+      }
+    },
+    "Fiche introuvable pour ce mot : carte non créée.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No entry found for this word: card not created."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fiche introuvable pour ce mot : carte non créée."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "找不到该词的词条：未创建卡片。"
+          }
+        }
+      }
+    },
+    "Aucun mot enregistré. Touche l'étoile d'un mot pour le retrouver ici.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No saved word. Tap the star of a word to find it here."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun mot enregistré. Touche l'étoile d'un mot pour le retrouver ici."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没有已保存的词语。轻点词语旁的星标即可在此找到它。"
+          }
+        }
+      }
+    },
+    "Tes mots enregistrés ne sont pas dans les dictionnaires actifs.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your saved words are not in the active dictionaries."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tes mots enregistrés ne sont pas dans les dictionnaires actifs."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已保存的词语不在已启用的词典中。"
+          }
+        }
+      }
+    },
     "Début d'un mot, en kana ou en kanji": {
       "localizations": {
         "en": {
