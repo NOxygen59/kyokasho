@@ -85,6 +85,15 @@ public struct LexiconFeed: Equatable, Sendable {
 }
 
 extension LexiconWord {
+    /// Le mot commence-t-il par `prefix` ? Même règle que la recherche paginée (`DictionaryDatabase.lexiconPage`) :
+    /// en kana, comparé à la lecture ; sinon à la forme écrite. Sert à filtrer la courte liste « Mes mots » sans relire
+    /// la base. Préfixe vide : toujours vrai.
+    public func matches(prefix: String) -> Bool {
+        let clean = LexiconFeed.cleanPrefix(prefix)
+        guard !clean.isEmpty else { return true }
+        return DictionaryDatabase.isKana(clean) ? sortReading.hasPrefix(clean) : expression.hasPrefix(clean)
+    }
+
     /// Forme japonaise découpée pour l'affichage, lecture répartie au-dessus des kanji (même fonction que les fiches
     /// du dictionnaire). Sans lecture à afficher (DEC-04) : la forme seule.
     public var furigana: [JapaneseText.FuriganaSegment] {

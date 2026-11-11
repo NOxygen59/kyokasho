@@ -202,6 +202,18 @@ final class DictionaryModel: ObservableObject {
         return try await withTaskCancellationHandler { try await work.value } onCancel: { work.cancel() }
     }
 
+    /// Mots enregistrés d'une étoile, tels que le Lexique les affiche (filtre « Mes mots »), lus hors du fil principal
+    /// dans les mêmes dictionnaires que la liste. Un mot enregistré absent de ces dictionnaires n'est pas renvoyé.
+    func savedLexiconWords() async throws -> [LexiconWord] {
+        guard let database else { return [] }
+        let ids = activeTermDictionaryIds
+        let entries = notebook.saved.filter { $0.kind == .word }.map { (expression: $0.expression, reading: $0.reading) }
+        let work = Task.detached(priority: .userInitiated) {
+            try database.lexiconWords(dictionaryIds: ids, entries: entries)
+        }
+        return try await withTaskCancellationHandler { try await work.value } onCancel: { work.cancel() }
+    }
+
     func isSaved(_ entry: SavedEntry) -> Bool { notebook.saved.contains(entry) }
 
     func toggleSaved(_ entry: SavedEntry) {
