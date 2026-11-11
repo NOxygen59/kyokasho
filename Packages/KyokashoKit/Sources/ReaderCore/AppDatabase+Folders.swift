@@ -63,11 +63,16 @@ public enum FolderError: LocalizedError, Equatable {
 }
 
 extension AppDatabase {
-    public func createFolder(name: String, space: String) throws -> LibraryFolder {
+    /// Crée un dossier et y range `moving` dans **la même transaction** (revue DeepSeek D-07 T5 E2, n°5) : si le
+    /// rangement est refusé (document d'un autre espace), le dossier n'est pas créé non plus.
+    public func createFolder(name: String, space: String, moving documentIds: [String] = []) throws -> LibraryFolder {
         let clean = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !clean.isEmpty else { throw FolderError.emptyName }
         let folder = LibraryFolder(name: clean, space: space)
-        try writer.write { db in try folder.insert(db) }
+        try writer.write { db in
+            try folder.insert(db)
+            try Self.move(db, documentIds, toFolder: folder.id, space: space)
+        }
         return folder
     }
 
@@ -95,18 +100,22 @@ extension AppDatabase {
     /// qui se trompe d'espace ne puisse pas ranger un manga dans un dossier de Livres & Manuels.
     public func moveDocuments(_ documentIds: [String], toFolder folderId: String?, space: String) throws {
         guard !documentIds.isEmpty else { return }
-        try writer.write { db in
-            if let folderId {
-                guard let folder = try LibraryFolder.fetchOne(db, key: folderId) else { throw FolderError.notFound }
-                guard folder.space == space else { throw FolderError.wrongSpace }
-                for document in try LibraryDocument.fetchAll(db, keys: documentIds)
-                where LibrarySpace(document: document).rawValue != folder.space {
-                    throw FolderError.wrongSpace
-                }
+        try writer.write { db in try Self.move(db, documentIds, toFolder: folderId, space: space) }
+    }
+
+    /// Corps de `moveDocuments`, dans la transaction de l'appelant.
+    static func move(_ db: Database, _ documentIds: [String], toFolder folderId: String?, space: String) throws {
+        guard !documentIds.isEmpty else { return }
+        if let folderId {
+            guard let folder = try LibraryFolder.fetchOne(db, key: folderId) else { throw FolderError.notFound }
+            guard folder.space == space else { throw FolderError.wrongSpace }
+            for document in try LibraryDocument.fetchAll(db, keys: documentIds)
+            where LibrarySpace(document: document).rawValue != folder.space {
+                throw FolderError.wrongSpace
             }
-            for id in documentIds {
-                try db.execute(sql: "UPDATE document SET folderId = ? WHERE id = ?", arguments: [folderId, id])
-            }
+        }
+        for id in documentIds {
+            try db.execute(sql: "UPDATE document SET folderId = ? WHERE id = ?", arguments: [folderId, id])
         }
     }
 

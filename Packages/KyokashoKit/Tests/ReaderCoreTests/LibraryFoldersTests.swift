@@ -163,4 +163,32 @@ final class LibraryFoldersTests: XCTestCase {
         XCTAssertEqual(membership["b"], study.id, "même espace : reste dans son dossier")
         XCTAssertEqual(try database.allDocuments().count, 2, "aucun document perdu")
     }
+
+    /// Revue DeepSeek D-07 T5 E2 (n°5) : « Nouveau dossier… » depuis une sélection refusée ne laisse pas de dossier vide.
+    func testCreatingAFolderWithRefusedDocumentsCreatesNothing() throws {
+        let (database, _) = try temporaryDatabase()
+        try database.save(document("a"))
+        try database.updateMangaSpace(documentId: "a", inManga: true)
+        XCTAssertThrowsError(try database.createFolder(name: "Étude", space: "study", moving: ["a"])) {
+            XCTAssertEqual($0 as? FolderError, .wrongSpace)
+        }
+        XCTAssertTrue(try database.libraryFolders().folders.isEmpty, "tout ou rien")
+        let made = try database.createFolder(name: "Shōnen", space: "manga", moving: ["a"])
+        XCTAssertEqual(try database.libraryFolders().membership["a"], made.id)
+    }
+
+    /// Revue DeepSeek D-07 T5 E2 (n°6) : fusion de remplacement Drive (le nouveau PDF est déjà dans la bibliothèque).
+    /// Le survivant sans dossier prend celui du remplacé ; un survivant déjà rangé garde le sien.
+    func testDriveFusionKeepsAFolder() throws {
+        let (database, _) = try temporaryDatabase()
+        for id in ["old1", "new1", "old2", "new2"] { try database.save(document(id)) }
+        let first = try database.createFolder(name: "A", space: "study", moving: ["old1", "old2"])
+        let second = try database.createFolder(name: "B", space: "study", moving: ["new2"])
+        try database.rekeyDocument(from: "old1", to: XCTUnwrap(database.document(id: "new1")))
+        try database.rekeyDocument(from: "old2", to: XCTUnwrap(database.document(id: "new2")))
+        let membership = try database.libraryFolders().membership
+        XCTAssertEqual(membership["new1"], first.id)
+        XCTAssertEqual(membership["new2"], second.id)
+        XCTAssertNil(try database.document(id: "old1"))
+    }
 }

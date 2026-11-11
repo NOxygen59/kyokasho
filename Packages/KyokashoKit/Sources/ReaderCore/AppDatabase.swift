@@ -375,6 +375,12 @@ extension AppDatabase {
                                    arguments: [newDocument.id, oldId])
                     // Archives des pages retirées (#49) : gardées avec le document qui reste, jamais effacées en passant.
                     try db.execute(sql: "UPDATE pageEdit SET documentId = ? WHERE documentId = ?", arguments: [newDocument.id, oldId])
+                    // T5 E2 (revue DeepSeek n°6) : le survivant sans dossier prend celui du document remplacé ; un
+                    // survivant déjà rangé garde le sien (sa fiche décrit le fichier qui reste, comme ci-dessous).
+                    try db.execute(sql: """
+                        UPDATE document SET folderId = (SELECT folderId FROM document WHERE id = ?)
+                        WHERE id = ? AND folderId IS NULL
+                        """, arguments: [oldId, newDocument.id])
                     _ = try LibraryDocument.deleteOne(db, key: oldId)
                     // P3 n°9 (revue R2) : le survivant garde son titre, ses réglages, sa catégorie
                     // et sa position de lecture — la fiche qui reste décrit déjà le **fichier qui

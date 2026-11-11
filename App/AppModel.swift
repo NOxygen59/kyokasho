@@ -182,6 +182,9 @@ final class AppModel: ObservableObject {
                 self.tabs.keep(only: Set(list.map(\.id)))
             }
             .store(in: &cancellables)
+        // Lus tout de suite (revue DeepSeek n°15) : sinon les documents rangés s'affichaient un instant hors de leur
+        // dossier au lancement, avant la première publication.
+        folders = (try? database.libraryFolders()) ?? LibraryFolders()
         database.foldersPublisher()
             .catch { error -> Empty<LibraryFolders, Never> in
                 // Dossiers illisibles : l'accueil reste utilisable, sans dossiers (les documents restent visibles).
@@ -519,10 +522,7 @@ final class AppModel: ObservableObject {
     /// Crée un dossier dans `space`, et y range tout de suite `documentIds` s'il y en a (« Déplacer vers → Nouveau
     /// dossier… »). Écrit sur la file d'écriture ; l'accueil se redessine par `foldersPublisher`.
     func createFolder(named name: String, in space: LibrarySpace, moving documentIds: [String] = []) {
-        persist { database in
-            let folder = try database.createFolder(name: name, space: space.rawValue)
-            try database.moveDocuments(documentIds, toFolder: folder.id, space: space.rawValue)
-        }
+        persist { _ = try $0.createFolder(name: name, space: space.rawValue, moving: documentIds) }
     }
 
     func renameFolder(_ folder: LibraryFolder, to name: String) {

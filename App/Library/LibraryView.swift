@@ -103,9 +103,10 @@ struct LibraryView: View {
         return LibrarySections.groupManga(loose)
     }
 
-    /// Documents affichés (« Tout sélectionner » ne prend que ceux-là).
+    /// Documents affichés (« Tout sélectionner » ne prend que ceux-là). Revue DeepSeek n°1 : à l'accueil, les
+    /// documents rangés dans un dossier ne sont pas affichés, donc jamais sélectionnés en bloc sans être vus.
     private var visibleDocuments: [LibraryDocument] {
-        currentFolder != nil ? currentFolderDocuments : filtered
+        currentFolder != nil ? currentFolderDocuments : folderLayout.loose
     }
 
     private var selectedComics: [LibraryDocument] {
@@ -697,12 +698,18 @@ struct LibraryView: View {
                                         Section {
                                             ForEach(folderLayout.tiles) { tile in
                                                 Button {
-                                                    if !selecting { openFolderId = tile.folder.id }
+                                                    // Revue DeepSeek n°2 et n°13 : on entre aussi en mode sélection, et
+                                                    // la sélection repart de zéro (jamais de document choisi hors de vue).
+                                                    batch = BatchDeletion()
+                                                    openFolderId = tile.folder.id
                                                 } label: {
                                                     FolderCard(name: tile.folder.name, documents: tile.documents)
                                                 }
                                                 .buttonStyle(PressScale())
                                                 .contextMenu { if !selecting { folderMenu(tile.folder) } }
+                                                // Revue DeepSeek n°14 : gérer le dossier sans appui long (VoiceOver).
+                                                .accessibilityAction(named: Text("Renommer")) { askRename(tile.folder) }
+                                                .accessibilityAction(named: Text("Supprimer le dossier")) { deletingFolder = tile.folder }
                                             }
                                         } header: {
                                             HStack(alignment: .firstTextBaseline, spacing: 8) {
@@ -855,7 +862,10 @@ struct LibraryView: View {
     private func openFolderHeader(_ folder: LibraryFolder) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .firstTextBaseline, spacing: 10) {
-                Button { openFolderId = nil } label: { Label("Accueil", systemImage: "chevron.left") }
+                Button {
+                    batch = BatchDeletion()
+                    openFolderId = nil
+                } label: { Label("Accueil", systemImage: "chevron.left") }
                     .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.read))
                 Image(systemName: "folder.fill").foregroundStyle(Atelier.Tint.read)
                 Text(folder.name).font(Atelier.font(20, weight: .semibold)).foregroundStyle(Atelier.textPrimary).lineLimit(1)
@@ -876,11 +886,20 @@ struct LibraryView: View {
     /// Renommer ou supprimer un dossier (la suppression demande confirmation ; les documents restent).
     @ViewBuilder
     private func folderMenu(_ folder: LibraryFolder) -> some View {
-        Button {
-            folderName = folder.name
-            folderNaming = .rename(folder)
-        } label: { Label("Renommer", systemImage: "pencil") }
-        Button(role: .destructive) { deletingFolder = folder } label: { Label("Supprimer le dossier", systemImage: "folder.badge.minus") }
+        // Revue DeepSeek n°4 : après la fermeture du menu d'appui long (0,35 s, comme les autres fenêtres de
+        // l'accueil), sinon iOS peut ignorer la fenêtre.
+        Button { afterMenu { askRename(folder) } } label: { Label("Renommer", systemImage: "pencil") }
+        Button(role: .destructive) { afterMenu { deletingFolder = folder } } label: { Label("Supprimer le dossier", systemImage: "folder.badge.minus") }
+    }
+
+    private func askRename(_ folder: LibraryFolder) {
+        folderName = folder.name
+        folderNaming = .rename(folder)
+    }
+
+    /// Présente une fenêtre une fois le menu contextuel refermé.
+    private func afterMenu(_ action: @escaping () -> Void) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35, execute: action)
     }
 
     /// « Déplacer vers… » : dossiers de l'espace des documents, nouveau dossier, ou sortie du dossier. Une sélection qui
@@ -893,8 +912,10 @@ struct LibraryView: View {
                 Button { model.move(documents, to: folder) } label: { shelfLabel(folder.name, on: current == [folder.id]) }
             }
             Button {
-                folderName = ""
-                folderNaming = .create(moving: documents)
+                afterMenu {
+                    folderName = ""
+                    folderNaming = .create(moving: documents)
+                }
             } label: { Label("Nouveau dossier…", systemImage: "folder.badge.plus") }
         }
         if !current.isEmpty {
@@ -1254,7 +1275,6 @@ enum FolderNaming {
 /// Tuile d'un dossier sur l'accueil : même gabarit qu'une carte de document, avec les couvertures des premiers
 /// documents en éventail (PLAN-T5-001, E2).
 struct FolderCard: View {
-    @EnvironmentObject private var model: AppModel
     let name: String
     let documents: [LibraryDocument]
 
@@ -1288,26 +1308,41 @@ struct FolderCard: View {
                 .overlay(RoundedRectangle(cornerRadius: Atelier.corner(12), style: .continuous).strokeBorder(Atelier.hairline))
             Text(name).font(Atelier.font(15, weight: .semibold)).lineLimit(2)
                 .foregroundStyle(Atelier.textPrimary)
-            Text("\(documents.count) document\(documents.count > 1 ? "s" : "")")
+            Text(documents.count == 1 ? String(localized: "1 document") : String(localized: "\(documents.count) documents"))
                 .font(.system(size: 11, weight: .semibold, design: .monospaced)).foregroundStyle(Atelier.textTertiary)
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(String(localized: "Dossier \(name), \(documents.count) documents"))
+        .accessibilityLabel(documents.count == 1 ? String(localized: "Dossier \(name), 1 document")
+                            : String(localized: "Dossier \(name), \(documents.count) documents"))
     }
 }
 
-/// Couverture réduite d'un document dans une tuile de dossier (vignette déjà en cache seulement : pas de rendu).
+/// Couverture réduite d'un document dans une tuile de dossier. Revue DeepSeek n°3 : le cache mémoire seul restait
+/// vide au lancement (un document rangé n'a plus de carte à l'accueil) ; la vignette passe donc par le même chemin que
+/// `DocumentCard` (même largeur 400, donc même entrée de cache, rendue au plus une fois). Trois au plus par dossier.
 private struct FolderCover: View {
     @EnvironmentObject private var model: AppModel
     let document: LibraryDocument
+    @State private var image: UIImage?
 
     var body: some View {
         Group {
-            if let image = model.thumbnails.cached(documentId: document.id, page: 0, width: 400) {
+            if let image {
                 Image(uiImage: image).resizable().scaledToFit()
             } else {
                 RoundedRectangle(cornerRadius: Atelier.corner(6), style: .continuous).fill(Atelier.surface)
             }
         }
+        .onAppear(perform: load)
+        .onChange(of: document.id) { _ in load() }
+    }
+
+    private func load() {
+        if let cached = model.thumbnails.cached(documentId: document.id, page: 0, width: 400) {
+            image = cached
+            return
+        }
+        model.thumbnails.thumbnail(documentId: document.id, fileURL: model.storage.url(for: document.id),
+                                   page: 0, width: 400) { image = $0 }
     }
 }
