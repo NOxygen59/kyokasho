@@ -104,21 +104,21 @@ struct PageCardsView: View {
     private func wordSection(lexicon: Bool) -> some View {
         let ids = entries.filter { $0.fromLexicon == lexicon }.map(\.id)
         if !ids.isEmpty {
+            // Revue D-07 F13 : « cochés / proposés » dans l'en-tête, « Tout cocher » sur une vraie ligne de la section.
+            let checked = ids.filter(selected.contains).count
             Section {
+                let allOn = checked == ids.count
+                Button(allOn ? String(localized: "Tout décocher") : String(localized: "Tout cocher")) {
+                    if allOn { selected.subtract(ids) } else { selected.formUnion(ids) }
+                }
+                .buttonStyle(.borderless)
+                .disabled(saving || message != nil)
                 ForEach($entries) { $entry in
                     if entry.fromLexicon == lexicon { wordRow($entry) }
                 }
             } header: {
-                HStack {
-                    Text(lexicon ? String(localized: "Lexique du cours (\(ids.count))") : String(localized: "Autres mots (\(ids.count))"))
-                    Spacer()
-                    let allOn = ids.allSatisfy(selected.contains)
-                    Button(allOn ? String(localized: "Tout décocher") : String(localized: "Tout cocher")) {
-                        if allOn { selected.subtract(ids) } else { selected.formUnion(ids) }
-                    }
-                    .font(.caption.bold())
-                    .disabled(saving || message != nil)
-                }
+                Text(lexicon ? String(localized: "Lexique du cours (\(checked)/\(ids.count))")
+                     : String(localized: "Autres mots (\(checked)/\(ids.count))"))
             }
         }
     }
@@ -203,7 +203,15 @@ struct PageCardsView: View {
                 }
             }.value
             try Task.checkCancellation()
-            words += try await otherWords(in: pageText, excluding: Set(found.map(\.term)))
+            // Revue D-07 F9 : le lexique ne dépend jamais des dictionnaires ; leur échec laisse le lexique et un message.
+            do {
+                words += try await otherWords(in: pageText, excluding: Set(found.map(\.term)))
+            } catch is CancellationError {
+                throw CancellationError()
+            } catch {
+                otherWordsNote = String(localized: "Autres mots illisibles : \(error.localizedDescription)")
+                Diagnostics.error("Cartes p. \(page), autres mots : \(error.localizedDescription)", "cartes")
+            }
             // DEC-CA-03 : une seule carte par mot ; celles qui existent déjà sont signalées et décochées.
             let store = review.store
             let keys = words.map { StudyCard.key(expression: $0.term, reading: $0.reading.trimmingCharacters(in: .whitespacesAndNewlines)) }
@@ -271,10 +279,12 @@ struct PageCardsView: View {
         error = nil
         defer { saving = false }
         let source = "\(document.title) · p. \(document.pageLabel(page))"
+        let lines = text.components(separatedBy: .newlines)
         let fields = chosen.map { entry in
-            let lines = text.components(separatedBy: .newlines)
-            // Mot conjugué sur la page (測っ…) : la phrase est cherchée par la forme écrite.
-            let sentence = lines.first { $0.contains(entry.term) } ?? lines.first { $0.contains(entry.surface) } ?? entry.term
+            // Mot conjugué sur la page (測っ…) : la phrase est cherchée par la forme écrite, seulement si elle a au
+            // moins deux caractères (revue D-07 F12 : une forme d'un caractère attrape n'importe quelle ligne).
+            let sentence = lines.first { $0.contains(entry.term) }
+                ?? (entry.surface.count > 1 ? lines.first { $0.contains(entry.surface) } : nil) ?? entry.term
             return CardFields.lexicon(expression: entry.term,
                                       reading: entry.reading.trimmingCharacters(in: .whitespacesAndNewlines),
                                       meaning: entry.meaning.trimmingCharacters(in: .whitespacesAndNewlines),

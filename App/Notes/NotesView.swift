@@ -79,6 +79,8 @@ struct NotesView: View {
                 }
             }
             .environment(\.editMode, .constant(selecting ? .active : .inactive))
+            // Revue DeepSeek D-07 F1 : jamais de note choisie qui n'est plus affichée (filtre, onglet, recherche).
+            .onChange(of: filter) { _ in selection.formIntersection(visibleIds) }
             .searchable(text: $filter.text, prompt: String(localized: "Chercher dans les notes"))
             .navigationTitle("Notes")
             .navigationBarTitleDisplayMode(.inline)
@@ -164,6 +166,7 @@ struct NotesView: View {
     @ViewBuilder
     private var selectionBar: some View {
         let ids = Array(selection)
+        let none = selection.isEmpty
         Menu {
             Button("Aujourd'hui") { apply(.due(NoteDay.string(Date())), to: ids) }
             Button("Demain") { apply(.due(NoteDay.string(NoteDay.calendar.date(byAdding: .day, value: 1, to: Date()) ?? Date())), to: ids) }
@@ -171,15 +174,18 @@ struct NotesView: View {
             Button("Choisir une date…") { choosingDue = true }
             Button("Sans échéance", role: .destructive) { apply(.due(nil), to: ids) }
         } label: { Label("Échéance", systemImage: "calendar") }
+        .disabled(none)
         Menu {
             ForEach(NotePriority.allCases.reversed(), id: \.self) { p in
                 Button(Self.title(p)) { apply(.priority(p), to: ids) }
             }
         } label: { Label("Priorité", systemImage: "exclamationmark.circle") }
+        .disabled(none)
         Menu {
             ForEach(folders) { f in Button(f.name) { apply(.folder(f.id), to: ids) } }
             Button("Aucun classeur") { apply(.folder(nil), to: ids) }
         } label: { Label("Classeur", systemImage: "folder") }
+        .disabled(none)
         Menu {
             Section("Ajouter") {
                 ForEach(tags) { t in Button("#" + t.name) { apply(.addTag(t.id), to: ids) } }
@@ -188,11 +194,14 @@ struct NotesView: View {
                 ForEach(tags) { t in Button("#" + t.name, role: .destructive) { apply(.removeTag(t.id), to: ids) } }
             }
         } label: { Label("Étiquette", systemImage: "tag") }
+        .disabled(none)
         Spacer()
         Text(String(localized: "\(selection.count) choisie(s)")).font(Atelier.font(13)).foregroundStyle(Atelier.textSecondary)
         Spacer()
-        archiveButton(ids, archived: filter.archived)
+        archiveButton(ids, archived: filter.archived).disabled(none)
     }
+
+    private var visibleIds: Set<String> { Set(sections.flatMap(\.notes).map(\.id)) }
 
     private var dueSheet: some View {
         NavigationStack {
@@ -221,11 +230,15 @@ struct NotesView: View {
         let database = model.database
         Task {
             let result = await Task.detached(priority: .userInitiated) { Result { try database.apply(change, to: ids) } }.value
-            if case .failure(let error) = result { actionError = error.localizedDescription } else { actionError = nil }
-            // Une note archivée ou désarchivée quitte la vue affichée : la sélection ne garde que ce qui reste visible.
+            switch result {
+            case .failure(let error): actionError = error.localizedDescription
+            case .success: actionError = nil
+            }
+            // Une note archivée ou désarchivée quitte la vue affichée : la sélection ne garde que ce qui reste visible ;
+            // plus rien de choisi après un lot → fin du mode sélection (revue D-07 F16).
             await reload()
-            let visible = Set(sections.flatMap(\.notes).map(\.id))
-            selection.formIntersection(visible)
+            selection.formIntersection(visibleIds)
+            if selecting, selection.isEmpty, case .success = result { selecting = false }
             model.refreshNotesToReview()
         }
     }

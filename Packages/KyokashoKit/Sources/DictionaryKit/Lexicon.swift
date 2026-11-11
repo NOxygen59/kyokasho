@@ -197,7 +197,9 @@ extension DictionaryDatabase {
                 arguments += ids
                 let groups = Self.group(try Self.fetch(db, sql: sql, arguments: StatementArguments(arguments)))
                 guard !groups.isEmpty else { continue }
-                let best = groups.first { $0.key.reading == hint } ?? groups.min { a, b in
+                // Revue D-07 F10 : lecture comparée en hiragana des deux côtés (un dictionnaire peut stocker des katakana).
+                let hiraganaHint = Self.hiragana(hint)
+                let best = groups.first { !hint.isEmpty && Self.hiragana($0.key.reading) == hiraganaHint } ?? groups.min { a, b in
                     let pa = a.rows.map { priorities[$0.dictionaryId] ?? Int.max }.min() ?? Int.max
                     let pb = b.rows.map { priorities[$0.dictionaryId] ?? Int.max }.min() ?? Int.max
                     return pa != pb ? pa < pb : a.rows.count > b.rows.count
@@ -313,6 +315,10 @@ extension DictionaryDatabase {
         let flat = text.replacingOccurrences(of: "\n", with: " ")
         guard flat.count > lexiconShortLength else { return flat }
         return String(flat.prefix(lexiconShortLength - 1)) + "…"
+    }
+
+    static func hiragana(_ text: String) -> String {
+        text.applyingTransform(.hiraganaToKatakana, reverse: true) ?? text
     }
 
     /// Hiragana, katakana et marque de prolongation seulement.

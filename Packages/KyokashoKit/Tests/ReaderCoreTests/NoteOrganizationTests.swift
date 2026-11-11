@@ -187,4 +187,19 @@ final class NoteOrganizationTests: XCTestCase {
         XCTAssertEqual(try db.organization(noteId: "n1")?.folderId, folder.id)
         XCTAssertNil(try db.organization(noteId: "n2")?.folderId)
     }
+
+    /// Revue DeepSeek D-07 F4 : note disparue → le lot échoue (rien écrit) et aucune étiquette n'est créée.
+    func testDeletedNoteFailsTheBatchAndCreatesNoOrphanTag() throws {
+        let db = try database()
+        XCTAssertThrowsError(try db.apply(.priority(.high), to: ["n1", "disparue"])) {
+            XCTAssertEqual($0 as? NoteOrganizationError, .noteNotFound)
+        }
+        XCTAssertEqual(try db.organization(noteId: "n1")?.priority, .normal, "tout ou rien")
+        XCTAssertThrowsError(try db.addTag(named: "Test S46", toNote: "disparue"))
+        XCTAssertTrue(try db.noteTags().isEmpty)
+        try db.addTag(named: "Test S46", toNote: "n1")
+        try db.addTag(named: "test s46", toNote: "n2")
+        XCTAssertEqual(try db.noteTags().count, 1)
+        XCTAssertEqual(try db.organization(noteId: "n2")?.tagIds, try db.organization(noteId: "n1")?.tagIds)
+    }
 }

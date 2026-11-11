@@ -27,6 +27,8 @@ final class PageWordCandidatesTests: XCTestCase {
             token("た", lemma: "た", "助動詞"),
             token("これ", lemma: "此れ", "代名詞"),
             token("ね", lemma: "ね", "感動詞"),
+            token("この", lemma: "此の", "連体詞"),
+            token("しかし", lemma: "然し", "接続詞"),
         ]
         XCTAssertEqual(PageWordCandidates.words(tokens).map(\.expression), ["木材", "強度", "測る", "試験"])
     }
@@ -52,7 +54,9 @@ final class PageWordCandidatesTests: XCTestCase {
             token("CAD", lemma: "", "名詞", "普通名詞"),
             token("ア-ル", lemma: "ア-ル", "名詞", "普通名詞"),
         ]
-        XCTAssertEqual(PageWordCandidates.words(tokens).map(\.expression), ["コンピューター", "ア-ル"])
+        // Revue D-07 F6 : « え » écrit pour 絵 reste proposé (la forme de dictionnaire n'est pas un kana seul).
+        XCTAssertEqual(PageWordCandidates.words(tokens).map(\.expression), ["コンピューター", "絵", "ア-ル"])
+        XCTAssertTrue(PageWordCandidates.words([token("か", lemma: "か", "名詞", "普通名詞")]).isEmpty)
     }
 
     func testEmptyPageGivesNoWord() {

@@ -74,6 +74,9 @@ final class LexiconSavedWordsTests: XCTestCase {
                                             ("床", "ゆか", "[\"sol\"]"), ("空", "そら", "null")])
         let found = try db.lexiconWords(dictionaryIds: [a], expressions: [("上手", "うわて"), ("床", ""), ("無い語", ""), ("空", "")])
         XCTAssertEqual(found["上手"]?.reading, "うわて")
+        let k = try dictionary("K", terms: [("今日", "コンニチ", "[\"de nos jours\"]"), ("今日", "キョウ", "[\"aujourd'hui\"]")])
+        XCTAssertEqual(try db.lexiconWords(dictionaryIds: [k], expressions: [("今日", "きょう")])["今日"]?.reading, "キョウ",
+                       "indice en hiragana, dictionnaire en katakana (revue D-07 F10)")
         XCTAssertEqual(found["床"]?.summary(.unknown), "sol")
         XCTAssertNil(found["無い語"])
         XCTAssertNil(found["空"], "sans aucun sens : rien à mettre sur la carte")

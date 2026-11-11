@@ -13,6 +13,8 @@ import SwiftUI
 ///
 /// Écritures et lectures hors du fil principal ; après chaque écriture, l'état est relu en base (ce qui est affiché est
 /// ce qui est enregistré) et `onChange` prévient l'appelant (écran Notes à relire, pastille de l'accueil).
+/// Revue DeepSeek D-07 (F2, F3) : **une écriture à la fois** ; pendant l'écriture et la relecture, les réglages sont
+/// figés (`busy`) : un second appui rapide ne part jamais d'un état périmé, l'ordre des gestes est l'ordre en base.
 struct NoteSettingsView: View {
     let database: AppDatabase
     let noteId: String
@@ -27,6 +29,8 @@ struct NoteSettingsView: View {
     @State private var newTagName = ""
     @State private var newFolderName = ""
     @State private var askingFolderName = false
+    /// Écriture ou relecture en cours : réglages figés.
+    @State private var busy = false
 
     var body: some View {
         NavigationStack {
@@ -64,6 +68,7 @@ struct NoteSettingsView: View {
                     ProgressView()
                 }
             }
+            .disabled(busy)
             .navigationTitle("Ranger la note")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("OK") { dismiss() } } }
@@ -137,8 +142,9 @@ struct NoteSettingsView: View {
         let name = newTagName, database = database, id = noteId
         guard !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         newTagName = ""
-        // Étiquette existante (même nom, sans les majuscules) réutilisée, sinon créée — puis posée sur la note.
-        run { try database.apply(.addTag(database.noteTag(named: name).id), to: [id]) }
+        // Étiquette existante (même nom, sans les majuscules) réutilisée, sinon créée — puis posée sur la note, en une
+        // transaction (note disparue : rien n'est créé).
+        run { try database.addTag(named: name, toNote: id) }
     }
 
     private func createFolder() {
@@ -148,7 +154,10 @@ struct NoteSettingsView: View {
     }
 
     private func run(_ work: @escaping @Sendable () throws -> Void) {
+        guard !busy else { return }
+        busy = true
         Task {
+            defer { busy = false }
             let result = await Task.detached(priority: .userInitiated) { Result { try work() } }.value
             if case .failure(let failure) = result { error = failure.localizedDescription } else { error = nil; onChange() }
             await reload()

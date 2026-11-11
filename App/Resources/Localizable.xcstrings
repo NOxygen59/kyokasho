@@ -1,6 +1,72 @@
 {
   "sourceLanguage": "fr",
   "strings": {
+    "Autres mots illisibles : %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Other words unreadable: %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Autres mots illisibles : %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法读取其他词语：%@"
+          }
+        }
+      }
+    },
+    "Lexique du cours (%lld/%lld)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Course glossary (%lld/%lld)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lexique du cours (%lld/%lld)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "课程词汇（%lld/%lld）"
+          }
+        }
+      }
+    },
+    "Autres mots (%lld/%lld)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Other words (%lld/%lld)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Autres mots (%lld/%lld)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "其他词语（%lld/%lld）"
+          }
+        }
+      }
+    },
     "Appliquer": {
       "localizations": {
         "en": {
@@ -129,50 +195,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "此页没有可建议的词语。"
-          }
-        }
-      }
-    },
-    "Autres mots (%lld)": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Other words (%lld)"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Autres mots (%lld)"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "其他词语（%lld）"
-          }
-        }
-      }
-    },
-    "Lexique du cours (%lld)": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Course glossary (%lld)"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lexique du cours (%lld)"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "课程词汇（%lld）"
           }
         }
       }

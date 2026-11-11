@@ -11,9 +11,12 @@ import Foundation
 /// proposés) et le repérage des cartes déjà créées se font après, hors de cette fonction.
 ///
 /// Retirés (DEC-CA-02) : particules (助詞), auxiliaires (助動詞), symboles et ponctuation (補助記号, 記号, 空白),
-/// préfixes et suffixes (接頭辞, 接尾辞), pronoms (代名詞), interjections (感動詞), nombres (数詞), mots « non
-/// autonomes » (非自立可能 : する, ある, いる, なる, こと, もの… outils de grammaire plus que vocabulaire), mots d'un
-/// seul kana, et mots sans caractère japonais (chiffres, lettres latines).
+/// préfixes et suffixes (接頭辞, 接尾辞), pronoms (代名詞), interjections (感動詞), conjonctions (接続詞 : しかし,
+/// だから), déterminants (連体詞 : この, その), hésitations (フィラー), nombres (数詞), verbes « non autonomes »
+/// (非自立可能 : する, ある, いる, なる… outils de grammaire plus que vocabulaire), mots dont la forme de dictionnaire
+/// est un seul kana, et mots sans caractère japonais (chiffres, lettres latines). Revue DeepSeek D-07 (F5-F7) :
+/// conjonctions et déterminants ajoutés ; un mot écrit d'un seul kana mais de forme pleine (え → 絵) reste proposé ;
+/// こと et もの, noms ordinaires pour UniDic, ne sont pas retirés.
 public enum PageWordCandidates {
     public struct Word: Equatable, Sendable {
         /// Forme à chercher dans les dictionnaires (lemme UniDic, sans son suffixe anglais).
@@ -30,7 +33,8 @@ public enum PageWordCandidates {
         }
     }
 
-    static let excludedCategories: Set<String> = ["助詞", "助動詞", "補助記号", "記号", "空白", "接頭辞", "接尾辞", "代名詞", "感動詞"]
+    static let excludedCategories: Set<String> = ["助詞", "助動詞", "補助記号", "記号", "空白", "接頭辞", "接尾辞", "代名詞",
+                                                  "感動詞", "接続詞", "連体詞", "フィラー"]
     static let excludedSubcategories: Set<String> = ["数詞", "非自立可能"]
 
     /// Mots retenus, dans l'ordre d'apparition, sans doublon (même forme de dictionnaire) et hors de `excluding`
@@ -42,7 +46,7 @@ public enum PageWordCandidates {
             guard let category = token.pos.first, !excludedCategories.contains(category),
                   token.pos.dropFirst().allSatisfy({ !excludedSubcategories.contains($0) }) else { continue }
             let expression = dictionaryForm(token)
-            guard isWorthACard(expression), isWorthACard(token.surface), !seen.contains(expression),
+            guard isWorthACard(expression), !seen.contains(expression),
                   !seen.contains(token.surface) else { continue }
             seen.insert(expression)
             out.append(Word(expression: expression, surface: token.surface,

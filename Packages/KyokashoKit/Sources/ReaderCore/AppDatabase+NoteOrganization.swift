@@ -98,7 +98,7 @@ public enum NoteChange: Equatable, Sendable {
 }
 
 public enum NoteOrganizationError: LocalizedError, Equatable {
-    case emptyName, invalidDay, folderNotFound, tagNotFound, duplicateName
+    case emptyName, invalidDay, folderNotFound, tagNotFound, duplicateName, noteNotFound
 
     public var errorDescription: String? {
         switch self {
@@ -107,6 +107,7 @@ public enum NoteOrganizationError: LocalizedError, Equatable {
         case .folderNotFound: return String(localized: "Ce classeur n'existe plus.", bundle: .main)
         case .tagNotFound: return String(localized: "Cette étiquette n'existe plus.", bundle: .main)
         case .duplicateName: return String(localized: "Une étiquette porte déjà ce nom.", bundle: .main)
+        case .noteNotFound: return String(localized: "Cette note n'existe plus.", bundle: .main)
         }
     }
 }
@@ -227,9 +228,12 @@ extension AppDatabase {
     // MARK: Rangement des notes
 
     /// Applique `change` à toutes les notes données, tout ou rien. Seules les colonnes de rangement sont écrites.
+    /// Une note disparue (supprimée ailleurs pendant que l'écran était ouvert) annule tout le lot
+    /// (`noteNotFound`, revue DeepSeek D-07 F4) : jamais un « succès » qui n'a rien écrit.
     public func apply(_ change: NoteChange, to noteIds: [String]) throws {
         guard !noteIds.isEmpty else { return }
         try writer.write { db in
+            for id in Set(noteIds) where try !Self.noteExists(db, id) { throw NoteOrganizationError.noteNotFound }
             switch change {
             case .due(let day):
                 if let day, !NoteDay.isValid(day) { throw NoteOrganizationError.invalidDay }
@@ -252,6 +256,25 @@ extension AppDatabase {
                                    arguments: [Self.encodeTags(Array(tags)), id])
                 }
             }
+        }
+    }
+
+    /// Étiquette de ce nom (créée au besoin) posée sur la note, en une transaction : si la note a disparu, rien n'est
+    /// créé (revue DeepSeek D-07 F4 : pas d'étiquette orpheline).
+    public func addTag(named name: String, toNote noteId: String) throws {
+        let clean = try Self.clean(name)
+        try writer.write { db in
+            guard try Self.noteExists(db, noteId) else { throw NoteOrganizationError.noteNotFound }
+            let tag: NoteTag
+            if let existing = try NoteTag.fetchAll(db).first(where: { $0.name.compare(clean, options: .caseInsensitive) == .orderedSame }) {
+                tag = existing
+            } else {
+                tag = NoteTag(name: clean)
+                try tag.insert(db)
+            }
+            let raw = try String.fetchOne(db, sql: "SELECT tagIds FROM pageComment WHERE id = ?", arguments: [noteId])
+            try db.execute(sql: "UPDATE pageComment SET tagIds = ? WHERE id = ?",
+                           arguments: [Self.encodeTags(Self.decodeTags(raw) + [tag.id]), noteId])
         }
     }
 
@@ -299,6 +322,10 @@ extension AppDatabase {
         for id in ids {
             try db.execute(sql: "UPDATE pageComment SET \(column) = ? WHERE id = ?", arguments: [value, id])
         }
+    }
+
+    private static func noteExists(_ db: Database, _ id: String) throws -> Bool {
+        try Bool.fetchOne(db, sql: "SELECT EXISTS(SELECT 1 FROM pageComment WHERE id = ?)", arguments: [id]) ?? false
     }
 
     private static func knownIds(_ db: Database) throws -> (folders: Set<String>, tags: Set<String>) {
