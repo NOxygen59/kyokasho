@@ -156,6 +156,15 @@ public struct StudyCard: Codable, Identifiable, Hashable, Sendable, FetchableRec
 
     public static func key(expression: String, reading: String) -> String { expression + "|" + reading }
 
+    /// Clé d'une carte modifiée à la main : celle des champs « Mot » et « Lecture » (texte sans HTML), comme à la
+    /// création ; `nil` si le mot est vide (gabarit sans champ « Mot » : la clé ne change pas).
+    public static func editedKey(fields: [String: String]) -> String? {
+        let plain = { (name: String) in CardTemplate.stripHTML(fields[name] ?? "").trimmingCharacters(in: .whitespacesAndNewlines) }
+        let word = plain("Mot")
+        guard !word.isEmpty else { return nil }
+        return key(expression: word, reading: plain("Lecture"))
+    }
+
     /// Premier champ non vide (titre de la carte dans les listes).
     public func title(fieldNames: [String]) -> String {
         for name in fieldNames {

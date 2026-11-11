@@ -68,6 +68,8 @@ struct LibraryView: View {
     @State private var folderNaming: FolderNaming?
     @State private var folderName = ""
     @State private var deletingFolder: LibraryFolder?
+    /// « Cartes de ce document » (PLAN-CARTES-001, E1).
+    @State private var cardsDocument: LibraryDocument?
 
     private var spaceDocuments: [LibraryDocument] {
         model.documents.filter { $0.isInMangaSpace == (space == .manga) }
@@ -347,6 +349,14 @@ struct LibraryView: View {
                 // incapable de présenter le lecteur (l'onglet s'ajoutait, le livre ne s'ouvrait pas). Fermé par
                 // « Fermer », tout allait bien : seule cette sortie reste, le modèle est déchargé par `onDisappear`.
                 .interactiveDismissDisabled()
+        }
+        .sheet(item: $cardsDocument) { document in
+            DocumentCardsView(document: document) {
+                // Export Anki : la feuille d'export existante, une fois celle-ci fermée.
+                cardsDocument = nil
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { exporting = document }
+            }
+            .environmentObject(model).environmentObject(model.review).preferredColorScheme(Theme.current.colorScheme)
         }
         .sheet(item: $exporting) { document in
             DocumentExportSheet(document: document)
@@ -1056,6 +1066,12 @@ struct LibraryView: View {
             Button {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { exporting = document }
             } label: { Label("Exporter…", systemImage: "square.and.arrow.up") }
+            // Mêmes documents que « Créer des cartes de cette page » (lecteur) : pas les CBZ.
+            if document.capabilities.pageEditing {
+                Button {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { cardsDocument = document }
+                } label: { Label("Cartes de ce document", systemImage: "rectangle.stack") }
+            }
         }
         Button(role: .destructive) {
             // Le menu d'appui long doit finir de se fermer, sinon iOS ignore la fenêtre de confirmation.

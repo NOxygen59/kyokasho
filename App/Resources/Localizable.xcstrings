@@ -1,6 +1,226 @@
 {
   "sourceLanguage": "fr",
   "strings": {
+    "Cartes de ce document": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cards of this document"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cartes de ce document"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此文档的卡片"
+          }
+        }
+      }
+    },
+    "Carte non enregistrée": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Card not saved"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carte non enregistrée"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "卡片未保存"
+          }
+        }
+      }
+    },
+    "Une autre carte existe déjà pour ce mot et cette lecture.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Another card already exists for this word and reading."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Une autre carte existe déjà pour ce mot et cette lecture."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已有另一张卡片使用此词语和读音。"
+          }
+        }
+      }
+    },
+    "À réviser aujourd'hui (nouvelles comprises)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To review today (new ones included)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "À réviser aujourd'hui (nouvelles comprises)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "今天需复习（含新卡片）"
+          }
+        }
+      }
+    },
+    "Aucune carte pour ce document. Dans le lecteur : menu « … » → Cette page → « Créer des cartes de cette page », ou ＋ dans la fiche d'un mot.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No cards for this document. In the reader: “…” menu → This page → “Create cards from this page”, or ＋ on a word's entry."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucune carte pour ce document. Dans le lecteur : menu « … » → Cette page → « Créer des cartes de cette page », ou ＋ dans la fiche d'un mot."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此文档还没有卡片。在阅读器中：“…”菜单 → 本页 →“从本页创建卡片”，或在词条中点 ＋。"
+          }
+        }
+      }
+    },
+    "Aucune carte ne correspond à la recherche.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No card matches the search."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucune carte ne correspond à la recherche."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没有符合搜索的卡片。"
+          }
+        }
+      }
+    },
+    "Sans page": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No page"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sans page"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无页码"
+          }
+        }
+      }
+    },
+    "Chercher dans les cartes de ce document": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search this document's cards"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chercher dans les cartes de ce document"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "搜索此文档的卡片"
+          }
+        }
+      }
+    },
+    "Cartes · %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cards · %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cartes · %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "卡片 · %@"
+          }
+        }
+      }
+    },
+    "Exporter en Anki": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export to Anki"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exporter en Anki"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导出到 Anki"
+          }
+        }
+      }
+    },
     "1 document": {
       "localizations": {
         "en": {

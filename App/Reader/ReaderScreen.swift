@@ -65,7 +65,7 @@ struct ReaderScreen: View {
     @Environment(\.scenePhase) private var scenePhase
 
     enum Sheet: String, Identifiable {
-        case search, ai, settings, pageCards, pageOrientation, lineEditor, gestureHelp
+        case search, ai, settings, pageCards, documentCards, pageOrientation, lineEditor, gestureHelp
         var id: String { rawValue }
     }
 
@@ -330,6 +330,8 @@ struct ReaderScreen: View {
                 case .lineEditor: OCRLineEditor(reader: reader)
                 case .gestureHelp: ReaderGestureHelpSheet(context: gestureHelpContext, close: { self.sheet = nil })
                 case .pageCards: PageCardsView(reader: reader)
+                // PLAN-CARTES-001, E1 : sans export ici (l'export se fait depuis l'accueil, livre fermé).
+                case .documentCards: DocumentCardsView(document: reader.document)
                 case .pageOrientation:
                     PageOrientationView(document: reader.document, selectedPage: reader.currentSourcePage,
                                         rotations: reader.pageRotations) {
@@ -593,6 +595,9 @@ struct ReaderScreen: View {
                     Menu {
                         Button { sheet = .pageCards } label: {
                             Label("Créer des cartes de cette page", systemImage: "rectangle.stack.badge.plus")
+                        }
+                        Button { sheet = .documentCards } label: {
+                            Label("Cartes de ce document", systemImage: "rectangle.stack")
                         }
                         Button { sheet = .pageOrientation } label: {
                             Label("Orientation des pages…", systemImage: "rotate.right")

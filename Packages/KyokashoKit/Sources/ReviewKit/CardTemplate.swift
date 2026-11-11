@@ -90,7 +90,7 @@ public struct CardTemplate: Sendable, Equatable {
         }
     }
 
-    static func stripHTML(_ s: String) -> String {
+    public static func stripHTML(_ s: String) -> String {
         guard s.contains("<") || s.contains("&") else { return s }
         var out = ""
         var inTag = false

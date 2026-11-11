@@ -144,6 +144,10 @@ public final class ReviewStore: @unchecked Sendable {
             try db.create(index: "reviewLog_card", on: "reviewLog", columns: ["cardId"])
             try db.create(index: "reviewLog_date", on: "reviewLog", columns: ["reviewedAt"])
         }
+        // PLAN-CARTES-001, E1 : écran « Cartes de ce document ». Index additif, aucune donnée touchée.
+        m.registerMigration("v2-card-source") { db in
+            try db.create(index: "card_source", on: "card", columns: ["sourceDocumentId", "sourcePage"])
+        }
         return m
     }
 
@@ -243,6 +247,48 @@ public final class ReviewStore: @unchecked Sendable {
         guard !keys.isEmpty else { return [] }
         return try writer.read { db in
             Set(try String.fetchAll(db, StudyCard.select(Column("key")).filter(keys.contains(Column("key")))))
+        }
+    }
+
+    /// Cartes créées depuis un document (PLAN-CARTES-001, E1), par page puis date de création, **sans limite** : l'écran
+    /// d'un livre doit les montrer toutes. `query` cherche dans les champs, comme le navigateur.
+    public func cards(sourceDocumentId: String, query: String = "") throws -> [StudyCard] {
+        try writer.read { db in
+            var request = StudyCard.filter(Column("sourceDocumentId") == sourceDocumentId)
+            let q = query.trimmingCharacters(in: .whitespaces)
+            if !q.isEmpty { request = request.filter(Column("fields").like("%\(q)%") || Column("key").like("%\(q)%")) }
+            return try request.order(Column("sourcePage"), Column("createdAt")).fetchAll(db)
+        }
+    }
+
+    /// Enregistre une carte modifiée à la main (PLAN-CARTES-001, DEC-CA-07 = A). Le mot ou la lecture peuvent changer :
+    /// la clé anti-doublon suit alors les champs « Mot » et « Lecture ». La planification FSRS, l'historique de
+    /// révision et le `guid` Anki ne sont **jamais** touchés (réexporter met à jour la même note Anki).
+    /// Refusé (`EditError.duplicate`) si une autre carte porte déjà la nouvelle clé : jamais deux cartes pour un mot.
+    @discardableResult
+    public func saveEdited(_ card: StudyCard) throws -> StudyCard {
+        try writer.write { db in
+            var c = card
+            // La clé ne bouge que si « Mot » ou « Lecture » ont été modifiés : à la création, elle vient du dictionnaire
+            // (lecture en kana), pas forcément du texte du champ ; corriger le sens ne doit jamais la changer.
+            let stored = try StudyCard.fetchOne(db, key: c.id)
+            let before = stored.flatMap { StudyCard.editedKey(fields: $0.fields) }
+            if let key = StudyCard.editedKey(fields: c.fields), key != before, key != c.key {
+                let other = try StudyCard.filter(Column("key") == key).fetchOne(db)
+                if let other, other.id != c.id { throw EditError.duplicate }
+                c.key = key
+            }
+            c.modifiedAt = Date()
+            try c.update(db)
+            return c
+        }
+    }
+
+    public enum EditError: LocalizedError, Equatable {
+        case duplicate
+
+        public var errorDescription: String? {
+            String(localized: "Une autre carte existe déjà pour ce mot et cette lecture.", bundle: .main)
         }
     }
 
