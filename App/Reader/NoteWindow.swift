@@ -22,6 +22,8 @@ struct NoteWindow: View {
     @GestureState private var resize: CGSize = .zero
     @State private var tool = NoteCanvas.Tool.pen(.black)
     @State private var fingerDraws = false
+    /// Réglages de rangement ouverts (PLAN-T4-001 E3, DEC-T4-09 A).
+    @State private var showSettings = false
 
     private static let minSize = CGSize(width: 260, height: 200)
 
@@ -78,6 +80,12 @@ struct NoteWindow: View {
             }
             .accessibilityLabel(fingerDraws ? String(localized: "Le doigt écrit du texte") : String(localized: "Dessiner au doigt ou à la souris"))
             anchorButton
+            Button { showSettings = true } label: { Image(systemName: "slider.horizontal.3").foregroundStyle(Atelier.textSecondary) }
+                .accessibilityLabel("Ranger la note (échéance, priorité, classeur, étiquettes, archive)")
+                .popover(isPresented: $showSettings) {
+                    NoteSettingsView(database: reader.model.database, noteId: note.id) { reader.model.refreshNotesToReview() }
+                        .frame(minWidth: 380, minHeight: 560)
+                }
             Button { reader.openNote = nil } label: { Image(systemName: "xmark").foregroundStyle(Atelier.textSecondary) }
                 .accessibilityLabel("Fermer la note")
         }

@@ -168,4 +168,23 @@ final class NoteOrganizationTests: XCTestCase {
         XCTAssertNoThrow(try db.renameNoteTag(id: a.id, to: "TEST S46"), "renommer en changeant la casse reste permis")
         XCTAssertEqual(try db.organizedNotes(includeArchived: true, excludingDocuments: ["d"]).count, 0)
     }
+
+    /// E3 : l'étiquette tapée dans « Ranger la note » réutilise celle qui existe (majuscules ignorées) ; une sélection
+    /// multiple refusée (classeur disparu) ne change aucune note.
+    func testTagTypedTwiceIsReusedAndARefusedBatchChangesNothing() throws {
+        let db = try database()
+        let first = try db.noteTag(named: "Test S46")
+        try db.apply(.addTag(first.id), to: ["n1"])
+        let again = try db.noteTag(named: "  test s46 ")
+        XCTAssertEqual(again.id, first.id)
+        try db.apply(.addTag(again.id), to: ["n1", "n2"])
+        XCTAssertEqual(try db.noteTags().count, 1)
+        XCTAssertEqual(try db.organization(noteId: "n2")?.tagIds, [first.id])
+
+        let folder = try db.createNoteFolder(name: "Matériaux")
+        try db.apply(.folder(folder.id), to: ["n1"])
+        XCTAssertThrowsError(try db.apply(.folder("disparu"), to: ["n1", "n2"]))
+        XCTAssertEqual(try db.organization(noteId: "n1")?.folderId, folder.id)
+        XCTAssertNil(try db.organization(noteId: "n2")?.folderId)
+    }
 }

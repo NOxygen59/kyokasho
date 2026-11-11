@@ -8,8 +8,11 @@ import SwiftUI
 ///
 /// Toutes les notes de tous les livres, groupées par échéance (En retard, Aujourd'hui, Cette semaine, Plus tard, Sans
 /// échéance), avec filtres (classeur, étiquette, priorité, livre, texte) et la vue « Archivées » (DEC-T4-D). Toucher une
-/// note ouvre son livre à sa page et fait clignoter son ancre. Les réglages d'une note (échéance, priorité, étiquettes,
-/// classeur, archive) arrivent à l'étape E3 : ici, lecture seulement.
+/// note ouvre son livre à sa page et fait clignoter son ancre.
+///
+/// Étape E3 (DEC-T4-09 A) : appui long sur une note → « Ranger… » (`NoteSettingsView`) ou archiver ; glisser vers la
+/// gauche → archiver / désarchiver ; « Choisir » → sélection multiple, puis échéance, priorité, classeur, étiquette ou
+/// archive pour toutes les notes choisies d'un coup (`AppDatabase.apply`, tout ou rien).
 ///
 /// Calcul pur testé : `NoteListing`. Lecture en base hors du fil principal, sans les dessins (`organizedNotes`).
 struct NotesView: View {
@@ -23,6 +26,14 @@ struct NotesView: View {
     @State private var tags: [NoteTag] = []
     @State private var filter = NoteListing.Filter()
     @State private var loaded = false
+    /// Sélection multiple (E3) : actif quand `selecting`.
+    @State private var selecting = false
+    @State private var selection = Set<String>()
+    /// Note dont on règle le rangement (feuille `NoteSettingsView`).
+    @State private var settingsFor: PageComment?
+    @State private var choosingDue = false
+    @State private var chosenDue = NoteSettingsView.defaultDue()
+    @State private var actionError: String?
 
     private var sections: [NoteListing.Section] {
         NoteListing.sections(notes, filter: filter, today: Date(),
@@ -37,7 +48,7 @@ struct NotesView: View {
 
     var body: some View {
         NavigationStack {
-            List {
+            List(selection: $selection) {
                 Section {
                     Picker("", selection: $filter.archived) {
                         Text("À faire").tag(false)
@@ -56,22 +67,39 @@ struct NotesView: View {
                 } else if loaded && sections.isEmpty {
                     Text(emptyText).foregroundStyle(Atelier.textSecondary)
                 }
+                if let actionError {
+                    Text(actionError).foregroundStyle(.red)
+                }
                 ForEach(sections, id: \.group) { section in
                     Section(Self.title(section.group)) {
                         ForEach(section.notes) { item in
-                            Button { open(item.note) } label: { row(item) }
-                                .buttonStyle(.plain)
+                            noteRow(item)
                         }
                     }
                 }
             }
+            .environment(\.editMode, .constant(selecting ? .active : .inactive))
             .searchable(text: $filter.text, prompt: String(localized: "Chercher dans les notes"))
             .navigationTitle("Notes")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) { Button("OK") { dismiss() } }
                 ToolbarItem(placement: .navigationBarLeading) { filterMenu }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(selecting ? String(localized: "Terminé") : String(localized: "Choisir")) {
+                        selecting.toggle()
+                        selection = []
+                    }
+                    .disabled(!selecting && notes.isEmpty)
+                }
+                ToolbarItemGroup(placement: .bottomBar) {
+                    if selecting { selectionBar }
+                }
             }
+            .sheet(item: $settingsFor, onDismiss: { Task { await reload() } }) { note in
+                NoteSettingsView(database: model.database, noteId: note.id) { model.refreshNotesToReview() }
+            }
+            .sheet(isPresented: $choosingDue) { dueSheet }
             .task { await reload() }
         }
     }
@@ -102,6 +130,103 @@ struct NotesView: View {
             }
         } label: {
             Label("Filtrer", systemImage: filter.isFiltered ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
+        }
+    }
+
+    /// Ligne : toucher ouvre la note (hors sélection) ; appui long et glissement pour la ranger (E3).
+    @ViewBuilder
+    private func noteRow(_ item: OrganizedNote) -> some View {
+        if selecting {
+            row(item).tag(item.id)
+        } else {
+            Button { open(item.note) } label: { row(item) }
+                .buttonStyle(.plain)
+                .contextMenu {
+                    Button { settingsFor = item.note } label: { Label("Ranger…", systemImage: "slider.horizontal.3") }
+                    archiveButton([item.id], archived: item.organization.archived)
+                }
+                .swipeActions(edge: .trailing) {
+                    archiveButton([item.id], archived: item.organization.archived).tint(Atelier.Tint.read)
+                }
+        }
+    }
+
+    private func archiveButton(_ ids: [String], archived: Bool) -> some View {
+        Button { apply(.archived(!archived), to: ids) } label: {
+            Label(archived ? String(localized: "Désarchiver") : String(localized: "Archiver"),
+                  systemImage: archived ? "tray.and.arrow.up" : "archivebox")
+        }
+    }
+
+    // MARK: Sélection multiple (E3)
+
+    /// Barre du bas : réglages appliqués à toutes les notes choisies.
+    @ViewBuilder
+    private var selectionBar: some View {
+        let ids = Array(selection)
+        Menu {
+            Button("Aujourd'hui") { apply(.due(NoteDay.string(Date())), to: ids) }
+            Button("Demain") { apply(.due(NoteDay.string(NoteDay.calendar.date(byAdding: .day, value: 1, to: Date()) ?? Date())), to: ids) }
+            Button("Dans 7 jours") { apply(.due(NoteDay.string(NoteSettingsView.defaultDue())), to: ids) }
+            Button("Choisir une date…") { choosingDue = true }
+            Button("Sans échéance", role: .destructive) { apply(.due(nil), to: ids) }
+        } label: { Label("Échéance", systemImage: "calendar") }
+        Menu {
+            ForEach(NotePriority.allCases.reversed(), id: \.self) { p in
+                Button(Self.title(p)) { apply(.priority(p), to: ids) }
+            }
+        } label: { Label("Priorité", systemImage: "exclamationmark.circle") }
+        Menu {
+            ForEach(folders) { f in Button(f.name) { apply(.folder(f.id), to: ids) } }
+            Button("Aucun classeur") { apply(.folder(nil), to: ids) }
+        } label: { Label("Classeur", systemImage: "folder") }
+        Menu {
+            Section("Ajouter") {
+                ForEach(tags) { t in Button("#" + t.name) { apply(.addTag(t.id), to: ids) } }
+            }
+            Section("Retirer") {
+                ForEach(tags) { t in Button("#" + t.name, role: .destructive) { apply(.removeTag(t.id), to: ids) } }
+            }
+        } label: { Label("Étiquette", systemImage: "tag") }
+        Spacer()
+        Text(String(localized: "\(selection.count) choisie(s)")).font(Atelier.font(13)).foregroundStyle(Atelier.textSecondary)
+        Spacer()
+        archiveButton(ids, archived: filter.archived)
+    }
+
+    private var dueSheet: some View {
+        NavigationStack {
+            DatePicker(String(localized: "Avant le"), selection: $chosenDue, displayedComponents: .date)
+                .datePickerStyle(.graphical)
+                .environment(\.calendar, NoteDay.calendar)
+                .padding()
+                .navigationTitle("Échéance")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) { Button("Annuler") { choosingDue = false } }
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Appliquer") {
+                            apply(.due(NoteDay.string(chosenDue)), to: Array(selection))
+                            choosingDue = false
+                        }
+                    }
+                }
+        }
+        .presentationDetents([.medium, .large])
+    }
+
+    /// Écrit hors du fil principal, puis relit l'écran et la pastille. Tout ou rien (une transaction).
+    private func apply(_ change: NoteChange, to ids: [String]) {
+        guard !ids.isEmpty else { return }
+        let database = model.database
+        Task {
+            let result = await Task.detached(priority: .userInitiated) { Result { try database.apply(change, to: ids) } }.value
+            if case .failure(let error) = result { actionError = error.localizedDescription } else { actionError = nil }
+            // Une note archivée ou désarchivée quitte la vue affichée : la sélection ne garde que ce qui reste visible.
+            await reload()
+            let visible = Set(sections.flatMap(\.notes).map(\.id))
+            selection.formIntersection(visible)
+            model.refreshNotesToReview()
         }
     }
 
