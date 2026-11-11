@@ -17,7 +17,7 @@ import Foundation
 /// - dictionnaire : bouton 辞 (`lookupMode`) puis toucher (`handleTap`) ; Maj + survol au curseur (`handleHover`) ;
 /// - surligneur : `ReaderController.handleHighlightPan` (bouton surligneur, appui long sur le bouton : couleur) ;
 ///   toucher un surlignage ouvre « Copier le texte / Supprimer » (`handleTap`, `ReaderScreen`) ;
-/// - dessin : bouton crayon (`ReaderController.setDrawing`), toile PencilKit (`InkOverlay`).
+/// - dessin : bouton crayon (`ReaderController.setDrawing`), toile PencilKit (`InkPageView`, fichier `InkOverlay.swift`).
 ///
 /// Rien n'est enregistré : la liste est recalculée à chaque ouverture d'après le document et ses réglages.
 public enum ReaderGestureHelp {

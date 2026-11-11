@@ -333,11 +333,20 @@ final class AppModel: ObservableObject {
 
     /// Efface pour de bon (le même effacement qu'avant la corbeille).
     func deleteForever(_ document: LibraryDocument) {
-        // BUG-003 : l'effacement peut être refusé (sauvegarde en cours, copies à réparer). Le document ne quitte la
-        // corbeille qu'une fois l'effacement lancé : sinon il revenait dans la bibliothèque sans avoir été restauré.
-        guard delete(document) else { return }
-        trash.remove(document.id)
-        saveTrash()
+        // BUG-003 : l'effacement peut être refusé (sauvegarde en cours, copies à réparer) : rien ne change alors.
+        // Revue DeepSeek D-07 (C1) : il peut aussi échouer plus tard, sur la file d'écriture. La marque de corbeille
+        // n'est donc retirée qu'une fois l'effacement réussi ; en échec, le document revient dans la liste de la
+        // corbeille avec sa date d'origine (délai de 30 jours intact), jamais dans la bibliothèque.
+        let started = delete(document) { [weak self] succeeded in
+            guard let self else { return }
+            if succeeded {
+                self.trash.remove(document.id)
+                self.saveTrash()
+            } else if !self.trashedDocuments.contains(where: { $0.id == document.id }) {
+                self.trashedDocuments.insert(document, at: 0)
+            }
+        }
+        guard started else { return }
         trashedDocuments.removeAll { $0.id == document.id }
     }
 
@@ -389,9 +398,11 @@ final class AppModel: ObservableObject {
         PrintedPageNumbers.set((try? database.printedNumbers()) ?? [:])
     }
 
-    /// Renvoie `false` si l'effacement est refusé avant d'avoir commencé (message dans `lastError`) : rien n'a changé.
+    /// Renvoie `false` si l'effacement est refusé avant d'avoir commencé (message dans `lastError`) : rien n'a changé,
+    /// et `finished` n'est pas appelé. Sinon `finished` est appelé une fois sur le fil principal, à la fin de
+    /// l'effacement : `true` s'il a réussi, `false` s'il a échoué (le document est alors encore dans la base).
     @discardableResult
-    func delete(_ document: LibraryDocument) -> Bool {
+    func delete(_ document: LibraryDocument, finished: ((Bool) -> Void)? = nil) -> Bool {
         guard !LibraryBackupService.inProgress else {
             lastError = String(localized: "Sauvegarde en cours : réessaie après sa fin.")
             return false
@@ -436,6 +447,7 @@ final class AppModel: ObservableObject {
                     // `Analysis/<id>.json` ni `Analysis/<id>/` une fois ses fichiers effacés.
                     await DocumentAnalysisService.shared.cancelAndFinish(documentId: document.id)
                     DocumentAnalysisService.shared.forget(document.id)
+                    finished?(true)
                 }
             } catch {
                 Task { @MainActor in
@@ -446,6 +458,7 @@ final class AppModel: ObservableObject {
                     // réapparaissaient dans la bibliothèque après un effacement en échec.
                     self.documents = ((try? self.database.allDocuments()) ?? self.documents)
                         .filter { !self.trash.contains($0.id) && !self.deletingIds.contains($0.id) }
+                    finished?(false)
                 }
             }
         }

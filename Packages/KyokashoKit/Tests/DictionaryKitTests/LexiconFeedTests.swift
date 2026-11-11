@@ -101,4 +101,25 @@ final class LexiconFeedTests: XCTestCase {
         XCTAssertEqual(kana.furigana.map(\.text), ["てんじょう"])
         XCTAssertEqual(kana.furigana.map(\.reading), [""])
     }
+
+    /// Revue DeepSeek D-07 (L1) : la liste ne garde que le premier sens court de chaque langue, jamais les définitions
+    /// entières, qui faisaient grandir la mémoire pendant un long défilement.
+    func testListKeepsOnlyTheShownSenseOfEachLanguage() throws {
+        let long = String(repeating: "définition très longue ", count: 200)
+        let senses = [
+            LexiconSense(dictionaryId: 1, dictionaryTitle: "fr", language: .french, short: "ciel", full: long),
+            LexiconSense(dictionaryId: 3, dictionaryTitle: "fr2", language: .french, short: "firmament", full: long),
+            LexiconSense(dictionaryId: 2, dictionaryTitle: "en", language: .english, short: "sky", full: long),
+        ]
+        let rich = LexiconWord(expression: "空", reading: "そら", sortReading: "そら", senses: senses)
+        var feed = LexiconFeed()
+        let start = try XCTUnwrap({ feed.reset(); return feed.beginLoading() }())
+        XCTAssertTrue(feed.accept(LexiconPage(words: [rich], next: nil), request: start.request))
+        let kept = try XCTUnwrap(feed.words.first)
+        XCTAssertEqual(kept.summary(.french), "ciel")
+        XCTAssertEqual(kept.summary(.english), "sky")
+        XCTAssertEqual(kept.senses.count, 2)
+        XCTAssertTrue(kept.senses.allSatisfy { $0.full == $0.short })
+        XCTAssertEqual(kept.id, rich.id)
+    }
 }

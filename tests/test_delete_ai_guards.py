@@ -27,7 +27,7 @@ class DeletionConcurrencyGuardsTests(unittest.TestCase):
 
     def test_document_deletion_cancels_ai_tasks_first(self):
         source = (ROOT / "App/AppModel.swift").read_text(encoding="utf-8")
-        body = body_of(source, "func delete(_ document: LibraryDocument)", "func closeTab(")
+        body = body_of(source, "func delete(_ document: LibraryDocument", "func closeTab(")
         cancel = body.index("AITaskCenter.shared.cancel(documentId:")
         self.assertLess(cancel, body.index("ioQueue.async"), "annulées avant le déclenchement de la suppression")
         self.assertLess(cancel, body.index("closeTab(document.id)"))
@@ -35,7 +35,7 @@ class DeletionConcurrencyGuardsTests(unittest.TestCase):
     def test_document_deletion_never_closes_ticket_with_ai_task_running(self):
         # L'annulation doit précéder le retrait du document de la bibliothèque.
         source = (ROOT / "App/AppModel.swift").read_text(encoding="utf-8")
-        body = body_of(source, "func delete(_ document: LibraryDocument)", "func closeTab(")
+        body = body_of(source, "func delete(_ document: LibraryDocument", "func closeTab(")
         cancel = body.index("AITaskCenter.shared.cancel(documentId:")
         self.assertLess(cancel, body.index("documents.removeAll"))
 
@@ -51,7 +51,7 @@ class DeletionConcurrencyGuardsTests(unittest.TestCase):
         # même prédicat de clé que cancel(documentId:) et PageShift.blocksAI
         self.assertLess(run.index("deletingDocumentIds"), run.index("let job = Job("))
         source = (ROOT / "App/AppModel.swift").read_text(encoding="utf-8")
-        body = body_of(source, "func delete(_ document: LibraryDocument)", "func closeTab(")
+        body = body_of(source, "func delete(_ document: LibraryDocument", "func closeTab(")
         begin = body.index("AITaskCenter.shared.beginDeletion(documentId: document.id)")
         self.assertLess(begin, body.index("deletingIds.insert(document.id)"), "refus posé avant le retrait de la liste")
         end = body.index("AITaskCenter.shared.endDeletion(documentId: document.id)")
@@ -65,7 +65,7 @@ class DeletionConcurrencyGuardsTests(unittest.TestCase):
         # avant l'effacement ; le `forget` attend la fin de la tâche, sinon une dernière lecture
         # recrée Analysis/<id>.json ou Analysis/<id>/ après leur suppression.
         source = (ROOT / "App/AppModel.swift").read_text(encoding="utf-8")
-        body = body_of(source, "func delete(_ document: LibraryDocument)", "func closeTab(")
+        body = body_of(source, "func delete(_ document: LibraryDocument", "func closeTab(")
         self.assertLess(body.index("DocumentAnalysisService.shared.cancel(documentId:"),
                         body.index("ioQueue.async"), "arrêt demandé avant l'effacement des fichiers")
         cancel = body.index("await DocumentAnalysisService.shared.cancelAndFinish(documentId: document.id)")

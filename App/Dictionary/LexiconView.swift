@@ -68,7 +68,10 @@ struct LexiconView: View {
         .background { GridBackground() }
         // Première page, puis relecture complète dès que la liste des dictionnaires consultés change (activation,
         // installation ou mise à jour finie, langue du lexique fourni). La tâche précédente est annulée par SwiftUI.
-        .task(id: reloadKey + "\u{1}" + LexiconFeed.cleanPrefix(query)) {
+        .task(id: reloadKey + "\u{1}" + LexiconFeed.cleanPrefix(query) + (savedOnly ? "\u{1}mes-mots" : "")) {
+            // « Mes mots » affiche `savedWords` : relire le lexique complet à chaque lettre ne servait à rien (revue
+            // DeepSeek D-07, L3). La liste complète repart du début quand le filtre s'éteint (clé de la tâche).
+            guard !savedOnly else { return }
             // Frappe en cours : on attend un court instant avant de relire (la tâche est annulée à la lettre suivante).
             // La liste affichée reste en place pendant l'attente, puis repart du début pour la nouvelle recherche.
             if LexiconFeed.cleanPrefix(query) != feed.prefix {

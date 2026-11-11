@@ -31,7 +31,11 @@ class PartialAITextNotKeptTests(unittest.TestCase):
                 if WRITE not in line or "static func" in line:
                     continue
                 found += 1
-                before = "\n".join(lines[max(0, index - 8):index])
+                window = lines[max(0, index - 8):index]
+                # Revue DeepSeek D-07 (C3) : le contrôle doit suivre la **dernière** attente (la génération) ; un
+                # contrôle placé avant elle ne prouve rien, la génération peut encore rendre un texte partiel.
+                awaits = [i for i, text in enumerate(window) if "await " in text]
+                before = "\n".join(window[awaits[-1] + 1:] if awaits else window)
                 self.assertTrue(any(check in before for check in CHECKS),
                                 f"{path.relative_to(ROOT)}:{index + 1} écrit un texte d'IA sans contrôle d'annulation")
         self.assertGreaterEqual(found, 6, "les six écritures connues sont toujours contrôlées")

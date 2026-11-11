@@ -64,7 +64,7 @@ public struct LexiconFeed: Equatable, Sendable {
     public mutating func accept(_ page: LexiconPage, request: Int) -> Bool {
         guard request == self.request else { return false }
         isLoading = false
-        for word in page.words where shown.insert(word.id).inserted { words.append(word) }
+        for word in page.words where shown.insert(word.id).inserted { words.append(word.forList) }
         next = page.next
         reachedEnd = page.next == nil
         return true
@@ -85,6 +85,20 @@ public struct LexiconFeed: Equatable, Sendable {
 }
 
 extension LexiconWord {
+    /// Ce que la liste garde d'un mot (revue DeepSeek D-07 du 11/11, L1) : le premier sens court de chaque langue,
+    /// seul affiché (`summary`). La liste accumule tous les mots lus pendant le défilement ; garder chaque sens avec sa
+    /// définition entière faisait grandir la mémoire sans limite pour du texte jamais montré. La fiche d'un mot relit
+    /// le dictionnaire : elle ne dépend pas de ces sens. Dans la copie gardée, `full` vaut `short`.
+    var forList: LexiconWord {
+        var kept: [LexiconSense] = []
+        for language in LexiconLanguage.allCases {
+            guard let sense = senses.first(where: { $0.language == language && !$0.short.isEmpty }) else { continue }
+            kept.append(LexiconSense(dictionaryId: sense.dictionaryId, dictionaryTitle: sense.dictionaryTitle,
+                                     language: sense.language, short: sense.short, full: sense.short))
+        }
+        return LexiconWord(expression: expression, reading: reading, sortReading: sortReading, senses: kept)
+    }
+
     /// Le mot commence-t-il par `prefix` ? Même règle que la recherche paginée (`DictionaryDatabase.lexiconPage`) :
     /// en kana, comparé à la lecture ; sinon à la forme écrite. Sert à filtrer la courte liste « Mes mots » sans relire
     /// la base. Préfixe vide : toujours vrai.

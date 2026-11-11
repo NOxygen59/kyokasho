@@ -45,7 +45,7 @@ class CancelAndFinishBoundedToDocumentTests(unittest.TestCase):
     def test_app_model_still_forgets_after_the_task_ends(self):
         # La garantie utilisateur de P2 n°3 reste : `forget` après `cancelAndFinish`, pas avant.
         source = (ROOT / "App/AppModel.swift").read_text(encoding="utf-8")
-        body = body_of(source, "func delete(_ document: LibraryDocument)", "func closeTab(")
+        body = body_of(source, "func delete(_ document: LibraryDocument", "func closeTab(")
         self.assertIn("await DocumentAnalysisService.shared.cancelAndFinish(documentId: document.id)", body)
         self.assertLess(body.index("await DocumentAnalysisService.shared.cancelAndFinish(documentId: document.id)"),
                         body.index("DocumentAnalysisService.shared.forget(document.id)"))

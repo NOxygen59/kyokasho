@@ -52,29 +52,39 @@ struct BrightnessReminderBanner: View {
             }
         }
         .animation(.easeOut(duration: 0.2), value: percent != nil)
-        .onAppear(perform: refresh)
+        .onAppear { refresh() }
         .onChange(of: scenePhase) { if $0 == .active { refresh() } }
         .onChange(of: enabled) { _ in refresh() }
         .onReceive(NotificationCenter.default.publisher(for: UIScreen.brightnessDidChangeNotification)) { _ in refresh() }
-        .onReceive(NotificationCenter.default.publisher(for: UIDevice.batteryStateDidChangeNotification)) { _ in refresh() }
+        // Notification de batterie : l'état est lu tel quel, sans rallumer la surveillance (revue DeepSeek D-07, B1 :
+        // allumer puis éteindre la surveillance depuis cette notification pouvait en relancer une autre, en boucle).
+        .onReceive(NotificationCenter.default.publisher(for: UIDevice.batteryStateDidChangeNotification)) { _ in
+            refresh(batteryState: UIDevice.current.batteryState)
+        }
     }
 
-    private func refresh() {
+    /// `batteryState` : état déjà connu (notification) ; `nil` : à lire, en allumant brièvement la surveillance.
+    private func refresh(batteryState: UIDevice.BatteryState? = nil) {
         let brightness = Double(UIScreen.main.brightness)
-        let show = BrightnessReminder.shouldShow(brightness: brightness, onBattery: Self.onBattery(), enabled: enabled,
-                                                 dismissed: Self.dismissedThisLaunch)
-        percent = show ? BrightnessReminder.percent(brightness) : nil
+        // Conditions gratuites d'abord : la batterie n'est lue que si le rappel peut vraiment s'afficher.
+        guard BrightnessReminder.shouldShow(brightness: brightness, onBattery: true, enabled: enabled,
+                                            dismissed: Self.dismissedThisLaunch) else {
+            percent = nil
+            return
+        }
+        let unplugged = (batteryState ?? Self.batteryState()) == .unplugged
+        percent = unplugged ? BrightnessReminder.percent(brightness) : nil
     }
 
-    /// Débranché ? La surveillance de la batterie n'est allumée que le temps de la lecture quand le relevé de batterie
+    /// État de la batterie. La surveillance de la batterie n'est allumée que le temps de la lecture quand le relevé de batterie
     /// est éteint, comme `Diagnostics.batteryPercent` : elle coûte des notifications périodiques.
-    private static func onBattery() -> Bool {
+    private static func batteryState() -> UIDevice.BatteryState {
         let device = UIDevice.current
         let wasEnabled = device.isBatteryMonitoringEnabled
         if !wasEnabled { device.isBatteryMonitoringEnabled = true }
-        let unplugged = device.batteryState == .unplugged
+        let state = device.batteryState
         if !wasEnabled { device.isBatteryMonitoringEnabled = UserDefaults.standard.bool(forKey: EnergyMeter.enabledKey) }
-        return unplugged
+        return state
     }
     #endif
 }
