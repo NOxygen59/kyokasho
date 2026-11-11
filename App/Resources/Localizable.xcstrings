@@ -1,6 +1,512 @@
 {
   "sourceLanguage": "fr",
   "strings": {
+    "Lexique, aide des gestes et correctifs de la recette 1.5.5": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lexicon, gesture help and fixes from the 1.5.5 test"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lexique, aide des gestes et correctifs de la recette 1.5.5"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "词汇表、手势帮助及 1.5.5 测试的修复"
+          }
+        }
+      }
+    },
+    "Lexique : tous les mots des dictionnaires actifs, page par page, avec lecture et sens ; recherche par début de mot et fiche du mot.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lexicon: every word of the active dictionaries, page by page, with reading and meaning; search by the start of a word and word card."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lexique : tous les mots des dictionnaires actifs, page par page, avec lecture et sens ; recherche par début de mot et fiche du mot."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "词汇表：已启用词典中的所有词，逐页显示读音和释义；可按词首搜索并查看词条。"
+          }
+        }
+      }
+    },
+    "Lexique : une étoile garde le mot, « + carte » crée sa carte de révision, et « Mes mots » ne montre que les mots gardés.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lexicon: a star saves the word, “+ card” creates its review card, and “My words” shows only saved words."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lexique : une étoile garde le mot, « + carte » crée sa carte de révision, et « Mes mots » ne montre que les mots gardés."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "词汇表：星标可收藏词语，“+ 卡片”创建复习卡片，“我的词语”只显示已收藏的词。"
+          }
+        }
+      }
+    },
+    "Lecteur : menu « … » → « Aide : gestes de lecture » explique les gestes de ce document.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reader: “…” menu → “Help: reading gestures” explains the gestures for this document."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lecteur : menu « … » → « Aide : gestes de lecture » explique les gestes de ce document."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "阅读器：“…”菜单 →“帮助：阅读手势”说明此文档的手势。"
+          }
+        }
+      }
+    },
+    "Lecteur sur batterie : un rappel s'affiche quand la luminosité dépasse 90 % (la batterie descend presque trois fois plus vite).": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reader on battery: a reminder appears when brightness is above 90% (the battery drains almost three times faster)."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lecteur sur batterie : un rappel s'affiche quand la luminosité dépasse 90 % (la batterie descend presque trois fois plus vite)."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用电池阅读时：亮度超过 90% 会显示提醒（电量下降速度几乎快三倍）。"
+          }
+        }
+      }
+    },
+    "Dessin au Pencil en page simple avec glissement : il marche dès l'ouverture du document, sans devoir tourner une page.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pencil drawing in single page with slide: it works as soon as the document opens, without turning a page first."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dessin au Pencil en page simple avec glissement : il marche dès l'ouverture du document, sans devoir tourner une page."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "单页滑动模式下的 Pencil 绘图：打开文档后即可使用，无需先翻页。"
+          }
+        }
+      }
+    },
+    "Chat du livre ouvert depuis l'accueil : il se ferme avec « Fermer », et le livre s'ouvre ensuite normalement.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Book chat opened from the home screen: it closes with “Close”, and the book then opens normally."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chat du livre ouvert depuis l'accueil : il se ferme avec « Fermer », et le livre s'ouvre ensuite normalement."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从主页打开的书籍聊天：用“关闭”关闭后，书籍可以正常打开。"
+          }
+        }
+      }
+    },
+    "Création de cartes : la liste des termes défile jusqu'au dernier.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Card creation: the term list scrolls to the last one."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Création de cartes : la liste des termes défile jusqu'au dernier."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "创建卡片：术语列表可以滚动到最后一项。"
+          }
+        }
+      }
+    },
+    "La fenêtre « Nouveautés » s'affiche de nouveau après une mise à jour.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The “What's new” window shows again after an update."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La fenêtre « Nouveautés » s'affiche de nouveau après une mise à jour."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更新后会再次显示“新功能”窗口。"
+          }
+        }
+      }
+    },
+    "« Arrêter » une analyse ou une traduction ne laisse plus un texte coupé compté comme page lue.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“Stop” on an analysis or translation no longer keeps a cut-off text counted as a read page."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "« Arrêter » une analyse ou une traduction ne laisse plus un texte coupé compté comme page lue."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“停止”分析或翻译后，不再把截断的文本算作已读页面。"
+          }
+        }
+      }
+    },
+    "« Supprimer définitivement » refusé pendant une sauvegarde : le document reste dans la corbeille.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“Delete permanently” refused during a backup: the document stays in the trash."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "« Supprimer définitivement » refusé pendant une sauvegarde : le document reste dans la corbeille."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "备份期间拒绝“永久删除”时，文档会留在废纸篓中。"
+          }
+        }
+      }
+    },
+    "Un effacement en échec ne fait plus réapparaître toute la corbeille dans la bibliothèque.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A failed deletion no longer brings the whole trash back into the library."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un effacement en échec ne fait plus réapparaître toute la corbeille dans la bibliothèque."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除失败时，废纸篓中的文档不再全部重新出现在书库中。"
+          }
+        }
+      }
+    },
+    "Une note ou une carte d'une page qui n'existe plus ne ferme plus l'app.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A note or card on a page that no longer exists no longer closes the app."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Une note ou une carte d'une page qui n'existe plus ne ferme plus l'app."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "指向已不存在页面的笔记或卡片不再导致应用退出。"
+          }
+        }
+      }
+    },
+    "Relevé de batterie : le résumé reste lisible après une coupe du fichier, et une charge termine bien une session.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Battery log: the summary stays readable after the file is trimmed, and charging properly ends a session."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Relevé de batterie : le résumé reste lisible après une coupe du fichier, et une charge termine bien une session."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "电池记录：文件裁剪后摘要仍可读取，充电会正确结束一次会话。"
+          }
+        }
+      }
+    },
+    "Pencil, chat du livre, navigateur et mises à jour Drive plus sûres": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pencil, book chat, browser and safer Drive updates"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pencil, chat du livre, navigateur et mises à jour Drive plus sûres"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pencil、书籍聊天、浏览器及更安全的 Drive 更新"
+          }
+        }
+      }
+    },
+    "Chat du livre : il répond aussi aux questions générales, en le signalant, et liste les pages citées.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Book chat: it also answers general questions, saying so, and lists the pages it cites."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chat du livre : il répond aussi aux questions générales, en le signalant, et liste les pages citées."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "书籍聊天：也会回答一般性问题并加以说明，同时列出引用的页面。"
+          }
+        }
+      }
+    },
+    "Navigateur intégré : la connexion Google s'ouvre dans une vraie fenêtre ; la barre d'adresse cherche avec Brave.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Built-in browser: Google sign-in opens in a real window; the address bar searches with Brave."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Navigateur intégré : la connexion Google s'ouvre dans une vraie fenêtre ; la barre d'adresse cherche avec Brave."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "内置浏览器：Google 登录在真正的窗口中打开；地址栏使用 Brave 搜索。"
+          }
+        }
+      }
+    },
+    "Lexique du design d'intérieur : les termes des pages 131 à 275 du manuel, en français et en anglais.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Interior design lexicon: the terms from pages 131 to 275 of the textbook, in French and English."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lexique du design d'intérieur : les termes des pages 131 à 275 du manuel, en français et en anglais."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "室内设计词汇表：教材第 131 至 275 页的术语，含法语和英语。"
+          }
+        }
+      }
+    },
+    "Diagnostic : relevé de batterie avec luminosité et sessions, journal plus lisible, bannière de taille.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diagnostics: battery log with brightness and sessions, clearer log, size banner."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diagnostic : relevé de batterie avec luminosité et sessions, journal plus lisible, bannière de taille."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "诊断：包含亮度和会话的电池记录、更易读的日志、大小横幅。"
+          }
+        }
+      }
+    },
+    "Dessin au Pencil en page simple avec glissement : écrire ne tourne plus la page (complété en 1.5.6).": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pencil drawing in single page with slide: writing no longer turns the page (completed in 1.5.6)."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dessin au Pencil en page simple avec glissement : écrire ne tourne plus la page (complété en 1.5.6)."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "单页滑动模式下的 Pencil 绘图：书写不再翻页（在 1.5.6 中完善）。"
+          }
+        }
+      }
+    },
+    "Lectures OvisOCR2 : 62 formes chinoises de plus remplacées par le japonais.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OvisOCR2 readings: 62 more Chinese forms replaced with Japanese."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lectures OvisOCR2 : 62 formes chinoises de plus remplacées par le japonais."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OvisOCR2 识别结果：又有 62 个中文字形被替换为日文。"
+          }
+        }
+      }
+    },
+    "Mise à jour d'un cours Drive : corrections, cartes, lectures IA et réglages suivent le nouveau fichier.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Updating a Drive course: corrections, cards, AI readings and settings follow the new file."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mise à jour d'un cours Drive : corrections, cartes, lectures IA et réglages suivent le nouveau fichier."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更新 Drive 课程时：更正、卡片、AI 识别结果和设置会跟随新文件。"
+          }
+        }
+      }
+    },
+    "Onglets ouverts, traductions et cartes suivent mieux le texte corrigé de la page.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open tabs, translations and cards better follow the page's corrected text."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Onglets ouverts, traductions et cartes suivent mieux le texte corrigé de la page."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已打开的标签页、翻译和卡片能更好地跟随页面的更正文本。"
+          }
+        }
+      }
+    },
     "Luminosité à %lld %% : la batterie descend plus vite.": {
       "localizations": {
         "en": {

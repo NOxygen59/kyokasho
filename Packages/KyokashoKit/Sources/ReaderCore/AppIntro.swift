@@ -101,16 +101,21 @@ public struct ReleaseNotes: Equatable, Sendable, Identifiable {
 
     /// La version en cours de préparation : seulement ce qu'elle change (décision de NOxygen59 du 04/11/2026). C'est
     /// elle que montre la fenêtre « Nouveautés » ; les versions précédentes vont dans `ReleaseHistory`.
-    public static let current = ReleaseNotes("1.5.4", "2026-11-09", published: false, String(localized: "Panneau Texte plus clair et bouton Copier", bundle: .main), added: [
-            String(localized: "Panneau Texte : un bouton « Copier » en bas à droite copie le texte affiché, y compris la mise en page IA et sa traduction.", bundle: .main),
-            String(localized: "Traduction DeepL : un petit bouton copie seulement la traduction.", bundle: .main),
-            String(localized: "Panneau Texte : une note dit quand le texte affiché ne vient pas du moteur choisi, ou qu'un moteur choisi ne vaut que pour la page.", bundle: .main),
+    public static let current = ReleaseNotes("1.5.6", "2026-11-11", published: false, String(localized: "Lexique, aide des gestes et correctifs de la recette 1.5.5", bundle: .main), added: [
+            String(localized: "Lexique : tous les mots des dictionnaires actifs, page par page, avec lecture et sens ; recherche par début de mot et fiche du mot.", bundle: .main),
+            String(localized: "Lexique : une étoile garde le mot, « + carte » crée sa carte de révision, et « Mes mots » ne montre que les mots gardés.", bundle: .main),
+            String(localized: "Lecteur : menu « … » → « Aide : gestes de lecture » explique les gestes de ce document.", bundle: .main),
+            String(localized: "Lecteur sur batterie : un rappel s'affiche quand la luminosité dépasse 90 % (la batterie descend presque trois fois plus vite).", bundle: .main),
         ], fixed: [
-            String(localized: "Panneau Texte : le bouton du moteur montre l'icône et le nom du moteur qui a lu le texte, et un crayon s'il est corrigé à la main.", bundle: .main),
-            String(localized: "Panneau Texte : l'en-tête tient sur une ligne quand la place suffit, sinon sur deux, au lieu d'être écrasé.", bundle: .main),
-            String(localized: "Panneau Texte : le menu range OvisOCR2 en tête, puis les moteurs, les actions et « Pagination et réglages de ce document ».", bundle: .main),
-            String(localized: "Menu des moteurs : GLM-OCR a sa propre icône.", bundle: .main),
-            String(localized: "VoiceOver annonce le moteur du texte, sa correction et l'écart avec le choix.", bundle: .main),
+            String(localized: "Dessin au Pencil en page simple avec glissement : il marche dès l'ouverture du document, sans devoir tourner une page.", bundle: .main),
+            String(localized: "Chat du livre ouvert depuis l'accueil : il se ferme avec « Fermer », et le livre s'ouvre ensuite normalement.", bundle: .main),
+            String(localized: "Création de cartes : la liste des termes défile jusqu'au dernier.", bundle: .main),
+            String(localized: "La fenêtre « Nouveautés » s'affiche de nouveau après une mise à jour.", bundle: .main),
+            String(localized: "« Arrêter » une analyse ou une traduction ne laisse plus un texte coupé compté comme page lue.", bundle: .main),
+            String(localized: "« Supprimer définitivement » refusé pendant une sauvegarde : le document reste dans la corbeille.", bundle: .main),
+            String(localized: "Un effacement en échec ne fait plus réapparaître toute la corbeille dans la bibliothèque.", bundle: .main),
+            String(localized: "Une note ou une carte d'une page qui n'existe plus ne ferme plus l'app.", bundle: .main),
+            String(localized: "Relevé de batterie : le résumé reste lisible après une coupe du fichier, et une charge termine bien une session.", bundle: .main),
         ])
 
     /// Notes de `version` (« 1.3.2 », sans le numéro de build) : la version elle-même, jamais une build de test.

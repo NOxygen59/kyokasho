@@ -10,6 +10,28 @@ import Foundation
 enum ReleaseHistory {
     static let past: [ReleaseNotes] = [
         // Candidates locales non publiées.
+        ReleaseNotes("1.5.5", "2026-11-10", published: false, String(localized: "Pencil, chat du livre, navigateur et mises à jour Drive plus sûres", bundle: .main), added: [
+            String(localized: "Chat du livre : il répond aussi aux questions générales, en le signalant, et liste les pages citées.", bundle: .main),
+            String(localized: "Navigateur intégré : la connexion Google s'ouvre dans une vraie fenêtre ; la barre d'adresse cherche avec Brave.", bundle: .main),
+            String(localized: "Lexique du design d'intérieur : les termes des pages 131 à 275 du manuel, en français et en anglais.", bundle: .main),
+            String(localized: "Diagnostic : relevé de batterie avec luminosité et sessions, journal plus lisible, bannière de taille.", bundle: .main),
+        ], fixed: [
+            String(localized: "Dessin au Pencil en page simple avec glissement : écrire ne tourne plus la page (complété en 1.5.6).", bundle: .main),
+            String(localized: "Lectures OvisOCR2 : 62 formes chinoises de plus remplacées par le japonais.", bundle: .main),
+            String(localized: "Mise à jour d'un cours Drive : corrections, cartes, lectures IA et réglages suivent le nouveau fichier.", bundle: .main),
+            String(localized: "Onglets ouverts, traductions et cartes suivent mieux le texte corrigé de la page.", bundle: .main),
+        ]),
+        ReleaseNotes("1.5.4", "2026-11-09", published: false, String(localized: "Panneau Texte plus clair et bouton Copier", bundle: .main), added: [
+            String(localized: "Panneau Texte : un bouton « Copier » en bas à droite copie le texte affiché, y compris la mise en page IA et sa traduction.", bundle: .main),
+            String(localized: "Traduction DeepL : un petit bouton copie seulement la traduction.", bundle: .main),
+            String(localized: "Panneau Texte : une note dit quand le texte affiché ne vient pas du moteur choisi, ou qu'un moteur choisi ne vaut que pour la page.", bundle: .main),
+        ], fixed: [
+            String(localized: "Panneau Texte : le bouton du moteur montre l'icône et le nom du moteur qui a lu le texte, et un crayon s'il est corrigé à la main.", bundle: .main),
+            String(localized: "Panneau Texte : l'en-tête tient sur une ligne quand la place suffit, sinon sur deux, au lieu d'être écrasé.", bundle: .main),
+            String(localized: "Panneau Texte : le menu range OvisOCR2 en tête, puis les moteurs, les actions et « Pagination et réglages de ce document ».", bundle: .main),
+            String(localized: "Menu des moteurs : GLM-OCR a sa propre icône.", bundle: .main),
+            String(localized: "VoiceOver annonce le moteur du texte, sa correction et l'écart avec le choix.", bundle: .main),
+        ]),
         ReleaseNotes("1.5.3", "2026-11-08", published: false, String(localized: "Zoom page unique, OCR plus fiable et accueil Manga", bundle: .main), added: [
             String(localized: "Page unique avec glissement : le double toucher zoome avec une animation, un second ramène la page entière.", bundle: .main),
             String(localized: "Accueil Manga : une section Manga puis une section CBZ.", bundle: .main),

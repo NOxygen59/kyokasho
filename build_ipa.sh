@@ -13,6 +13,14 @@ ROOT="$(cd -- "$(dirname -- "$0")" && pwd)"
 cd "$ROOT"
 
 VERSION="$(grep -m1 'MARKETING_VERSION' project.yml | sed -E 's/.*"([^"]+)".*/\1/')"
+# Recette 1.5.5 : la candidate est partie sans ses notes, et la fenêtre « Nouveautés » ne s'est pas affichée.
+# On refuse donc de construire un paquet dont la version n'est pas celle de `ReleaseNotes.current`.
+NOTES="$(grep -m1 'public static let current = ReleaseNotes(' Packages/KyokashoKit/Sources/ReaderCore/AppIntro.swift \
+  | sed -E 's/.*ReleaseNotes\("([^"]+)".*/\1/')"
+if [[ "$NOTES" != "$VERSION" ]]; then
+  print -u2 "Notes de version absentes : ReleaseNotes.current est $NOTES, la version est $VERSION (AppIntro.swift)."
+  exit 1
+fi
 BUILD="$ROOT/build/ipa"
 ARCHIVE="$BUILD/Kyokasho.xcarchive"
 OUT="$ROOT/dist/Kyokasho-$VERSION.tipa"
