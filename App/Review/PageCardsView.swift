@@ -2,18 +2,44 @@
 // Copyright (c) 2026 NOxygen59
 
 import DictionaryKit
+import MorphologyKit
 import OCRKit
+import ReviewKit
 import ReaderCore
 import SwiftUI
 
 /// La page est figée à l'ouverture, même en double page : celle choisie dans le panneau d'étude.
+///
+/// PLAN-CARTES-001, étape E2 (plan approuvé par NOxygen59 le 11/11/2026, DEC-CA-02, 03 et 06 = A) : deux sections.
+/// « Lexique du cours » : termes du lexique trouvés sur la page, cochés. « Autres mots » : tous les autres mots de la
+/// page découpés par MeCab/UniDic (`PageWordCandidates`, mots grammaticaux retirés) et **trouvés dans les
+/// dictionnaires actifs**, décochés, dans l'ordre de la page. Un mot qui a déjà sa carte est signalé (« déjà en
+/// carte », « … (autre livre) ») et décoché ; l'ajout reste le même chemin (`addPageCards`, anti-doublon dans la
+/// transaction). Sans analyseur ou sans dictionnaire : le lexique seul, avec un message qui dit quoi installer.
+/// Découpage et recherches hors du fil principal, arrêtés si l'écran se ferme ; durée notée dans le Diagnostic
+/// (objectif < 2 s sur une page dense, à mesurer sur l'iPad).
 struct PageCardsView: View {
+    /// Un mot proposé (lexique ou dictionnaire), modifiable avant l'ajout.
+    struct PageWord: Identifiable, Equatable {
+        let id = UUID()
+        var term: String
+        /// Forme telle qu'écrite sur la page (phrase d'exemple d'un mot conjugué).
+        var surface: String
+        var reading: String
+        var meaning: String
+        let fromLexicon: Bool
+        /// Carte déjà créée pour ce mot : document d'où elle vient (`""` : aucun) ; `nil` : pas encore de carte.
+        var existingDocumentId: String?
+    }
+
     private let reader: ReaderController
     private let document: LibraryDocument
     @State private var page: Int
     @EnvironmentObject private var review: ReviewModel
     @Environment(\.dismiss) private var dismiss
-    @State private var entries: [DomainLexicon.Entry] = []
+    @State private var entries: [PageWord] = []
+    /// Pourquoi « Autres mots » est vide ou absent (analyseur ou dictionnaire manquant).
+    @State private var otherWordsNote: String?
     @State private var selected: Set<UUID> = []
     @State private var text = ""
     @State private var loading = true
@@ -29,7 +55,7 @@ struct PageCardsView: View {
         _page = State(initialValue: reader.focusSource)
     }
 
-    private var chosen: [DomainLexicon.Entry] {
+    private var chosen: [PageWord] {
         entries.filter { selected.contains($0.id) && !$0.reading.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && !$0.meaning.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
     }
@@ -43,21 +69,14 @@ struct PageCardsView: View {
                         .font(.footnote).foregroundStyle(.secondary)
                 }
                 if loading {
-                    ProgressView("Recherche des termes de la page…")
+                    ProgressView("Recherche des mots de la page…")
                 } else if entries.isEmpty, error == nil {
-                    Text("Aucun terme du lexique trouvé sur cette page. Tu peux enrichir le lexique dans Réglages → Japonais.")
+                    Text("Aucun mot à proposer sur cette page.")
                 }
-                ForEach($entries) { $entry in
-                    Section {
-                        Toggle(entry.term, isOn: Binding(get: { selected.contains(entry.id) }, set: { on in
-                            if on { selected.insert(entry.id) } else { selected.remove(entry.id) }
-                        }))
-                        TextField("Lecture en kana (à renseigner)", text: $entry.reading)
-                        TextField("Sens en français", text: $entry.meaning, axis: .vertical)
-                    }
-                    // Recette 1.5.5 (5.8) : seuls les champs sont figés pendant et après l'ajout ; figer tout le
-                    // formulaire bloquait aussi son défilement (on ne voyait plus les termes du bas).
-                    .disabled(saving || message != nil)
+                if !loading {
+                    wordSection(lexicon: true)
+                    wordSection(lexicon: false)
+                    if let otherWordsNote { Text(otherWordsNote).font(.footnote).foregroundStyle(.secondary) }
                 }
                 if !entries.isEmpty {
                     Text("Une lecture et un sens sont nécessaires. Les corrections ici s'appliquent seulement aux cartes créées.")
@@ -78,6 +97,64 @@ struct PageCardsView: View {
             .interactiveDismissDisabled(saving)
             .task { await load() }
         }
+    }
+
+    /// Une section de mots. Mot coché : lecture et sens modifiables ; décoché : une ligne (liste légère, même longue).
+    @ViewBuilder
+    private func wordSection(lexicon: Bool) -> some View {
+        let ids = entries.filter { $0.fromLexicon == lexicon }.map(\.id)
+        if !ids.isEmpty {
+            Section {
+                ForEach($entries) { $entry in
+                    if entry.fromLexicon == lexicon { wordRow($entry) }
+                }
+            } header: {
+                HStack {
+                    Text(lexicon ? String(localized: "Lexique du cours (\(ids.count))") : String(localized: "Autres mots (\(ids.count))"))
+                    Spacer()
+                    let allOn = ids.allSatisfy(selected.contains)
+                    Button(allOn ? String(localized: "Tout décocher") : String(localized: "Tout cocher")) {
+                        if allOn { selected.subtract(ids) } else { selected.formUnion(ids) }
+                    }
+                    .font(.caption.bold())
+                    .disabled(saving || message != nil)
+                }
+            }
+        }
+    }
+
+    private func wordRow(_ entry: Binding<PageWord>) -> some View {
+        let word = entry.wrappedValue
+        let on = selected.contains(word.id)
+        return VStack(alignment: .leading, spacing: 6) {
+            Toggle(isOn: Binding(get: { on }, set: { value in
+                if value { selected.insert(word.id) } else { selected.remove(word.id) }
+            })) {
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 6) {
+                        Text(verbatim: word.term).font(.body.bold())
+                        if !on, !word.reading.isEmpty, word.reading != word.term {
+                            Text(verbatim: word.reading).font(.callout).foregroundStyle(.secondary)
+                        }
+                    }
+                    if !on, !word.meaning.isEmpty {
+                        Text(verbatim: word.meaning).font(.footnote).foregroundStyle(.secondary).lineLimit(2)
+                    }
+                    if let other = word.existingDocumentId {
+                        Text(other.isEmpty || other == document.id ? String(localized: "Déjà en carte")
+                             : String(localized: "Déjà en carte (autre livre)"))
+                            .font(.caption.bold()).foregroundStyle(.orange)
+                    }
+                }
+            }
+            if on {
+                TextField("Lecture en kana (à renseigner)", text: entry.reading)
+                TextField("Sens en français", text: entry.meaning, axis: .vertical)
+            }
+        }
+        // Recette 1.5.5 (5.8) : seuls les champs sont figés pendant et après l'ajout ; figer tout le
+        // formulaire bloquait aussi son défilement (on ne voyait plus les termes du bas).
+        .disabled(saving || message != nil)
     }
 
     private func load() async {
@@ -113,24 +190,70 @@ struct PageCardsView: View {
                 return
             }
             var seen: Set<String> = []
-            entries = lexicon.filter { !$0.term.isEmpty && text.contains($0.term) && seen.insert($0.term).inserted }
+            let pageText = text
+            // Termes du lexique dans l'ordre où la page les montre (DEC-CA-02 : en tête, cochés).
+            let found = lexicon.filter { !$0.term.isEmpty && pageText.contains($0.term) && seen.insert($0.term).inserted }
+                .sorted { (pageText.range(of: $0.term)?.lowerBound ?? pageText.endIndex) < (pageText.range(of: $1.term)?.lowerBound ?? pageText.endIndex) }
             // Lectures du lexique prioritaires ; suggestion locale à vérifier pour les entrées sans lecture.
-            let candidates = entries
-            entries = await Task.detached(priority: .utility) {
-                candidates.map { entry in
-                    var entry = entry
-                    if entry.reading.isEmpty { entry.reading = Self.suggestedReading(entry.term) }
-                    return entry
+            var words = await Task.detached(priority: .utility) {
+                found.map { entry in
+                    PageWord(term: entry.term, surface: entry.term,
+                             reading: entry.reading.isEmpty ? Self.suggestedReading(entry.term) : entry.reading,
+                             meaning: entry.meaning, fromLexicon: true)
                 }
             }.value
             try Task.checkCancellation()
-            selected = Set(entries.map(\.id))
+            words += try await otherWords(in: pageText, excluding: Set(found.map(\.term)))
+            // DEC-CA-03 : une seule carte par mot ; celles qui existent déjà sont signalées et décochées.
+            let store = review.store
+            let keys = words.map { StudyCard.key(expression: $0.term, reading: $0.reading.trimmingCharacters(in: .whitespacesAndNewlines)) }
+            let existing = (try? await Task.detached(priority: .utility) { try store.existingCardDocuments(keys) }.value) ?? [:]
+            for i in words.indices { words[i].existingDocumentId = existing[keys[i]] }
+            try Task.checkCancellation()
+            entries = words
+            selected = Set(words.filter { $0.fromLexicon && $0.existingDocumentId == nil }.map(\.id))
         } catch is CancellationError {
             return
         } catch {
             self.error = error.localizedDescription
             Diagnostics.error("Cartes p. \(page) : \(error.localizedDescription)", "cartes")
         }
+    }
+
+    /// « Autres mots » (DEC-CA-02, DEC-CA-06 A) : découpage MeCab, filtre, recherche groupée dans les dictionnaires
+    /// actifs ; seuls les mots trouvés, dans l'ordre de la page. Fermer l'écran annule le travail en cours.
+    private func otherWords(in text: String, excluding lexiconTerms: Set<String>) async throws -> [PageWord] {
+        guard let mecab = MorphologyService.shared.mecab else {
+            otherWordsNote = String(localized: "Pour voir aussi les autres mots de la page, installe l'analyseur japonais (Réglages → Modèles → MeCab + UniDic).")
+            return []
+        }
+        let dictionary = reader.model.dictionary
+        let ids = dictionary.activeTermDictionaryIds
+        guard let database = dictionary.database, !ids.isEmpty else {
+            otherWordsNote = String(localized: "Pour voir aussi les autres mots de la page, installe ou active un dictionnaire (Réglages → Dictionnaires).")
+            return []
+        }
+        let start = Date()
+        let work = Task.detached(priority: .userInitiated) { () throws -> [PageWord] in
+            let candidates = PageWordCandidates.words(mecab.tokens(text), excluding: lexiconTerms)
+            try Task.checkCancellation()
+            // Forme de dictionnaire d'abord ; la forme écrite seulement si la première n'existe dans aucune source.
+            var lookups = candidates.map { (expression: $0.expression, readingHint: $0.readingHint) }
+            lookups += candidates.filter { $0.surface != $0.expression }.map { (expression: $0.surface, readingHint: "") }
+            let found = try database.lexiconWords(dictionaryIds: ids, expressions: lookups)
+            var seen = lexiconTerms
+            return candidates.compactMap { candidate -> PageWord? in
+                guard let word = found[candidate.expression] ?? found[candidate.surface],
+                      seen.insert(word.expression).inserted else { return nil }
+                let meaning = word.summary(.french) ?? word.summary(.english) ?? word.senses.first?.short ?? ""
+                return PageWord(term: word.expression, surface: candidate.surface, reading: word.reading ?? word.expression,
+                                meaning: meaning, fromLexicon: false)
+            }
+        }
+        let words = try await withTaskCancellationHandler { try await work.value } onCancel: { work.cancel() }
+        Diagnostics.log("Cartes p. \(page) : \(words.count) autres mots en \(String(format: "%.2f", Date().timeIntervalSince(start))) s", "cartes")
+        if words.isEmpty { otherWordsNote = String(localized: "Aucun autre mot de cette page n'est dans tes dictionnaires.") }
+        return words
     }
 
     nonisolated private static func suggestedReading(_ term: String) -> String {
@@ -149,7 +272,9 @@ struct PageCardsView: View {
         defer { saving = false }
         let source = "\(document.title) · p. \(document.pageLabel(page))"
         let fields = chosen.map { entry in
-            let sentence = text.components(separatedBy: .newlines).first { $0.contains(entry.term) } ?? entry.term
+            let lines = text.components(separatedBy: .newlines)
+            // Mot conjugué sur la page (測っ…) : la phrase est cherchée par la forme écrite.
+            let sentence = lines.first { $0.contains(entry.term) } ?? lines.first { $0.contains(entry.surface) } ?? entry.term
             return CardFields.lexicon(expression: entry.term,
                                       reading: entry.reading.trimmingCharacters(in: .whitespacesAndNewlines),
                                       meaning: entry.meaning.trimmingCharacters(in: .whitespacesAndNewlines),
