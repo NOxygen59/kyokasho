@@ -65,12 +65,19 @@ struct ReaderScreen: View {
     @Environment(\.scenePhase) private var scenePhase
 
     enum Sheet: String, Identifiable {
-        case search, ai, settings, pageCards, pageOrientation, lineEditor
+        case search, ai, settings, pageCards, pageOrientation, lineEditor, gestureHelp
         var id: String { rawValue }
     }
 
     enum Side: Equatable { case study, web }
     private var capabilities: DocumentCapabilities { reader.document.capabilities }
+    /// Ce que l'aide aux gestes doit décrire pour ce document, avec ses réglages du moment (rien n'est enregistré).
+    private var gestureHelpContext: ReaderGestureHelp.Context {
+        ReaderGestureHelp.Context(textAnalysis: capabilities.textAnalysis, annotations: capabilities.annotations,
+                                  continuousScroll: reader.settings.scrollMode == .continuous,
+                                  rightToLeft: reader.settings.direction == .rightToLeft,
+                                  doubleTapZoom: reader.settings.doubleTapZoom)
+    }
     @State private var keyboardFreeSize = CGSize.zero
 
     init(document: LibraryDocument, model: AppModel) {
@@ -321,6 +328,7 @@ struct ReaderScreen: View {
                 case .ai: AIPageSheet(reader: reader, openWeb: { self.sheet = nil; side = .web })
                 case .settings: DocumentSettingsSheet(reader: reader)
                 case .lineEditor: OCRLineEditor(reader: reader)
+                case .gestureHelp: ReaderGestureHelpSheet(context: gestureHelpContext, close: { self.sheet = nil })
                 case .pageCards: PageCardsView(reader: reader)
                 case .pageOrientation:
                     PageOrientationView(document: reader.document, selectedPage: reader.currentSourcePage,
@@ -620,6 +628,10 @@ struct ReaderScreen: View {
                     }
                 }
                 Divider()
+                // Aide aux gestes (FEAT-AIDE) : dans le menu, pour ne rien ajouter à une barre déjà pleine en portrait.
+                Button { sheet = .gestureHelp } label: {
+                    Label("Aide : gestes de lecture", systemImage: "questionmark.circle")
+                }
                 Button { sheet = .settings } label: {
                     Label("Pagination et réglages de ce document", systemImage: "slider.horizontal.3")
                 }
