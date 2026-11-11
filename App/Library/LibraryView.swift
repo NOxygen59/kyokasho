@@ -307,6 +307,10 @@ struct LibraryView: View {
         .sheet(item: $chatDocument) { document in
             NavigationStack { QwenChatView(document: document, database: model.database) }
                 .environmentObject(model).preferredColorScheme(Theme.current.colorScheme)
+                // Recette iPad 1.5.5 (10.3) : fermé d'un toucher à côté de la feuille, le chat laissait l'accueil
+                // incapable de présenter le lecteur (l'onglet s'ajoutait, le livre ne s'ouvrait pas). Fermé par
+                // « Fermer », tout allait bien : seule cette sortie reste, le modèle est déchargé par `onDisappear`.
+                .interactiveDismissDisabled()
         }
         .sheet(item: $exporting) { document in
             DocumentExportSheet(document: document)
