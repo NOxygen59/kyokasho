@@ -1,6 +1,424 @@
 {
   "sourceLanguage": "fr",
   "strings": {
+    "Aide : gestes de lecture": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Help: reading gestures"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aide : gestes de lecture"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "帮助：阅读手势"
+          }
+        }
+      }
+    },
+    "Gestes de lecture": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reading gestures"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gestes de lecture"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "阅读手势"
+          }
+        }
+      }
+    },
+    "Ce que tu peux faire avec le doigt sur la page de ce document.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What your finger can do on the page of this document."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce que tu peux faire avec le doigt sur la page de ce document."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在本文档的页面上，手指可以做的操作。"
+          }
+        }
+      }
+    },
+    "Tourner la page": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn the page"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tourner la page"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "翻页"
+          }
+        }
+      }
+    },
+    "Fais défiler les pages avec le doigt. Les flèches ‹ › de la barre et les touches ← → d'un clavier changent aussi de page.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scroll through the pages with your finger. The ‹ › arrows in the bar and the ← → keys of a keyboard also change page."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fais défiler les pages avec le doigt. Les flèches ‹ › de la barre et les touches ← → d'un clavier changent aussi de page."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "用手指滚动页面。工具栏的 ‹ › 箭头和键盘的 ← → 键也可以翻页。"
+          }
+        }
+      }
+    },
+    "Page affichée en entier, glisse d'un doigt vers la droite pour avancer, vers la gauche pour revenir (lecture de droite à gauche). Les flèches ‹ › de la barre et les touches ← → d'un clavier changent aussi de page.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "With the whole page shown, swipe right with one finger to go forward, left to go back (right-to-left reading). The ‹ › arrows in the bar and the ← → keys of a keyboard also change page."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Page affichée en entier, glisse d'un doigt vers la droite pour avancer, vers la gauche pour revenir (lecture de droite à gauche). Les flèches ‹ › de la barre et les touches ← → d'un clavier changent aussi de page."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "页面完整显示时，单指向右滑动前进，向左滑动返回（从右到左阅读）。工具栏的 ‹ › 箭头和键盘的 ← → 键也可以翻页。"
+          }
+        }
+      }
+    },
+    "Page affichée en entier, glisse d'un doigt vers la gauche pour avancer, vers la droite pour revenir. Les flèches ‹ › de la barre et les touches ← → d'un clavier changent aussi de page.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "With the whole page shown, swipe left with one finger to go forward, right to go back. The ‹ › arrows in the bar and the ← → keys of a keyboard also change page."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Page affichée en entier, glisse d'un doigt vers la gauche pour avancer, vers la droite pour revenir. Les flèches ‹ › de la barre et les touches ← → d'un clavier changent aussi de page."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "页面完整显示时，单指向左滑动前进，向右滑动返回。工具栏的 ‹ › 箭头和键盘的 ← → 键也可以翻页。"
+          }
+        }
+      }
+    },
+    "Afficher ou cacher les barres": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show or hide the bars"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Afficher ou cacher les barres"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "显示或隐藏工具栏"
+          }
+        }
+      }
+    },
+    "Touche la page une fois. Barres cachées, la petite flèche en haut de l'écran les ramène aussi.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tap the page once. When the bars are hidden, the small arrow at the top of the screen also brings them back."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Touche la page une fois. Barres cachées, la petite flèche en haut de l'écran les ramène aussi."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "轻点页面一次。工具栏隐藏时，屏幕顶部的小箭头也能让它们重新出现。"
+          }
+        }
+      }
+    },
+    "Zoomer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zoom"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zoomer"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "缩放"
+          }
+        }
+      }
+    },
+    "Touche deux fois pour agrandir l'endroit touché, encore deux fois pour revoir la page entière. Tu peux aussi pincer. Page agrandie, glisser déplace la page au lieu de la tourner.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Double-tap to zoom in on that spot, double-tap again to see the whole page. You can also pinch. When zoomed in, swiping moves the page instead of turning it."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Touche deux fois pour agrandir l'endroit touché, encore deux fois pour revoir la page entière. Tu peux aussi pincer. Page agrandie, glisser déplace la page au lieu de la tourner."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "轻点两下放大该处，再轻点两下恢复整页。也可以双指捏合。放大后，滑动是移动页面而不是翻页。"
+          }
+        }
+      }
+    },
+    "Pince avec deux doigts pour agrandir ou réduire. Page agrandie, glisser déplace la page au lieu de la tourner.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pinch with two fingers to zoom in or out. When zoomed in, swiping moves the page instead of turning it."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pince avec deux doigts pour agrandir ou réduire. Page agrandie, glisser déplace la page au lieu de la tourner."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "双指捏合可放大或缩小。放大后，滑动是移动页面而不是翻页。"
+          }
+        }
+      }
+    },
+    "Sélectionner du texte": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select text"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sélectionner du texte"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选择文字"
+          }
+        }
+      }
+    },
+    "Sur une page qui contient du texte, appuie longuement sur un mot, puis glisse sans lever le doigt pour étendre la sélection. Un toucher ailleurs l'efface.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On a page that contains text, press and hold a word, then drag without lifting your finger to extend the selection. A tap elsewhere clears it."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sur une page qui contient du texte, appuie longuement sur un mot, puis glisse sans lever le doigt pour étendre la sélection. Un toucher ailleurs l'efface."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在含有文字的页面上，长按一个词，然后不抬起手指拖动以扩大选区。轻点其他位置可取消选择。"
+          }
+        }
+      }
+    },
+    "Chercher un mot dans le dictionnaire": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Look up a word in the dictionary"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chercher un mot dans le dictionnaire"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在词典中查词"
+          }
+        }
+      }
+    },
+    "Active 辞 dans la barre d'outils, puis touche un mot de la page. Avec une souris ou un trackpad, tiens Maj et passe le curseur sur le mot.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn on 辞 in the toolbar, then tap a word on the page. With a mouse or trackpad, hold Shift and move the pointer over the word."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Active 辞 dans la barre d'outils, puis touche un mot de la page. Avec une souris ou un trackpad, tiens Maj et passe le curseur sur le mot."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开工具栏中的「辞」，然后轻点页面上的词。使用鼠标或触控板时，按住 Shift 并把指针移到词上。"
+          }
+        }
+      }
+    },
+    "Active le surligneur dans la barre d'outils, puis glisse sur le texte. Un appui long sur ce bouton change la couleur ; toucher un surlignage permet de le copier ou de le supprimer.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn on the highlighter in the toolbar, then drag over the text. Press and hold that button to change the colour; tap a highlight to copy or delete it."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Active le surligneur dans la barre d'outils, puis glisse sur le texte. Un appui long sur ce bouton change la couleur ; toucher un surlignage permet de le copier ou de le supprimer."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开工具栏中的荧光笔，然后在文字上拖动。长按该按钮可更换颜色；轻点一处高亮可复制或删除它。"
+          }
+        }
+      }
+    },
+    "Écrire sur la page": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Write on the page"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Écrire sur la page"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在页面上书写"
+          }
+        }
+      }
+    },
+    "Active le crayon dans la barre d'outils pour dessiner avec l'Apple Pencil. Le bouton main revient à la lecture.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn on the pen in the toolbar to draw with the Apple Pencil. The hand button goes back to reading."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Active le crayon dans la barre d'outils pour dessiner avec l'Apple Pencil. Le bouton main revient à la lecture."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开工具栏中的画笔即可用 Apple Pencil 书写。手形按钮可返回阅读。"
+          }
+        }
+      }
+    },
     "Tous les mots": {
       "localizations": {
         "en": {
