@@ -251,6 +251,8 @@ final class ReaderController: NSObject, ObservableObject {
     /// Vrai pendant une reconstruction : le changement de page qui en résulte n'est pas un geste.
     var rebuilding = false
     var observers: [NSObjectProtocol] = []
+    /// Note dont l'ancre clignotera une fois les pages installées (ouverture depuis l'écran « Notes »).
+    var pendingAnchorNote: PageComment?
     /// Abonnements Combine du lecteur (demandes « aller à la note » de l’écran Notes).
     var cancellables: Set<AnyCancellable> = []
     /// Fin d'une tâche IA (peut-être lancée par un lecteur précédent) : la page affichée est relue du cache.
@@ -317,15 +319,17 @@ final class ReaderController: NSObject, ObservableObject {
             loadError = error.localizedDescription
         }
         // Écran « Notes » (PLAN-T4-001 E2) : ouvert pour une note, le livre part de sa page, puis l'ancre clignote.
-        let jumpNote = model.noteJump.flatMap { jump in
-            jump.documentId == document.id ? notes.first { $0.id == jump.noteId } : nil
+        // La demande est consommée dans tous les cas (revue DeepSeek F2) : une note supprimée entre-temps ne laisse pas
+        // une demande pendante qu'un prochain ouvrage du livre suivrait sans raison.
+        var jumpNote: PageComment?
+        if let jump = model.noteJump, jump.documentId == document.id {
+            jumpNote = notes.first { $0.id == jump.noteId }
+            model.noteJump = nil
         }
-        if jumpNote != nil { model.noteJump = nil }
         rebuild(keepingSource: jumpNote?.pageIndex ?? document.lastPageIndex)
         markOpened()
-        if let jumpNote {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { [weak self] in self?.goToAnchor(jumpNote) }
-        }
+        // Le clignotement attend la fin de la construction des pages (`install`, revue DeepSeek F8).
+        pendingAnchorNote = jumpNote
     }
 
     /// Résultat de la construction (fait hors du fil principal) : document affiché + repères.
@@ -553,6 +557,11 @@ final class ReaderController: NSObject, ObservableObject {
         guard let built else {
             loadError = String(localized: "Impossible d'ouvrir ce PDF.")
             return
+        }
+        if let note = pendingAnchorNote {
+            pendingAnchorNote = nil
+            // Après la fin de cette installation (même tour de boucle) : PDF et pages sont en place.
+            DispatchQueue.main.async { [weak self] in self?.goToAnchor(note) }
         }
         originalBoxes = built.boxes
         originalRotations = built.rotations
@@ -908,7 +917,8 @@ final class ReaderController: NSObject, ObservableObject {
     // MARK: Notifications
 
     func observe() {
-        // Livre déjà ouvert dans un onglet quand on choisit une de ses notes dans l'écran « Notes ».
+        // Livre déjà ouvert quand une de ses notes est choisie. Aujourd'hui l'écran « Notes » ne s'ouvre que lecteur
+        // fermé (revue DeepSeek F11) : ce chemin servira quand on pourra l'atteindre depuis le lecteur (E3).
         // (`insert` plutôt que `.store(in:)` : un contrôle source réserve `.store(` aux écritures OCR du lecteur.)
         cancellables.insert(model.$noteJump
             .receive(on: DispatchQueue.main)

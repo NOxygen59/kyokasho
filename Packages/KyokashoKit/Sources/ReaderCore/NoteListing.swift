@@ -6,13 +6,18 @@ import Foundation
 /// Écran « Notes » de l'accueil — PLAN-T4-001, étape E2 (plan approuvé par NOxygen59 le 11/11/2026).
 ///
 /// Décision pure, testée sur Mac : l'écran (`App/Notes/NotesView.swift`) ne fait qu'afficher ce calcul.
-/// - Groupes par échéance : En retard, Aujourd'hui, Cette semaine (les 7 jours suivants), Plus tard, Sans échéance.
+/// - Groupes par échéance : En retard, Aujourd'hui, Demain, Dans les 7 jours, Plus tard, Sans échéance. Les trois
+///   premiers sont exactement les notes comptées par la pastille (DEC-T4-06, `notesToReviewCount`) : le chiffre de
+///   l'accueil se retrouve à l'écran (revue DeepSeek F5). La vue « Archivées » est un seul groupe (F17).
 /// - Dans un groupe : priorité haute d'abord (DEC-T4-07), puis échéance la plus proche, puis note la plus récente.
 /// - Filtres cumulables : classeur, étiquette, priorité, livre, texte ; « Archivées » montre seulement les archivées
 ///   (DEC-T4-D : une note archivée quitte les listes courantes).
 public enum NoteListing {
     public enum Group: Int, CaseIterable, Sendable, Comparable {
-        case overdue, today, thisWeek, later, noDue
+        case overdue, today, tomorrow, thisWeek, later, noDue, archived
+
+        /// Groupes comptés par la pastille de l'accueil.
+        public var isToReview: Bool { self == .overdue || self == .today || self == .tomorrow }
 
         public static func < (lhs: Group, rhs: Group) -> Bool { lhs.rawValue < rhs.rawValue }
     }
@@ -53,11 +58,14 @@ public enum NoteListing {
         let todayString = NoteDay.string(today, calendar: calendar)
         if dueDay < todayString { return .overdue }
         if dueDay == todayString { return .today }
+        if let tomorrow = calendar.date(byAdding: .day, value: 1, to: today),
+           dueDay == NoteDay.string(tomorrow, calendar: calendar) { return .tomorrow }
         guard let weekEnd = calendar.date(byAdding: .day, value: 7, to: today) else { return .later }
         return dueDay <= NoteDay.string(weekEnd, calendar: calendar) ? .thisWeek : .later
     }
 
-    public static func matches(_ item: OrganizedNote, _ filter: Filter) -> Bool {
+    /// `documentTitle` : titre du livre de la note, cherché aussi par le texte (revue DeepSeek F15).
+    public static func matches(_ item: OrganizedNote, _ filter: Filter, documentTitle: String = "") -> Bool {
         let o = item.organization
         guard o.archived == filter.archived else { return false }
         if let folderId = filter.folderId, o.folderId != folderId { return false }
@@ -66,7 +74,7 @@ public enum NoteListing {
         if let documentId = filter.documentId, item.note.documentId != documentId { return false }
         let text = filter.text.trimmingCharacters(in: .whitespacesAndNewlines)
         if !text.isEmpty {
-            let haystack = item.note.body + " " + (item.note.anchorText ?? "")
+            let haystack = item.note.body + " " + (item.note.anchorText ?? "") + " " + documentTitle
             guard haystack.range(of: text, options: [.caseInsensitive, .diacriticInsensitive]) != nil else { return false }
         }
         return true
@@ -74,10 +82,11 @@ public enum NoteListing {
 
     /// Sections non vides, dans l'ordre des groupes.
     public static func sections(_ notes: [OrganizedNote], filter: Filter, today: Date,
-                                calendar: Calendar = NoteDay.calendar) -> [Section] {
+                                calendar: Calendar = NoteDay.calendar, documentTitles: [String: String] = [:]) -> [Section] {
         var byGroup: [Group: [OrganizedNote]] = [:]
-        for item in notes where matches(item, filter) {
-            byGroup[group(dueDay: item.organization.dueDay, today: today, calendar: calendar), default: []].append(item)
+        for item in notes where matches(item, filter, documentTitle: documentTitles[item.note.documentId] ?? "") {
+            let key = filter.archived ? .archived : group(dueDay: item.organization.dueDay, today: today, calendar: calendar)
+            byGroup[key, default: []].append(item)
         }
         return Group.allCases.compactMap { group in
             guard let items = byGroup[group], !items.isEmpty else { return nil }

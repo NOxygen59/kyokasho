@@ -39,6 +39,7 @@ struct LibraryView: View {
     @State private var showLexicon = false
     /// Écran « Notes » (PLAN-T4-001, E2).
     @State private var showNotes = false
+    @State private var noteToOpen: PageComment?
     @State private var showDashboard = false
     @State private var renaming: LibraryDocument?
     @EnvironmentObject private var review: ReviewModel
@@ -282,13 +283,28 @@ struct LibraryView: View {
             }
             .environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review).preferredColorScheme(Theme.current.colorScheme)
         }
-        .fullScreenCover(isPresented: $showNotes, onDismiss: { model.refreshNotesToReview() }) {
-            NotesView()
+        .fullScreenCover(isPresented: $showNotes, onDismiss: {
+            model.refreshNotesToReview()
+            // Le livre s'ouvre une fois l'écran « Notes » refermé (deux plein écran ne s'empilent pas ; revue F9).
+            if let note = noteToOpen { model.open(note) }
+            noteToOpen = nil
+        }) {
+            NotesView { noteToOpen = $0 }
                 .environmentObject(model).preferredColorScheme(Theme.current.colorScheme)
         }
-        // Pastille des notes relue au retour sur l'accueil (une échéance a pu passer, une note a pu être supprimée).
+        // Pastille des notes relue au retour sur l'accueil (une échéance a pu passer, une note a pu être supprimée),
+        // au retour dans l'app (changement de jour) et quand la corbeille change (revue DeepSeek F4).
         .onAppear { model.refreshNotesToReview() }
-        .onChange(of: model.openDocumentId) { if $0 == nil { model.refreshNotesToReview() } }
+        .onChange(of: model.openDocumentId) {
+            if $0 == nil {
+                model.refreshNotesToReview()
+                model.noteJump = nil   // jamais une demande de saut pendante au retour sur l'accueil (F2)
+            }
+        }
+        .onChange(of: model.trashedDocuments.count) { _ in model.refreshNotesToReview() }
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
+            model.refreshNotesToReview()
+        }
         .fullScreenCover(isPresented: $showLexicon) {
             NavigationStack {
                 LexiconView(dictionary: model.dictionary) { term in
@@ -485,10 +501,11 @@ struct LibraryView: View {
                     actionRow(icon: "character.book.closed.ja", title: String(localized: "Dictionnaire"), tint: Atelier.Tint.japanese,
                               count: model.dictionary.notebook.saved.count) { showDictionary = true }
                     actionRow(icon: "text.book.closed", title: String(localized: "Lexique"), tint: Atelier.Tint.japanese) { showLexicon = true }
-                    // Pastille : notes à revoir (échéance passée, aujourd'hui ou demain ; DEC-T4-06).
-                    actionRow(icon: "note.text", title: String(localized: "Notes"), tint: Atelier.Tint.annotate,
-                              count: model.notesToReview) { showNotes = true }
                 }
+                // Notes dans les deux espaces (revue DeepSeek F1) : les PDF de Manga ont aussi des notes, l'écran est global.
+                // Pastille : notes à revoir (échéance passée, aujourd'hui ou demain ; DEC-T4-06).
+                actionRow(icon: "note.text", title: String(localized: "Notes"), tint: Atelier.Tint.annotate,
+                          count: model.notesToReview) { showNotes = true }
                 actionRow(icon: "doc.on.doc", title: String(localized: "Fusionner des PDF"), tint: Atelier.Tint.cloud) { showMerge = true }
                 if space != .manga {
                     actionRow(icon: "photo.on.rectangle.angled", title: String(localized: "Images vers PDF"), tint: Atelier.Tint.cloud) { showImagesToPDF = true }
@@ -591,9 +608,9 @@ struct LibraryView: View {
             // Hors périmètre en Manga (PLAN-LEX-001, § 2) : l'entrée n'existe que pour Livres & Manuels.
             if space == .study {
                 CapsuleButton(icon: "text.book.closed", label: String(localized: "Lexique")) { showLexicon = true }
-                CapsuleButton(icon: "note.text", label: model.notesToReview > 0
-                              ? String(localized: "Notes · \(model.notesToReview) à revoir") : String(localized: "Notes")) { showNotes = true }
             }
+            CapsuleButton(icon: "note.text", label: model.notesToReview > 0
+                          ? String(localized: "Notes · \(model.notesToReview) à revoir") : String(localized: "Notes")) { showNotes = true }
             CapsuleButton(icon: "chart.bar.fill", label: String(localized: "Tableau de bord")) { showDashboard = true }
             CapsuleButton(icon: "gearshape", label: String(localized: "Réglages")) { showSettings = true }
         }

@@ -26,7 +26,8 @@ final class NoteListingTests: XCTestCase {
     func testGroupsByDueDay() {
         XCTAssertEqual(NoteListing.group(dueDay: "2026-11-10", today: today, calendar: calendar), .overdue)
         XCTAssertEqual(NoteListing.group(dueDay: "2026-11-11", today: today, calendar: calendar), .today)
-        XCTAssertEqual(NoteListing.group(dueDay: "2026-11-12", today: today, calendar: calendar), .thisWeek)
+        XCTAssertEqual(NoteListing.group(dueDay: "2026-11-12", today: today, calendar: calendar), .tomorrow)
+        XCTAssertEqual(NoteListing.group(dueDay: "2026-11-13", today: today, calendar: calendar), .thisWeek)
         XCTAssertEqual(NoteListing.group(dueDay: "2026-11-18", today: today, calendar: calendar), .thisWeek)
         XCTAssertEqual(NoteListing.group(dueDay: "2026-11-19", today: today, calendar: calendar), .later)
         XCTAssertEqual(NoteListing.group(dueDay: nil, today: today, calendar: calendar), .noDue)
@@ -46,6 +47,7 @@ final class NoteListingTests: XCTestCase {
         XCTAssertEqual(sections.map(\.group), [.overdue, .thisWeek, .noDue])
         XCTAssertEqual(sections[1].notes.map(\.id), ["c", "b", "a"], "haute d'abord, puis échéance la plus proche")
         let archived = NoteListing.sections(notes, filter: .init(archived: true), today: today, calendar: calendar)
+        XCTAssertEqual(archived.map(\.group), [.archived], "F17 : pas de « En retard » pour une note archivée")
         XCTAssertEqual(archived.flatMap(\.notes).map(\.id), ["f"])
     }
 
@@ -66,5 +68,30 @@ final class NoteListingTests: XCTestCase {
         XCTAssertEqual(ids(.init(text: "FACADE")), ["a"], "sans casse ni accents")
         XCTAssertFalse(NoteListing.Filter().isActive)
         XCTAssertTrue(NoteListing.Filter(text: "x").isActive)
+    }
+
+    /// Revue DeepSeek F6 : la pastille (SQL), `NoteDay.isToReview` et les groupes de l'écran disent la même chose.
+    func testBadgeAndScreenAgree() throws {
+        let days = ["2026-10-01", "2026-11-10", "2026-11-11", "2026-11-12", "2026-11-13", "2026-12-25", "faux"]
+        let db = try AppDatabase.inMemory()
+        try db.save(LibraryDocument(id: "d", title: "d", originalFileName: "d.pdf", pageCount: 1, fileSize: 1))
+        for (i, day) in days.enumerated() {
+            try db.save(PageComment(id: "n\(i)", documentId: "d", pageIndex: 0, body: day))
+            try db.writer.write { try $0.execute(sql: "UPDATE pageComment SET dueDay = ? WHERE id = ?", arguments: [day, "n\(i)"]) }
+        }
+        let listed = try db.organizedNotes(includeArchived: false)
+        let byScreen = NoteListing.sections(listed, filter: .init(), today: today, calendar: calendar)
+            .filter { $0.group.isToReview }.flatMap(\.notes).count
+        let byRule = listed.filter { NoteDay.isToReview($0.organization, today: today, calendar: calendar) }.count
+        XCTAssertEqual(byScreen, 4)
+        XCTAssertEqual(byRule, 4)
+        XCTAssertEqual(try db.notesToReviewCount(today: today, calendar: calendar), 4)
+    }
+
+    func testSearchAlsoFindsTheBookTitle() {
+        let items = [note("a", document: "d1", body: "x"), note("b", document: "d2", body: "y")]
+        let found = NoteListing.sections(items, filter: .init(text: "façade"), today: today, calendar: calendar,
+                                         documentTitles: ["d1": "Matériaux de Façade"])
+        XCTAssertEqual(found.flatMap(\.notes).map(\.id), ["a"])
     }
 }

@@ -539,14 +539,23 @@ final class AppModel: ObservableObject {
     func refreshNotesToReview() {
         let database = database, excluded = trashedDocumentIds
         Task.detached(priority: .utility) {
-            let count = (try? database.notesToReviewCount(today: Date(), excludingDocuments: excluded)) ?? 0
+            let count: Int
+            do { count = try database.notesToReviewCount(today: Date(), excludingDocuments: excluded) } catch {
+                // Revue DeepSeek F7 : jamais confondu avec « aucune note » sans trace.
+                Diagnostics.error("pastille des notes : \(error.localizedDescription)", "notes")
+                return
+            }
             await MainActor.run { if self.notesToReview != count { self.notesToReview = count } }
         }
     }
 
     /// Ouvre le livre d'une note à sa page (écran « Notes »).
     func open(_ note: PageComment) {
-        guard documents.contains(where: { $0.id == note.documentId }) else { return }
+        guard documents.contains(where: { $0.id == note.documentId }) else {
+            // Revue DeepSeek F3 : le livre est à la corbeille ou a été supprimé entre-temps.
+            lastError = String(localized: "Le livre de cette note n'est plus dans la bibliothèque (corbeille ?).")
+            return
+        }
         noteJump = NoteJump(documentId: note.documentId, noteId: note.id)
         openDocumentId = note.documentId
     }

@@ -139,7 +139,9 @@ public enum NoteDay {
         return check.year == year && check.month == month && check.day == dayNumber
     }
 
-    /// DEC-T4-06 : à revoir = non archivée, échéance passée, aujourd'hui ou demain.
+    /// DEC-T4-06 : à revoir = non archivée, échéance passée, aujourd'hui ou demain. Même règle, en SQL, dans
+    /// `notesToReviewCount` (pastille) et, par groupes, dans `NoteListing.Group.isToReview` (écran) : les trois sont
+    /// comparées par `NoteListingTests` (revue DeepSeek F6).
     public static func isToReview(_ organization: NoteOrganization, today: Date, calendar: Calendar = NoteDay.calendar) -> Bool {
         guard !organization.archived, let due = organization.dueDay else { return false }
         guard let tomorrow = calendar.date(byAdding: .day, value: 1, to: today) else { return false }

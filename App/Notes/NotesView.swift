@@ -15,13 +15,19 @@ import SwiftUI
 struct NotesView: View {
     @EnvironmentObject private var model: AppModel
     @Environment(\.dismiss) private var dismiss
+    /// Note choisie : l'appelant ouvre son livre **après** la fermeture de cet écran (`onDismiss`, revue DeepSeek F9).
+    var onOpen: (PageComment) -> Void = { _ in }
     @State private var notes: [OrganizedNote] = []
+    @State private var loadError: String?
     @State private var folders: [NoteFolder] = []
     @State private var tags: [NoteTag] = []
     @State private var filter = NoteListing.Filter()
     @State private var loaded = false
 
-    private var sections: [NoteListing.Section] { NoteListing.sections(notes, filter: filter, today: Date()) }
+    private var sections: [NoteListing.Section] {
+        NoteListing.sections(notes, filter: filter, today: Date(),
+                             documentTitles: Dictionary(model.documents.map { ($0.id, $0.title) }, uniquingKeysWith: { a, _ in a }))
+    }
 
     /// Livres qui ont des notes (filtre « Livre »), par titre.
     private var documentsWithNotes: [LibraryDocument] {
@@ -44,7 +50,10 @@ struct NotesView: View {
                         }
                     }
                 }
-                if loaded && sections.isEmpty {
+                if let loadError {
+                    // Revue DeepSeek F7 : une lecture en échec n'est jamais présentée comme « aucune note ».
+                    Text(String(localized: "Notes illisibles : \(loadError)")).foregroundStyle(.red)
+                } else if loaded && sections.isEmpty {
                     Text(emptyText).foregroundStyle(Atelier.textSecondary)
                 }
                 ForEach(sections, id: \.group) { section in
@@ -60,8 +69,8 @@ struct NotesView: View {
             .navigationTitle("Notes")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("OK") { dismiss() } }
-                ToolbarItem(placement: .primaryAction) { filterMenu }
+                ToolbarItem(placement: .confirmationAction) { Button("OK") { dismiss() } }
+                ToolbarItem(placement: .navigationBarLeading) { filterMenu }
             }
             .task { await reload() }
         }
@@ -104,7 +113,12 @@ struct NotesView: View {
             Image(systemName: o.priority == .high ? "exclamationmark.circle.fill" : o.priority == .low ? "arrow.down.circle" : "note.text")
                 .foregroundStyle(o.priority == .high ? Atelier.Tint.annotate : Atelier.textTertiary)
                 .frame(width: 22)
+                .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 4) {
+                if o.priority != .normal {
+                    Text(Self.title(o.priority)).font(Atelier.font(11, weight: .semibold))
+                        .foregroundStyle(o.priority == .high ? Atelier.Tint.annotate : Atelier.textTertiary)
+                }
                 Text(Self.firstLine(note)).font(Atelier.font(16, weight: .semibold)).foregroundStyle(Atelier.textPrimary).lineLimit(2)
                 HStack(spacing: 6) {
                     if let document {
@@ -138,20 +152,23 @@ struct NotesView: View {
     }
 
     private func open(_ note: PageComment) {
+        onOpen(note)
         dismiss()
-        // Le lecteur se présente une fois cet écran refermé (deux plein écran ne s'empilent pas).
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { model.open(note) }
     }
 
     private func reload() async {
         let database = model.database, excluded = model.trashedDocumentIds
-        let result = await Task.detached(priority: .userInitiated) {
-            ((try? database.organizedNotes(includeArchived: true, excludingDocuments: excluded)) ?? [],
-             (try? database.noteFolders()) ?? [], (try? database.noteTags()) ?? [])
+        let result = await Task.detached(priority: .userInitiated) { () -> Result<([OrganizedNote], [NoteFolder], [NoteTag]), Error> in
+            Result { (try database.organizedNotes(includeArchived: true, excludingDocuments: excluded),
+                      try database.noteFolders(), try database.noteTags()) }
         }.value
-        notes = result.0
-        folders = result.1
-        tags = result.2
+        switch result {
+        case .success(let value):
+            (notes, folders, tags) = value
+            loadError = nil
+        case .failure(let error):
+            loadError = error.localizedDescription
+        }
         loaded = true
     }
 
@@ -159,9 +176,11 @@ struct NotesView: View {
         switch group {
         case .overdue: return String(localized: "En retard")
         case .today: return String(localized: "Aujourd'hui")
-        case .thisWeek: return String(localized: "Cette semaine")
+        case .tomorrow: return String(localized: "Demain")
+        case .thisWeek: return String(localized: "Dans les 7 jours")
         case .later: return String(localized: "Plus tard")
         case .noDue: return String(localized: "Sans échéance")
+        case .archived: return String(localized: "Archivées")
         }
     }
 
