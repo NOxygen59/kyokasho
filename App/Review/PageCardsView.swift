@@ -55,6 +55,9 @@ struct PageCardsView: View {
                         TextField("Lecture en kana (à renseigner)", text: $entry.reading)
                         TextField("Sens en français", text: $entry.meaning, axis: .vertical)
                     }
+                    // Recette 1.5.5 (5.8) : seuls les champs sont figés pendant et après l'ajout ; figer tout le
+                    // formulaire bloquait aussi son défilement (on ne voyait plus les termes du bas).
+                    .disabled(saving || message != nil)
                 }
                 if !entries.isEmpty {
                     Text("Une lecture et un sens sont nécessaires. Les corrections ici s'appliquent seulement aux cartes créées.")
@@ -63,7 +66,6 @@ struct PageCardsView: View {
                 if let error { Text(error).foregroundStyle(.red) }
                 if let message { Text(message) }
             }
-            .disabled(saving || message != nil)
             .navigationTitle("Cartes de la page")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
