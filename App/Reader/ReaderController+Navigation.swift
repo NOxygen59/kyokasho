@@ -511,5 +511,8 @@ extension ReaderController {
         DispatchQueue.main.async { [ink] in ink.showToolPicker(on) }
         // T1 : les vues de page du contrôleur peuvent n'apparaître qu'après la mise en page.
         DispatchQueue.main.async { [weak self] in self?.applyPencilPageTurnGuard() }
+        // Recette 1.5.5 (1.1) : la mise en page de PDFKit qui suit peut encore recréer la vue de la page ; second
+        // passage une fois l'animation de la barre d'outils finie (la garde ne change rien si tout est déjà réglé).
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { [weak self] in self?.applyPencilPageTurnGuard() }
     }
 }

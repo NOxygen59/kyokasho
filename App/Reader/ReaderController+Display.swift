@@ -85,19 +85,26 @@ extension ReaderController {
     func applyPencilPageTurnGuard() {
         let drawing = isDrawing
         let pageController = pdfView.isUsingPageViewController
+        var changed = 0, scrolls = 0
         func walk(_ view: UIView) {
             for sub in view.subviews where !(sub is PKCanvasView) {
                 if let scroll = sub as? UIScrollView {
+                    scrolls += 1
                     let pan = scroll.panGestureRecognizer
                     let current = pan.allowedTouchTypes.map(\.intValue)
                     if let next = PencilPageTurnGuard.touchTypes(current: current, drawing: drawing, pageController: pageController) {
                         pan.allowedTouchTypes = next.map { NSNumber(value: $0) }
+                        changed += 1
                     }
                 }
                 walk(sub)
             }
         }
         walk(pdfView)
+        // Recette 1.5.5 (1.1) : trace pour la prochaine recette si le Pencil fait encore glisser la page.
+        if changed > 0 {
+            Diagnostics.log("Pencil : \(changed) défilement(s) sur \(scrolls) réglé(s), dessin \(drawing), glissement \(pageController)", "gestes")
+        }
     }
 
     /// Double page : déplacement libre et zoom au toucher fiables (RET-043, Issue #63).

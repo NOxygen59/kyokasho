@@ -158,6 +158,13 @@ final class InkStore: NSObject, PDFPageOverlayViewProvider {
             overlay.setEditing(editing, toolPicker: toolPicker, finger: model.drawWithFinger)
             liveViews.add(overlay)
             scheduleToolPickerFocus()
+            // Recette iPad 1.5.5 (1.1) : en page simple + Glissement, PDFKit recrée la vue de la page (avec son propre
+            // défilement zoomable) après l'activation du dessin ; ce défilement neuf prenait encore le Pencil et faisait
+            // glisser la page jusqu'au premier tour de page. La garde est réappliquée dès qu'une page apparaît, au tour
+            // suivant de la boucle (la vue est alors dans la hiérarchie de la vue PDF).
+            if editing {
+                DispatchQueue.main.async { [weak controller] in controller?.applyPencilPageTurnGuard() }
+            }
             return overlay
         }
     }
