@@ -88,6 +88,8 @@ extension ReaderController {
         var changed = 0, scrolls = 0
         func walk(_ view: UIView) {
             for sub in view.subviews where !(sub is PKCanvasView) {
+                // Revue D-07 (F2) : une page recréée par PDFKit sans repasser par une fenêtre retrouve aussi sa dépendance.
+                (sub as? InkPageView)?.holdPageScrollsForPencil()
                 if let scroll = sub as? UIScrollView {
                     scrolls += 1
                     let pan = scroll.panGestureRecognizer

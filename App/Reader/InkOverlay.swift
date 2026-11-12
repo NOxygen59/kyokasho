@@ -286,7 +286,7 @@ final class InkPageView: UIView, PKCanvasViewDelegate {
     /// trait faisait glisser la page. Ici, chaque défilement au-dessus de la toile attend que le geste de dessin ait
     /// échoué : un trait de Pencil gagne toujours, le doigt (dessin au Pencil seul) tourne la page sans attendre.
     /// Une dépendance UIKit (`require(toFail:)`) n'est pas effacée par PDFKit, contrairement aux types de toucher.
-    private func holdPageScrollsForPencil() {
+    func holdPageScrollsForPencil() {
         guard let canvas, isUserInteractionEnabled, window != nil else { return }
         var view = superview
         while let current = view {

@@ -805,9 +805,11 @@ struct QwenChatView: View {
                         let context = BookChatPrompt.context(sources: sources, title: document.title)
                         for try await chunk in chat.stream(question, context: context) { messages[index].text += chunk }
                         // T2 (10/11) : seules les pages réellement citées par la réponse sont listées et ouvrables.
-                        let cited = BookChatPrompt.listedPages(
-                            in: messages[index].text,
-                            passages: passages.map { (page: $0.page, label: document.pageLabel($0.page)) })
+                        // Revue D-07 (F5) : la page affichée donnée en repli (score 0) n'est listée que si la réponse la cite.
+                        let given = passages.map { (page: $0.page, label: document.pageLabel($0.page)) }
+                        let cited = passages.allSatisfy { $0.score == 0 }
+                            ? BookChatPrompt.citedPages(in: messages[index].text, passages: given)
+                            : BookChatPrompt.listedPages(in: messages[index].text, passages: given)
                         if !cited.isEmpty {
                             messages[index].text += "\n\n" + String(localized: "Pages consultées : ") + cited.map { "p. \(document.pageLabel($0))" }.joined(separator: ", ")
                         }

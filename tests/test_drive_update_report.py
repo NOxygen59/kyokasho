@@ -23,7 +23,7 @@ class DriveUpdateReportTests(unittest.TestCase):
     def test_report_explains_what_is_compared(self):
         views = (APP / "DriveViews.swift").read_text(encoding="utf-8")
         self.assertIn("Chaque cours suit son propre fichier Drive (pas son nom)", views)
-        self.assertIn("renommé « \\(onlineName) » en ligne", views)
+        self.assertIn("nommé « \\(onlineName) » sur Drive", views)
 
 
 if __name__ == "__main__":

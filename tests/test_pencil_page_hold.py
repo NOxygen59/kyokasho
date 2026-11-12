@@ -14,16 +14,22 @@ class PencilPageHoldTests(unittest.TestCase):
     def test_page_scrolls_wait_for_the_drawing_gesture(self):
         source = INK.read_text(encoding="utf-8")
         self.assertIn("scroll.panGestureRecognizer.require(toFail: canvas.drawingGestureRecognizer)", source)
-        hold = source[source.index("private func holdPageScrollsForPencil()"):]
+        hold = source[source.index("func holdPageScrollsForPencil()"):]
         self.assertIn("guard let canvas, isUserInteractionEnabled, window != nil", hold)
 
     def test_hold_is_set_when_the_page_appears_and_when_drawing_starts(self):
         source = INK.read_text(encoding="utf-8")
-        moved = source[source.index("override func didMoveToWindow()"):source.index("private func holdPageScrollsForPencil()")]
+        moved = source[source.index("override func didMoveToWindow()"):source.index("func holdPageScrollsForPencil()")]
         self.assertIn("holdPageScrollsForPencil()", moved)
         editing = source[source.index("func setEditing(_ on: Bool, toolPicker:"):]
         self.assertIn("canvas.drawingGestureRecognizer.isEnabled = on", editing)
         self.assertIn("holdPageScrollsForPencil()", editing[:editing.index("} else {")])
+
+    def test_hold_is_set_again_where_the_guard_is_reapplied(self):
+        # Revue D-07 (F2) : une page recréée par PDFKit sans repasser par une fenêtre.
+        display = (INK.parent / "ReaderController+Display.swift").read_text(encoding="utf-8")
+        guard = display[display.index("func applyPencilPageTurnGuard()"):]
+        self.assertIn("(sub as? InkPageView)?.holdPageScrollsForPencil()", guard)
 
 
 if __name__ == "__main__":

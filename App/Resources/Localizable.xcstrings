@@ -1,6 +1,50 @@
 {
   "sourceLanguage": "fr",
   "strings": {
+    "« %@ » : contenu identique sur Drive (fichier suivi, nommé « %@ » sur Drive).": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%1$@”: same content on Drive (tracked file, named “%2$@” on Drive)."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "« %@ » : contenu identique sur Drive (fichier suivi, nommé « %@ » sur Drive)."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%1$@”：Drive 上内容相同（所跟踪的文件，在 Drive 上名为“%2$@”）。"
+          }
+        }
+      }
+    },
+    "Préparation de la sauvegarde…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preparing the backup…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Préparation de la sauvegarde…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在准备备份…"
+          }
+        }
+      }
+    },
     "« %@ » : son fichier Drive est dans la corbeille de Drive ; copie locale gardée.": {
       "localizations": {
         "en": {
@@ -41,28 +85,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "“%@”：Drive 上内容相同。"
-          }
-        }
-      }
-    },
-    "« %@ » : contenu identique sur Drive (fichier suivi, renommé « %@ » en ligne).": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "“%1$@”: same content on Drive (tracked file, renamed “%2$@” online)."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "« %@ » : contenu identique sur Drive (fichier suivi, renommé « %@ » en ligne)."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "“%1$@”：Drive 上内容相同（所跟踪的文件，在线已重命名为“%2$@”）。"
           }
         }
       }

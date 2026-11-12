@@ -110,6 +110,7 @@ enum LibraryBackupService {
         // Écritures en file terminées (notes, encre, position, réglages). Brouillons, conversations, lexique et
         // traductions sont écrits d'un bloc (écriture atomique) : la copie voit l'ancienne ou la nouvelle version,
         // jamais un fichier coupé.
+        step(nil, String(localized: "Préparation de la sauvegarde…"))
         await model.drainWrites()
         let fm = FileManager.default
         let work = fm.temporaryDirectory.appendingPathComponent("BackupApp-\(UUID().uuidString)", isDirectory: true)
@@ -121,10 +122,11 @@ enum LibraryBackupService {
         do {
             try await Task.detached(priority: .userInitiated) {
                 try LibraryBackup.write(source, to: zip, appVersion: version) { done, total in
-                    Task { @MainActor in
-                        step(Double(done) / Double(max(total, 1)),
+                    // Revue D-07 (F8) : file principale, dans l'ordre (un `Task` par palier pouvait arriver en retard).
+                    DispatchQueue.main.async {
+                        MainActor.assumeIsolated { step(Double(done) / Double(max(total, 1)),
                              done == total ? String(localized: "Vérification de la sauvegarde…")
-                                           : String(localized: "\(done)/\(total) fichiers"))
+                                           : String(localized: "\(done)/\(total) fichiers")) }
                     }
                 }
             }.value

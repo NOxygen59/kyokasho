@@ -427,7 +427,7 @@ extension AppModel {
                 guard file.revision != document.driveRevision else {
                     checked.append(onlineName == document.title
                         ? String(localized: "« \(document.title) » : contenu identique sur Drive.")
-                        : String(localized: "« \(document.title) » : contenu identique sur Drive (fichier suivi, renommé « \(onlineName) » en ligne)."))
+                        : String(localized: "« \(document.title) » : contenu identique sur Drive (fichier suivi, nommé « \(onlineName) » sur Drive)."))
                     continue
                 }
                 let url = try await GoogleDrive.shared.download(file) { _ in }
