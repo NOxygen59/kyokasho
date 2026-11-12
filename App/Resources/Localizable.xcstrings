@@ -1,6 +1,292 @@
 {
   "sourceLanguage": "fr",
   "strings": {
+    "Notes, dossiers, cartes et correctifs de la recette 1.5.6": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notes, folders, cards and fixes from the 1.5.6 test"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notes, dossiers, cartes et correctifs de la recette 1.5.6"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "笔记、文件夹、卡片及 1.5.6 测试修复"
+          }
+        }
+      }
+    },
+    "Notes : un écran « Notes » sur l'accueil réunit toutes les notes, par échéance, avec filtres et archives ; une pastille compte les notes à revoir.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notes: a “Notes” screen on the home page gathers all notes by due date, with filters and archives; a badge counts the notes to review."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notes : un écran « Notes » sur l'accueil réunit toutes les notes, par échéance, avec filtres et archives ; une pastille compte les notes à revoir."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "笔记：主页上的“笔记”屏幕按截止日期汇集所有笔记，带筛选和归档；标记显示待复习的笔记数。"
+          }
+        }
+      }
+    },
+    "Notes : régler une note (échéance, priorité, classeur, étiquettes, archive), une seule ou plusieurs à la fois.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notes: organize a note (due date, priority, binder, tags, archive), one or several at once."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notes : régler une note (échéance, priorité, classeur, étiquettes, archive), une seule ou plusieurs à la fois."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "笔记：整理笔记（截止日期、优先级、分类夹、标签、归档），可单条或多条同时操作。"
+          }
+        }
+      }
+    },
+    "Accueil : des dossiers pour ranger les documents.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Home: folders to organize documents."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accueil : des dossiers pour ranger les documents."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "主页：用文件夹整理文档。"
+          }
+        }
+      }
+    },
+    "Cartes : un écran « Cartes de ce document » pour voir, modifier, suspendre, supprimer et exporter les cartes d'un livre.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cards: a “Cards of this document” screen to view, edit, suspend, delete and export a book's cards."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cartes : un écran « Cartes de ce document » pour voir, modifier, suspendre, supprimer et exporter les cartes d'un livre."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "卡片：“本文档的卡片”屏幕，可查看、编辑、暂停、删除和导出一本书的卡片。"
+          }
+        }
+      }
+    },
+    "Cartes de la page : tous les mots de la page trouvés dans tes dictionnaires, en plus du lexique du cours.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cards from the page: every word of the page found in your dictionaries, in addition to the course glossary."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cartes de la page : tous les mots de la page trouvés dans tes dictionnaires, en plus du lexique du cours."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "页面卡片：除课程词汇外，还列出此页在你词典中找到的所有词语。"
+          }
+        }
+      }
+    },
+    "Sauvegarde : une barre montre l'avancement.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Backup: a bar shows the progress."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sauvegarde : une barre montre l'avancement."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "备份：进度条显示进度。"
+          }
+        }
+      }
+    },
+    "Pencil en page simple avec glissement : la page ne glisse plus au premier trait, aussi sur un document d'une page et à la réouverture.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pencil in single page with swipe: the page no longer slides on the first stroke, also on a one-page document and when reopening."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pencil en page simple avec glissement : la page ne glisse plus au premier trait, aussi sur un document d'une page et à la réouverture."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "单页滑动模式下的 Pencil：首笔不再使页面滑动，单页文档和重新打开时也是如此。"
+          }
+        }
+      }
+    },
+    "Chat du livre : l'IA sait quel document et quelle page sont ouverts.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Book chat: the AI knows which document and page are open."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chat du livre : l'IA sait quel document et quelle page sont ouverts."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "书籍聊天：AI 知道当前打开的文档和页面。"
+          }
+        }
+      }
+    },
+    "Vérification Drive : le rapport dit quel fichier est suivi, son nom sur Drive et s'il est dans la corbeille de Drive.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drive check: the report says which file is tracked, its name on Drive and whether it is in the Drive trash."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vérification Drive : le rapport dit quel fichier est suivi, son nom sur Drive et s'il est dans la corbeille de Drive."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drive 检查：报告显示所跟踪的文件、它在 Drive 上的名称以及是否在 Drive 回收站中。"
+          }
+        }
+      }
+    },
+    "Accueil : un document déplacé hors de la vue quitte la sélection.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Home: a document moved out of view leaves the selection."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accueil : un document déplacé hors de la vue quitte la sélection."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "主页：移出视图的文档会从选择中移除。"
+          }
+        }
+      }
+    },
+    "Cartes : la définition entière est gardée, plus seulement son début.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cards: the full definition is kept, not only its beginning."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cartes : la définition entière est gardée, plus seulement son début."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "卡片：保留完整释义，而不只是开头。"
+          }
+        }
+      }
+    },
+    "Mise à jour Drive : un document ne reçoit plus un dossier de l'autre espace.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drive update: a document no longer gets a folder from the other space."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mise à jour Drive : un document ne reçoit plus un dossier de l'autre espace."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drive 更新：文档不再被放入另一空间的文件夹。"
+          }
+        }
+      }
+    },
     "Aucune nouvelle version à télécharger (%lld document(s)).": {
       "localizations": {
         "en": {
