@@ -404,10 +404,14 @@ extension AppDatabase {
                     try db.execute(sql: "UPDATE pageEdit SET documentId = ? WHERE documentId = ?", arguments: [newDocument.id, oldId])
                     // T5 E2 (revue DeepSeek n°6) : le survivant sans dossier prend celui du document remplacé ; un
                     // survivant déjà rangé garde le sien (sa fiche décrit le fichier qui reste, comme ci-dessous).
-                    try db.execute(sql: """
-                        UPDATE document SET folderId = (SELECT folderId FROM document WHERE id = ?)
-                        WHERE id = ? AND folderId IS NULL
-                        """, arguments: [oldId, newDocument.id])
+                    // Revue Codex après 1.5.6 (P2 n°3) : seulement un dossier du même espace que le survivant relu en base.
+                    let survivorFolder = try String.fetchOne(db, sql: "SELECT folderId FROM document WHERE id = ?", arguments: [newDocument.id])
+                    if survivorFolder == nil, let survivor = try LibraryDocument.fetchOne(db, key: newDocument.id),
+                       let inherited = try String.fetchOne(db, sql: "SELECT folderId FROM document WHERE id = ?", arguments: [oldId]),
+                       let folder = try LibraryFolder.fetchOne(db, key: inherited),
+                       folder.space == LibrarySpace(document: survivor).rawValue {
+                        try db.execute(sql: "UPDATE document SET folderId = ? WHERE id = ?", arguments: [inherited, newDocument.id])
+                    }
                     _ = try LibraryDocument.deleteOne(db, key: oldId)
                     // P3 n°9 (revue R2) : le survivant garde son titre, ses réglages, sa catégorie
                     // et sa position de lecture — la fiche qui reste décrit déjà le **fichier qui

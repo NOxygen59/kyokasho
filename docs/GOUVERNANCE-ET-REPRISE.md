@@ -94,6 +94,42 @@ Une ligne suffit à lancer l'agent suivant ; le reste est sur GitHub :
 - « Fais la revue indépendante de la PR #N selon `docs/GOUVERNANCE-ET-REPRISE.md`. Ne pousse rien sur sa branche. »
 - « Réponds à la revue de la PR #N et corrige ce qui est justifié. »
 
+## Sécurité : rien de personnel dans le dépôt
+
+Décision de NOxygen59 du 13/11/2026, après le blocage du compte GitHub en octobre (un nom légal publié par un agent).
+
+- **Aucun** nom légal, adresse, mail personnel, téléphone, clé ou jeton dans un fichier, un message de commit ou une
+  identité git. Identité unique : `NOxygen59` avec son adresse `…@users.noreply.github.com`.
+- **Garde-fou automatique** : `scripts/githooks/` (`kyokasho_hooks.py`), activé par
+  `git config core.hooksPath scripts/githooks`. `pre-commit` et `commit-msg` refusent un ajout, un message ou une
+  identité qui contient un terme privé, un mail non `noreply`, un numéro de téléphone (France, Japon), une clé d'accès
+  (`sk-`, `ghp_`, `github_pat_`, `AKIA`, `AIza`, `GOCSPX-`, `xox?-`) ou une clé privée. Les termes privés vivent
+  **seulement** dans `~/.kyokasho-secret` (un par ligne, `chmod 600`, jamais copié ailleurs) ; sans ce fichier, tout
+  commit est refusé. Le message de refus ne réaffiche jamais le terme trouvé. Tests : `tests/test_privacy_hooks.py`.
+- `.gitignore` exclut `.env`, `.env.*`, `*.local`, `secrets/` et les fichiers de configuration locaux.
+- `git commit --no-verify` ou `git push --no-verify` : seulement avec l'accord explicite de NOxygen59, noté dans le pont.
+- **En cas de fuite** : 1) ne plus rien pousser ; 2) clé ou jeton : le révoquer chez son fournisseur avant tout le
+  reste ; 3) si c'est déjà sur GitHub : NOxygen59 décide de la réécriture de l'historique et écrit au support GitHub
+  (formulaire de retrait de données sensibles), qui purge aussi les copies en cache ; ne jamais repousser l'ancien
+  historique ensuite ; 4) noter l'incident et la cause dans le pont.
+
+## Relecture finale par un autre modèle
+
+Décision de NOxygen59 du 13/11/2026. Avant **chaque push** et **chaque candidate**, le diff assemblé entier (pas les
+parties) est relu par un modèle d'une autre famille que Claude (DeepSeek par défaut, GLM en secours), en lecture seule :
+`python3 -I <pont>/outils/revue_finale.py --base <dernier commit publié ou de la candidate précédente>`.
+
+- **Artefact** : un fichier par diff, `<pont>/REVUES/FINALES/REVUE-FINALE-<sha court de la tête>.md` (hors dépôt, privé),
+  avec la ligne `VERDICT : OK` ou `VERDICT : BLOQUANT`, puis « Points bloquants » et « Points non bloquants ». La PR ou
+  la note de candidate cite ce fichier. Le verdict est celui du relecteur : Claude ne l'écrit ni ne le modifie.
+- **Bloquant** : bug de logique démontrable, perte ou fuite de données, faille de sécurité, régression probable,
+  incohérence d'interface entre parties assemblées, appelant ou fichier oublié, test cassé ou retiré — toujours avec un
+  scénario concret et un fichier:ligne. **Non bloquant** : style, nommage, documentation, suggestion, doute sans scénario.
+- `BLOQUANT` : correction, nouveau commit, nouvelle relecture (nouveau fichier pour la nouvelle tête).
+- **Appliqué par l'outil** : le hook `pre-push` refuse de pousser une branche dont la tête n'a pas de relecture
+  `VERDICT : OK` ; `build_ipa.sh` refuse de construire une candidate sur un commit non relu ou avec des modifications
+  non commitées.
+
 ## Définition d'un travail terminé
 
 Le comportement demandé est présent ; le diff reste limité ; le code significatif est documenté selon [CONTRIBUTING.md](../CONTRIBUTING.md) ; la PR contient sa passation ; les données et iOS 16 sont préservés ; les contrôles adaptés ont un résultat et un environnement ; les documents du domaine sont à jour ; les tests ignorés et la recette iPad manquante sont visibles ; aucune release n'est fabriquée sans demande. Un travail peut être intégré avec une limite connue explicitement acceptée, mais ne devient pas pour autant « confirmé sur iPad ».

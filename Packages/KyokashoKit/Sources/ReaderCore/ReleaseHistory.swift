@@ -10,6 +10,22 @@ import Foundation
 enum ReleaseHistory {
     static let past: [ReleaseNotes] = [
         // Candidates locales non publiées.
+        ReleaseNotes("1.5.6", "2026-11-11", published: false, String(localized: "Lexique, aide des gestes et correctifs de la recette 1.5.5", bundle: .main), added: [
+                String(localized: "Lexique : tous les mots des dictionnaires actifs, page par page, avec lecture et sens ; recherche par début de mot et fiche du mot.", bundle: .main),
+                String(localized: "Lexique : une étoile garde le mot, « + carte » crée sa carte de révision, et « Mes mots » ne montre que les mots gardés.", bundle: .main),
+                String(localized: "Lecteur : menu « … » → « Aide : gestes de lecture » explique les gestes de ce document.", bundle: .main),
+                String(localized: "Lecteur sur batterie : un rappel s'affiche quand la luminosité dépasse 90 % (la batterie descend presque trois fois plus vite).", bundle: .main),
+            ], fixed: [
+                String(localized: "Dessin au Pencil en page simple avec glissement : il marche dès l'ouverture du document, sans devoir tourner une page.", bundle: .main),
+                String(localized: "Chat du livre ouvert depuis l'accueil : il se ferme avec « Fermer », et le livre s'ouvre ensuite normalement.", bundle: .main),
+                String(localized: "Création de cartes : la liste des termes défile jusqu'au dernier.", bundle: .main),
+                String(localized: "La fenêtre « Nouveautés » s'affiche de nouveau après une mise à jour.", bundle: .main),
+                String(localized: "« Arrêter » une analyse ou une traduction ne laisse plus un texte coupé compté comme page lue.", bundle: .main),
+                String(localized: "« Supprimer définitivement » refusé pendant une sauvegarde : le document reste dans la corbeille.", bundle: .main),
+                String(localized: "Un effacement en échec ne fait plus réapparaître toute la corbeille dans la bibliothèque.", bundle: .main),
+                String(localized: "Une note ou une carte d'une page qui n'existe plus ne ferme plus l'app.", bundle: .main),
+                String(localized: "Relevé de batterie : le résumé reste lisible après une coupe du fichier, et une charge termine bien une session.", bundle: .main),
+            ]),
         ReleaseNotes("1.5.5", "2026-11-10", published: false, String(localized: "Pencil, chat du livre, navigateur et mises à jour Drive plus sûres", bundle: .main), added: [
             String(localized: "Chat du livre : il répond aussi aux questions générales, en le signalant, et liste les pages citées.", bundle: .main),
             String(localized: "Navigateur intégré : la connexion Google s'ouvre dans une vraie fenêtre ; la barre d'adresse cherche avec Brave.", bundle: .main),

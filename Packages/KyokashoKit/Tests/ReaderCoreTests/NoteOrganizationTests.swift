@@ -168,4 +168,47 @@ final class NoteOrganizationTests: XCTestCase {
         XCTAssertNoThrow(try db.renameNoteTag(id: a.id, to: "TEST S46"), "renommer en changeant la casse reste permis")
         XCTAssertEqual(try db.organizedNotes(includeArchived: true, excludingDocuments: ["d"]).count, 0)
     }
+
+    /// E3 : l'étiquette tapée dans « Ranger la note » réutilise celle qui existe (majuscules ignorées) ; une sélection
+    /// multiple refusée (classeur disparu) ne change aucune note.
+    func testTagTypedTwiceIsReusedAndARefusedBatchChangesNothing() throws {
+        let db = try database()
+        let first = try db.noteTag(named: "Test S46")
+        try db.apply(.addTag(first.id), to: ["n1"])
+        let again = try db.noteTag(named: "  test s46 ")
+        XCTAssertEqual(again.id, first.id)
+        try db.apply(.addTag(again.id), to: ["n1", "n2"])
+        XCTAssertEqual(try db.noteTags().count, 1)
+        XCTAssertEqual(try db.organization(noteId: "n2")?.tagIds, [first.id])
+
+        let folder = try db.createNoteFolder(name: "Matériaux")
+        try db.apply(.folder(folder.id), to: ["n1"])
+        XCTAssertThrowsError(try db.apply(.folder("disparu"), to: ["n1", "n2"]))
+        XCTAssertEqual(try db.organization(noteId: "n1")?.folderId, folder.id)
+        XCTAssertNil(try db.organization(noteId: "n2")?.folderId)
+    }
+
+    /// Revue DeepSeek D-07 F4 : note disparue → le lot échoue (rien écrit) et aucune étiquette n'est créée.
+    func testDeletedNoteFailsTheBatchAndCreatesNoOrphanTag() throws {
+        let db = try database()
+        XCTAssertThrowsError(try db.apply(.priority(.high), to: ["n1", "disparue"])) {
+            XCTAssertEqual($0 as? NoteOrganizationError, .noteNotFound)
+        }
+        XCTAssertEqual(try db.organization(noteId: "n1")?.priority, .normal, "tout ou rien")
+        XCTAssertThrowsError(try db.addTag(named: "Test S46", toNote: "disparue"))
+        XCTAssertTrue(try db.noteTags().isEmpty)
+        try db.addTag(named: "Test S46", toNote: "n1")
+        try db.addTag(named: "test s46", toNote: "n2")
+        XCTAssertEqual(try db.noteTags().count, 1)
+        XCTAssertEqual(try db.organization(noteId: "n2")?.tagIds, try db.organization(noteId: "n1")?.tagIds)
+    }
+
+    /// Relecture finale f2b3d49 (N2) : « Nouveau classeur… » sur une note disparue ne laisse aucun classeur vide.
+    func testNewFolderForADeletedNoteCreatesNothing() throws {
+        let db = try database()
+        XCTAssertThrowsError(try db.createNoteFolder(name: "Matériaux", assigningTo: "disparue"))
+        XCTAssertTrue(try db.noteFolders().isEmpty)
+        let folder = try db.createNoteFolder(name: "Matériaux", assigningTo: "n1")
+        XCTAssertEqual(try db.organization(noteId: "n1")?.folderId, folder.id)
+    }
 }

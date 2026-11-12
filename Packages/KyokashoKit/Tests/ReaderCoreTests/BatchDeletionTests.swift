@@ -50,4 +50,15 @@ final class BatchDeletionTests: XCTestCase {
         batch.requestDeletion(); batch.confirmFirst()
         XCTAssertEqual(batch.confirmSecond(existing: ["b"]), ["b"])
     }
+
+    /// Revue Codex après 1.5.6 (P2 n°1) : un document déplacé hors de la vue quitte la sélection, l'ordre reste.
+    func testKeepOnlyDropsDocumentsNoLongerVisible() {
+        var batch = BatchDeletion()
+        batch.toggle("a"); batch.toggle("b"); batch.toggle("c")
+        batch.keepOnly(["c", "a"])
+        XCTAssertEqual(batch.selected, ["a", "c"])
+        XCTAssertEqual(batch.order, ["a", "c"])
+        batch.requestDeletion(); batch.confirmFirst()
+        XCTAssertEqual(batch.confirmSecond(existing: ["a", "b", "c"]), ["a", "c"])
+    }
 }

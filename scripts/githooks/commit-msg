@@ -1,0 +1,5 @@
+#!/bin/sh
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2026 NOxygen59
+# Garde-fou Kyōkasho (voir kyokasho_hooks.py et docs/GOUVERNANCE-ET-REPRISE.md, « Sécurité »).
+exec python3 "$(dirname "$0")/kyokasho_hooks.py" commit-msg "$@"

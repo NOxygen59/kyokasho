@@ -68,7 +68,10 @@ public enum LibraryBackup {
 
     /// Écrit la sauvegarde dans `zip` (remplacé s'il existe), puis la relit et la vérifie entièrement. Un dossier
     /// absent est simplement vide ; un lien symbolique ou un chemin dangereux arrête tout.
-    public static func write(_ source: Source, to zip: URL, appVersion: String, at date: Date = Date()) throws {
+    /// `progress(fait, total)` (recette 1.5.6, 4.2) : fichiers écrits sur le total, au plus une fois par point de
+    /// pourcentage, appelé depuis le fil de l'écriture ; la relecture finale n'est pas comptée.
+    public static func write(_ source: Source, to zip: URL, appVersion: String, at date: Date = Date(),
+                             progress: ((Int, Int) -> Void)? = nil) throws {
         let fm = FileManager.default
         let work = fm.temporaryDirectory.appendingPathComponent("BackupWrite-\(UUID().uuidString)", isDirectory: true)
         try fm.createDirectory(at: work, withIntermediateDirectories: true)
@@ -76,10 +79,30 @@ public enum LibraryBackup {
         if fm.fileExists(atPath: zip.path) { try fm.removeItem(at: zip) }
         let archive = try Archive(url: zip, accessMode: .create)
         var hashes: [String: String] = [:]
+        // Fichiers des dossiers listés d'abord : le total est connu avant la première écriture (même ordre qu'avant).
+        var folderEntries: [(String, URL)] = []
+        for folder in source.folders {
+            for (relative, url) in try regularFiles(in: folder.url) {
+                let path = folder.path + "/" + relative
+                // Les bases SQLite ne passent que par l'API de sauvegarde (`databases`) : jamais leur fichier brut,
+                // ni leurs fichiers annexes du WAL.
+                guard !isSQLiteFile(url.lastPathComponent),
+                      !source.excluded.contains(where: { path == $0 || path.hasPrefix($0 + "/") }) else { continue }
+                folderEntries.append((path, url))
+            }
+        }
+        let presentFiles = source.files.filter { fm.fileExists(atPath: $0.url.path) }
+        let total = source.databases.count + presentFiles.count + folderEntries.count
+        var done = 0, reported = -1
         func add(_ path: String, file: URL) throws {
             guard safePath(path), hashes[path] == nil else { throw BackupError(String(localized: "Chemin de sauvegarde invalide : \(path)", bundle: .main)) }
             hashes[path] = try DocumentImporter.sha256(of: file)
             try archive.addEntry(with: path, fileURL: file, compressionMethod: path.hasSuffix(".pdf") ? .none : .deflate)
+            done += 1
+            if let progress, done * 100 / max(total, 1) != reported {
+                reported = done * 100 / max(total, 1)
+                progress(done, total)
+            }
         }
         for (index, database) in source.databases.enumerated() {
             let copy = work.appendingPathComponent("db-\(index).sqlite")
@@ -91,19 +114,12 @@ public enum LibraryBackup {
             try destination.close()
             try add(database.path, file: copy)
         }
-        for file in source.files where fm.fileExists(atPath: file.url.path) {
+        for file in presentFiles {
             try checkRegular(file.url)
             try add(file.path, file: file.url)
         }
-        for folder in source.folders {
-            for (relative, url) in try regularFiles(in: folder.url) {
-                let path = folder.path + "/" + relative
-                // Les bases SQLite ne passent que par l'API de sauvegarde (`databases`) : jamais leur fichier brut,
-                // ni leurs fichiers annexes du WAL.
-                guard !isSQLiteFile(url.lastPathComponent),
-                      !source.excluded.contains(where: { path == $0 || path.hasPrefix($0 + "/") }) else { continue }
-                try add(path, file: url)
-            }
+        for (path, url) in folderEntries {
+            try add(path, file: url)
         }
         let manifest = Manifest(formatVersion: formatVersion, appVersion: appVersion, createdAt: date, counts: source.counts,
                                 files: hashes, databases: source.databases.map(\.path), models: source.models)
