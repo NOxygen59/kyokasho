@@ -253,7 +253,11 @@ struct PageCardsView: View {
             return candidates.compactMap { candidate -> PageWord? in
                 guard let word = found[candidate.expression] ?? found[candidate.surface],
                       seen.insert(word.expression).inserted else { return nil }
-                let meaning = word.summary(.french) ?? word.summary(.english) ?? word.senses.first?.short ?? ""
+                // Revue Codex après 1.5.6 (P2 n°2) : la carte reçoit la définition entière (`full`), pas l'aperçu
+                // coupé à 90 caractères ; seule la ligne de la liste est limitée à l'écran.
+                let sense = word.senses.first { $0.language == .french && !$0.full.isEmpty }
+                    ?? word.senses.first { $0.language == .english && !$0.full.isEmpty } ?? word.senses.first
+                let meaning = sense?.full ?? ""
                 return PageWord(term: word.expression, surface: candidate.surface, reading: word.reading ?? word.expression,
                                 meaning: meaning, fromLexicon: false)
             }

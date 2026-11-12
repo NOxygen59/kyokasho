@@ -302,6 +302,8 @@ struct LibraryView: View {
             }
         }
         .onChange(of: model.trashedDocuments.count) { _ in model.refreshNotesToReview() }
+        // Revue Codex après 1.5.6 (P2 n°1) : la sélection suit ce qui est affiché (déplacement, dossier ouvert).
+        .onChange(of: visibleDocuments.map(\.id)) { ids in batch.keepOnly(Set(ids)) }
         .onReceive(NotificationCenter.default.publisher(for: UIApplication.didBecomeActiveNotification)) { _ in
             model.refreshNotesToReview()
         }

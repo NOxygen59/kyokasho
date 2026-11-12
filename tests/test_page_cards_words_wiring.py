@@ -29,6 +29,11 @@ class PageCardsWordsWiringTests(unittest.TestCase):
         self.assertIn("store.existingCardDocuments(keys)", self.view)
         self.assertIn("review.addPageCards(fields, documentId: document.id, page: page)", self.view)
 
+    def test_cards_get_the_full_definition(self):
+        # Revue Codex après 1.5.6 (P2 n°2) : jamais l'aperçu coupé à 90 caractères.
+        self.assertIn("let meaning = sense?.full ?? \"\"", self.view)
+        self.assertNotIn("word.senses.first?.short", self.view)
+
 
 if __name__ == "__main__":
     unittest.main()
