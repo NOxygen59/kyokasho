@@ -276,6 +276,27 @@ final class InkPageView: UIView, PKCanvasViewDelegate {
         return base.concatenating(CGAffineTransform(scaleX: scale, y: scale))
     }
 
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        holdPageScrollsForPencil()
+    }
+
+    /// Recette iPad 1.5.6 (1.2 à 1.4) : en page simple + Glissement, PDFKit rétablit le Pencil sur ses défilements
+    /// après chaque réglage de `applyPencilPageTurnGuard` (journal : « 2 sur 2 réglé(s) » à chaque appel), et le premier
+    /// trait faisait glisser la page. Ici, chaque défilement au-dessus de la toile attend que le geste de dessin ait
+    /// échoué : un trait de Pencil gagne toujours, le doigt (dessin au Pencil seul) tourne la page sans attendre.
+    /// Une dépendance UIKit (`require(toFail:)`) n'est pas effacée par PDFKit, contrairement aux types de toucher.
+    private func holdPageScrollsForPencil() {
+        guard let canvas, isUserInteractionEnabled, window != nil else { return }
+        var view = superview
+        while let current = view {
+            if let scroll = current as? UIScrollView {
+                scroll.panGestureRecognizer.require(toFail: canvas.drawingGestureRecognizer)
+            }
+            view = current.superview
+        }
+    }
+
     override func layoutSubviews() {
         super.layoutSubviews()
         canvas?.frame = bounds
@@ -306,8 +327,11 @@ final class InkPageView: UIView, PKCanvasViewDelegate {
         guard on || canvas != nil else { return }
         let canvas = ensureCanvas()
         canvas.isUserInteractionEnabled = on
+        // Hors dessin, la toile ne retient plus le défilement de la page (voir `holdPageScrollsForPencil`).
+        canvas.drawingGestureRecognizer.isEnabled = on
         canvas.drawingPolicy = finger ? .anyInput : .pencilOnly
         if on {
+            holdPageScrollsForPencil()
             toolPicker.addObserver(canvas)
             canvas.tool = toolPicker.selectedTool
             // Aussi pour les pages qui apparaissent pendant le dessin (défilement, page suivante).
