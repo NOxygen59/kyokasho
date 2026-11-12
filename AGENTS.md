@@ -96,6 +96,9 @@ Détail au § 2 de la feuille de route.
 - Jamais de PDF, dictionnaire, modèle ou donnée tierce dans le dépôt (le dépôt peut être public). En-tête de chaque
   fichier : `// SPDX-License-Identifier: MIT` + `// Copyright (c) 2026 NOxygen59`.
 - Travailler sur une branche et une PR dédiées, petites. Commits en français.
+- **Garde-fous (13/11/2026)** : hooks `scripts/githooks/` (rien de personnel ni de clé dans un commit) et relecture
+  finale du diff entier par un autre modèle avant chaque push et chaque candidate (`VERDICT : OK`). Détail :
+  [`docs/GOUVERNANCE-ET-REPRISE.md`](docs/GOUVERNANCE-ET-REPRISE.md), « Sécurité » et « Relecture finale ».
 
 ## Construire (Mac, Xcode, `xcodegen`)
 

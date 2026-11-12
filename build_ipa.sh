@@ -21,6 +21,13 @@ if [[ "$NOTES" != "$VERSION" ]]; then
   print -u2 "Notes de version absentes : ReleaseNotes.current est $NOTES, la version est $VERSION (AppIntro.swift)."
   exit 1
 fi
+# Décision de NOxygen59 du 13/11/2026 : une candidate exige la relecture finale de son commit par un modèle d'une
+# autre famille (REVUE-FINALE-<sha>.md avec « VERDICT : OK », voir docs/GOUVERNANCE-ET-REPRISE.md, « Sécurité »).
+if [[ -n "$(git status --porcelain --untracked-files=no)" ]]; then
+  print -u2 "Modifications non commitées : une candidate se construit sur un commit relu."
+  exit 1
+fi
+python3 scripts/githooks/kyokasho_hooks.py final-review "$(git rev-parse HEAD)"
 BUILD="$ROOT/build/ipa"
 ARCHIVE="$BUILD/Kyokasho.xcarchive"
 OUT="$ROOT/dist/Kyokasho-$VERSION.tipa"
