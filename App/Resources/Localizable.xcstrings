@@ -1,6 +1,28 @@
 {
   "sourceLanguage": "fr",
   "strings": {
+    "Vérification incomplète : %lld document(s) sur %lld vérifié(s).": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Incomplete check: %lld of %lld document(s) checked."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vérification incomplète : %lld document(s) sur %lld vérifié(s)."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "检查未完成：已检查 %lld/%lld 个文档。"
+          }
+        }
+      }
+    },
     "Notes, dossiers, cartes et correctifs de la recette 1.5.6": {
       "localizations": {
         "en": {

@@ -19,6 +19,9 @@ class DriveUpdateReportTests(unittest.TestCase):
         trashed = check.index("if file.trashed == true {")
         self.assertLess(trashed, check.index("GoogleDrive.shared.download(file)"))
         self.assertIn("continue", check[trashed:check.index("guard file.revision != document.driveRevision")])
+        # Relecture finale f7b5026 (B1) : la corbeille est un compteur, jamais un mot cherché dans le texte traduit.
+        self.assertIn("inDriveTrash.append(", check)
+        self.assertNotIn('contains(String(localized: "corbeille de Drive"))', check)
 
     def test_report_explains_what_is_compared(self):
         views = (APP / "DriveViews.swift").read_text(encoding="utf-8")

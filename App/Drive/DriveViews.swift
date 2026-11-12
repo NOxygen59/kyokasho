@@ -414,6 +414,9 @@ extension AppModel {
         // Recette 1.5.6 (6.1) : un cours suit **son** fichier Drive (identifiant + empreinte du contenu), jamais un
         // nom ; le rapport dit quel fichier a été comparé, s'il a été renommé ou mis à la corbeille sur Drive.
         var checked: [String] = []
+        // Relecture finale f7b5026 (B1, N1) : cours dont le fichier Drive est dans la corbeille de Drive, comptés à part
+        // (jamais retrouvés dans le texte traduit) et listés avant l'explication sur les noms.
+        var inDriveTrash: [String] = []
         for document in linked {
             guard let fileId = document.driveFileId else { continue }
             do {
@@ -421,7 +424,7 @@ extension AppModel {
                 let onlineName = (file.name as NSString).deletingPathExtension
                 // Corbeille de Drive : rien n'est remplacé ni effacé ici, la copie locale reste telle quelle.
                 if file.trashed == true {
-                    checked.append(String(localized: "« \(document.title) » : son fichier Drive est dans la corbeille de Drive ; copie locale gardée."))
+                    inDriveTrash.append(String(localized: "« \(document.title) » : son fichier Drive est dans la corbeille de Drive ; copie locale gardée."))
                     continue
                 }
                 guard file.revision != document.driveRevision else {
@@ -451,11 +454,13 @@ extension AppModel {
             }
         }
         var lines: [String] = []
-        // Relecture finale f2b3d49 (N4) : pas de « Tout est à jour » si un fichier suivi est dans la corbeille de Drive.
-        let inDriveTrash = checked.contains { $0.contains(String(localized: "corbeille de Drive")) }
+        // « Tout est à jour » seulement si chaque cours a été vérifié et qu'aucun n'est dans la corbeille de Drive
+        // (relectures finales f2b3d49 N4, f7b5026 B1 et N2).
         lines.append(!updated.isEmpty ? String(localized: "Mis à jour : ") + updated.joined(separator: ", ")
-                     : inDriveTrash ? String(localized: "Aucune nouvelle version à télécharger (\(linked.count) document(s)).")
+                     : !failures.isEmpty ? String(localized: "Vérification incomplète : \(linked.count - failures.count) document(s) sur \(linked.count) vérifié(s).")
+                     : !inDriveTrash.isEmpty ? String(localized: "Aucune nouvelle version à télécharger (\(linked.count) document(s)).")
                      : String(localized: "Tout est à jour (\(linked.count) document(s))."))
+        lines += inDriveTrash
         if !failures.isEmpty { lines.append(String(localized: "Erreurs : ") + failures.joined(separator: " ; ")) }
         if !conflicts.isEmpty { lines.append(conflicts.joined(separator: " ; ")) }
         if !checked.isEmpty {
