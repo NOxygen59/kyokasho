@@ -774,6 +774,14 @@ struct QwenChatView: View {
                             DocumentKnowledge.passages(for: document, question: prompt, japaneseTerms: searchTerms)
                         }.value
                     }
+                    // Recette 1.5.6 (5.3) : rien trouvé par mots-clés → la page affichée (sinon la dernière lue) sert
+                    // d'extrait ; l'IA sait ainsi sur quel document et quelle page on l'interroge.
+                    if passages.isEmpty && requestedPages.isEmpty {
+                        let shown = focusPage.flatMap { label in (0..<document.pageCount).first { document.pageLabel($0) == label } }
+                            ?? document.lastPageIndex
+                        let open = await Task.detached(priority: .userInitiated) { DocumentKnowledge.pagePassage(document, page: shown) }.value
+                        passages = open.map { [$0] } ?? []
+                    }
                     let dialogue = followUp ? previous.map { ($0.role == .user ? "Utilisateur : " : "Assistant : ") + $0.text }.joined(separator: "\n").prefix(800) : ""
                     let question = dialogue.isEmpty ? prompt : "Dernier échange (contexte, pas une source) :\n\(dialogue)\nQuestion actuelle : \(prompt)"
                     if passages.isEmpty && !requestedPages.isEmpty {
@@ -781,7 +789,7 @@ struct QwenChatView: View {
                     } else if passages.isEmpty {
                         // T2 (10/11) : aucune page du livre ne correspond ; l'IA répond avec ses connaissances
                         // générales en le signalant, au lieu de refuser.
-                        for try await chunk in chat.stream(question, context: BookChatPrompt.generalContext) { messages[index].text += chunk }
+                        for try await chunk in chat.stream(question, context: BookChatPrompt.generalContext(title: document.title)) { messages[index].text += chunk }
                         // Revue D-07 : réponse sans page, mais liée à la version actuelle (pas de mention « liens retirés »).
                         messages[index].pages = []
                         messages[index].layoutVersion = (try? database?.layoutVersion(documentId: document.id)) ?? 0
@@ -794,7 +802,7 @@ struct QwenChatView: View {
                                 : "Lecture non recoupée." } ?? "Lecture OvisOCR2 non recoupée."
                             return "[p. \(document.pageLabel(passage.page))] \(confidence)\n\(passage.text)"
                         }.joined(separator: "\n\n")
-                        let context = BookChatPrompt.context(sources: sources)
+                        let context = BookChatPrompt.context(sources: sources, title: document.title)
                         for try await chunk in chat.stream(question, context: context) { messages[index].text += chunk }
                         // T2 (10/11) : seules les pages réellement citées par la réponse sont listées et ouvrables.
                         let cited = BookChatPrompt.listedPages(

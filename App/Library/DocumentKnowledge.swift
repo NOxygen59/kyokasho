@@ -71,6 +71,14 @@ enum DocumentKnowledge {
             .sorted { $0.count > $1.count }
     }
 
+    /// Recette 1.5.6 (5.3) : la page affichée sert d'extrait quand la recherche ne trouve rien, pour que l'IA sache
+    /// ce que l'utilisateur regarde (le chat n'existe que pour un document entièrement lu par OvisOCR2).
+    static func pagePassage(_ document: LibraryDocument, page: Int) -> Passage? {
+        guard let content = DocumentAITextStore.read(documentId: document.id, reader: ModelSpec.ovisocr2.id, page: page),
+              !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
+        return Passage(page: page, text: String(content.prefix(3500)), score: 0)
+    }
+
     static func explicitPages(_ question: String, document: LibraryDocument) -> Set<Int> {
         guard let expression = try? NSRegularExpression(pattern: #"(?i)\b(?:p\.?\s*|pages?\s+)(\d+|[ivxlcdm]+)\b"#) else { return [] }
         let range = NSRange(question.startIndex..<question.endIndex, in: question)

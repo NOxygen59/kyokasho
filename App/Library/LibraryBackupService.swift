@@ -83,7 +83,9 @@ enum LibraryBackupService {
     /// Écritures au repos, puis sauvegarde dans un dossier privé, déplacée dans le dossier choisi (sinon laissée à
     /// partager). Refusée pendant une modification des pages, une lecture IA ou une analyse.
     @MainActor
-    static func backup(_ model: AppModel) async throws -> Result {
+    /// `step` (recette 1.5.6, 4.2) : avancement affiché, sur le fil principal — fraction des fichiers écrits, puis
+    /// `nil` avec un libellé pour la vérification et la copie, qui ne se mesurent pas.
+    static func backup(_ model: AppModel, step: @escaping @MainActor (Double?, String) -> Void = { _, _ in }) async throws -> Result {
         guard !inProgress else { throw fail(String(localized: "Une sauvegarde est déjà en cours.")) }
         guard PageShift.pendingDocumentId == nil, model.storageRecoveryError == nil else {
             throw fail(String(localized: "Une modification des pages doit être reprise avant de sauvegarder."))
@@ -118,7 +120,13 @@ enum LibraryBackupService {
         let version = DocumentPackageService.appVersion
         do {
             try await Task.detached(priority: .userInitiated) {
-                try LibraryBackup.write(source, to: zip, appVersion: version)
+                try LibraryBackup.write(source, to: zip, appVersion: version) { done, total in
+                    Task { @MainActor in
+                        step(Double(done) / Double(max(total, 1)),
+                             done == total ? String(localized: "Vérification de la sauvegarde…")
+                                           : String(localized: "\(done)/\(total) fichiers"))
+                    }
+                }
             }.value
         } catch {
             try? fm.removeItem(at: work)
@@ -132,6 +140,7 @@ enum LibraryBackupService {
         let access = folder.startAccessingSecurityScopedResource()
         defer { if access { folder.stopAccessingSecurityScopedResource() } }
         let target = folder.appendingPathComponent(name)
+        step(nil, String(localized: "Copie dans « \(folder.lastPathComponent) »…"))
         try fm.copyItem(at: zip, to: target)
         try? fm.removeItem(at: work)
         let removed = (try? LibraryBackup.rotate(in: folder, keep: keep).count) ?? 0
@@ -255,6 +264,8 @@ struct BackupSettingsView: View {
     @State private var folderName = LibraryBackupService.folder?.lastPathComponent
     @State private var choosing = false
     @State private var working = false
+    /// Avancement de la sauvegarde en cours (recette 1.5.6, 4.2) : fraction (`nil` : étape non mesurée) et libellé.
+    @State private var backupStep: (fraction: Double?, label: String)?
     @State private var message: String?
     @State private var shareURL: URL?
     @State private var pickingBackup = false
@@ -271,6 +282,13 @@ struct BackupSettingsView: View {
                     Label(working ? String(localized: "Sauvegarde en cours…") : String(localized: "Sauvegarder maintenant"), systemImage: "externaldrive.badge.checkmark")
                 }
                 .disabled(working)
+                if let backupStep {
+                    if let fraction = backupStep.fraction {
+                        ProgressView(value: fraction) { Text(verbatim: backupStep.label).font(.footnote) }
+                    } else {
+                        ProgressView { Text(verbatim: backupStep.label).font(.footnote) }
+                    }
+                }
                 if let message { Text(message).font(.footnote).foregroundStyle(Atelier.textSecondary) }
                 if let last = LibraryBackupService.lastBackup {
                     LabeledContent("Dernière sauvegarde", value: last.formatted(date: .abbreviated, time: .shortened))
@@ -340,7 +358,8 @@ struct BackupSettingsView: View {
         working = true
         message = nil
         do {
-            let result = try await LibraryBackupService.backup(model)
+            defer { backupStep = nil }
+            let result = try await LibraryBackupService.backup(model) { fraction, label in backupStep = (fraction, label) }
             if result.inChosenFolder {
                 message = String(localized: "Sauvegarde écrite dans « \(folderName ?? "") »") + (result.removed > 0 ? String(localized: " ; \(result.removed) ancienne(s) effacée(s).") : ".")
             } else {

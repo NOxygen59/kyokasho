@@ -1,6 +1,160 @@
 {
   "sourceLanguage": "fr",
   "strings": {
+    "« %@ » : son fichier Drive est dans la corbeille de Drive ; copie locale gardée.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@”: its Drive file is in the Drive trash; local copy kept."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "« %@ » : son fichier Drive est dans la corbeille de Drive ; copie locale gardée."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@”：其 Drive 文件在 Drive 回收站中；本地副本已保留。"
+          }
+        }
+      }
+    },
+    "« %@ » : contenu identique sur Drive.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@”: same content on Drive."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "« %@ » : contenu identique sur Drive."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@”：Drive 上内容相同。"
+          }
+        }
+      }
+    },
+    "« %@ » : contenu identique sur Drive (fichier suivi, renommé « %@ » en ligne).": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%1$@”: same content on Drive (tracked file, renamed “%2$@” online)."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "« %@ » : contenu identique sur Drive (fichier suivi, renommé « %@ » en ligne)."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%1$@”：Drive 上内容相同（所跟踪的文件，在线已重命名为“%2$@”）。"
+          }
+        }
+      }
+    },
+    "Chaque cours suit son propre fichier Drive (pas son nom) : un autre fichier renommé pareil n'est pas pris en compte.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Each course follows its own Drive file (not its name): another file renamed the same way is not taken into account."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chaque cours suit son propre fichier Drive (pas son nom) : un autre fichier renommé pareil n'est pas pris en compte."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每门课程跟踪自己的 Drive 文件（而非文件名）：重命名为相同名称的其他文件不会被考虑。"
+          }
+        }
+      }
+    },
+    "Vérification de la sauvegarde…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Checking the backup…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vérification de la sauvegarde…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在检查备份…"
+          }
+        }
+      }
+    },
+    "%lld/%lld fichiers": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld/%lld files"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld/%lld fichiers"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld/%lld 个文件"
+          }
+        }
+      }
+    },
+    "Copie dans « %@ »…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copying to “%@”…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copie dans « %@ »…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在复制到“%@”…"
+          }
+        }
+      }
+    },
     "Autres mots illisibles : %@": {
       "localizations": {
         "en": {
