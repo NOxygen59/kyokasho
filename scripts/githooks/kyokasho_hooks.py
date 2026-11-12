@@ -24,6 +24,9 @@ from pathlib import Path
 SECRET = Path(os.environ.get("KYOKASHO_SECRET_FILE", Path.home() / ".kyokasho-secret"))
 REVIEWS = Path(os.environ.get("KYOKASHO_FINAL_REVIEWS",
                               Path.home() / "Documents/Codex/Kyokasho-Pont/REVUES/FINALES"))
+# Relecture finale f2b3d49 (B1) : code tiers livré tel quel, dont les en-têtes citent légitimement le mail de leurs
+# auteurs. Les termes privés, téléphones et clés y restent contrôlés ; seuls les mails y sont admis.
+THIRD_PARTY = ("Packages/KyokashoKit/Sources/MeCabC/", "LICENSES/", "THIRD_PARTY_NOTICES.md")
 NOREPLY = re.compile(r"@(users\.noreply\.github\.com|anthropic\.com|example\.(com|org)|exemple\.fr)$", re.I)
 EMAIL = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
 PATTERNS = [
@@ -51,13 +54,14 @@ def secret_terms():
     return terms
 
 
-def findings(text, terms):
+def findings(text, terms, path=None):
     """Problèmes d'un texte : (sorte, extrait sûr à afficher). Un terme privé n'est jamais réaffiché."""
     found = []
     folded = text.casefold()
     if any(term in folded for term in terms):
         found.append(("terme privé (~/.kyokasho-secret)", "<masqué>"))
-    for mail in EMAIL.findall(text):
+    third_party = path is not None and path.startswith(THIRD_PARTY)
+    for mail in [] if third_party else EMAIL.findall(text):
         if not NOREPLY.search(mail):
             found.append(("mail personnel", mail[:2] + "…"))
     for kind, pattern in PATTERNS:
@@ -102,7 +106,7 @@ def pre_commit():
             number = int(re.search(r"\+(\d+)", line).group(1)) - 1
         elif line.startswith("+"):
             number += 1
-            problems += [f"{path}:{number} : {kind} {shown}" for kind, shown in findings(line[1:], terms)]
+            problems += [f"{path}:{number} : {kind} {shown}" for kind, shown in findings(line[1:], terms, path)]
     return refuse(problems) if problems else 0
 
 

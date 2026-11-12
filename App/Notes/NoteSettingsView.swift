@@ -150,7 +150,7 @@ struct NoteSettingsView: View {
     private func createFolder() {
         let name = newFolderName, database = database, id = noteId
         newFolderName = ""
-        run { try database.apply(.folder(database.createNoteFolder(name: name).id), to: [id]) }
+        run { try database.createNoteFolder(name: name, assigningTo: id) }
     }
 
     private func run(_ work: @escaping @Sendable () throws -> Void) {

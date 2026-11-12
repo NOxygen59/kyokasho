@@ -278,6 +278,19 @@ extension AppDatabase {
         }
     }
 
+    /// Classeur créé et donné à la note en une transaction : si la note a disparu, rien n'est créé (relecture finale
+    /// f2b3d49, N2 : même règle que `addTag(named:toNote:)`).
+    @discardableResult
+    public func createNoteFolder(name: String, assigningTo noteId: String) throws -> NoteFolder {
+        let folder = NoteFolder(name: try Self.clean(name))
+        try writer.write { db in
+            guard try Self.noteExists(db, noteId) else { throw NoteOrganizationError.noteNotFound }
+            try folder.insert(db)
+            try db.execute(sql: "UPDATE pageComment SET noteFolderId = ? WHERE id = ?", arguments: [folder.id, noteId])
+        }
+        return folder
+    }
+
     /// Rangement d'une note (identifiants inconnus de classeur ou d'étiquette retirés).
     public func organization(noteId: String) throws -> NoteOrganization? {
         try writer.read { db in

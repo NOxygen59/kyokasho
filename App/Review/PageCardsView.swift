@@ -193,7 +193,12 @@ struct PageCardsView: View {
             let pageText = text
             // Termes du lexique dans l'ordre où la page les montre (DEC-CA-02 : en tête, cochés).
             let found = lexicon.filter { !$0.term.isEmpty && pageText.contains($0.term) && seen.insert($0.term).inserted }
-                .sorted { (pageText.range(of: $0.term)?.lowerBound ?? pageText.endIndex) < (pageText.range(of: $1.term)?.lowerBound ?? pageText.endIndex) }
+                .sorted { a, b in
+                    // Relecture finale f2b3d49 (N6) : même position (木 / 木材) → le plus long d'abord, puis l'ordre alphabétique.
+                    let pa = pageText.range(of: a.term)?.lowerBound ?? pageText.endIndex
+                    let pb = pageText.range(of: b.term)?.lowerBound ?? pageText.endIndex
+                    return pa != pb ? pa < pb : a.term.count != b.term.count ? a.term.count > b.term.count : a.term < b.term
+                }
             // Lectures du lexique prioritaires ; suggestion locale à vérifier pour les entrées sans lecture.
             var words = await Task.detached(priority: .utility) {
                 found.map { entry in

@@ -52,7 +52,8 @@ class PrivacyHooksTests(unittest.TestCase):
         self.assertNotIn(FAKE_NAME.casefold(), result.stderr.casefold())
 
     def test_mail_phone_and_keys_are_refused(self):
-        for bad in ["contact : prenom.nom" + "@" + "gmail.com", "tel 06 12 34 56 78", "+81 90-1234-5678",
+        # Valeurs coupées en morceaux : ce fichier ne contient lui-même aucun motif refusé (relecture f2b3d49, B1).
+        for bad in ["contact : prenom.nom" + "@" + "gmail.com", "tel 06 " + "12 34 56 78", "+81 " + "90-1234-5678",
                     "gh" + "p_" + "a" * 36, "sk-" + "ant-" + "b" * 30, "AK" + "IA" + "ABCDEFGHIJKLMNOP",
                     "-----BEGIN " + "RSA PRIVATE KEY-----"]:
             with self.subTest(bad=bad[:8]):
@@ -62,6 +63,17 @@ class PrivacyHooksTests(unittest.TestCase):
         self.assertNotEqual(self.commit("ok\n", "Corrigé par " + FAKE_NAME).returncode, 0)
         self.git("config", "user.name", FAKE_NAME)
         self.assertNotEqual(self.commit("ok 2\n").returncode, 0)
+
+    def test_third_party_headers_may_keep_their_authors_mail(self):
+        # Relecture finale f2b3d49 (B1) : en-têtes de MeCab, mais jamais un terme privé.
+        folder = self.repo / "Packages/KyokashoKit/Sources/MeCabC"
+        folder.mkdir(parents=True)
+        (folder / "x.h").write_text("// Copyright Taku Kudo <taku" + "@" + "chasen.org>\n", encoding="utf-8")
+        self.git("add", ".")
+        self.assertEqual(self.git("commit", "-q", "-m", "MeCab").returncode, 0)
+        (folder / "x.h").write_text("// " + FAKE_NAME + "\n", encoding="utf-8")
+        self.git("add", ".")
+        self.assertNotEqual(self.git("commit", "-q", "-m", "MeCab 2").returncode, 0)
 
     def test_missing_secret_file_refuses_everything(self):
         self.secret.unlink()

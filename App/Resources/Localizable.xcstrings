@@ -1,6 +1,28 @@
 {
   "sourceLanguage": "fr",
   "strings": {
+    "Aucune nouvelle version à télécharger (%lld document(s)).": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No new version to download (%lld document(s))."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucune nouvelle version à télécharger (%lld document(s))."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没有可下载的新版本（%lld 个文档）。"
+          }
+        }
+      }
+    },
     "« %@ » : contenu identique sur Drive (fichier suivi, nommé « %@ » sur Drive).": {
       "localizations": {
         "en": {

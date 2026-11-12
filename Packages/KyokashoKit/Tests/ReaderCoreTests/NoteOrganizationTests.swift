@@ -202,4 +202,13 @@ final class NoteOrganizationTests: XCTestCase {
         XCTAssertEqual(try db.noteTags().count, 1)
         XCTAssertEqual(try db.organization(noteId: "n2")?.tagIds, try db.organization(noteId: "n1")?.tagIds)
     }
+
+    /// Relecture finale f2b3d49 (N2) : « Nouveau classeur… » sur une note disparue ne laisse aucun classeur vide.
+    func testNewFolderForADeletedNoteCreatesNothing() throws {
+        let db = try database()
+        XCTAssertThrowsError(try db.createNoteFolder(name: "Matériaux", assigningTo: "disparue"))
+        XCTAssertTrue(try db.noteFolders().isEmpty)
+        let folder = try db.createNoteFolder(name: "Matériaux", assigningTo: "n1")
+        XCTAssertEqual(try db.organization(noteId: "n1")?.folderId, folder.id)
+    }
 }

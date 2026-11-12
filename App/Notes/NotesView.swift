@@ -86,8 +86,10 @@ struct NotesView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) { Button("OK") { dismiss() } }
-                ToolbarItem(placement: .navigationBarLeading) { filterMenu }
-                ToolbarItem(placement: .navigationBarTrailing) {
+                // Relecture finale f2b3d49 (N5) : « Choisir » à gauche avec le filtre, « OK » seul à droite (iOS 16 peut
+                // replier deux éléments de droite dans un menu).
+                ToolbarItemGroup(placement: .navigationBarLeading) {
+                    filterMenu
                     Button(selecting ? String(localized: "Terminé") : String(localized: "Choisir")) {
                         selecting.toggle()
                         selection = []

@@ -451,7 +451,11 @@ extension AppModel {
             }
         }
         var lines: [String] = []
-        lines.append(updated.isEmpty ? String(localized: "Tout est à jour (\(linked.count) document(s)).") : String(localized: "Mis à jour : ") + updated.joined(separator: ", "))
+        // Relecture finale f2b3d49 (N4) : pas de « Tout est à jour » si un fichier suivi est dans la corbeille de Drive.
+        let inDriveTrash = checked.contains { $0.contains(String(localized: "corbeille de Drive")) }
+        lines.append(!updated.isEmpty ? String(localized: "Mis à jour : ") + updated.joined(separator: ", ")
+                     : inDriveTrash ? String(localized: "Aucune nouvelle version à télécharger (\(linked.count) document(s)).")
+                     : String(localized: "Tout est à jour (\(linked.count) document(s))."))
         if !failures.isEmpty { lines.append(String(localized: "Erreurs : ") + failures.joined(separator: " ; ")) }
         if !conflicts.isEmpty { lines.append(conflicts.joined(separator: " ; ")) }
         if !checked.isEmpty {
