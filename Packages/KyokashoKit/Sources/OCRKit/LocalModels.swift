@@ -53,7 +53,7 @@ public enum LocalModels {
     public enum ImportError: LocalizedError, Equatable {
         case unreadableConfig, unsupported(String), missing([String]), alreadyInstalled(String), notEnoughSpace(needed: Int64, free: Int64)
         case keptAside(String)
-        case badWeights(String), alreadyHasInfo, unknownFreeSpace, symbolicLink(String)
+        case badWeights(String), alreadyHasInfo, unknownFreeSpace, symbolicLink(String), unreadableTokenizer
 
         public var errorDescription: String? {
             switch self {
@@ -65,6 +65,8 @@ public enum LocalModels {
                 return String(localized: "Fichiers manquants : \(files.joined(separator: ", ")).", bundle: .main)
             case .alreadyInstalled(let name):
                 return String(localized: "Un modèle « \(name) » est déjà installé : supprime-le d'abord.", bundle: .main)
+            case .unreadableTokenizer:
+                return String(localized: "tokenizer_config.json est illisible : le modèle a peut-être été abîmé pendant le transfert.", bundle: .main)
             case .badWeights(let detail):
                 return String(localized: "Poids du modèle incomplets : \(detail).", bundle: .main)
             case .alreadyHasInfo:
@@ -107,8 +109,15 @@ public enum LocalModels {
             }
         }
         var missing = requiredFiles.filter { size($0) == nil }
-        let template = (try? Data(contentsOf: file("tokenizer_config.json")))
-            .flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }?["chat_template"] != nil
+        // Revue R2 MODLOC E3 (n°6) : lu une fois, ici ; illisible = refusé avant tout déplacement.
+        var template = false
+        if size("tokenizer_config.json") != nil {
+            guard let tokenizerData = try? Data(contentsOf: file("tokenizer_config.json")),
+                  let tokenizer = try? JSONSerialization.jsonObject(with: tokenizerData) as? [String: Any] else {
+                throw ImportError.unreadableTokenizer
+            }
+            template = tokenizer["chat_template"] != nil
+        }
         if !template && size("chat_template.jinja") == nil && size("chat_template.json") == nil { missing.append("chat_template.jinja") }
         // C3 : poids entiers = chaque fichier présent et non vide, et, avec un index, toutes ses parties au moins aussi
         // grosses que la taille annoncée (`metadata.total_size`, en-têtes en plus).
@@ -199,6 +208,8 @@ public enum LocalModels {
         } catch {
             if method == .moved {
                 try? fm.removeItem(at: prepared.appendingPathComponent(infoFile))
+                // Revue R2 MODLOC E3 (n°7) : le dossier rendu est exactement celui de départ (tokenizer d'origine remis).
+                restoreTokenizer(in: prepared)
                 guard (try? fm.moveItem(at: prepared, to: folder)) != nil else {
                     throw ImportError.keptAside(staging.path)   // dossier gardé tel quel, jamais effacé
                 }
@@ -226,6 +237,17 @@ public enum LocalModels {
         json["tokenizer_class"] = known
         try JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted, .sortedKeys]).write(to: config, options: .atomic)
         return current
+    }
+
+    /// Remet `tokenizer_config.json` d'origine (s'il avait été corrigé) et retire la copie de sauvegarde.
+    static func restoreTokenizer(in folder: URL) {
+        let fm = FileManager.default
+        let backup = folder.appendingPathComponent("tokenizer_config.original.json")
+        let config = folder.appendingPathComponent("tokenizer_config.json")
+        guard fm.fileExists(atPath: backup.path) else { return }
+        if (try? fm.removeItem(at: config)) != nil || !fm.fileExists(atPath: config.path) {
+            try? fm.moveItem(at: backup, to: config)
+        }
     }
 
     /// Place libre du disque de `url` (nil si inconnue).
@@ -315,7 +337,13 @@ public enum LocalModels {
                 try? fm.removeItem(at: moved.appendingPathComponent(infoFile))
                 let destination = recoverTo ?? root
                 try? fm.createDirectory(at: destination, withIntermediateDirectories: true)
-                let target = destination.appendingPathComponent("Modèle-récupéré-" + moved.lastPathComponent, isDirectory: true)
+                // Revue R2 MODLOC E3 (n°10) : nom libre garanti (« -2 », « -3 »…), jamais d'échec silencieux sur un nom pris.
+                var target = destination.appendingPathComponent("Modèle-récupéré-" + moved.lastPathComponent, isDirectory: true)
+                var rank = 2
+                while fm.fileExists(atPath: target.path) {
+                    target = destination.appendingPathComponent("Modèle-récupéré-\(moved.lastPathComponent)-\(rank)", isDirectory: true)
+                    rank += 1
+                }
                 if (try? fm.moveItem(at: moved, to: target)) != nil { recovered.append(target) }
             }
             // Effacé seulement s'il est vide : ce qui n'a pas pu être rendu reste tel quel.

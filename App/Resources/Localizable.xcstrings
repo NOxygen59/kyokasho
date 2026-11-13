@@ -1,6 +1,50 @@
 {
   "sourceLanguage": "fr",
   "strings": {
+    "Le modèle de cette conversation n'est plus installé : Qwen3-VL 4B prend la suite.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This conversation's model is no longer installed: Qwen3-VL 4B takes over."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le modèle de cette conversation n'est plus installé : Qwen3-VL 4B prend la suite."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此对话的模型已不再安装：改用 Qwen3-VL 4B。"
+          }
+        }
+      }
+    },
+    "tokenizer_config.json est illisible : le modèle a peut-être été abîmé pendant le transfert.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tokenizer_config.json is unreadable: the model may have been damaged during transfer."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tokenizer_config.json est illisible : le modèle a peut-être été abîmé pendant le transfert."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tokenizer_config.json 无法读取：模型可能在传输中损坏。"
+          }
+        }
+      }
+    },
     "Poids du modèle incomplets : %@.": {
       "localizations": {
         "en": {

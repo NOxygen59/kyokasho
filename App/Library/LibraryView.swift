@@ -1092,17 +1092,21 @@ struct LibraryView: View {
         }
     }
 
+    /// Un modèle de chat est là : officiel ou importé (revue R2 MODLOC E3, n°1).
+    private var chatModelInstalled: Bool {
+        Qwen3VLReader().isAvailable || ModelStore.shared.isInstalled(.qwen35chat4b) || !LocalModels.specs().isEmpty
+    }
+
     @ViewBuilder
     private func menu(for document: LibraryDocument) -> some View {
         Button { model.openDocumentId = document.id } label: { Label("Ouvrir", systemImage: "book") }
         if !document.capabilities.chat || !ownerUnlocked {
             // CBZ et mangas : ni chat ni mention de lecture IA. Mode propriétaire verrouillé : chat caché (DEC-03).
-        } else if (Qwen3VLReader().isAvailable || ModelStore.shared.isInstalled(.qwen35chat4b)),
-           DocumentKnowledge.isReady(document) {
+        } else if chatModelInstalled, DocumentKnowledge.isReady(document) {
             Button {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { chatDocument = document }
             } label: { Label("Discuter du livre", systemImage: "bubble.left.and.bubble.right") }
-        } else if Qwen3VLReader().isAvailable || ModelStore.shared.isInstalled(.qwen35chat4b) {
+        } else if chatModelInstalled {
             Label("Chat après lecture OvisOCR2 (\(DocumentKnowledge.readCount(document))/\(document.pageCount))",
                   systemImage: "text.book.closed")
         }

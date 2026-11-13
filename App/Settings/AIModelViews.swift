@@ -360,7 +360,9 @@ struct QwenChatView: View {
 
     @ViewBuilder
     private func modelOption(_ spec: ModelSpec, title: String) -> some View {
-        if downloads.installed.contains(spec.id) {
+        if LocalModels.isLocal(spec.id) && !downloads.installed.contains(spec.id) {
+            // Modèle importé disparu entre-temps : rien à télécharger (revue R2 MODLOC E3, n°4).
+        } else if downloads.installed.contains(spec.id) {
             Button { selectModel(spec) } label: {
                 Label(title, systemImage: spec.id == selectedModelID ? "checkmark" : "cpu")
             }
@@ -435,7 +437,23 @@ struct QwenChatView: View {
         loading = true
         ready = false
         error = nil
+        // Revue R2 MODLOC E3 (n°3) : modèle importé supprimé depuis → on le dit et la conversation passe à Qwen3-VL.
+        var notice: String?
+        if !AIChatSettingsStore.models.contains(where: { $0.id == selectedModelID }) {
+            notice = String(localized: "Le modèle de cette conversation n'est plus installé : Qwen3-VL 4B prend la suite.")
+            selectedModelID = ModelSpec.qwen3vl4b.id
+            if let index = conversations.firstIndex(where: { $0.id == selectedConversation }) {
+                conversations[index].modelID = selectedModelID
+                saveConversations()
+            }
+        }
+        defer { if let notice, error == nil { error = notice } }
         let spec = selectedSpec
+        // Revue R2 MODLOC E3 (n°8) : un modèle importé avant la correction du nom du tokenizer est corrigé ici (idempotent).
+        if LocalModels.isLocal(spec.id) {
+            let directory = ModelStore.shared.directory(spec)
+            await Task.detached(priority: .userInitiated) { _ = try? LocalModels.normalizeTokenizer(in: directory) }.value
+        }
         guard downloads.installed.contains(spec.id) else {
             error = String(localized: "Télécharge \(spec.title) depuis le menu Modèle pour discuter.")
             loading = false

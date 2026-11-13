@@ -179,4 +179,28 @@ final class LocalModelsTests: XCTestCase {
         XCTAssertTrue(original.contains("Qwen3_5Tokenizer"))
         XCTAssertNil(try LocalModels.normalizeTokenizer(in: installed), "déjà normalisé : rien à refaire")
     }
+
+    /// Revue R2 MODLOC E3 (n°6, 7, 10) : tokenizer illisible refusé avant déplacement ; une préparation interrompue se
+    /// rend sous un nom libre même si le premier est déjà pris ; le tokenizer d'origine est remis au dossier rendu.
+    func testUnreadableTokenizerRecoveredNamesAndRestoredTokenizer() throws {
+        let broken = try fakeModel("Abime")
+        try "{pas du json".write(to: broken.appendingPathComponent("tokenizer_config.json"), atomically: true, encoding: .utf8)
+        XCTAssertThrowsError(try LocalModels.validate(broken)) { XCTAssertEqual($0 as? LocalModels.ImportError, .unreadableTokenizer) }
+
+        let recovery = root.appendingPathComponent("Recuperes", isDirectory: true)
+        try FileManager.default.createDirectory(at: recovery.appendingPathComponent("Modèle-récupéré-local-z"), withIntermediateDirectories: true)
+        let staging = models.appendingPathComponent(".import-x/local-z", isDirectory: true)
+        try FileManager.default.createDirectory(at: staging, withIntermediateDirectories: true)
+        let recovered = LocalModels.removeLeftovers(in: models, recoverTo: recovery)
+        XCTAssertEqual(recovered.map(\.lastPathComponent), ["Modèle-récupéré-local-z-2"])
+
+        let folder = root.appendingPathComponent("Rendu", isDirectory: true)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        try #"{"tokenizer_class": "Qwen3_5Tokenizer"}"#.write(to: folder.appendingPathComponent("tokenizer_config.json"), atomically: true, encoding: .utf8)
+        try LocalModels.normalizeTokenizer(in: folder)
+        LocalModels.restoreTokenizer(in: folder)
+        let text = try String(contentsOf: folder.appendingPathComponent("tokenizer_config.json"), encoding: .utf8)
+        XCTAssertTrue(text.contains("Qwen3_5Tokenizer"))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: folder.appendingPathComponent("tokenizer_config.original.json").path))
+    }
 }

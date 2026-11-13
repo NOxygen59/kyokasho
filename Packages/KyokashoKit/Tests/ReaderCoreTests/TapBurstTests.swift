@@ -35,4 +35,15 @@ final class TapBurstTests: XCTestCase {
     func testNoTapNoOutcome() {
         XCTAssertNil(TapBurst().outcome(at: t0))
     }
+
+    /// Revue R2 MODLOC E3 (n°11) : une pause d'au moins 0,4 s clôt la rafale ; trois touchers espacés d'exactement 0,4 s
+    /// ouvrent donc le tableau de bord, espacés de 0,39 s ils basculent le mode.
+    func testFrontierAtTheWindow() {
+        var slow = TapBurst()
+        for i in 0..<3 { slow.tap(at: t0.addingTimeInterval(Double(i) * 0.4)) }
+        XCTAssertEqual(slow.outcome(at: t0.addingTimeInterval(1.2)), .single)
+        var quick = TapBurst()
+        for i in 0..<3 { quick.tap(at: t0.addingTimeInterval(Double(i) * 0.39)) }
+        XCTAssertEqual(quick.outcome(at: t0.addingTimeInterval(0.78 + 0.4)), .toggleOwnerMode)
+    }
 }

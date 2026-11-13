@@ -55,6 +55,8 @@ public final class QwenChat: @unchecked Sendable {
             throw OCRError.engineFailed(String(localized: "Ce modèle ne sait pas discuter.", bundle: .main))
         }
         guard isAvailable else { throw OCRError.modelMissing(model.title) }
+        // Revue R2 MODLOC E3 (n°9) : un autre modèle resté chargé sans travail est d'abord rendu, puis on remesure.
+        if let free = PageVLMReader.availableMemory(), free < 3_800 * 1_048_576 { await GLMModel.shared.unloadIfIdle() }
         if let free = PageVLMReader.availableMemory(), free < 3_800 * 1_048_576 {
             throw OCRError.engineFailed(String(localized: "Pas assez de mémoire libre pour \(model.title) (\(free / 1_048_576) Mo libres). Ferme les autres apps et réessaie.", bundle: .main))
         }
