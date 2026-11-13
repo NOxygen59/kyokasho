@@ -62,7 +62,7 @@ struct NotesView: View {
                     if !activeFilters.isEmpty {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 6) {
-                                ForEach(activeFilters, id: \.label) { chip in
+                                ForEach(activeFilters, id: \.id) { chip in
                                     Button { chip.clear() } label: {
                                         Label(chip.label, systemImage: "xmark.circle.fill").font(Atelier.font(12, weight: .medium))
                                             .padding(.horizontal, 10).padding(.vertical, 5)
@@ -268,10 +268,6 @@ struct NotesView: View {
         let document = model.documents.first { $0.id == note.documentId }
         let group = NoteListing.group(dueDay: o.dueDay, today: Date())
         return HStack(alignment: .top, spacing: 10) {
-            RoundedRectangle(cornerRadius: Atelier.corner(2))
-                .fill(o.priority == .high ? Atelier.Tint.annotate : o.priority == .low ? Atelier.textTertiary.opacity(0.4) : Color.clear)
-                .frame(width: 4)
-                .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 5) {
                 Text(Self.firstLine(note)).font(Atelier.font(16, weight: .semibold)).foregroundStyle(Atelier.textPrimary).lineLimit(2)
                 if let document {
@@ -282,6 +278,8 @@ struct NotesView: View {
                     .font(Atelier.font(12)).foregroundStyle(Atelier.textTertiary)
                 let chips = chips(for: o)
                 if o.dueDay != nil || o.priority != .normal || !chips.isEmpty {
+                    // Revue D-07 (n°12) : les pastilles défilent au lieu d'être coupées.
+                    ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 6) {
                         if let due = o.dueDay {
                             chip(Self.dueLabel(due), icon: "calendar",
@@ -291,10 +289,19 @@ struct NotesView: View {
                             chip(Self.title(o.priority), icon: o.priority == .high ? "exclamationmark" : "arrow.down",
                                  tint: o.priority == .high ? Atelier.Tint.annotate : Atelier.textSecondary)
                         }
-                        ForEach(chips, id: \.self) { chip($0, icon: nil, tint: Atelier.Tint.read) }
+                        ForEach(chips, id: \.id) { chip($0.label, icon: nil, tint: Atelier.Tint.read) }
                     }
                     .lineLimit(1)
+                    }
                 }
+            }
+            .padding(.leading, 10)
+            // Revue D-07 (n°8) : trait de priorité sur toute la hauteur de la note.
+            .overlay(alignment: .leading) {
+                RoundedRectangle(cornerRadius: Atelier.corner(2))
+                    .fill(o.priority == .high ? Atelier.Tint.annotate : o.priority == .low ? Atelier.textTertiary.opacity(0.4) : Color.clear)
+                    .frame(width: 4)
+                    .accessibilityHidden(true)
             }
             Spacer(minLength: 0)
         }
@@ -312,11 +319,11 @@ struct NotesView: View {
         .background(tint.opacity(0.12), in: Capsule())
     }
 
-    /// Classeur puis étiquettes, chacun en pastille.
-    private func chips(for o: NoteOrganization) -> [String] {
-        var parts: [String] = []
-        if let folder = folders.first(where: { $0.id == o.folderId }) { parts.append("▸ " + folder.name) }
-        return parts + tags.filter { o.tagIds.contains($0.id) }.map { "#" + $0.name }
+    /// Classeur puis étiquettes, chacun en pastille, identifiés par leur identifiant (revue D-07 n°9 : deux noms pareils).
+    private func chips(for o: NoteOrganization) -> [(id: String, label: String)] {
+        var parts: [(id: String, label: String)] = []
+        if let folder = folders.first(where: { $0.id == o.folderId }) { parts.append(("f-" + folder.id, "▸ " + folder.name)) }
+        return parts + tags.filter { o.tagIds.contains($0.id) }.map { ("t-" + $0.id, "#" + $0.name) }
     }
 
     /// En-tête de groupe : icône, nom, nombre de notes ; en retard en rouge.
@@ -336,27 +343,29 @@ struct NotesView: View {
 
     /// « 3 notes · 1 à revoir » pour la vue affichée.
     private var summary: String {
-        let shown = sections.reduce(0) { $0 + $1.notes.count }
-        let toReview = sections.filter { [.overdue, .today, .tomorrow].contains($0.group) }.reduce(0) { $0 + $1.notes.count }
+        let all = sections   // calculé une fois (revue D-07 n°10)
+        let shown = all.reduce(0) { $0 + $1.notes.count }
+        let toReview = all.filter { [.overdue, .today, .tomorrow].contains($0.group) }.reduce(0) { $0 + $1.notes.count }
         return toReview > 0 ? String(localized: "\(shown) note(s) · \(toReview) à revoir") : String(localized: "\(shown) note(s)")
     }
 
     /// Filtres posés, à retirer d'un toucher.
-    private var activeFilters: [(label: String, clear: () -> Void)] {
-        var list: [(label: String, clear: () -> Void)] = []
-        if let id = filter.folderId { list.append(("▸ " + (folders.first { $0.id == id }?.name ?? "?"), { filter.folderId = nil })) }
-        if let id = filter.tagId { list.append(("#" + (tags.first { $0.id == id }?.name ?? "?"), { filter.tagId = nil })) }
-        if let priority = filter.priority { list.append((Self.title(priority), { filter.priority = nil })) }
-        if let id = filter.documentId { list.append((model.documents.first { $0.id == id }?.title ?? "?", { filter.documentId = nil })) }
+    private var activeFilters: [(id: String, label: String, clear: () -> Void)] {
+        var list: [(id: String, label: String, clear: () -> Void)] = []
+        if let id = filter.folderId { list.append(("folder", "▸ " + (folders.first { $0.id == id }?.name ?? "?"), { filter.folderId = nil })) }
+        if let id = filter.tagId { list.append(("tag", "#" + (tags.first { $0.id == id }?.name ?? "?"), { filter.tagId = nil })) }
+        if let priority = filter.priority { list.append(("priority", Self.title(priority), { filter.priority = nil })) }
+        if let id = filter.documentId { list.append(("book", model.documents.first { $0.id == id }?.title ?? "?", { filter.documentId = nil })) }
         return list
     }
 
-    /// « Modifiée le 13 nov. 2026 à 14:05 » (ou « Créée le … » si jamais modifiée).
+    /// « Créée le 13 nov. 2026 à 14:05 », plus « · modifiée le … » si elle a changé plus d'une minute après (revue D-07
+    /// n°11 : la première saisie suit de près la création, ce n'est pas une modification).
     static func dateLabel(_ note: PageComment) -> String {
         let format = Date.FormatStyle(date: .abbreviated, time: .shortened)
-        return note.updatedAt.timeIntervalSince(note.createdAt) > 1
-            ? String(localized: "Modifiée le \(note.updatedAt.formatted(format))")
-            : String(localized: "Créée le \(note.createdAt.formatted(format))")
+        let created = String(localized: "Créée le \(note.createdAt.formatted(format))")
+        guard note.updatedAt.timeIntervalSince(note.createdAt) > 60 else { return created }
+        return created + " · " + String(localized: "modifiée le \(note.updatedAt.formatted(format))")
     }
 
     private func open(_ note: PageComment) {

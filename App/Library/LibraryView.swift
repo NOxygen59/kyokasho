@@ -1383,9 +1383,13 @@ struct FolderNameSheet: View {
                 ToolbarItem(placement: .cancellationAction) { Button("Annuler", action: cancel) }
                 ToolbarItem(placement: .confirmationAction) { Button(confirm, action: done).disabled(!valid) }
             }
-            .onAppear { focused = true }
+            // Revue D-07 (n°2) : le focus demandé pendant l'animation d'ouverture est perdu sur iOS 16 ; on attend sa fin.
+            .task {
+                try? await Task.sleep(nanoseconds: 450_000_000)
+                focused = true
+            }
         }
-        .presentationDetents([.height(220)])
+        .presentationDetents([.medium])
     }
 }
 

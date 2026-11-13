@@ -19,8 +19,7 @@ struct FloatingToolbar<Items: View>: View {
     /// plus quand sa taille change, par exemple en passant au Pencil (recette 1.5.7, 1.2). Bornée à l'affichage.
     @AppStorage("toolbar.x") private var fractionX = 0.0
     @AppStorage("toolbar.y") private var fractionY = 0.1
-    /// Marge invisible autour de la barre, qui sert aussi de prise (recette 1.5.7, 1.2 : demande de NOxygen59).
-    private static var grabMargin: CGFloat { 12 }
+
     /// Déplacement en cours (remis à zéro tout seul à la fin du geste).
     @GestureState private var drag: CGSize = .zero
     @State private var size: CGSize = .zero
@@ -32,7 +31,8 @@ struct FloatingToolbar<Items: View>: View {
         let y = min(max(0, fractionY * area.height + drag.height), maxY)
         // Repère global : la poignée bouge avec la barre ; mesurer dans son propre repère faisait
         // osciller le geste à l'infini (gel puis plantage).
-        let gesture = DragGesture(minimumDistance: 2, coordinateSpace: .global)
+        // 8 pt avant de déplacer (revue D-07 n°6) : un toucher un peu glissé sur un outil reste un toucher.
+        let gesture = DragGesture(minimumDistance: 8, coordinateSpace: .global)
             .updating($drag) { value, state, _ in state = value.translation }
             .onEnded { value in
                 let endX = min(max(0, fractionX * area.width + value.translation.width), maxX)
@@ -65,8 +65,8 @@ struct FloatingToolbar<Items: View>: View {
         }
         .padding(6)
         .atelierPanel(radius: 16)
-        // Toute la barre et sa marge se déplacent au glisser ; un toucher sur un bouton reste un toucher.
-        .padding(Self.grabMargin)
+        // Toute la barre se prend pour la déplacer (recette 1.5.7, 1.2) ; un toucher sur un bouton reste un toucher.
+        // Pas de marge invisible autour (revue D-07 n°1) : elle volait les traits du Pencil commencés près de la barre.
         .contentShape(Rectangle())
         .gesture(gesture)
         .background(GeometryReader { g in Color.clear.preference(key: ToolbarSizeKey.self, value: g.size) })
@@ -84,7 +84,8 @@ struct FloatingToolbar<Items: View>: View {
             .rotationEffect(.degrees(vertical ? 0 : 90))
             .font(Atelier.font(13, weight: .bold))
             .foregroundStyle(Atelier.textTertiary)
-            .frame(width: vertical ? 46 : 30, height: vertical ? 30 : 46)
+            // Poignée agrandie (recette 1.5.7, 1.2) : 44 pt dans les deux sens, barre dépliée comme repliée.
+            .frame(width: vertical ? 46 : 44, height: vertical ? 44 : 46)
             .contentShape(Rectangle())
             .accessibilityLabel("Déplacer la barre d'outils")
     }

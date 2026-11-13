@@ -1,6 +1,28 @@
 {
   "sourceLanguage": "fr",
   "strings": {
+    "modifiée le %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "edited on %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "modifiée le %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "修改于 %@"
+          }
+        }
+      }
+    },
     "Retirer le filtre %@": {
       "localizations": {
         "en": {

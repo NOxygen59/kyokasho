@@ -22,7 +22,8 @@ class Recette157FixesTests(unittest.TestCase):
         bar = (APP / "Reader/FloatingToolbar.swift").read_text(encoding="utf-8")
         self.assertIn("fractionX * area.width + drag.width", bar)
         self.assertIn("fractionX = area.width > 0 ? endX / area.width : 0", bar)
-        self.assertIn(".padding(Self.grabMargin)\n        .contentShape(Rectangle())\n        .gesture(gesture)", bar)
+        self.assertIn(".contentShape(Rectangle())\n        .gesture(gesture)", bar)
+        self.assertNotIn("grabMargin", bar)
 
     def test_notes_show_date_and_time(self):
         notes = (APP / "Notes/NotesView.swift").read_text(encoding="utf-8")
