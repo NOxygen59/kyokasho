@@ -35,6 +35,8 @@ final class AppModel: ObservableObject {
     /// Pastille « N notes à revoir » de l'accueil (PLAN-T4-001 E2, DEC-T4-06) : notes non archivées dont l'échéance est
     /// passée, aujourd'hui ou demain, hors documents à la corbeille. Relue par `refreshNotesToReview`.
     @Published private(set) var notesToReview = 0
+    /// Pastille « ! » de Notes sur l'accueil (PLAN-NOTIF-001, E1).
+    @Published private(set) var noteDueBadge = NoteDueBadge.none
     /// Note à montrer à l'ouverture d'un livre depuis l'écran « Notes » : le lecteur de ce document va à sa page et
     /// fait clignoter son ancre, puis remet la demande à `nil`.
     @Published var noteJump: NoteJump?
@@ -539,13 +541,20 @@ final class AppModel: ObservableObject {
     func refreshNotesToReview() {
         let database = database, excluded = trashedDocumentIds
         Task.detached(priority: .utility) {
-            let count: Int
-            do { count = try database.notesToReviewCount(today: Date(), excludingDocuments: excluded) } catch {
+            let count: Int, badge: NoteDueBadge
+            do {
+                let now = Date()
+                count = try database.notesToReviewCount(today: now, excludingDocuments: excluded)
+                badge = try database.noteDueBadge(today: now, excludingDocuments: excluded)
+            } catch {
                 // Revue DeepSeek F7 : jamais confondu avec « aucune note » sans trace.
                 Diagnostics.error("pastille des notes : \(error.localizedDescription)", "notes")
                 return
             }
-            await MainActor.run { if self.notesToReview != count { self.notesToReview = count } }
+            await MainActor.run {
+                if self.notesToReview != count { self.notesToReview = count }
+                if self.noteDueBadge != badge { self.noteDueBadge = badge }
+            }
         }
     }
 

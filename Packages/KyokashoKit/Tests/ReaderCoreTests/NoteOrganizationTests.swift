@@ -130,6 +130,29 @@ final class NoteOrganizationTests: XCTestCase {
         XCTAssertEqual(try db.organizedNotes(includeArchived: true).count, 4)
     }
 
+    /// PLAN-NOTIF-001 E1 : « ! » noir dans les 7 jours, rouge aujourd'hui ou dépassé ; archivées, corbeille et jours
+    /// invalides ignorés ; 23 h à Tokyo reste « aujourd'hui ».
+    func testDueBadgeIsBlackWithinAWeekAndRedTodayOrLate() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Tokyo")!
+        let today = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 11, day: 11, hour: 23)))
+        XCTAssertEqual(NoteDueBadge.of(dueDays: [], today: today, calendar: calendar), .none)
+        XCTAssertEqual(NoteDueBadge.of(dueDays: ["2026-11-19"], today: today, calendar: calendar), .none)
+        XCTAssertEqual(NoteDueBadge.of(dueDays: ["2026-11-18"], today: today, calendar: calendar), .soon)
+        XCTAssertEqual(NoteDueBadge.of(dueDays: ["2026-11-12", "2026-11-11"], today: today, calendar: calendar), .urgent)
+        XCTAssertEqual(NoteDueBadge.of(dueDays: ["2026-10-01"], today: today, calendar: calendar), .urgent)
+        XCTAssertEqual(NoteDueBadge.of(dueDays: ["2026-1-5"], today: today, calendar: calendar), .none)
+
+        let db = try database()
+        try db.apply(.due("2026-11-15"), to: ["n1"])
+        XCTAssertEqual(try db.noteDueBadge(today: today, calendar: calendar), .soon)
+        try db.apply(.due("2026-11-11"), to: ["n2"])
+        XCTAssertEqual(try db.noteDueBadge(today: today, calendar: calendar), .urgent)
+        try db.apply(.archived(true), to: ["n2"])
+        XCTAssertEqual(try db.noteDueBadge(today: today, calendar: calendar), .soon)
+        XCTAssertEqual(try db.noteDueBadge(today: today, calendar: calendar, excludingDocuments: ["d"]), .none)
+    }
+
     func testDayStrings() {
         XCTAssertTrue(NoteDay.isValid("2028-02-29"))
         XCTAssertFalse(NoteDay.isValid("2027-02-29"))

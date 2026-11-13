@@ -512,8 +512,10 @@ struct LibraryView: View {
                 }
                 // Notes dans les deux espaces (revue DeepSeek F1) : les PDF de Manga ont aussi des notes, l'écran est global.
                 // Pastille : notes à revoir (échéance passée, aujourd'hui ou demain ; DEC-T4-06).
+                // PLAN-NOTIF-001 (DEC-01/02 = A) : « ! » noir si une échéance tombe dans les 7 jours, rouge si elle est
+                // aujourd'hui ou dépassée ; le nombre reste dans l'écran Notes.
                 actionRow(icon: "note.text", title: String(localized: "Notes"), tint: Atelier.Tint.annotate,
-                          count: model.notesToReview) { showNotes = true }
+                          due: model.noteDueBadge) { showNotes = true }
             }
             VStack(alignment: .leading, spacing: 8) {
                 AtelierLabel(String(localized: "Importer et convertir")).padding(.bottom, 2)
@@ -559,13 +561,14 @@ struct LibraryView: View {
         .buttonStyle(.plain)
     }
 
-    private func actionRow(icon: String, title: String, tint: Color, count: Int? = nil,
+    private func actionRow(icon: String, title: String, tint: Color, count: Int? = nil, due: NoteDueBadge = .none,
                            action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 10) {
                 Image(systemName: icon).frame(width: 22).foregroundStyle(tint)
                 Text(ui: title).foregroundStyle(Atelier.textPrimary)
                 Spacer()
+                dueMark(due)
                 if let count, count > 0 {
                     Text("\(count)").font(Atelier.mono).foregroundStyle(Atelier.onAccentInk.opacity(0.8))
                         .padding(.horizontal, 7).padding(.vertical, 2)
@@ -577,6 +580,19 @@ struct LibraryView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(PressScale())
+    }
+
+    /// « ! » des échéances de notes : noir dans les 7 jours, rouge aujourd'hui ou en retard (PLAN-NOTIF-001, E1).
+    @ViewBuilder
+    private func dueMark(_ due: NoteDueBadge) -> some View {
+        if due != .none {
+            Text(verbatim: "!").font(Atelier.font(13, weight: .heavy)).foregroundStyle(.white)
+                .frame(width: 22, height: 22)
+                // Noir demandé par NOxygen59 (recette 1.5.8, 1.9), quel que soit le thème.
+                .background(due == .urgent ? Color.red : Color.black, in: Circle())
+                .accessibilityLabel(due == .urgent ? String(localized: "Échéance aujourd'hui ou dépassée")
+                                    : String(localized: "Échéance dans les 7 jours"))
+        }
     }
 
     /// Tuile compacte de la colonne de gauche (recette 1.5.8) : icône au-dessus, nom en dessous, pastille en coin.
@@ -686,6 +702,7 @@ struct LibraryView: View {
             }
             CapsuleButton(icon: "note.text", label: model.notesToReview > 0
                           ? String(localized: "Notes · \(model.notesToReview) à revoir") : String(localized: "Notes")) { showNotes = true }
+                .overlay(alignment: .topTrailing) { dueMark(model.noteDueBadge).scaleEffect(0.75).offset(x: 6, y: -6).allowsHitTesting(false) }
             // Revue D-07 MODLOC E1 (n°1) : en portrait, la même rafale passe par ce bouton (pas de carte « Temps de lecture »).
             CapsuleButton(icon: dashboardIcon, label: String(localized: "Tableau de bord")) { statsTapped() }
                 .onDisappear { cancelStatsBurst() }

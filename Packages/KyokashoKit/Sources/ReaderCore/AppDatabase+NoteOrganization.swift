@@ -150,7 +150,35 @@ public enum NoteDay {
     }
 }
 
+/// Pastille « ! » de Notes sur l'accueil (PLAN-NOTIF-001, DEC-01/02 = A) : noire s'il y a une échéance dans les 7 jours,
+/// rouge si une échéance est aujourd'hui ou dépassée. Notes archivées exclues (comme `notesToReviewCount`).
+public enum NoteDueBadge: Equatable, Sendable {
+    case none, soon, urgent
+
+    public static let soonDays = 7
+
+    public static func of(dueDays: [String], today: Date, calendar: Calendar = NoteDay.calendar) -> NoteDueBadge {
+        let valid = dueDays.filter(NoteDay.isValid)
+        let todayString = NoteDay.string(today, calendar: calendar)
+        if valid.contains(where: { $0 <= todayString }) { return .urgent }
+        guard let limit = calendar.date(byAdding: .day, value: soonDays, to: today) else { return .none }
+        let limitString = NoteDay.string(limit, calendar: calendar)
+        return valid.contains(where: { $0 <= limitString }) ? .soon : .none
+    }
+}
+
 extension AppDatabase {
+    /// Pastille « ! » de Notes : échéances des notes non archivées, hors documents exclus (corbeille).
+    public func noteDueBadge(today: Date, calendar: Calendar = NoteDay.calendar, excludingDocuments: Set<String> = []) throws -> NoteDueBadge {
+        guard let limit = calendar.date(byAdding: .day, value: NoteDueBadge.soonDays, to: today) else { return .none }
+        let rows = try writer.read { db in
+            try Row.fetchAll(db, sql: "SELECT documentId, dueDay FROM pageComment WHERE archived = 0 AND dueDay IS NOT NULL AND dueDay <= ?",
+                             arguments: [NoteDay.string(limit, calendar: calendar)])
+        }
+        let days = rows.filter { !excludingDocuments.contains($0["documentId"] as String) }.map { $0["dueDay"] as String }
+        return NoteDueBadge.of(dueDays: days, today: today, calendar: calendar)
+    }
+
     // MARK: Classeurs
 
     public func noteFolders() throws -> [NoteFolder] {

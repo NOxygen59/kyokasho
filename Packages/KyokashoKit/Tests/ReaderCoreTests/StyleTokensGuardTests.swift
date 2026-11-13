@@ -194,6 +194,7 @@ final class StyleTokensGuardTests: XCTestCase {
         "Reader/ReaderStatusBadge.swift": 7, // batterie et heure : blanc sur noir translucide, lisibles sur toute page
         "Settings/SettingsView.swift": 4,    // noms des fonds de page
         "Library/DocumentExport.swift": 2,   // dessin dans le PDF exporté
+        "Library/LibraryView.swift": 2,      // « ! » noir des échéances de notes (PLAN-NOTIF-001, demande de NOxygen59)
     ]
 
     func testInterfaceUsesStyleTokensInsteadOfWhiteOrBlack() throws {
