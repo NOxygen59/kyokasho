@@ -41,7 +41,11 @@ final class ReaderController: NSObject, ObservableObject {
     @Published var bookmarks: [Bookmark] = []
     @Published var tappedHighlight: Highlight?
     /// Note ouverte dans la fenêtre flottante.
-    @Published var openNote: PageComment?
+    @Published var openNote: PageComment? {
+        // Fenêtre de note fermée ou changée : rappels reprogrammés avec le texte enregistré (revue R2 NOTIF n°6),
+        // pas à chaque mot tapé.
+        didSet { if let old = oldValue, old.id != openNote?.id { model.refreshNotesAfterPendingWrites() } }
+    }
     /// Note qui attend son ancre : le prochain toucher sur la page la pose.
     @Published var placingAnchorFor: PageComment?
     /// Notes du document (ancres affichées sur les pages).
@@ -345,11 +349,30 @@ final class ReaderController: NSObject, ObservableObject {
         let pendingBounds: [(page: PDFPage, box: CGRect)]
     }
 
+    nonisolated private static let equalizationLock = NSLock()
+
     /// PDF aux pages de même hauteur (`Caches/Equalized/<id>-<taille>-<date>.pdf`) et cadres d'origine des pages
     /// (`.json`). `nil` : aucune page à changer (le PDF d'origine sert tel quel). Fait une fois par version du
     /// fichier : ajouter des pages change sa taille et sa date, donc la préparation est refaite une fois.
-    nonisolated static func equalizedDocument(url: URL, documentId: String) -> (pdf: PDFDocument, sourceBoxes: [CGRect])? {
+    ///
+    /// PLAN-DATA03-001 E3 (DEC-02 = A) : la hauteur commune est fixée une fois par document dans la base (`database`),
+    /// reprise du PDF déjà préparé s'il existe ; ajouter des pages ou vider le cache ne la change plus, donc les
+    /// annotations déjà posées gardent leur échelle.
+    nonisolated static func equalizedDocument(url: URL, documentId: String, database: AppDatabase?) -> (pdf: PDFDocument, sourceBoxes: [CGRect])? {
+        // Revue R2 DATA-03 (n°3) : lecteur et export peuvent préparer en même temps ; une seule préparation à la fois
+        // (l'une supprimait les fichiers que l'autre lisait). Jamais appelé depuis le fil principal.
+        equalizationLock.lock()
+        defer { equalizationLock.unlock() }
         let fm = FileManager.default
+        let stored = (try? database?.equalizationReference(documentId: documentId)).flatMap { $0 }.map { CGFloat($0) }
+        func remember(_ height: CGFloat?) {
+            guard stored == nil, let height else { return }
+            try? database?.fixEqualizationReference(Double(height), documentId: documentId)
+        }
+        func preparedHeight(_ pdf: PDFDocument, _ boxes: [CGRect]) -> CGFloat? {
+            PageEqualization.referenceHeight(displayed: (0..<pdf.pageCount).compactMap { pdf.page(at: $0) }
+                .map { ($0.bounds(for: .cropBox), $0.rotation) }, sourceBoxes: boxes)
+        }
         let values = try? url.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey])
         let stamp = "\(values?.fileSize ?? 0)-\(Int(values?.contentModificationDate?.timeIntervalSince1970 ?? 0))"
         let folder = fm.urls(for: .cachesDirectory, in: .userDomainMask)[0].appendingPathComponent("Equalized", isDirectory: true)
@@ -360,14 +383,38 @@ final class ReaderController: NSObject, ObservableObject {
         if let data = try? Data(contentsOf: boxesFile), let saved = try? JSONDecoder().decode([[CGFloat]].self, from: data),
            let boxes = EqualizedBoxes.rects(saved) {
             // Déjà préparé : liste vide = rien à changer dans ce PDF.
-            guard !boxes.isEmpty, let pdf = PDFDocument(url: pdfFile), pdf.pageCount == boxes.count else { return nil }
+            guard !boxes.isEmpty, let pdf = PDFDocument(url: pdfFile), pdf.pageCount == boxes.count else {
+                // Revue R2 DATA-03 (n°7) : seulement quand la préparation a dit « rien à changer » (hauteur réellement
+                // affichée), jamais pour un cache incohérent.
+                if stored == nil, boxes.isEmpty { remember(PDFDocument(url: url).flatMap(commonHeight)) }
+                return nil
+            }
+            remember(preparedHeight(pdf, boxes))
             return (pdf, boxes)
         }
-        guard let original = PDFDocument(url: url), let common = commonHeight(original) else { return nil }
+        guard let original = PDFDocument(url: url) else { return nil }
         try? fm.createDirectory(at: folder, withIntermediateDirectories: true)
+        let previous = ((try? fm.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? [])
+            .filter { $0.lastPathComponent.hasPrefix(documentId + "-") }
+        // Référence : celle de la base, sinon celle de la version préparée précédente (avant que le fichier change),
+        // sinon la règle commune.
+        // Revue R2 DATA-03 (n°2) : la plus récente des versions **lisibles** (paire pdf + json), pas la première venue.
+        var inherited: CGFloat?
+        if stored == nil {
+            let date = { (u: URL) in (try? u.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast }
+            for oldPDF in previous.filter({ $0.pathExtension == "pdf" }).sorted(by: { date($0) > date($1) }) {
+                guard let data = try? Data(contentsOf: oldPDF.deletingPathExtension().appendingPathExtension("json")),
+                      let saved = try? JSONDecoder().decode([[CGFloat]].self, from: data),
+                      let oldBoxes = EqualizedBoxes.rects(saved), let oldDoc = PDFDocument(url: oldPDF),
+                      let height = preparedHeight(oldDoc, oldBoxes) else { continue }
+                inherited = height
+                break
+            }
+        }
+        guard let common = stored ?? inherited ?? commonHeight(original) else { return nil }
+        remember(common)
         // Anciennes versions préparées de ce document : supprimées.
-        for old in (try? fm.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? []
-        where old.lastPathComponent.hasPrefix(documentId + "-") { try? fm.removeItem(at: old) }
+        for old in previous { try? fm.removeItem(at: old) }
         var boxes: [CGRect] = []
         var pages: [PDFPage] = []
         var helpers: [PDFDocument] = []
@@ -377,7 +424,7 @@ final class ReaderController: NSObject, ObservableObject {
             let box = page.bounds(for: .cropBox)
             boxes.append(box)
             let height = page.rotation % 180 == 0 ? box.height : box.width
-            if height > 0, abs(common / height - 1) > 0.03, let (scaled, doc) = scaledPage(page, factor: common / height) {
+            if let factor = PageEqualization.factor(height: height, common: common), let (scaled, doc) = scaledPage(page, factor: factor) {
                 pages.append(scaled)
                 helpers.append(doc)
                 rescaled = true
@@ -432,15 +479,12 @@ final class ReaderController: NSObject, ObservableObject {
         return (scaled, doc)
     }
 
-    /// Hauteur la plus courante des pages (telles qu'affichées, rotation comprise), arrondie au point.
+    /// Hauteur la plus courante des pages (telles qu'affichées, rotation comprise), arrondie au point ; à égalité, la
+    /// plus grande (PLAN-DATA03-001, DEC-03 = A). Calcul dans `PageEqualization` (testé).
     nonisolated static func commonHeight(_ pdf: PDFDocument) -> CGFloat? {
-        var counts: [Int: Int] = [:]
-        for i in 0..<pdf.pageCount {
-            guard let page = pdf.page(at: i) else { continue }
-            let b = page.bounds(for: .cropBox)
-            counts[Int((page.rotation % 180 == 0 ? b.height : b.width).rounded()), default: 0] += 1
-        }
-        return counts.max { $0.value < $1.value }.map { CGFloat($0.key) }
+        PageEqualization.commonHeight((0..<pdf.pageCount).compactMap { pdf.page(at: $0) }.map {
+            PageEqualization.displayedHeight(box: $0.bounds(for: .cropBox), rotation: $0.rotation)
+        })
     }
 
     /// Numéro de la dernière construction demandée : un résultat plus ancien est ignoré.
@@ -458,22 +502,22 @@ final class ReaderController: NSObject, ObservableObject {
         pageStringCache = nil
         rebuildGeneration += 1
         let generation = rebuildGeneration
-        let url = fileURL, transforms = transforms, settings = settings, documentId = document.id
+        let url = fileURL, transforms = transforms, settings = settings, documentId = document.id, database = model.database
         isBuilding = true
         // Une seule construction à la fois : la précédente (plus à jour) est abandonnée.
         buildTask?.cancel()
         buildTask = Task.detached(priority: .userInitiated) { [weak self] in
-            let built = autoreleasepool { Self.build(url: url, documentId: documentId, transforms: transforms, settings: settings) }
+            let built = autoreleasepool { Self.build(url: url, documentId: documentId, transforms: transforms, settings: settings, database: database) }
             guard !Task.isCancelled else { return }
             await self?.install(built, source: source, generation: generation)
         }
     }
 
     nonisolated static func build(url: URL, documentId: String, transforms: [Int: PageTransform],
-                                          settings: ReaderSettings) -> Built? {
+                                          settings: ReaderSettings, database: AppDatabase?) -> Built? {
         // Pages remises à la même hauteur : préparées une fois par version du PDF (cache disque), ensuite lues
         // directement (plus de « Préparation des pages » à chaque ouverture).
-        let equalized = equalizedDocument(url: url, documentId: documentId)
+        let equalized = equalizedDocument(url: url, documentId: documentId, database: database)
         guard let pdf = equalized?.pdf ?? PDFDocument(url: url) else { return nil }
         pdf.delegate = TonedPageProvider.shared
         let sourceBoxes = equalized?.sourceBoxes

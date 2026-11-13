@@ -17,6 +17,7 @@ Les chemins ci-dessous sont relatifs au conteneur de l'app sur iPad. Ils ne dés
 | Traductions de définitions | `Application Support/definition-translations.json`, `DefinitionTranslations` | Traductions françaises et votes 👍/👎 ; donnée personnelle |
 | Brouillons de notes | `Application Support/Kyokasho/NoteDrafts/<id>.json`, `NoteDraftStore` | Brouillons non encore ajoutés (RET-008) ; donnée personnelle |
 | Modèles et UniDic | `ModelStore.root`, sous `Application Support/Kyokasho/Models` (UniDic : `Models/unidic`) | Retéléchargeables si source/version encore disponibles ; coûteux |
+| Modèles importés (PLAN-MODLOC-001) | `Models/local-<nom>/` (avec `local.json` et, si le nom du tokenizer a été corrigé, `tokenizer_config.original.json`) ; préparation `Models/.import-<UUID>/` ; dossier rendu après une app tuée : `Documents/Modèles récupérés/` (visible dans Fichiers) | **Pas dans la sauvegarde** (comme tout `Models/`) et **pas retéléchargeables** : le dossier d'origine a été déplacé dans l'app ; garder une copie ailleurs (ex. sur le Mac) |
 | Mesures de vitesse (banc d'essai) | `Application Support/Kyokasho/Bench/`, `AppModel` | Résultats de mesures locales ; incluses dans la sauvegarde |
 | Lectures IA, traductions | `Application Support/Analysis/<id>/*.md`, `DocumentAITextStore` | Données dérivées coûteuses ; garder pour reproduire un bug |
 | Rapports | `Application Support/Analysis/<id>.json` | Résultats dépendant des versions des lectures |

@@ -15,45 +15,56 @@ struct FloatingToolbar<Items: View>: View {
     @AppStorage("toolbar.style") private var styleRaw = Style.vertical.rawValue
     private var style: Style { Style(rawValue: styleRaw) ?? .vertical }
     @AppStorage("toolbar.lastOpen") private var lastOpen = Style.vertical.rawValue
+    /// Ancienne position, en fraction de la zone : lue seulement tant qu'aucune position en points n'est enregistrée.
     @AppStorage("toolbar.x") private var fractionX = 0.0
     @AppStorage("toolbar.y") private var fractionY = 0.1
+    /// Coin haut-gauche de la barre, en points depuis le coin de la zone (−1 : pas encore enregistré). Recette 1.5.8
+    /// (1.6) : en fraction, la barre bougeait encore quand la zone change de taille (la bande du bas disparaît en mode
+    /// Pencil). Bornée à l'affichage, donc toujours visible après une rotation.
+    @AppStorage("toolbar.px") private var pointX = -1.0
+    @AppStorage("toolbar.py") private var pointY = -1.0
+    /// Marge gardée aux bords (recette 1.5.8, 1.7 : la poignée se cachait contre le bord droit).
+    private static var inset: CGFloat { 12 }
+
     /// Déplacement en cours (remis à zéro tout seul à la fin du geste).
     @GestureState private var drag: CGSize = .zero
     @State private var size: CGSize = .zero
 
     var body: some View {
-        let maxX = max(0, area.width - size.width)
-        let maxY = max(0, area.height - size.height)
-        let x = min(max(0, fractionX * maxX + drag.width), maxX)
-        let y = min(max(0, fractionY * maxY + drag.height), maxY)
+        let inset = Self.inset
+        let maxX = max(inset, area.width - size.width - inset)
+        let maxY = max(inset, area.height - size.height - inset)
+        let baseX = pointX >= 0 ? pointX : fractionX * area.width
+        let baseY = pointY >= 0 ? pointY : fractionY * area.height
+        let x = min(max(inset, baseX + drag.width), maxX)
+        let y = min(max(inset, baseY + drag.height), maxY)
         // Repère global : la poignée bouge avec la barre ; mesurer dans son propre repère faisait
         // osciller le geste à l'infini (gel puis plantage).
-        let gesture = DragGesture(minimumDistance: 2, coordinateSpace: .global)
+        // 8 pt avant de déplacer (revue D-07 n°6) : un toucher un peu glissé sur un outil reste un toucher.
+        let gesture = DragGesture(minimumDistance: 8, coordinateSpace: .global)
             .updating($drag) { value, state, _ in state = value.translation }
             .onEnded { value in
-                let endX = min(max(0, fractionX * maxX + value.translation.width), maxX)
-                let endY = min(max(0, fractionY * maxY + value.translation.height), maxY)
-                fractionX = maxX > 0 ? endX / maxX : 0
-                fractionY = maxY > 0 ? endY / maxY : 0
+                pointX = min(max(inset, baseX + value.translation.width), maxX)
+                pointY = min(max(inset, baseY + value.translation.height), maxY)
             }
         return Group {
             switch style {
             case .collapsed:
                 HStack(spacing: 2) {
-                    grip(vertical: false).gesture(gesture)
+                    grip(vertical: false)
                     ToolButton(icon: "square.grid.2x2", label: String(localized: "Ouvrir les outils"), tint: Atelier.Tint.read) {
                         setStyle(Style(rawValue: lastOpen) ?? .vertical)
                     }
                 }
             case .vertical:
                 VStack(spacing: 6) {
-                    grip(vertical: true).gesture(gesture)
+                    grip(vertical: true)
                     items(true)
                     styleButtons(vertical: true)
                 }
             case .horizontal:
                 HStack(spacing: 6) {
-                    grip(vertical: false).gesture(gesture)
+                    grip(vertical: false)
                     items(false)
                     styleButtons(vertical: false)
                 }
@@ -61,11 +72,19 @@ struct FloatingToolbar<Items: View>: View {
         }
         .padding(6)
         .atelierPanel(radius: 16)
+        // Toute la barre se prend pour la déplacer (recette 1.5.7, 1.2) ; un toucher sur un bouton reste un toucher.
+        // Pas de marge invisible autour (revue D-07 n°1) : elle volait les traits du Pencil commencés près de la barre.
+        .contentShape(Rectangle())
+        .gesture(gesture)
         .background(GeometryReader { g in Color.clear.preference(key: ToolbarSizeKey.self, value: g.size) })
         .onPreferenceChange(ToolbarSizeKey.self) { new in
             // Seulement si la taille change vraiment (pas de boucle de mise en page).
             if abs(new.width - size.width) > 0.5 || abs(new.height - size.height) > 0.5 { size = new }
         }
+        // Revue D-07 (n°3) : l'ancienne position (fraction) est convertie une fois en points, sinon la barre bougerait
+        // encore avec la zone tant qu'elle n'a pas été déplacée depuis la mise à jour.
+        .onAppear { adoptPoints() }
+        .onChange(of: area) { _ in adoptPoints() }
         .offset(x: x, y: y)
         .transaction { if drag != .zero { $0.animation = nil } }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -76,7 +95,8 @@ struct FloatingToolbar<Items: View>: View {
             .rotationEffect(.degrees(vertical ? 0 : 90))
             .font(Atelier.font(13, weight: .bold))
             .foregroundStyle(Atelier.textTertiary)
-            .frame(width: vertical ? 46 : 22, height: vertical ? 22 : 46)
+            // Poignée agrandie (recette 1.5.7, 1.2) : 44 pt dans les deux sens, barre dépliée comme repliée.
+            .frame(width: vertical ? 46 : 44, height: vertical ? 44 : 46)
             .contentShape(Rectangle())
             .accessibilityLabel("Déplacer la barre d'outils")
     }
@@ -104,6 +124,12 @@ struct FloatingToolbar<Items: View>: View {
         .buttonStyle(PressScale())
         .disabled(current)
         .accessibilityLabel(label)
+    }
+
+    private func adoptPoints() {
+        guard pointX < 0 || pointY < 0, area.width > 0, area.height > 0 else { return }
+        pointX = fractionX * area.width
+        pointY = fractionY * area.height
     }
 
     private func setStyle(_ style: Style) {

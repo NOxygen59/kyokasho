@@ -1,6 +1,2932 @@
 {
   "sourceLanguage": "fr",
   "strings": {
+    "Rappels de notes, annotations exactes à l'export et correctifs de la recette 1.5.8": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Note reminders, exact annotations on export and fixes from the 1.5.8 test round"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rappels de notes, annotations exactes à l'export et correctifs de la recette 1.5.8"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "笔记提醒、导出批注位置准确及 1.5.8 测试修正"
+          }
+        }
+      }
+    },
+    "Notes : un « ! » sur l'accueil, noir si une échéance arrive dans les 7 jours, rouge si elle est aujourd'hui ou dépassée.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notes: a “!” on the home screen, black when a due date is within 7 days, red when it is today or overdue."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notes : un « ! » sur l'accueil, noir si une échéance arrive dans les 7 jours, rouge si elle est aujourd'hui ou dépassée."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "笔记：主页上显示“!”，7 天内到期为黑色，今天到期或已逾期为红色。"
+          }
+        }
+      }
+    },
+    "Notes : une heure d'échéance et jusqu'à trois rappels par note, avec une notification d'iOS qui ouvre la note.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notes: a due time and up to three reminders per note, with an iOS notification that opens the note."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notes : une heure d'échéance et jusqu'à trois rappels par note, avec une notification d'iOS qui ouvre la note."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "笔记：每条笔记可设截止时间和最多三个提醒，iOS 通知可直接打开笔记。"
+          }
+        }
+      }
+    },
+    "Accueil : la colonne de gauche est regroupée (Étudier, Importer et convertir), et entrer dans un dossier est animé.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Home: the left column is grouped (Study, Import and convert), and opening a folder is animated."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accueil : la colonne de gauche est regroupée (Étudier, Importer et convertir), et entrer dans un dossier est animé."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "主页：左栏已分组（学习、导入与转换），进入文件夹有动画。"
+          }
+        }
+      }
+    },
+    "Export « PDF annoté » et images : surlignages, dessins et notes restent sur leur mot, même sur une page d'une autre taille, et la page garde la rotation choisie dans l'app.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“Annotated PDF” and image export: highlights, drawings and notes stay on their word, even on a page of another size, and the page keeps the rotation chosen in the app."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export « PDF annoté » et images : surlignages, dessins et notes restent sur leur mot, même sur une page d'une autre taille, et la page garde la rotation choisie dans l'app."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“带批注的 PDF”和图片导出：高亮、绘图和笔记留在原词上，即使页面尺寸不同；页面保持应用内选择的旋转。"
+          }
+        }
+      }
+    },
+    "Dossiers : les pastilles de sélection se mettent à jour dans un dossier.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Folders: selection marks update inside a folder."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dossiers : les pastilles de sélection se mettent à jour dans un dossier."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文件夹：文件夹内的选择标记会正确更新。"
+          }
+        }
+      }
+    },
+    "Barre à poignée : elle ne bouge plus au passage du Pencil, et sa poignée ne se cache plus contre le bord.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Handle bar: it no longer moves when switching to Pencil, and its handle no longer hides against the edge."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Barre à poignée : elle ne bouge plus au passage du Pencil, et sa poignée ne se cache plus contre le bord."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "手柄栏：切换 Pencil 时不再移动，手柄不再隐藏在边缘。"
+          }
+        }
+      }
+    },
+    "Les pages n'ont pas pu être préparées comme à l'écran : réessaie l'export (les annotations seraient décalées).": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The pages could not be prepared as on screen: try the export again (annotations would be misplaced)."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les pages n'ont pas pu être préparées comme à l'écran : réessaie l'export (les annotations seraient décalées)."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法按屏幕显示准备页面：请重新导出（否则批注会错位）。"
+          }
+        }
+      }
+    },
+    "%@ · p. %lld": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · p. %lld"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · p. %lld"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · 第 %lld 页"
+          }
+        }
+      }
+    },
+    "Note sans texte": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Note without text"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Note sans texte"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无文字笔记"
+          }
+        }
+      }
+    },
+    "Heure d'une échéance sans heure": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Time for a due date without a time"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heure d'une échéance sans heure"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未设时间的截止时刻"
+          }
+        }
+      }
+    },
+    "Rappel d'une nouvelle échéance": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reminder for a new due date"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rappel d'une nouvelle échéance"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新截止日期的提醒"
+          }
+        }
+      }
+    },
+    "Valent pour les notes dont l'heure ou les rappels n'ont pas été réglés.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apply to notes whose time or reminders have not been set."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Valent pour les notes dont l'heure ou les rappels n'ont pas été réglés."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "适用于未设置时间或提醒的笔记。"
+          }
+        }
+      }
+    },
+    "Notifications autorisées": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notifications allowed"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notifications autorisées"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已允许通知"
+          }
+        }
+      }
+    },
+    "Notifications refusées": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notifications denied"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notifications refusées"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "通知已被拒绝"
+          }
+        }
+      }
+    },
+    "Ouvrir les Réglages d'iOS": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open iOS Settings"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ouvrir les Réglages d'iOS"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开 iOS 设置"
+          }
+        }
+      }
+    },
+    "iOS demandera l'autorisation au premier rappel.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iOS will ask for permission at the first reminder."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iOS demandera l'autorisation au premier rappel."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "首次提醒时 iOS 会请求授权。"
+          }
+        }
+      }
+    },
+    "Notifications d'iOS": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iOS notifications"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notifications d'iOS"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iOS 通知"
+          }
+        }
+      }
+    },
+    "Les rappels sont programmés sur l'iPad, sans serveur. Le texte de la note s'affiche sur l'écran verrouillé selon Réglages › Notifications › Afficher les aperçus.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reminders are scheduled on the iPad, with no server. The note's text shows on the Lock Screen according to Settings › Notifications › Show Previews."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les rappels sont programmés sur l'iPad, sans serveur. Le texte de la note s'affiche sur l'écran verrouillé selon Réglages › Notifications › Afficher les aperçus."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "提醒在 iPad 上安排，不经过服务器。锁定屏幕是否显示笔记内容取决于“设置 › 通知 › 显示预览”。"
+          }
+        }
+      }
+    },
+    "À une heure précise": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "At a set time"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "À une heure précise"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在指定时间"
+          }
+        }
+      }
+    },
+    "Heure": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Time"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heure"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "时间"
+          }
+        }
+      }
+    },
+    "Rappels": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reminders"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rappels"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "提醒"
+          }
+        }
+      }
+    },
+    "Trois rappels au plus. Sans heure précise, l'échéance compte pour %@.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Up to three reminders. Without a set time, the due date counts as %@."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trois rappels au plus. Sans heure précise, l'échéance compte pour %@."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最多三个提醒。未指定时间时，截止时间按 %@ 计算。"
+          }
+        }
+      }
+    },
+    "Trois rappels au plus. Une notification d'iOS arrive à chaque rappel.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Up to three reminders. An iOS notification arrives at each reminder."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trois rappels au plus. Une notification d'iOS arrive à chaque rappel."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最多三个提醒。每个提醒都会收到 iOS 通知。"
+          }
+        }
+      }
+    },
+    "À l'heure de l'échéance": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "At the due time"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "À l'heure de l'échéance"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "截止时"
+          }
+        }
+      }
+    },
+    "15 minutes avant": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "15 minutes before"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "15 minutes avant"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "提前 15 分钟"
+          }
+        }
+      }
+    },
+    "1 heure avant": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 hour before"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 heure avant"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "提前 1 小时"
+          }
+        }
+      }
+    },
+    "1 jour avant": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 day before"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 jour avant"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "提前 1 天"
+          }
+        }
+      }
+    },
+    "2 jours avant": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2 days before"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2 jours avant"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "提前 2 天"
+          }
+        }
+      }
+    },
+    "1 semaine avant": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 week before"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 semaine avant"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "提前 1 周"
+          }
+        }
+      }
+    },
+    "Heure d'échéance invalide.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invalid due time."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heure d'échéance invalide."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "截止时间无效。"
+          }
+        }
+      }
+    },
+    "Échéance aujourd'hui ou dépassée": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Due today or overdue"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Échéance aujourd'hui ou dépassée"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "今天到期或已逾期"
+          }
+        }
+      }
+    },
+    "Échéance dans les 7 jours": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Due within 7 days"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Échéance dans les 7 jours"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "7 天内到期"
+          }
+        }
+      }
+    },
+    "Étudier": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Study"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Étudier"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "学习"
+          }
+        }
+      }
+    },
+    "Importer et convertir": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import and convert"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importer et convertir"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导入与转换"
+          }
+        }
+      }
+    },
+    "Correctifs de la recette 1.5.7": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fixes from the 1.5.7 test round"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Correctifs de la recette 1.5.7"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1.5.7 测试修正"
+          }
+        }
+      }
+    },
+    "Notes : chaque note affiche sa date et son heure de création ou de modification.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notes: each note shows the date and time it was created or modified."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notes : chaque note affiche sa date et son heure de création ou de modification."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "笔记：每条笔记显示创建或修改的日期和时间。"
+          }
+        }
+      }
+    },
+    "Accueil : créer ou renommer un dossier se fait dans une fenêtre de l'app, avec un bouton « Créer » qui marche.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Home: creating or renaming a folder happens in an in-app window, with a working “Create” button."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accueil : créer ou renommer un dossier se fait dans une fenêtre de l'app, avec un bouton « Créer » qui marche."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "主页：在应用内窗口中创建或重命名文件夹，“创建”按钮可正常使用。"
+          }
+        }
+      }
+    },
+    "Barre flottante : elle ne bouge plus au passage entre Pencil et doigt, et une poignée plus grande la déplace.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Floating bar: it no longer shifts when switching between Pencil and finger, and a larger handle moves it."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Barre flottante : elle ne bouge plus au passage entre Pencil et doigt, et une poignée plus grande la déplace."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "浮动栏：在 Pencil 与手指之间切换时不再移动，更大的手柄可拖动它。"
+          }
+        }
+      }
+    },
+    "Écran Notes plus clair : filtres en pastilles, et chaque note montre son livre, sa page, son échéance et ses étiquettes.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clearer Notes screen: filters as chips, and each note shows its book, page, due date and tags."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Écran Notes plus clair : filtres en pastilles, et chaque note montre son livre, sa page, son échéance et ses étiquettes."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "笔记界面更清晰：筛选条件以标签显示，每条笔记显示其书籍、页码、截止日期和标签。"
+          }
+        }
+      }
+    },
+    "modifiée le %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "edited on %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "modifiée le %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "修改于 %@"
+          }
+        }
+      }
+    },
+    "Retirer le filtre %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove filter %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retirer le filtre %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移除筛选 %@"
+          }
+        }
+      }
+    },
+    "%lld note(s) · %lld à revoir": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld note(s) · %lld to review"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld note(s) · %lld à revoir"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 条笔记 · %lld 条待复习"
+          }
+        }
+      }
+    },
+    "%lld note(s)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld note(s)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld note(s)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 条笔记"
+          }
+        }
+      }
+    },
+    "Modifiée le %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Edited on %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modifiée le %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "修改于 %@"
+          }
+        }
+      }
+    },
+    "Créée le %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Created on %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Créée le %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "创建于 %@"
+          }
+        }
+      }
+    },
+    "Le modèle de cette conversation n'est plus installé : Qwen3-VL 4B prend la suite.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This conversation's model is no longer installed: Qwen3-VL 4B takes over."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le modèle de cette conversation n'est plus installé : Qwen3-VL 4B prend la suite."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此对话的模型已不再安装：改用 Qwen3-VL 4B。"
+          }
+        }
+      }
+    },
+    "tokenizer_config.json est illisible : le modèle a peut-être été abîmé pendant le transfert.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tokenizer_config.json is unreadable: the model may have been damaged during transfer."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tokenizer_config.json est illisible : le modèle a peut-être été abîmé pendant le transfert."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "tokenizer_config.json 无法读取：模型可能在传输中损坏。"
+          }
+        }
+      }
+    },
+    "Poids du modèle incomplets : %@.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Model weights incomplete: %@."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Poids du modèle incomplets : %@."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "模型权重不完整：%@。"
+          }
+        }
+      }
+    },
+    "Ce dossier contient déjà un fichier local.json : choisis le dossier d'origine du modèle.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This folder already contains a local.json file: choose the model's original folder."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce dossier contient déjà un fichier local.json : choisis le dossier d'origine du modèle."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此文件夹已包含 local.json 文件：请选择模型的原始文件夹。"
+          }
+        }
+      }
+    },
+    "Place libre inconnue : la copie n'est pas lancée. Place le dossier dans « Sur mon iPad » pour qu'il soit déplacé.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Free space unknown: the copy is not started. Put the folder in “On My iPad” so it can be moved."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Place libre inconnue : la copie n'est pas lancée. Place le dossier dans « Sur mon iPad » pour qu'il soit déplacé."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可用空间未知：未开始复制。请将文件夹放到“我的 iPad”中以便移动。"
+          }
+        }
+      }
+    },
+    "« %@ » est un lien, pas un vrai fichier : copie le modèle complet dans le dossier.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@” is a link, not a real file: copy the complete model into the folder."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "« %@ » est un lien, pas un vrai fichier : copie le modèle complet dans le dossier."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@”是链接而非真实文件：请将完整模型复制到文件夹中。"
+          }
+        }
+      }
+    },
+    "index des poids illisible ou vide": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "weight index unreadable or empty"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "index des poids illisible ou vide"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "权重索引无法读取或为空"
+          }
+        }
+      }
+    },
+    "une partie des poids est vide": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "part of the weights is empty"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "une partie des poids est vide"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "部分权重为空"
+          }
+        }
+      }
+    },
+    "%1$lld octets pour %2$lld annoncés": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld bytes for %2$lld announced"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld octets pour %2$lld annoncés"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld 字节，标称 %2$lld"
+          }
+        }
+      }
+    },
+    "model.safetensors est vide": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "model.safetensors is empty"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "model.safetensors est vide"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "model.safetensors 为空"
+          }
+        }
+      }
+    },
+    "Ce modèle est en cours d'utilisation : ferme le chat, puis supprime-le.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This model is in use: close the chat, then delete it."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce modèle est en cours d'utilisation : ferme le chat, puis supprime-le."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此模型正在使用：请先关闭聊天，再删除。"
+          }
+        }
+      }
+    },
+    "Import interrompu retrouvé : ton dossier est dans Fichiers › Sur mon iPad › Kyōkasho › Modèles récupérés.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Interrupted import found: your folder is in Files › On My iPad › Kyōkasho › Recovered models."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import interrompu retrouvé : ton dossier est dans Fichiers › Sur mon iPad › Kyōkasho › Modèles récupérés."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "发现中断的导入：你的文件夹在“文件 › 我的 iPad › Kyōkasho › 已恢复的模型”中。"
+          }
+        }
+      }
+    },
+    "Choisis le dossier d'un modèle MLX de la famille Qwen3.5. Il est vérifié, puis déplacé dans l'app (pas de double place) ; copié seulement si iOS refuse le déplacement. Il apparaît ensuite dans le choix du modèle du chat.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose the folder of an MLX model of the Qwen3.5 family. It is checked, then moved into the app (no double space); copied only if iOS refuses the move. It then appears in the chat's model choice."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choisis le dossier d'un modèle MLX de la famille Qwen3.5. Il est vérifié, puis déplacé dans l'app (pas de double place) ; copié seulement si iOS refuse le déplacement. Il apparaît ensuite dans le choix du modèle du chat."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选择一个 Qwen3.5 系列 MLX 模型的文件夹。先检查，再移入应用（不占双倍空间）；仅在 iOS 拒绝移动时才复制。之后它会出现在聊天的模型选择中。"
+          }
+        }
+      }
+    },
+    "Import en cours…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importing…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import en cours…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在导入…"
+          }
+        }
+      }
+    },
+    "Importer un modèle MLX…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import an MLX model…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importer un modèle MLX…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导入 MLX 模型…"
+          }
+        }
+      }
+    },
+    "Modèles importés": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Imported models"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modèles importés"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已导入的模型"
+          }
+        }
+      }
+    },
+    "Choisis le dossier d'un modèle MLX de la famille Qwen3.5. Il est vérifié, puis déplacé dans l'app (pas de double place) ; copié seulement si iOS refuse le déplacement. Il apparaît ensuite dans le chat.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose the folder of an MLX model of the Qwen3.5 family. It is checked, then moved into the app (no double space); copied only if iOS refuses the move. It then appears in the chat."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choisis le dossier d'un modèle MLX de la famille Qwen3.5. Il est vérifié, puis déplacé dans l'app (pas de double place) ; copié seulement si iOS refuse le déplacement. Il apparaît ensuite dans le chat."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选择一个 Qwen3.5 系列 MLX 模型的文件夹。先检查，再移入应用（不占双倍空间）；仅在 iOS 拒绝移动时才复制。之后它会出现在聊天中。"
+          }
+        }
+      }
+    },
+    "Ses fichiers sont effacés de l'iPad. Les conversations sont gardées.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Its files are erased from the iPad. Conversations are kept."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ses fichiers sont effacés de l'iPad. Les conversations sont gardées."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "其文件将从 iPad 上删除。对话会保留。"
+          }
+        }
+      }
+    },
+    "« %@ » importé (déplacé dans l'app).": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@” imported (moved into the app)."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "« %@ » importé (déplacé dans l'app)."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已导入“%@”（已移入应用）。"
+          }
+        }
+      }
+    },
+    "« %@ » importé (copié : iOS n'a pas permis de le déplacer ; tu peux effacer l'original).": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@” imported (copied: iOS did not allow moving it; you can delete the original)."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "« %@ » importé (copié : iOS n'a pas permis de le déplacer ; tu peux effacer l'original)."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已导入“%@”（已复制：iOS 不允许移动；你可以删除原件）。"
+          }
+        }
+      }
+    },
+    "Import refusé : %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import refused: %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import refusé : %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导入被拒绝：%@"
+          }
+        }
+      }
+    },
+    "Import interrompu retrouvé : dossier gardé dans « %@ ».": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Interrupted import found: folder kept in “%@”."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import interrompu retrouvé : dossier gardé dans « %@ »."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "发现中断的导入：文件夹保存在“%@”中。"
+          }
+        }
+      }
+    },
+    "Ce dossier n'est pas un modèle MLX : config.json absent ou illisible.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This folder is not an MLX model: config.json missing or unreadable."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce dossier n'est pas un modèle MLX : config.json absent ou illisible."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此文件夹不是 MLX 模型：缺少 config.json 或无法读取。"
+          }
+        }
+      }
+    },
+    "Architecture « %@ » pas encore prise en charge (seulement Qwen3.5).": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Architecture “%@” not supported yet (Qwen3.5 only)."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Architecture « %@ » pas encore prise en charge (seulement Qwen3.5)."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "尚不支持“%@”架构（仅支持 Qwen3.5）。"
+          }
+        }
+      }
+    },
+    "Fichiers manquants : %@.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Missing files: %@."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fichiers manquants : %@."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "缺少文件：%@。"
+          }
+        }
+      }
+    },
+    "Un modèle « %@ » est déjà installé : supprime-le d'abord.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A model “%@” is already installed: delete it first."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un modèle « %@ » est déjà installé : supprime-le d'abord."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已安装模型“%@”：请先删除。"
+          }
+        }
+      }
+    },
+    "Place insuffisante : %1$@ nécessaires, %2$@ libres.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not enough space: %1$@ needed, %2$@ free."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Place insuffisante : %1$@ nécessaires, %2$@ libres."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "空间不足：需要 %1$@，可用 %2$@。"
+          }
+        }
+      }
+    },
+    "Import interrompu : ton dossier est gardé dans %@.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import interrupted: your folder is kept in %@."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import interrompu : ton dossier est gardé dans %@."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导入中断：你的文件夹保存在 %@。"
+          }
+        }
+      }
+    },
+    "Modèle importé à la main (%@).": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manually imported model (%@)."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modèle importé à la main (%@)."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "手动导入的模型（%@）。"
+          }
+        }
+      }
+    },
+    "Licence du modèle importé : à vérifier par son propriétaire.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "License of the imported model: to be checked by its owner."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Licence du modèle importé : à vérifier par son propriétaire."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导入模型的许可：需由其所有者核实。"
+          }
+        }
+      }
+    },
+    "État, mémoire, « Décharger », réglages propres et dernières tâches.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Status, memory, “Unload”, own settings and recent tasks."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "État, mémoire, « Décharger », réglages propres et dernières tâches."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "状态、内存、“卸载”、专属设置和最近任务。"
+          }
+        }
+      }
+    },
+    "Vérification incomplète : %lld document(s) sur %lld vérifié(s).": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Incomplete check: %lld of %lld document(s) checked."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vérification incomplète : %lld document(s) sur %lld vérifié(s)."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "检查未完成：已检查 %lld/%lld 个文档。"
+          }
+        }
+      }
+    },
+    "Notes, dossiers, cartes et correctifs de la recette 1.5.6": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notes, folders, cards and fixes from the 1.5.6 test"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notes, dossiers, cartes et correctifs de la recette 1.5.6"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "笔记、文件夹、卡片及 1.5.6 测试修复"
+          }
+        }
+      }
+    },
+    "Notes : un écran « Notes » sur l'accueil réunit toutes les notes, par échéance, avec filtres et archives ; une pastille compte les notes à revoir.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notes: a “Notes” screen on the home page gathers all notes by due date, with filters and archives; a badge counts the notes to review."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notes : un écran « Notes » sur l'accueil réunit toutes les notes, par échéance, avec filtres et archives ; une pastille compte les notes à revoir."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "笔记：主页上的“笔记”屏幕按截止日期汇集所有笔记，带筛选和归档；标记显示待复习的笔记数。"
+          }
+        }
+      }
+    },
+    "Notes : régler une note (échéance, priorité, classeur, étiquettes, archive), une seule ou plusieurs à la fois.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notes: organize a note (due date, priority, binder, tags, archive), one or several at once."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notes : régler une note (échéance, priorité, classeur, étiquettes, archive), une seule ou plusieurs à la fois."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "笔记：整理笔记（截止日期、优先级、分类夹、标签、归档），可单条或多条同时操作。"
+          }
+        }
+      }
+    },
+    "Accueil : des dossiers pour ranger les documents.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Home: folders to organize documents."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accueil : des dossiers pour ranger les documents."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "主页：用文件夹整理文档。"
+          }
+        }
+      }
+    },
+    "Cartes : un écran « Cartes de ce document » pour voir, modifier, suspendre, supprimer et exporter les cartes d'un livre.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cards: a “Cards of this document” screen to view, edit, suspend, delete and export a book's cards."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cartes : un écran « Cartes de ce document » pour voir, modifier, suspendre, supprimer et exporter les cartes d'un livre."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "卡片：“本文档的卡片”屏幕，可查看、编辑、暂停、删除和导出一本书的卡片。"
+          }
+        }
+      }
+    },
+    "Cartes de la page : tous les mots de la page trouvés dans tes dictionnaires, en plus du lexique du cours.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cards from the page: every word of the page found in your dictionaries, in addition to the course glossary."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cartes de la page : tous les mots de la page trouvés dans tes dictionnaires, en plus du lexique du cours."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "页面卡片：除课程词汇外，还列出此页在你词典中找到的所有词语。"
+          }
+        }
+      }
+    },
+    "Sauvegarde : une barre montre l'avancement.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Backup: a bar shows the progress."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sauvegarde : une barre montre l'avancement."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "备份：进度条显示进度。"
+          }
+        }
+      }
+    },
+    "Pencil en page simple avec glissement : la page ne glisse plus au premier trait, aussi sur un document d'une page et à la réouverture.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pencil in single page with swipe: the page no longer slides on the first stroke, also on a one-page document and when reopening."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pencil en page simple avec glissement : la page ne glisse plus au premier trait, aussi sur un document d'une page et à la réouverture."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "单页滑动模式下的 Pencil：首笔不再使页面滑动，单页文档和重新打开时也是如此。"
+          }
+        }
+      }
+    },
+    "Chat du livre : l'IA sait quel document et quelle page sont ouverts.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Book chat: the AI knows which document and page are open."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chat du livre : l'IA sait quel document et quelle page sont ouverts."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "书籍聊天：AI 知道当前打开的文档和页面。"
+          }
+        }
+      }
+    },
+    "Vérification Drive : le rapport dit quel fichier est suivi, son nom sur Drive et s'il est dans la corbeille de Drive.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drive check: the report says which file is tracked, its name on Drive and whether it is in the Drive trash."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vérification Drive : le rapport dit quel fichier est suivi, son nom sur Drive et s'il est dans la corbeille de Drive."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drive 检查：报告显示所跟踪的文件、它在 Drive 上的名称以及是否在 Drive 回收站中。"
+          }
+        }
+      }
+    },
+    "Accueil : un document déplacé hors de la vue quitte la sélection.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Home: a document moved out of view leaves the selection."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accueil : un document déplacé hors de la vue quitte la sélection."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "主页：移出视图的文档会从选择中移除。"
+          }
+        }
+      }
+    },
+    "Cartes : la définition entière est gardée, plus seulement son début.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cards: the full definition is kept, not only its beginning."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cartes : la définition entière est gardée, plus seulement son début."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "卡片：保留完整释义，而不只是开头。"
+          }
+        }
+      }
+    },
+    "Mise à jour Drive : un document ne reçoit plus un dossier de l'autre espace.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drive update: a document no longer gets a folder from the other space."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mise à jour Drive : un document ne reçoit plus un dossier de l'autre espace."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Drive 更新：文档不再被放入另一空间的文件夹。"
+          }
+        }
+      }
+    },
+    "Aucune nouvelle version à télécharger (%lld document(s)).": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No new version to download (%lld document(s))."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucune nouvelle version à télécharger (%lld document(s))."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "没有可下载的新版本（%lld 个文档）。"
+          }
+        }
+      }
+    },
+    "« %@ » : contenu identique sur Drive (fichier suivi, nommé « %@ » sur Drive).": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%1$@”: same content on Drive (tracked file, named “%2$@” on Drive)."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "« %@ » : contenu identique sur Drive (fichier suivi, nommé « %@ » sur Drive)."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%1$@”：Drive 上内容相同（所跟踪的文件，在 Drive 上名为“%2$@”）。"
+          }
+        }
+      }
+    },
+    "Préparation de la sauvegarde…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preparing the backup…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Préparation de la sauvegarde…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在准备备份…"
+          }
+        }
+      }
+    },
+    "« %@ » : son fichier Drive est dans la corbeille de Drive ; copie locale gardée.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@”: its Drive file is in the Drive trash; local copy kept."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "« %@ » : son fichier Drive est dans la corbeille de Drive ; copie locale gardée."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@”：其 Drive 文件在 Drive 回收站中；本地副本已保留。"
+          }
+        }
+      }
+    },
+    "« %@ » : contenu identique sur Drive.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@”: same content on Drive."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "« %@ » : contenu identique sur Drive."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@”：Drive 上内容相同。"
+          }
+        }
+      }
+    },
+    "Chaque cours suit son propre fichier Drive (pas son nom) : un autre fichier renommé pareil n'est pas pris en compte.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Each course follows its own Drive file (not its name): another file renamed the same way is not taken into account."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chaque cours suit son propre fichier Drive (pas son nom) : un autre fichier renommé pareil n'est pas pris en compte."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每门课程跟踪自己的 Drive 文件（而非文件名）：重命名为相同名称的其他文件不会被考虑。"
+          }
+        }
+      }
+    },
+    "Vérification de la sauvegarde…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Checking the backup…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vérification de la sauvegarde…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在检查备份…"
+          }
+        }
+      }
+    },
+    "%lld/%lld fichiers": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld/%lld files"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld/%lld fichiers"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld/%lld 个文件"
+          }
+        }
+      }
+    },
+    "Copie dans « %@ »…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copying to “%@”…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copie dans « %@ »…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在复制到“%@”…"
+          }
+        }
+      }
+    },
+    "Autres mots illisibles : %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Other words unreadable: %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Autres mots illisibles : %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法读取其他词语：%@"
+          }
+        }
+      }
+    },
+    "Lexique du cours (%lld/%lld)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Course glossary (%lld/%lld)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lexique du cours (%lld/%lld)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "课程词汇（%lld/%lld）"
+          }
+        }
+      }
+    },
+    "Autres mots (%lld/%lld)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Other words (%lld/%lld)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Autres mots (%lld/%lld)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "其他词语（%lld/%lld）"
+          }
+        }
+      }
+    },
+    "Appliquer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apply"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Appliquer"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "应用"
+          }
+        }
+      }
+    },
+    "Archiver": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Archive"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Archiver"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "归档"
+          }
+        }
+      }
+    },
+    "Désarchiver": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unarchive"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Désarchiver"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "取消归档"
+          }
+        }
+      }
+    },
+    "Aucun autre mot de cette page n'est dans tes dictionnaires.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No other word on this page is in your dictionaries."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun autre mot de cette page n'est dans tes dictionnaires."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此页其他词语都不在你的词典中。"
+          }
+        }
+      }
+    },
+    "Aucun classeur": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No binder"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun classeur"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无分类夹"
+          }
+        }
+      }
+    },
+    "Aucun mot à proposer sur cette page.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No word to suggest on this page."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun mot à proposer sur cette page."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此页没有可建议的词语。"
+          }
+        }
+      }
+    },
+    "%lld choisie(s)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld selected"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld choisie(s)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已选 %lld 条"
+          }
+        }
+      }
+    },
+    "Avant le": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Due by"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avant le"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "截止日期"
+          }
+        }
+      }
+    },
+    "Avant une date": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Due by a date"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avant une date"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "设定截止日期"
+          }
+        }
+      }
+    },
+    "Cette note n'existe plus.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This note no longer exists."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cette note n'existe plus."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此笔记已不存在。"
+          }
+        }
+      }
+    },
+    "Choisir": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choisir"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选择"
+          }
+        }
+      }
+    },
+    "Choisir une date…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose a date…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choisir une date…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选择日期…"
+          }
+        }
+      }
+    },
+    "Dans 7 jours": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In 7 days"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dans 7 jours"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "7 天后"
+          }
+        }
+      }
+    },
+    "Déjà en carte": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Already a card"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Déjà en carte"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已有卡片"
+          }
+        }
+      }
+    },
+    "Déjà en carte (autre livre)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Already a card (other book)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Déjà en carte (autre livre)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已有卡片（其他书）"
+          }
+        }
+      }
+    },
+    "Nouveau classeur": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New binder"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nouveau classeur"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新建分类夹"
+          }
+        }
+      }
+    },
+    "Nouveau classeur…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New binder…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nouveau classeur…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新建分类夹…"
+          }
+        }
+      }
+    },
+    "Nouvelle étiquette (ex. Test S46)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New tag (e.g. Test W46)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nouvelle étiquette (ex. Test S46)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新标签（例：第 46 周测验）"
+          }
+        }
+      }
+    },
+    "Pour voir aussi les autres mots de la page, installe l'analyseur japonais (Réglages → Modèles → MeCab + UniDic).": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To also see the other words on the page, install the Japanese analyzer (Settings → Models → MeCab + UniDic)."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pour voir aussi les autres mots de la page, installe l'analyseur japonais (Réglages → Modèles → MeCab + UniDic)."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "若要同时查看此页的其他词语，请安装日语分析器（设置 → 模型 → MeCab + UniDic）。"
+          }
+        }
+      }
+    },
+    "Pour voir aussi les autres mots de la page, installe ou active un dictionnaire (Réglages → Dictionnaires).": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To also see the other words on the page, install or enable a dictionary (Settings → Dictionaries)."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pour voir aussi les autres mots de la page, installe ou active un dictionnaire (Réglages → Dictionnaires)."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "若要同时查看此页的其他词语，请安装或启用词典（设置 → 词典）。"
+          }
+        }
+      }
+    },
+    "Ranger la note": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Organize note"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ranger la note"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "整理笔记"
+          }
+        }
+      }
+    },
+    "Ranger la note (échéance, priorité, classeur, étiquettes, archive)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Organize note (due date, priority, binder, tags, archive)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ranger la note (échéance, priorité, classeur, étiquettes, archive)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "整理笔记（截止日期、优先级、分类夹、标签、归档）"
+          }
+        }
+      }
+    },
+    "Ranger…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Organize…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ranger…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "整理…"
+          }
+        }
+      }
+    },
+    "Recherche des mots de la page…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finding the words on the page…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recherche des mots de la page…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在查找此页词语…"
+          }
+        }
+      }
+    },
+    "Retirer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retirer"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "移除"
+          }
+        }
+      }
+    },
+    "Touche une étiquette pour la mettre ou l'enlever.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tap a tag to add or remove it."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Touche une étiquette pour la mettre ou l'enlever."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "轻点标签以添加或移除。"
+          }
+        }
+      }
+    },
+    "Tout cocher": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check all"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tout cocher"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全选"
+          }
+        }
+      }
+    },
+    "Tout décocher": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uncheck all"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tout décocher"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全不选"
+          }
+        }
+      }
+    },
+    "Une note archivée sort des listes et de la pastille ; on la retrouve dans « Archivées ».": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "An archived note leaves the lists and the badge; find it under “Archived”."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Une note archivée sort des listes et de la pastille ; on la retrouve dans « Archivées »."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "归档的笔记不再显示在列表和标记中；可在“已归档”中找到。"
+          }
+        }
+      }
+    },
+    "Échéance": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Due date"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Échéance"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "截止日期"
+          }
+        }
+      }
+    },
     "Le livre de cette note n'est plus dans la bibliothèque (corbeille ?).": {
       "localizations": {
         "en": {
@@ -1074,7 +4000,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "新建文件夹"
+            "value": "新建分类夹"
           }
         }
       }
@@ -1316,7 +4242,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "新建文件夹…"
+            "value": "新建分类夹…"
           }
         }
       }

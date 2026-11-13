@@ -45,6 +45,10 @@ extension BackupRoundTripTests {
                                                                            "cote.json", "corrections-page-\\(pageIndex)-\\(engineName)-\\(String(hash, radix: 16)).json",
                                                                            "page-\\(pageIndex).ink", "page-\\(pageIndex)-\\(UUID().uuidString).ink"]),
         "Packages/KyokashoKit/Sources/OCRKit/ModelStore.swift": ("modèles : Kyokasho/Models/ (omissible, retéléchargeable)", ["Kyokasho/Models", "model-"]),
+        "Packages/KyokashoKit/Sources/OCRKit/LocalModels.swift": ("modèles importés (PLAN-MODLOC-001) : Kyokasho/Models/local-<nom>/ (local.json, tokenizer_config.original.json) ; préparation Models/.import-<UUID>/ ; dossier rendu après une app tuée : Modèle-récupéré-<id> ; lit la place libre de tmp",
+                                                                 ["Modèle-récupéré-", "Modèle-récupéré-\\(moved.lastPathComponent)-\\(rank)", "tokenizer_config.json", "tokenizer_config.original.json"]),
+        "App/Settings/LocalModelsSection.swift": ("modèles importés : Documents/Modèles récupérés/ (visible dans Fichiers, après un import interrompu)",
+                                                  ["Modèles récupérés"]),
         "App/Dictionary/MorphologyService.swift": ("modèles : Kyokasho/Models/unidic ; temporaire : tmp/unidic-lite.tar.gz",
                                                    ["unidic", "unidic-lite.tar.gz"]),
         "App/Library/PageShift.swift": ("transaction : Kyokasho/page-shift.json (sauvegarde refusée) ; copies 30 jours (#49) : Kyokasho/PageShift/<opération>/ avec manifest.json ; temporaire : tmp/PageEdit-<UUID>/ ; conflits du remplacement Drive : Kyokasho/Conflits-remplacement/<ancien identifiant>/<Brouillons|Lectures-IA|Rapport|PDF>/ (P2 n°4 du lot C2, données gardées)",
@@ -188,7 +192,7 @@ extension BackupRoundTripTests {
     }
 
     /// C1 — base `AppDatabase` au schéma `v3-page-one` (avant `v4-note-canvas-anchor`), sauvegardée et restaurée :
-    /// l'app actuelle l'ouvre, applique `v4`, `v5`, `v6` (dossiers) et `v7` (rangement des notes) et relit notes, repères et OCR, puis écrit une note ancrée.
+    /// l'app actuelle l'ouvre, applique `v4`, `v5`, `v6` (dossiers), `v7` (rangement des notes) et `v8` (rappels) et relit notes, repères et OCR, puis écrit une note ancrée.
     func testC1OlderAppDatabaseSchemaRestoresAndMigrates() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("kyokasho-old-schema-test-" + UUID().uuidString)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
@@ -207,6 +211,9 @@ extension BackupRoundTripTests {
         try database.writer.close()
         // Revenir au schéma v3 : colonnes et tables de v4 à v7 retirées et migrations oubliées, comme une base jamais migrée.
         try sqlite(path, """
+            DROP TABLE equalizationReference; DELETE FROM grdb_migrations WHERE identifier = 'v9-equalization-reference';
+            ALTER TABLE pageComment DROP COLUMN dueMinute; ALTER TABLE pageComment DROP COLUMN reminders;
+            DELETE FROM grdb_migrations WHERE identifier = 'v8-note-reminders';
             DROP INDEX pageComment_due; ALTER TABLE pageComment DROP COLUMN dueDay;
             ALTER TABLE pageComment DROP COLUMN priority; ALTER TABLE pageComment DROP COLUMN archived;
             ALTER TABLE pageComment DROP COLUMN noteFolderId; ALTER TABLE pageComment DROP COLUMN tagIds;
@@ -252,6 +259,10 @@ extension BackupRoundTripTests {
         XCTAssertTrue(try sqliteRows(restored, "SELECT identifier FROM grdb_migrations").contains("v5-document-category"))
         XCTAssertTrue(try sqliteRows(restored, "SELECT identifier FROM grdb_migrations").contains("v6-folders"))
         XCTAssertTrue(try sqliteRows(restored, "SELECT identifier FROM grdb_migrations").contains("v7-note-organization"))
+        // v8 (PLAN-NOTIF-001) : sans heure, rappel par défaut (`.default` ci-dessus le vérifie déjà).
+        XCTAssertTrue(try sqliteRows(restored, "SELECT identifier FROM grdb_migrations").contains("v8-note-reminders"))
+        // v9 (PLAN-DATA03-001) : aucune référence d'égalisation fixée pour un document ancien (elle le sera à l'ouverture).
+        XCTAssertTrue(try sqliteRows(restored, "SELECT identifier FROM grdb_migrations").contains("v9-equalization-reference"))
     }
 
     // MARK: SQLite direct (sans dépendance supplémentaire à GRDB dans cette cible)

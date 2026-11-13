@@ -10,6 +10,44 @@ import Foundation
 enum ReleaseHistory {
     static let past: [ReleaseNotes] = [
         // Candidates locales non publiées.
+        ReleaseNotes("1.5.8", "2026-11-13", published: false, String(localized: "Correctifs de la recette 1.5.7", bundle: .main), added: [
+                String(localized: "Notes : chaque note affiche sa date et son heure de création ou de modification.", bundle: .main),
+            ], fixed: [
+                String(localized: "Accueil : créer ou renommer un dossier se fait dans une fenêtre de l'app, avec un bouton « Créer » qui marche.", bundle: .main),
+                String(localized: "Barre flottante : elle ne bouge plus au passage entre Pencil et doigt, et une poignée plus grande la déplace.", bundle: .main),
+                String(localized: "Écran Notes plus clair : filtres en pastilles, et chaque note montre son livre, sa page, son échéance et ses étiquettes.", bundle: .main),
+            ]),
+        ReleaseNotes("1.5.7", "2026-11-13", published: false, String(localized: "Notes, dossiers, cartes et correctifs de la recette 1.5.6", bundle: .main), added: [
+                String(localized: "Notes : un écran « Notes » sur l'accueil réunit toutes les notes, par échéance, avec filtres et archives ; une pastille compte les notes à revoir.", bundle: .main),
+                String(localized: "Notes : régler une note (échéance, priorité, classeur, étiquettes, archive), une seule ou plusieurs à la fois.", bundle: .main),
+                String(localized: "Accueil : des dossiers pour ranger les documents.", bundle: .main),
+                String(localized: "Cartes : un écran « Cartes de ce document » pour voir, modifier, suspendre, supprimer et exporter les cartes d'un livre.", bundle: .main),
+                String(localized: "Cartes de la page : tous les mots de la page trouvés dans tes dictionnaires, en plus du lexique du cours.", bundle: .main),
+                String(localized: "Sauvegarde : une barre montre l'avancement.", bundle: .main),
+            ], fixed: [
+                String(localized: "Pencil en page simple avec glissement : la page ne glisse plus au premier trait, aussi sur un document d'une page et à la réouverture.", bundle: .main),
+                String(localized: "Chat du livre : l'IA sait quel document et quelle page sont ouverts.", bundle: .main),
+                String(localized: "Vérification Drive : le rapport dit quel fichier est suivi, son nom sur Drive et s'il est dans la corbeille de Drive.", bundle: .main),
+                String(localized: "Accueil : un document déplacé hors de la vue quitte la sélection.", bundle: .main),
+                String(localized: "Cartes : la définition entière est gardée, plus seulement son début.", bundle: .main),
+                String(localized: "Mise à jour Drive : un document ne reçoit plus un dossier de l'autre espace.", bundle: .main),
+            ]),
+        ReleaseNotes("1.5.6", "2026-11-11", published: false, String(localized: "Lexique, aide des gestes et correctifs de la recette 1.5.5", bundle: .main), added: [
+                String(localized: "Lexique : tous les mots des dictionnaires actifs, page par page, avec lecture et sens ; recherche par début de mot et fiche du mot.", bundle: .main),
+                String(localized: "Lexique : une étoile garde le mot, « + carte » crée sa carte de révision, et « Mes mots » ne montre que les mots gardés.", bundle: .main),
+                String(localized: "Lecteur : menu « … » → « Aide : gestes de lecture » explique les gestes de ce document.", bundle: .main),
+                String(localized: "Lecteur sur batterie : un rappel s'affiche quand la luminosité dépasse 90 % (la batterie descend presque trois fois plus vite).", bundle: .main),
+            ], fixed: [
+                String(localized: "Dessin au Pencil en page simple avec glissement : il marche dès l'ouverture du document, sans devoir tourner une page.", bundle: .main),
+                String(localized: "Chat du livre ouvert depuis l'accueil : il se ferme avec « Fermer », et le livre s'ouvre ensuite normalement.", bundle: .main),
+                String(localized: "Création de cartes : la liste des termes défile jusqu'au dernier.", bundle: .main),
+                String(localized: "La fenêtre « Nouveautés » s'affiche de nouveau après une mise à jour.", bundle: .main),
+                String(localized: "« Arrêter » une analyse ou une traduction ne laisse plus un texte coupé compté comme page lue.", bundle: .main),
+                String(localized: "« Supprimer définitivement » refusé pendant une sauvegarde : le document reste dans la corbeille.", bundle: .main),
+                String(localized: "Un effacement en échec ne fait plus réapparaître toute la corbeille dans la bibliothèque.", bundle: .main),
+                String(localized: "Une note ou une carte d'une page qui n'existe plus ne ferme plus l'app.", bundle: .main),
+                String(localized: "Relevé de batterie : le résumé reste lisible après une coupe du fichier, et une charge termine bien une session.", bundle: .main),
+            ]),
         ReleaseNotes("1.5.5", "2026-11-10", published: false, String(localized: "Pencil, chat du livre, navigateur et mises à jour Drive plus sûres", bundle: .main), added: [
             String(localized: "Chat du livre : il répond aussi aux questions générales, en le signalant, et liste les pages citées.", bundle: .main),
             String(localized: "Navigateur intégré : la connexion Google s'ouvre dans une vraie fenêtre ; la barre d'adresse cherche avec Brave.", bundle: .main),

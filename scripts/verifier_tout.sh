@@ -3,7 +3,13 @@
 # Copyright (c) 2026 NOxygen59
 # Vérification complète locale, reproductible, d'un commit Kyōkasho (GitHub Actions reste désactivé, CI-0).
 #
-#   ./scripts/verifier_tout.sh
+#   ./scripts/verifier_tout.sh                    profil complet (avant une candidate ou un push)
+#   ./scripts/verifier_tout.sh --rapide           tests Swift et Python seulement, pendant le travail
+#   ./scripts/verifier_tout.sh --rapide --filtre NoteOrganizationTests   tests Swift ciblés (+ Python)
+#
+# Lot C1 (13/11/2026) : profils rapide et complet ; le complet lance aussi les tests de Packages/GLMOCRKit (oubliés
+# jusque-là, relecture finale 88f8a12 N10) ; une étape non lancée par le profil est écrite « non exécutée », jamais
+# comptée comme réussie ; un résumé par commit (`RESUME-<date>-<sha>[-rapide].md`), recopié en `RESUME-<date>.md`.
 #
 # Enchaîne, depuis la racine du dépôt : génération du projet Xcode (si `xcodegen` existe), tests Swift
 # (`Packages/KyokashoKit`), tests Python (`tests/`), compilation iOS générique (simulateur, sans signature)
@@ -19,6 +25,17 @@
 #   NOxygen59 : c'est une preuve Mac, pas une recette.
 set -uo pipefail
 
+PROFIL="complet"
+FILTRE=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --rapide) PROFIL="rapide" ;;
+    --filtre) shift; FILTRE="${1:-}"; [ -n "$FILTRE" ] || { echo "--filtre demande un nom de test" >&2; exit 2; } ;;
+    *) echo "Option inconnue : $1 (voir l'en-tête du script)" >&2; exit 2 ;;
+  esac
+  shift
+done
+
 ROOT="$(cd -- "$(dirname -- "$0")/.." && pwd)"
 cd "$ROOT" || exit 2
 
@@ -28,14 +45,17 @@ mkdir -p "$JOURNAUX" || exit 2
 
 DATE="$(date +%Y-%m-%d)"
 HEURE="$(date '+%H:%M')"
-RESUME="$OUT/RESUME-$DATE.md"
 SHA="$(git rev-parse --short HEAD 2>/dev/null || echo 'inconnu')"
+SUFFIXE=""; [ "$PROFIL" = "rapide" ] && SUFFIXE="-rapide"
+RESUME="$OUT/RESUME-$DATE-$SHA$SUFFIXE.md"
 SHA_LONG="$(git rev-parse HEAD 2>/dev/null || echo 'inconnu')"
 BRANCHE="$(git branch --show-current 2>/dev/null)"
 [ -n "$BRANCHE" ] || BRANCHE="(tête détachée)"
 MODIFIES="$(git status --porcelain 2>/dev/null | wc -l | tr -d ' ')"
 
 XCODEGEN_RESULTAT="non exécuté (xcodegen absent)"
+GLM_RESULTAT="non exécuté (profil rapide)"
+GLM_DETAIL="non mesuré"
 SWIFT_RESULTAT="non exécuté"
 SWIFT_TOTAL="non mesuré"
 SWIFT_IGNORES="non mesuré"
@@ -63,7 +83,9 @@ ajouter_echec() {
 DEBUT=$SECONDS
 
 # 1. Projet Xcode -----------------------------------------------------------
-if command -v xcodegen >/dev/null 2>&1; then
+if [ "$PROFIL" = "rapide" ]; then
+  XCODEGEN_RESULTAT="non exécuté (profil rapide)"
+elif command -v xcodegen >/dev/null 2>&1; then
   printf '==> 1/5 Projet Xcode (xcodegen generate -q)\n'
   if xcodegen generate -q >"$JOURNAUX/xcodegen.log" 2>&1; then
     XCODEGEN_RESULTAT="réussi"
@@ -74,8 +96,8 @@ if command -v xcodegen >/dev/null 2>&1; then
 fi
 
 # 2. Tests Swift (paquet KyokashoKit) ---------------------------------------
-printf '==> 2/5 Tests Swift (Packages/KyokashoKit)\n'
-if ( cd "$ROOT/Packages/KyokashoKit" && swift test ) >"$JOURNAUX/swift.log" 2>&1; then
+printf '==> 2/6 Tests Swift (Packages/KyokashoKit)%s\n' "${FILTRE:+, filtre $FILTRE}"
+if ( cd "$ROOT/Packages/KyokashoKit" && swift test ${FILTRE:+--filter "$FILTRE"} ) >"$JOURNAUX/swift.log" 2>&1; then
   SWIFT_RESULTAT="réussi"
 else
   SWIFT_RESULTAT="échec (voir journaux/swift.log)"
@@ -85,7 +107,7 @@ fi
 # (« started » puis « passed »/« failed ») et seul le total de la cible est porté par la ligne
 # « Executed … » qui suit le verdict. On ne retient donc que la ligne suivant « passed »/« failed » : la
 # prendre après « started » ramènerait la ligne du bundle et donnerait un total faux (piège rencontré).
-sed -nE "/^Test Suite 'All tests' (passed|failed) at/ { n; p; }" "$JOURNAUX/swift.log" >"$JOURNAUX/swift-totaux.txt"
+sed -nE "/^Test Suite '(All|Selected) tests' (passed|failed) at/ { n; p; }" "$JOURNAUX/swift.log" >"$JOURNAUX/swift-totaux.txt"
 if grep -q '^[[:space:]]*Executed ' "$JOURNAUX/swift-totaux.txt"; then
   SWIFT_TOTAL="$(awk '{ if ($1 == "Executed") total += $2 } END { printf "%d", total }' "$JOURNAUX/swift-totaux.txt")"
   SWIFT_IGNORES="$(grep -oE '[0-9]+ tests? skipped' "$JOURNAUX/swift-totaux.txt" | awk '{ total += $1 } END { printf "%d", total }')"
@@ -105,8 +127,22 @@ else
   SWIFT_CLARIFIE="$SWIFT_TOTAL exécutés (lignes « Executed »), $SWIFT_IGNORES ignorés, $SWIFT_ECHECS échec(s) ; $SWIFT_CAS_TOTAL cas comptés un à un (écart à expliquer)"
 fi
 
+# 2b. Tests Swift (paquet GLMOCRKit : moteurs d'IA, chat) — profil complet ----
+if [ "$PROFIL" = "complet" ]; then
+  printf '==> 3/6 Tests Swift (Packages/GLMOCRKit)\n'
+  if ( cd "$ROOT/Packages/GLMOCRKit" && swift test ) >"$JOURNAUX/glmocrkit.log" 2>&1; then
+    GLM_RESULTAT="réussi"
+  else
+    GLM_RESULTAT="échec (voir journaux/glmocrkit.log)"
+    ajouter_echec "swift test GLMOCRKit"
+  fi
+  # Mêmes règles de comptage que KyokashoKit ; la plupart sont ignorés sans les poids des modèles (dit tel quel).
+  GLM_TOTAUX="$(sed -nE "/^Test Suite 'All tests' (passed|failed) at/ { n; p; }" "$JOURNAUX/glmocrkit.log")"
+  GLM_DETAIL="$(printf '%s\n' "$GLM_TOTAUX" | awk '$1 == "Executed" { t += $2 } END { printf "%d", t }') exécutés, $(printf '%s\n' "$GLM_TOTAUX" | grep -oE '[0-9]+ tests? skipped' | awk '{ s += $1 } END { printf "%d", s }') ignorés (poids absents), $(printf '%s\n' "$GLM_TOTAUX" | grep -oE '[0-9]+ failures?' | awk '{ f += $1 } END { printf "%d", f }') échec(s)"
+fi
+
 # 3. Tests Python (outil de sauvegarde, catalogues, gardes de câblage) ------
-printf '==> 3/5 Tests Python (tests/)\n'
+printf '==> 4/6 Tests Python (tests/)\n'
 if python3 -m unittest discover -s tests >"$JOURNAUX/python.log" 2>&1; then
   PYTHON_RESULTAT="réussi"
 else
@@ -119,7 +155,11 @@ PYTHON_DETAIL="$(grep -E '^(OK|FAILED)' "$JOURNAUX/python.log" | tail -1)"
 [ -n "$PYTHON_DETAIL" ] || PYTHON_DETAIL="pas de ligne de résultat"
 
 # 4. Compilation iOS générique (simulateur, sans signature) -----------------
-printf '==> 4/5 Compilation iOS générique\n'
+if [ "$PROFIL" = "rapide" ]; then
+  IOS_RESULTAT="non exécutée (profil rapide)"
+  IOS_ERREURS="—"
+else
+printf '==> 5/6 Compilation iOS générique\n'
 if xcodebuild -project Kyokasho.xcodeproj -scheme Kyokasho \
   -destination 'generic/platform=iOS Simulator' -derivedDataPath build/verif \
   build CODE_SIGNING_ALLOWED=NO -quiet >"$JOURNAUX/ios.log" 2>&1; then
@@ -131,9 +171,14 @@ fi
 # Seules les erreurs de compilation comptent (« fichier.swift:ligne:col: error »). Les lignes « failed with exit code 0
 # but produced no further output » de xcodebuild sont un bruit connu, sans échec (analyse avant candidate 1.5.5).
 IOS_ERREURS="$(grep -cE '\.swift:[0-9]+:[0-9]+: error' "$JOURNAUX/ios.log")"
+fi
 
 # 5. Contrôle documentaire --------------------------------------------------
-printf '==> 5/5 Contrôle documentaire (scripts/check_documentation.py)\n'
+if [ "$PROFIL" = "rapide" ]; then
+  DOC_RESULTAT="non exécuté (profil rapide)"
+  DOC_LIENS="non mesuré"
+else
+printf '==> 6/6 Contrôle documentaire (scripts/check_documentation.py)\n'
 if python3 scripts/check_documentation.py >"$JOURNAUX/documentation.log" 2>&1; then
   DOC_RESULTAT="réussi"
 else
@@ -142,13 +187,14 @@ else
 fi
 DOC_LIENS="$(tail -1 "$JOURNAUX/documentation.log")"
 [ -n "$DOC_LIENS" ] || DOC_LIENS="pas de ligne de résultat"
+fi
 
 DUREE=$((SECONDS - DEBUT))
 if [ "$ECHECS_NOMBRE" -eq 0 ]; then
-  VERDICT="toutes les étapes ont réussi"
+  VERDICT="toutes les étapes lancées ont réussi (profil $PROFIL${FILTRE:+, filtre $FILTRE})"
   CODE=0
 else
-  VERDICT="$ECHECS_NOMBRE étape(s) en échec : $ECHECS_LISTE"
+  VERDICT="$ECHECS_NOMBRE étape(s) en échec : $ECHECS_LISTE (profil $PROFIL)"
   CODE=1
 fi
 
@@ -161,6 +207,7 @@ cat >"$RESUME" <<EOF
 Généré par \`scripts/verifier_tout.sh\`. Preuve **Mac** : elle ne remplace ni la compilation iOS d'un lot
 précis, ni la validation sur l'iPad par NOxygen59. Aucun réseau, GitHub Actions désactivé (CI-0).
 
+- Profil : **$PROFIL**${FILTRE:+ (tests Swift filtrés : \`$FILTRE\`)} — seul le profil complet sans filtre vaut avant une candidate
 - Commit : \`$SHA\` (\`$SHA_LONG\`)
 - Branche : \`$BRANCHE\`
 - Fichiers modifiés ou non suivis au lancement : $MODIFIES
@@ -173,6 +220,7 @@ précis, ni la validation sur l'iPad par NOxygen59. Aucun réseau, GitHub Action
 |---|---|---|
 | Projet Xcode | $XCODEGEN_RESULTAT | \`xcodegen generate -q\` |
 | Tests Swift | $SWIFT_RESULTAT | $SWIFT_CLARIFIE |
+| Tests Swift GLMOCRKit | $GLM_RESULTAT | $GLM_DETAIL |
 | Tests Python | $PYTHON_RESULTAT | $PYTHON_TOTAL tests ; $PYTHON_DETAIL |
 | Compilation iOS générique (simulateur) | $IOS_RESULTAT | $IOS_ERREURS erreur(s) de compilation Swift |
 | Contrôle documentaire | $DOC_RESULTAT | $DOC_LIENS |
@@ -189,5 +237,6 @@ Non couvert par ce résumé : recette iPad (iOS 16.6.1, TrollStore), MLX/Metal s
 ASan/LSan, essais MLX/ONNX avec poids. Ces preuves restent à la charge de NOxygen59 et des lots qui les exigent.
 EOF
 
+cp "$RESUME" "$OUT/RESUME-$DATE.md"
 printf '\nRésumé : %s\n%s\n' "$RESUME" "$VERDICT"
 exit "$CODE"

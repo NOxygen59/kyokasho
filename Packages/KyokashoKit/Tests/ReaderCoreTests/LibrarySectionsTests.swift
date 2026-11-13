@@ -28,6 +28,10 @@ final class LibrarySectionsTests: XCTestCase {
         XCTAssertNotEqual(initial, LibraryCardRenderIdentity(documentId: "d", category: .book, selecting: false))
         XCTAssertNotEqual(initial, LibraryCardRenderIdentity(documentId: "d", category: nil, selecting: true))
         XCTAssertEqual(initial, LibraryCardRenderIdentity(documentId: "d", category: nil, selecting: false))
+        // Recette 1.5.8 (1.4) : la même carte dans un dossier ouvert, ou cochée, est une autre carte.
+        XCTAssertNotEqual(initial, LibraryCardRenderIdentity(documentId: "d", category: nil, selecting: false, folderId: "f"))
+        XCTAssertNotEqual(LibraryCardRenderIdentity(documentId: "d", category: nil, selecting: true),
+                          LibraryCardRenderIdentity(documentId: "d", category: nil, selecting: true, selected: true))
     }
 
     // Espace Manga en deux sections, comme Livres et Manuels (demande de NOxygen59, 07/11/2026) : les mangas PDF d'abord,

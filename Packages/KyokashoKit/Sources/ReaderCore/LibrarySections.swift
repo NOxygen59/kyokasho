@@ -47,17 +47,24 @@ public enum LibrarySections {
     }
 }
 
-/// Force SwiftUI à reconstruire une carte quand elle change de section ou quand le mode sélection apparaît.
+/// Force SwiftUI à reconstruire une carte quand elle change de section ou de dossier, quand le mode sélection apparaît
+/// ou quand elle est cochée. Recette 1.5.8 (1.4) : dans un dossier ouvert, la carte gardait l'identité qu'elle avait sur
+/// l'accueil et sa pastille de sélection restait figée.
 public struct LibraryCardRenderIdentity: Hashable, Sendable {
     public var documentId: String
     public var category: DocumentCategory?
     public var selecting: Bool
     public var manga: Bool
+    public var folderId: String?
+    public var selected: Bool
 
-    public init(documentId: String, category: DocumentCategory?, selecting: Bool, manga: Bool = false) {
+    public init(documentId: String, category: DocumentCategory?, selecting: Bool, manga: Bool = false,
+                folderId: String? = nil, selected: Bool = false) {
         self.documentId = documentId
         self.category = category
         self.selecting = selecting
         self.manga = manga
+        self.folderId = folderId
+        self.selected = selected
     }
 }

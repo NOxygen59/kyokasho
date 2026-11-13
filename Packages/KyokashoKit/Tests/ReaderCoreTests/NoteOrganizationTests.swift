@@ -130,6 +130,75 @@ final class NoteOrganizationTests: XCTestCase {
         XCTAssertEqual(try db.organizedNotes(includeArchived: true).count, 4)
     }
 
+    /// PLAN-NOTIF-001 E1 : « ! » noir dans les 7 jours, rouge aujourd'hui ou dépassé ; archivées, corbeille et jours
+    /// invalides ignorés ; 23 h à Tokyo reste « aujourd'hui ».
+    func testDueBadgeIsBlackWithinAWeekAndRedTodayOrLate() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Tokyo")!
+        let today = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 11, day: 11, hour: 23)))
+        XCTAssertEqual(NoteDueBadge.of(dueDays: [], today: today, calendar: calendar), .none)
+        XCTAssertEqual(NoteDueBadge.of(dueDays: ["2026-11-19"], today: today, calendar: calendar), .none)
+        XCTAssertEqual(NoteDueBadge.of(dueDays: ["2026-11-18"], today: today, calendar: calendar), .soon)
+        XCTAssertEqual(NoteDueBadge.of(dueDays: ["2026-11-12", "2026-11-11"], today: today, calendar: calendar), .urgent)
+        XCTAssertEqual(NoteDueBadge.of(dueDays: ["2026-10-01"], today: today, calendar: calendar), .urgent)
+        XCTAssertEqual(NoteDueBadge.of(dueDays: ["2026-1-5"], today: today, calendar: calendar), .none)
+
+        let db = try database()
+        try db.apply(.due("2026-11-15"), to: ["n1"])
+        XCTAssertEqual(try db.noteDueBadge(today: today, calendar: calendar), .soon)
+        try db.apply(.due("2026-11-11"), to: ["n2"])
+        XCTAssertEqual(try db.noteDueBadge(today: today, calendar: calendar), .urgent)
+        try db.apply(.archived(true), to: ["n2"])
+        XCTAssertEqual(try db.noteDueBadge(today: today, calendar: calendar), .soon)
+        XCTAssertEqual(try db.noteDueBadge(today: today, calendar: calendar, excludingDocuments: ["d"]), .none)
+    }
+
+    /// PLAN-NOTIF-001 E2 : heure et rappels écrits seuls, forme canonique, refus d'une heure invalide, heure effacée
+    /// avec l'échéance ; rappels à venir calculés au bon instant ; rouge 24 h avant une échéance à heure réglée.
+    func testDueTimeAndRemindersAreStoredAndScheduled() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Tokyo")!
+        let db = try database()
+        XCTAssertNil(try db.organization(noteId: "n1")?.reminders, "rien de réglé : rappel par défaut")
+        try db.apply(.due("2026-11-20"), to: ["n1"])
+        try db.apply(.dueMinute(14 * 60 + 30), to: ["n1"])
+        try db.apply(.reminders([1_440, 0, 0, 7, 60, 15]), to: ["n1"])
+        var o = try XCTUnwrap(db.organization(noteId: "n1"))
+        XCTAssertEqual(o.dueMinute, 870)
+        XCTAssertEqual(o.reminders, [0, 15, 60], "choix connus, sans doublon, triés, 3 au plus")
+        XCTAssertThrowsError(try db.apply(.dueMinute(1_440), to: ["n1"])) { XCTAssertEqual($0 as? NoteOrganizationError, .invalidTime) }
+        try db.apply(.reminders([]), to: ["n1"])
+        XCTAssertEqual(try db.organization(noteId: "n1")?.reminders, [])
+        try db.apply(.due(nil), to: ["n1"])
+        o = try XCTUnwrap(db.organization(noteId: "n1"))
+        XCTAssertNil(o.dueMinute)
+        XCTAssertEqual(o.reminders, [], "les rappels choisis restent pour la prochaine échéance")
+
+        let now = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 11, day: 19, hour: 15)))
+        let fires = NoteReminder.fireDates(day: "2026-11-20", minute: 14 * 60 + 30, reminders: [0, 60, 1_440], now: now, calendar: calendar)
+        XCTAssertEqual(fires.map { calendar.dateComponents([.day, .hour, .minute], from: $0) },
+                       [DateComponents(day: 20, hour: 13, minute: 30), DateComponents(day: 20, hour: 14, minute: 30)],
+                       "le rappel « 1 jour avant » est déjà passé")
+        XCTAssertEqual(NoteReminder.fireDates(day: "2026-11-20", minute: nil, reminders: nil, now: now, calendar: calendar)
+            .map { calendar.component(.hour, from: $0) }, [9], "sans heure ni rappel : à 9 h, à l'heure")
+        XCTAssertEqual(NoteDueBadge.of(dues: [("2026-11-20", 14 * 60)], now: now, calendar: calendar), .urgent, "dans moins de 24 h")
+        XCTAssertEqual(NoteDueBadge.of(dues: [("2026-11-20", nil)], now: now, calendar: calendar), .soon, "sans heure : rouge le jour même")
+        XCTAssertEqual(NoteDueBadge.of(dues: [("2026-11-21", 14 * 60)], now: now, calendar: calendar), .soon)
+        // Revue R2 (n°10) : même règle lue en base, avec l'heure.
+        try db.apply(.due("2026-11-20"), to: ["n2"])
+        try db.apply(.dueMinute(14 * 60), to: ["n2"])
+        XCTAssertEqual(try db.noteDueBadge(today: now, calendar: calendar), .urgent)
+        // Revue R2 (n°4) : une valeur abîmée vaut « aucun rappel ».
+        try db.writer.write { try $0.execute(sql: "UPDATE pageComment SET reminders = 'abîmé' WHERE id = 'n2'") }
+        XCTAssertEqual(try db.organization(noteId: "n2")?.reminders, [])
+        // Revue R2 (n°3) : « 1 jour avant » garde l'heure même au changement d'heure (Paris, 29/03/2026).
+        var paris = Calendar(identifier: .gregorian)
+        paris.timeZone = TimeZone(identifier: "Europe/Paris")!
+        let before = try XCTUnwrap(paris.date(from: DateComponents(year: 2026, month: 3, day: 27)))
+        let dayBefore = NoteReminder.fireDates(day: "2026-03-29", minute: 14 * 60 + 30, reminders: [1_440], now: before, calendar: paris)
+        XCTAssertEqual(dayBefore.map { paris.dateComponents([.day, .hour, .minute], from: $0) }, [DateComponents(day: 28, hour: 14, minute: 30)])
+    }
+
     func testDayStrings() {
         XCTAssertTrue(NoteDay.isValid("2028-02-29"))
         XCTAssertFalse(NoteDay.isValid("2027-02-29"))
@@ -167,5 +236,48 @@ final class NoteOrganizationTests: XCTestCase {
         XCTAssertThrowsError(try db.renameNoteTag(id: b.id, to: "test s46")) { XCTAssertEqual($0 as? NoteOrganizationError, .duplicateName) }
         XCTAssertNoThrow(try db.renameNoteTag(id: a.id, to: "TEST S46"), "renommer en changeant la casse reste permis")
         XCTAssertEqual(try db.organizedNotes(includeArchived: true, excludingDocuments: ["d"]).count, 0)
+    }
+
+    /// E3 : l'étiquette tapée dans « Ranger la note » réutilise celle qui existe (majuscules ignorées) ; une sélection
+    /// multiple refusée (classeur disparu) ne change aucune note.
+    func testTagTypedTwiceIsReusedAndARefusedBatchChangesNothing() throws {
+        let db = try database()
+        let first = try db.noteTag(named: "Test S46")
+        try db.apply(.addTag(first.id), to: ["n1"])
+        let again = try db.noteTag(named: "  test s46 ")
+        XCTAssertEqual(again.id, first.id)
+        try db.apply(.addTag(again.id), to: ["n1", "n2"])
+        XCTAssertEqual(try db.noteTags().count, 1)
+        XCTAssertEqual(try db.organization(noteId: "n2")?.tagIds, [first.id])
+
+        let folder = try db.createNoteFolder(name: "Matériaux")
+        try db.apply(.folder(folder.id), to: ["n1"])
+        XCTAssertThrowsError(try db.apply(.folder("disparu"), to: ["n1", "n2"]))
+        XCTAssertEqual(try db.organization(noteId: "n1")?.folderId, folder.id)
+        XCTAssertNil(try db.organization(noteId: "n2")?.folderId)
+    }
+
+    /// Revue DeepSeek D-07 F4 : note disparue → le lot échoue (rien écrit) et aucune étiquette n'est créée.
+    func testDeletedNoteFailsTheBatchAndCreatesNoOrphanTag() throws {
+        let db = try database()
+        XCTAssertThrowsError(try db.apply(.priority(.high), to: ["n1", "disparue"])) {
+            XCTAssertEqual($0 as? NoteOrganizationError, .noteNotFound)
+        }
+        XCTAssertEqual(try db.organization(noteId: "n1")?.priority, .normal, "tout ou rien")
+        XCTAssertThrowsError(try db.addTag(named: "Test S46", toNote: "disparue"))
+        XCTAssertTrue(try db.noteTags().isEmpty)
+        try db.addTag(named: "Test S46", toNote: "n1")
+        try db.addTag(named: "test s46", toNote: "n2")
+        XCTAssertEqual(try db.noteTags().count, 1)
+        XCTAssertEqual(try db.organization(noteId: "n2")?.tagIds, try db.organization(noteId: "n1")?.tagIds)
+    }
+
+    /// Relecture finale f2b3d49 (N2) : « Nouveau classeur… » sur une note disparue ne laisse aucun classeur vide.
+    func testNewFolderForADeletedNoteCreatesNothing() throws {
+        let db = try database()
+        XCTAssertThrowsError(try db.createNoteFolder(name: "Matériaux", assigningTo: "disparue"))
+        XCTAssertTrue(try db.noteFolders().isEmpty)
+        let folder = try db.createNoteFolder(name: "Matériaux", assigningTo: "n1")
+        XCTAssertEqual(try db.organization(noteId: "n1")?.folderId, folder.id)
     }
 }

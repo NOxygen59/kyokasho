@@ -101,21 +101,14 @@ public struct ReleaseNotes: Equatable, Sendable, Identifiable {
 
     /// La version en cours de préparation : seulement ce qu'elle change (décision de NOxygen59 du 04/11/2026). C'est
     /// elle que montre la fenêtre « Nouveautés » ; les versions précédentes vont dans `ReleaseHistory`.
-    public static let current = ReleaseNotes("1.5.6", "2026-11-11", published: false, String(localized: "Lexique, aide des gestes et correctifs de la recette 1.5.5", bundle: .main), added: [
-            String(localized: "Lexique : tous les mots des dictionnaires actifs, page par page, avec lecture et sens ; recherche par début de mot et fiche du mot.", bundle: .main),
-            String(localized: "Lexique : une étoile garde le mot, « + carte » crée sa carte de révision, et « Mes mots » ne montre que les mots gardés.", bundle: .main),
-            String(localized: "Lecteur : menu « … » → « Aide : gestes de lecture » explique les gestes de ce document.", bundle: .main),
-            String(localized: "Lecteur sur batterie : un rappel s'affiche quand la luminosité dépasse 90 % (la batterie descend presque trois fois plus vite).", bundle: .main),
+    public static let current = ReleaseNotes("1.5.9", "2026-11-14", published: false, String(localized: "Rappels de notes, annotations exactes à l'export et correctifs de la recette 1.5.8", bundle: .main), added: [
+            String(localized: "Notes : un « ! » sur l'accueil, noir si une échéance arrive dans les 7 jours, rouge si elle est aujourd'hui ou dépassée.", bundle: .main),
+            String(localized: "Notes : une heure d'échéance et jusqu'à trois rappels par note, avec une notification d'iOS qui ouvre la note.", bundle: .main),
+            String(localized: "Accueil : la colonne de gauche est regroupée (Étudier, Importer et convertir), et entrer dans un dossier est animé.", bundle: .main),
         ], fixed: [
-            String(localized: "Dessin au Pencil en page simple avec glissement : il marche dès l'ouverture du document, sans devoir tourner une page.", bundle: .main),
-            String(localized: "Chat du livre ouvert depuis l'accueil : il se ferme avec « Fermer », et le livre s'ouvre ensuite normalement.", bundle: .main),
-            String(localized: "Création de cartes : la liste des termes défile jusqu'au dernier.", bundle: .main),
-            String(localized: "La fenêtre « Nouveautés » s'affiche de nouveau après une mise à jour.", bundle: .main),
-            String(localized: "« Arrêter » une analyse ou une traduction ne laisse plus un texte coupé compté comme page lue.", bundle: .main),
-            String(localized: "« Supprimer définitivement » refusé pendant une sauvegarde : le document reste dans la corbeille.", bundle: .main),
-            String(localized: "Un effacement en échec ne fait plus réapparaître toute la corbeille dans la bibliothèque.", bundle: .main),
-            String(localized: "Une note ou une carte d'une page qui n'existe plus ne ferme plus l'app.", bundle: .main),
-            String(localized: "Relevé de batterie : le résumé reste lisible après une coupe du fichier, et une charge termine bien une session.", bundle: .main),
+            String(localized: "Export « PDF annoté » et images : surlignages, dessins et notes restent sur leur mot, même sur une page d'une autre taille, et la page garde la rotation choisie dans l'app.", bundle: .main),
+            String(localized: "Dossiers : les pastilles de sélection se mettent à jour dans un dossier.", bundle: .main),
+            String(localized: "Barre à poignée : elle ne bouge plus au passage du Pencil, et sa poignée ne se cache plus contre le bord.", bundle: .main),
         ])
 
     /// Notes de `version` (« 1.3.2 », sans le numéro de build) : la version elle-même, jamais une build de test.

@@ -21,6 +21,7 @@ final class ModelDownloads: ObservableObject {
 
     func refresh() {
         installed = Set((ModelSpec.all + [.degan] + ModelSpec.layoutModels).filter { store.isInstalled($0) }.map(\.id))
+            .union(LocalModels.installed(in: store.root).map(\.id))   // modèles importés (PLAN-MODLOC-001, E3)
     }
 
     func start(_ spec: ModelSpec) {
@@ -70,6 +71,7 @@ struct OCRModelsSection: View {
     let group: Group
     @ObservedObject private var downloads = ModelDownloads.shared
     @State private var deleting: ModelSpec?
+    @AppStorage(OwnerMode.unlockedKey) private var ownerUnlocked = false
 
     var body: some View {
         Section {
@@ -81,7 +83,7 @@ struct OCRModelsSection: View {
                 row(.glmocr, badge: String(localized: "Optionnel"))
                 row(.ovisocr2, badge: String(localized: "Optionnel"))
                 row(.qwen3vl4b, badge: String(localized: "Optionnel · lourd"))
-                row(.qwen35chat4b, badge: String(localized: "Optionnel · chat"))
+                if ownerUnlocked { row(.qwen35chat4b, badge: String(localized: "Optionnel · chat")) }
             case .layout:
                 ForEach(ModelSpec.layoutModels) { spec in row(spec, badge: String(localized: "Optionnel")) }
             case .sharpen:

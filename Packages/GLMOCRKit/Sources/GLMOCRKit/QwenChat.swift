@@ -51,10 +51,12 @@ public final class QwenChat: @unchecked Sendable {
     /// `settings` : consigne et paramètres choisis pour ce modèle (#37, #45) ; par défaut, ceux d'avant.
     public func start(history: [Message], grounded: Bool = false, settings: AIChatSettings = AIChatSettings()) async throws {
         guard session == nil else { return }
-        guard model.id == ModelSpec.qwen3vl4b.id || model.id == ModelSpec.qwen35chat4b.id else {
+        guard model.id == ModelSpec.qwen3vl4b.id || ModelSpec.isQwen35Family(model.id) else {
             throw OCRError.engineFailed(String(localized: "Ce modèle ne sait pas discuter.", bundle: .main))
         }
         guard isAvailable else { throw OCRError.modelMissing(model.title) }
+        // Revue R2 MODLOC E3 (n°9) : un autre modèle resté chargé sans travail est d'abord rendu, puis on remesure.
+        if let free = PageVLMReader.availableMemory(), free < 3_800 * 1_048_576 { await GLMModel.shared.unloadIfIdle() }
         if let free = PageVLMReader.availableMemory(), free < 3_800 * 1_048_576 {
             throw OCRError.engineFailed(String(localized: "Pas assez de mémoire libre pour \(model.title) (\(free / 1_048_576) Mo libres). Ferme les autres apps et réessaie.", bundle: .main))
         }
@@ -67,7 +69,7 @@ public final class QwenChat: @unchecked Sendable {
                                             repetitionPenalty: settings.repetitionPenalty.map { Float($0) })
         session = ChatSession(container, instructions: settings.effectiveInstructions(default: Self.instructions), history: past,
                               generateParameters: parameters,
-                              additionalContext: model.id == ModelSpec.qwen35chat4b.id ? ["enable_thinking": settings.thinking] : nil)
+                              additionalContext: ModelSpec.isQwen35Family(model.id) ? ["enable_thinking": settings.thinking] : nil)
     }
 
     /// Aide fiable ajoutée à la question (le modèle de 4 milliards invente souvent les lectures, ex. 天井 « あまね ») :

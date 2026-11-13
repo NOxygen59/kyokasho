@@ -41,6 +41,13 @@ struct LibraryView: View {
     @State private var showNotes = false
     @State private var noteToOpen: PageComment?
     @State private var showDashboard = false
+    /// Mode propriétaire (PLAN-MODLOC-001, E1) : rafale de touchers sur « Temps de lecture ».
+    @AppStorage(OwnerMode.unlockedKey) private var ownerUnlocked = false
+    @State private var statsTaps = TapBurst()
+    @State private var statsDecision: Task<Void, Never>?
+    /// Retour visuel bref de la bascule (revue D-07 MODLOC E1, n°2 : l'iPad n'a pas de vibreur) : cadenas ouvert ou
+    /// fermé à la place de l'icône du tableau de bord pendant ~1,2 s, sans texte (DEC-01).
+    @State private var ownerFlash: Bool?
     @State private var renaming: LibraryDocument?
     @EnvironmentObject private var review: ReviewModel
     @EnvironmentObject private var themes: ThemeManager
@@ -67,6 +74,9 @@ struct LibraryView: View {
     @State private var showConvertConfirmation = false
     /// Dossier ouvert sur l'accueil (PLAN-T5-001, E2) ; `nil` : accueil complet. Remis à `nil` au changement d'espace.
     @State private var openFolderId: String?
+    /// Transition d'entrée et de sortie d'un dossier (recette 1.5.8) : 0 au changement, puis 1 en ressort.
+    @State private var folderProgress: CGFloat = 1
+    @State private var folderEntering = true
     /// Fenêtre « nom du dossier » : création (avec documents à ranger) ou renommage.
     @State private var folderNaming: FolderNaming?
     @State private var folderName = ""
@@ -486,13 +496,11 @@ struct LibraryView: View {
                 sideRow(.drive, icon: "externaldrive.badge.icloud", title: String(localized: "Depuis Drive"),
                         count: spaceDocuments.filter { $0.driveFileId != nil }.count)
             }
+            // Recette 1.5.8 : la colonne était trop remplie (13 lignes à la suite). Rien n'est retiré : ce qui sert chaque
+            // jour reste en lignes avec pastille ; importer et convertir passent en tuiles ; banc d'essai, corbeille et
+            // réglages en rangée du bas.
             VStack(alignment: .leading, spacing: 4) {
-                AtelierLabel(String(localized: "Importer")).padding(.bottom, 4)
-                actionRow(icon: "folder", title: String(localized: "Fichiers"), tint: Atelier.Tint.cloud) { showImportOptions = true }
-                actionRow(icon: "externaldrive.badge.icloud", title: String(localized: "Google Drive"), tint: Atelier.Tint.cloud) { showDrive = true }
-            }
-            VStack(alignment: .leading, spacing: 4) {
-                AtelierLabel(String(localized: "Outils")).padding(.bottom, 4)
+                AtelierLabel(String(localized: "Étudier")).padding(.bottom, 4)
                 // Manga : pas de révisions, de dictionnaire, d'images vers PDF ni de banc d'essai OCR (demande de NOxygen59,
                 // 07/11/2026) ; ces outils servent l'étude des manuels.
                 if space != .manga {
@@ -504,16 +512,29 @@ struct LibraryView: View {
                 }
                 // Notes dans les deux espaces (revue DeepSeek F1) : les PDF de Manga ont aussi des notes, l'écran est global.
                 // Pastille : notes à revoir (échéance passée, aujourd'hui ou demain ; DEC-T4-06).
+                // PLAN-NOTIF-001 (DEC-01/02 = A) : « ! » noir si une échéance tombe dans les 7 jours, rouge si elle est
+                // aujourd'hui ou dépassée ; le nombre reste dans l'écran Notes.
                 actionRow(icon: "note.text", title: String(localized: "Notes"), tint: Atelier.Tint.annotate,
-                          count: model.notesToReview) { showNotes = true }
-                actionRow(icon: "doc.on.doc", title: String(localized: "Fusionner des PDF"), tint: Atelier.Tint.cloud) { showMerge = true }
-                if space != .manga {
-                    actionRow(icon: "photo.on.rectangle.angled", title: String(localized: "Images vers PDF"), tint: Atelier.Tint.cloud) { showImagesToPDF = true }
-                    actionRow(icon: "gauge.with.dots.needle.33percent", title: String(localized: "Banc d'essai OCR"), tint: Atelier.Tint.japanese) { showBench = true }
+                          due: model.noteDueBadge) { showNotes = true }
+            }
+            VStack(alignment: .leading, spacing: 8) {
+                AtelierLabel(String(localized: "Importer et convertir")).padding(.bottom, 2)
+                LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
+                    toolTile(icon: "folder", title: String(localized: "Fichiers"), tint: Atelier.Tint.cloud) { showImportOptions = true }
+                    toolTile(icon: "externaldrive.badge.icloud", title: String(localized: "Google Drive"), tint: Atelier.Tint.cloud) { showDrive = true }
+                    toolTile(icon: "doc.on.doc", title: String(localized: "Fusionner des PDF"), tint: Atelier.Tint.cloud) { showMerge = true }
+                    if space != .manga {
+                        toolTile(icon: "photo.on.rectangle.angled", title: String(localized: "Images vers PDF"), tint: Atelier.Tint.cloud) { showImagesToPDF = true }
+                    }
                 }
-                actionRow(icon: "trash", title: String(localized: "Corbeille"), tint: Atelier.textSecondary,
-                          count: model.trashedDocuments.count) { showTrash = true }
-                actionRow(icon: "gearshape", title: String(localized: "Réglages"), tint: Atelier.textSecondary) { showSettings = true }
+            }
+            HStack(spacing: 8) {
+                if space != .manga {
+                    toolTile(icon: "speedometer", title: String(localized: "Banc d'essai OCR"), tint: Atelier.Tint.japanese) { showBench = true }
+                }
+                toolTile(icon: "trash", title: String(localized: "Corbeille"), tint: Atelier.textSecondary,
+                         count: model.trashedDocuments.count) { showTrash = true }
+                toolTile(icon: "gearshape", title: String(localized: "Réglages"), tint: Atelier.textSecondary) { showSettings = true }
             }
             // Avertissement de l'IA locale (RET-018) : dans la partie qui défile, au-dessus du temps de lecture fixé.
             LocalAIEnergyCard()
@@ -540,13 +561,14 @@ struct LibraryView: View {
         .buttonStyle(.plain)
     }
 
-    private func actionRow(icon: String, title: String, tint: Color, count: Int? = nil,
+    private func actionRow(icon: String, title: String, tint: Color, count: Int? = nil, due: NoteDueBadge = .none,
                            action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: 10) {
                 Image(systemName: icon).frame(width: 22).foregroundStyle(tint)
                 Text(ui: title).foregroundStyle(Atelier.textPrimary)
                 Spacer()
+                dueMark(due)
                 if let count, count > 0 {
                     Text("\(count)").font(Atelier.mono).foregroundStyle(Atelier.onAccentInk.opacity(0.8))
                         .padding(.horizontal, 7).padding(.vertical, 2)
@@ -560,19 +582,111 @@ struct LibraryView: View {
         .buttonStyle(PressScale())
     }
 
+    /// « ! » des échéances de notes : noir dans les 7 jours, rouge aujourd'hui ou en retard (PLAN-NOTIF-001, E1).
+    @ViewBuilder
+    private func dueMark(_ due: NoteDueBadge) -> some View {
+        if due != .none {
+            Text(verbatim: "!").font(Atelier.font(13, weight: .heavy)).foregroundStyle(.white)
+                .frame(width: 22, height: 22)
+                // Noir demandé par NOxygen59 (recette 1.5.8, 1.9), quel que soit le thème.
+                .background(due == .urgent ? Color.red : Color.black, in: Circle())
+                .accessibilityLabel(due == .urgent ? String(localized: "Échéance aujourd'hui ou dépassée")
+                                    : String(localized: "Échéance dans les 7 jours"))
+        }
+    }
+
+    /// Entre dans un dossier (ou en sort avec `nil`) avec la transition (recette 1.5.8). Revue D-07 (n°11, n°12) : le
+    /// départ est posé dans le même changement que le nouveau contenu (aucune image du contenu à 100 % avant
+    /// l'animation), et seuls l'entrée et le retour « Accueil » s'animent, pas un changement d'espace ni une suppression.
+    private func showFolder(_ id: String?) {
+        var instant = Transaction()
+        instant.disablesAnimations = true
+        withTransaction(instant) {
+            batch = BatchDeletion()
+            folderEntering = id != nil
+            folderProgress = 0
+            openFolderId = id
+        }
+        // Au tour suivant : sinon SwiftUI fusionne les deux changements et rien ne s'anime.
+        DispatchQueue.main.async {
+            withAnimation(reduceMotion ? .easeOut(duration: 0.18) : .spring(response: 0.38, dampingFraction: 0.88)) {
+                folderProgress = 1
+            }
+        }
+    }
+
+    /// Tuile compacte de la colonne de gauche (recette 1.5.8) : icône au-dessus, nom en dessous, pastille en coin.
+    private func toolTile(icon: String, title: String, tint: Color, count: Int? = nil,
+                          action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(spacing: 5) {
+                Image(systemName: icon).font(Atelier.font(17, weight: .medium)).foregroundStyle(tint)
+                Text(ui: title).font(Atelier.font(12, weight: .medium)).foregroundStyle(Atelier.textPrimary)
+                    .multilineTextAlignment(.center).lineLimit(2).minimumScaleFactor(0.85)
+            }
+            .frame(maxWidth: .infinity, minHeight: 62)
+            .padding(.horizontal, 4).padding(.vertical, 6)
+            .background(Atelier.surfaceHigh, in: RoundedRectangle(cornerRadius: Atelier.smallRadius, style: .continuous))
+            .overlay(alignment: .topTrailing) {
+                if let count, count > 0 {
+                    Text("\(count)").font(Atelier.mono).foregroundStyle(Atelier.onAccentInk.opacity(0.8))
+                        .padding(.horizontal, 6).padding(.vertical, 1)
+                        .background(tint, in: Capsule())
+                        .padding(4)
+                }
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(PressScale())
+        // Revue D-07 (n°16) : un seul élément, nommé, avec le nombre, et qui reste un bouton.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(count.map { $0 > 0 ? "\(title), \($0)" : title } ?? title)
+        .accessibilityAddTraits(.isButton)
+    }
+
     /// Temps de lecture active, à la place de « Progression XX/XX pages » (RET-037, #52).
     private var statsCard: some View {
-        Button { showDashboard = true } label: { statsCardContent }
+        Button { statsTapped() } label: { statsCardContent }
             .buttonStyle(PressScale())
+            // Revue D-07 (n°5) : une décision en attente ne survit pas à l'écran.
+            .onDisappear { cancelStatsBurst() }
             .accessibilityHint(Text("Ouvre le tableau de bord"))
     }
+
+    /// DEC-01 = A : on attend la fin de la rafale ; 3 touchers basculent le mode propriétaire, sinon le tableau de bord.
+    private func statsTapped() {
+        statsTaps.tap(at: Date())
+        statsDecision?.cancel()
+        statsDecision = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: UInt64(TapBurst.window * 1_000_000_000))
+            guard !Task.isCancelled, let outcome = statsTaps.outcome(at: Date()) else { return }
+            statsTaps = TapBurst()
+            switch outcome {
+            case .single: showDashboard = true
+            case .toggleOwnerMode:
+                OwnerMode.toggle()
+                ownerFlash = UserDefaults.standard.bool(forKey: OwnerMode.unlockedKey)
+                try? await Task.sleep(nanoseconds: 1_200_000_000)
+                ownerFlash = nil
+            }
+        }
+    }
+
+    private func cancelStatsBurst() {
+        statsDecision?.cancel()
+        statsTaps = TapBurst()
+        ownerFlash = nil
+    }
+
+    /// Icône du tableau de bord, ou cadenas pendant le retour de la bascule.
+    private var dashboardIcon: String { ownerFlash.map { $0 ? "lock.open.fill" : "lock.fill" } ?? "chart.bar.fill" }
 
     private var statsCardContent: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 AtelierLabel(String(localized: "Temps de lecture"))
                 Spacer()
-                Image(systemName: "chart.bar.fill").font(Atelier.font(12)).foregroundStyle(Atelier.textTertiary)
+                Image(systemName: dashboardIcon).font(Atelier.font(12)).foregroundStyle(Atelier.textTertiary)
             }
             // Séparé par espace, d'après le journal des séances. Le reste du total, plus ancien que ce journal, reste
             // compté dans Livres & Manuels.
@@ -611,7 +725,10 @@ struct LibraryView: View {
             }
             CapsuleButton(icon: "note.text", label: model.notesToReview > 0
                           ? String(localized: "Notes · \(model.notesToReview) à revoir") : String(localized: "Notes")) { showNotes = true }
-            CapsuleButton(icon: "chart.bar.fill", label: String(localized: "Tableau de bord")) { showDashboard = true }
+                .overlay(alignment: .topTrailing) { dueMark(model.noteDueBadge).scaleEffect(0.75).offset(x: 6, y: -6).allowsHitTesting(false) }
+            // Revue D-07 MODLOC E1 (n°1) : en portrait, la même rafale passe par ce bouton (pas de carte « Temps de lecture »).
+            CapsuleButton(icon: dashboardIcon, label: String(localized: "Tableau de bord")) { statsTapped() }
+                .onDisappear { cancelStatsBurst() }
             CapsuleButton(icon: "gearshape", label: String(localized: "Réglages")) { showSettings = true }
         }
         .padding(10)
@@ -746,8 +863,7 @@ struct LibraryView: View {
                                                 Button {
                                                     // Revue DeepSeek n°2 et n°13 : on entre aussi en mode sélection, et
                                                     // la sélection repart de zéro (jamais de document choisi hors de vue).
-                                                    batch = BatchDeletion()
-                                                    openFolderId = tile.folder.id
+                                                    showFolder(tile.folder.id)
                                                 } label: {
                                                     FolderCard(name: tile.folder.name, documents: tile.documents)
                                                 }
@@ -792,7 +908,8 @@ struct LibraryView: View {
                                     proxy.scrollTo(LibraryCardRenderIdentity(
                                         documentId: anchor,
                                         category: filtered.first(where: { $0.id == anchor })?.category,
-                                        selecting: selecting, manga: displayedSpace == .manga), anchor: .top)
+                                        selecting: selecting, manga: displayedSpace == .manga,
+                                        folderId: openFolderId, selected: selecting && batch.selected.contains(anchor)), anchor: .top)
                                 }
                             }
                             .onPreferenceChange(LibraryCardPositions.self) { frames in
@@ -814,6 +931,11 @@ struct LibraryView: View {
                 // La liste prend sa nouvelle largeur d'un coup : animée, toute la grille se recalculait à chaque image
                 // et le défilement saccadait pendant l'animation (recette 1.3.2 (65), point 6). Seul le moniteur s'anime.
                 .transaction { $0.animation = nil }
+                // Hors du `.transaction` ci-dessus, qui couperait l'animation : le contenu du dossier arrive en zoom
+                // léger et en fondu ; en sortant, l'accueil revient du sens inverse. Fondu seul avec « Réduire les
+                // animations ».
+                .opacity(0.25 + 0.75 * folderProgress)
+                .scaleEffect(reduceMotion ? 1 : 1 + (folderEntering ? -0.05 : 0.05) * (1 - folderProgress), anchor: .top)
                 if monitorVisible {
                     ResourceMonitorPanel(expandsDown: true, fillsWidth: monitorDetailed, showsActivities: model.openDocumentId == nil)
                         .frame(width: monitorDetailed ? Self.monitorWidth : nil)
@@ -829,11 +951,13 @@ struct LibraryView: View {
         }
         .padding(.horizontal, 6)
         // Dossiers (PLAN-T5-001, E2) : nom d'un nouveau dossier (avec les documents à y ranger) ou nouveau nom.
-        .alert(folderNaming?.title ?? "", isPresented: Binding(get: { folderNaming != nil },
-                                                             set: { if !$0 { folderNaming = nil } })) {
-            TextField("Nom du dossier", text: $folderName)
-            Button("Annuler", role: .cancel) { folderNaming = nil }
-            Button("OK") {
+        // Recette 1.5.7 (2.1) : l'alerte système d'iOS 16 n'affichait pas le bouton de validation (grisé au départ, jamais
+        // remis à jour) ; fenêtre de l'app à la place, demandée par NOxygen59.
+        .sheet(isPresented: Binding(get: { folderNaming != nil }, set: { if !$0 { folderNaming = nil } })) {
+            FolderNameSheet(title: folderNaming?.title ?? "", name: $folderName,
+                            confirm: folderNaming.map { if case .rename = $0 { return String(localized: "Renommer") }
+                                                        return String(localized: "Créer") } ?? "",
+                            cancel: { folderNaming = nil }) {
                 switch folderNaming {
                 case .create(let moving):
                     model.createFolder(named: folderName, in: LibraryFolderLayout.commonSpace(of: moving) ?? space,
@@ -843,7 +967,6 @@ struct LibraryView: View {
                 }
                 folderNaming = nil
             }
-            .disabled(folderName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         }
         .alert("Supprimer ce dossier ?", isPresented: Binding(get: { deletingFolder != nil },
                                                               set: { if !$0 { deletingFolder = nil } })) {
@@ -872,7 +995,9 @@ struct LibraryView: View {
         .id(LibraryCardRenderIdentity(documentId: document.id,
                                       category: document.category,
                                       selecting: selecting,
-                                      manga: document.isInMangaSpace))
+                                      manga: document.isInMangaSpace,
+                                      folderId: openFolderId,
+                                      selected: selecting && batch.selected.contains(document.id)))
         // La catégorie appartient à l'état courant de la bibliothèque. En la
         // dessinant au-dessus du bouton, elle n'est plus retenue dans l'ancien
         // rendu interne de la carte après l'import.
@@ -909,8 +1034,7 @@ struct LibraryView: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .firstTextBaseline, spacing: 10) {
                 Button {
-                    batch = BatchDeletion()
-                    openFolderId = nil
+                    showFolder(nil)
                 } label: { Label("Accueil", systemImage: "chevron.left") }
                     .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.read))
                 Image(systemName: "folder.fill").foregroundStyle(Atelier.Tint.read)
@@ -1034,6 +1158,8 @@ struct LibraryView: View {
         }
         .padding(12)
         .atelierPanel(radius: 18)
+        // Revue Codex après 1.5.6 (P2 n°1) : la sélection suit ce qui est affiché (déplacement, dossier ouvert).
+        .onChange(of: visibleDocuments.map(\.id)) { ids in batch.keepOnly(Set(ids)) }
     }
 
     /// Titres des documents choisis (au plus 5), pour les deux questions.
@@ -1051,17 +1177,21 @@ struct LibraryView: View {
         }
     }
 
+    /// Un modèle de chat est là : officiel ou importé (revue R2 MODLOC E3, n°1).
+    private var chatModelInstalled: Bool {
+        Qwen3VLReader().isAvailable || ModelStore.shared.isInstalled(.qwen35chat4b) || !LocalModels.specs().isEmpty
+    }
+
     @ViewBuilder
     private func menu(for document: LibraryDocument) -> some View {
         Button { model.openDocumentId = document.id } label: { Label("Ouvrir", systemImage: "book") }
-        if !document.capabilities.chat {
-            // CBZ et mangas : ni chat ni mention de lecture IA.
-        } else if (Qwen3VLReader().isAvailable || ModelStore.shared.isInstalled(.qwen35chat4b)),
-           DocumentKnowledge.isReady(document) {
+        if !document.capabilities.chat || !ownerUnlocked {
+            // CBZ et mangas : ni chat ni mention de lecture IA. Mode propriétaire verrouillé : chat caché (DEC-03).
+        } else if chatModelInstalled, DocumentKnowledge.isReady(document) {
             Button {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { chatDocument = document }
             } label: { Label("Discuter du livre", systemImage: "bubble.left.and.bubble.right") }
-        } else if Qwen3VLReader().isAvailable || ModelStore.shared.isInstalled(.qwen35chat4b) {
+        } else if chatModelInstalled {
             Label("Chat après lecture OvisOCR2 (\(DocumentKnowledge.readCount(document))/\(document.pageCount))",
                   systemImage: "text.book.closed")
         }
@@ -1311,6 +1441,42 @@ private struct LibraryCardPositions: PreferenceKey {
 }
 
 /// Fenêtre de nom d'un dossier de l'accueil (PLAN-T5-001, E2).
+/// Nom d'un dossier (créer ou renommer) dans une fenêtre de l'app (recette 1.5.7, 2.1) : champ prêt à taper, bouton de
+/// validation actif dès qu'un nom est écrit, « Entrée » valide aussi.
+struct FolderNameSheet: View {
+    let title: String
+    @Binding var name: String
+    let confirm: String
+    let cancel: () -> Void
+    let done: () -> Void
+    @FocusState private var focused: Bool
+
+    private var valid: Bool { !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                TextField("Nom du dossier", text: $name)
+                    .focused($focused)
+                    .submitLabel(.done)
+                    .onSubmit { if valid { done() } }
+            }
+            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Annuler", action: cancel) }
+                ToolbarItem(placement: .confirmationAction) { Button(confirm, action: done).disabled(!valid) }
+            }
+            // Revue D-07 (n°2) : le focus demandé pendant l'animation d'ouverture est perdu sur iOS 16 ; on attend sa fin.
+            .task {
+                try? await Task.sleep(nanoseconds: 450_000_000)
+                focused = true
+            }
+        }
+        .presentationDetents([.medium])
+    }
+}
+
 enum FolderNaming {
     /// Nouveau dossier ; les documents donnés y sont rangés tout de suite (« Déplacer vers → Nouveau dossier… »).
     case create(moving: [LibraryDocument])

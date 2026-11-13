@@ -42,6 +42,7 @@ extension ReaderController {
         if placingAnchorFor?.id == note.id { placingAnchorFor = nil }
         if let pdf { removeAnchor(note, in: pdf) }
         model.persist { try $0.deleteComment(id: note.id) }
+        model.refreshNotesAfterPendingWrites()
     }
 
     /// Notes rechargées (ajoutées depuis le panneau d'étude).

@@ -66,4 +66,21 @@ final class LexiconSavedWordsTests: XCTestCase {
         XCTAssertEqual(words.filter { $0.matches(prefix: "") }.count, 2)
         XCTAssertTrue(words.filter { $0.matches(prefix: "ぬ") }.isEmpty)
     }
+
+    /// PLAN-CARTES-001 E2 : mots de la page cherchés par leur forme ; lecture de la page préférée, sinon la source la
+    /// plus prioritaire ; forme absente ou sans sens : pas proposée.
+    func testPageWordsAreFoundByTheirFormWithTheRightReading() throws {
+        let a = try dictionary("A", terms: [("上手", "じょうず", "[\"habile\"]"), ("上手", "うわて", "[\"supérieur\"]"),
+                                            ("床", "ゆか", "[\"sol\"]"), ("空", "そら", "null")])
+        let found = try db.lexiconWords(dictionaryIds: [a], expressions: [("上手", "うわて"), ("床", ""), ("無い語", ""), ("空", "")])
+        XCTAssertEqual(found["上手"]?.reading, "うわて")
+        let k = try dictionary("K", terms: [("今日", "コンニチ", "[\"de nos jours\"]"), ("今日", "キョウ", "[\"aujourd'hui\"]")])
+        XCTAssertEqual(try db.lexiconWords(dictionaryIds: [k], expressions: [("今日", "きょう")])["今日"]?.reading, "キョウ",
+                       "indice en hiragana, dictionnaire en katakana (revue D-07 F10)")
+        XCTAssertEqual(found["床"]?.summary(.unknown), "sol")
+        XCTAssertNil(found["無い語"])
+        XCTAssertNil(found["空"], "sans aucun sens : rien à mettre sur la carte")
+        XCTAssertEqual(try db.lexiconWords(dictionaryIds: [a], expressions: [("上手", "")])["上手"]?.senses.isEmpty, false)
+        XCTAssertTrue(try db.lexiconWords(dictionaryIds: [], expressions: [("床", "")]).isEmpty)
+    }
 }

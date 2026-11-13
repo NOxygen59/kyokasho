@@ -240,7 +240,45 @@ public final class AppDatabase: @unchecked Sendable {
             }
             try db.create(index: "pageComment_due", on: "pageComment", columns: ["archived", "dueDay"])
         }
+        // PLAN-NOTIF-001 E2 (DEC-03/04 = A) : heure facultative de l'échéance (minutes depuis minuit) et rappels de la
+        // note (JSON, minutes avant l'échéance ; NULL = rappel par défaut, « [] » = aucun). Colonnes ajoutées seulement :
+        // rien n'est réécrit, et comme les autres colonnes de rangement elles suivent la note dans sa ligne.
+        m.registerMigration("v8-note-reminders") { db in
+            try db.alter(table: "pageComment") { t in
+                t.add(column: "dueMinute", .integer)
+                t.add(column: "reminders", .text)
+            }
+        }
+        // PLAN-DATA03-001 E3 (DEC-02 = A) : hauteur de référence de l'égalisation, fixée une fois par document, pour que
+        // les annotations déjà posées ne changent pas d'échelle quand des pages sont ajoutées ou que le cache est vidé.
+        // Table à part (aucune colonne de `document` réécrite) ; sans clé étrangère : une ligne orpheline est inoffensive.
+        m.registerMigration("v9-equalization-reference") { db in
+            try db.create(table: "equalizationReference") { t in
+                t.primaryKey("documentId", .text)
+                t.column("height", .double).notNull()
+            }
+        }
         return m
+    }
+}
+
+// MARK: - Égalisation (PLAN-DATA03-001, E3)
+
+extension AppDatabase {
+    /// Hauteur de référence des pages de ce document, si elle a déjà été fixée.
+    public func equalizationReference(documentId: String) throws -> Double? {
+        try writer.read { db in
+            try Double.fetchOne(db, sql: "SELECT height FROM equalizationReference WHERE documentId = ?", arguments: [documentId])
+        }
+    }
+
+    /// Fixe la hauteur de référence **une seule fois** : une valeur déjà présente n'est jamais remplacée.
+    public func fixEqualizationReference(_ height: Double, documentId: String) throws {
+        guard height > 0, height.isFinite else { return }
+        try writer.write { db in
+            try db.execute(sql: "INSERT OR IGNORE INTO equalizationReference (documentId, height) VALUES (?, ?)",
+                           arguments: [documentId, height])
+        }
     }
 }
 
@@ -289,7 +327,11 @@ extension AppDatabase {
     }
 
     public func deleteDocument(id: String) throws {
-        try writer.write { db in _ = try LibraryDocument.deleteOne(db, key: id) }
+        try writer.write { db in
+            _ = try LibraryDocument.deleteOne(db, key: id)
+            // Revue R2 DATA-03 (n°8) : pas de référence d'égalisation orpheline (table sans clé étrangère).
+            try db.execute(sql: "DELETE FROM equalizationReference WHERE documentId = ?", arguments: [id])
+        }
     }
 
     /// Change seulement la catégorie (requête ciblée) : une copie du document gardée ailleurs ne l'écrase pas, et
@@ -349,6 +391,9 @@ extension AppDatabase {
                               asideInk: AsideInk? = nil) throws {
         try writer.write { db in
             if oldId != newDocument.id {
+                // Revue R2 DATA-03 (n°6) : la hauteur de référence suit le document, comme ses annotations.
+                try db.execute(sql: "INSERT OR IGNORE INTO equalizationReference (documentId, height) SELECT ?, height FROM equalizationReference WHERE documentId = ?",
+                               arguments: [newDocument.id, oldId])
                 // DEC-C3 : AVANT la bascule et l'effacement, tous les résultats OCR des deux
                 // identifiants sont proposés à l'appelant (un résultat illisible interrompt
                 // l'opération : les corrections manuelles seraient perdues sans lui). Jamais
@@ -404,10 +449,14 @@ extension AppDatabase {
                     try db.execute(sql: "UPDATE pageEdit SET documentId = ? WHERE documentId = ?", arguments: [newDocument.id, oldId])
                     // T5 E2 (revue DeepSeek n°6) : le survivant sans dossier prend celui du document remplacé ; un
                     // survivant déjà rangé garde le sien (sa fiche décrit le fichier qui reste, comme ci-dessous).
-                    try db.execute(sql: """
-                        UPDATE document SET folderId = (SELECT folderId FROM document WHERE id = ?)
-                        WHERE id = ? AND folderId IS NULL
-                        """, arguments: [oldId, newDocument.id])
+                    // Revue Codex après 1.5.6 (P2 n°3) : seulement un dossier du même espace que le survivant relu en base.
+                    let survivorFolder = try String.fetchOne(db, sql: "SELECT folderId FROM document WHERE id = ?", arguments: [newDocument.id])
+                    if survivorFolder == nil, let survivor = try LibraryDocument.fetchOne(db, key: newDocument.id),
+                       let inherited = try String.fetchOne(db, sql: "SELECT folderId FROM document WHERE id = ?", arguments: [oldId]),
+                       let folder = try LibraryFolder.fetchOne(db, key: inherited),
+                       folder.space == LibrarySpace(document: survivor).rawValue {
+                        try db.execute(sql: "UPDATE document SET folderId = ? WHERE id = ?", arguments: [inherited, newDocument.id])
+                    }
                     _ = try LibraryDocument.deleteOne(db, key: oldId)
                     // P3 n°9 (revue R2) : le survivant garde son titre, ses réglages, sa catégorie
                     // et sa position de lecture — la fiche qui reste décrit déjà le **fichier qui

@@ -35,9 +35,13 @@ final class AppModel: ObservableObject {
     /// Pastille « N notes à revoir » de l'accueil (PLAN-T4-001 E2, DEC-T4-06) : notes non archivées dont l'échéance est
     /// passée, aujourd'hui ou demain, hors documents à la corbeille. Relue par `refreshNotesToReview`.
     @Published private(set) var notesToReview = 0
+    /// Pastille « ! » de Notes sur l'accueil (PLAN-NOTIF-001, E1).
+    @Published private(set) var noteDueBadge = NoteDueBadge.none
     /// Note à montrer à l'ouverture d'un livre depuis l'écran « Notes » : le lecteur de ce document va à sa page et
     /// fait clignoter son ancre, puis remet la demande à `nil`.
     @Published var noteJump: NoteJump?
+    /// Note d'une notification touchée avant le chargement de la bibliothèque (revue R2 NOTIF n°2).
+    private var noteToOpenWhenLoaded: NoteJump?
 
     struct NoteJump: Equatable {
         let documentId: String
@@ -192,6 +196,11 @@ final class AppModel: ObservableObject {
                     self.pendingDocuments = nil
                     self.documents = list
                 }
+                // Revue R2 NOTIF (n°2) : notification touchée app fermée, rejouée une fois la bibliothèque chargée.
+                if let waiting = self.noteToOpenWhenLoaded, !list.isEmpty {
+                    self.noteToOpenWhenLoaded = nil
+                    self.openNote(documentId: waiting.documentId, noteId: waiting.noteId)
+                }
                 // C1.3 : un document disparu (corbeille, suppression ailleurs) n'a plus d'onglet.
                 self.tabs.keep(only: Set(list.map(\.id)))
             }
@@ -215,6 +224,12 @@ final class AppModel: ObservableObject {
         refreshPrintedNumbers()
         // Lexique du domaine lu tout de suite : la relecture de l'OCR (hors du fil principal) s'en sert.
         _ = DomainLexicon.shared
+    }
+
+    /// Pastille et rappels de notes relus **après** les écritures déjà en file (revue R2 NOTIF n°5, n°6 : note supprimée
+    /// ou modifiée dans le lecteur, sinon la notification partait avec l'ancien texte).
+    func refreshNotesAfterPendingWrites() {
+        ioQueue.async { Task { @MainActor in self.refreshNotesToReview() } }
     }
 
     func persist(_ work: @escaping @Sendable (AppDatabase) throws -> Void) {
@@ -539,26 +554,45 @@ final class AppModel: ObservableObject {
     func refreshNotesToReview() {
         let database = database, excluded = trashedDocumentIds
         Task.detached(priority: .utility) {
-            let count: Int
-            do { count = try database.notesToReviewCount(today: Date(), excludingDocuments: excluded) } catch {
+            let count: Int, badge: NoteDueBadge
+            do {
+                let now = Date()
+                count = try database.notesToReviewCount(today: now, excludingDocuments: excluded)
+                badge = try database.noteDueBadge(today: now, excludingDocuments: excluded)
+            } catch {
                 // Revue DeepSeek F7 : jamais confondu avec « aucune note » sans trace.
                 Diagnostics.error("pastille des notes : \(error.localizedDescription)", "notes")
                 return
             }
-            await MainActor.run { if self.notesToReview != count { self.notesToReview = count } }
+            await MainActor.run {
+                if self.notesToReview != count { self.notesToReview = count }
+                if self.noteDueBadge != badge { self.noteDueBadge = badge }
+            }
         }
+        // PLAN-NOTIF-001 E3 : mêmes moments que la pastille (note changée, accueil, retour dans l'app).
+        NoteNotifications.reschedule(database: database,
+                                     titles: Dictionary(documents.map { ($0.id, $0.title) }, uniquingKeysWith: { a, _ in a }),
+                                     excluded: excluded)
     }
 
-    /// Ouvre le livre d'une note à sa page (écran « Notes »).
-    func open(_ note: PageComment) {
-        guard documents.contains(where: { $0.id == note.documentId }) else {
+    /// Ouvre la note d'une notification (PLAN-NOTIF-001, E4) : livre à sa page, ancre qui clignote.
+    func openNote(documentId: String, noteId: String) {
+        // Lancement à froid : la bibliothèque n'est pas encore lue ; la note s'ouvrira dès qu'elle l'est.
+        if documents.isEmpty && trashedDocuments.isEmpty {
+            noteToOpenWhenLoaded = NoteJump(documentId: documentId, noteId: noteId)
+            return
+        }
+        guard documents.contains(where: { $0.id == documentId }) else {
             // Revue DeepSeek F3 : le livre est à la corbeille ou a été supprimé entre-temps.
             lastError = String(localized: "Le livre de cette note n'est plus dans la bibliothèque (corbeille ?).")
             return
         }
-        noteJump = NoteJump(documentId: note.documentId, noteId: note.id)
-        openDocumentId = note.documentId
+        noteJump = NoteJump(documentId: documentId, noteId: noteId)
+        openDocumentId = documentId
     }
+
+    /// Ouvre le livre d'une note à sa page (écran « Notes »).
+    func open(_ note: PageComment) { openNote(documentId: note.documentId, noteId: note.id) }
 
     // MARK: Dossiers de l'accueil (PLAN-T5-001, E2)
 

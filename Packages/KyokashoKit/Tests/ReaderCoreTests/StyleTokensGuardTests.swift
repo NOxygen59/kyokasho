@@ -194,6 +194,7 @@ final class StyleTokensGuardTests: XCTestCase {
         "Reader/ReaderStatusBadge.swift": 7, // batterie et heure : blanc sur noir translucide, lisibles sur toute page
         "Settings/SettingsView.swift": 4,    // noms des fonds de page
         "Library/DocumentExport.swift": 2,   // dessin dans le PDF exporté
+        "Library/LibraryView.swift": 2,      // « ! » noir des échéances de notes (PLAN-NOTIF-001, demande de NOxygen59)
     ]
 
     func testInterfaceUsesStyleTokensInsteadOfWhiteOrBlack() throws {
@@ -272,7 +273,8 @@ final class StyleTokensGuardTests: XCTestCase {
         func read(_ path: String) throws -> String { try String(contentsOf: app.appendingPathComponent(path), encoding: .utf8) }
         // Panneau de gauche : outils d'étude masqués en Manga ; sections Manga puis CBZ.
         let library = try read("Library/LibraryView.swift")
-        XCTAssertEqual(library.components(separatedBy: "if space != .manga {").count, 3)
+        // Recette 1.5.8 : trois gardes (étude, images vers PDF, banc d'essai) depuis la nouvelle colonne de gauche.
+        XCTAssertEqual(library.components(separatedBy: "if space != .manga {").count, 4)
         XCTAssertTrue(library.contains("return LibrarySections.groupManga(loose)")) // PLAN-T5-001 E2 : hors dossier
         // Tableau de bord : coins arrondis même pour un style à angles droits.
         XCTAssertTrue(library.contains("static var dashboardRadius: CGFloat { max(Atelier.corner(26), 18) }"))
