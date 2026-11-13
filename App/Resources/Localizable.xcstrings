@@ -1,6 +1,380 @@
 {
   "sourceLanguage": "fr",
   "strings": {
+    "Import en cours…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importing…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import en cours…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在导入…"
+          }
+        }
+      }
+    },
+    "Importer un modèle MLX…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import an MLX model…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importer un modèle MLX…"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导入 MLX 模型…"
+          }
+        }
+      }
+    },
+    "Modèles importés": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Imported models"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modèles importés"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已导入的模型"
+          }
+        }
+      }
+    },
+    "Choisis le dossier d'un modèle MLX de la famille Qwen3.5. Il est vérifié, puis déplacé dans l'app (pas de double place) ; copié seulement si iOS refuse le déplacement. Il apparaît ensuite dans le chat.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose the folder of an MLX model of the Qwen3.5 family. It is checked, then moved into the app (no double space); copied only if iOS refuses the move. It then appears in the chat."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choisis le dossier d'un modèle MLX de la famille Qwen3.5. Il est vérifié, puis déplacé dans l'app (pas de double place) ; copié seulement si iOS refuse le déplacement. Il apparaît ensuite dans le chat."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选择一个 Qwen3.5 系列 MLX 模型的文件夹。先检查，再移入应用（不占双倍空间）；仅在 iOS 拒绝移动时才复制。之后它会出现在聊天中。"
+          }
+        }
+      }
+    },
+    "Ses fichiers sont effacés de l'iPad. Les conversations sont gardées.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Its files are erased from the iPad. Conversations are kept."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ses fichiers sont effacés de l'iPad. Les conversations sont gardées."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "其文件将从 iPad 上删除。对话会保留。"
+          }
+        }
+      }
+    },
+    "« %@ » importé (déplacé dans l'app).": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@” imported (moved into the app)."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "« %@ » importé (déplacé dans l'app)."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已导入“%@”（已移入应用）。"
+          }
+        }
+      }
+    },
+    "« %@ » importé (copié : iOS n'a pas permis de le déplacer ; tu peux effacer l'original).": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@” imported (copied: iOS did not allow moving it; you can delete the original)."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "« %@ » importé (copié : iOS n'a pas permis de le déplacer ; tu peux effacer l'original)."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已导入“%@”（已复制：iOS 不允许移动；你可以删除原件）。"
+          }
+        }
+      }
+    },
+    "Import refusé : %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import refused: %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import refusé : %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导入被拒绝：%@"
+          }
+        }
+      }
+    },
+    "Import interrompu retrouvé : dossier gardé dans « %@ ».": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Interrupted import found: folder kept in “%@”."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import interrompu retrouvé : dossier gardé dans « %@ »."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "发现中断的导入：文件夹保存在“%@”中。"
+          }
+        }
+      }
+    },
+    "Ce dossier n'est pas un modèle MLX : config.json absent ou illisible.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This folder is not an MLX model: config.json missing or unreadable."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce dossier n'est pas un modèle MLX : config.json absent ou illisible."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此文件夹不是 MLX 模型：缺少 config.json 或无法读取。"
+          }
+        }
+      }
+    },
+    "Architecture « %@ » pas encore prise en charge (seulement Qwen3.5).": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Architecture “%@” not supported yet (Qwen3.5 only)."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Architecture « %@ » pas encore prise en charge (seulement Qwen3.5)."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "尚不支持“%@”架构（仅支持 Qwen3.5）。"
+          }
+        }
+      }
+    },
+    "Fichiers manquants : %@.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Missing files: %@."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fichiers manquants : %@."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "缺少文件：%@。"
+          }
+        }
+      }
+    },
+    "Un modèle « %@ » est déjà installé : supprime-le d'abord.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A model “%@” is already installed: delete it first."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un modèle « %@ » est déjà installé : supprime-le d'abord."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已安装模型“%@”：请先删除。"
+          }
+        }
+      }
+    },
+    "Place insuffisante : %1$@ nécessaires, %2$@ libres.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not enough space: %1$@ needed, %2$@ free."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Place insuffisante : %1$@ nécessaires, %2$@ libres."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "空间不足：需要 %1$@，可用 %2$@。"
+          }
+        }
+      }
+    },
+    "Import interrompu : ton dossier est gardé dans %@.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import interrupted: your folder is kept in %@."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import interrompu : ton dossier est gardé dans %@."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导入中断：你的文件夹保存在 %@。"
+          }
+        }
+      }
+    },
+    "Modèle importé à la main (%@).": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manually imported model (%@)."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modèle importé à la main (%@)."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "手动导入的模型（%@）。"
+          }
+        }
+      }
+    },
+    "Licence du modèle importé : à vérifier par son propriétaire.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "License of the imported model: to be checked by its owner."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Licence du modèle importé : à vérifier par son propriétaire."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导入模型的许可：需由其所有者核实。"
+          }
+        }
+      }
+    },
     "État, mémoire, « Décharger », réglages propres et dernières tâches.": {
       "localizations": {
         "en": {

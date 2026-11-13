@@ -615,6 +615,7 @@ struct ModelsView: View {
                 Text("État, mémoire, « Décharger », réglages propres et dernières tâches.")
             }
             if ownerUnlocked {
+                LocalModelsSection()
                 Section {
                     NavigationLink { AIChatSettingsView() } label: {
                         Label("Consignes et paramètres du chat", systemImage: "slider.horizontal.3")
