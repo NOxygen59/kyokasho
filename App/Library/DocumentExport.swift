@@ -148,13 +148,33 @@ enum DocumentExport {
     /// PDF des pages **telles qu'à l'écran** (PLAN-DATA03-001, E2, DEC-01 = A) : les annotations sont enregistrées dans
     /// le repère des pages égalisées (même hauteur) ; les dessiner sur le PDF d'origine les décalait sur les pages
     /// redessinées (enquête D-03). Sans page à égaliser, c'est le PDF d'origine.
-    static func displayedPDF(source: URL, documentId: String, database: AppDatabase) -> PDFDocument? {
-        ReaderController.equalizedDocument(url: source, documentId: documentId, database: database)?.pdf ?? PDFDocument(url: source)
+    static func displayedPDF(source: URL, documentId: String, database: AppDatabase) throws -> PDFDocument? {
+        if let prepared = ReaderController.equalizedDocument(url: source, documentId: documentId, database: database)?.pdf {
+            return prepared
+        }
+        guard let original = PDFDocument(url: source) else { return nil }
+        // Revue R2 DATA-03 (n°4) : jamais de repli silencieux. Si une page devait être remise à la hauteur commune et que
+        // la préparation a échoué, l'export s'arrête avec un message au lieu de décaler les annotations.
+        let pages = (0..<original.pageCount).compactMap { original.page(at: $0) }
+        let heights = pages.map { PageEqualization.displayedHeight(box: $0.bounds(for: .cropBox), rotation: $0.rotation) }
+        let stored = (try? database.equalizationReference(documentId: documentId)).flatMap { $0 }.map { CGFloat($0) }
+        if let common = stored ?? PageEqualization.commonHeight(heights),
+           heights.contains(where: { PageEqualization.factor(height: $0, common: common) != nil }) {
+            Diagnostics.error("export : pages égalisées indisponibles pour \(documentId)", "export")
+            throw ExportPreparationFailed()
+        }
+        return original
+    }
+
+    struct ExportPreparationFailed: LocalizedError {
+        var errorDescription: String? {
+            String(localized: "Les pages n'ont pas pu être préparées comme à l'écran : réessaie l'export (les annotations seraient décalées).")
+        }
     }
 
     static func annotatedPDF(source: URL, documentId: String, database: AppDatabase, pages: ClosedRange<Int>, _ a: Annotations, title: String,
                              labels: [Int: String], to url: URL, progress: (Int) -> Void) throws {
-        guard let doc = displayedPDF(source: source, documentId: documentId, database: database) else { throw CocoaError(.fileReadCorruptFile) }
+        guard let doc = try displayedPDF(source: source, documentId: documentId, database: database) else { throw CocoaError(.fileReadCorruptFile) }
         var box = CGRect(x: 0, y: 0, width: 595, height: 842)
         guard let ctx = CGContext(url as CFURL, mediaBox: &box, [kCGPDFContextTitle as String: title] as CFDictionary)
         else { throw CocoaError(.fileWriteUnknown) }
@@ -209,7 +229,7 @@ enum DocumentExport {
 
     static func images(source: URL, documentId: String, database: AppDatabase, pages: ClosedRange<Int>, _ a: Annotations, labels: [Int: String],
                        folder: URL, progress: (Int) -> Void) throws {
-        guard let doc = displayedPDF(source: source, documentId: documentId, database: database) else { throw CocoaError(.fileReadCorruptFile) }
+        guard let doc = try displayedPDF(source: source, documentId: documentId, database: database) else { throw CocoaError(.fileReadCorruptFile) }
         for (k, index) in pages.enumerated() {
             try Task.checkCancellation()
             try autoreleasepool {

@@ -349,6 +349,8 @@ final class ReaderController: NSObject, ObservableObject {
         let pendingBounds: [(page: PDFPage, box: CGRect)]
     }
 
+    nonisolated private static let equalizationLock = NSLock()
+
     /// PDF aux pages de même hauteur (`Caches/Equalized/<id>-<taille>-<date>.pdf`) et cadres d'origine des pages
     /// (`.json`). `nil` : aucune page à changer (le PDF d'origine sert tel quel). Fait une fois par version du
     /// fichier : ajouter des pages change sa taille et sa date, donc la préparation est refaite une fois.
@@ -357,6 +359,10 @@ final class ReaderController: NSObject, ObservableObject {
     /// reprise du PDF déjà préparé s'il existe ; ajouter des pages ou vider le cache ne la change plus, donc les
     /// annotations déjà posées gardent leur échelle.
     nonisolated static func equalizedDocument(url: URL, documentId: String, database: AppDatabase?) -> (pdf: PDFDocument, sourceBoxes: [CGRect])? {
+        // Revue R2 DATA-03 (n°3) : lecteur et export peuvent préparer en même temps ; une seule préparation à la fois
+        // (l'une supprimait les fichiers que l'autre lisait). Jamais appelé depuis le fil principal.
+        equalizationLock.lock()
+        defer { equalizationLock.unlock() }
         let fm = FileManager.default
         let stored = (try? database?.equalizationReference(documentId: documentId)).flatMap { $0 }.map { CGFloat($0) }
         func remember(_ height: CGFloat?) {
@@ -378,7 +384,9 @@ final class ReaderController: NSObject, ObservableObject {
            let boxes = EqualizedBoxes.rects(saved) {
             // Déjà préparé : liste vide = rien à changer dans ce PDF.
             guard !boxes.isEmpty, let pdf = PDFDocument(url: pdfFile), pdf.pageCount == boxes.count else {
-                if stored == nil { remember(PDFDocument(url: url).flatMap(commonHeight)) }
+                // Revue R2 DATA-03 (n°7) : seulement quand la préparation a dit « rien à changer » (hauteur réellement
+                // affichée), jamais pour un cache incohérent.
+                if stored == nil, boxes.isEmpty { remember(PDFDocument(url: url).flatMap(commonHeight)) }
                 return nil
             }
             remember(preparedHeight(pdf, boxes))
@@ -390,12 +398,18 @@ final class ReaderController: NSObject, ObservableObject {
             .filter { $0.lastPathComponent.hasPrefix(documentId + "-") }
         // Référence : celle de la base, sinon celle de la version préparée précédente (avant que le fichier change),
         // sinon la règle commune.
+        // Revue R2 DATA-03 (n°2) : la plus récente des versions **lisibles** (paire pdf + json), pas la première venue.
         var inherited: CGFloat?
-        if stored == nil, let oldPDF = previous.first(where: { $0.pathExtension == "pdf" }),
-           let data = try? Data(contentsOf: oldPDF.deletingPathExtension().appendingPathExtension("json")),
-           let saved = try? JSONDecoder().decode([[CGFloat]].self, from: data), let oldBoxes = EqualizedBoxes.rects(saved),
-           let oldDoc = PDFDocument(url: oldPDF) {
-            inherited = preparedHeight(oldDoc, oldBoxes)
+        if stored == nil {
+            let date = { (u: URL) in (try? u.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast }
+            for oldPDF in previous.filter({ $0.pathExtension == "pdf" }).sorted(by: { date($0) > date($1) }) {
+                guard let data = try? Data(contentsOf: oldPDF.deletingPathExtension().appendingPathExtension("json")),
+                      let saved = try? JSONDecoder().decode([[CGFloat]].self, from: data),
+                      let oldBoxes = EqualizedBoxes.rects(saved), let oldDoc = PDFDocument(url: oldPDF),
+                      let height = preparedHeight(oldDoc, oldBoxes) else { continue }
+                inherited = height
+                break
+            }
         }
         guard let common = stored ?? inherited ?? commonHeight(original) else { return nil }
         remember(common)

@@ -54,5 +54,13 @@ final class EqualizedBoxesTests: XCTestCase {
         XCTAssertEqual(try db.equalizationReference(documentId: "d"), 842, "jamais remplacée")
         try db.fixEqualizationReference(.nan, documentId: "e")
         XCTAssertNil(try db.equalizationReference(documentId: "e"))
+
+        // Revue R2 (n°6, n°8) : la référence suit une nouvelle version du document (Drive) et part avec sa suppression.
+        try db.save(LibraryDocument(id: "d", title: "d", originalFileName: "d.pdf", pageCount: 3, fileSize: 1))
+        try db.save(LibraryDocument(id: "new", title: "new", originalFileName: "new.pdf", pageCount: 3, fileSize: 2))
+        try db.rekeyDocument(from: "d", to: XCTUnwrap(db.document(id: "new")))
+        XCTAssertEqual(try db.equalizationReference(documentId: "new"), 842)
+        try db.deleteDocument(id: "new")
+        XCTAssertNil(try db.equalizationReference(documentId: "new"))
     }
 }

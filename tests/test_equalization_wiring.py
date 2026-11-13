@@ -11,7 +11,9 @@ APP = pathlib.Path(__file__).resolve().parents[1] / "App"
 class EqualizationWiringTests(unittest.TestCase):
     def test_annotated_export_and_images_use_the_displayed_pages(self):
         export = (APP / "Library/DocumentExport.swift").read_text(encoding="utf-8")
-        self.assertEqual(export.count("guard let doc = displayedPDF(source: source, documentId: documentId, database: database)"), 2)
+        self.assertEqual(export.count("guard let doc = try displayedPDF(source: source, documentId: documentId, database: database)"), 2)
+        # Revue R2 DATA-03 (n°4) : pas de repli silencieux sur le PDF d'origine quand une page devait être égalisée.
+        self.assertIn("throw ExportPreparationFailed()", export)
         self.assertNotIn("guard let doc = PDFDocument(url: source)", export)
 
     def test_reader_and_export_share_the_stored_reference(self):

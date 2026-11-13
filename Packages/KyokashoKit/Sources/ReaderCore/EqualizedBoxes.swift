@@ -14,8 +14,9 @@ public enum EqualizedBoxes {
 }
 
 /// Égalisation des hauteurs de page (PLAN-DATA03-001, E1 ; DEC-03/04 = A, NOxygen59 13/11/2026). Fonctions pures,
-/// testées : le lecteur (`ReaderController.equalizedDocument`) et l'export s'en servent, pour que l'écran et l'export
-/// placent les annotations au même endroit.
+/// testées, utilisées par la préparation des pages (`ReaderController.equalizedDocument`). L'export ne convertit rien
+/// point par point (DEC-01 = A) : il part des mêmes pages préparées que l'écran. `toEqualized`/`toSource` décrivent la
+/// conversion (tests) ; elles serviront si un export aux tailles d'origine (DEC-01 B) est un jour demandé.
 public enum PageEqualization {
     /// Écart au-delà duquel une page est redessinée à la hauteur commune.
     public static let tolerance: CGFloat = 0.03

@@ -327,7 +327,11 @@ extension AppDatabase {
     }
 
     public func deleteDocument(id: String) throws {
-        try writer.write { db in _ = try LibraryDocument.deleteOne(db, key: id) }
+        try writer.write { db in
+            _ = try LibraryDocument.deleteOne(db, key: id)
+            // Revue R2 DATA-03 (n°8) : pas de référence d'égalisation orpheline (table sans clé étrangère).
+            try db.execute(sql: "DELETE FROM equalizationReference WHERE documentId = ?", arguments: [id])
+        }
     }
 
     /// Change seulement la catégorie (requête ciblée) : une copie du document gardée ailleurs ne l'écrase pas, et
@@ -387,6 +391,9 @@ extension AppDatabase {
                               asideInk: AsideInk? = nil) throws {
         try writer.write { db in
             if oldId != newDocument.id {
+                // Revue R2 DATA-03 (n°6) : la hauteur de référence suit le document, comme ses annotations.
+                try db.execute(sql: "INSERT OR IGNORE INTO equalizationReference (documentId, height) SELECT ?, height FROM equalizationReference WHERE documentId = ?",
+                               arguments: [newDocument.id, oldId])
                 // DEC-C3 : AVANT la bascule et l'effacement, tous les résultats OCR des deux
                 // identifiants sont proposés à l'appelant (un résultat illisible interrompt
                 // l'opération : les corrections manuelles seraient perdues sans lui). Jamais

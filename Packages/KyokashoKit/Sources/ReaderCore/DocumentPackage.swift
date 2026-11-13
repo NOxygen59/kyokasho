@@ -21,6 +21,9 @@ public enum DocumentPackage {
     public static let formatVersion = 1
     /// Tables exportées, dans l'ordre d'installation (`document` d'abord : les autres s'y rattachent). Les opérations
     /// de pages et leurs archives (#49) restent sur l'appareil : leurs copies de 30 jours n'en font pas partie.
+    /// `equalizationReference` (PLAN-DATA03-001) n'en fait pas partie non plus : l'ajouter ferait refuser tous les
+    /// nouveaux paquets par les versions plus anciennes (table inconnue) ; installée, la hauteur est recalculée par la
+    /// règle (identique sauf égalité exacte de hauteurs). Limite acceptée, revue R2 DATA-03 n°5.
     public static let tables = ["document", "pageTransform", "highlight", "inkDrawing", "bookmark", "pageComment",
                                 "ocrResult", "pageIdentity"]
 

@@ -1,6 +1,28 @@
 {
   "sourceLanguage": "fr",
   "strings": {
+    "Les pages n'ont pas pu être préparées comme à l'écran : réessaie l'export (les annotations seraient décalées).": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The pages could not be prepared as on screen: try the export again (annotations would be misplaced)."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les pages n'ont pas pu être préparées comme à l'écran : réessaie l'export (les annotations seraient décalées)."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法按屏幕显示准备页面：请重新导出（否则批注会错位）。"
+          }
+        }
+      }
+    },
     "%@ · p. %lld": {
       "localizations": {
         "en": {
