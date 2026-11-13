@@ -33,6 +33,9 @@ class PDFPageRotationThreadTests(unittest.TestCase):
             ("ReaderController.swift", "for (page, degrees) in built.pendingRotations { page.rotation = degrees }"),
             ("ReaderController.swift", "if Thread.isMainThread { scaled.rotation = rotation }"),
             ("ReaderController.swift", "else { DispatchQueue.main.sync { scaled.rotation = rotation } }"),
+            # Export (14/11/2026) : rotation de l'app sur une page d'un document d'export (jamais affiché), posée sur le
+            # fil principal comme `scaledPage`.
+            ("DocumentExport.swift", "if Thread.isMainThread { page.rotation = rotation } else { DispatchQueue.main.sync { page.rotation = rotation } }"),
         ]))
 
     def test_background_build_never_sets_page_rotation(self):

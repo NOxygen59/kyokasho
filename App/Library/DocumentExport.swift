@@ -166,6 +166,15 @@ enum DocumentExport {
         return original
     }
 
+    /// Rotation choisie dans Kyōkasho (`PageTransform`), ajoutée à celle du PDF comme dans le lecteur : la page exportée a
+    /// l'orientation vue à l'écran (essais Kimi/Hy4 du 14/11/2026 : l'export l'ignorait). Les annotations sont en repère
+    /// de page et suivent par `page.transform(for:)`. `PDFPage.rotation` notifie UIKit : posée sur le fil principal.
+    static func applyAppRotation(_ page: PDFPage, extra: Int?) {
+        guard let extra, PageTransform.normalizedRotation(extra) != 0 else { return }
+        let rotation = PageTransform.effectiveRotation(intrinsic: page.rotation, additional: extra)
+        if Thread.isMainThread { page.rotation = rotation } else { DispatchQueue.main.sync { page.rotation = rotation } }
+    }
+
     struct ExportPreparationFailed: LocalizedError {
         var errorDescription: String? {
             String(localized: "Les pages n'ont pas pu être préparées comme à l'écran : réessaie l'export (les annotations seraient décalées).")
@@ -173,7 +182,7 @@ enum DocumentExport {
     }
 
     static func annotatedPDF(source: URL, documentId: String, database: AppDatabase, pages: ClosedRange<Int>, _ a: Annotations, title: String,
-                             labels: [Int: String], to url: URL, progress: (Int) -> Void) throws {
+                             labels: [Int: String], rotations: [Int: Int] = [:], to url: URL, progress: (Int) -> Void) throws {
         guard let doc = try displayedPDF(source: source, documentId: documentId, database: database) else { throw CocoaError(.fileReadCorruptFile) }
         var box = CGRect(x: 0, y: 0, width: 595, height: 842)
         guard let ctx = CGContext(url as CFURL, mediaBox: &box, [kCGPDFContextTitle as String: title] as CFDictionary)
@@ -181,6 +190,7 @@ enum DocumentExport {
         for (k, index) in pages.enumerated() {
             try Task.checkCancellation()
             guard let page = doc.page(at: index) else { continue }
+            applyAppRotation(page, extra: rotations[index])
             let bounds = page.bounds(for: .cropBox)
             var media = CGRect(origin: .zero, size: page.rotation % 180 == 0 ? bounds.size
                                                    : CGSize(width: bounds.height, height: bounds.width))
@@ -228,12 +238,13 @@ enum DocumentExport {
     }
 
     static func images(source: URL, documentId: String, database: AppDatabase, pages: ClosedRange<Int>, _ a: Annotations, labels: [Int: String],
-                       folder: URL, progress: (Int) -> Void) throws {
+                       rotations: [Int: Int] = [:], folder: URL, progress: (Int) -> Void) throws {
         guard let doc = try displayedPDF(source: source, documentId: documentId, database: database) else { throw CocoaError(.fileReadCorruptFile) }
         for (k, index) in pages.enumerated() {
             try Task.checkCancellation()
             try autoreleasepool {
                 guard let page = doc.page(at: index) else { return }
+                applyAppRotation(page, extra: rotations[index])
                 let bounds = page.bounds(for: .cropBox)
                 let size = page.rotation % 180 == 0 ? bounds.size : CGSize(width: bounds.height, height: bounds.width)
                 // ≈ 200 ppp, plafonné (mémoire de l'iPad).
@@ -401,6 +412,7 @@ struct DocumentExportSheet: View {
         let labels = Dictionary(uniqueKeysWithValues: pages.map { ($0, doc.pageLabel($0)) })
         let format = format
         // Lu ici (base et cartes partagées avec l'app), écrit hors du fil principal.
+        let rotations = ((try? model.database.pageTransforms(documentId: doc.id)) ?? [:]).mapValues(\.rotation)
         let annotations = format == .annotated || format == .images || format == .markdown
             ? DocumentExport.annotations(model.database, documentId: doc.id, pages: pages) : DocumentExport.Annotations()
         var cards: (cards: [StudyCard], template: NoteTemplate, mediaRoot: URL)?
@@ -446,13 +458,13 @@ struct DocumentExportSheet: View {
                 case .annotated:
                     let url = folder.appendingPathComponent(name + String(localized: " (annoté).pdf"))
                     try DocumentExport.annotatedPDF(source: source, documentId: doc.id, database: database, pages: pages, annotations, title: doc.title,
-                                                    labels: labels, to: url, progress: report)
+                                                    labels: labels, rotations: rotations, to: url, progress: report)
                     return url
                 case .images:
                     let dir = folder.appendingPathComponent(name, isDirectory: true)
                     try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
                     try DocumentExport.images(source: source, documentId: doc.id, database: database, pages: pages, annotations, labels: labels,
-                                              folder: dir, progress: report)
+                                              rotations: rotations, folder: dir, progress: report)
                     let url = folder.appendingPathComponent(name + " (images).zip")
                     try DocumentExport.zip(dir, to: url)
                     return url

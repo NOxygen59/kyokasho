@@ -16,6 +16,13 @@ class EqualizationWiringTests(unittest.TestCase):
         self.assertIn("throw ExportPreparationFailed()", export)
         self.assertNotIn("guard let doc = PDFDocument(url: source)", export)
 
+    def test_export_applies_the_rotation_chosen_in_the_app(self):
+        # Essais Kimi/Hy4 du 14/11/2026 : la rotation choisie dans l'app manquait à l'export.
+        export = (APP / "Library/DocumentExport.swift").read_text(encoding="utf-8")
+        self.assertEqual(export.count("applyAppRotation(page, extra: rotations[index])"), 2)
+        self.assertIn("PageTransform.effectiveRotation(intrinsic: page.rotation, additional: extra)", export)
+        self.assertIn("pageTransforms(documentId: doc.id)", export)
+
     def test_reader_and_export_share_the_stored_reference(self):
         reader = (APP / "Reader/ReaderController.swift").read_text(encoding="utf-8")
         self.assertIn("guard let common = stored ?? inherited ?? commonHeight(original) else { return nil }", reader)
