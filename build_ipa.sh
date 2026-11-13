@@ -8,11 +8,13 @@
 # Étapes : génération du projet Xcode (XcodeGen) → archive Release sans signature → dossier
 # Payload → pseudo-signature ldid avec les entitlements → zip en .tipa.
 # Prérequis : Xcode, XcodeGen et ldid (brew install xcodegen ldid).
+# Sorties : le .tipa, sa fiche d'identité `Kyokasho-<version>.manifeste.json` et ses symboles `.dSYM.zip` (lot B1).
 set -euo pipefail
 ROOT="$(cd -- "$(dirname -- "$0")" && pwd)"
 cd "$ROOT"
 
 VERSION="$(grep -m1 'MARKETING_VERSION' project.yml | sed -E 's/.*"([^"]+)".*/\1/')"
+BUILD_NUMBER="$(grep -m1 'CURRENT_PROJECT_VERSION' project.yml | sed -E 's/.*"([^"]+)".*/\1/')"
 # Recette 1.5.5 : la candidate est partie sans ses notes, et la fenêtre « Nouveautés » ne s'est pas affichée.
 # On refuse donc de construire un paquet dont la version n'est pas celle de `ReleaseNotes.current`.
 NOTES="$(grep -m1 'public static let current = ReleaseNotes(' Packages/KyokashoKit/Sources/ReaderCore/AppIntro.swift \
@@ -64,8 +66,11 @@ cp -R "$APP" "$BUILD/Payload/"
 # tools/build_domain_lexicon.py, jamais versionné. Ajouté au paquet s'il existe ; sinon l'app indique qu'il manque.
 LEXIQUE="${KYOKASHO_LEXIQUE:-$ROOT/../dictionnaires-construits/lexique-interieur/lexique-interieur.zip}"
 # Conserver le chemin français historique ; ses variantes sont cherchées dans le même dossier.
+# Lot B1 (13/11/2026) : la révision attendue est versionnée ; le bon dossier est trouvé, sinon refus (un ancien
+# lexique était parti dans le premier paquet 1.5.8).
 python3 "$ROOT/tools/copy_bundled_lexicons.py" --source "${LEXIQUE:h}" \
-  --french "$LEXIQUE" --app "$BUILD/Payload/Kyokasho.app" --platform ios
+  --french "$LEXIQUE" --app "$BUILD/Payload/Kyokasho.app" --platform ios \
+  --expected "$(<"$ROOT/packaging/lexique-attendu.txt")"
 
 # Pas de chinois sur iPad (décision de NOxygen59, 04/11/2026) : le catalogue commun le produit, le paquet le retire.
 find "$BUILD/Payload/Kyokasho.app" -type d -name 'zh-Hans.lproj' -prune -print0 | xargs -0 -r trash
@@ -78,6 +83,9 @@ with open(sys.argv[1], "wb") as target:
     plistlib.dump(info, target)
 PY
 python3 "$ROOT/tools/check_ipad_package.py" "$BUILD/Payload/Kyokasho.app"
+# Fiche d'identité dans l'app (lot B1) : version, commit, outils, dépendances, lexiques, relecture finale.
+python3 "$ROOT/tools/build_manifest.py" app --root "$ROOT" --app "$BUILD/Payload/Kyokasho.app" \
+  --version "$VERSION" --build "$BUILD_NUMBER" --review "REVUE-FINALE-$(git rev-parse HEAD | cut -c1-7).md"
 
 print "==> 4/5 Pseudo-signature (ldid)"
 # Frameworks embarqués d'abord (s'il y en a), puis l'app avec ses entitlements.
@@ -88,5 +96,14 @@ print "==> 5/5 Paquet .tipa"
 mkdir -p "$ROOT/dist"
 [[ ! -e "$OUT" ]] || trash "$OUT"
 (cd "$BUILD" && zip -qry "$OUT" Payload)
+# Symboles de débogage gardés à côté du paquet, et fiche complète (taille, SHA-256, UUID contrôlés) (lot B1).
+DSYM="$ARCHIVE/dSYMs/Kyokasho.app.dSYM"
+DSYM_OUT="$ROOT/dist/Kyokasho-$VERSION.dSYM.zip"
+[[ ! -e "$DSYM_OUT" ]] || trash "$DSYM_OUT"
+[[ -d "$DSYM" ]] && (cd "${DSYM:h}" && zip -qry "$DSYM_OUT" "${DSYM:t}")
+MANIFEST_OUT="$ROOT/dist/Kyokasho-$VERSION.manifeste.json"
+[[ ! -e "$MANIFEST_OUT" ]] || trash "$MANIFEST_OUT"
+python3 "$ROOT/tools/build_manifest.py" paquet --manifest "$BUILD/Payload/Kyokasho.app/MANIFESTE.json" \
+  --tipa "$OUT" --binary "$BUILD/Payload/Kyokasho.app/Kyokasho" --dsym "$DSYM" --out "$MANIFEST_OUT"
 print "OK : $OUT ($(du -h "$OUT" | cut -f1))"
 print "Installation : ouvrir ce fichier avec TrollStore sur l'iPad."
