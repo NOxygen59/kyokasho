@@ -30,6 +30,14 @@ public enum LocalModels {
         public let modelType: String
         public let size: Int64
         public let importedAt: Date
+
+        public init(id: String, name: String, modelType: String, size: Int64, importedAt: Date) {
+            self.id = id
+            self.name = name
+            self.modelType = modelType
+            self.size = size
+            self.importedAt = importedAt
+        }
     }
 
     public struct Candidate: Equatable, Sendable {
@@ -129,6 +137,7 @@ public enum LocalModels {
                 try Data().write(to: staging.appendingPathComponent(copyMarker))
                 try fm.copyItem(at: folder, to: prepared)
             }
+            try normalizeTokenizer(in: prepared)
             let info = Info(id: candidate.id, name: candidate.name, modelType: candidate.modelType, size: candidate.size,
                             importedAt: now)
             let encoder = JSONEncoder()
@@ -136,6 +145,7 @@ public enum LocalModels {
             try encoder.encode(info).write(to: prepared.appendingPathComponent(infoFile), options: .atomic)
             try fm.moveItem(at: prepared, to: final)
             try? fm.removeItem(at: staging)
+            invalidate(root)
             return (info, method)
         } catch {
             if method == .moved {
@@ -147,6 +157,26 @@ public enum LocalModels {
             try? fm.removeItem(at: staging)
             throw error
         }
+    }
+
+    /// Noms de tokenizer écrits par certains convertisseurs (mlx-vlm 0.7) pour Qwen3.5, inconnus de `swift-transformers`,
+    /// alors que le découpage est le BPE ordinaire que le Qwen3.5 officiel déclare `TokenizersBackend` (essai sur Mac du
+    /// 13/11/2026 : `unsupportedTokenizer("Qwen3_5Tokenizer")`).
+    static let tokenizerAliases = ["Qwen3_5Tokenizer": "TokenizersBackend", "Qwen3_5TokenizerFast": "TokenizersBackend"]
+
+    /// Remplace un nom de tokenizer inconnu par son équivalent connu dans `tokenizer_config.json` du modèle **installé**
+    /// (jamais ailleurs) ; l'original est gardé tel quel à côté (`tokenizer_config.original.json`). Renvoie l'ancien nom.
+    @discardableResult
+    public static func normalizeTokenizer(in folder: URL) throws -> String? {
+        let config = folder.appendingPathComponent("tokenizer_config.json")
+        let data = try Data(contentsOf: config)
+        guard var json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let current = json["tokenizer_class"] as? String, let known = tokenizerAliases[current] else { return nil }
+        let backup = folder.appendingPathComponent("tokenizer_config.original.json")
+        if !FileManager.default.fileExists(atPath: backup.path) { try data.write(to: backup, options: .atomic) }
+        json["tokenizer_class"] = known
+        try JSONSerialization.data(withJSONObject: json, options: [.prettyPrinted, .sortedKeys]).write(to: config, options: .atomic)
+        return current
     }
 
     /// Place libre du disque de `url` (nil si inconnue).
@@ -185,9 +215,34 @@ public enum LocalModels {
     /// Un identifiant de modèle importé (famille Qwen3.5 tant que `supportedTypes` n'a qu'elle).
     public static func isLocal(_ id: String) -> Bool { id.hasPrefix(prefix) }
 
+    /// Fiches des modèles importés de `store` (E3 : choix du chat, Stockage, pastilles, relevé d'énergie). Lues par des
+    /// vues redessinées souvent : gardées en mémoire, relues après un import, une suppression ou un nettoyage.
+    public static func specs(store: ModelStore = .shared) -> [ModelSpec] { cached(store.root).specs }
+
+    /// Nom affiché d'un modèle importé, `nil` pour un autre identifiant.
+    public static func name(_ id: String, store: ModelStore = .shared) -> String? {
+        guard isLocal(id) else { return nil }
+        return cached(store.root).infos.first { $0.id == id }?.name
+    }
+
+    private static let cacheLock = NSLock()
+    nonisolated(unsafe) private static var cache: [URL: (infos: [Info], specs: [ModelSpec])] = [:]
+
+    private static func cached(_ root: URL) -> (infos: [Info], specs: [ModelSpec]) {
+        if let hit = cacheLock.withLock({ cache[root] }) { return hit }
+        let infos = installed(in: root)
+        let value = (infos: infos, specs: infos.map { spec($0, in: root) })
+        cacheLock.withLock { cache[root] = value }
+        return value
+    }
+
+    /// À appeler après tout changement du dossier des modèles importés.
+    public static func invalidate(_ root: URL) { cacheLock.withLock { _ = cache.removeValue(forKey: root) } }
+
     public static func delete(_ id: String, in root: URL) throws {
         guard isLocal(id) else { return }
         let folder = root.appendingPathComponent(id, isDirectory: true)
+        defer { invalidate(root) }
         if FileManager.default.fileExists(atPath: folder.path) { try FileManager.default.removeItem(at: folder) }
     }
 
@@ -198,6 +253,7 @@ public enum LocalModels {
     public static func removeLeftovers(in root: URL) -> [URL] {
         let fm = FileManager.default
         var recovered: [URL] = []
+        defer { invalidate(root) }
         for staging in (try? fm.contentsOfDirectory(at: root, includingPropertiesForKeys: nil, options: [])) ?? []
         where staging.lastPathComponent.hasPrefix(stagingPrefix) {
             if fm.fileExists(atPath: staging.appendingPathComponent(copyMarker).path) {

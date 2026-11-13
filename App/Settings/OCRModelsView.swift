@@ -21,6 +21,7 @@ final class ModelDownloads: ObservableObject {
 
     func refresh() {
         installed = Set((ModelSpec.all + [.degan] + ModelSpec.layoutModels).filter { store.isInstalled($0) }.map(\.id))
+            .union(LocalModels.installed(in: store.root).map(\.id))   // modèles importés (PLAN-MODLOC-001, E3)
     }
 
     func start(_ spec: ModelSpec) {

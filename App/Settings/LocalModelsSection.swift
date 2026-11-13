@@ -93,6 +93,8 @@ struct LocalModelsSection: View {
             (cleaning ? LocalModels.removeLeftovers(in: root) : [], LocalModels.installed(in: root))
         }.value
         models = list
+        // Le chat et les réglages lisent la liste des modèles installés : elle suit l'import et la suppression (E3).
+        ModelDownloads.shared.refresh()
         if !recovered.isEmpty {
             message = String(localized: "Import interrompu retrouvé : dossier gardé dans « \(recovered.map(\.lastPathComponent).joined(separator: ", ")) ».")
         }

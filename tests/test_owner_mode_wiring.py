@@ -27,7 +27,7 @@ class OwnerModeWiringTests(unittest.TestCase):
         self.assertIn("reader.document.capabilities.chat && ownerUnlocked", study)
         self.assertIn(".onChange(of: ownerUnlocked) { _ in normalizeTab() }", study)
         settings = self.read("Settings/SettingsView.swift")
-        self.assertIn("if ownerUnlocked {\n                Section {\n                    NavigationLink { AIChatSettingsView() }", settings)
+        self.assertIn("if ownerUnlocked {\n                LocalModelsSection()\n                Section {\n                    NavigationLink { AIChatSettingsView() }", settings)
         self.assertIn(".filter { ownerUnlocked || $0.id != ModelSpec.qwen35chat4b.id }", settings)
         self.assertIn("if ownerUnlocked, spec.id == ModelSpec.qwen3vl4b.id", self.read("Settings/AIModelViews.swift"))
         self.assertIn('if ownerUnlocked { row(.qwen35chat4b', self.read("Settings/OCRModelsView.swift"))

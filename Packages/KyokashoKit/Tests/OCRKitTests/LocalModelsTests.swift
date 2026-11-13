@@ -49,6 +49,13 @@ final class LocalModelsTests: XCTestCase {
         XCTAssertTrue(ModelStore(root: models).isInstalled(spec))
         XCTAssertTrue(spec.files.contains { $0.name == "model.safetensors" })
         XCTAssertTrue(LocalModels.isLocal(spec.id))
+        // E3 : la liste gardée en mémoire suit l'import puis la suppression.
+        let store = ModelStore(root: models)
+        XCTAssertEqual(LocalModels.specs(store: store).map(\.id), [info.id])
+        XCTAssertEqual(LocalModels.name(info.id, store: store), "Mon modèle 4B")
+        XCTAssertTrue(ModelSpec.isQwen35Family(info.id))
+        try LocalModels.delete(info.id, in: models)
+        XCTAssertTrue(LocalModels.specs(store: store).isEmpty)
     }
 
     func testInvalidFoldersAreRefusedBeforeAnyMove() throws {
@@ -116,5 +123,21 @@ final class LocalModelsTests: XCTestCase {
         let candidate = try LocalModels.validate(URL(fileURLWithPath: path, isDirectory: true))
         XCTAssertEqual(candidate.modelType, "qwen3_5")
         XCTAssertGreaterThan(candidate.size, 1_000_000_000)
+    }
+
+    /// Essai du 13/11/2026 : le convertisseur écrit « Qwen3_5Tokenizer », inconnu de l'app ; l'import le remplace par
+    /// « TokenizersBackend » (comme le Qwen3.5 officiel) dans la copie installée et garde l'original à côté.
+    func testUnknownQwen35TokenizerNameIsNormalizedAndBackedUp() throws {
+        let folder = try fakeModel("Tok")
+        try #"{"tokenizer_class": "Qwen3_5Tokenizer", "x": 1}"#.write(to: folder.appendingPathComponent("tokenizer_config.json"),
+                                                                     atomically: true, encoding: .utf8)
+        let (info, _) = try LocalModels.install(folder, into: models)
+        let installed = models.appendingPathComponent(info.id)
+        let config = try JSONSerialization.jsonObject(with: Data(contentsOf: installed.appendingPathComponent("tokenizer_config.json"))) as? [String: Any]
+        XCTAssertEqual(config?["tokenizer_class"] as? String, "TokenizersBackend")
+        XCTAssertEqual(config?["x"] as? Int, 1, "le reste du fichier est gardé")
+        let original = try String(contentsOf: installed.appendingPathComponent("tokenizer_config.original.json"), encoding: .utf8)
+        XCTAssertTrue(original.contains("Qwen3_5Tokenizer"))
+        XCTAssertNil(try LocalModels.normalizeTokenizer(in: installed), "déjà normalisé : rien à refaire")
     }
 }

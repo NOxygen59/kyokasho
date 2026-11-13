@@ -183,8 +183,9 @@ struct QwenChatView: View {
     private var bookFile: URL? {
         document.map { file.deletingLastPathComponent().appendingPathComponent("book-\($0.id).json") }
     }
+    /// Modèle choisi : officiel ou importé (PLAN-MODLOC-001, E3) ; un modèle importé supprimé retombe sur Qwen3-VL.
     private var selectedSpec: ModelSpec {
-        selectedModelID == ModelSpec.qwen35chat4b.id ? .qwen35chat4b : .qwen3vl4b
+        AIChatSettingsStore.models.first { $0.id == selectedModelID } ?? .qwen3vl4b
     }
 
     var body: some View {
@@ -331,8 +332,9 @@ struct QwenChatView: View {
             Menu {
                 modelOption(.qwen3vl4b, title: String(localized: "Qwen3-VL 4B"))
                 modelOption(.qwen35chat4b, title: String(localized: "Qwen3.5 4B"))
+                ForEach(LocalModels.specs(), id: \.id) { spec in modelOption(spec, title: spec.title) }
             } label: {
-                Label(selectedSpec.id == ModelSpec.qwen35chat4b.id ? "Qwen3.5" : "Qwen3-VL", systemImage: "cpu")
+                Label(AIChatSettingsStore.name(selectedSpec.id), systemImage: "cpu")
                     .lineLimit(1)
             }
             .disabled(answering != nil || loading || storageError)
@@ -620,7 +622,7 @@ struct QwenChatView: View {
 
     /// État du modèle et durée de la dernière réponse.
     private var statusLine: some View {
-        let name = selectedSpec.id == ModelSpec.qwen35chat4b.id ? "Qwen3.5" : "Qwen3-VL"
+        let name = AIChatSettingsStore.name(selectedSpec.id)
         let settings = AIChatSettingsStore.load(selectedModelID)
         var parts = [loading ? String(localized: "Chargement de \(name)…") : ready ? String(localized: "\(name) prêt") : String(localized: "\(name) indisponible")]
         if settings.instructions != nil { parts.append(String(localized: "consigne perso")) }

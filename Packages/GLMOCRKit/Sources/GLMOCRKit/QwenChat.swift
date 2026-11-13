@@ -51,7 +51,7 @@ public final class QwenChat: @unchecked Sendable {
     /// `settings` : consigne et paramètres choisis pour ce modèle (#37, #45) ; par défaut, ceux d'avant.
     public func start(history: [Message], grounded: Bool = false, settings: AIChatSettings = AIChatSettings()) async throws {
         guard session == nil else { return }
-        guard model.id == ModelSpec.qwen3vl4b.id || model.id == ModelSpec.qwen35chat4b.id else {
+        guard model.id == ModelSpec.qwen3vl4b.id || ModelSpec.isQwen35Family(model.id) else {
             throw OCRError.engineFailed(String(localized: "Ce modèle ne sait pas discuter.", bundle: .main))
         }
         guard isAvailable else { throw OCRError.modelMissing(model.title) }
@@ -67,7 +67,7 @@ public final class QwenChat: @unchecked Sendable {
                                             repetitionPenalty: settings.repetitionPenalty.map { Float($0) })
         session = ChatSession(container, instructions: settings.effectiveInstructions(default: Self.instructions), history: past,
                               generateParameters: parameters,
-                              additionalContext: model.id == ModelSpec.qwen35chat4b.id ? ["enable_thinking": settings.thinking] : nil)
+                              additionalContext: ModelSpec.isQwen35Family(model.id) ? ["enable_thinking": settings.thinking] : nil)
     }
 
     /// Aide fiable ajoutée à la question (le modèle de 4 milliards invente souvent les lectures, ex. 天井 « あまね ») :
