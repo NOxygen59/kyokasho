@@ -46,7 +46,7 @@ extension BackupRoundTripTests {
                                                                            "page-\\(pageIndex).ink", "page-\\(pageIndex)-\\(UUID().uuidString).ink"]),
         "Packages/KyokashoKit/Sources/OCRKit/ModelStore.swift": ("modèles : Kyokasho/Models/ (omissible, retéléchargeable)", ["Kyokasho/Models", "model-"]),
         "Packages/KyokashoKit/Sources/OCRKit/LocalModels.swift": ("modèles importés (PLAN-MODLOC-001) : Kyokasho/Models/local-<nom>/ (local.json, tokenizer_config.original.json) ; préparation Models/.import-<UUID>/ ; dossier rendu après une app tuée : Modèle-récupéré-<id> ; lit la place libre de tmp",
-                                                                 ["Modèle-récupéré-", "tokenizer_config.json", "tokenizer_config.original.json"]),
+                                                                 ["Modèle-récupéré-", "Modèle-récupéré-\\(moved.lastPathComponent)-\\(rank)", "tokenizer_config.json", "tokenizer_config.original.json"]),
         "App/Settings/LocalModelsSection.swift": ("modèles importés : Documents/Modèles récupérés/ (visible dans Fichiers, après un import interrompu)",
                                                   ["Modèles récupérés"]),
         "App/Dictionary/MorphologyService.swift": ("modèles : Kyokasho/Models/unidic ; temporaire : tmp/unidic-lite.tar.gz",
