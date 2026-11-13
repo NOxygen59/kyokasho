@@ -45,6 +45,9 @@ struct LibraryView: View {
     @AppStorage(OwnerMode.unlockedKey) private var ownerUnlocked = false
     @State private var statsTaps = TapBurst()
     @State private var statsDecision: Task<Void, Never>?
+    /// Retour visuel bref de la bascule (revue D-07 MODLOC E1, n°2 : l'iPad n'a pas de vibreur) : cadenas ouvert ou
+    /// fermé à la place de l'icône du tableau de bord pendant ~1,2 s, sans texte (DEC-01).
+    @State private var ownerFlash: Bool?
     @State private var renaming: LibraryDocument?
     @EnvironmentObject private var review: ReviewModel
     @EnvironmentObject private var themes: ThemeManager
@@ -568,6 +571,8 @@ struct LibraryView: View {
     private var statsCard: some View {
         Button { statsTapped() } label: { statsCardContent }
             .buttonStyle(PressScale())
+            // Revue D-07 (n°5) : une décision en attente ne survit pas à l'écran.
+            .onDisappear { cancelStatsBurst() }
             .accessibilityHint(Text("Ouvre le tableau de bord"))
     }
 
@@ -581,17 +586,30 @@ struct LibraryView: View {
             statsTaps = TapBurst()
             switch outcome {
             case .single: showDashboard = true
-            case .toggleOwnerMode: OwnerMode.toggle()
+            case .toggleOwnerMode:
+                OwnerMode.toggle()
+                ownerFlash = UserDefaults.standard.bool(forKey: OwnerMode.unlockedKey)
+                try? await Task.sleep(nanoseconds: 1_200_000_000)
+                ownerFlash = nil
             }
         }
     }
+
+    private func cancelStatsBurst() {
+        statsDecision?.cancel()
+        statsTaps = TapBurst()
+        ownerFlash = nil
+    }
+
+    /// Icône du tableau de bord, ou cadenas pendant le retour de la bascule.
+    private var dashboardIcon: String { ownerFlash.map { $0 ? "lock.open.fill" : "lock.fill" } ?? "chart.bar.fill" }
 
     private var statsCardContent: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 AtelierLabel(String(localized: "Temps de lecture"))
                 Spacer()
-                Image(systemName: "chart.bar.fill").font(Atelier.font(12)).foregroundStyle(Atelier.textTertiary)
+                Image(systemName: dashboardIcon).font(Atelier.font(12)).foregroundStyle(Atelier.textTertiary)
             }
             // Séparé par espace, d'après le journal des séances. Le reste du total, plus ancien que ce journal, reste
             // compté dans Livres & Manuels.
@@ -630,7 +648,9 @@ struct LibraryView: View {
             }
             CapsuleButton(icon: "note.text", label: model.notesToReview > 0
                           ? String(localized: "Notes · \(model.notesToReview) à revoir") : String(localized: "Notes")) { showNotes = true }
-            CapsuleButton(icon: "chart.bar.fill", label: String(localized: "Tableau de bord")) { showDashboard = true }
+            // Revue D-07 MODLOC E1 (n°1) : en portrait, la même rafale passe par ce bouton (pas de carte « Temps de lecture »).
+            CapsuleButton(icon: dashboardIcon, label: String(localized: "Tableau de bord")) { statsTapped() }
+                .onDisappear { cancelStatsBurst() }
             CapsuleButton(icon: "gearshape", label: String(localized: "Réglages")) { showSettings = true }
         }
         .padding(10)

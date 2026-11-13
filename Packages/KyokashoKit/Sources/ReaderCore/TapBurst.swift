@@ -19,7 +19,8 @@ public struct TapBurst: Equatable, Sendable {
 
     public mutating func tap(at date: Date) {
         // Un toucher venu après une pause commence une nouvelle rafale.
-        if let last = taps.last, date.timeIntervalSince(last) > Self.window { taps = [] }
+        // Même frontière que `outcome` (revue D-07 n°6) : une pause d'au moins `window` clôt la rafale.
+        if let last = taps.last, date.timeIntervalSince(last) >= Self.window - 0.001 { taps = [] }
         taps.append(date)
     }
 

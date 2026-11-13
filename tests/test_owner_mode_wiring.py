@@ -19,7 +19,10 @@ class OwnerModeWiringTests(unittest.TestCase):
         library = self.read("Library/LibraryView.swift")
         self.assertIn("Button { statsTapped() } label: { statsCardContent }", library)
         self.assertIn("case .single: showDashboard = true", library)
-        self.assertIn("case .toggleOwnerMode: OwnerMode.toggle()", library)
+        self.assertIn("case .toggleOwnerMode:\n                OwnerMode.toggle()", library)
+        # Revue D-07 : portrait (bouton « Tableau de bord ») et retour visuel sans vibreur.
+        self.assertIn('CapsuleButton(icon: dashboardIcon, label: String(localized: "Tableau de bord")) { statsTapped() }', library)
+        self.assertIn('"lock.open.fill"', library)
 
     def test_every_chat_entry_is_hidden_while_locked(self):
         self.assertIn("if !document.capabilities.chat || !ownerUnlocked {", self.read("Library/LibraryView.swift"))
