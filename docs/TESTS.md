@@ -99,7 +99,14 @@ datée : génération du projet Xcode (`xcodegen generate -q`, seulement si l'ou
 ./scripts/verifier_tout.sh; echo "code de sortie : $?"
 ```
 
-- Résumé : `build/verif/RESUME-<date>.md` — SHA court et long, branche, nombre de fichiers modifiés au lancement,
+Profils (lot C1, 13/11/2026) : sans option, profil **complet** (ci-dessus, plus les tests Swift de `Packages/GLMOCRKit`,
+dont la plupart sont ignorés sans les poids des modèles) — seul valable avant une candidate ou un push.
+`--rapide` lance seulement les tests Swift de `KyokashoKit` et les tests Python ; `--filtre <test>` cible les tests
+Swift (`swift test --filter`). Une étape non lancée est écrite « non exécutée (profil rapide) », jamais « réussie ».
+Un échec volontaire (test Python qui échoue) donne bien le code de sortie 1 et l'étape en échec dans le résumé
+(contrôlé le 13/11).
+
+- Résumé : `build/verif/RESUME-<date>-<sha>[-rapide].md`, recopié en `build/verif/RESUME-<date>.md` — SHA court et long, branche, nombre de fichiers modifiés au lancement,
   versions de macOS, Xcode et Swift, durée, puis une ligne par étape : tests Swift exécutés / ignorés / en échec,
   nombre de tests Python et leur verdict, résultat de la compilation avec le nombre de lignes `error:` du journal,
   liens documentaires examinés et erreurs éventuelles.
