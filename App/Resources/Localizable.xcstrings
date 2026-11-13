@@ -1,6 +1,116 @@
 {
   "sourceLanguage": "fr",
   "strings": {
+    "Correctifs de la recette 1.5.7": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fixes from the 1.5.7 test round"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Correctifs de la recette 1.5.7"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1.5.7 测试修正"
+          }
+        }
+      }
+    },
+    "Notes : chaque note affiche sa date et son heure de création ou de modification.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notes: each note shows the date and time it was created or modified."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notes : chaque note affiche sa date et son heure de création ou de modification."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "笔记：每条笔记显示创建或修改的日期和时间。"
+          }
+        }
+      }
+    },
+    "Accueil : créer ou renommer un dossier se fait dans une fenêtre de l'app, avec un bouton « Créer » qui marche.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Home: creating or renaming a folder happens in an in-app window, with a working “Create” button."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accueil : créer ou renommer un dossier se fait dans une fenêtre de l'app, avec un bouton « Créer » qui marche."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "主页：在应用内窗口中创建或重命名文件夹，“创建”按钮可正常使用。"
+          }
+        }
+      }
+    },
+    "Barre flottante : elle ne bouge plus au passage entre Pencil et doigt, et une poignée plus grande la déplace.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Floating bar: it no longer shifts when switching between Pencil and finger, and a larger handle moves it."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Barre flottante : elle ne bouge plus au passage entre Pencil et doigt, et une poignée plus grande la déplace."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "浮动栏：在 Pencil 与手指之间切换时不再移动，更大的手柄可拖动它。"
+          }
+        }
+      }
+    },
+    "Écran Notes plus clair : filtres en pastilles, et chaque note montre son livre, sa page, son échéance et ses étiquettes.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clearer Notes screen: filters as chips, and each note shows its book, page, due date and tags."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Écran Notes plus clair : filtres en pastilles, et chaque note montre son livre, sa page, son échéance et ses étiquettes."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "笔记界面更清晰：筛选条件以标签显示，每条笔记显示其书籍、页码、截止日期和标签。"
+          }
+        }
+      }
+    },
     "modifiée le %@": {
       "localizations": {
         "en": {

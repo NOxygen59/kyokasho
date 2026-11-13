@@ -101,20 +101,12 @@ public struct ReleaseNotes: Equatable, Sendable, Identifiable {
 
     /// La version en cours de préparation : seulement ce qu'elle change (décision de NOxygen59 du 04/11/2026). C'est
     /// elle que montre la fenêtre « Nouveautés » ; les versions précédentes vont dans `ReleaseHistory`.
-    public static let current = ReleaseNotes("1.5.7", "2026-11-13", published: false, String(localized: "Notes, dossiers, cartes et correctifs de la recette 1.5.6", bundle: .main), added: [
-            String(localized: "Notes : un écran « Notes » sur l'accueil réunit toutes les notes, par échéance, avec filtres et archives ; une pastille compte les notes à revoir.", bundle: .main),
-            String(localized: "Notes : régler une note (échéance, priorité, classeur, étiquettes, archive), une seule ou plusieurs à la fois.", bundle: .main),
-            String(localized: "Accueil : des dossiers pour ranger les documents.", bundle: .main),
-            String(localized: "Cartes : un écran « Cartes de ce document » pour voir, modifier, suspendre, supprimer et exporter les cartes d'un livre.", bundle: .main),
-            String(localized: "Cartes de la page : tous les mots de la page trouvés dans tes dictionnaires, en plus du lexique du cours.", bundle: .main),
-            String(localized: "Sauvegarde : une barre montre l'avancement.", bundle: .main),
+    public static let current = ReleaseNotes("1.5.8", "2026-11-13", published: false, String(localized: "Correctifs de la recette 1.5.7", bundle: .main), added: [
+            String(localized: "Notes : chaque note affiche sa date et son heure de création ou de modification.", bundle: .main),
         ], fixed: [
-            String(localized: "Pencil en page simple avec glissement : la page ne glisse plus au premier trait, aussi sur un document d'une page et à la réouverture.", bundle: .main),
-            String(localized: "Chat du livre : l'IA sait quel document et quelle page sont ouverts.", bundle: .main),
-            String(localized: "Vérification Drive : le rapport dit quel fichier est suivi, son nom sur Drive et s'il est dans la corbeille de Drive.", bundle: .main),
-            String(localized: "Accueil : un document déplacé hors de la vue quitte la sélection.", bundle: .main),
-            String(localized: "Cartes : la définition entière est gardée, plus seulement son début.", bundle: .main),
-            String(localized: "Mise à jour Drive : un document ne reçoit plus un dossier de l'autre espace.", bundle: .main),
+            String(localized: "Accueil : créer ou renommer un dossier se fait dans une fenêtre de l'app, avec un bouton « Créer » qui marche.", bundle: .main),
+            String(localized: "Barre flottante : elle ne bouge plus au passage entre Pencil et doigt, et une poignée plus grande la déplace.", bundle: .main),
+            String(localized: "Écran Notes plus clair : filtres en pastilles, et chaque note montre son livre, sa page, son échéance et ses étiquettes.", bundle: .main),
         ])
 
     /// Notes de `version` (« 1.3.2 », sans le numéro de build) : la version elle-même, jamais une build de test.

@@ -10,6 +10,21 @@ import Foundation
 enum ReleaseHistory {
     static let past: [ReleaseNotes] = [
         // Candidates locales non publiées.
+        ReleaseNotes("1.5.7", "2026-11-13", published: false, String(localized: "Notes, dossiers, cartes et correctifs de la recette 1.5.6", bundle: .main), added: [
+                String(localized: "Notes : un écran « Notes » sur l'accueil réunit toutes les notes, par échéance, avec filtres et archives ; une pastille compte les notes à revoir.", bundle: .main),
+                String(localized: "Notes : régler une note (échéance, priorité, classeur, étiquettes, archive), une seule ou plusieurs à la fois.", bundle: .main),
+                String(localized: "Accueil : des dossiers pour ranger les documents.", bundle: .main),
+                String(localized: "Cartes : un écran « Cartes de ce document » pour voir, modifier, suspendre, supprimer et exporter les cartes d'un livre.", bundle: .main),
+                String(localized: "Cartes de la page : tous les mots de la page trouvés dans tes dictionnaires, en plus du lexique du cours.", bundle: .main),
+                String(localized: "Sauvegarde : une barre montre l'avancement.", bundle: .main),
+            ], fixed: [
+                String(localized: "Pencil en page simple avec glissement : la page ne glisse plus au premier trait, aussi sur un document d'une page et à la réouverture.", bundle: .main),
+                String(localized: "Chat du livre : l'IA sait quel document et quelle page sont ouverts.", bundle: .main),
+                String(localized: "Vérification Drive : le rapport dit quel fichier est suivi, son nom sur Drive et s'il est dans la corbeille de Drive.", bundle: .main),
+                String(localized: "Accueil : un document déplacé hors de la vue quitte la sélection.", bundle: .main),
+                String(localized: "Cartes : la définition entière est gardée, plus seulement son début.", bundle: .main),
+                String(localized: "Mise à jour Drive : un document ne reçoit plus un dossier de l'autre espace.", bundle: .main),
+            ]),
         ReleaseNotes("1.5.6", "2026-11-11", published: false, String(localized: "Lexique, aide des gestes et correctifs de la recette 1.5.5", bundle: .main), added: [
                 String(localized: "Lexique : tous les mots des dictionnaires actifs, page par page, avec lecture et sens ; recherche par début de mot et fiche du mot.", bundle: .main),
                 String(localized: "Lexique : une étoile garde le mot, « + carte » crée sa carte de révision, et « Mes mots » ne montre que les mots gardés.", bundle: .main),
