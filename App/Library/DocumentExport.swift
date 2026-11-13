@@ -145,9 +145,16 @@ enum DocumentExport {
         ctx.restoreGState()
     }
 
-    static func annotatedPDF(source: URL, pages: ClosedRange<Int>, _ a: Annotations, title: String,
+    /// PDF des pages **telles qu'à l'écran** (PLAN-DATA03-001, E2, DEC-01 = A) : les annotations sont enregistrées dans
+    /// le repère des pages égalisées (même hauteur) ; les dessiner sur le PDF d'origine les décalait sur les pages
+    /// redessinées (enquête D-03). Sans page à égaliser, c'est le PDF d'origine.
+    static func displayedPDF(source: URL, documentId: String, database: AppDatabase) -> PDFDocument? {
+        ReaderController.equalizedDocument(url: source, documentId: documentId, database: database)?.pdf ?? PDFDocument(url: source)
+    }
+
+    static func annotatedPDF(source: URL, documentId: String, database: AppDatabase, pages: ClosedRange<Int>, _ a: Annotations, title: String,
                              labels: [Int: String], to url: URL, progress: (Int) -> Void) throws {
-        guard let doc = PDFDocument(url: source) else { throw CocoaError(.fileReadCorruptFile) }
+        guard let doc = displayedPDF(source: source, documentId: documentId, database: database) else { throw CocoaError(.fileReadCorruptFile) }
         var box = CGRect(x: 0, y: 0, width: 595, height: 842)
         guard let ctx = CGContext(url as CFURL, mediaBox: &box, [kCGPDFContextTitle as String: title] as CFDictionary)
         else { throw CocoaError(.fileWriteUnknown) }
@@ -200,9 +207,9 @@ enum DocumentExport {
         }
     }
 
-    static func images(source: URL, pages: ClosedRange<Int>, _ a: Annotations, labels: [Int: String],
+    static func images(source: URL, documentId: String, database: AppDatabase, pages: ClosedRange<Int>, _ a: Annotations, labels: [Int: String],
                        folder: URL, progress: (Int) -> Void) throws {
-        guard let doc = PDFDocument(url: source) else { throw CocoaError(.fileReadCorruptFile) }
+        guard let doc = displayedPDF(source: source, documentId: documentId, database: database) else { throw CocoaError(.fileReadCorruptFile) }
         for (k, index) in pages.enumerated() {
             try Task.checkCancellation()
             try autoreleasepool {
@@ -418,13 +425,13 @@ struct DocumentExportSheet: View {
                     return url
                 case .annotated:
                     let url = folder.appendingPathComponent(name + String(localized: " (annoté).pdf"))
-                    try DocumentExport.annotatedPDF(source: source, pages: pages, annotations, title: doc.title,
+                    try DocumentExport.annotatedPDF(source: source, documentId: doc.id, database: database, pages: pages, annotations, title: doc.title,
                                                     labels: labels, to: url, progress: report)
                     return url
                 case .images:
                     let dir = folder.appendingPathComponent(name, isDirectory: true)
                     try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-                    try DocumentExport.images(source: source, pages: pages, annotations, labels: labels,
+                    try DocumentExport.images(source: source, documentId: doc.id, database: database, pages: pages, annotations, labels: labels,
                                               folder: dir, progress: report)
                     let url = folder.appendingPathComponent(name + " (images).zip")
                     try DocumentExport.zip(dir, to: url)

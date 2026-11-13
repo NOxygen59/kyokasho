@@ -211,6 +211,7 @@ extension BackupRoundTripTests {
         try database.writer.close()
         // Revenir au schéma v3 : colonnes et tables de v4 à v7 retirées et migrations oubliées, comme une base jamais migrée.
         try sqlite(path, """
+            DROP TABLE equalizationReference; DELETE FROM grdb_migrations WHERE identifier = 'v9-equalization-reference';
             ALTER TABLE pageComment DROP COLUMN dueMinute; ALTER TABLE pageComment DROP COLUMN reminders;
             DELETE FROM grdb_migrations WHERE identifier = 'v8-note-reminders';
             DROP INDEX pageComment_due; ALTER TABLE pageComment DROP COLUMN dueDay;
@@ -260,6 +261,8 @@ extension BackupRoundTripTests {
         XCTAssertTrue(try sqliteRows(restored, "SELECT identifier FROM grdb_migrations").contains("v7-note-organization"))
         // v8 (PLAN-NOTIF-001) : sans heure, rappel par défaut (`.default` ci-dessus le vérifie déjà).
         XCTAssertTrue(try sqliteRows(restored, "SELECT identifier FROM grdb_migrations").contains("v8-note-reminders"))
+        // v9 (PLAN-DATA03-001) : aucune référence d'égalisation fixée pour un document ancien (elle le sera à l'ouverture).
+        XCTAssertTrue(try sqliteRows(restored, "SELECT identifier FROM grdb_migrations").contains("v9-equalization-reference"))
     }
 
     // MARK: SQLite direct (sans dépendance supplémentaire à GRDB dans cette cible)

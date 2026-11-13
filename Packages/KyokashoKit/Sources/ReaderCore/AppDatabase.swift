@@ -249,7 +249,36 @@ public final class AppDatabase: @unchecked Sendable {
                 t.add(column: "reminders", .text)
             }
         }
+        // PLAN-DATA03-001 E3 (DEC-02 = A) : hauteur de référence de l'égalisation, fixée une fois par document, pour que
+        // les annotations déjà posées ne changent pas d'échelle quand des pages sont ajoutées ou que le cache est vidé.
+        // Table à part (aucune colonne de `document` réécrite) ; sans clé étrangère : une ligne orpheline est inoffensive.
+        m.registerMigration("v9-equalization-reference") { db in
+            try db.create(table: "equalizationReference") { t in
+                t.primaryKey("documentId", .text)
+                t.column("height", .double).notNull()
+            }
+        }
         return m
+    }
+}
+
+// MARK: - Égalisation (PLAN-DATA03-001, E3)
+
+extension AppDatabase {
+    /// Hauteur de référence des pages de ce document, si elle a déjà été fixée.
+    public func equalizationReference(documentId: String) throws -> Double? {
+        try writer.read { db in
+            try Double.fetchOne(db, sql: "SELECT height FROM equalizationReference WHERE documentId = ?", arguments: [documentId])
+        }
+    }
+
+    /// Fixe la hauteur de référence **une seule fois** : une valeur déjà présente n'est jamais remplacée.
+    public func fixEqualizationReference(_ height: Double, documentId: String) throws {
+        guard height > 0, height.isFinite else { return }
+        try writer.write { db in
+            try db.execute(sql: "INSERT OR IGNORE INTO equalizationReference (documentId, height) VALUES (?, ?)",
+                           arguments: [documentId, height])
+        }
     }
 }
 
