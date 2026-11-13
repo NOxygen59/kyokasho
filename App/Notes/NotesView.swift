@@ -268,7 +268,7 @@ struct NotesView: View {
         let document = model.documents.first { $0.id == note.documentId }
         let group = NoteListing.group(dueDay: o.dueDay, today: Date())
         return HStack(alignment: .top, spacing: 10) {
-            RoundedRectangle(cornerRadius: 2)
+            RoundedRectangle(cornerRadius: Atelier.corner(2))
                 .fill(o.priority == .high ? Atelier.Tint.annotate : o.priority == .low ? Atelier.textTertiary.opacity(0.4) : Color.clear)
                 .frame(width: 4)
                 .accessibilityHidden(true)
