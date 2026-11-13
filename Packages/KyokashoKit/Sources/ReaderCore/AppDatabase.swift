@@ -240,6 +240,15 @@ public final class AppDatabase: @unchecked Sendable {
             }
             try db.create(index: "pageComment_due", on: "pageComment", columns: ["archived", "dueDay"])
         }
+        // PLAN-NOTIF-001 E2 (DEC-03/04 = A) : heure facultative de l'échéance (minutes depuis minuit) et rappels de la
+        // note (JSON, minutes avant l'échéance ; NULL = rappel par défaut, « [] » = aucun). Colonnes ajoutées seulement :
+        // rien n'est réécrit, et comme les autres colonnes de rangement elles suivent la note dans sa ligne.
+        m.registerMigration("v8-note-reminders") { db in
+            try db.alter(table: "pageComment") { t in
+                t.add(column: "dueMinute", .integer)
+                t.add(column: "reminders", .text)
+            }
+        }
         return m
     }
 }

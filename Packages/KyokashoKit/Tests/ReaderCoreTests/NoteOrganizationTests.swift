@@ -153,6 +153,39 @@ final class NoteOrganizationTests: XCTestCase {
         XCTAssertEqual(try db.noteDueBadge(today: today, calendar: calendar, excludingDocuments: ["d"]), .none)
     }
 
+    /// PLAN-NOTIF-001 E2 : heure et rappels écrits seuls, forme canonique, refus d'une heure invalide, heure effacée
+    /// avec l'échéance ; rappels à venir calculés au bon instant ; rouge 24 h avant une échéance à heure réglée.
+    func testDueTimeAndRemindersAreStoredAndScheduled() throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Tokyo")!
+        let db = try database()
+        XCTAssertNil(try db.organization(noteId: "n1")?.reminders, "rien de réglé : rappel par défaut")
+        try db.apply(.due("2026-11-20"), to: ["n1"])
+        try db.apply(.dueMinute(14 * 60 + 30), to: ["n1"])
+        try db.apply(.reminders([1_440, 0, 0, 7, 60, 15]), to: ["n1"])
+        var o = try XCTUnwrap(db.organization(noteId: "n1"))
+        XCTAssertEqual(o.dueMinute, 870)
+        XCTAssertEqual(o.reminders, [0, 15, 60], "choix connus, sans doublon, triés, 3 au plus")
+        XCTAssertThrowsError(try db.apply(.dueMinute(1_440), to: ["n1"])) { XCTAssertEqual($0 as? NoteOrganizationError, .invalidTime) }
+        try db.apply(.reminders([]), to: ["n1"])
+        XCTAssertEqual(try db.organization(noteId: "n1")?.reminders, [])
+        try db.apply(.due(nil), to: ["n1"])
+        o = try XCTUnwrap(db.organization(noteId: "n1"))
+        XCTAssertNil(o.dueMinute)
+        XCTAssertEqual(o.reminders, [], "les rappels choisis restent pour la prochaine échéance")
+
+        let now = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 11, day: 19, hour: 15)))
+        let fires = NoteReminder.fireDates(day: "2026-11-20", minute: 14 * 60 + 30, reminders: [0, 60, 1_440], now: now, calendar: calendar)
+        XCTAssertEqual(fires.map { calendar.dateComponents([.day, .hour, .minute], from: $0) },
+                       [DateComponents(day: 20, hour: 13, minute: 30), DateComponents(day: 20, hour: 14, minute: 30)],
+                       "le rappel « 1 jour avant » est déjà passé")
+        XCTAssertEqual(NoteReminder.fireDates(day: "2026-11-20", minute: nil, reminders: nil, now: now, calendar: calendar)
+            .map { calendar.component(.hour, from: $0) }, [9], "sans heure ni rappel : à 9 h, à l'heure")
+        XCTAssertEqual(NoteDueBadge.of(dues: [("2026-11-20", 14 * 60)], now: now, calendar: calendar), .urgent, "dans moins de 24 h")
+        XCTAssertEqual(NoteDueBadge.of(dues: [("2026-11-20", nil)], now: now, calendar: calendar), .soon, "sans heure : rouge le jour même")
+        XCTAssertEqual(NoteDueBadge.of(dues: [("2026-11-21", 14 * 60)], now: now, calendar: calendar), .soon)
+    }
+
     func testDayStrings() {
         XCTAssertTrue(NoteDay.isValid("2028-02-29"))
         XCTAssertFalse(NoteDay.isValid("2027-02-29"))

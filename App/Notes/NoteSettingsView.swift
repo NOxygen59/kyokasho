@@ -94,8 +94,77 @@ struct NoteSettingsView: View {
                     get: { date },
                     set: { write(.due(NoteDay.string($0))) }), displayedComponents: .date)
                     .environment(\.calendar, NoteDay.calendar)
+                // PLAN-NOTIF-001 E2 (DEC-03 = A) : heure facultative ; sans elle, l'heure par défaut des Réglages.
+                Toggle(String(localized: "À une heure précise"), isOn: Binding(
+                    get: { o.dueMinute != nil },
+                    set: { on in write(.dueMinute(on ? defaultDueMinute : nil)) }))
+                if let minute = o.dueMinute {
+                    DatePicker(String(localized: "Heure"), selection: Binding(
+                        get: { Self.time(minute) },
+                        set: { write(.dueMinute(Self.minute(of: $0))) }), displayedComponents: .hourAndMinute)
+                }
             }
         }
+        if o.dueDay != nil { remindersSection(o) }
+    }
+
+    /// Rappels de la note (DEC-04 = A) : 3 au plus ; rien de choisi = le rappel par défaut des Réglages.
+    @ViewBuilder
+    private func remindersSection(_ o: NoteOrganization) -> some View {
+        let chosen = o.reminders ?? NoteReminder.defaultReminders
+        Section {
+            ForEach(NoteReminder.choices, id: \.self) { minutes in
+                let on = chosen.contains(minutes)
+                Button {
+                    var next = Set(chosen)
+                    if on { next.remove(minutes) } else { next.insert(minutes) }
+                    write(.reminders(Array(next)))
+                } label: {
+                    HStack {
+                        Text(Self.reminderTitle(minutes)).foregroundStyle(Atelier.textPrimary)
+                        Spacer()
+                        if on { Image(systemName: "checkmark").foregroundStyle(Atelier.Tint.read) }
+                    }
+                    .contentShape(Rectangle())
+                }
+                .disabled(!on && chosen.count >= NoteReminder.maxPerNote)
+                .accessibilityAddTraits(on ? .isSelected : [])
+            }
+        } header: {
+            Text("Rappels")
+        } footer: {
+            Text(o.dueMinute == nil
+                 ? String(localized: "Trois rappels au plus. Sans heure précise, l'échéance compte pour \(Self.timeText(defaultDueMinute)).")
+                 : String(localized: "Trois rappels au plus. Une notification d'iOS arrive à chaque rappel."))
+        }
+    }
+
+    /// Heure par défaut d'une échéance (Réglages › Notes), en minutes depuis minuit.
+    @AppStorage(NoteSettingsView.defaultDueMinuteKey) private var defaultDueMinute = NoteReminder.defaultDueMinute
+    static let defaultDueMinuteKey = "notes.defaultDueMinute"
+
+    static func reminderTitle(_ minutes: Int) -> String {
+        switch minutes {
+        case 0: return String(localized: "À l'heure de l'échéance")
+        case 15: return String(localized: "15 minutes avant")
+        case 60: return String(localized: "1 heure avant")
+        case 1_440: return String(localized: "1 jour avant")
+        case 2_880: return String(localized: "2 jours avant")
+        default: return String(localized: "1 semaine avant")
+        }
+    }
+
+    static func time(_ minute: Int) -> Date {
+        NoteDay.calendar.date(bySettingHour: minute / 60, minute: minute % 60, second: 0, of: Date()) ?? Date()
+    }
+
+    static func minute(of date: Date) -> Int {
+        let c = NoteDay.calendar.dateComponents([.hour, .minute], from: date)
+        return (c.hour ?? 0) * 60 + (c.minute ?? 0)
+    }
+
+    static func timeText(_ minute: Int) -> String {
+        time(minute).formatted(date: .omitted, time: .shortened)
     }
 
     @ViewBuilder

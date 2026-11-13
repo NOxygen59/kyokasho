@@ -192,7 +192,7 @@ extension BackupRoundTripTests {
     }
 
     /// C1 — base `AppDatabase` au schéma `v3-page-one` (avant `v4-note-canvas-anchor`), sauvegardée et restaurée :
-    /// l'app actuelle l'ouvre, applique `v4`, `v5`, `v6` (dossiers) et `v7` (rangement des notes) et relit notes, repères et OCR, puis écrit une note ancrée.
+    /// l'app actuelle l'ouvre, applique `v4`, `v5`, `v6` (dossiers), `v7` (rangement des notes) et `v8` (rappels) et relit notes, repères et OCR, puis écrit une note ancrée.
     func testC1OlderAppDatabaseSchemaRestoresAndMigrates() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("kyokasho-old-schema-test-" + UUID().uuidString)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
@@ -211,6 +211,8 @@ extension BackupRoundTripTests {
         try database.writer.close()
         // Revenir au schéma v3 : colonnes et tables de v4 à v7 retirées et migrations oubliées, comme une base jamais migrée.
         try sqlite(path, """
+            ALTER TABLE pageComment DROP COLUMN dueMinute; ALTER TABLE pageComment DROP COLUMN reminders;
+            DELETE FROM grdb_migrations WHERE identifier = 'v8-note-reminders';
             DROP INDEX pageComment_due; ALTER TABLE pageComment DROP COLUMN dueDay;
             ALTER TABLE pageComment DROP COLUMN priority; ALTER TABLE pageComment DROP COLUMN archived;
             ALTER TABLE pageComment DROP COLUMN noteFolderId; ALTER TABLE pageComment DROP COLUMN tagIds;
@@ -256,6 +258,8 @@ extension BackupRoundTripTests {
         XCTAssertTrue(try sqliteRows(restored, "SELECT identifier FROM grdb_migrations").contains("v5-document-category"))
         XCTAssertTrue(try sqliteRows(restored, "SELECT identifier FROM grdb_migrations").contains("v6-folders"))
         XCTAssertTrue(try sqliteRows(restored, "SELECT identifier FROM grdb_migrations").contains("v7-note-organization"))
+        // v8 (PLAN-NOTIF-001) : sans heure, rappel par défaut (`.default` ci-dessus le vérifie déjà).
+        XCTAssertTrue(try sqliteRows(restored, "SELECT identifier FROM grdb_migrations").contains("v8-note-reminders"))
     }
 
     // MARK: SQLite direct (sans dépendance supplémentaire à GRDB dans cette cible)
