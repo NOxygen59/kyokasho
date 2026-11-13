@@ -27,6 +27,9 @@ final class LocalModelsTests: XCTestCase {
         for file in LocalModels.requiredFiles where file != "config.json" && file != skip {
             try "{}".write(to: folder.appendingPathComponent(file), atomically: true, encoding: .utf8)
         }
+        if skip != "chat_template.jinja" {
+            try "{{ messages }}".write(to: folder.appendingPathComponent("chat_template.jinja"), atomically: true, encoding: .utf8)
+        }
         if let shards {
             let map = Dictionary(uniqueKeysWithValues: shards.map { ("w.\($0)", $0) })
             let index = try JSONSerialization.data(withJSONObject: ["weight_map": map])
@@ -109,10 +112,46 @@ final class LocalModelsTests: XCTestCase {
         XCTAssertTrue(LocalModels.installed(in: models).isEmpty)
     }
 
-    func testCopyNeedsEnoughSpace() {
-        // Le déplacement est testé plus haut ; ici, la règle de place pour une copie (taille + 10 %).
-        XCTAssertEqual(LocalModels.ImportError.notEnoughSpace(needed: 110, free: 50),
-                       .notEnoughSpace(needed: 110, free: 50))
+    /// Revue R2 E2 (C6, C11) : déplacement refusé (dossier parent en lecture seule) → copie, seulement si la place
+    /// suffit ; place inconnue → rien n'est lancé ; l'original reste toujours en place.
+    func testCopyWhenMoveIsRefusedChecksTheSpace() throws {
+        let parent = root.appendingPathComponent("lecture-seule", isDirectory: true)
+        try FileManager.default.createDirectory(at: parent, withIntermediateDirectories: true)
+        let folder = parent.appendingPathComponent("Copie")
+        try FileManager.default.moveItem(at: try fakeModel("Copie"), to: folder)
+        try FileManager.default.setAttributes([.posixPermissions: 0o555], ofItemAtPath: parent.path)
+        defer { try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: parent.path) }
+        XCTAssertThrowsError(try LocalModels.install(folder, into: models, available: { 10 })) {
+            guard case .notEnoughSpace = $0 as? LocalModels.ImportError else { return XCTFail("\($0)") }
+        }
+        XCTAssertTrue(LocalModels.installed(in: models).isEmpty)
+        let (_, method) = try LocalModels.install(folder, into: models, available: { 1 << 40 })
+        XCTAssertEqual(method, .copied)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: folder.appendingPathComponent("model.safetensors").path), "original intact")
+        XCTAssertEqual(LocalModels.installed(in: models).count, 1)
+        XCTAssertFalse(((try? FileManager.default.contentsOfDirectory(atPath: models.path)) ?? []).contains { $0.hasPrefix(".import-") },
+                       "aucune préparation laissée")
+    }
+
+    /// Revue R2 E2 (C3, C5, C7, C14) : poids vides refusés, noms japonais distincts, local.json et liens refusés.
+    func testWeightsNamesAndSpecialFiles() throws {
+        let empty = try fakeModel("Vide")
+        try Data().write(to: empty.appendingPathComponent("model.safetensors"))
+        XCTAssertThrowsError(try LocalModels.validate(empty)) {
+            guard case .badWeights = $0 as? LocalModels.ImportError else { return XCTFail("\($0)") }
+        }
+        XCTAssertNotEqual(LocalModels.id(for: "模型A"), LocalModels.id(for: "模型B"))
+        XCTAssertEqual(LocalModels.id(for: "Qwen3.5-4B"), "local-qwen3.5-4b", "nom ASCII : identifiant lisible, sans empreinte")
+        let info = try fakeModel("Info")
+        try "{}".write(to: info.appendingPathComponent("local.json"), atomically: true, encoding: .utf8)
+        XCTAssertThrowsError(try LocalModels.validate(info)) { XCTAssertEqual($0 as? LocalModels.ImportError, .alreadyHasInfo) }
+        let linked = try fakeModel("Lien")
+        try FileManager.default.removeItem(at: linked.appendingPathComponent("model.safetensors"))
+        try FileManager.default.createSymbolicLink(at: linked.appendingPathComponent("model.safetensors"),
+                                                   withDestinationURL: empty.appendingPathComponent("config.json"))
+        XCTAssertThrowsError(try LocalModels.validate(linked)) {
+            XCTAssertEqual($0 as? LocalModels.ImportError, .symbolicLink("model.safetensors"))
+        }
     }
 
     /// Essai manuel sur un vrai modèle converti (`KYOKASHO_LOCAL_MODEL_DIR`) : vérification seule, rien n'est déplacé.

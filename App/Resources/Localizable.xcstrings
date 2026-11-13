@@ -1,6 +1,248 @@
 {
   "sourceLanguage": "fr",
   "strings": {
+    "Poids du modèle incomplets : %@.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Model weights incomplete: %@."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Poids du modèle incomplets : %@."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "模型权重不完整：%@。"
+          }
+        }
+      }
+    },
+    "Ce dossier contient déjà un fichier local.json : choisis le dossier d'origine du modèle.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This folder already contains a local.json file: choose the model's original folder."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce dossier contient déjà un fichier local.json : choisis le dossier d'origine du modèle."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此文件夹已包含 local.json 文件：请选择模型的原始文件夹。"
+          }
+        }
+      }
+    },
+    "Place libre inconnue : la copie n'est pas lancée. Place le dossier dans « Sur mon iPad » pour qu'il soit déplacé.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Free space unknown: the copy is not started. Put the folder in “On My iPad” so it can be moved."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Place libre inconnue : la copie n'est pas lancée. Place le dossier dans « Sur mon iPad » pour qu'il soit déplacé."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可用空间未知：未开始复制。请将文件夹放到“我的 iPad”中以便移动。"
+          }
+        }
+      }
+    },
+    "« %@ » est un lien, pas un vrai fichier : copie le modèle complet dans le dossier.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@” is a link, not a real file: copy the complete model into the folder."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "« %@ » est un lien, pas un vrai fichier : copie le modèle complet dans le dossier."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“%@”是链接而非真实文件：请将完整模型复制到文件夹中。"
+          }
+        }
+      }
+    },
+    "index des poids illisible ou vide": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "weight index unreadable or empty"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "index des poids illisible ou vide"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "权重索引无法读取或为空"
+          }
+        }
+      }
+    },
+    "une partie des poids est vide": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "part of the weights is empty"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "une partie des poids est vide"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "部分权重为空"
+          }
+        }
+      }
+    },
+    "%1$lld octets pour %2$lld annoncés": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld bytes for %2$lld announced"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld octets pour %2$lld annoncés"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld 字节，标称 %2$lld"
+          }
+        }
+      }
+    },
+    "model.safetensors est vide": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "model.safetensors is empty"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "model.safetensors est vide"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "model.safetensors 为空"
+          }
+        }
+      }
+    },
+    "Ce modèle est en cours d'utilisation : ferme le chat, puis supprime-le.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This model is in use: close the chat, then delete it."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce modèle est en cours d'utilisation : ferme le chat, puis supprime-le."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "此模型正在使用：请先关闭聊天，再删除。"
+          }
+        }
+      }
+    },
+    "Import interrompu retrouvé : ton dossier est dans Fichiers › Sur mon iPad › Kyōkasho › Modèles récupérés.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Interrupted import found: your folder is in Files › On My iPad › Kyōkasho › Recovered models."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import interrompu retrouvé : ton dossier est dans Fichiers › Sur mon iPad › Kyōkasho › Modèles récupérés."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "发现中断的导入：你的文件夹在“文件 › 我的 iPad › Kyōkasho › 已恢复的模型”中。"
+          }
+        }
+      }
+    },
+    "Choisis le dossier d'un modèle MLX de la famille Qwen3.5. Il est vérifié, puis déplacé dans l'app (pas de double place) ; copié seulement si iOS refuse le déplacement. Il apparaît ensuite dans le choix du modèle du chat.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choose the folder of an MLX model of the Qwen3.5 family. It is checked, then moved into the app (no double space); copied only if iOS refuses the move. It then appears in the chat's model choice."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Choisis le dossier d'un modèle MLX de la famille Qwen3.5. Il est vérifié, puis déplacé dans l'app (pas de double place) ; copié seulement si iOS refuse le déplacement. Il apparaît ensuite dans le choix du modèle du chat."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "选择一个 Qwen3.5 系列 MLX 模型的文件夹。先检查，再移入应用（不占双倍空间）；仅在 iOS 拒绝移动时才复制。之后它会出现在聊天的模型选择中。"
+          }
+        }
+      }
+    },
     "Import en cours…": {
       "localizations": {
         "en": {

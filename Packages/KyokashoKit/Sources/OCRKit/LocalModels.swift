@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 NOxygen59
 
+import CryptoKit
 import Foundation
 
 /// Modèles MLX importés à la main par NOxygen59 (PLAN-MODLOC-001, E2 ; DEC-05 = A et avenant AV-MODLOC-01, décidés le
@@ -17,8 +18,10 @@ import Foundation
 public enum LocalModels {
     /// Architectures que la fabrique MLX de l'app sait charger pour le chat (au départ, la famille Qwen3.5).
     public static let supportedTypes: Set<String> = ["qwen3_5"]
-    /// Fichiers indispensables au chargement (mêmes que le Qwen3.5 officiel, hors poids).
-    public static let requiredFiles = ["config.json", "tokenizer.json", "tokenizer_config.json", "preprocessor_config.json"]
+    /// Fichiers indispensables au chargement par la fabrique MLX de l'app (revue R2 E2, C2) ; le gabarit de conversation
+    /// peut aussi se trouver dans `tokenizer_config.json` (`chat_template`), voir `validate`.
+    public static let requiredFiles = ["config.json", "tokenizer.json", "tokenizer_config.json", "preprocessor_config.json",
+                                       "processor_config.json"]
     static let prefix = "local-"
     static let infoFile = "local.json"
     static let stagingPrefix = ".import-"
@@ -50,6 +53,7 @@ public enum LocalModels {
     public enum ImportError: LocalizedError, Equatable {
         case unreadableConfig, unsupported(String), missing([String]), alreadyInstalled(String), notEnoughSpace(needed: Int64, free: Int64)
         case keptAside(String)
+        case badWeights(String), alreadyHasInfo, unknownFreeSpace, symbolicLink(String)
 
         public var errorDescription: String? {
             switch self {
@@ -61,6 +65,14 @@ public enum LocalModels {
                 return String(localized: "Fichiers manquants : \(files.joined(separator: ", ")).", bundle: .main)
             case .alreadyInstalled(let name):
                 return String(localized: "Un modèle « \(name) » est déjà installé : supprime-le d'abord.", bundle: .main)
+            case .badWeights(let detail):
+                return String(localized: "Poids du modèle incomplets : \(detail).", bundle: .main)
+            case .alreadyHasInfo:
+                return String(localized: "Ce dossier contient déjà un fichier local.json : choisis le dossier d'origine du modèle.", bundle: .main)
+            case .unknownFreeSpace:
+                return String(localized: "Place libre inconnue : la copie n'est pas lancée. Place le dossier dans « Sur mon iPad » pour qu'il soit déplacé.", bundle: .main)
+            case .symbolicLink(let name):
+                return String(localized: "« \(name) » est un lien, pas un vrai fichier : copie le modèle complet dans le dossier.", bundle: .main)
             case .keptAside(let path):
                 return String(localized: "Import interrompu : ton dossier est gardé dans \(path).", bundle: .main)
             case .notEnoughSpace(let needed, let free):
@@ -76,22 +88,55 @@ public enum LocalModels {
     /// complets (fichier unique, ou toutes les parties citées par `model.safetensors.index.json`).
     public static func validate(_ folder: URL) throws -> Candidate {
         let fm = FileManager.default
-        guard let data = try? Data(contentsOf: folder.appendingPathComponent("config.json")),
+        func file(_ name: String) -> URL { folder.appendingPathComponent(name) }
+        func size(_ name: String) -> Int64? {
+            let values = try? file(name).resourceValues(forKeys: [.fileSizeKey, .isSymbolicLinkKey, .isRegularFileKey])
+            guard values?.isRegularFile == true else { return nil }
+            return Int64(values?.fileSize ?? 0)
+        }
+        guard let data = try? Data(contentsOf: file("config.json")),
               let config = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { throw ImportError.unreadableConfig }
-        let type = config["model_type"] as? String ?? ""
+        // Revue R2 E2 (C9) : certains convertisseurs ne mettent le type que dans `text_config`.
+        let type = (config["model_type"] as? String) ?? ((config["text_config"] as? [String: Any])?["model_type"] as? String) ?? ""
         guard supportedTypes.contains(type) else { throw ImportError.unsupported(type.isEmpty ? "?" : type) }
-        var missing = requiredFiles.filter { !fm.fileExists(atPath: folder.appendingPathComponent($0).path) }
-        let index = folder.appendingPathComponent("model.safetensors.index.json")
-        if let indexData = try? Data(contentsOf: index),
-           let json = try? JSONSerialization.jsonObject(with: indexData) as? [String: Any],
-           let map = json["weight_map"] as? [String: String] {
-            missing += Set(map.values).sorted().filter { !fm.fileExists(atPath: folder.appendingPathComponent($0).path) }
-        } else if !fm.fileExists(atPath: folder.appendingPathComponent("model.safetensors").path) {
+        // C7 : un `local.json` déjà présent serait écrasé ; C14 : un lien arriverait cassé après une copie.
+        guard !fm.fileExists(atPath: file(infoFile).path) else { throw ImportError.alreadyHasInfo }
+        for name in (try? fm.contentsOfDirectory(atPath: folder.path)) ?? [] where !name.hasPrefix(".") {
+            if (try? file(name).resourceValues(forKeys: [.isSymbolicLinkKey]))?.isSymbolicLink == true {
+                throw ImportError.symbolicLink(name)
+            }
+        }
+        var missing = requiredFiles.filter { size($0) == nil }
+        let template = (try? Data(contentsOf: file("tokenizer_config.json")))
+            .flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }?["chat_template"] != nil
+        if !template && size("chat_template.jinja") == nil && size("chat_template.json") == nil { missing.append("chat_template.jinja") }
+        // C3 : poids entiers = chaque fichier présent et non vide, et, avec un index, toutes ses parties au moins aussi
+        // grosses que la taille annoncée (`metadata.total_size`, en-têtes en plus).
+        if fm.fileExists(atPath: file("model.safetensors.index.json").path) {
+            guard let indexData = try? Data(contentsOf: file("model.safetensors.index.json")),
+                  let json = try? JSONSerialization.jsonObject(with: indexData) as? [String: Any],
+                  let map = json["weight_map"] as? [String: String], !map.isEmpty else {
+                throw ImportError.badWeights(String(localized: "index des poids illisible ou vide", bundle: .main))
+            }
+            let parts = Set(map.values).sorted()
+            missing += parts.filter { size($0) == nil }
+            if missing.isEmpty {
+                let total = parts.compactMap { size($0) }.reduce(0, +)
+                if parts.contains(where: { size($0) == 0 }) {
+                    throw ImportError.badWeights(String(localized: "une partie des poids est vide", bundle: .main))
+                }
+                if let announced = (json["metadata"] as? [String: Any])?["total_size"] as? NSNumber, total < announced.int64Value {
+                    throw ImportError.badWeights(String(localized: "\(total) octets pour \(announced.int64Value) annoncés", bundle: .main))
+                }
+            }
+        } else if let weights = size("model.safetensors") {
+            if weights == 0 { throw ImportError.badWeights(String(localized: "model.safetensors est vide", bundle: .main)) }
+        } else {
             missing.append("model.safetensors")
         }
         guard missing.isEmpty else { throw ImportError.missing(missing) }
         let name = folder.lastPathComponent
-        return Candidate(id: id(for: name), name: name, modelType: type, size: try size(of: folder))
+        return Candidate(id: id(for: name), name: name, modelType: type, size: try Self.size(of: folder))
     }
 
     /// Identifiant stable et sûr pour un nom de dossier : `local-` + lettres, chiffres, `.`, `_`, `-` (le reste devient `-`).
@@ -100,7 +145,12 @@ public enum LocalModels {
         let folded = name.folding(options: [.diacriticInsensitive, .widthInsensitive], locale: Locale(identifier: "en"))
         let cleaned = String(folded.unicodeScalars.map { $0.isASCII && allowed.contains($0) ? Character($0) : "-" })
             .trimmingCharacters(in: CharacterSet(charactersIn: ".-"))
-        return prefix + String((cleaned.isEmpty ? "modele" : cleaned).prefix(80)).lowercased()
+        // Revue R2 E2 (C5) : un nom qui garde des caractères non latins (japonais, emoji) reçoit une courte empreinte
+        // du nom d'origine, pour que deux dossiers différents ne donnent jamais le même identifiant.
+        let base = String((cleaned.isEmpty ? "modele" : cleaned).prefix(80)).lowercased()
+        guard folded.unicodeScalars.contains(where: { !$0.isASCII }) else { return prefix + base }
+        let digest = SHA256.hash(data: Data(name.precomposedStringWithCanonicalMapping.utf8))
+        return prefix + base + "-" + digest.prefix(4).map { String(format: "%02x", $0) }.joined()
     }
 
     // MARK: Installation
@@ -130,9 +180,8 @@ public enum LocalModels {
             } catch {
                 // Déplacement refusé (autre fournisseur, iCloud, droits) : copie, seulement si la place suffit.
                 let needed = candidate.size + candidate.size / 10
-                if let free = available() ?? freeSpace(at: root), free < needed {
-                    throw ImportError.notEnoughSpace(needed: needed, free: free)
-                }
+                guard let free = available() ?? freeSpace(at: root) else { throw ImportError.unknownFreeSpace }
+                if free < needed { throw ImportError.notEnoughSpace(needed: needed, free: free) }
                 // Marque « copie » : seul ce genre de préparation peut être effacé au lancement (`removeLeftovers`).
                 try Data().write(to: staging.appendingPathComponent(copyMarker))
                 try fm.copyItem(at: folder, to: prepared)
@@ -249,8 +298,10 @@ public enum LocalModels {
     /// Préparations laissées par une app tuée pendant un import (au lancement) : une **copie** inachevée est effacée
     /// (l'original est resté à sa place) ; un dossier **déplacé** n'est jamais effacé, il est rendu visible comme
     /// dossier `Modèle-récupéré-…` dans `root` pour que NOxygen59 le retrouve. Renvoie les dossiers récupérés.
+    /// `recoverTo` : dossier où rendre un dossier déplacé (l'app y met `Documents/Modèles récupérés`, visible dans Fichiers,
+    /// revue R2 E2 C4) ; par défaut `root`.
     @discardableResult
-    public static func removeLeftovers(in root: URL) -> [URL] {
+    public static func removeLeftovers(in root: URL, recoverTo: URL? = nil) -> [URL] {
         let fm = FileManager.default
         var recovered: [URL] = []
         defer { invalidate(root) }
@@ -262,7 +313,9 @@ public enum LocalModels {
             }
             for moved in (try? fm.contentsOfDirectory(at: staging, includingPropertiesForKeys: nil)) ?? [] {
                 try? fm.removeItem(at: moved.appendingPathComponent(infoFile))
-                let target = root.appendingPathComponent("Modèle-récupéré-" + moved.lastPathComponent, isDirectory: true)
+                let destination = recoverTo ?? root
+                try? fm.createDirectory(at: destination, withIntermediateDirectories: true)
+                let target = destination.appendingPathComponent("Modèle-récupéré-" + moved.lastPathComponent, isDirectory: true)
                 if (try? fm.moveItem(at: moved, to: target)) != nil { recovered.append(target) }
             }
             // Effacé seulement s'il est vide : ce qui n'a pas pu être rendu reste tel quel.
