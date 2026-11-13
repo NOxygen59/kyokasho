@@ -117,7 +117,9 @@ public enum NoteReminder {
                                  calendar: Calendar = NoteDay.calendar) -> [Date] {
         guard let due = dueDate(day: day, minute: minute, defaultMinute: defaultMinute, calendar: calendar) else { return [] }
         return (canonical(reminders) ?? canonical(defaultReminders) ?? [])
-            .map { due.addingTimeInterval(-Double($0) * 60) }
+            // Revue R2 NOTIF (n°3) : les jours se comptent dans le calendrier (changement d'heure), les minutes en temps.
+            .compactMap { $0 % 1_440 == 0 && $0 > 0 ? calendar.date(byAdding: .day, value: -$0 / 1_440, to: due)
+                                                    : due.addingTimeInterval(-Double($0) * 60) }
             .filter { $0 > now }
             .sorted()
     }
@@ -453,7 +455,10 @@ extension AppDatabase {
 
     /// Rappels lus en base : `nil` si la colonne est vide ou illisible (rappel par défaut), sinon forme canonique.
     static func decodeMinutes(_ raw: String?) -> [Int]? {
-        guard let data = raw?.data(using: .utf8), let list = try? JSONDecoder().decode([Int].self, from: data) else { return nil }
+        guard let raw else { return nil }
+        // Revue R2 NOTIF (n°4) : une valeur abîmée vaut « aucun rappel », jamais le rappel par défaut (des
+        // notifications coupées ne reviennent pas toutes seules).
+        guard let list = try? JSONDecoder().decode([Int].self, from: Data(raw.utf8)) else { return [] }
         return NoteReminder.canonical(list)
     }
 

@@ -63,7 +63,11 @@ enum NoteNotifications {
 
     /// Reprogramme tous les rappels de notes (les autres notifications de l'app ne sont pas touchées).
     static func reschedule(database: AppDatabase, titles: [String: String], excluded: Set<String>) {
+        // Revue R2 NOTIF (n°1) : bibliothèque pas encore lue (lancement) : on ne touche à rien, sinon tous les rappels
+        // seraient retirés faute de titres.
+        guard !titles.isEmpty else { return }
         let defaultMinute = defaultDueMinute, reminders = defaultReminders
+        let generation = Generation.next()
         Task.detached(priority: .utility) {
             let notes: [OrganizedNote]
             do { notes = try database.organizedNotes(includeArchived: false, excludingDocuments: excluded) } catch {
@@ -72,6 +76,8 @@ enum NoteNotifications {
             }
             let planned = plan(notes, titles: titles, now: Date(), defaultMinute: defaultMinute, defaultReminders: reminders)
             let center = UNUserNotificationCenter.current()
+            // Deux reprogrammations de suite : seule la dernière écrit (pas de rappels en double ni retirés à tort).
+            guard Generation.isCurrent(generation) else { return }
             let old = await center.pendingNotificationRequests().map(\.identifier).filter { $0.hasPrefix(prefix) }
             center.removePendingNotificationRequests(withIdentifiers: old)
             guard !planned.isEmpty else { return }
@@ -79,6 +85,7 @@ enum NoteNotifications {
                 _ = try? await center.requestAuthorization(options: [.alert, .sound])
             }
             for item in planned {
+                guard Generation.isCurrent(generation) else { return }
                 let content = UNMutableNotificationContent()
                 content.title = item.title
                 content.body = item.body
@@ -96,6 +103,15 @@ enum NoteNotifications {
     }
 }
 
+/// Numéro de la dernière reprogrammation demandée (revue R2 NOTIF n°1).
+private enum Generation {
+    private static let lock = NSLock()
+    private static var current = 0
+
+    static func next() -> Int { lock.lock(); defer { lock.unlock() }; current += 1; return current }
+    static func isCurrent(_ value: Int) -> Bool { lock.lock(); defer { lock.unlock() }; return value == current }
+}
+
 /// Toucher une notification de note ouvre le livre à sa page (PLAN-NOTIF-001, E4) ; dans l'app, la bannière s'affiche
 /// quand même.
 final class NoteNotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
@@ -105,7 +121,7 @@ final class NoteNotificationDelegate: NSObject, UNUserNotificationCenterDelegate
         didSet {
             guard let model, let pending else { return }
             self.pending = nil
-            Task { @MainActor in model.openNote(documentId: pending.documentId, noteId: pending.noteId) }
+            DispatchQueue.main.async { model.openNote(documentId: pending.documentId, noteId: pending.noteId) }
         }
     }
     private var pending: (documentId: String, noteId: String)?
@@ -119,10 +135,13 @@ final class NoteNotificationDelegate: NSObject, UNUserNotificationCenterDelegate
                                 withCompletionHandler completionHandler: @escaping () -> Void) {
         let info = response.notification.request.content.userInfo
         if let noteId = info["noteId"] as? String, let documentId = info["documentId"] as? String {
-            if let model {
-                Task { @MainActor in model.openNote(documentId: documentId, noteId: noteId) }
-            } else {
-                pending = (documentId, noteId)
+            // Revue R2 NOTIF (n°7) : `model` et `pending` ne sont lus et écrits que sur le fil principal.
+            DispatchQueue.main.async {
+                if let model = self.model {
+                    model.openNote(documentId: documentId, noteId: noteId)
+                } else {
+                    self.pending = (documentId, noteId)
+                }
             }
         }
         completionHandler()

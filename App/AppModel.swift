@@ -40,6 +40,8 @@ final class AppModel: ObservableObject {
     /// Note à montrer à l'ouverture d'un livre depuis l'écran « Notes » : le lecteur de ce document va à sa page et
     /// fait clignoter son ancre, puis remet la demande à `nil`.
     @Published var noteJump: NoteJump?
+    /// Note d'une notification touchée avant le chargement de la bibliothèque (revue R2 NOTIF n°2).
+    private var noteToOpenWhenLoaded: NoteJump?
 
     struct NoteJump: Equatable {
         let documentId: String
@@ -194,6 +196,11 @@ final class AppModel: ObservableObject {
                     self.pendingDocuments = nil
                     self.documents = list
                 }
+                // Revue R2 NOTIF (n°2) : notification touchée app fermée, rejouée une fois la bibliothèque chargée.
+                if let waiting = self.noteToOpenWhenLoaded, !list.isEmpty {
+                    self.noteToOpenWhenLoaded = nil
+                    self.openNote(documentId: waiting.documentId, noteId: waiting.noteId)
+                }
                 // C1.3 : un document disparu (corbeille, suppression ailleurs) n'a plus d'onglet.
                 self.tabs.keep(only: Set(list.map(\.id)))
             }
@@ -217,6 +224,12 @@ final class AppModel: ObservableObject {
         refreshPrintedNumbers()
         // Lexique du domaine lu tout de suite : la relecture de l'OCR (hors du fil principal) s'en sert.
         _ = DomainLexicon.shared
+    }
+
+    /// Pastille et rappels de notes relus **après** les écritures déjà en file (revue R2 NOTIF n°5, n°6 : note supprimée
+    /// ou modifiée dans le lecteur, sinon la notification partait avec l'ancien texte).
+    func refreshNotesAfterPendingWrites() {
+        ioQueue.async { Task { @MainActor in self.refreshNotesToReview() } }
     }
 
     func persist(_ work: @escaping @Sendable (AppDatabase) throws -> Void) {
@@ -564,6 +577,11 @@ final class AppModel: ObservableObject {
 
     /// Ouvre la note d'une notification (PLAN-NOTIF-001, E4) : livre à sa page, ancre qui clignote.
     func openNote(documentId: String, noteId: String) {
+        // Lancement à froid : la bibliothèque n'est pas encore lue ; la note s'ouvrira dès qu'elle l'est.
+        if documents.isEmpty && trashedDocuments.isEmpty {
+            noteToOpenWhenLoaded = NoteJump(documentId: documentId, noteId: noteId)
+            return
+        }
         guard documents.contains(where: { $0.id == documentId }) else {
             // Revue DeepSeek F3 : le livre est à la corbeille ou a été supprimé entre-temps.
             lastError = String(localized: "Le livre de cette note n'est plus dans la bibliothèque (corbeille ?).")

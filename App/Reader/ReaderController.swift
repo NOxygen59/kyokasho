@@ -41,7 +41,11 @@ final class ReaderController: NSObject, ObservableObject {
     @Published var bookmarks: [Bookmark] = []
     @Published var tappedHighlight: Highlight?
     /// Note ouverte dans la fenêtre flottante.
-    @Published var openNote: PageComment?
+    @Published var openNote: PageComment? {
+        // Fenêtre de note fermée ou changée : rappels reprogrammés avec le texte enregistré (revue R2 NOTIF n°6),
+        // pas à chaque mot tapé.
+        didSet { if let old = oldValue, old.id != openNote?.id { model.refreshNotesAfterPendingWrites() } }
+    }
     /// Note qui attend son ancre : le prochain toucher sur la page la pose.
     @Published var placingAnchorFor: PageComment?
     /// Notes du document (ancres affichées sur les pages).
