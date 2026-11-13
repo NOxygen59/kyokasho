@@ -55,9 +55,23 @@ struct NotesView: View {
                         Text("Archivées").tag(true)
                     }
                     .pickerStyle(.segmented)
-                    if filter.folderId != nil || filter.tagId != nil || filter.priority != nil || filter.documentId != nil {
-                        Button("Retirer les filtres") {
-                            filter = NoteListing.Filter(text: filter.text, archived: filter.archived)
+                    // Recette 1.5.7 (4.1) : ce qu'on regarde se lit d'un coup d'œil (combien, quels filtres).
+                    if loaded, loadError == nil {
+                        Text(summary).font(Atelier.font(13)).foregroundStyle(Atelier.textSecondary)
+                    }
+                    if !activeFilters.isEmpty {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 6) {
+                                ForEach(activeFilters, id: \.label) { chip in
+                                    Button { chip.clear() } label: {
+                                        Label(chip.label, systemImage: "xmark.circle.fill").font(Atelier.font(12, weight: .medium))
+                                            .padding(.horizontal, 10).padding(.vertical, 5)
+                                            .background(Atelier.Tint.read.opacity(0.15), in: Capsule())
+                                    }
+                                    .buttonStyle(.plain)
+                                    .accessibilityLabel(String(localized: "Retirer le filtre \(chip.label)"))
+                                }
+                            }
                         }
                     }
                 }
@@ -71,10 +85,12 @@ struct NotesView: View {
                     Text(actionError).foregroundStyle(.red)
                 }
                 ForEach(sections, id: \.group) { section in
-                    Section(Self.title(section.group)) {
+                    Section {
                         ForEach(section.notes) { item in
                             noteRow(item)
                         }
+                    } header: {
+                        sectionHeader(section)
                     }
                 }
             }
@@ -245,50 +261,102 @@ struct NotesView: View {
         }
     }
 
+    /// Ligne d'une note (recette 1.5.7, 4.1) : trait de couleur de la priorité, texte, livre et page, **date et heure**,
+    /// échéance en pastille, classeur et étiquettes en pastilles.
     private func row(_ item: OrganizedNote) -> some View {
         let note = item.note, o = item.organization
         let document = model.documents.first { $0.id == note.documentId }
         let group = NoteListing.group(dueDay: o.dueDay, today: Date())
         return HStack(alignment: .top, spacing: 10) {
-            Image(systemName: o.priority == .high ? "exclamationmark.circle.fill" : o.priority == .low ? "arrow.down.circle" : "note.text")
-                .foregroundStyle(o.priority == .high ? Atelier.Tint.annotate : Atelier.textTertiary)
-                .frame(width: 22)
+            RoundedRectangle(cornerRadius: 2)
+                .fill(o.priority == .high ? Atelier.Tint.annotate : o.priority == .low ? Atelier.textTertiary.opacity(0.4) : Color.clear)
+                .frame(width: 4)
                 .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 4) {
-                if o.priority != .normal {
-                    Text(Self.title(o.priority)).font(Atelier.font(11, weight: .semibold))
-                        .foregroundStyle(o.priority == .high ? Atelier.Tint.annotate : Atelier.textTertiary)
-                }
+            VStack(alignment: .leading, spacing: 5) {
                 Text(Self.firstLine(note)).font(Atelier.font(16, weight: .semibold)).foregroundStyle(Atelier.textPrimary).lineLimit(2)
-                HStack(spacing: 6) {
-                    if let document {
-                        Text(String(localized: "\(document.title) · p. \(document.pageLabel(note.pageIndex))"))
-                            .lineLimit(1)
-                    }
-                    if let due = o.dueDay {
-                        Text(Self.dueLabel(due))
-                            .foregroundStyle(group == .overdue ? Color.red : group == .today ? Atelier.Tint.annotate : Atelier.textSecondary)
-                    }
+                if let document {
+                    Label(String(localized: "\(document.title) · p. \(document.pageLabel(note.pageIndex))"), systemImage: "book.closed")
+                        .font(Atelier.font(13)).foregroundStyle(Atelier.textSecondary).lineLimit(1)
                 }
-                .font(Atelier.font(13)).foregroundStyle(Atelier.textSecondary)
-                let labels = labels(for: o)
-                if !labels.isEmpty {
-                    Text(labels).font(Atelier.font(12, weight: .medium)).foregroundStyle(Atelier.Tint.read).lineLimit(1)
+                Label(Self.dateLabel(note), systemImage: "clock")
+                    .font(Atelier.font(12)).foregroundStyle(Atelier.textTertiary)
+                let chips = chips(for: o)
+                if o.dueDay != nil || o.priority != .normal || !chips.isEmpty {
+                    HStack(spacing: 6) {
+                        if let due = o.dueDay {
+                            chip(Self.dueLabel(due), icon: "calendar",
+                                 tint: group == .overdue ? .red : group == .today ? Atelier.Tint.annotate : Atelier.textSecondary)
+                        }
+                        if o.priority != .normal {
+                            chip(Self.title(o.priority), icon: o.priority == .high ? "exclamationmark" : "arrow.down",
+                                 tint: o.priority == .high ? Atelier.Tint.annotate : Atelier.textSecondary)
+                        }
+                        ForEach(chips, id: \.self) { chip($0, icon: nil, tint: Atelier.Tint.read) }
+                    }
+                    .lineLimit(1)
                 }
             }
             Spacer(minLength: 0)
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, 4)
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
     }
 
-    /// Classeur puis étiquettes, sur une ligne.
-    private func labels(for o: NoteOrganization) -> String {
+    private func chip(_ text: String, icon: String?, tint: Color) -> some View {
+        Group {
+            if let icon { Label(text, systemImage: icon) } else { Text(text) }
+        }
+        .font(Atelier.font(11, weight: .semibold)).foregroundStyle(tint)
+        .padding(.horizontal, 8).padding(.vertical, 3)
+        .background(tint.opacity(0.12), in: Capsule())
+    }
+
+    /// Classeur puis étiquettes, chacun en pastille.
+    private func chips(for o: NoteOrganization) -> [String] {
         var parts: [String] = []
         if let folder = folders.first(where: { $0.id == o.folderId }) { parts.append("▸ " + folder.name) }
-        parts += tags.filter { o.tagIds.contains($0.id) }.map { "#" + $0.name }
-        return parts.joined(separator: "  ")
+        return parts + tags.filter { o.tagIds.contains($0.id) }.map { "#" + $0.name }
+    }
+
+    /// En-tête de groupe : icône, nom, nombre de notes ; en retard en rouge.
+    private func sectionHeader(_ section: NoteListing.Section) -> some View {
+        let (icon, tint): (String, Color) = switch section.group {
+        case .overdue: ("exclamationmark.triangle.fill", .red)
+        case .today: ("sun.max.fill", Atelier.Tint.annotate)
+        case .tomorrow: ("sunrise.fill", Atelier.Tint.annotate)
+        case .thisWeek: ("calendar", Atelier.Tint.read)
+        case .later: ("calendar.badge.clock", Atelier.textSecondary)
+        case .noDue: ("tray", Atelier.textSecondary)
+        case .archived: ("archivebox", Atelier.textSecondary)
+        }
+        return Label("\(Self.title(section.group)) (\(section.notes.count))", systemImage: icon)
+            .font(Atelier.font(13, weight: .bold)).foregroundStyle(tint)
+    }
+
+    /// « 3 notes · 1 à revoir » pour la vue affichée.
+    private var summary: String {
+        let shown = sections.reduce(0) { $0 + $1.notes.count }
+        let toReview = sections.filter { [.overdue, .today, .tomorrow].contains($0.group) }.reduce(0) { $0 + $1.notes.count }
+        return toReview > 0 ? String(localized: "\(shown) note(s) · \(toReview) à revoir") : String(localized: "\(shown) note(s)")
+    }
+
+    /// Filtres posés, à retirer d'un toucher.
+    private var activeFilters: [(label: String, clear: () -> Void)] {
+        var list: [(label: String, clear: () -> Void)] = []
+        if let id = filter.folderId { list.append(("▸ " + (folders.first { $0.id == id }?.name ?? "?"), { filter.folderId = nil })) }
+        if let id = filter.tagId { list.append(("#" + (tags.first { $0.id == id }?.name ?? "?"), { filter.tagId = nil })) }
+        if let priority = filter.priority { list.append((Self.title(priority), { filter.priority = nil })) }
+        if let id = filter.documentId { list.append((model.documents.first { $0.id == id }?.title ?? "?", { filter.documentId = nil })) }
+        return list
+    }
+
+    /// « Modifiée le 13 nov. 2026 à 14:05 » (ou « Créée le … » si jamais modifiée).
+    static func dateLabel(_ note: PageComment) -> String {
+        let format = Date.FormatStyle(date: .abbreviated, time: .shortened)
+        return note.updatedAt.timeIntervalSince(note.createdAt) > 1
+            ? String(localized: "Modifiée le \(note.updatedAt.formatted(format))")
+            : String(localized: "Créée le \(note.createdAt.formatted(format))")
     }
 
     private func open(_ note: PageComment) {

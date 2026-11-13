@@ -868,11 +868,13 @@ struct LibraryView: View {
         }
         .padding(.horizontal, 6)
         // Dossiers (PLAN-T5-001, E2) : nom d'un nouveau dossier (avec les documents à y ranger) ou nouveau nom.
-        .alert(folderNaming?.title ?? "", isPresented: Binding(get: { folderNaming != nil },
-                                                             set: { if !$0 { folderNaming = nil } })) {
-            TextField("Nom du dossier", text: $folderName)
-            Button("Annuler", role: .cancel) { folderNaming = nil }
-            Button("OK") {
+        // Recette 1.5.7 (2.1) : l'alerte système d'iOS 16 n'affichait pas le bouton de validation (grisé au départ, jamais
+        // remis à jour) ; fenêtre de l'app à la place, demandée par NOxygen59.
+        .sheet(isPresented: Binding(get: { folderNaming != nil }, set: { if !$0 { folderNaming = nil } })) {
+            FolderNameSheet(title: folderNaming?.title ?? "", name: $folderName,
+                            confirm: folderNaming.map { if case .rename = $0 { return String(localized: "Renommer") }
+                                                        return String(localized: "Créer") } ?? "",
+                            cancel: { folderNaming = nil }) {
                 switch folderNaming {
                 case .create(let moving):
                     model.createFolder(named: folderName, in: LibraryFolderLayout.commonSpace(of: moving) ?? space,
@@ -882,7 +884,6 @@ struct LibraryView: View {
                 }
                 folderNaming = nil
             }
-            .disabled(folderName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         }
         .alert("Supprimer ce dossier ?", isPresented: Binding(get: { deletingFolder != nil },
                                                               set: { if !$0 { deletingFolder = nil } })) {
@@ -1356,6 +1357,38 @@ private struct LibraryCardPositions: PreferenceKey {
 }
 
 /// Fenêtre de nom d'un dossier de l'accueil (PLAN-T5-001, E2).
+/// Nom d'un dossier (créer ou renommer) dans une fenêtre de l'app (recette 1.5.7, 2.1) : champ prêt à taper, bouton de
+/// validation actif dès qu'un nom est écrit, « Entrée » valide aussi.
+struct FolderNameSheet: View {
+    let title: String
+    @Binding var name: String
+    let confirm: String
+    let cancel: () -> Void
+    let done: () -> Void
+    @FocusState private var focused: Bool
+
+    private var valid: Bool { !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                TextField("Nom du dossier", text: $name)
+                    .focused($focused)
+                    .submitLabel(.done)
+                    .onSubmit { if valid { done() } }
+            }
+            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Annuler", action: cancel) }
+                ToolbarItem(placement: .confirmationAction) { Button(confirm, action: done).disabled(!valid) }
+            }
+            .onAppear { focused = true }
+        }
+        .presentationDetents([.height(220)])
+    }
+}
+
 enum FolderNaming {
     /// Nouveau dossier ; les documents donnés y sont rangés tout de suite (« Déplacer vers → Nouveau dossier… »).
     case create(moving: [LibraryDocument])
