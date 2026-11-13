@@ -41,6 +41,10 @@ struct LibraryView: View {
     @State private var showNotes = false
     @State private var noteToOpen: PageComment?
     @State private var showDashboard = false
+    /// Mode propriétaire (PLAN-MODLOC-001, E1) : rafale de touchers sur « Temps de lecture ».
+    @AppStorage(OwnerMode.unlockedKey) private var ownerUnlocked = false
+    @State private var statsTaps = TapBurst()
+    @State private var statsDecision: Task<Void, Never>?
     @State private var renaming: LibraryDocument?
     @EnvironmentObject private var review: ReviewModel
     @EnvironmentObject private var themes: ThemeManager
@@ -562,9 +566,24 @@ struct LibraryView: View {
 
     /// Temps de lecture active, à la place de « Progression XX/XX pages » (RET-037, #52).
     private var statsCard: some View {
-        Button { showDashboard = true } label: { statsCardContent }
+        Button { statsTapped() } label: { statsCardContent }
             .buttonStyle(PressScale())
             .accessibilityHint(Text("Ouvre le tableau de bord"))
+    }
+
+    /// DEC-01 = A : on attend la fin de la rafale ; 3 touchers basculent le mode propriétaire, sinon le tableau de bord.
+    private func statsTapped() {
+        statsTaps.tap(at: Date())
+        statsDecision?.cancel()
+        statsDecision = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: UInt64(TapBurst.window * 1_000_000_000))
+            guard !Task.isCancelled, let outcome = statsTaps.outcome(at: Date()) else { return }
+            statsTaps = TapBurst()
+            switch outcome {
+            case .single: showDashboard = true
+            case .toggleOwnerMode: OwnerMode.toggle()
+            }
+        }
     }
 
     private var statsCardContent: some View {
@@ -1056,8 +1075,8 @@ struct LibraryView: View {
     @ViewBuilder
     private func menu(for document: LibraryDocument) -> some View {
         Button { model.openDocumentId = document.id } label: { Label("Ouvrir", systemImage: "book") }
-        if !document.capabilities.chat {
-            // CBZ et mangas : ni chat ni mention de lecture IA.
+        if !document.capabilities.chat || !ownerUnlocked {
+            // CBZ et mangas : ni chat ni mention de lecture IA. Mode propriétaire verrouillé : chat caché (DEC-03).
         } else if (Qwen3VLReader().isAvailable || ModelStore.shared.isInstalled(.qwen35chat4b)),
            DocumentKnowledge.isReady(document) {
             Button {

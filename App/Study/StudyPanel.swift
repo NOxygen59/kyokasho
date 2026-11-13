@@ -14,6 +14,7 @@ struct StudyPanel: View {
     enum Tab: Hashable { case text, vocab, notes, marks, chat }
 
     @EnvironmentObject private var model: AppModel
+    @AppStorage(OwnerMode.unlockedKey) private var ownerUnlocked = false
     @ObservedObject var reader: ReaderController
     @Binding var tab: Tab
     var openSearch: () -> Void
@@ -62,7 +63,7 @@ struct StudyPanel: View {
             PillTabs(items: [(Tab.text, "character.ja", String(localized: "Texte")), (.vocab, "character.book.closed.ja", String(localized: "Dico")),
                              (.notes, "text.bubble", String(localized: "Notes")), (.marks, "bookmark", String(localized: "Repères")),
                              (.chat, "bubble.left.and.bubble.right", String(localized: "Chat"))]
-                                .filter { $0.0 != .chat || reader.document.capabilities.chat },
+                                .filter { $0.0 != .chat || chatAllowed },
                      selection: $tab, tint: tint)
             Group {
                 switch tab {
@@ -81,7 +82,7 @@ struct StudyPanel: View {
                 case .notes: StudyNotesTab(reader: reader)
                 case .marks: StudyMarksTab(reader: reader, openSearch: openSearch)
                 // Onglet repris d'un document précédent : pas de chat sur un manga.
-                case .chat where !reader.document.capabilities.chat: StudyTextTab(reader: reader, openLineEditor: openLineEditor, openDocumentSettings: openDocumentSettings)
+                case .chat where !chatAllowed: StudyTextTab(reader: reader, openLineEditor: openLineEditor, openDocumentSettings: openDocumentSettings)
                 case .chat: QwenChatView(document: reader.document, embedded: true,
                                          focusPage: reader.document.pageLabel(reader.focusSource),
                                          openPage: { reader.go(toSource: $0) },
@@ -103,11 +104,16 @@ struct StudyPanel: View {
         .onChange(of: reader.document.id) { _ in normalizeTab() }
         // Même document rangé en Manga pendant la lecture : la capacité Chat disparaît sans changer d'identifiant.
         .onChange(of: reader.document.capabilities.chat) { _ in normalizeTab() }
+        // Mode propriétaire reverrouillé pendant la lecture : l'onglet Chat disparaît (PLAN-MODLOC-001, DEC-03).
+        .onChange(of: ownerUnlocked) { _ in normalizeTab() }
     }
 
     private func normalizeTab() {
-        if tab == .chat && !reader.document.capabilities.chat { tab = .text }
+        if tab == .chat && !chatAllowed { tab = .text }
     }
+
+    /// Chat possible pour ce document (pas de manga) et mode propriétaire déverrouillé (PLAN-MODLOC-001, DEC-03).
+    private var chatAllowed: Bool { reader.document.capabilities.chat && ownerUnlocked }
 
     private var tint: Color {
         switch tab {

@@ -1,6 +1,28 @@
 {
   "sourceLanguage": "fr",
   "strings": {
+    "État, mémoire, « Décharger », réglages propres et dernières tâches.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Status, memory, “Unload”, own settings and recent tasks."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "État, mémoire, « Décharger », réglages propres et dernières tâches."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "状态、内存、“卸载”、专属设置和最近任务。"
+          }
+        }
+      }
+    },
     "Vérification incomplète : %lld document(s) sur %lld vérifié(s).": {
       "localizations": {
         "en": {

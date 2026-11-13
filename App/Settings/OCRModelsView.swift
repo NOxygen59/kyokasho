@@ -70,6 +70,7 @@ struct OCRModelsSection: View {
     let group: Group
     @ObservedObject private var downloads = ModelDownloads.shared
     @State private var deleting: ModelSpec?
+    @AppStorage(OwnerMode.unlockedKey) private var ownerUnlocked = false
 
     var body: some View {
         Section {
@@ -81,7 +82,7 @@ struct OCRModelsSection: View {
                 row(.glmocr, badge: String(localized: "Optionnel"))
                 row(.ovisocr2, badge: String(localized: "Optionnel"))
                 row(.qwen3vl4b, badge: String(localized: "Optionnel · lourd"))
-                row(.qwen35chat4b, badge: String(localized: "Optionnel · chat"))
+                if ownerUnlocked { row(.qwen35chat4b, badge: String(localized: "Optionnel · chat")) }
             case .layout:
                 ForEach(ModelSpec.layoutModels) { spec in row(spec, badge: String(localized: "Optionnel")) }
             case .sharpen:

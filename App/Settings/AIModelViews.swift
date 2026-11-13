@@ -12,6 +12,7 @@ import UIKit
 /// « Décharger », ses réglages, ses dernières tâches. Qwen3-VL : conversation (`QwenChatView`).
 struct AIModelDetailView: View {
     let spec: ModelSpec
+    @AppStorage(OwnerMode.unlockedKey) private var ownerUnlocked = false
     @ObservedObject private var downloads = ModelDownloads.shared
     @State private var status: AIModelStatus?
     @State private var diskSize: Int64?
@@ -74,7 +75,7 @@ struct AIModelDetailView: View {
                 }
             }
             usageLocation
-            if spec.id == ModelSpec.qwen3vl4b.id || spec.id == ModelSpec.qwen35chat4b.id {
+            if ownerUnlocked, spec.id == ModelSpec.qwen3vl4b.id || spec.id == ModelSpec.qwen35chat4b.id {
                 Section {
                     NavigationLink { QwenChatView(preferredModel: spec) } label: { Label("Discuter avec l'IA", systemImage: "bubble.left.and.bubble.right") }
                         .disabled(!installed)
