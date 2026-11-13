@@ -111,7 +111,7 @@ struct NoteSettingsView: View {
     /// Rappels de la note (DEC-04 = A) : 3 au plus ; rien de choisi = le rappel par défaut des Réglages.
     @ViewBuilder
     private func remindersSection(_ o: NoteOrganization) -> some View {
-        let chosen = o.reminders ?? NoteReminder.defaultReminders
+        let chosen = o.reminders ?? NoteNotifications.defaultReminders
         Section {
             ForEach(NoteReminder.choices, id: \.self) { minutes in
                 let on = chosen.contains(minutes)

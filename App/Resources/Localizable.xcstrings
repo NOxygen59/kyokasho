@@ -1,6 +1,248 @@
 {
   "sourceLanguage": "fr",
   "strings": {
+    "%@ · p. %lld": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · p. %lld"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · p. %lld"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · 第 %lld 页"
+          }
+        }
+      }
+    },
+    "Note sans texte": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Note without text"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Note sans texte"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无文字笔记"
+          }
+        }
+      }
+    },
+    "Heure d'une échéance sans heure": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Time for a due date without a time"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Heure d'une échéance sans heure"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未设时间的截止时刻"
+          }
+        }
+      }
+    },
+    "Rappel d'une nouvelle échéance": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reminder for a new due date"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rappel d'une nouvelle échéance"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新截止日期的提醒"
+          }
+        }
+      }
+    },
+    "Valent pour les notes dont l'heure ou les rappels n'ont pas été réglés.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apply to notes whose time or reminders have not been set."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Valent pour les notes dont l'heure ou les rappels n'ont pas été réglés."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "适用于未设置时间或提醒的笔记。"
+          }
+        }
+      }
+    },
+    "Notifications autorisées": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notifications allowed"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notifications autorisées"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已允许通知"
+          }
+        }
+      }
+    },
+    "Notifications refusées": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notifications denied"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notifications refusées"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "通知已被拒绝"
+          }
+        }
+      }
+    },
+    "Ouvrir les Réglages d'iOS": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open iOS Settings"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ouvrir les Réglages d'iOS"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开 iOS 设置"
+          }
+        }
+      }
+    },
+    "iOS demandera l'autorisation au premier rappel.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iOS will ask for permission at the first reminder."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iOS demandera l'autorisation au premier rappel."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "首次提醒时 iOS 会请求授权。"
+          }
+        }
+      }
+    },
+    "Notifications d'iOS": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iOS notifications"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notifications d'iOS"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iOS 通知"
+          }
+        }
+      }
+    },
+    "Les rappels sont programmés sur l'iPad, sans serveur. Le texte de la note s'affiche sur l'écran verrouillé selon Réglages › Notifications › Afficher les aperçus.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reminders are scheduled on the iPad, with no server. The note's text shows on the Lock Screen according to Settings › Notifications › Show Previews."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les rappels sont programmés sur l'iPad, sans serveur. Le texte de la note s'affiche sur l'écran verrouillé selon Réglages › Notifications › Afficher les aperçus."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "提醒在 iPad 上安排，不经过服务器。锁定屏幕是否显示笔记内容取决于“设置 › 通知 › 显示预览”。"
+          }
+        }
+      }
+    },
     "À une heure précise": {
       "localizations": {
         "en": {

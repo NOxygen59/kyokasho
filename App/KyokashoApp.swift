@@ -6,11 +6,14 @@ import OCRKit
 import ONNXOCRKit
 import ReaderCore
 import SwiftUI
+import UserNotifications
 import UIKit
 
 @main
 struct KyokashoApp: App {
     init() {
+        // PLAN-NOTIF-001 E4 : posé au lancement, pour qu'une notification touchée app fermée ne soit pas perdue.
+        UNUserNotificationCenter.current().delegate = NoteNotificationDelegate.shared
         // Avant tout : journal de diagnostic et gestionnaire d'erreurs MLX (message noté avant un arrêt).
         Diagnostics.start()
         // Restauration préparée (#51) : appliquée avant que la moindre base soit ouverte.
@@ -160,10 +163,13 @@ struct RootView: View {
         .onChange(of: scenePhase) { phase in
             if phase == .background { Self.releaseAI() }
             // Au retour dans l'app : la connexion a pu revenir ou un jour être passé (`DictionaryUpdateSchedule`).
+            // Rappels de notes reprogrammés au retour (un jour a pu passer).
+            if phase == .active { model.refreshNotesToReview() }
             if phase == .active, !LibraryBackupService.inProgress {
                 Task { await dictionaryUpdates.checkAutomaticallyIfDue(model: model.dictionary) }
             }
         }
+        .onAppear { NoteNotificationDelegate.shared.model = model }
         .task {
             // Après le chargement de la bibliothèque, et jamais par-dessus une sauvegarde en cours.
             guard !LibraryBackupService.inProgress else { return }

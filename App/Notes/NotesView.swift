@@ -32,6 +32,7 @@ struct NotesView: View {
     /// Note dont on règle le rangement (feuille `NoteSettingsView`).
     @State private var settingsFor: PageComment?
     @State private var choosingDue = false
+    @State private var remindersSettings = false
     @State private var chosenDue = NoteSettingsView.defaultDue()
     @State private var actionError: String?
 
@@ -106,6 +107,9 @@ struct NotesView: View {
                 // replier deux éléments de droite dans un menu).
                 ToolbarItemGroup(placement: .navigationBarLeading) {
                     filterMenu
+                    // PLAN-NOTIF-001 E4 : heure et rappel par défaut, autorisation des notifications.
+                    Button { remindersSettings = true } label: { Image(systemName: "bell") }
+                        .accessibilityLabel("Rappels")
                     Button(selecting ? String(localized: "Terminé") : String(localized: "Choisir")) {
                         selecting.toggle()
                         selection = []
@@ -120,6 +124,7 @@ struct NotesView: View {
                 NoteSettingsView(database: model.database, noteId: note.id) { model.refreshNotesToReview() }
             }
             .sheet(isPresented: $choosingDue) { dueSheet }
+            .sheet(isPresented: $remindersSettings, onDismiss: { model.refreshNotesToReview() }) { NoteReminderSettingsView() }
             .task { await reload() }
         }
     }

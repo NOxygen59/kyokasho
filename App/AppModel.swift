@@ -556,18 +556,25 @@ final class AppModel: ObservableObject {
                 if self.noteDueBadge != badge { self.noteDueBadge = badge }
             }
         }
+        // PLAN-NOTIF-001 E3 : mêmes moments que la pastille (note changée, accueil, retour dans l'app).
+        NoteNotifications.reschedule(database: database,
+                                     titles: Dictionary(documents.map { ($0.id, $0.title) }, uniquingKeysWith: { a, _ in a }),
+                                     excluded: excluded)
     }
 
-    /// Ouvre le livre d'une note à sa page (écran « Notes »).
-    func open(_ note: PageComment) {
-        guard documents.contains(where: { $0.id == note.documentId }) else {
+    /// Ouvre la note d'une notification (PLAN-NOTIF-001, E4) : livre à sa page, ancre qui clignote.
+    func openNote(documentId: String, noteId: String) {
+        guard documents.contains(where: { $0.id == documentId }) else {
             // Revue DeepSeek F3 : le livre est à la corbeille ou a été supprimé entre-temps.
             lastError = String(localized: "Le livre de cette note n'est plus dans la bibliothèque (corbeille ?).")
             return
         }
-        noteJump = NoteJump(documentId: note.documentId, noteId: note.id)
-        openDocumentId = note.documentId
+        noteJump = NoteJump(documentId: documentId, noteId: noteId)
+        openDocumentId = documentId
     }
+
+    /// Ouvre le livre d'une note à sa page (écran « Notes »).
+    func open(_ note: PageComment) { openNote(documentId: note.documentId, noteId: note.id) }
 
     // MARK: Dossiers de l'accueil (PLAN-T5-001, E2)
 
