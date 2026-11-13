@@ -81,6 +81,10 @@ struct FloatingToolbar<Items: View>: View {
             // Seulement si la taille change vraiment (pas de boucle de mise en page).
             if abs(new.width - size.width) > 0.5 || abs(new.height - size.height) > 0.5 { size = new }
         }
+        // Revue D-07 (n°3) : l'ancienne position (fraction) est convertie une fois en points, sinon la barre bougerait
+        // encore avec la zone tant qu'elle n'a pas été déplacée depuis la mise à jour.
+        .onAppear { adoptPoints() }
+        .onChange(of: area) { _ in adoptPoints() }
         .offset(x: x, y: y)
         .transaction { if drag != .zero { $0.animation = nil } }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -120,6 +124,12 @@ struct FloatingToolbar<Items: View>: View {
         .buttonStyle(PressScale())
         .disabled(current)
         .accessibilityLabel(label)
+    }
+
+    private func adoptPoints() {
+        guard pointX < 0 || pointY < 0, area.width > 0, area.height > 0 else { return }
+        pointX = fractionX * area.width
+        pointY = fractionY * area.height
     }
 
     private func setStyle(_ style: Style) {

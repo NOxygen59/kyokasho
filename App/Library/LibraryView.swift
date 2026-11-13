@@ -595,6 +595,26 @@ struct LibraryView: View {
         }
     }
 
+    /// Entre dans un dossier (ou en sort avec `nil`) avec la transition (recette 1.5.8). Revue D-07 (n°11, n°12) : le
+    /// départ est posé dans le même changement que le nouveau contenu (aucune image du contenu à 100 % avant
+    /// l'animation), et seuls l'entrée et le retour « Accueil » s'animent, pas un changement d'espace ni une suppression.
+    private func showFolder(_ id: String?) {
+        var instant = Transaction()
+        instant.disablesAnimations = true
+        withTransaction(instant) {
+            batch = BatchDeletion()
+            folderEntering = id != nil
+            folderProgress = 0
+            openFolderId = id
+        }
+        // Au tour suivant : sinon SwiftUI fusionne les deux changements et rien ne s'anime.
+        DispatchQueue.main.async {
+            withAnimation(reduceMotion ? .easeOut(duration: 0.18) : .spring(response: 0.38, dampingFraction: 0.88)) {
+                folderProgress = 1
+            }
+        }
+    }
+
     /// Tuile compacte de la colonne de gauche (recette 1.5.8) : icône au-dessus, nom en dessous, pastille en coin.
     private func toolTile(icon: String, title: String, tint: Color, count: Int? = nil,
                           action: @escaping () -> Void) -> some View {
@@ -618,7 +638,10 @@ struct LibraryView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(PressScale())
-        .accessibilityElement(children: .combine)
+        // Revue D-07 (n°16) : un seul élément, nommé, avec le nombre, et qui reste un bouton.
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(count.map { $0 > 0 ? "\(title), \($0)" : title } ?? title)
+        .accessibilityAddTraits(.isButton)
     }
 
     /// Temps de lecture active, à la place de « Progression XX/XX pages » (RET-037, #52).
@@ -840,8 +863,7 @@ struct LibraryView: View {
                                                 Button {
                                                     // Revue DeepSeek n°2 et n°13 : on entre aussi en mode sélection, et
                                                     // la sélection repart de zéro (jamais de document choisi hors de vue).
-                                                    batch = BatchDeletion()
-                                                    openFolderId = tile.folder.id
+                                                    showFolder(tile.folder.id)
                                                 } label: {
                                                     FolderCard(name: tile.folder.name, documents: tile.documents)
                                                 }
@@ -914,20 +936,6 @@ struct LibraryView: View {
                 // animations ».
                 .opacity(0.25 + 0.75 * folderProgress)
                 .scaleEffect(reduceMotion ? 1 : 1 + (folderEntering ? -0.05 : 0.05) * (1 - folderProgress), anchor: .top)
-                .onChange(of: openFolderId) { id in
-                    var instant = Transaction()
-                    instant.disablesAnimations = true
-                    withTransaction(instant) {
-                        folderEntering = id != nil
-                        folderProgress = 0
-                    }
-                    // Au tour suivant : sinon SwiftUI fusionne les deux changements et rien ne s'anime.
-                    DispatchQueue.main.async {
-                        withAnimation(reduceMotion ? .easeOut(duration: 0.18) : .spring(response: 0.38, dampingFraction: 0.88)) {
-                            folderProgress = 1
-                        }
-                    }
-                }
                 if monitorVisible {
                     ResourceMonitorPanel(expandsDown: true, fillsWidth: monitorDetailed, showsActivities: model.openDocumentId == nil)
                         .frame(width: monitorDetailed ? Self.monitorWidth : nil)
@@ -1026,8 +1034,7 @@ struct LibraryView: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .firstTextBaseline, spacing: 10) {
                 Button {
-                    batch = BatchDeletion()
-                    openFolderId = nil
+                    showFolder(nil)
                 } label: { Label("Accueil", systemImage: "chevron.left") }
                     .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.read))
                 Image(systemName: "folder.fill").foregroundStyle(Atelier.Tint.read)
