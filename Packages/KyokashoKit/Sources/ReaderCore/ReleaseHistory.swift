@@ -10,6 +10,13 @@ import Foundation
 enum ReleaseHistory {
     static let past: [ReleaseNotes] = [
         // Candidates locales non publiées.
+        ReleaseNotes("1.5.8", "2026-11-13", published: false, String(localized: "Correctifs de la recette 1.5.7", bundle: .main), added: [
+                String(localized: "Notes : chaque note affiche sa date et son heure de création ou de modification.", bundle: .main),
+            ], fixed: [
+                String(localized: "Accueil : créer ou renommer un dossier se fait dans une fenêtre de l'app, avec un bouton « Créer » qui marche.", bundle: .main),
+                String(localized: "Barre flottante : elle ne bouge plus au passage entre Pencil et doigt, et une poignée plus grande la déplace.", bundle: .main),
+                String(localized: "Écran Notes plus clair : filtres en pastilles, et chaque note montre son livre, sa page, son échéance et ses étiquettes.", bundle: .main),
+            ]),
         ReleaseNotes("1.5.7", "2026-11-13", published: false, String(localized: "Notes, dossiers, cartes et correctifs de la recette 1.5.6", bundle: .main), added: [
                 String(localized: "Notes : un écran « Notes » sur l'accueil réunit toutes les notes, par échéance, avec filtres et archives ; une pastille compte les notes à revoir.", bundle: .main),
                 String(localized: "Notes : régler une note (échéance, priorité, classeur, étiquettes, archive), une seule ou plusieurs à la fois.", bundle: .main),

@@ -1,6 +1,160 @@
 {
   "sourceLanguage": "fr",
   "strings": {
+    "Rappels de notes, annotations exactes à l'export et correctifs de la recette 1.5.8": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Note reminders, exact annotations on export and fixes from the 1.5.8 test round"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rappels de notes, annotations exactes à l'export et correctifs de la recette 1.5.8"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "笔记提醒、导出批注位置准确及 1.5.8 测试修正"
+          }
+        }
+      }
+    },
+    "Notes : un « ! » sur l'accueil, noir si une échéance arrive dans les 7 jours, rouge si elle est aujourd'hui ou dépassée.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notes: a “!” on the home screen, black when a due date is within 7 days, red when it is today or overdue."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notes : un « ! » sur l'accueil, noir si une échéance arrive dans les 7 jours, rouge si elle est aujourd'hui ou dépassée."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "笔记：主页上显示“!”，7 天内到期为黑色，今天到期或已逾期为红色。"
+          }
+        }
+      }
+    },
+    "Notes : une heure d'échéance et jusqu'à trois rappels par note, avec une notification d'iOS qui ouvre la note.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notes: a due time and up to three reminders per note, with an iOS notification that opens the note."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notes : une heure d'échéance et jusqu'à trois rappels par note, avec une notification d'iOS qui ouvre la note."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "笔记：每条笔记可设截止时间和最多三个提醒，iOS 通知可直接打开笔记。"
+          }
+        }
+      }
+    },
+    "Accueil : la colonne de gauche est regroupée (Étudier, Importer et convertir), et entrer dans un dossier est animé.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Home: the left column is grouped (Study, Import and convert), and opening a folder is animated."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accueil : la colonne de gauche est regroupée (Étudier, Importer et convertir), et entrer dans un dossier est animé."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "主页：左栏已分组（学习、导入与转换），进入文件夹有动画。"
+          }
+        }
+      }
+    },
+    "Export « PDF annoté » et images : surlignages, dessins et notes restent sur leur mot, même sur une page d'une autre taille, et la page garde la rotation choisie dans l'app.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“Annotated PDF” and image export: highlights, drawings and notes stay on their word, even on a page of another size, and the page keeps the rotation chosen in the app."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export « PDF annoté » et images : surlignages, dessins et notes restent sur leur mot, même sur une page d'une autre taille, et la page garde la rotation choisie dans l'app."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“带批注的 PDF”和图片导出：高亮、绘图和笔记留在原词上，即使页面尺寸不同；页面保持应用内选择的旋转。"
+          }
+        }
+      }
+    },
+    "Dossiers : les pastilles de sélection se mettent à jour dans un dossier.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Folders: selection marks update inside a folder."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dossiers : les pastilles de sélection se mettent à jour dans un dossier."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文件夹：文件夹内的选择标记会正确更新。"
+          }
+        }
+      }
+    },
+    "Barre à poignée : elle ne bouge plus au passage du Pencil, et sa poignée ne se cache plus contre le bord.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Handle bar: it no longer moves when switching to Pencil, and its handle no longer hides against the edge."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Barre à poignée : elle ne bouge plus au passage du Pencil, et sa poignée ne se cache plus contre le bord."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "手柄栏：切换 Pencil 时不再移动，手柄不再隐藏在边缘。"
+          }
+        }
+      }
+    },
     "Les pages n'ont pas pu être préparées comme à l'écran : réessaie l'export (les annotations seraient décalées).": {
       "localizations": {
         "en": {
