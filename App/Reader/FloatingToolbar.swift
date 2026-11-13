@@ -15,30 +15,37 @@ struct FloatingToolbar<Items: View>: View {
     @AppStorage("toolbar.style") private var styleRaw = Style.vertical.rawValue
     private var style: Style { Style(rawValue: styleRaw) ?? .vertical }
     @AppStorage("toolbar.lastOpen") private var lastOpen = Style.vertical.rawValue
-    /// Coin haut-gauche de la barre, en fraction de la **zone** (pas de « zone − taille de la barre ») : la barre ne bouge
-    /// plus quand sa taille change, par exemple en passant au Pencil (recette 1.5.7, 1.2). Bornée à l'affichage.
+    /// Ancienne position, en fraction de la zone : lue seulement tant qu'aucune position en points n'est enregistrée.
     @AppStorage("toolbar.x") private var fractionX = 0.0
     @AppStorage("toolbar.y") private var fractionY = 0.1
+    /// Coin haut-gauche de la barre, en points depuis le coin de la zone (−1 : pas encore enregistré). Recette 1.5.8
+    /// (1.6) : en fraction, la barre bougeait encore quand la zone change de taille (la bande du bas disparaît en mode
+    /// Pencil). Bornée à l'affichage, donc toujours visible après une rotation.
+    @AppStorage("toolbar.px") private var pointX = -1.0
+    @AppStorage("toolbar.py") private var pointY = -1.0
+    /// Marge gardée aux bords (recette 1.5.8, 1.7 : la poignée se cachait contre le bord droit).
+    private static var inset: CGFloat { 12 }
 
     /// Déplacement en cours (remis à zéro tout seul à la fin du geste).
     @GestureState private var drag: CGSize = .zero
     @State private var size: CGSize = .zero
 
     var body: some View {
-        let maxX = max(0, area.width - size.width)
-        let maxY = max(0, area.height - size.height)
-        let x = min(max(0, fractionX * area.width + drag.width), maxX)
-        let y = min(max(0, fractionY * area.height + drag.height), maxY)
+        let inset = Self.inset
+        let maxX = max(inset, area.width - size.width - inset)
+        let maxY = max(inset, area.height - size.height - inset)
+        let baseX = pointX >= 0 ? pointX : fractionX * area.width
+        let baseY = pointY >= 0 ? pointY : fractionY * area.height
+        let x = min(max(inset, baseX + drag.width), maxX)
+        let y = min(max(inset, baseY + drag.height), maxY)
         // Repère global : la poignée bouge avec la barre ; mesurer dans son propre repère faisait
         // osciller le geste à l'infini (gel puis plantage).
         // 8 pt avant de déplacer (revue D-07 n°6) : un toucher un peu glissé sur un outil reste un toucher.
         let gesture = DragGesture(minimumDistance: 8, coordinateSpace: .global)
             .updating($drag) { value, state, _ in state = value.translation }
             .onEnded { value in
-                let endX = min(max(0, fractionX * area.width + value.translation.width), maxX)
-                let endY = min(max(0, fractionY * area.height + value.translation.height), maxY)
-                fractionX = area.width > 0 ? endX / area.width : 0
-                fractionY = area.height > 0 ? endY / area.height : 0
+                pointX = min(max(inset, baseX + value.translation.width), maxX)
+                pointY = min(max(inset, baseY + value.translation.height), maxY)
             }
         return Group {
             switch style {

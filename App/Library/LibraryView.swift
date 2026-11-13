@@ -74,6 +74,9 @@ struct LibraryView: View {
     @State private var showConvertConfirmation = false
     /// Dossier ouvert sur l'accueil (PLAN-T5-001, E2) ; `nil` : accueil complet. Remis à `nil` au changement d'espace.
     @State private var openFolderId: String?
+    /// Transition d'entrée et de sortie d'un dossier (recette 1.5.8) : 0 au changement, puis 1 en ressort.
+    @State private var folderProgress: CGFloat = 1
+    @State private var folderEntering = true
     /// Fenêtre « nom du dossier » : création (avec documents à ranger) ou renommage.
     @State private var folderNaming: FolderNaming?
     @State private var folderName = ""
@@ -493,13 +496,11 @@ struct LibraryView: View {
                 sideRow(.drive, icon: "externaldrive.badge.icloud", title: String(localized: "Depuis Drive"),
                         count: spaceDocuments.filter { $0.driveFileId != nil }.count)
             }
+            // Recette 1.5.8 : la colonne était trop remplie (13 lignes à la suite). Rien n'est retiré : ce qui sert chaque
+            // jour reste en lignes avec pastille ; importer et convertir passent en tuiles ; banc d'essai, corbeille et
+            // réglages en rangée du bas.
             VStack(alignment: .leading, spacing: 4) {
-                AtelierLabel(String(localized: "Importer")).padding(.bottom, 4)
-                actionRow(icon: "folder", title: String(localized: "Fichiers"), tint: Atelier.Tint.cloud) { showImportOptions = true }
-                actionRow(icon: "externaldrive.badge.icloud", title: String(localized: "Google Drive"), tint: Atelier.Tint.cloud) { showDrive = true }
-            }
-            VStack(alignment: .leading, spacing: 4) {
-                AtelierLabel(String(localized: "Outils")).padding(.bottom, 4)
+                AtelierLabel(String(localized: "Étudier")).padding(.bottom, 4)
                 // Manga : pas de révisions, de dictionnaire, d'images vers PDF ni de banc d'essai OCR (demande de NOxygen59,
                 // 07/11/2026) ; ces outils servent l'étude des manuels.
                 if space != .manga {
@@ -513,14 +514,25 @@ struct LibraryView: View {
                 // Pastille : notes à revoir (échéance passée, aujourd'hui ou demain ; DEC-T4-06).
                 actionRow(icon: "note.text", title: String(localized: "Notes"), tint: Atelier.Tint.annotate,
                           count: model.notesToReview) { showNotes = true }
-                actionRow(icon: "doc.on.doc", title: String(localized: "Fusionner des PDF"), tint: Atelier.Tint.cloud) { showMerge = true }
-                if space != .manga {
-                    actionRow(icon: "photo.on.rectangle.angled", title: String(localized: "Images vers PDF"), tint: Atelier.Tint.cloud) { showImagesToPDF = true }
-                    actionRow(icon: "gauge.with.dots.needle.33percent", title: String(localized: "Banc d'essai OCR"), tint: Atelier.Tint.japanese) { showBench = true }
+            }
+            VStack(alignment: .leading, spacing: 8) {
+                AtelierLabel(String(localized: "Importer et convertir")).padding(.bottom, 2)
+                LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
+                    toolTile(icon: "folder", title: String(localized: "Fichiers"), tint: Atelier.Tint.cloud) { showImportOptions = true }
+                    toolTile(icon: "externaldrive.badge.icloud", title: String(localized: "Google Drive"), tint: Atelier.Tint.cloud) { showDrive = true }
+                    toolTile(icon: "doc.on.doc", title: String(localized: "Fusionner des PDF"), tint: Atelier.Tint.cloud) { showMerge = true }
+                    if space != .manga {
+                        toolTile(icon: "photo.on.rectangle.angled", title: String(localized: "Images vers PDF"), tint: Atelier.Tint.cloud) { showImagesToPDF = true }
+                    }
                 }
-                actionRow(icon: "trash", title: String(localized: "Corbeille"), tint: Atelier.textSecondary,
-                          count: model.trashedDocuments.count) { showTrash = true }
-                actionRow(icon: "gearshape", title: String(localized: "Réglages"), tint: Atelier.textSecondary) { showSettings = true }
+            }
+            HStack(spacing: 8) {
+                if space != .manga {
+                    toolTile(icon: "speedometer", title: String(localized: "Banc d'essai OCR"), tint: Atelier.Tint.japanese) { showBench = true }
+                }
+                toolTile(icon: "trash", title: String(localized: "Corbeille"), tint: Atelier.textSecondary,
+                         count: model.trashedDocuments.count) { showTrash = true }
+                toolTile(icon: "gearshape", title: String(localized: "Réglages"), tint: Atelier.textSecondary) { showSettings = true }
             }
             // Avertissement de l'IA locale (RET-018) : dans la partie qui défile, au-dessus du temps de lecture fixé.
             LocalAIEnergyCard()
@@ -565,6 +577,32 @@ struct LibraryView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(PressScale())
+    }
+
+    /// Tuile compacte de la colonne de gauche (recette 1.5.8) : icône au-dessus, nom en dessous, pastille en coin.
+    private func toolTile(icon: String, title: String, tint: Color, count: Int? = nil,
+                          action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(spacing: 5) {
+                Image(systemName: icon).font(Atelier.font(17, weight: .medium)).foregroundStyle(tint)
+                Text(ui: title).font(Atelier.font(12, weight: .medium)).foregroundStyle(Atelier.textPrimary)
+                    .multilineTextAlignment(.center).lineLimit(2).minimumScaleFactor(0.85)
+            }
+            .frame(maxWidth: .infinity, minHeight: 62)
+            .padding(.horizontal, 4).padding(.vertical, 6)
+            .background(Atelier.surfaceHigh, in: RoundedRectangle(cornerRadius: Atelier.smallRadius, style: .continuous))
+            .overlay(alignment: .topTrailing) {
+                if let count, count > 0 {
+                    Text("\(count)").font(Atelier.mono).foregroundStyle(Atelier.onAccentInk.opacity(0.8))
+                        .padding(.horizontal, 6).padding(.vertical, 1)
+                        .background(tint, in: Capsule())
+                        .padding(4)
+                }
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(PressScale())
+        .accessibilityElement(children: .combine)
     }
 
     /// Temps de lecture active, à la place de « Progression XX/XX pages » (RET-037, #52).
@@ -831,7 +869,8 @@ struct LibraryView: View {
                                     proxy.scrollTo(LibraryCardRenderIdentity(
                                         documentId: anchor,
                                         category: filtered.first(where: { $0.id == anchor })?.category,
-                                        selecting: selecting, manga: displayedSpace == .manga), anchor: .top)
+                                        selecting: selecting, manga: displayedSpace == .manga,
+                                        folderId: openFolderId, selected: selecting && batch.selected.contains(anchor)), anchor: .top)
                                 }
                             }
                             .onPreferenceChange(LibraryCardPositions.self) { frames in
@@ -853,6 +892,25 @@ struct LibraryView: View {
                 // La liste prend sa nouvelle largeur d'un coup : animée, toute la grille se recalculait à chaque image
                 // et le défilement saccadait pendant l'animation (recette 1.3.2 (65), point 6). Seul le moniteur s'anime.
                 .transaction { $0.animation = nil }
+                // Hors du `.transaction` ci-dessus, qui couperait l'animation : le contenu du dossier arrive en zoom
+                // léger et en fondu ; en sortant, l'accueil revient du sens inverse. Fondu seul avec « Réduire les
+                // animations ».
+                .opacity(0.25 + 0.75 * folderProgress)
+                .scaleEffect(reduceMotion ? 1 : 1 + (folderEntering ? -0.05 : 0.05) * (1 - folderProgress), anchor: .top)
+                .onChange(of: openFolderId) { id in
+                    var instant = Transaction()
+                    instant.disablesAnimations = true
+                    withTransaction(instant) {
+                        folderEntering = id != nil
+                        folderProgress = 0
+                    }
+                    // Au tour suivant : sinon SwiftUI fusionne les deux changements et rien ne s'anime.
+                    DispatchQueue.main.async {
+                        withAnimation(reduceMotion ? .easeOut(duration: 0.18) : .spring(response: 0.38, dampingFraction: 0.88)) {
+                            folderProgress = 1
+                        }
+                    }
+                }
                 if monitorVisible {
                     ResourceMonitorPanel(expandsDown: true, fillsWidth: monitorDetailed, showsActivities: model.openDocumentId == nil)
                         .frame(width: monitorDetailed ? Self.monitorWidth : nil)
@@ -912,7 +970,9 @@ struct LibraryView: View {
         .id(LibraryCardRenderIdentity(documentId: document.id,
                                       category: document.category,
                                       selecting: selecting,
-                                      manga: document.isInMangaSpace))
+                                      manga: document.isInMangaSpace,
+                                      folderId: openFolderId,
+                                      selected: selecting && batch.selected.contains(document.id)))
         // La catégorie appartient à l'état courant de la bibliothèque. En la
         // dessinant au-dessus du bouton, elle n'est plus retenue dans l'ancien
         // rendu interne de la carte après l'import.

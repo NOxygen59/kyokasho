@@ -20,7 +20,9 @@ struct AIModelDetailView: View {
 
     /// Modèles MLX (chargés en mémoire du GPU) ; les autres (ONNX) s'ouvrent à la demande.
     private var isMLX: Bool { [ModelSpec.glmocr.id, ModelSpec.ovisocr2.id, ModelSpec.qwen3vl4b.id,
-                               ModelSpec.qwen35chat4b.id].contains(spec.id) }
+                               ModelSpec.qwen35chat4b.id].contains(spec.id) || LocalModels.isLocal(spec.id) }
+    /// Modèles qui discutent : Qwen3-VL, Qwen3.5 et les modèles importés (recette 1.5.8, 3.3).
+    private var chats: Bool { spec.id == ModelSpec.qwen3vl4b.id || spec.id == ModelSpec.qwen35chat4b.id || LocalModels.isLocal(spec.id) }
     private var directory: URL { ModelStore.shared.directory(spec) }
     private var installed: Bool { downloads.installed.contains(spec.id) }
     private var isLoaded: Bool { status?.loaded == directory }
@@ -31,6 +33,7 @@ struct AIModelDetailView: View {
         case ModelSpec.ovisocr2.id: return ["scan", "verif", "miseenpage", "analyse"]
         case ModelSpec.qwen3vl4b.id: return ["traduction", "chat", "analyse"]
         case ModelSpec.qwen35chat4b.id: return ["chat"]
+        case _ where LocalModels.isLocal(spec.id): return ["chat"]
         case ModelSpec.glmocr.id: return ["relecture", "analyse"]
         default: return ["ocr"]
         }
@@ -75,7 +78,7 @@ struct AIModelDetailView: View {
                 }
             }
             usageLocation
-            if ownerUnlocked, spec.id == ModelSpec.qwen3vl4b.id || spec.id == ModelSpec.qwen35chat4b.id {
+            if ownerUnlocked, chats {
                 Section {
                     NavigationLink { QwenChatView(preferredModel: spec) } label: { Label("Discuter avec l'IA", systemImage: "bubble.left.and.bubble.right") }
                         .disabled(!installed)

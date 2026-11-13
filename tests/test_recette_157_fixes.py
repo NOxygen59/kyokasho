@@ -20,8 +20,11 @@ class Recette157FixesTests(unittest.TestCase):
 
     def test_toolbar_position_is_relative_to_the_area_and_whole_bar_drags(self):
         bar = (APP / "Reader/FloatingToolbar.swift").read_text(encoding="utf-8")
-        self.assertIn("fractionX * area.width + drag.width", bar)
-        self.assertIn("fractionX = area.width > 0 ? endX / area.width : 0", bar)
+        # Recette 1.5.8 (1.6, 1.7) : position en points (la zone change de taille en mode Pencil), marge aux bords,
+        # ancienne fraction lue seulement tant qu'aucune position en points n'existe.
+        self.assertIn("let baseX = pointX >= 0 ? pointX : fractionX * area.width", bar)
+        self.assertIn("pointX = min(max(inset, baseX + value.translation.width), maxX)", bar)
+        self.assertIn("let maxX = max(inset, area.width - size.width - inset)", bar)
         self.assertIn(".contentShape(Rectangle())\n        .gesture(gesture)", bar)
         self.assertNotIn("grabMargin", bar)
 

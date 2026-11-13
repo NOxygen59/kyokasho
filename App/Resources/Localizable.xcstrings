@@ -1,6 +1,50 @@
 {
   "sourceLanguage": "fr",
   "strings": {
+    "Étudier": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Study"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Étudier"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "学习"
+          }
+        }
+      }
+    },
+    "Importer et convertir": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import and convert"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importer et convertir"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导入与转换"
+          }
+        }
+      }
+    },
     "Correctifs de la recette 1.5.7": {
       "localizations": {
         "en": {

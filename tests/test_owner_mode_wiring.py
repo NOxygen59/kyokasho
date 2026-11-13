@@ -32,7 +32,11 @@ class OwnerModeWiringTests(unittest.TestCase):
         settings = self.read("Settings/SettingsView.swift")
         self.assertIn("if ownerUnlocked {\n                LocalModelsSection()\n                Section {\n                    NavigationLink { AIChatSettingsView() }", settings)
         self.assertIn(".filter { ownerUnlocked || $0.id != ModelSpec.qwen35chat4b.id }", settings)
-        self.assertIn("if ownerUnlocked, spec.id == ModelSpec.qwen3vl4b.id", self.read("Settings/AIModelViews.swift"))
+        models = self.read("Settings/AIModelViews.swift")
+        self.assertIn("if ownerUnlocked, chats {", models)
+        # Recette 1.5.8 (3.3) : un modèle importé a sa page et son lien de chat, mode propriétaire ouvert.
+        self.assertIn("|| LocalModels.isLocal(spec.id) }", models)
+        self.assertIn("(ownerUnlocked ? LocalModels.specs() : [])", self.read("Settings/SettingsView.swift"))
         self.assertIn('if ownerUnlocked { row(.qwen35chat4b', self.read("Settings/OCRModelsView.swift"))
         for path in ["Library/LibraryView.swift", "Study/StudyPanel.swift", "Settings/SettingsView.swift",
                      "Settings/AIModelViews.swift", "Settings/OCRModelsView.swift"]:

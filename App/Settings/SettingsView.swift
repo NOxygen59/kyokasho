@@ -605,8 +605,9 @@ struct ModelsView: View {
             }
             Section {
                 // Mode propriétaire verrouillé : le modèle réservé au chat est caché (PLAN-MODLOC-001, DEC-03).
+                // Recette 1.5.8 (3.3) : les modèles importés ont aussi leur page (chat, mémoire), mode propriétaire ouvert.
                 ForEach([ModelSpec.ovisocr2, .qwen3vl4b, .qwen35chat4b, .glmocr, .ndlocr, .ppocr5]
-                    .filter { ownerUnlocked || $0.id != ModelSpec.qwen35chat4b.id }) { spec in
+                    .filter { ownerUnlocked || $0.id != ModelSpec.qwen35chat4b.id } + (ownerUnlocked ? LocalModels.specs() : [])) { spec in
                     NavigationLink { AIModelDetailView(spec: spec) } label: { Text(spec.title) }
                 }
             } header: {
