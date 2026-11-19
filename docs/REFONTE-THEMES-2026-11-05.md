@@ -5,7 +5,7 @@
 
 Demande NOxygen59 : thèmes plus stylisés et uniques selon leur nom, « Très distincte et expressive ». Première ébauche à 23 styles jugée trop répétitive ; décision explicite du manager : **6 à 8 univers réellement distincts**. La livraison retient huit univers, avec des couleurs secondaires repliées.
 
-Base `57deec9` (candidate 1.4.4), branche `codex/identite-themes`, worktree Codex réutilisé `/Users/noxygen/.codex/worktrees/kyokasho-lexique-langues/wt-rotation`. Le nom historique de ce dossier ne décrit plus sa tâche ; la branche du lexique est conservée dans Git. Aucun changement de la branche de Claude.
+Base `57deec9` (candidate 1.4.4), branche `codex/identite-themes`, worktree Codex réutilisé `~/.codex/worktrees/kyokasho-lexique-langues/wt-rotation`. Le nom historique de ce dossier ne décrit plus sa tâche ; la branche du lexique est conservée dans Git. Aucun changement de la branche de Claude.
 
 ## Résultat
 
@@ -36,8 +36,8 @@ Les différences de panneaux sont réelles (`AtelierPanel`), pas seulement dessi
 - Les vrais `StyleTokensGuardTests` et `ThemeContrastTests` sont recompilés seuls dans un bundle XCTest Mac : **10 tests réussis, 0 échec**. Ils contrôlent les jetons et les contrastes AA des palettes claires, pas tous les pixels après composition des motifs ou du verre. L'unique adaptation du garde-fou autorise le nouveau consommateur du helper d'ombre.
 - Planche SwiftUI Mac rendue avec les vraies vues de fond, de forme et d'aperçu, les vraies définitions de styles/palettes. Les sources Theme du rendu retirent uniquement le sélecteur et le gestionnaire iOS et adaptent la fonction CSS inutilisée. Assertion : huit choix principaux, 23 styles historiques, 17 palettes. Géométrie des trois formes contrôlée dans les rectangles normaux et minuscules, inset excessif vide.
 - Planche finale inspectée : huit cartes, Cyberpunk distinct de Synthwave ; les premières planches à 23 cartes sont obsolètes et remplacées.
-- `git diff --check` réussi ; contrôle documentaire local réussi. Les résultats et les PNG sont hors Git dans `/Users/noxygen/Documents/Codex/Kyokasho-Pont/REVUES/APERCUS-THEMES-2026-11-05/`.
-- Copies initiales des quatre fichiers de design existants dans `/Users/noxygen/Documents/Codex/Kyokasho-Backups/2026-11-05-identite-themes/` ; base Git conservée pour le reste. Aucun nettoyage des anciens caches effectué.
+- `git diff --check` réussi ; contrôle documentaire local réussi. Les résultats et les PNG sont hors Git dans `~/Documents/Codex/Kyokasho-Pont/REVUES/APERCUS-THEMES-2026-11-05/`.
+- Copies initiales des quatre fichiers de design existants dans `~/Documents/Codex/Kyokasho-Backups/2026-11-05-identite-themes/` ; base Git conservée pour le reste. Aucun nettoyage des anciens caches effectué.
 
 **Non vérifié :** build complet de l'app iOS ou Catalyst, rendu réel iPad, performances CPU/GPU, tailles dynamiques extrêmes, VoiceOver réel, clavier et toutes les combinaisons couleur/style. Aucune candidate, fusion, version ou publication créée.
 

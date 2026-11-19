@@ -162,7 +162,7 @@ s'il y en a, sinon l'étape suivante non cochée (§ 7 bis puis § 8). Pas de si
 - En ligne seulement : DeepL (option), téléchargements demandés (audio, modèles), navigateur à côté, avis de mise à
   jour (`latest.json` 1×/lancement) + API GitHub des releases du dépôt privé si GitHub est connecté.
 - Télécharger sur le Mac : dire quoi / d'où / taille et **demander** (sauf OvisOCR2 et Qwen3-VL : autorisés le
-  22/10 pour tester). Le PDF d'essai de l'utilisateur : `~/Downloads/INTERIOR COORDINATOR HANDBOOK HAWE.pdf`
+  22/10 pour tester). Le PDF d'essai est gardé hors du dépôt
   (manuel japonais de design d'intérieur, 24 p.) — utile pour tester, **jamais** dans le dépôt.
 - Release **seulement quand l'utilisateur la demande**. Il numérote lui-même (0.8.5.1, 0.8.6…).
 

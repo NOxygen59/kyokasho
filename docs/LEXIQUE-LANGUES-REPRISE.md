@@ -5,13 +5,13 @@
 
 ## État et périmètre
 
-Lot autorisé par NOxygen59, sur `codex/lexique-langues`, base `15f18a3`, worktree `/Users/noxygen/.codex/worktrees/kyokasho-lexique-langues/wt-rotation`. La reprise explicite remplace les anciennes pauses : anglais complet, chinois limité aux équivalents littéraux selon sa consigne. Traductions rédigées directement par Codex, sans moteur local ni service externe. Aucun push, fusion, changement de version, dépendance, CI ou paquet candidat.
+Lot autorisé par NOxygen59, sur `codex/lexique-langues`, base `15f18a3`, worktree `~/.codex/worktrees/kyokasho-lexique-langues/wt-rotation`. La reprise explicite remplace les anciennes pauses : anglais complet, chinois limité aux équivalents littéraux selon sa consigne. Traductions rédigées directement par Codex, sans moteur local ni service externe. Aucun push, fusion, changement de version, dépendance, CI ou paquet candidat.
 
 Objectif : conserver les lexiques FR/EN/zh-Hans séparément et utiliser la variante de la langue réellement appliquée après relancement. Invariants : termes et lectures japonais, tags, scores, séquences, liens, attribution et avertissements IA ; archive française inchangée, dictionnaires personnels et profils conservés. Acceptation locale : archives complètes, vrai import et recherche après réouverture d'une base jetable, tests, compilation iOS. La revue Claude et la recette utilisateur restent distinctes.
 
 ## Archives hors dépôt
 
-Dossier : `/Users/noxygen/Projets-iPad/dictionnaires-construits/lexique-interieur/`.
+Dossier : `~/Projets-iPad/dictionnaires-construits/lexique-interieur/`.
 
 | Fichier | Contenu | SHA-256 |
 |---|---|---|
@@ -49,7 +49,7 @@ Journaux locaux : `build/codex-validation/`, non versionnés.
 Commandes de contrôle :
 
 ```sh
-KYOKASHO_TEST_LEXICONS=/Users/noxygen/Projets-iPad/dictionnaires-construits/lexique-interieur swift test --package-path Packages/KyokashoKit --disable-automatic-resolution
+KYOKASHO_TEST_LEXICONS=~/Projets-iPad/dictionnaires-construits/lexique-interieur swift test --package-path Packages/KyokashoKit --disable-automatic-resolution
 python3 -I -m unittest discover -s tests -v
 python3 -I scripts/check_documentation.py
 git diff --check
@@ -76,4 +76,4 @@ Sur une future candidate autorisée, avec bibliothèque de test :
 
 **Non testé** : interface réelle Mac/iPad, cycle utilisateur de changement de langue et alertes, paquet Mac réellement signé, revue linguistique indépendante, revue Claude. Pas de candidate construite dans ce lot.
 
-Six originaux sauvegardés et comparés avant édition : dossier `2026-11-04-lexique.v4zpnupt`, initialement dans `/Users/noxygen/Documents/Codex/Kyokasho-Backups/`. Les six fichiers ont été recomparés octet par octet à la base Git `15f18a3`, puis le dossier a été déplacé avec `/usr/bin/trash` à la Corbeille après les contrôles réussis, conformément à la consigne du manager. Aucune suppression définitive.
+Six originaux sauvegardés et comparés avant édition : dossier `2026-11-04-lexique.v4zpnupt`, initialement dans `~/Documents/Codex/Kyokasho-Backups/`. Les six fichiers ont été recomparés octet par octet à la base Git `15f18a3`, puis le dossier a été déplacé avec `/usr/bin/trash` à la Corbeille après les contrôles réussis, conformément à la consigne du manager. Aucune suppression définitive.
