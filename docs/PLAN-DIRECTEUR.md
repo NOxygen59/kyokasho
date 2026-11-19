@@ -3,6 +3,10 @@
 
 # Plan directeur — professionnalisation de Kyōkasho
 
+**Réunions de revue avant recette 1.5.9 — 16/11 et 19/11 (lecture seule).** Deux réunions d'IA (DeepSeek V4.1 Flash, GLM 5.3 Flash, puis DeepSeek V4 Pro, animées par Claude le 19/11) sur `859a2c7..56bfdc1` : aucun bug bloquant, recette 1.5.9 à faire telle quelle. Lot 1.5.10 proposé, non commencé : numéro imprimé (`pageLabel`) dans le titre des rappels avec `NoteNotifications.plan` extraite dans `ReaderCore` et testée ; réparation d'une paire de cache d'égalisation incohérente (aujourd'hui l'export de ce document est refusé ; issue : Réglages › Stockage › « Effacer le cache ») ; autorisation de notifications refusée gérée ; reprogrammation par différence. Défaut de méthode : la relecture finale de `56bfdc1` citait des numéros de ligne impossibles ; contrôle automatique proposé dans la porte `final-review`. Rapports hors dépôt.
+
+**Candidate 1.5.9 (97) — 14/11, demandée par NOxygen59.** Commit `56bfdc1` (branche `claude/modloc`) : corrections de la recette 1.5.8, rappels de notes (NOTIF, PLAN-NOTIF-001 : pastille « ! », heure et rappels par note, migration `v8-note-reminders`, notifications iOS locales, ouverture de la note), export tel qu'à l'écran et rotation de l'app (DATA-03, migration `v9-equalization-reference`), fiche d'identité du paquet et lexique attendu (B1). `verifier_tout.sh` code 0 ; relecture finale VERDICT : OK. Branche poussée, PR #91 ouverte, non fusionnée ; release GitHub v1.5.9 (paquet public sans le lexique du manuel). **Recette iPad non faite.**
+
 **T4 E1 — rangement des notes en base — 11/11.** PLAN-T4-001 (approuvé le 11/11, tout A ; avenant AV-T4-01 : étiquettes et classeur dans la ligne de la note, sans table de liaison). Migration `v7-note-organization`, API `AppDatabase+NoteOrganization` (classeurs, étiquettes, échéance, priorité, archive, pastille). Revue R2 sans Codex : GLM PASS (`GLM-R2-NOTES-E1-07cd200.md`) puis DeepSeek PASS (`DEEPSEEK-R2-NOTES-E1-ed5e234.md`), points traités. E2 (écran « Notes » sur l'accueil, dans les deux espaces, pastille des notes à revoir, ouverture d'une note à sa page) codée le 11/11, revue DeepSeek D-07 (`DEEPSEEK-D07-NOTES-E2-06579a8.md`, PARTIAL) traitée. E3 (régler une note : panneau « Ranger la note » depuis la fenêtre de note et l'écran Notes, sélection multiple) codée le 11/11 (`b6739f6`), revue DeepSeek D-07 (`DEEPSEEK-D07-T4E3-CARTESE2-2f0e567.md`, PARTIAL) traitée (`ccbcd26`). Preuves Mac seulement ; recette iPad à faire.
 
 **Cartes E1 — écran « Cartes de ce document » — 11/11.** PLAN-CARTES-001 (approuvé le 11/11, tout A), branche `claude/ipad-tableau-mesures`, local. Index additif `v2-card-source` de la base des révisions (testé sur une base v1 peuplée), `cards(sourceDocumentId:query:)` sans limite, `saveEdited` (mot/lecture modifiables, clé anti-doublon suivie, seules les colonnes éditées écrites : FSRS jamais réécrit), écran par document ouvert depuis l'accueil et le lecteur, export Anki par `onDismiss`. Revue DeepSeek D-07 (`DEEPSEEK-D07-CARTES-E1-980f316.md`, PARTIAL) traitée. E2 (mots de la page : lexique coché puis autres mots MeCab/UniDic trouvés dans les dictionnaires, décochés ; « déjà en carte ») codée le 11/11 (`2f0e567`), même revue DeepSeek traitée (`ccbcd26`) ; durée sur page dense à mesurer sur l'iPad. Preuves Mac seulement ; recette iPad à faire.
@@ -210,7 +214,14 @@ Une anomalie critique démontrée peut modifier cet ordre, avec justification en
 
 ## 8. Point de reprise pour le prochain chat
 
-**État au 10/11/2026 (relevé de cette note, sur le Mac de travail) :**
+**État au 19/11/2026 (relevé de cette note, sur le Mac de travail) :**
+
+- Branche de travail `claude/modloc`, pointe `56bfdc1` = candidate 1.5.9 (97), poussée ; PR #91 vers `main`, **non fusionnée**. `origin/main` = `859a2c7` (fusion de la PR #89 du 11/11). La branche contient les candidates 1.5.7, 1.5.8 et 1.5.9 (43 commits au-dessus de `main`) : MODLOC, NOTIF, DATA-03, B1, hooks anti-fuite, corrections des recettes 1.5.7 et 1.5.8.
+- Recettes : 1.5.7 (24/27) et 1.5.8 (20/24) rendues et corrigées ; **1.5.9 à faire** par NOxygen59.
+- Suite : recette 1.5.9, puis lot 1.5.10 sur demande (voir l'entrée « Réunions de revue » en tête de ce fichier), puis décision de NOxygen59 sur la fusion de la PR #91.
+- Preuve rejouable en une commande : `./scripts/verifier_tout.sh` (inchangé). GitHub Actions reste désactivé (CI-0).
+
+**État du 10/11/2026 (historique) :**
 
 - Copie de travail sur la branche `agents/docs-verif`, pointe `76cd371`. Le lot T1-T3 / C1-C3 / T6 / Lexique E1 /
   T5 E1 est décrit au § 3 bis : hors `main`, sans fusion ni push constatés, **non testé iPad**. `main` lu localement
