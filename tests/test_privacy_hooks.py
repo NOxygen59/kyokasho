@@ -26,8 +26,8 @@ class PrivacyHooksTests(unittest.TestCase):
         self.env = dict(os.environ, KYOKASHO_SECRET_FILE=str(self.secret), KYOKASHO_FINAL_REVIEWS=str(self.reviews),
                         GIT_CONFIG_GLOBAL="/dev/null", GIT_CONFIG_NOSYSTEM="1")
         self.git("init", "-q", str(self.repo), cwd=root)
-        self.git("config", "user.name", "NOxygen59")
-        self.git("config", "user.email", "1+NOxygen59@users.noreply.github.com")
+        self.git("config", "user.name", "Auteur Neutre")
+        self.git("config", "user.email", "auteur@example.com")
         self.git("config", "core.hooksPath", str(HOOKS))
 
     def tearDown(self):
@@ -55,7 +55,7 @@ class PrivacyHooksTests(unittest.TestCase):
         # Valeurs coupées en morceaux : ce fichier ne contient lui-même aucun motif refusé (relecture f2b3d49, B1).
         for bad in ["contact : prenom.nom" + "@" + "gmail.com", "tel 06 " + "12 34 56 78", "+81 " + "90-1234-5678",
                     "gh" + "p_" + "a" * 36, "sk-" + "ant-" + "b" * 30, "AK" + "IA" + "ABCDEFGHIJKLMNOP",
-                    "-----BEGIN " + "RSA PRIVATE KEY-----"]:
+                    "-----BEGIN " + "RSA PRIVATE KEY-----", "worktree /" + "Users/" + "quelquun/projet"]:
             with self.subTest(bad=bad[:8]):
                 self.assertNotEqual(self.commit(bad + "\n").returncode, 0)
 

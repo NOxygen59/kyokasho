@@ -37,6 +37,8 @@ PATTERNS = [
     ("clé d'accès", re.compile(r"\bAKIA[0-9A-Z]{16}\b|\bAIza[0-9A-Za-z_-]{35}\b|\bGOCSPX-[A-Za-z0-9_-]{20,}")),
     ("clé d'accès", re.compile(r"\bxox[abprs]-[A-Za-z0-9-]{10,}")),
     ("clé privée", re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----")),
+    # Réunion « état complet » du 19/11/2026 : des chemins de dossier personnel étaient passés sur le dépôt public.
+    ("chemin personnel", re.compile(r"/(?:Users|home)/(?!Shared/)[A-Za-z0-9._-]+/")),
 ]
 
 
