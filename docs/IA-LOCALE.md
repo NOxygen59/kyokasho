@@ -142,15 +142,17 @@ contrôle (mémoire `ios16-backport-rules`). Chaque correctif est listé dans `I
 Pour reproduire un test, garder les révisions de `Package.resolved`. Une mise à jour des forks est une
 intervention distincte, justifiée et validée ; elle ne fait pas partie de cette commande de test.
 
-Modèles et PDF d'essai **hors dépôt** (dossier temporaire de travail ; le PDF de l'utilisateur :
-`~/Downloads/INTERIOR COORDINATOR HANDBOOK HAWE.pdf`, 24 p., ne jamais le copier dans le dépôt).
+Modèles et PDF d'essai **hors dépôt** (dossier temporaire de travail ; PDF d'essai de 24 p., gardé hors du
+dépôt). Remplacer chaque valeur entre guillemets par un chemin réel :
 ```
 cd Packages/GLMOCRKit && swift build --build-tests --disable-automatic-resolution
-MLX_METAL_LANGUAGE_VERSION=30 KYOKASHO_MODELS=<dossier contenant ovisocr2/ qwen3vl4b/> \
-  KYOKASHO_SAMPLE_PDF="$HOME/Downloads/INTERIOR COORDINATOR HANDBOOK HAWE.pdf" KYOKASHO_SAMPLE_PAGES=1,2 \
-  swift test --skip-build --filter testRealSample          # + KYOKASHO_ONLY=OVIS|QWEN, KYOKASHO_DUMP=<dossier>
-KYOKASHO_TRANSLATE=<page.md> … --filter testQwenTranslatesPage
+MLX_METAL_LANGUAGE_VERSION=30 KYOKASHO_MODELS="/chemin/vers/modeles" \
+  KYOKASHO_SAMPLE_PDF="/chemin/vers/essai.pdf" KYOKASHO_SAMPLE_PAGES=1,2 \
+  swift test --skip-build --filter testRealSample          # + KYOKASHO_ONLY=OVIS|QWEN, KYOKASHO_DUMP="/chemin/sortie"
+MLX_METAL_LANGUAGE_VERSION=30 KYOKASHO_MODELS="/chemin/vers/modeles" KYOKASHO_TRANSLATE="/chemin/vers/page.md" \
+  swift test --skip-build --filter testQwenTranslatesPage
 ```
+`KYOKASHO_MODELS` est le dossier qui contient `ovisocr2/` et `qwen3vl4b/`.
 Téléchargement d'un modèle pour test : fichiers listés dans `ModelStore.swift` (URL figée sur une révision HF),
 `curl -sSLo` dans `<dossier>/<id>/`, **tous** les fichiers du spec (sinon `isInstalled` = faux, ex. `LICENSE`).
 
