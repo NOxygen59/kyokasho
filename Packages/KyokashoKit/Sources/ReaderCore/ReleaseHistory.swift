@@ -10,6 +10,15 @@ import Foundation
 enum ReleaseHistory {
     static let past: [ReleaseNotes] = [
         // Candidates locales non publiées.
+        ReleaseNotes("1.5.9", "2026-11-14", published: false, String(localized: "Rappels de notes, annotations exactes à l'export et correctifs de la recette 1.5.8", bundle: .main), added: [
+                String(localized: "Notes : un « ! » sur l'accueil, noir si une échéance arrive dans les 7 jours, rouge si elle est aujourd'hui ou dépassée.", bundle: .main),
+                String(localized: "Notes : une heure d'échéance et jusqu'à trois rappels par note, avec une notification d'iOS qui ouvre la note.", bundle: .main),
+                String(localized: "Accueil : la colonne de gauche est regroupée (Étudier, Importer et convertir), et entrer dans un dossier est animé.", bundle: .main),
+            ], fixed: [
+                String(localized: "Export « PDF annoté » et images : surlignages, dessins et notes restent sur leur mot, même sur une page d'une autre taille, et la page garde la rotation choisie dans l'app.", bundle: .main),
+                String(localized: "Dossiers : les pastilles de sélection se mettent à jour dans un dossier.", bundle: .main),
+                String(localized: "Barre à poignée : elle ne bouge plus au passage du Pencil, et sa poignée ne se cache plus contre le bord.", bundle: .main),
+            ]),
         ReleaseNotes("1.5.8", "2026-11-13", published: false, String(localized: "Correctifs de la recette 1.5.7", bundle: .main), added: [
                 String(localized: "Notes : chaque note affiche sa date et son heure de création ou de modification.", bundle: .main),
             ], fixed: [

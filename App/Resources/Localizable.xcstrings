@@ -1,6 +1,94 @@
 {
   "sourceLanguage": "fr",
   "strings": {
+    "Correctifs de la recette 1.5.9": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fixes from the 1.5.9 test pass"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Correctifs de la recette 1.5.9"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1.5.9 测试反馈的修正"
+          }
+        }
+      }
+    },
+    "Accueil : un document ouvert juste après la fermeture d'un menu ou de la fenêtre d'export est redemandé automatiquement s'il ne s'est pas affiché.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Home: a document opened right after closing a menu or the export window is requested again automatically if it did not show up."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accueil : un document ouvert juste après la fermeture d'un menu ou de la fenêtre d'export est redemandé automatiquement s'il ne s'est pas affiché."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "主页：刚关闭菜单或导出窗口后打开的文档如未显示，应用会自动重试打开该文档。"
+          }
+        }
+      }
+    },
+    "Furigana : ils reviennent d'eux-mêmes sur la page ouverte quand l'app a dû libérer de la mémoire ou vider son cache, et au retour dans l'app.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Furigana: they come back on their own on the open page when the app had to free memory or clear its cache, and when you return to the app."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Furigana : ils reviennent d'eux-mêmes sur la page ouverte quand l'app a dû libérer de la mémoire ou vider son cache, et au retour dans l'app."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "振假名：当应用需要释放内存或清除缓存时，以及返回应用时，打开的页面会自动重新显示振假名。"
+          }
+        }
+      }
+    },
+    "Cartes de la page : un mot sans lecture connue n'a plus son kanji recopié comme lecture ; elle est laissée vide si aucune lecture complète n'est trouvée.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Page cards: a word with no known reading no longer gets its kanji copied as the reading; it is left empty when no complete reading is found."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cartes de la page : un mot sans lecture connue n'a plus son kanji recopié comme lecture ; elle est laissée vide si aucune lecture complète n'est trouvée."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "本页卡片：没有已知读音的词不再把汉字复制为读音；若找不到完整读音则留空。"
+          }
+        }
+      }
+    },
     "Rappels de notes, annotations exactes à l'export et correctifs de la recette 1.5.8": {
       "localizations": {
         "en": {

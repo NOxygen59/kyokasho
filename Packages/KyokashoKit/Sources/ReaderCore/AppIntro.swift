@@ -101,14 +101,11 @@ public struct ReleaseNotes: Equatable, Sendable, Identifiable {
 
     /// La version en cours de préparation : seulement ce qu'elle change (décision de NOxygen59 du 04/11/2026). C'est
     /// elle que montre la fenêtre « Nouveautés » ; les versions précédentes vont dans `ReleaseHistory`.
-    public static let current = ReleaseNotes("1.5.9", "2026-11-14", published: false, String(localized: "Rappels de notes, annotations exactes à l'export et correctifs de la recette 1.5.8", bundle: .main), added: [
-            String(localized: "Notes : un « ! » sur l'accueil, noir si une échéance arrive dans les 7 jours, rouge si elle est aujourd'hui ou dépassée.", bundle: .main),
-            String(localized: "Notes : une heure d'échéance et jusqu'à trois rappels par note, avec une notification d'iOS qui ouvre la note.", bundle: .main),
-            String(localized: "Accueil : la colonne de gauche est regroupée (Étudier, Importer et convertir), et entrer dans un dossier est animé.", bundle: .main),
+    public static let current = ReleaseNotes("1.5.10", "2026-11-20", published: false, String(localized: "Correctifs de la recette 1.5.9", bundle: .main), added: [
         ], fixed: [
-            String(localized: "Export « PDF annoté » et images : surlignages, dessins et notes restent sur leur mot, même sur une page d'une autre taille, et la page garde la rotation choisie dans l'app.", bundle: .main),
-            String(localized: "Dossiers : les pastilles de sélection se mettent à jour dans un dossier.", bundle: .main),
-            String(localized: "Barre à poignée : elle ne bouge plus au passage du Pencil, et sa poignée ne se cache plus contre le bord.", bundle: .main),
+            String(localized: "Accueil : un document ouvert juste après la fermeture d'un menu ou de la fenêtre d'export est redemandé automatiquement s'il ne s'est pas affiché.", bundle: .main),
+            String(localized: "Furigana : ils reviennent d'eux-mêmes sur la page ouverte quand l'app a dû libérer de la mémoire ou vider son cache, et au retour dans l'app.", bundle: .main),
+            String(localized: "Cartes de la page : un mot sans lecture connue n'a plus son kanji recopié comme lecture ; elle est laissée vide si aucune lecture complète n'est trouvée.", bundle: .main),
         ])
 
     /// Notes de `version` (« 1.3.2 », sans le numéro de build) : la version elle-même, jamais une build de test.
