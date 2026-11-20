@@ -1,6 +1,138 @@
 {
   "sourceLanguage": "fr",
   "strings": {
+    "Correctifs de la recette 1.5.10": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fixes from the 1.5.10 test pass"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Correctifs de la recette 1.5.10"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1.5.10 测试反馈的修正"
+          }
+        }
+      }
+    },
+    "Effacer le cache : quand des fichiers récents sont gardés, un petit compte à rebours indique quand ils pourront être effacés.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear cache: when recent files are kept, a small countdown shows when they can be cleared."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Effacer le cache : quand des fichiers récents sont gardés, un petit compte à rebours indique quand ils pourront être effacés."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清除缓存：保留了最近的文件时，会用小倒计时显示何时可以清除它们。"
+          }
+        }
+      }
+    },
+    "Accueil : le lecteur s'affiche maintenant par-dessus l'accueil, au lieu d'une fenêtre qu'iOS pouvait refuser d'ouvrir juste après un menu ou l'export.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Home: the reader now appears on top of the home screen, instead of a window that iOS could refuse to open right after a menu or an export."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accueil : le lecteur s'affiche maintenant par-dessus l'accueil, au lieu d'une fenêtre qu'iOS pouvait refuser d'ouvrir juste après un menu ou l'export."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "主页：阅读器现在直接显示在主页之上，不再使用 iOS 在菜单或导出之后可能拒绝打开的窗口。"
+          }
+        }
+      }
+    },
+    "Furigana, teinte et pages nettoyées : ils s'affichent de nouveau sur un livre aux pages de tailles différentes rouvert depuis le cache.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Furigana, tint and cleaned pages: they appear again on a book with pages of different sizes reopened from the cache."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Furigana, teinte et pages nettoyées : ils s'affichent de nouveau sur un livre aux pages de tailles différentes rouvert depuis le cache."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "注音假名、色调和清理后的页面：页面尺寸不一的书从缓存重新打开时会再次显示。"
+          }
+        }
+      }
+    },
+    "Pages égalisées : une préparation abîmée dans le cache est refaite d'elle-même au lieu de bloquer l'export.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Equalized pages: a damaged preparation in the cache is redone automatically instead of blocking the export."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pages égalisées : une préparation abîmée dans le cache est refaite d'elle-même au lieu de bloquer l'export."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "统一页面高度：缓存中损坏的预处理会自动重做，不再阻止导出。"
+          }
+        }
+      }
+    },
+    "Enrichir le lexique : les comics ne sont plus proposés dans la liste des livres.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enrich the lexicon: comics are no longer offered in the list of books."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enrichir le lexique : les comics ne sont plus proposés dans la liste des livres."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "扩充词库：书籍列表中不再出现漫画。"
+          }
+        }
+      }
+    },
     "Fichiers récents gardés : effaçables dans %@": {
       "localizations": {
         "en": {

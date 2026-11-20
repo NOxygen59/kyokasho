@@ -101,11 +101,13 @@ public struct ReleaseNotes: Equatable, Sendable, Identifiable {
 
     /// La version en cours de préparation : seulement ce qu'elle change (décision de NOxygen59 du 04/11/2026). C'est
     /// elle que montre la fenêtre « Nouveautés » ; les versions précédentes vont dans `ReleaseHistory`.
-    public static let current = ReleaseNotes("1.5.10", "2026-11-20", published: false, String(localized: "Correctifs de la recette 1.5.9", bundle: .main), added: [
+    public static let current = ReleaseNotes("1.6.0", "2026-11-20", published: false, String(localized: "Correctifs de la recette 1.5.10", bundle: .main), added: [
+            String(localized: "Effacer le cache : quand des fichiers récents sont gardés, un petit compte à rebours indique quand ils pourront être effacés.", bundle: .main),
         ], fixed: [
-            String(localized: "Accueil : un document ouvert juste après la fermeture d'un menu ou de la fenêtre d'export est redemandé automatiquement s'il ne s'est pas affiché.", bundle: .main),
-            String(localized: "Furigana : ils reviennent d'eux-mêmes sur la page ouverte quand l'app a dû libérer de la mémoire ou vider son cache, et au retour dans l'app.", bundle: .main),
-            String(localized: "Cartes de la page : un mot sans lecture connue n'a plus son kanji recopié comme lecture ; elle est laissée vide si aucune lecture complète n'est trouvée.", bundle: .main),
+            String(localized: "Accueil : le lecteur s'affiche maintenant par-dessus l'accueil, au lieu d'une fenêtre qu'iOS pouvait refuser d'ouvrir juste après un menu ou l'export.", bundle: .main),
+            String(localized: "Furigana, teinte et pages nettoyées : ils s'affichent de nouveau sur un livre aux pages de tailles différentes rouvert depuis le cache.", bundle: .main),
+            String(localized: "Pages égalisées : une préparation abîmée dans le cache est refaite d'elle-même au lieu de bloquer l'export.", bundle: .main),
+            String(localized: "Enrichir le lexique : les comics ne sont plus proposés dans la liste des livres.", bundle: .main),
         ])
 
     /// Notes de `version` (« 1.3.2 », sans le numéro de build) : la version elle-même, jamais une build de test.
