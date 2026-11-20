@@ -74,7 +74,7 @@ enum DiagnosticContext {
         }
         context.gesture = gesture?.value
         context.panel = panel?.value
-        DiagnosticCPU.shared.store(context)
+        DiagnosticCPU.shared.store(context, gestureTime: gesture?.time)
     }
 
     static func resetActions() { gesture = nil; panel = nil }
@@ -87,6 +87,8 @@ final class DiagnosticCPU: @unchecked Sendable {
     private let contextLock = NSLock()
     private let refreshSlot = DispatchSemaphore(value: 1)
     private var context = DiagnosticCPULog.Context()
+    /// Heure du geste du contexte : son âge est revérifié à l'écriture (revue R2 D, second passage).
+    private var gestureTime: TimeInterval?
     // État confiné à `queue`, sauf le contexte protégé par son verrou.
     private var timer: DispatchSourceTimer?
     private var sampler = DiagnosticMachCPU()
@@ -119,7 +121,9 @@ final class DiagnosticCPU: @unchecked Sendable {
         shared.configure(running: enabled && UIApplication.shared.applicationState != .background, mainID: mainID)
     }
 
-    func store(_ value: DiagnosticCPULog.Context) { contextLock.withLock { context = value } }
+    func store(_ value: DiagnosticCPULog.Context, gestureTime: TimeInterval?) {
+        contextLock.withLock { context = value; self.gestureTime = gestureTime }
+    }
     var visiblePage: Int? { contextLock.withLock { context.page } }
 
     private func configure(running: Bool, mainID: UInt64) {
@@ -159,7 +163,9 @@ final class DiagnosticCPU: @unchecked Sendable {
         let long = center.takeDiagnosticLongWork()
         guard let decision = policy.decide(at: now, percent: sample.percent, cost: sample.cost,
                                            hasLongWork: !long.entries.isEmpty) else { return }
-        let current = contextLock.withLock { context }
+        var current = contextLock.withLock { context }
+        // Contexte rafraîchi en retard (fil principal occupé) : un geste de plus de 5 s n'explique plus ce pic.
+        if let time = contextLock.withLock({ gestureTime }), now - time > 5 { current.gesture = nil }
         let line = DiagnosticCPULog.line(percent: sample.percent, threads: sample.threads, active: center.diagnosticActive(),
                                          context: current, long: long, cost: sample.cost, decision: decision)
         Diagnostics.logCPU(line)
