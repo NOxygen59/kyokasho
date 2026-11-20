@@ -9,6 +9,12 @@
             "value": "Raw: uncertain characters"
           }
         },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Brut : caractères douteux"
+          }
+        },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
