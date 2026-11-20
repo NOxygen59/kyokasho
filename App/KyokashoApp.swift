@@ -78,9 +78,15 @@ struct RootView: View {
     @EnvironmentObject private var model: AppModel
     @ObservedObject private var dictionaryUpdates = DictionaryCatalogService.shared
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var retryingStorage = false
     /// N4 (revue R2) : confirmation avant de mettre un journal refusé de côté.
     @State private var confirmingAside = false
+
+    private var showsReader: Bool {
+        guard model.storageRecoveryError == nil, let id = model.openDocumentId else { return false }
+        return model.documents.contains { $0.id == id }
+    }
 
     var body: some View {
         Group {
@@ -137,22 +143,36 @@ struct RootView: View {
         }
         // Tâches IA toujours en cours ; le moniteur de la bibliothèque est ancré à droite de la liste (recette 63).
         .overlay(alignment: .bottomLeading) { ActivityDock(showsMonitor: false).padding(Atelier.gap) }
+        .allowsHitTesting(!showsReader)
+        .accessibilityHidden(showsReader)
         .task { AppUpdate.shared.checkAtLaunch(); MorphologyService.shared.loadIfInstalled(); EnergyMeter.shared.attach(model) }
-        // Visite guidée au premier lancement, nouveautés après une mise à jour.
-        .modifier(IntroPresenter(hasLibrary: { [model] in !model.documents.isEmpty }))
-        // Une seule couverture pour tous les onglets (#16) : changer d'onglet remplace le lecteur sans refermer
-        // ni rouvrir la feuille plein écran.
-        .fullScreenCover(isPresented: Binding(
-            get: { model.storageRecoveryError == nil && model.readerPresented
-                && model.openDocumentId.map { id in model.documents.contains { $0.id == id } } == true },
-            set: { if !$0 { model.readerCoverDismissed() } }
-        )) {
-            ReaderTabsHost()
-                .environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review)
-                .preferredColorScheme(themes.effectiveTheme.colorScheme)
-                .environment(\.themeRevision, themes.effectiveRevision)
-                .atelierFontDesign()
-                .tint(Atelier.Tint.read)
+        .overlay {
+            // Différer visite et nouveautés pendant la lecture sans démonter la bibliothèque.
+            if !showsReader {
+                Color.clear
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+                    .modifier(IntroPresenter(hasLibrary: { [model] in !model.documents.isEmpty }))
+            }
+        }
+        .overlay {
+            ZStack {
+                // Un seul calque pour tous les onglets (#16), indépendant des présentations iOS (#93).
+                if showsReader {
+                    ReaderTabsHost()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        // Le fond couvre les zones sûres, les commandes gardent leurs marges et le clavier.
+                        .background(Atelier.canvas.ignoresSafeArea())
+                        .environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review)
+                        .preferredColorScheme(themes.effectiveTheme.colorScheme)
+                        .environment(\.themeRevision, themes.effectiveRevision)
+                        .atelierFontDesign()
+                        .tint(Atelier.Tint.read)
+                        // Retrait immédiat : le lecteur rend sa mémoire sans attendre la fin d'un fondu.
+                        .transition(.asymmetric(insertion: .opacity, removal: .identity))
+                }
+            }
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: showsReader)
         }
         .onAppear {
             model.themeManager = themes

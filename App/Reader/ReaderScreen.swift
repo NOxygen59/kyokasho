@@ -17,7 +17,6 @@ struct ReaderScreen: View {
     private let model: AppModel
     @State private var showOCRBoxes = false
     @EnvironmentObject private var review: ReviewModel
-    @Environment(\.dismiss) private var dismiss
     @StateObject private var reader: ReaderController
     @StateObject private var lookup: LookupSession
     @State private var sheet: Sheet?
@@ -486,7 +485,7 @@ struct ReaderScreen: View {
 
     private var titleCapsule: some View {
         HStack(spacing: 4) {
-            CapsuleButton(icon: "chevron.left", label: String(localized: "Bibliothèque")) { dismiss() }
+            CapsuleButton(icon: "chevron.left", label: String(localized: "Bibliothèque")) { model.openDocumentId = nil }
             VStack(alignment: .leading, spacing: 1) {
                 Text(reader.document.title).font(Atelier.font(15, weight: .semibold)).lineLimit(1)
                     .foregroundStyle(Atelier.textPrimary)
