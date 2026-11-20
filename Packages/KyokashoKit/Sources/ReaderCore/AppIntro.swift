@@ -102,7 +102,7 @@ public struct ReleaseNotes: Equatable, Sendable, Identifiable {
     /// La version en cours de préparation : seulement ce qu'elle change (décision de NOxygen59 du 04/11/2026). C'est
     /// elle que montre la fenêtre « Nouveautés » ; les versions précédentes vont dans `ReleaseHistory`.
     public static let current = ReleaseNotes("1.6.1", "2026-11-20", published: false, String(localized: "Correctifs de la recette 1.6.0", bundle: .main), added: [
-            String(localized: "Mode diagnostic : le journal note ce qui occupe le processeur pendant un pic (tâches en cours, page, étape, temps processeur, onglets ouverts, dernier geste).", bundle: .main),
+            String(localized: "Mode diagnostic : lors d'un pic du processeur, le journal relève le contexte (tâches en cours avec leur page et leur étape, temps processeur quand il est mesuré, onglets ouverts, dernier geste récent).", bundle: .main),
         ], fixed: [
             String(localized: "Lecteur : il s'ouvre en fondu court et se ferme sans traîne.", bundle: .main),
             String(localized: "Bannière de diagnostic : elle garde sa place en haut au retour à l'accueil.", bundle: .main),

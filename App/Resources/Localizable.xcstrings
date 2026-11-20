@@ -23,24 +23,24 @@
         }
       }
     },
-    "Mode diagnostic : le journal note ce qui occupe le processeur pendant un pic (tâches en cours, page, étape, temps processeur, onglets ouverts, dernier geste).": {
+    "Mode diagnostic : lors d'un pic du processeur, le journal relève le contexte (tâches en cours avec leur page et leur étape, temps processeur quand il est mesuré, onglets ouverts, dernier geste récent).": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Diagnostic mode: the log records what keeps the processor busy during a spike (running tasks, page, step, processor time, open tabs, last gesture)."
+            "value": "Diagnostic mode: during a processor spike, the log records the context (running tasks with their page and step, processor time when it is measured, open tabs, recent last gesture)."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mode diagnostic : le journal note ce qui occupe le processeur pendant un pic (tâches en cours, page, étape, temps processeur, onglets ouverts, dernier geste)."
+            "value": "Mode diagnostic : lors d'un pic du processeur, le journal relève le contexte (tâches en cours avec leur page et leur étape, temps processeur quand il est mesuré, onglets ouverts, dernier geste récent)."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "诊断模式：处理器占用高峰时，日志会记录占用原因（正在运行的任务、页码、步骤、处理器时间、已打开的标签页、最后的操作）。"
+            "value": "诊断模式：处理器占用出现高峰时，日志会记录当时的情况（正在运行的任务及其页码和步骤、可测得时的处理器时间、已打开的标签页、最近的操作）。"
           }
         }
       }
