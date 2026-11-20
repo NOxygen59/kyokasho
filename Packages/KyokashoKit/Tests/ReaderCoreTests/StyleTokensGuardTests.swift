@@ -32,7 +32,8 @@ final class StyleTokensGuardTests: XCTestCase {
         // Enquête furigana iPad / Mac (07/11/2026) : un seul moteur par page alimente zones et furigana ; un calcul dont
         // le moteur n'est plus retenu n'est pas publié, et le texte du PDF ne remplace pas un OCR retenu.
         XCTAssertTrue(display.contains("guard !closed, selectedEngines[source] == ocr.engine else {"))
-        XCTAssertTrue(display.contains("selectedEngines[source] == engine else { return }"))
+        XCTAssertTrue(display.contains("selectedEngines[source] == engine, FuriganaLayer.purgeCount == purge else { return }"))
+        // #94 (PLAN-1510-001 E2) : une lecture calculée avant une purge du cache n'est jamais publiée après elle.
         // Revue Codex de d87e048 (R1, R2) : une seule adoption gardée et versionnée change le moteur retenu ; aucune
         // écriture directe de la sélection ne subsiste dans le lecteur.
         XCTAssertTrue(display.contains("guard !closed, ocrSelection.adopt(candidate.page.engine, ticket: candidate.ticket,"))
@@ -71,7 +72,7 @@ final class StyleTokensGuardTests: XCTestCase {
         let controller = try String(contentsOf: reader.appendingPathComponent("ReaderController.swift"), encoding: .utf8)
         XCTAssertTrue(controller.contains("guard source == self.focusSource else { self.reloadShownPage(source, engine: engine); return }"))
         XCTAssertTrue(display.contains("overridingPin: OCRSelectionPolicy.isCorrected(candidate.page)"))
-        XCTAssertTrue(display.contains("guard retained == nil || retained == OCREngineID.pdfText else { return false }"))
+        XCTAssertTrue(display.contains("guard retained == nil || retained == OCREngineID.pdfText, FuriganaLayer.purgeCount == purge else { return false }"))
         XCTAssertEqual(display.components(separatedBy: "FuriganaLayer.set(").count, 3, "publication de showOCR et de scheduleFurigana, pas d'autre")
         let close = try String(contentsOf: reader.appendingPathComponent("ReaderController+OCR.swift"), encoding: .utf8)
         XCTAssertTrue(close.contains("for page in furiganaGeneration.keys { furiganaGeneration[page, default: 0] += 1 }"))

@@ -26,7 +26,7 @@ class PageCardsWordsWiringTests(unittest.TestCase):
         self.assertIn("onCancel: { work.cancel() }", self.view)
 
     def test_existing_cards_are_flagged_and_adding_keeps_the_same_path(self):
-        self.assertIn("store.existingCardDocuments(keys)", self.view)
+        self.assertIn("store.existingCardDocuments(keys + legacy)", self.view)  # #97 : cartes « terme|terme » d'avant 1.5.10
         self.assertIn("review.addPageCards(fields, documentId: document.id, page: page)", self.view)
 
     def test_cards_get_the_full_definition(self):

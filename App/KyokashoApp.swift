@@ -143,8 +143,9 @@ struct RootView: View {
         // Une seule couverture pour tous les onglets (#16) : changer d'onglet remplace le lecteur sans refermer
         // ni rouvrir la feuille plein écran.
         .fullScreenCover(isPresented: Binding(
-            get: { model.storageRecoveryError == nil && model.openDocumentId.map { id in model.documents.contains { $0.id == id } } == true },
-            set: { if !$0 { model.openDocumentId = nil } }
+            get: { model.storageRecoveryError == nil && model.readerPresented
+                && model.openDocumentId.map { id in model.documents.contains { $0.id == id } } == true },
+            set: { if !$0 { model.readerCoverDismissed() } }
         )) {
             ReaderTabsHost()
                 .environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review)

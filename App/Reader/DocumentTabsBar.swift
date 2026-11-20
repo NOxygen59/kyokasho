@@ -38,7 +38,10 @@ struct ReaderTabsHost: View {
             }
         }
         // Lecteur ouvert depuis la bibliothèque avec déjà assez d'onglets : prévenir une fois à l'ouverture.
-        .onAppear { if model.tabs.showsMemoryWarning { showNotice() } }
+        .onAppear {
+            model.readerDidAppear()  // #93 : accusé de présentation du lecteur
+            if model.tabs.showsMemoryWarning { showNotice() }
+        }
         .onDisappear { hideTask?.cancel() }
     }
 

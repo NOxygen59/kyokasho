@@ -600,8 +600,10 @@ final class ReaderController: NSObject, ObservableObject {
         let target = pdf == nil ? source : currentSourcePage
         guard let built else {
             loadError = String(localized: "Impossible d'ouvrir ce PDF.")
+            Diagnostics.error("PDF : échec de préparation", "lecteur")  // #93 : demandé → affiché → prêt ou échec
             return
         }
+        Diagnostics.log("PDF prêt : \(built.presented.count) pages", "lecteur")
         if let note = pendingAnchorNote {
             pendingAnchorNote = nil
             // Après la fin de cette installation (même tour de boucle) : PDF et pages sont en place.
@@ -1009,6 +1011,12 @@ final class ReaderController: NSObject, ObservableObject {
         })
         // Pages pas encore lues par l'IA : lecture en tâche de l'app (continue après la fermeture du lecteur).
         DocumentScan.start(document, url: fileURL, ocr: model.ocr)
+        // #94 : furigana vidés pendant la lecture, ou retour au premier plan : recalcul des pages visibles qui n'en ont plus.
+        for name in [FuriganaLayer.didClearMemory, UIApplication.willEnterForegroundNotification] {
+            observers.append(center.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.refreshMissingFurigana() }
+            })
+        }
         observers.append(center.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated {
                 self?.savePositionWork?.perform()

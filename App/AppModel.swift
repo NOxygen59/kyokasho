@@ -77,9 +77,22 @@ final class AppModel: ObservableObject {
     @Published var incomingPackage: URL?
     weak var themeManager: ThemeManager?
 
+    /// Fenêtre plein écran du lecteur demandée (#93) : séparée du document ouvert, pour pouvoir redemander la
+    /// présentation quand iOS l'a refusée (menu ou fenêtre encore en train de se fermer) sans toucher à l'onglet.
+    @Published private(set) var readerPresented = false
+    private var openGuard = ReaderOpenGuard()
+    /// Numéro de la dernière demande d'ouverture : une action différée plus ancienne ne doit rien ouvrir.
+    var openRequestSerial: Int { openGuard.serial }
+
     @Published var openDocumentId: String? {
         didSet {
-            if let openDocumentId { tabs.open(openDocumentId) }
+            if let openDocumentId {
+                tabs.open(openDocumentId)
+                requestReader(openDocumentId)
+            } else {
+                openGuard.didClose()
+                readerPresented = false
+            }
             // Le lecteur doit lire Theme.current avant de construire ses vues et ses furigana.
             themeManager?.showDocument(in: activeDocumentSpace)
             // Lecteur fermé : la bibliothèque reçoit enfin les positions de lecture mises de côté.
@@ -89,6 +102,56 @@ final class AppModel: ObservableObject {
             }
         }
     }
+    /// #93 : demande d'ouverture. Le lecteur doit signaler son apparition (`readerDidAppear`) ; sinon nouvel essai.
+    private func requestReader(_ id: String) {
+        Diagnostics.log("ouverture demandée : \(id.prefix(8))", "lecteur")
+        switch openGuard.request(id) {
+        case .present: readerPresented = true
+        case .presentAgain: presentReaderAgain(serial: openGuard.serial)
+        case .none: break
+        }
+        checkReaderLater(serial: openGuard.serial)
+    }
+
+    /// Le lecteur est réellement à l'écran (appelé par `ReaderTabsHost`).
+    func readerDidAppear() {
+        // Accusé reçu pendant un retrait de la reprise : ignoré, la remise suivante enverra le sien.
+        guard readerPresented else { return }
+        openGuard.didShow()
+        Diagnostics.log("lecteur affiché", "lecteur")
+    }
+
+    private func presentReaderAgain(serial: Int) {
+        readerPresented = false
+        // Laisser finir la fermeture en cours (même délai que les fenêtres ouvertes depuis un menu).
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 350_000_000)
+            guard let self, self.openGuard.serial == serial, self.openDocumentId != nil, !self.openGuard.shown else { return }
+            self.readerPresented = true
+        }
+    }
+
+    /// Fermeture du lecteur demandée par SwiftUI (balayage, bouton). Ignorée pendant un retrait fait par la reprise
+    /// d'ouverture : ce n'est pas l'utilisateur qui ferme.
+    func readerCoverDismissed() {
+        guard readerPresented else { return }
+        openDocumentId = nil
+    }
+
+    private func checkReaderLater(serial: Int) {
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 1_500_000_000)
+            guard let self else { return }
+            if self.openGuard.check(serial: serial) == .presentAgain {
+                Diagnostics.log("lecteur non affiché : nouvel essai \(self.openGuard.retries)", "lecteur")
+                self.presentReaderAgain(serial: serial)
+                self.checkReaderLater(serial: serial)
+            } else if self.openGuard.gaveUp(serial: serial) {
+                Diagnostics.error("lecteur jamais affiché après \(ReaderOpenGuard.maxRetries) essais", "lecteur")
+            }
+        }
+    }
+
     var activeDocumentSpace: LibrarySpace? {
         guard let openDocumentId, let document = documents.first(where: { $0.id == openDocumentId }) else { return nil }
         return LibrarySpace(document: document)

@@ -203,7 +203,7 @@ struct PageCardsView: View {
             var words = await Task.detached(priority: .utility) {
                 found.map { entry in
                     PageWord(term: entry.term, surface: entry.term,
-                             reading: entry.reading.isEmpty ? Self.suggestedReading(entry.term) : entry.reading,
+                             reading: Furigana.completeReading(for: entry.term, preferred: entry.reading),
                              meaning: entry.meaning, fromLexicon: true)
                 }
             }.value
@@ -220,8 +220,10 @@ struct PageCardsView: View {
             // DEC-CA-03 : une seule carte par mot ; celles qui existent déjà sont signalées et décochées.
             let store = review.store
             let keys = words.map { StudyCard.key(expression: $0.term, reading: $0.reading.trimmingCharacters(in: .whitespacesAndNewlines)) }
-            let existing = (try? await Task.detached(priority: .utility) { try store.existingCardDocuments(keys) }.value) ?? [:]
-            for i in words.indices { words[i].existingDocumentId = existing[keys[i]] }
+            // #97 : avant la 1.5.10, un mot sans lecture devenait une carte « terme|terme » ; elle compte toujours.
+            let legacy = words.map { StudyCard.key(expression: $0.term, reading: $0.term) }
+            let existing = (try? await Task.detached(priority: .utility) { try store.existingCardDocuments(keys + legacy) }.value) ?? [:]
+            for i in words.indices { words[i].existingDocumentId = existing[keys[i]] ?? existing[legacy[i]] }
             try Task.checkCancellation()
             entries = words
             selected = Set(words.filter { $0.fromLexicon && $0.existingDocumentId == nil }.map(\.id))
@@ -263,7 +265,8 @@ struct PageCardsView: View {
                 let sense = word.senses.first { $0.language == .french && !$0.full.isEmpty }
                     ?? word.senses.first { $0.language == .english && !$0.full.isEmpty } ?? word.senses.first
                 let meaning = sense?.full ?? ""
-                return PageWord(term: word.expression, surface: candidate.surface, reading: word.reading ?? word.expression,
+                return PageWord(term: word.expression, surface: candidate.surface,
+                                reading: Furigana.completeReading(for: word.expression, preferred: word.reading),
                                 meaning: meaning, fromLexicon: false)
             }
         }
@@ -271,16 +274,6 @@ struct PageCardsView: View {
         Diagnostics.log("Cartes p. \(page) : \(words.count) autres mots en \(String(format: "%.2f", Date().timeIntervalSince(start))) s", "cartes")
         if words.isEmpty { otherWordsNote = String(localized: "Aucun autre mot de cette page n'est dans tes dictionnaires.") }
         return words
-    }
-
-    nonisolated private static func suggestedReading(_ term: String) -> String {
-        let result = NSMutableString(string: term)
-        for ruby in Furigana.rubies(for: term).sorted(by: { $0.utf16.location > $1.utf16.location }) {
-            result.replaceCharacters(in: ruby.utf16, with: ruby.reading)
-        }
-        let reading = (result as String).applyingTransform(.hiraganaToKatakana, reverse: true) ?? ""
-        // Lecture incomplète : laisser le champ vide plutôt que garder des kanji.
-        return reading.contains(where: Furigana.isKanji) ? "" : reading
     }
 
     private func add() async {

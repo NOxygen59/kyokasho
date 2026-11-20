@@ -223,6 +223,7 @@ extension ReaderController {
         // Calculs lancés l'un après l'autre pour la même page : seul le dernier est gardé.
         furiganaGeneration[source, default: 0] += 1
         let generation = furiganaGeneration[source, default: 0]
+        let purge = FuriganaLayer.purgeCount
         // Texte d'OvisOCR2 (scan à l'import, vérification, mise en page IA) : lectures d'après lui.
         let documentId = document.id
         let translator = model.dictionary.translator
@@ -265,18 +266,18 @@ extension ReaderController {
                             + "texte Ovis \(reference?.count ?? 0) caractères, \(marks.count) lectures", "furigana")
             // Préparée ici : la publication, sur le fil principal, n'a plus qu'à la ranger.
             let page = FuriganaLayer.PreparedPage(marks, signature: signature)
-            await self?.publishPageFurigana(page, key: key, source: source, generation: generation, engine: ocr.engine)
+            await self?.publishPageFurigana(page, key: key, source: source, generation: generation, engine: ocr.engine, purge: purge)
         }
     }
 
     /// Contrôle et publication d'un seul tenant sur le fil principal : rien ne peut s'intercaler. Un calcul annulé
     /// (fermeture, remplacement) a pu rendre des lectures de secours : elles ne doivent pas entrer dans le cache.
     private func publishPageFurigana(_ page: FuriganaLayer.PreparedPage, key: String, source: Int, generation: Int,
-                                     engine: String) {
+                                     engine: String, purge: Int) {
         // Moteur retenu changé pendant le calcul (choix dans le panneau, réglage) : ces lectures ne sont plus les bonnes.
         // `drawOCR` n'est appelé qu'après adoption : un moteur retenu vide signifie un réglage remis à zéro entre-temps.
         guard !closed, !Task.isCancelled, furiganaGeneration[source] == generation,
-              selectedEngines[source] == engine else { return }
+              selectedEngines[source] == engine, FuriganaLayer.purgeCount == purge else { return }
         FuriganaLayer.set(page, for: key)
         pdfView.requestRedraw()
     }
@@ -294,7 +295,7 @@ extension ReaderController {
     func scheduleFurigana(_ pages: [Int]) {
         furiganaTask?.cancel()
         guard pageFuriganaOn else { return }
-        let url = fileURL, id = document.id
+        let url = fileURL, id = document.id, purge = FuriganaLayer.purgeCount
         furiganaTask = Task.detached(priority: .utility) { [weak self] in
             var changed = false
             for source in pages {
@@ -313,7 +314,7 @@ extension ReaderController {
                 let allowed = await MainActor.run { () -> Bool in
                     guard let self, !self.closed, !Task.isCancelled else { return false }
                     let retained = self.selectedEngines[source]
-                    guard retained == nil || retained == OCREngineID.pdfText else { return false }
+                    guard retained == nil || retained == OCREngineID.pdfText, FuriganaLayer.purgeCount == purge else { return false }
                     FuriganaLayer.set(marks, for: key)
                     return true
                 }
@@ -322,6 +323,16 @@ extension ReaderController {
             guard changed, !Task.isCancelled else { return }
             await self?.pdfView.requestRedraw()
         }
+    }
+
+    /// #94 : pages visibles sans furigana en mémoire alors qu'ils sont activés → même recalcul qu'à l'arrivée sur la page,
+    /// en gardant le panneau. Rien n'est relancé si toutes les pages visibles ont encore les leurs.
+    func refreshMissingFurigana() {
+        guard !closed, pageFuriganaOn, document.capabilities.textAnalysis else { return }
+        let missing = visibleSources().filter { !FuriganaLayer.has(ScanSharpening.key(documentId: document.id, page: $0)) }
+        guard !missing.isEmpty else { return }
+        Diagnostics.log("Furigana : recalcul de \(missing.count) page(s) visible(s) après purge ou retour", "furigana")
+        schedulePageSettled(samePageKeeps: true)
     }
 
     func setFuriganaTint(_ tint: FuriganaLayer.Tint) {
