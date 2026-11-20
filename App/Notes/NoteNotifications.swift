@@ -10,12 +10,11 @@ import UserNotifications
 /// Notifications iOS des rappels de notes (PLAN-NOTIF-001, E3 ; DEC-03 à DEC-05 = A, NOxygen59 13/11/2026).
 ///
 /// Notifications **locales** : programmées sur l'iPad, sans serveur ; rien ne sort de l'appareil. iOS en garde 64 au
-/// plus : on programme les `limit` rappels les plus proches, et tout est reprogrammé à chaque changement de note, au
+/// plus : on programme les `NoteReminderPlan.limit` rappels les plus proches, et tout est reprogrammé à chaque changement de note, au
 /// lancement et au retour dans l'app (`AppModel.refreshNotesToReview`). Note archivée, sans échéance, ou document à la
 /// corbeille : aucun rappel. L'autorisation d'iOS n'est demandée qu'au premier rappel à programmer.
 enum NoteNotifications {
-    static let prefix = "note-"
-    static let limit = 60
+    static let prefix = NoteReminderPlan.prefix
     /// Réglages › Notes : rappel d'une nouvelle échéance, en minutes avant (−1 : aucun). Défaut : à l'heure.
     static let defaultReminderKey = "notes.defaultReminder"
 
@@ -31,41 +30,14 @@ enum NoteNotifications {
         return (0..<1_440).contains(value) ? value : NoteReminder.defaultDueMinute
     }
 
-    /// Une notification à programmer : identifiant stable, instant, contenu.
-    struct Planned: Equatable {
-        let id: String
-        let date: Date
-        let title: String
-        let body: String
-        let noteId: String
-        let documentId: String
-    }
-
-    /// Rappels à programmer, les plus proches d'abord (fonction pure).
-    static func plan(_ notes: [OrganizedNote], titles: [String: String], now: Date, defaultMinute: Int,
-                     defaultReminders: [Int], calendar: Calendar = NoteDay.calendar) -> [Planned] {
-        var planned: [Planned] = []
-        for item in notes where !item.organization.archived {
-            guard let day = item.organization.dueDay, let book = titles[item.note.documentId] else { continue }
-            let dates = NoteReminder.fireDates(day: day, minute: item.organization.dueMinute, reminders: item.organization.reminders,
-                                               now: now, defaultMinute: defaultMinute, defaultReminders: defaultReminders,
-                                               calendar: calendar)
-            let text = item.note.body.trimmingCharacters(in: .whitespacesAndNewlines)
-            for date in dates {
-                planned.append(Planned(id: "\(prefix)\(item.note.id)-\(Int(date.timeIntervalSince1970))", date: date,
-                                       title: String(localized: "\(book) · p. \(item.note.pageIndex + 1)"),
-                                       body: text.isEmpty ? String(localized: "Note sans texte") : String(text.prefix(150)),
-                                       noteId: item.note.id, documentId: item.note.documentId))
-            }
-        }
-        return Array(planned.sorted { $0.date < $1.date }.prefix(limit))
-    }
-
-    /// Reprogramme tous les rappels de notes (les autres notifications de l'app ne sont pas touchées).
-    static func reschedule(database: AppDatabase, titles: [String: String], excluded: Set<String>) {
+    /// Reprogramme les rappels de notes (les autres notifications de l'app ne sont pas touchées).
+    /// #96 (PLAN-16-001, E4) : numéro de page imprimé, autorisation relue après la demande, et seuls les rappels qui
+    /// changent sont retirés ou ajoutés (`NoteReminderPlan`), au lieu de tout retirer puis tout recréer.
+    static func reschedule(database: AppDatabase, documents: [String: LibraryDocument], excluded: Set<String>) {
         // Revue R2 NOTIF (n°1) : bibliothèque pas encore lue (lancement) : on ne touche à rien, sinon tous les rappels
         // seraient retirés faute de titres.
-        guard !titles.isEmpty else { return }
+        guard !documents.isEmpty else { return }
+        let titles = documents.mapValues(\.title)
         let defaultMinute = defaultDueMinute, reminders = defaultReminders
         let generation = Generation.next()
         Task.detached(priority: .utility) {
@@ -74,32 +46,61 @@ enum NoteNotifications {
                 Diagnostics.error("rappels des notes : \(error.localizedDescription)", "notes")
                 return
             }
-            let planned = plan(notes, titles: titles, now: Date(), defaultMinute: defaultMinute, defaultReminders: reminders)
             let center = UNUserNotificationCenter.current()
+            let pending = await center.pendingNotificationRequests().filter { $0.identifier.hasPrefix(prefix) }.map(Self.pending)
+            let plan = NoteReminderPlan.make(
+                notes, titles: titles, pageLabel: { id, index in documents[id]?.pageLabel(index) },
+                now: Date(), pending: pending, defaultMinute: defaultMinute, defaultReminders: reminders,
+                calendar: NoteDay.calendar, makeTitle: { book, label in String(localized: "\(book) · p. \(label)") },
+                emptyBody: String(localized: "Note sans texte"))
+            var status = await center.notificationSettings().authorizationStatus
+            if !plan.updates.isEmpty, status == .notDetermined {
+                _ = try? await center.requestAuthorization(options: [.alert, .sound])
+                // Relue : la réponse de l'utilisateur décide, pas l'état d'avant la question.
+                status = await center.notificationSettings().authorizationStatus
+            }
             // Deux reprogrammations de suite : seule la dernière écrit (pas de rappels en double ni retirés à tort).
             guard Generation.isCurrent(generation) else { return }
-            let old = await center.pendingNotificationRequests().map(\.identifier).filter { $0.hasPrefix(prefix) }
-            center.removePendingNotificationRequests(withIdentifiers: old)
-            guard !planned.isEmpty else { return }
-            if await center.notificationSettings().authorizationStatus == .notDetermined {
-                _ = try? await center.requestAuthorization(options: [.alert, .sound])
+            center.removePendingNotificationRequests(withIdentifiers: plan.removals)
+            guard [UNAuthorizationStatus.authorized, .provisional, .ephemeral].contains(status) else {
+                // Refus : rien n'est programmé ; Réglages › Rappels l'explique (« Notifications refusées »).
+                if !plan.updates.isEmpty { Diagnostics.log("rappels : notifications non autorisées, \(plan.updates.count) rappel(s) non programmé(s)", "notes") }
+                return
             }
-            for item in planned {
+            for update in plan.updates {
                 guard Generation.isCurrent(generation) else { return }
+                let reminder: NoteReminderPlan.Reminder
+                switch update { case .add(let r), .replace(let r): reminder = r }
                 let content = UNMutableNotificationContent()
-                content.title = item.title
-                content.body = item.body
+                content.title = reminder.content.title
+                content.body = reminder.content.body
                 content.sound = .default
-                content.threadIdentifier = item.documentId
-                content.userInfo = ["noteId": item.noteId, "documentId": item.documentId]
-                let parts = NoteDay.calendar.dateComponents([.year, .month, .day, .hour, .minute], from: item.date)
-                let request = UNNotificationRequest(identifier: item.id, content: content,
-                                                    trigger: UNCalendarNotificationTrigger(dateMatching: parts, repeats: false))
+                content.threadIdentifier = reminder.content.documentId
+                content.userInfo = ["noteId": reminder.content.noteId, "documentId": reminder.content.documentId]
+                // Même identifiant : iOS remplace la demande existante, sans retrait préalable.
+                let request = UNNotificationRequest(identifier: reminder.id, content: content,
+                                                    trigger: UNCalendarNotificationTrigger(dateMatching: reminder.trigger.components,
+                                                                                           repeats: reminder.trigger.repeats))
                 do { try await center.add(request) } catch {
                     Diagnostics.error("rappel non programmé : \(error.localizedDescription)", "notes")
                 }
             }
         }
+    }
+
+    /// Demande déjà programmée → forme comparable par le plan (`nil` si contenu ou déclencheur inattendu : remplacé).
+    private static func pending(_ request: UNNotificationRequest) -> NoteReminderPlan.PendingReminder {
+        let info = request.content.userInfo
+        let content = (info["noteId"] as? String).flatMap { noteId in
+            (info["documentId"] as? String).map { documentId in
+                NoteReminderPlan.Content(title: request.content.title, body: request.content.body,
+                                         noteId: noteId, documentId: documentId)
+            }
+        }
+        let trigger = (request.trigger as? UNCalendarNotificationTrigger).map {
+            NoteReminderPlan.Trigger(components: $0.dateComponents, repeats: $0.repeats)
+        }
+        return .init(id: request.identifier, content: content, trigger: trigger)
     }
 }
 

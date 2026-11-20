@@ -20,11 +20,19 @@ class NoteNotificationsWiringTests(unittest.TestCase):
 
     def test_only_note_requests_are_replaced_and_iOS_limit_is_kept(self):
         service = self.read("Notes/NoteNotifications.swift")
-        self.assertIn('static let prefix = "note-"', service)
-        self.assertIn("static let limit = 60", service)
-        self.assertIn(".filter { $0.hasPrefix(prefix) }", service)
-        self.assertIn("for item in notes where !item.organization.archived {", service)
-        self.assertIn("authorizationStatus == .notDetermined", service)
+        plan = (APP.parent / "Packages/KyokashoKit/Sources/ReaderCore/NoteReminderPlan.swift").read_text(encoding="utf-8")
+        self.assertIn('public static let prefix = "note-"', plan)
+        self.assertIn("public static let limit = 60", plan)
+        self.assertIn("for item in notes where !item.organization.archived {", plan)
+        self.assertIn("static let prefix = NoteReminderPlan.prefix", service)
+        self.assertIn(".filter { $0.identifier.hasPrefix(prefix) }", service)
+        # #96 (PLAN-16-001 E4) : diff ciblé, page imprimée, autorisation relue après la demande.
+        self.assertIn("center.removePendingNotificationRequests(withIdentifiers: plan.removals)", service)
+        self.assertNotIn("removePendingNotificationRequests(withIdentifiers: old)", service)
+        self.assertIn("pageLabel: { id, index in documents[id]?.pageLabel(index) }", service)
+        self.assertIn("status == .notDetermined", service)
+        self.assertIn("status = await center.notificationSettings().authorizationStatus", service)
+        self.assertIn("guard [UNAuthorizationStatus.authorized, .provisional, .ephemeral].contains(status) else {", service)
 
     def test_tapping_a_notification_opens_the_note_even_from_a_cold_start(self):
         app = self.read("KyokashoApp.swift")

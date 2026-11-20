@@ -579,7 +579,7 @@ final class AppModel: ObservableObject {
         }
         // PLAN-NOTIF-001 E3 : mêmes moments que la pastille (note changée, accueil, retour dans l'app).
         NoteNotifications.reschedule(database: database,
-                                     titles: Dictionary(documents.map { ($0.id, $0.title) }, uniquingKeysWith: { a, _ in a }),
+                                     documents: Dictionary(documents.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a }),
                                      excluded: excluded)
     }
 
