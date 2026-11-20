@@ -1,6 +1,22 @@
 {
   "sourceLanguage": "fr",
   "strings": {
+    "Brut : caractères douteux": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Raw: uncertain characters"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "原始：有可疑字符"
+          }
+        }
+      }
+    },
     "Correctifs de la recette 1.5.10": {
       "localizations": {
         "en": {
