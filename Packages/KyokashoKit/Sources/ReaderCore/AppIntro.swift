@@ -101,13 +101,17 @@ public struct ReleaseNotes: Equatable, Sendable, Identifiable {
 
     /// La version en cours de préparation : seulement ce qu'elle change (décision de NOxygen59 du 04/11/2026). C'est
     /// elle que montre la fenêtre « Nouveautés » ; les versions précédentes vont dans `ReleaseHistory`.
-    public static let current = ReleaseNotes("1.6.0", "2026-11-20", published: false, String(localized: "Correctifs de la recette 1.5.10", bundle: .main), added: [
-            String(localized: "Effacer le cache : quand des fichiers récents sont gardés, un petit compte à rebours indique quand ils pourront être effacés.", bundle: .main),
+    public static let current = ReleaseNotes("1.6.1", "2026-11-20", published: false, String(localized: "Correctifs de la recette 1.6.0", bundle: .main), added: [
+            String(localized: "Mode diagnostic : le journal note ce qui occupe le processeur pendant un pic (tâches en cours, page, étape, temps processeur, onglets ouverts, dernier geste).", bundle: .main),
         ], fixed: [
-            String(localized: "Accueil : le lecteur s'affiche maintenant par-dessus l'accueil, au lieu d'une fenêtre qu'iOS pouvait refuser d'ouvrir juste après un menu ou l'export.", bundle: .main),
-            String(localized: "Furigana, teinte et pages nettoyées : ils s'affichent de nouveau sur un livre aux pages de tailles différentes rouvert depuis le cache.", bundle: .main),
-            String(localized: "Pages égalisées : une préparation abîmée dans le cache est maintenant refaite d'elle-même ; si elle échoue encore, l'export le signale comme avant.", bundle: .main),
-            String(localized: "Enrichir le lexique : les comics ne sont plus proposés dans la liste des livres.", bundle: .main),
+            String(localized: "Lecteur : il s'ouvre en fondu court et se ferme sans traîne.", bundle: .main),
+            String(localized: "Bannière de diagnostic : elle garde sa place en haut au retour à l'accueil.", bundle: .main),
+            String(localized: "Recherche dans un document : nouvelle présentation, dans le style de la confirmation de la corbeille.", bundle: .main),
+            String(localized: "Surligneur : ses actions passent au-dessus de la barre déplaçable.", bundle: .main),
+            String(localized: "Fenêtre OCR : les caractères douteux ne sont signalés que dans Brut, par une pastille orange sur l'onglet.", bundle: .main),
+            String(localized: "Lexique du domaine : « Enrichir » et « Remettre les termes de départ manquants » sont en haut de la page.", bundle: .main),
+            String(localized: "Notes : ouvrir une note affiche la fenêtre OCR sur l'onglet Notes.", bundle: .main),
+            String(localized: "Rappels de notes : numéro de page imprimé dans le titre ; rien n'est programmé si les notifications sont refusées ; seuls les rappels modifiés sont remplacés.", bundle: .main),
         ])
 
     /// Notes de `version` (« 1.3.2 », sans le numéro de build) : la version elle-même, jamais une build de test.

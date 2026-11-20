@@ -10,6 +10,14 @@ import Foundation
 enum ReleaseHistory {
     static let past: [ReleaseNotes] = [
         // Candidates locales non publiées.
+        ReleaseNotes("1.6.0", "2026-11-20", published: false, String(localized: "Correctifs de la recette 1.5.10", bundle: .main), added: [
+                String(localized: "Effacer le cache : quand des fichiers récents sont gardés, un petit compte à rebours indique quand ils pourront être effacés.", bundle: .main),
+            ], fixed: [
+                String(localized: "Accueil : le lecteur s'affiche maintenant par-dessus l'accueil, au lieu d'une fenêtre qu'iOS pouvait refuser d'ouvrir juste après un menu ou l'export.", bundle: .main),
+                String(localized: "Furigana, teinte et pages nettoyées : ils s'affichent de nouveau sur un livre aux pages de tailles différentes rouvert depuis le cache.", bundle: .main),
+                String(localized: "Pages égalisées : une préparation abîmée dans le cache est maintenant refaite d'elle-même ; si elle échoue encore, l'export le signale comme avant.", bundle: .main),
+                String(localized: "Enrichir le lexique : les comics ne sont plus proposés dans la liste des livres.", bundle: .main),
+            ]),
         ReleaseNotes("1.5.10", "2026-11-20", published: false, String(localized: "Correctifs de la recette 1.5.9", bundle: .main), added: [
             ], fixed: [
                 String(localized: "Accueil : un document ouvert juste après la fermeture d'un menu ou de la fenêtre d'export est redemandé automatiquement s'il ne s'est pas affiché.", bundle: .main),

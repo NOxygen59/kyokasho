@@ -1,6 +1,226 @@
 {
   "sourceLanguage": "fr",
   "strings": {
+    "Correctifs de la recette 1.6.0": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fixes from the 1.6.0 test pass"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Correctifs de la recette 1.6.0"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1.6.0 测试反馈的修正"
+          }
+        }
+      }
+    },
+    "Mode diagnostic : le journal note ce qui occupe le processeur pendant un pic (tâches en cours, page, étape, temps processeur, onglets ouverts, dernier geste).": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diagnostic mode: the log records what keeps the processor busy during a spike (running tasks, page, step, processor time, open tabs, last gesture)."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mode diagnostic : le journal note ce qui occupe le processeur pendant un pic (tâches en cours, page, étape, temps processeur, onglets ouverts, dernier geste)."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "诊断模式：处理器占用高峰时，日志会记录占用原因（正在运行的任务、页码、步骤、处理器时间、已打开的标签页、最后的操作）。"
+          }
+        }
+      }
+    },
+    "Lecteur : il s'ouvre en fondu court et se ferme sans traîne.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reader: it opens with a short fade and closes without lingering."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lecteur : il s'ouvre en fondu court et se ferme sans traîne."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "阅读器：以短暂淡入打开，关闭时不再拖延。"
+          }
+        }
+      }
+    },
+    "Bannière de diagnostic : elle garde sa place en haut au retour à l'accueil.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diagnostic banner: it stays at the top when returning to the home screen."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bannière de diagnostic : elle garde sa place en haut au retour à l'accueil."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "诊断横幅：返回主页时保持在顶部。"
+          }
+        }
+      }
+    },
+    "Recherche dans un document : nouvelle présentation, dans le style de la confirmation de la corbeille.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search in a document: new look, in the style of the trash confirmation."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recherche dans un document : nouvelle présentation, dans le style de la confirmation de la corbeille."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文档内搜索：新外观，与回收站确认窗口风格一致。"
+          }
+        }
+      }
+    },
+    "Surligneur : ses actions passent au-dessus de la barre déplaçable.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Highlighter: its actions appear above the movable bar."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Surligneur : ses actions passent au-dessus de la barre déplaçable."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "荧光笔：其操作按钮显示在可移动栏上方。"
+          }
+        }
+      }
+    },
+    "Fenêtre OCR : les caractères douteux ne sont signalés que dans Brut, par une pastille orange sur l'onglet.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OCR window: doubtful characters are flagged only in Raw, with an orange dot on the tab."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fenêtre OCR : les caractères douteux ne sont signalés que dans Brut, par une pastille orange sur l'onglet."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "OCR 窗口：可疑字符只在“原始”中提示，并在该标签上显示橙色圆点。"
+          }
+        }
+      }
+    },
+    "Lexique du domaine : « Enrichir » et « Remettre les termes de départ manquants » sont en haut de la page.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Domain lexicon: “Enrich” and “Restore missing starter terms” are at the top of the page."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lexique du domaine : « Enrichir » et « Remettre les termes de départ manquants » sont en haut de la page."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "领域词库：“扩充”和“恢复缺失的初始词条”位于页面顶部。"
+          }
+        }
+      }
+    },
+    "Notes : ouvrir une note affiche la fenêtre OCR sur l'onglet Notes.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notes: opening a note shows the OCR window on the Notes tab."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notes : ouvrir une note affiche la fenêtre OCR sur l'onglet Notes."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "笔记：打开笔记时，OCR 窗口显示“笔记”标签。"
+          }
+        }
+      }
+    },
+    "Rappels de notes : numéro de page imprimé dans le titre ; rien n'est programmé si les notifications sont refusées ; seuls les rappels modifiés sont remplacés.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Note reminders: printed page number in the title; nothing is scheduled if notifications are denied; only changed reminders are replaced."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rappels de notes : numéro de page imprimé dans le titre ; rien n'est programmé si les notifications sont refusées ; seuls les rappels modifiés sont remplacés."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "笔记提醒：标题使用印刷页码；通知被拒绝时不安排任何提醒；只替换有变化的提醒。"
+          }
+        }
+      }
+    },
     "Brut : caractères douteux": {
       "localizations": {
         "en": {
