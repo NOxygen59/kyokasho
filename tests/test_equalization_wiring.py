@@ -29,6 +29,14 @@ class EqualizationWiringTests(unittest.TestCase):
         self.assertIn("equalizedDocument(url: url, documentId: documentId, database: database)", reader)
         self.assertIn("PageEqualization.factor(height: height, common: common)", reader)
 
+    def test_cached_equalized_pages_are_created_after_the_reader_delegate(self):
+        # Recette 1.5.10 (3.2, 3.3) : lire les pages du PDF rendu avant `TonedPageProvider` les créait en PDFPage
+        # simples (preuve PDFKit sur Mac, REVUES/BUGS-16-2026-11-20/FAIT-CLAUDE-FURIGANA.md) : plus aucun furigana.
+        reader = (APP / "Reader/ReaderController.swift").read_text(encoding="utf-8")
+        self.assertNotIn("remember(preparedHeight(pdf, boxes))", reader)
+        self.assertIn("if stored == nil { remember(PDFDocument(url: pdfFile).flatMap { preparedHeight($0, boxes) }) }", reader)
+        self.assertIn("!(pdf.page(at: 0) is TonedPage)", reader)
+
 
 if __name__ == "__main__":
     unittest.main()

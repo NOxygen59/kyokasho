@@ -389,7 +389,10 @@ final class ReaderController: NSObject, ObservableObject {
                 if stored == nil, boxes.isEmpty { remember(PDFDocument(url: url).flatMap(commonHeight)) }
                 return nil
             }
-            remember(preparedHeight(pdf, boxes))
+            // Recette 1.5.10 (3.2, 3.3) : mesure sur une autre instance, et seulement si la base n'a pas encore la hauteur.
+            // Lire les pages de `pdf` ici les créait en `PDFPage` simples, avant que le lecteur pose `TonedPageProvider` :
+            // sans `TonedPage`, ni furigana, ni teinte, ni page nettoyée sur un document égalisé ouvert depuis le cache.
+            if stored == nil { remember(PDFDocument(url: pdfFile).flatMap { preparedHeight($0, boxes) }) }
             return (pdf, boxes)
         }
         guard let original = PDFDocument(url: url) else { return nil }
@@ -520,6 +523,10 @@ final class ReaderController: NSObject, ObservableObject {
         let equalized = equalizedDocument(url: url, documentId: documentId, database: database)
         guard let pdf = equalized?.pdf ?? PDFDocument(url: url) else { return nil }
         pdf.delegate = TonedPageProvider.shared
+        // Une page lue avant le délégué reste une `PDFPage` simple : rien de propre au lecteur n'y serait dessiné.
+        if pdf.pageCount > 0, !(pdf.page(at: 0) is TonedPage) {
+            Diagnostics.error("pages créées avant la préparation du lecteur : furigana et teinte impossibles", "lecteur")
+        }
         let sourceBoxes = equalized?.sourceBoxes
         var boxes: [Int: CGRect] = [:]
         var rotations: [Int: Int] = [:]
