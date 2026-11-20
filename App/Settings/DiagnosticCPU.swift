@@ -163,9 +163,10 @@ final class DiagnosticCPU: @unchecked Sendable {
         let long = center.takeDiagnosticLongWork()
         guard let decision = policy.decide(at: now, percent: sample.percent, cost: sample.cost,
                                            hasLongWork: !long.entries.isEmpty) else { return }
-        var current = contextLock.withLock { context }
-        // Contexte rafraîchi en retard (fil principal occupé) : un geste de plus de 5 s n'explique plus ce pic.
-        if let time = contextLock.withLock({ gestureTime }), now - time > 5 { current.gesture = nil }
+        // Contexte et heure du geste lus ensemble ; âge revérifié à l'heure de l'écriture : un geste de plus de 5 s
+        // n'explique plus ce pic, même si le fil principal a tardé à rafraîchir le contexte.
+        var (current, gestureTime) = contextLock.withLock { (context, self.gestureTime) }
+        if current.gesture != nil, ProcessInfo.processInfo.systemUptime - (gestureTime ?? 0) > 5 { current.gesture = nil }
         let line = DiagnosticCPULog.line(percent: sample.percent, threads: sample.threads, active: center.diagnosticActive(),
                                          context: current, long: long, cost: sample.cost, decision: decision)
         Diagnostics.logCPU(line)
