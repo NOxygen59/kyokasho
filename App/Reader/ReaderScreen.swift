@@ -268,6 +268,10 @@ struct ReaderScreen: View {
             reader.syncClassification(mangaSpace: current.settingsOverride.mangaSpace)
         }
         .onChange(of: studyTab) { new in ReaderTabHandoff.shared.current = { [side] in (side, new) } }
+        .onChange(of: reader.completedNoteJump) { opening in
+            guard opening == model.openRequestSerial, model.openDocumentId == reader.document.id else { return }
+            showStudy(.notes)
+        }
         .statusBarHidden(!chromeVisible)
         .persistentSystemOverlays(chromeVisible ? .automatic : .hidden)
         .onAppear {
@@ -773,12 +777,18 @@ struct ReaderScreen: View {
         if side == .study && studyTab == tab {
             side = nil
         } else {
-            studyTab = tab
-            side = .study
-            // Panneau réduit : l'ouvrir sur un onglet le rouvre comme avant.
-            if studyMode == .minimized { studyMode = studyRestore == .minimized ? .docked : studyRestore }
+            showStudy(tab)
         }
         if tab == .text, reader.ocrPage == nil, reader.ocrState != .running { reader.runOCR() }
+    }
+
+    /// Un saut impose l'onglet sans basculer le panneau s'il est déjà ouvert.
+    private func showStudy(_ tab: StudyPanel.Tab) {
+        guard capabilities.study else { return }
+        studyTab = tab
+        side = .study
+        // Panneau réduit : l'ouvrir sur un onglet le rouvre comme avant.
+        if studyMode == .minimized { studyMode = studyRestore == .minimized ? .docked : studyRestore }
     }
 
     // MARK: Colonne de droite animée (Issue #69)

@@ -256,7 +256,9 @@ final class ReaderController: NSObject, ObservableObject {
     var rebuilding = false
     var observers: [NSObjectProtocol] = []
     /// Note dont l'ancre clignotera une fois les pages installées (ouverture depuis l'écran « Notes »).
-    var pendingAnchorNote: PageComment?
+    private var pendingAnchorNote: (noteId: String, opening: Int)?
+    /// Intention d'ouverture du dernier saut effectué, pour afficher Notes sans relire la demande.
+    @Published private(set) var completedNoteJump: Int?
     /// Abonnements Combine du lecteur (demandes « aller à la note » de l’écran Notes).
     var cancellables: Set<AnyCancellable> = []
     /// Fin d'une tâche IA (peut-être lancée par un lecteur précédent) : la page affichée est relue du cache.
@@ -325,15 +327,35 @@ final class ReaderController: NSObject, ObservableObject {
         // Écran « Notes » (PLAN-T4-001 E2) : ouvert pour une note, le livre part de sa page, puis l'ancre clignote.
         // La demande est consommée dans tous les cas (revue DeepSeek F2) : une note supprimée entre-temps ne laisse pas
         // une demande pendante qu'un prochain ouvrage du livre suivrait sans raison.
-        var jumpNote: PageComment?
-        if let jump = model.noteJump, jump.documentId == document.id {
-            jumpNote = notes.first { $0.id == jump.noteId }
-            model.noteJump = nil
-        }
-        rebuild(keepingSource: jumpNote?.pageIndex ?? document.lastPageIndex)
+        acceptNoteJump()
+        rebuild(keepingSource: document.lastPageIndex)
         markOpened()
-        // Le clignotement attend la fin de la construction des pages (`install`, revue DeepSeek F8).
-        pendingAnchorNote = jumpNote
+    }
+
+    private func acceptNoteJump() {
+        guard !closed, model.openDocumentId == document.id,
+              let jump = model.noteJump, jump.documentId == document.id else { return }
+        model.noteJump = nil
+        pendingAnchorNote = nil
+        guard notes.contains(where: { $0.id == jump.noteId }) else { return }
+        let pending = (noteId: jump.noteId, opening: model.openRequestSerial)
+        if pdf == nil {
+            // Le clignotement attend la fin de la construction des pages (`install`, revue DeepSeek F8).
+            pendingAnchorNote = pending
+        } else {
+            completeNoteJump(pending)
+        }
+    }
+
+    private func noteForJump(_ pending: (noteId: String, opening: Int)) -> PageComment? {
+        guard !closed, model.openDocumentId == document.id, pending.opening == model.openRequestSerial else { return nil }
+        return notes.first { $0.id == pending.noteId }
+    }
+
+    private func completeNoteJump(_ pending: (noteId: String, opening: Int)) {
+        guard let note = noteForJump(pending) else { return }
+        goToAnchor(note)
+        completedNoteJump = pending.opening
     }
 
     /// Résultat de la construction (fait hors du fil principal) : document affiché + repères.
@@ -618,19 +640,17 @@ final class ReaderController: NSObject, ObservableObject {
     func install(_ built: Built?, source: Int, generation: Int) {
         guard generation == rebuildGeneration, !closed else { return }
         isBuilding = false
+        let pending = pendingAnchorNote
+        pendingAnchorNote = nil
+        let pendingNote = pending.flatMap { noteForJump($0) }
         // Page tournée pendant la construction : on reste où l'utilisateur est allé.
-        let target = pdf == nil ? source : currentSourcePage
+        let target = pdf == nil ? (pendingNote?.pageIndex ?? source) : currentSourcePage
         guard let built else {
             loadError = String(localized: "Impossible d'ouvrir ce PDF.")
             Diagnostics.error("PDF : échec de préparation", "lecteur")  // #93 : demandé → affiché → prêt ou échec
             return
         }
         Diagnostics.log("PDF prêt : \(built.presented.count) pages", "lecteur")
-        if let note = pendingAnchorNote {
-            pendingAnchorNote = nil
-            // Après la fin de cette installation (même tour de boucle) : PDF et pages sont en place.
-            DispatchQueue.main.async { [weak self] in self?.goToAnchor(note) }
-        }
         originalBoxes = built.boxes
         originalRotations = built.rotations
         splitSources = built.splits
@@ -682,6 +702,10 @@ final class ReaderController: NSObject, ObservableObject {
         if pendingDrawingRestore {
             pendingDrawingRestore = false
             setDrawing(true)
+        }
+        if let pending, pendingNote != nil {
+            // Après l'installation du PDF, revérifier qu'aucune ouverture n'a pris la main.
+            DispatchQueue.main.async { [weak self] in self?.completeNoteJump(pending) }
         }
     }
 
@@ -985,16 +1009,14 @@ final class ReaderController: NSObject, ObservableObject {
     // MARK: Notifications
 
     func observe() {
-        // Livre déjà ouvert quand une de ses notes est choisie. Aujourd'hui l'écran « Notes » ne s'ouvre que lecteur
-        // fermé (revue DeepSeek F11) : ce chemin servira quand on pourra l'atteindre depuis le lecteur (E3).
+        // À chaud (revue DeepSeek F11) : la livraison différée ne doit pas consommer un saut déjà remplacé.
         // (`insert` plutôt que `.store(in:)` : un contrôle source réserve `.store(` aux écritures OCR du lecteur.)
         cancellables.insert(model.$noteJump
             .receive(on: DispatchQueue.main)
             .sink { [weak self] jump in
-                guard let self, let jump, jump.documentId == self.document.id, self.pdf != nil,
-                      let note = self.notes.first(where: { $0.id == jump.noteId }) else { return }
-                self.model.noteJump = nil
-                self.goToAnchor(note)
+                guard let self, let jump, self.model.noteJump == jump,
+                      self.pdf != nil || self.isBuilding else { return }
+                self.acceptNoteJump()
             })
         let center = NotificationCenter.default
         observers.append(center.addObserver(forName: .PDFViewPageChanged, object: pdfView, queue: .main) { [weak self] _ in

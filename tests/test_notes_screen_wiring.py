@@ -1,9 +1,10 @@
 # SPDX-License-Identifier: MIT
 # Copyright (c) 2026 NOxygen59
-"""PLAN-T4-001, étape E2 : l'écran « Notes » est atteignable depuis l'accueil, la pastille compte les notes à revoir,
-et ouvrir une note mène le lecteur à sa page. Contrôle de la source (vues SwiftUI non compilées par `swift test`) ;
+"""PLAN-T4-001 E2 et PLAN-16-001 E3 : l'écran « Notes » est atteignable depuis l'accueil, avec sa pastille,
+et ouvrir une note mène à sa page et à l'onglet Notes. Contrôle de la source (SwiftUI hors de `swift test`) ;
 le comportement réel se vérifie sur l'iPad."""
 
+import re
 import unittest
 from pathlib import Path
 
@@ -36,12 +37,54 @@ class NotesScreenWiringTests(unittest.TestCase):
 
     def test_opening_a_note_jumps_to_its_page_once(self):
         reader = (APP / "Reader/ReaderController.swift").read_text(encoding="utf-8")
-        self.assertIn("rebuild(keepingSource: jumpNote?.pageIndex ?? document.lastPageIndex)", reader)
         load = reader[reader.index("    func load() {"):reader.index("    /// Résultat de la construction")]
-        self.assertIn("if let jump = model.noteJump, jump.documentId == document.id {", load)
-        self.assertIn("            model.noteJump = nil\n        }", load, "consommée même si la note a disparu (F2)")
-        self.assertIn("pendingAnchorNote = jumpNote", load)
-        self.assertIn("self.model.noteJump = nil", reader)
+        self.assertIn("acceptNoteJump()", load)
+        self.assertIn("rebuild(keepingSource: document.lastPageIndex)", load)
+        install = reader[reader.index("    func install("):reader.index("    func markOpened()")]
+        self.assertIn("let pendingNote = pending.flatMap { noteForJump($0) }", install)
+        self.assertIn("let target = pdf == nil ? (pendingNote?.pageIndex ?? source) : currentSourcePage", install)
+        self.assertIn("self?.completeNoteJump(pending)", install)
+        self.assertLess(install.index("pdfView.document = pdf"), install.index("self?.completeNoteJump(pending)"))
+        observe = reader[reader.index("    func observe() {"):reader.index("        let center = NotificationCenter.default", reader.index("    func observe() {"))]
+        self.assertIn(".receive(on: DispatchQueue.main)", observe)
+        self.assertIn("self.model.noteJump == jump", observe)
+        self.assertIn("self.acceptNoteJump()", observe)
+
+    def test_only_the_controller_consumes_the_current_jump(self):
+        reader_dir = APP / "Reader"
+        reader = (reader_dir / "ReaderController.swift").read_text(encoding="utf-8")
+        accept = reader[reader.index("    private func acceptNoteJump()"):reader.index("    private func completeNoteJump(")]
+        self.assertIn("!closed, model.openDocumentId == document.id", accept)
+        self.assertIn("jump.documentId == document.id", accept)
+        self.assertLess(accept.index("model.noteJump = nil"), accept.index("guard notes.contains"),
+                        "la demande est consommée même si la note a disparu")
+        self.assertIn("pendingAnchorNote = pending", accept)
+        self.assertIn("completeNoteJump(pending)", accept)
+        files_with_jump = [path.name for path in reader_dir.glob("*.swift")
+                           if re.search(r"\bnoteJump\b", path.read_text(encoding="utf-8"))]
+        self.assertEqual(files_with_jump, ["ReaderController.swift"])
+        self.assertEqual(reader.count("model.$noteJump"), 1)
+        self.assertEqual(reader.count("model.noteJump = nil"), 1)
+
+    def test_only_a_completed_note_jump_opens_the_notes_tab(self):
+        reader = (APP / "Reader/ReaderController.swift").read_text(encoding="utf-8")
+        validate = reader[reader.index("    private func noteForJump("):reader.index("    private func completeNoteJump(")]
+        self.assertIn("!closed, model.openDocumentId == document.id", validate)
+        self.assertIn("pending.opening == model.openRequestSerial", validate)
+        self.assertIn("return notes.first { $0.id == pending.noteId }", validate)
+        complete = reader[reader.index("    private func completeNoteJump("):reader.index("    /// Résultat de la construction")]
+        self.assertIn("guard let note = noteForJump(pending) else { return }", complete)
+        self.assertIn("        goToAnchor(note)\n        completedNoteJump = pending.opening", complete)
+        self.assertEqual(reader.count("completedNoteJump ="), 1)
+
+        screen = (APP / "Reader/ReaderScreen.swift").read_text(encoding="utf-8")
+        self.assertIn(".onChange(of: reader.completedNoteJump) { opening in\n"
+                      "            guard opening == model.openRequestSerial, model.openDocumentId == reader.document.id else { return }\n"
+                      "            showStudy(.notes)\n        }", screen)
+        show = screen[screen.index("    private func showStudy("):screen.index("    // MARK: Colonne de droite animée")]
+        self.assertIn("guard capabilities.study else { return }\n        studyTab = tab\n        side = .study", show)
+        self.assertIn("if studyMode == .minimized { studyMode = studyRestore == .minimized ? .docked : studyRestore }", show)
+        self.assertNotIn("side = nil", show)
 
 
 if __name__ == "__main__":
