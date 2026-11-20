@@ -8,7 +8,8 @@ import SwiftUI
 
 /// Réglages du chat gardés par modèle dans les préférences (`ai.chat.<modèle>`, donc dans la sauvegarde).
 enum AIChatSettingsStore {
-    static let models: [ModelSpec] = [.qwen3vl4b, .qwen35chat4b]
+    /// Modèles officiels puis modèles importés (PLAN-MODLOC-001, E3).
+    static var models: [ModelSpec] { [.qwen3vl4b, .qwen35chat4b] + LocalModels.specs() }
 
     private static func key(_ modelID: String) -> String { "ai.chat.\(modelID)" }
 
@@ -26,7 +27,10 @@ enum AIChatSettingsStore {
         }
     }
 
-    static func name(_ modelID: String) -> String { modelID == ModelSpec.qwen35chat4b.id ? String(localized: "Qwen3.5 4B") : String(localized: "Qwen3-VL 4B") }
+    static func name(_ modelID: String) -> String {
+        if let local = LocalModels.name(modelID) { return local }
+        return modelID == ModelSpec.qwen35chat4b.id ? String(localized: "Qwen3.5 4B") : String(localized: "Qwen3-VL 4B")
+    }
 }
 
 /// Consigne générale et paramètres de chaque modèle de chat (#37, #45), à la manière de Locally : tout est modifiable,
@@ -109,7 +113,7 @@ struct AIChatSettingsView: View {
                 }
                 Text("Évite qu'il boucle sur la même phrase. 1,1 suffit en général ; trop fort, il évite aussi les mots utiles.")
                     .font(.caption).foregroundStyle(.secondary)
-                if modelID == ModelSpec.qwen35chat4b.id {
+                if ModelSpec.isQwen35Family(modelID) {
                     Toggle("Réflexion avant de répondre", isOn: $settings.thinking)
                     Text("Qwen3.5 réfléchit d'abord (la réflexion s'affiche dans la réponse). Souvent plus juste en maths, mais 2 à 5 fois plus long.")
                         .font(.caption).foregroundStyle(.secondary)

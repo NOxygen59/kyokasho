@@ -43,6 +43,14 @@ public struct BatchDeletion: Equatable, Sendable {
         order = ids
     }
 
+    /// Revue Codex après 1.5.6 (P2 n°1) : un document déplacé hors de la vue (dans un dossier, hors d'un dossier) quitte
+    /// la sélection ; une action de lot ne touche jamais un document qu'on ne voit plus coché. Ordre gardé.
+    public mutating func keepOnly(_ visible: Set<String>) {
+        guard step == .selecting else { return }
+        selected.formIntersection(visible)
+        order.removeAll { !visible.contains($0) }
+    }
+
     /// « Supprimer (N) » : première question, seulement s'il y a une sélection.
     public mutating func requestDeletion() {
         guard step == .selecting, !selected.isEmpty else { return }

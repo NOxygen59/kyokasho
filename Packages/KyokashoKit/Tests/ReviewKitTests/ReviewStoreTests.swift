@@ -72,6 +72,15 @@ final class ReviewStoreTests: XCTestCase {
         XCTAssertEqual(try store.existingKeys([]), [])
     }
 
+    /// PLAN-CARTES-001 E2 (DEC-CA-03) : « déjà en carte » dit aussi de quel livre vient la carte.
+    func testExistingCardDocumentsGiveTheSourceBook() throws {
+        try store.add(StudyCard(deckId: deckId, templateId: templateId, key: "床|ゆか", fields: ["Mot": "床"],
+                                sourceDocumentId: "livre-a", sourcePage: 1, now: now))
+        try add("猫")
+        XCTAssertEqual(try store.existingCardDocuments(["床|ゆか", "猫|", "犬|"]), ["床|ゆか": "livre-a", "猫|": ""])
+        XCTAssertEqual(try store.existingCardDocuments([]), [:])
+    }
+
     func testNextLearningFirstAndNewLimit() throws {
         var settings = ReviewSettings()
         settings.fuzz = false

@@ -18,9 +18,11 @@ class PageCardsScrollTests(unittest.TestCase):
 
     def test_term_fields_are_disabled_during_and_after_adding(self):
         source = VIEW.read_text()
-        block = re.search(r"ForEach\(\$entries\).*?\n                \}\n", source, re.S)
+        # Cartes E2 : chaque ligne de mot est dessinée par `wordRow`, qui porte la désactivation.
+        block = re.search(r"private func wordRow\(.*?\n    \}\n", source, re.S)
         self.assertIsNotNone(block)
         self.assertIn(".disabled(saving || message != nil)", block.group(0))
+        self.assertIn("wordRow($entry)", source)
 
 
 if __name__ == "__main__":

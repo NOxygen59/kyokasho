@@ -14,7 +14,8 @@ class NotesScreenWiringTests(unittest.TestCase):
     def test_home_opens_the_notes_screen_with_its_badge(self):
         library = (APP / "Library/LibraryView.swift").read_text(encoding="utf-8")
         self.assertIn('actionRow(icon: "note.text", title: String(localized: "Notes")', library)
-        self.assertIn("count: model.notesToReview) { showNotes = true }", library)
+        # PLAN-NOTIF-001 E1 : la pastille de Notes devient un « ! » noir ou rouge (le nombre reste dans l'écran Notes).
+        self.assertIn("due: model.noteDueBadge) { showNotes = true }", library)
         self.assertIn(".fullScreenCover(isPresented: $showNotes, onDismiss: {", library)
         self.assertIn("if let note = noteToOpen { model.open(note) }", library)
         self.assertIn("NotesView { noteToOpen = $0 }", library)
@@ -30,7 +31,8 @@ class NotesScreenWiringTests(unittest.TestCase):
 
     def test_badge_excludes_trashed_documents(self):
         model = (APP / "AppModel.swift").read_text(encoding="utf-8")
-        self.assertIn("notesToReviewCount(today: Date(), excludingDocuments: excluded)", model)
+        self.assertIn("notesToReviewCount(today: now, excludingDocuments: excluded)", model)
+        self.assertIn("noteDueBadge(today: now, excludingDocuments: excluded)", model)
 
     def test_opening_a_note_jumps_to_its_page_once(self):
         reader = (APP / "Reader/ReaderController.swift").read_text(encoding="utf-8")

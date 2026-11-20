@@ -588,6 +588,7 @@ struct TranslationSettingsSection: View {
 /// Tous les modèles à télécharger (OCR, netteté des scans), avec leurs liens.
 struct ModelsView: View {
     @AppStorage(AITaskPill.visibleKey) private var showAIBadges = true
+    @AppStorage(OwnerMode.unlockedKey) private var ownerUnlocked = false
 
     var body: some View {
         Form {
@@ -603,20 +604,26 @@ struct ModelsView: View {
                 Text("De petites pastilles indiquent ce que fait chaque IA. Elles deviennent plus discrètes quand un modèle reste simplement chargé en mémoire.")
             }
             Section {
-                ForEach([ModelSpec.ovisocr2, .qwen3vl4b, .qwen35chat4b, .glmocr, .ndlocr, .ppocr5]) { spec in
+                // Mode propriétaire verrouillé : le modèle réservé au chat est caché (PLAN-MODLOC-001, DEC-03).
+                // Recette 1.5.8 (3.3) : les modèles importés ont aussi leur page (chat, mémoire), mode propriétaire ouvert.
+                ForEach([ModelSpec.ovisocr2, .qwen3vl4b, .qwen35chat4b, .glmocr, .ndlocr, .ppocr5]
+                    .filter { ownerUnlocked || $0.id != ModelSpec.qwen35chat4b.id } + (ownerUnlocked ? LocalModels.specs() : [])) { spec in
                     NavigationLink { AIModelDetailView(spec: spec) } label: { Text(spec.title) }
                 }
             } header: {
                 Text("Chaque IA")
             } footer: {
-                Text("État, mémoire, « Décharger », réglages propres et dernières tâches. Qwen3-VL et Qwen3.5 : conversation.")
+                Text("État, mémoire, « Décharger », réglages propres et dernières tâches.")
             }
-            Section {
-                NavigationLink { AIChatSettingsView() } label: {
-                    Label("Consignes et paramètres du chat", systemImage: "slider.horizontal.3")
+            if ownerUnlocked {
+                LocalModelsSection()
+                Section {
+                    NavigationLink { AIChatSettingsView() } label: {
+                        Label("Consignes et paramètres du chat", systemImage: "slider.horizontal.3")
+                    }
+                } footer: {
+                    Text("Pour chaque modèle de chat : consigne générale, préréglages (résumer, expliquer les formules, professeur de japonais, traduction mot à mot), température, longueur…")
                 }
-            } footer: {
-                Text("Pour chaque modèle de chat : consigne générale, préréglages (résumer, expliquer les formules, professeur de japonais, traduction mot à mot), température, longueur…")
             }
             OCRModelsSection(group: .ocr)
             MorphologySection()

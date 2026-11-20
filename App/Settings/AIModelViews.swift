@@ -12,6 +12,7 @@ import UIKit
 /// « Décharger », ses réglages, ses dernières tâches. Qwen3-VL : conversation (`QwenChatView`).
 struct AIModelDetailView: View {
     let spec: ModelSpec
+    @AppStorage(OwnerMode.unlockedKey) private var ownerUnlocked = false
     @ObservedObject private var downloads = ModelDownloads.shared
     @State private var status: AIModelStatus?
     @State private var diskSize: Int64?
@@ -19,7 +20,9 @@ struct AIModelDetailView: View {
 
     /// Modèles MLX (chargés en mémoire du GPU) ; les autres (ONNX) s'ouvrent à la demande.
     private var isMLX: Bool { [ModelSpec.glmocr.id, ModelSpec.ovisocr2.id, ModelSpec.qwen3vl4b.id,
-                               ModelSpec.qwen35chat4b.id].contains(spec.id) }
+                               ModelSpec.qwen35chat4b.id].contains(spec.id) || LocalModels.isLocal(spec.id) }
+    /// Modèles qui discutent : Qwen3-VL, Qwen3.5 et les modèles importés (recette 1.5.8, 3.3).
+    private var chats: Bool { spec.id == ModelSpec.qwen3vl4b.id || spec.id == ModelSpec.qwen35chat4b.id || LocalModels.isLocal(spec.id) }
     private var directory: URL { ModelStore.shared.directory(spec) }
     private var installed: Bool { downloads.installed.contains(spec.id) }
     private var isLoaded: Bool { status?.loaded == directory }
@@ -30,6 +33,7 @@ struct AIModelDetailView: View {
         case ModelSpec.ovisocr2.id: return ["scan", "verif", "miseenpage", "analyse"]
         case ModelSpec.qwen3vl4b.id: return ["traduction", "chat", "analyse"]
         case ModelSpec.qwen35chat4b.id: return ["chat"]
+        case _ where LocalModels.isLocal(spec.id): return ["chat"]
         case ModelSpec.glmocr.id: return ["relecture", "analyse"]
         default: return ["ocr"]
         }
@@ -74,7 +78,7 @@ struct AIModelDetailView: View {
                 }
             }
             usageLocation
-            if spec.id == ModelSpec.qwen3vl4b.id || spec.id == ModelSpec.qwen35chat4b.id {
+            if ownerUnlocked, chats {
                 Section {
                     NavigationLink { QwenChatView(preferredModel: spec) } label: { Label("Discuter avec l'IA", systemImage: "bubble.left.and.bubble.right") }
                         .disabled(!installed)
@@ -182,8 +186,9 @@ struct QwenChatView: View {
     private var bookFile: URL? {
         document.map { file.deletingLastPathComponent().appendingPathComponent("book-\($0.id).json") }
     }
+    /// Modèle choisi : officiel ou importé (PLAN-MODLOC-001, E3) ; un modèle importé supprimé retombe sur Qwen3-VL.
     private var selectedSpec: ModelSpec {
-        selectedModelID == ModelSpec.qwen35chat4b.id ? .qwen35chat4b : .qwen3vl4b
+        AIChatSettingsStore.models.first { $0.id == selectedModelID } ?? .qwen3vl4b
     }
 
     var body: some View {
@@ -330,8 +335,9 @@ struct QwenChatView: View {
             Menu {
                 modelOption(.qwen3vl4b, title: String(localized: "Qwen3-VL 4B"))
                 modelOption(.qwen35chat4b, title: String(localized: "Qwen3.5 4B"))
+                ForEach(LocalModels.specs(), id: \.id) { spec in modelOption(spec, title: spec.title) }
             } label: {
-                Label(selectedSpec.id == ModelSpec.qwen35chat4b.id ? "Qwen3.5" : "Qwen3-VL", systemImage: "cpu")
+                Label(AIChatSettingsStore.name(selectedSpec.id), systemImage: "cpu")
                     .lineLimit(1)
             }
             .disabled(answering != nil || loading || storageError)
@@ -357,7 +363,9 @@ struct QwenChatView: View {
 
     @ViewBuilder
     private func modelOption(_ spec: ModelSpec, title: String) -> some View {
-        if downloads.installed.contains(spec.id) {
+        if LocalModels.isLocal(spec.id) && !downloads.installed.contains(spec.id) {
+            // Modèle importé disparu entre-temps : rien à télécharger (revue R2 MODLOC E3, n°4).
+        } else if downloads.installed.contains(spec.id) {
             Button { selectModel(spec) } label: {
                 Label(title, systemImage: spec.id == selectedModelID ? "checkmark" : "cpu")
             }
@@ -432,7 +440,23 @@ struct QwenChatView: View {
         loading = true
         ready = false
         error = nil
+        // Revue R2 MODLOC E3 (n°3) : modèle importé supprimé depuis → on le dit et la conversation passe à Qwen3-VL.
+        var notice: String?
+        if !AIChatSettingsStore.models.contains(where: { $0.id == selectedModelID }) {
+            notice = String(localized: "Le modèle de cette conversation n'est plus installé : Qwen3-VL 4B prend la suite.")
+            selectedModelID = ModelSpec.qwen3vl4b.id
+            if let index = conversations.firstIndex(where: { $0.id == selectedConversation }) {
+                conversations[index].modelID = selectedModelID
+                saveConversations()
+            }
+        }
+        defer { if let notice, error == nil { error = notice } }
         let spec = selectedSpec
+        // Revue R2 MODLOC E3 (n°8) : un modèle importé avant la correction du nom du tokenizer est corrigé ici (idempotent).
+        if LocalModels.isLocal(spec.id) {
+            let directory = ModelStore.shared.directory(spec)
+            await Task.detached(priority: .userInitiated) { _ = try? LocalModels.normalizeTokenizer(in: directory) }.value
+        }
         guard downloads.installed.contains(spec.id) else {
             error = String(localized: "Télécharge \(spec.title) depuis le menu Modèle pour discuter.")
             loading = false
@@ -619,7 +643,7 @@ struct QwenChatView: View {
 
     /// État du modèle et durée de la dernière réponse.
     private var statusLine: some View {
-        let name = selectedSpec.id == ModelSpec.qwen35chat4b.id ? "Qwen3.5" : "Qwen3-VL"
+        let name = AIChatSettingsStore.name(selectedSpec.id)
         let settings = AIChatSettingsStore.load(selectedModelID)
         var parts = [loading ? String(localized: "Chargement de \(name)…") : ready ? String(localized: "\(name) prêt") : String(localized: "\(name) indisponible")]
         if settings.instructions != nil { parts.append(String(localized: "consigne perso")) }
@@ -774,6 +798,14 @@ struct QwenChatView: View {
                             DocumentKnowledge.passages(for: document, question: prompt, japaneseTerms: searchTerms)
                         }.value
                     }
+                    // Recette 1.5.6 (5.3) : rien trouvé par mots-clés → la page affichée (sinon la dernière lue) sert
+                    // d'extrait ; l'IA sait ainsi sur quel document et quelle page on l'interroge.
+                    if passages.isEmpty && requestedPages.isEmpty {
+                        let shown = focusPage.flatMap { label in (0..<document.pageCount).first { document.pageLabel($0) == label } }
+                            ?? document.lastPageIndex
+                        let open = await Task.detached(priority: .userInitiated) { DocumentKnowledge.pagePassage(document, page: shown) }.value
+                        passages = open.map { [$0] } ?? []
+                    }
                     let dialogue = followUp ? previous.map { ($0.role == .user ? "Utilisateur : " : "Assistant : ") + $0.text }.joined(separator: "\n").prefix(800) : ""
                     let question = dialogue.isEmpty ? prompt : "Dernier échange (contexte, pas une source) :\n\(dialogue)\nQuestion actuelle : \(prompt)"
                     if passages.isEmpty && !requestedPages.isEmpty {
@@ -781,7 +813,7 @@ struct QwenChatView: View {
                     } else if passages.isEmpty {
                         // T2 (10/11) : aucune page du livre ne correspond ; l'IA répond avec ses connaissances
                         // générales en le signalant, au lieu de refuser.
-                        for try await chunk in chat.stream(question, context: BookChatPrompt.generalContext) { messages[index].text += chunk }
+                        for try await chunk in chat.stream(question, context: BookChatPrompt.generalContext(title: document.title)) { messages[index].text += chunk }
                         // Revue D-07 : réponse sans page, mais liée à la version actuelle (pas de mention « liens retirés »).
                         messages[index].pages = []
                         messages[index].layoutVersion = (try? database?.layoutVersion(documentId: document.id)) ?? 0
@@ -794,12 +826,14 @@ struct QwenChatView: View {
                                 : "Lecture non recoupée." } ?? "Lecture OvisOCR2 non recoupée."
                             return "[p. \(document.pageLabel(passage.page))] \(confidence)\n\(passage.text)"
                         }.joined(separator: "\n\n")
-                        let context = BookChatPrompt.context(sources: sources)
+                        let context = BookChatPrompt.context(sources: sources, title: document.title)
                         for try await chunk in chat.stream(question, context: context) { messages[index].text += chunk }
                         // T2 (10/11) : seules les pages réellement citées par la réponse sont listées et ouvrables.
-                        let cited = BookChatPrompt.listedPages(
-                            in: messages[index].text,
-                            passages: passages.map { (page: $0.page, label: document.pageLabel($0.page)) })
+                        // Revue D-07 (F5) : la page affichée donnée en repli (score 0) n'est listée que si la réponse la cite.
+                        let given = passages.map { (page: $0.page, label: document.pageLabel($0.page)) }
+                        let cited = passages.allSatisfy { $0.score == 0 }
+                            ? BookChatPrompt.citedPages(in: messages[index].text, passages: given)
+                            : BookChatPrompt.listedPages(in: messages[index].text, passages: given)
                         if !cited.isEmpty {
                             messages[index].text += "\n\n" + String(localized: "Pages consultées : ") + cited.map { "p. \(document.pageLabel($0))" }.joined(separator: ", ")
                         }

@@ -22,6 +22,8 @@ final class GoogleDrive: NSObject, ObservableObject {
         let size: String?
         let modifiedTime: String?
         let md5Checksum: String?
+        /// Fichier mis à la corbeille de Drive (demandé seulement par `metadata`, recette 1.5.6, 6.1).
+        let trashed: Bool?
 
         var isFolder: Bool { mimeType == "application/vnd.google-apps.folder" }
         var isPDF: Bool { mimeType == "application/pdf" }
@@ -225,7 +227,7 @@ final class GoogleDrive: NSObject, ObservableObject {
 
     func metadata(fileId: String) async throws -> File {
         var components = URLComponents(string: "https://www.googleapis.com/drive/v3/files/\(fileId)")!
-        components.queryItems = [.init(name: "fields", value: "id,name,mimeType,size,modifiedTime,md5Checksum"),
+        components.queryItems = [.init(name: "fields", value: "id,name,mimeType,size,modifiedTime,md5Checksum,trashed"),
                                  .init(name: "supportsAllDrives", value: "true")]
         return try await get(components.url!)
     }

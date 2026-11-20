@@ -338,5 +338,31 @@ final class FuriganaTests: XCTestCase {
         let ns = text as NSString
         XCTAssertEqual(Furigana.rubies(for: text).map { ns.substring(with: $0.utf16) }, ["新", "漢字"])
     }
+
+    func testCompleteReadingKeepsKnownReadingWithoutAnalyzing() {
+        let reading = Furigana.completeReading(for: "生物", preferred: "なまもの") { _ in
+            XCTFail("Une lecture fournie ne doit pas être remplacée par une suggestion.")
+            return []
+        }
+        XCTAssertEqual(reading, "なまもの")
+    }
+
+    func testCompleteReadingUsesSuggestionWhenReadingIsMissing() {
+        for preferred in [nil, ""] as [String?] {
+            let reading = Furigana.completeReading(for: "食べ物", preferred: preferred) { term in
+                XCTAssertEqual(term, "食べ物")
+                return [.init(range: 0..<1, utf16: NSRange(location: 0, length: 1), reading: "た"),
+                        .init(range: 2..<3, utf16: NSRange(location: 2, length: 1), reading: "もの")]
+            }
+            XCTAssertEqual(reading, "たべもの")
+        }
+    }
+
+    func testCompleteReadingLeavesFieldEmptyWhenKanjiRemain() {
+        XCTAssertEqual(Furigana.completeReading(for: "食べ物", preferred: nil) { _ in
+            [.init(range: 0..<1, utf16: NSRange(location: 0, length: 1), reading: "た")]
+        }, "")
+        XCTAssertEqual(Furigana.completeReading(for: "食べ物", preferred: nil) { _ in [] }, "")
+    }
 }
 

@@ -16,9 +16,13 @@ xcuserdata/
 /dist/
 /Payload/
 
-# Secrets locaux (identifiant Google, etc.)
+# Secrets locaux (identifiant Google, etc.) ; jamais de données personnelles (décision du 13/11/2026)
 /App/Config/Local.xcconfig
 /App/Config/Secrets.plist
+.env
+.env.*
+*.local
+secrets/
 
 .DS_Store
 

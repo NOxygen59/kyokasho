@@ -35,9 +35,13 @@ final class AppModel: ObservableObject {
     /// Pastille « N notes à revoir » de l'accueil (PLAN-T4-001 E2, DEC-T4-06) : notes non archivées dont l'échéance est
     /// passée, aujourd'hui ou demain, hors documents à la corbeille. Relue par `refreshNotesToReview`.
     @Published private(set) var notesToReview = 0
+    /// Pastille « ! » de Notes sur l'accueil (PLAN-NOTIF-001, E1).
+    @Published private(set) var noteDueBadge = NoteDueBadge.none
     /// Note à montrer à l'ouverture d'un livre depuis l'écran « Notes » : le lecteur de ce document va à sa page et
     /// fait clignoter son ancre, puis remet la demande à `nil`.
     @Published var noteJump: NoteJump?
+    /// Note d'une notification touchée avant le chargement de la bibliothèque (revue R2 NOTIF n°2).
+    private var noteToOpenWhenLoaded: NoteJump?
 
     struct NoteJump: Equatable {
         let documentId: String
@@ -73,9 +77,22 @@ final class AppModel: ObservableObject {
     @Published var incomingPackage: URL?
     weak var themeManager: ThemeManager?
 
+    /// Fenêtre plein écran du lecteur demandée (#93) : séparée du document ouvert, pour pouvoir redemander la
+    /// présentation quand iOS l'a refusée (menu ou fenêtre encore en train de se fermer) sans toucher à l'onglet.
+    @Published private(set) var readerPresented = false
+    private var openGuard = ReaderOpenGuard()
+    /// Numéro de la dernière demande d'ouverture : une action différée plus ancienne ne doit rien ouvrir.
+    var openRequestSerial: Int { openGuard.serial }
+
     @Published var openDocumentId: String? {
         didSet {
-            if let openDocumentId { tabs.open(openDocumentId) }
+            if let openDocumentId {
+                tabs.open(openDocumentId)
+                requestReader(openDocumentId)
+            } else {
+                openGuard.didClose()
+                readerPresented = false
+            }
             // Le lecteur doit lire Theme.current avant de construire ses vues et ses furigana.
             themeManager?.showDocument(in: activeDocumentSpace)
             // Lecteur fermé : la bibliothèque reçoit enfin les positions de lecture mises de côté.
@@ -85,6 +102,56 @@ final class AppModel: ObservableObject {
             }
         }
     }
+    /// #93 : demande d'ouverture. Le lecteur doit signaler son apparition (`readerDidAppear`) ; sinon nouvel essai.
+    private func requestReader(_ id: String) {
+        Diagnostics.log("ouverture demandée : \(id.prefix(8))", "lecteur")
+        switch openGuard.request(id) {
+        case .present: readerPresented = true
+        case .presentAgain: presentReaderAgain(serial: openGuard.serial)
+        case .none: break
+        }
+        checkReaderLater(serial: openGuard.serial)
+    }
+
+    /// Le lecteur est réellement à l'écran (appelé par `ReaderTabsHost`).
+    func readerDidAppear() {
+        // Accusé reçu pendant un retrait de la reprise : ignoré, la remise suivante enverra le sien.
+        guard readerPresented else { return }
+        openGuard.didShow()
+        Diagnostics.log("lecteur affiché", "lecteur")
+    }
+
+    private func presentReaderAgain(serial: Int) {
+        readerPresented = false
+        // Laisser finir la fermeture en cours (même délai que les fenêtres ouvertes depuis un menu).
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 350_000_000)
+            guard let self, self.openGuard.serial == serial, self.openDocumentId != nil, !self.openGuard.shown else { return }
+            self.readerPresented = true
+        }
+    }
+
+    /// Fermeture du lecteur demandée par SwiftUI (balayage, bouton). Ignorée pendant un retrait fait par la reprise
+    /// d'ouverture : ce n'est pas l'utilisateur qui ferme.
+    func readerCoverDismissed() {
+        guard readerPresented else { return }
+        openDocumentId = nil
+    }
+
+    private func checkReaderLater(serial: Int) {
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 1_500_000_000)
+            guard let self else { return }
+            if self.openGuard.check(serial: serial) == .presentAgain {
+                Diagnostics.log("lecteur non affiché : nouvel essai \(self.openGuard.retries)", "lecteur")
+                self.presentReaderAgain(serial: serial)
+                self.checkReaderLater(serial: serial)
+            } else if self.openGuard.gaveUp(serial: serial) {
+                Diagnostics.error("lecteur jamais affiché après \(ReaderOpenGuard.maxRetries) essais", "lecteur")
+            }
+        }
+    }
+
     var activeDocumentSpace: LibrarySpace? {
         guard let openDocumentId, let document = documents.first(where: { $0.id == openDocumentId }) else { return nil }
         return LibrarySpace(document: document)
@@ -192,6 +259,11 @@ final class AppModel: ObservableObject {
                     self.pendingDocuments = nil
                     self.documents = list
                 }
+                // Revue R2 NOTIF (n°2) : notification touchée app fermée, rejouée une fois la bibliothèque chargée.
+                if let waiting = self.noteToOpenWhenLoaded, !list.isEmpty {
+                    self.noteToOpenWhenLoaded = nil
+                    self.openNote(documentId: waiting.documentId, noteId: waiting.noteId)
+                }
                 // C1.3 : un document disparu (corbeille, suppression ailleurs) n'a plus d'onglet.
                 self.tabs.keep(only: Set(list.map(\.id)))
             }
@@ -215,6 +287,12 @@ final class AppModel: ObservableObject {
         refreshPrintedNumbers()
         // Lexique du domaine lu tout de suite : la relecture de l'OCR (hors du fil principal) s'en sert.
         _ = DomainLexicon.shared
+    }
+
+    /// Pastille et rappels de notes relus **après** les écritures déjà en file (revue R2 NOTIF n°5, n°6 : note supprimée
+    /// ou modifiée dans le lecteur, sinon la notification partait avec l'ancien texte).
+    func refreshNotesAfterPendingWrites() {
+        ioQueue.async { Task { @MainActor in self.refreshNotesToReview() } }
     }
 
     func persist(_ work: @escaping @Sendable (AppDatabase) throws -> Void) {
@@ -539,26 +617,45 @@ final class AppModel: ObservableObject {
     func refreshNotesToReview() {
         let database = database, excluded = trashedDocumentIds
         Task.detached(priority: .utility) {
-            let count: Int
-            do { count = try database.notesToReviewCount(today: Date(), excludingDocuments: excluded) } catch {
+            let count: Int, badge: NoteDueBadge
+            do {
+                let now = Date()
+                count = try database.notesToReviewCount(today: now, excludingDocuments: excluded)
+                badge = try database.noteDueBadge(today: now, excludingDocuments: excluded)
+            } catch {
                 // Revue DeepSeek F7 : jamais confondu avec « aucune note » sans trace.
                 Diagnostics.error("pastille des notes : \(error.localizedDescription)", "notes")
                 return
             }
-            await MainActor.run { if self.notesToReview != count { self.notesToReview = count } }
+            await MainActor.run {
+                if self.notesToReview != count { self.notesToReview = count }
+                if self.noteDueBadge != badge { self.noteDueBadge = badge }
+            }
         }
+        // PLAN-NOTIF-001 E3 : mêmes moments que la pastille (note changée, accueil, retour dans l'app).
+        NoteNotifications.reschedule(database: database,
+                                     titles: Dictionary(documents.map { ($0.id, $0.title) }, uniquingKeysWith: { a, _ in a }),
+                                     excluded: excluded)
     }
 
-    /// Ouvre le livre d'une note à sa page (écran « Notes »).
-    func open(_ note: PageComment) {
-        guard documents.contains(where: { $0.id == note.documentId }) else {
+    /// Ouvre la note d'une notification (PLAN-NOTIF-001, E4) : livre à sa page, ancre qui clignote.
+    func openNote(documentId: String, noteId: String) {
+        // Lancement à froid : la bibliothèque n'est pas encore lue ; la note s'ouvrira dès qu'elle l'est.
+        if documents.isEmpty && trashedDocuments.isEmpty {
+            noteToOpenWhenLoaded = NoteJump(documentId: documentId, noteId: noteId)
+            return
+        }
+        guard documents.contains(where: { $0.id == documentId }) else {
             // Revue DeepSeek F3 : le livre est à la corbeille ou a été supprimé entre-temps.
             lastError = String(localized: "Le livre de cette note n'est plus dans la bibliothèque (corbeille ?).")
             return
         }
-        noteJump = NoteJump(documentId: note.documentId, noteId: note.id)
-        openDocumentId = note.documentId
+        noteJump = NoteJump(documentId: documentId, noteId: noteId)
+        openDocumentId = documentId
     }
+
+    /// Ouvre le livre d'une note à sa page (écran « Notes »).
+    func open(_ note: PageComment) { openNote(documentId: note.documentId, noteId: note.id) }
 
     // MARK: Dossiers de l'accueil (PLAN-T5-001, E2)
 

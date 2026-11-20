@@ -17,6 +17,7 @@ Les chemins ci-dessous sont relatifs au conteneur de l'app sur iPad. Ils ne dés
 | Traductions de définitions | `Application Support/definition-translations.json`, `DefinitionTranslations` | Traductions françaises et votes 👍/👎 ; donnée personnelle |
 | Brouillons de notes | `Application Support/Kyokasho/NoteDrafts/<id>.json`, `NoteDraftStore` | Brouillons non encore ajoutés (RET-008) ; donnée personnelle |
 | Modèles et UniDic | `ModelStore.root`, sous `Application Support/Kyokasho/Models` (UniDic : `Models/unidic`) | Retéléchargeables si source/version encore disponibles ; coûteux |
+| Modèles importés (PLAN-MODLOC-001) | `Models/local-<nom>/` (avec `local.json` et, si le nom du tokenizer a été corrigé, `tokenizer_config.original.json`) ; préparation `Models/.import-<UUID>/` ; dossier rendu après une app tuée : `Documents/Modèles récupérés/` (visible dans Fichiers) | **Pas dans la sauvegarde** (comme tout `Models/`) et **pas retéléchargeables** : le dossier d'origine a été déplacé dans l'app ; garder une copie ailleurs (ex. sur le Mac) |
 | Mesures de vitesse (banc d'essai) | `Application Support/Kyokasho/Bench/`, `AppModel` | Résultats de mesures locales ; incluses dans la sauvegarde |
 | Lectures IA, traductions | `Application Support/Analysis/<id>/*.md`, `DocumentAITextStore` | Données dérivées coûteuses ; garder pour reproduire un bug |
 | Rapports | `Application Support/Analysis/<id>.json` | Résultats dépendant des versions des lectures |
@@ -73,7 +74,7 @@ La preuve automatisée Mac du format applicatif comprend maintenant la relecture
 
 ## Migrations et retour arrière
 
-`AppDatabase` enregistre `v1`, `v2-ocr`, `v3-page-one`, `v4-note-canvas-anchor`, `v5-document-category`, `v5-page-edits`, `v6-folders` (dossiers de l'accueil), `v7-note-organization` (échéance, priorité, archive, classeur et étiquettes des notes, colonnes hors du modèle `PageComment`). `ReviewStore` a ses propres migrations (`v1`, `v2-card-source`). Ajouter une nouvelle migration plutôt que réécrire une migration déjà livrée. Tester une base ancienne, une base neuve et une réouverture après migration, avec comparaison des données conservées.
+`AppDatabase` enregistre `v1`, `v2-ocr`, `v3-page-one`, `v4-note-canvas-anchor`, `v5-document-category`, `v5-page-edits`, `v6-folders` (dossiers de l'accueil), `v7-note-organization` (échéance, priorité, archive, classeur et étiquettes des notes, colonnes hors du modèle `PageComment`), `v8-note-reminders` (heure d'échéance et rappels des notes), `v9-equalization-reference` (hauteur de référence des pages égalisées, fixée une fois par document). `ReviewStore` a ses propres migrations (`v1`, `v2-card-source`). Ajouter une nouvelle migration plutôt que réécrire une migration déjà livrée. Tester une base ancienne, une base neuve et une réouverture après migration, avec comparaison des données conservées.
 
 Réinstaller une ancienne app ne garantit pas qu'elle lira une base migrée. Un retour arrière sûr combine code et sauvegarde compatible. Pour un refactoring sans schéma modifié, conserver tout de même les fichiers utilisateur avant les essais de reprise après panne.
 

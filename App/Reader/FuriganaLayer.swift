@@ -148,7 +148,18 @@ enum FuriganaLayer {
         }
     }
 
-    static func clearMemory() { lock.withLock { pages = [:]; order = [] } }
+    /// #94 : cache vidé (mémoire basse, « Effacer le cache », changement d'analyseur…). Le lecteur ouvert recalcule
+    /// alors ses pages visibles ; sans cela elles restaient sans furigana jusqu'au prochain changement de page.
+    static let didClearMemory = Notification.Name("kyokasho.furigana.didClearMemory")
+
+    private static var purges = 0
+    /// Nombre de purges : un calcul commencé avant une purge ne publie pas son résultat après elle.
+    static var purgeCount: Int { lock.withLock { purges } }
+
+    static func clearMemory() {
+        lock.withLock { pages = [:]; order = []; purges += 1 }
+        NotificationCenter.default.post(name: didClearMemory, object: nil)
+    }
 
     /// Oublie les lectures d'une page : l'OCR retenu a changé de moteur, elles seront recalculées depuis le nouveau.
     static func remove(_ key: String) {

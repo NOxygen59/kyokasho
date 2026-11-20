@@ -68,15 +68,60 @@ public struct NoteOrganization: Equatable, Hashable, Sendable {
     public var folderId: String?
     /// Triées, sans doublon.
     public var tagIds: [String]
+    /// Heure de l'échéance, en minutes depuis minuit (0…1439) ; `nil` : l'heure par défaut (PLAN-NOTIF-001, DEC-03).
+    public var dueMinute: Int?
+    /// Rappels, en minutes avant l'échéance (triés, 3 au plus) ; `nil` : le rappel par défaut, `[]` : aucun (DEC-04).
+    public var reminders: [Int]?
 
     public static let `default` = NoteOrganization(dueDay: nil, priority: .normal, archived: false, folderId: nil, tagIds: [])
 
-    public init(dueDay: String?, priority: NotePriority, archived: Bool, folderId: String?, tagIds: [String]) {
+    public init(dueDay: String?, priority: NotePriority, archived: Bool, folderId: String?, tagIds: [String],
+                dueMinute: Int? = nil, reminders: [Int]? = nil) {
         self.dueDay = dueDay
         self.priority = priority
         self.archived = archived
         self.folderId = folderId
         self.tagIds = tagIds
+        self.dueMinute = dueMinute
+        self.reminders = reminders
+    }
+}
+
+/// Rappels d'une note (PLAN-NOTIF-001, DEC-03/04 = A). Fonctions pures, testées.
+public enum NoteReminder {
+    /// Choix offerts, en minutes avant l'échéance : à l'heure, 15 min, 1 h, 1 jour, 2 jours, 1 semaine.
+    public static let choices = [0, 15, 60, 1_440, 2_880, 10_080]
+    public static let maxPerNote = 3
+    /// Sans heure réglée, une échéance compte pour 9 h (réglable dans Réglages › Notes).
+    public static let defaultDueMinute = 9 * 60
+    /// Rappel d'une nouvelle échéance : à l'heure.
+    public static let defaultReminders = [0]
+
+    /// Forme canonique : choix connus seulement, sans doublon, triés, 3 au plus ; `nil` reste `nil` (défaut).
+    public static func canonical(_ reminders: [Int]?) -> [Int]? {
+        reminders.map { Array(Set($0.filter(choices.contains))).sorted().prefix(maxPerNote).map { $0 } }
+    }
+
+    /// Instant de l'échéance : le jour à l'heure donnée (ou à l'heure par défaut), dans le calendrier de l'appareil.
+    public static func dueDate(day: String, minute: Int?, defaultMinute: Int = defaultDueMinute,
+                               calendar: Calendar = NoteDay.calendar) -> Date? {
+        guard NoteDay.isValid(day) else { return nil }
+        let parts = day.split(separator: "-").compactMap { Int($0) }
+        let m = minute ?? defaultMinute
+        return calendar.date(from: DateComponents(year: parts[0], month: parts[1], day: parts[2], hour: m / 60, minute: m % 60))
+    }
+
+    /// Instants des rappels encore à venir après `now`, triés.
+    public static func fireDates(day: String, minute: Int?, reminders: [Int]?, now: Date,
+                                 defaultMinute: Int = defaultDueMinute, defaultReminders: [Int] = defaultReminders,
+                                 calendar: Calendar = NoteDay.calendar) -> [Date] {
+        guard let due = dueDate(day: day, minute: minute, defaultMinute: defaultMinute, calendar: calendar) else { return [] }
+        return (canonical(reminders) ?? canonical(defaultReminders) ?? [])
+            // Revue R2 NOTIF (n°3) : les jours se comptent dans le calendrier (changement d'heure), les minutes en temps.
+            .compactMap { $0 % 1_440 == 0 && $0 > 0 ? calendar.date(byAdding: .day, value: -$0 / 1_440, to: due)
+                                                    : due.addingTimeInterval(-Double($0) * 60) }
+            .filter { $0 > now }
+            .sorted()
     }
 }
 
@@ -95,10 +140,14 @@ public enum NoteChange: Equatable, Sendable {
     case folder(String?)
     case addTag(String)
     case removeTag(String)
+    /// Heure de l'échéance en minutes depuis minuit ; `nil` : heure par défaut (PLAN-NOTIF-001, E2).
+    case dueMinute(Int?)
+    /// Rappels en minutes avant l'échéance ; `nil` : rappel par défaut, `[]` : aucun.
+    case reminders([Int]?)
 }
 
 public enum NoteOrganizationError: LocalizedError, Equatable {
-    case emptyName, invalidDay, folderNotFound, tagNotFound, duplicateName
+    case emptyName, invalidDay, folderNotFound, tagNotFound, duplicateName, noteNotFound, invalidTime
 
     public var errorDescription: String? {
         switch self {
@@ -107,6 +156,8 @@ public enum NoteOrganizationError: LocalizedError, Equatable {
         case .folderNotFound: return String(localized: "Ce classeur n'existe plus.", bundle: .main)
         case .tagNotFound: return String(localized: "Cette étiquette n'existe plus.", bundle: .main)
         case .duplicateName: return String(localized: "Une étiquette porte déjà ce nom.", bundle: .main)
+        case .noteNotFound: return String(localized: "Cette note n'existe plus.", bundle: .main)
+        case .invalidTime: return String(localized: "Heure d'échéance invalide.", bundle: .main)
         }
     }
 }
@@ -149,7 +200,46 @@ public enum NoteDay {
     }
 }
 
+/// Pastille « ! » de Notes sur l'accueil (PLAN-NOTIF-001, DEC-01/02 = A) : noire s'il y a une échéance dans les 7 jours,
+/// rouge si une échéance est aujourd'hui ou dépassée. Notes archivées exclues (comme `notesToReviewCount`).
+public enum NoteDueBadge: Equatable, Sendable {
+    case none, soon, urgent
+
+    public static let soonDays = 7
+
+    public static func of(dueDays: [String], today: Date, calendar: Calendar = NoteDay.calendar) -> NoteDueBadge {
+        of(dues: dueDays.map { ($0, nil) }, now: today, calendar: calendar)
+    }
+
+    /// Avec l'heure (E2) : une échéance à heure réglée passe au rouge 24 h avant.
+    public static func of(dues: [(day: String, minute: Int?)], now: Date, calendar: Calendar = NoteDay.calendar) -> NoteDueBadge {
+        let valid = dues.filter { NoteDay.isValid($0.day) }
+        let todayString = NoteDay.string(now, calendar: calendar)
+        if valid.contains(where: { $0.day <= todayString }) { return .urgent }
+        if valid.contains(where: { due in
+            guard let minute = due.minute, let date = NoteReminder.dueDate(day: due.day, minute: minute, calendar: calendar)
+            else { return false }
+            return date.timeIntervalSince(now) <= 24 * 3_600
+        }) { return .urgent }
+        guard let limit = calendar.date(byAdding: .day, value: soonDays, to: now) else { return .none }
+        let limitString = NoteDay.string(limit, calendar: calendar)
+        return valid.contains(where: { $0.day <= limitString }) ? .soon : .none
+    }
+}
+
 extension AppDatabase {
+    /// Pastille « ! » de Notes : échéances des notes non archivées, hors documents exclus (corbeille).
+    public func noteDueBadge(today: Date, calendar: Calendar = NoteDay.calendar, excludingDocuments: Set<String> = []) throws -> NoteDueBadge {
+        guard let limit = calendar.date(byAdding: .day, value: NoteDueBadge.soonDays, to: today) else { return .none }
+        let rows = try writer.read { db in
+            try Row.fetchAll(db, sql: "SELECT documentId, dueDay, dueMinute FROM pageComment WHERE archived = 0 AND dueDay IS NOT NULL AND dueDay <= ?",
+                             arguments: [NoteDay.string(limit, calendar: calendar)])
+        }
+        let dues = rows.filter { !excludingDocuments.contains($0["documentId"] as String) }
+            .map { (day: $0["dueDay"] as String, minute: ($0["dueMinute"] as Int?).flatMap { (0..<1_440).contains($0) ? $0 : nil }) }
+        return NoteDueBadge.of(dues: dues, now: today, calendar: calendar)
+    }
+
     // MARK: Classeurs
 
     public func noteFolders() throws -> [NoteFolder] {
@@ -227,13 +317,23 @@ extension AppDatabase {
     // MARK: Rangement des notes
 
     /// Applique `change` à toutes les notes données, tout ou rien. Seules les colonnes de rangement sont écrites.
+    /// Une note disparue (supprimée ailleurs pendant que l'écran était ouvert) annule tout le lot
+    /// (`noteNotFound`, revue DeepSeek D-07 F4) : jamais un « succès » qui n'a rien écrit.
     public func apply(_ change: NoteChange, to noteIds: [String]) throws {
         guard !noteIds.isEmpty else { return }
         try writer.write { db in
+            for id in Set(noteIds) where try !Self.noteExists(db, id) { throw NoteOrganizationError.noteNotFound }
             switch change {
             case .due(let day):
                 if let day, !NoteDay.isValid(day) { throw NoteOrganizationError.invalidDay }
                 try Self.update(db, "dueDay", day, noteIds)
+                // Sans échéance, plus d'heure (les rappels choisis restent, pour la prochaine échéance).
+                if day == nil { try Self.update(db, "dueMinute", nil, noteIds) }
+            case .dueMinute(let minute):
+                if let minute, !(0..<1_440).contains(minute) { throw NoteOrganizationError.invalidTime }
+                try Self.update(db, "dueMinute", minute, noteIds)
+            case .reminders(let reminders):
+                try Self.update(db, "reminders", NoteReminder.canonical(reminders).map(Self.encodeMinutes), noteIds)
             case .priority(let priority):
                 try Self.update(db, "priority", priority.rawValue, noteIds)
             case .archived(let archived):
@@ -253,6 +353,38 @@ extension AppDatabase {
                 }
             }
         }
+    }
+
+    /// Étiquette de ce nom (créée au besoin) posée sur la note, en une transaction : si la note a disparu, rien n'est
+    /// créé (revue DeepSeek D-07 F4 : pas d'étiquette orpheline).
+    public func addTag(named name: String, toNote noteId: String) throws {
+        let clean = try Self.clean(name)
+        try writer.write { db in
+            guard try Self.noteExists(db, noteId) else { throw NoteOrganizationError.noteNotFound }
+            let tag: NoteTag
+            if let existing = try NoteTag.fetchAll(db).first(where: { $0.name.compare(clean, options: .caseInsensitive) == .orderedSame }) {
+                tag = existing
+            } else {
+                tag = NoteTag(name: clean)
+                try tag.insert(db)
+            }
+            let raw = try String.fetchOne(db, sql: "SELECT tagIds FROM pageComment WHERE id = ?", arguments: [noteId])
+            try db.execute(sql: "UPDATE pageComment SET tagIds = ? WHERE id = ?",
+                           arguments: [Self.encodeTags(Self.decodeTags(raw) + [tag.id]), noteId])
+        }
+    }
+
+    /// Classeur créé et donné à la note en une transaction : si la note a disparu, rien n'est créé (relecture finale
+    /// f2b3d49, N2 : même règle que `addTag(named:toNote:)`).
+    @discardableResult
+    public func createNoteFolder(name: String, assigningTo noteId: String) throws -> NoteFolder {
+        let folder = NoteFolder(name: try Self.clean(name))
+        try writer.write { db in
+            guard try Self.noteExists(db, noteId) else { throw NoteOrganizationError.noteNotFound }
+            try folder.insert(db)
+            try db.execute(sql: "UPDATE pageComment SET noteFolderId = ? WHERE id = ?", arguments: [folder.id, noteId])
+        }
+        return folder
     }
 
     /// Rangement d'une note (identifiants inconnus de classeur ou d'étiquette retirés).
@@ -293,12 +425,16 @@ extension AppDatabase {
 
     // MARK: Interne
 
-    private static let columns = "dueDay, priority, archived, noteFolderId, tagIds"
+    private static let columns = "dueDay, priority, archived, noteFolderId, tagIds, dueMinute, reminders"
 
     private static func update(_ db: Database, _ column: String, _ value: (any DatabaseValueConvertible)?, _ ids: [String]) throws {
         for id in ids {
             try db.execute(sql: "UPDATE pageComment SET \(column) = ? WHERE id = ?", arguments: [value, id])
         }
+    }
+
+    private static func noteExists(_ db: Database, _ id: String) throws -> Bool {
+        try Bool.fetchOne(db, sql: "SELECT EXISTS(SELECT 1 FROM pageComment WHERE id = ?)", arguments: [id]) ?? false
     }
 
     private static func knownIds(_ db: Database) throws -> (folders: Set<String>, tags: Set<String>) {
@@ -312,7 +448,22 @@ extension AppDatabase {
                                 priority: NotePriority(rawValue: row["priority"] ?? 1) ?? .normal,
                                 archived: row["archived"] ?? false,
                                 folderId: folder.flatMap { known.folders.contains($0) ? $0 : nil },
-                                tagIds: decodeTags(row["tagIds"]).filter { known.tags.contains($0) })
+                                tagIds: decodeTags(row["tagIds"]).filter { known.tags.contains($0) },
+                                dueMinute: (row["dueMinute"] as Int?).flatMap { (0..<1_440).contains($0) ? $0 : nil },
+                                reminders: decodeMinutes(row["reminders"]))
+    }
+
+    /// Rappels lus en base : `nil` si la colonne est vide ou illisible (rappel par défaut), sinon forme canonique.
+    static func decodeMinutes(_ raw: String?) -> [Int]? {
+        guard let raw else { return nil }
+        // Revue R2 NOTIF (n°4) : une valeur abîmée vaut « aucun rappel », jamais le rappel par défaut (des
+        // notifications coupées ne reviennent pas toutes seules).
+        guard let list = try? JSONDecoder().decode([Int].self, from: Data(raw.utf8)) else { return [] }
+        return NoteReminder.canonical(list)
+    }
+
+    static func encodeMinutes(_ minutes: [Int]) -> String {
+        String(decoding: (try? JSONEncoder().encode(minutes)) ?? Data("[]".utf8), as: UTF8.self)
     }
 
     static func decodeTags(_ raw: String?) -> [String] {

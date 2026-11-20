@@ -191,4 +191,16 @@ final class LibraryFoldersTests: XCTestCase {
         XCTAssertEqual(membership["new2"], second.id)
         XCTAssertNil(try database.document(id: "old1"))
     }
+
+    /// Revue Codex après 1.5.6 (P2 n°3) : le remplacé est rangé dans Livres & Manuels, le survivant est dans Manga :
+    /// le survivant ne prend pas un dossier de l'autre espace (il reste hors dossier, visible).
+    func testDriveFusionNeverTakesAFolderOfTheOtherSpace() throws {
+        let (database, _) = try temporaryDatabase()
+        for id in ["old", "survivor"] { try database.save(document(id)) }
+        try database.updateMangaSpace(documentId: "survivor", inManga: true)
+        _ = try database.createFolder(name: "Étude", space: "study", moving: ["old"])
+        try database.rekeyDocument(from: "old", to: XCTUnwrap(database.document(id: "survivor")))
+        XCTAssertNil(try database.libraryFolders().membership["survivor"])
+        XCTAssertNil(try database.document(id: "old"))
+    }
 }
