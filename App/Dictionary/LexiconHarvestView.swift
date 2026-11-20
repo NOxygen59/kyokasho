@@ -35,13 +35,26 @@ struct LexiconHarvestView: View {
     private static let key = "lexique|releve"
     private var running: Bool { center.isRunning(Self.key) }
 
+    private var eligibleDocuments: [LibraryDocument] {
+        model.documents.filter { $0.capabilities.textAnalysis }
+    }
+
+    private var selectedDocument: LibraryDocument? {
+        eligibleDocuments.first { $0.id == documentId }
+    }
+
+    private var documentSelection: Binding<String?> {
+        // Une sélection devenue inéligible doit s'afficher comme « Choisir… ».
+        Binding(get: { selectedDocument?.id }, set: { documentId = $0 })
+    }
+
     var body: some View {
         NavigationStack {
             List {
                 Section {
-                    Picker("Livre", selection: $documentId) {
+                    Picker("Livre", selection: documentSelection) {
                         Text("Choisir…").tag(String?.none)
-                        ForEach(model.documents) { d in Text(d.title).tag(Optional(d.id)) }
+                        ForEach(eligibleDocuments) { d in Text(d.title).tag(Optional(d.id)) }
                     }
                     Picker("IA", selection: $modelID) {
                         ForEach(TermExtractor.models, id: \.id) { spec in
@@ -60,7 +73,7 @@ struct LexiconHarvestView: View {
                         Label(running ? String(localized: "Relevé en cours… (\(pagesDone)/\(pagesTotal))") : String(localized: "Relever les termes avec l'IA"),
                               systemImage: "sparkles")
                     }
-                    .disabled(documentId == nil || running || !TermExtractor.isAvailable(chosenModel))
+                    .disabled(selectedDocument == nil || running || !TermExtractor.isAvailable(chosenModel))
                     if running { Button("Arrêter", role: .destructive) { center.cancel(key: Self.key) } }
                 } header: {
                     Text("Depuis tes manuels")
@@ -150,7 +163,8 @@ struct LexiconHarvestView: View {
     /// Une tâche IA de l'app : continue si l'on ferme la fenêtre ; les propositions reviennent à la réouverture
     /// seulement si elle est encore ouverte (sinon, relancer : les pages déjà vues sont refaites, rien n'est écrit).
     private func harvest() {
-        guard let id = documentId, let document = model.documents.first(where: { $0.id == id }) else { return }
+        guard let document = selectedDocument else { return }
+        let id = document.id
         error = nil
         let pages = (0..<document.pageCount).filter { DocumentAITextStore.read(documentId: id, reader: ModelSpec.ovisocr2.id, page: $0) != nil }
         guard !pages.isEmpty else {
