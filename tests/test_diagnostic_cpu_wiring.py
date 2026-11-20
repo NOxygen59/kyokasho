@@ -31,8 +31,8 @@ class DiagnosticCPUWiringTests(unittest.TestCase):
 
     def test_activity_snapshot_does_not_consume_monitor_ledger_or_details(self):
         center = source("App/Reader/ActivityCenter.swift")
-        self.assertIn("if Diagnostics.enabled { diagnosticRunning", center)
-        self.assertIn("if let observed = diagnosticRunning.removeValue(forKey: id), Diagnostics.enabled", center)
+        self.assertIn("if diagnosticsOn { diagnosticRunning", center)
+        self.assertIn("if diagnosticsOn, let observed = diagnosticRunning.removeValue(forKey: id) {", center)
         active = center.split("func diagnosticActive()", 1)[1].split("func ", 1)[0]
         self.assertNotIn("ledger.snapshot", active)
         self.assertNotIn("detail", active)

@@ -33,6 +33,11 @@ class NoteNotificationsWiringTests(unittest.TestCase):
         self.assertIn("status == .notDetermined", service)
         self.assertIn("status = await center.notificationSettings().authorizationStatus", service)
         self.assertIn("guard [UNAuthorizationStatus.authorized, .provisional, .ephemeral].contains(status) else {", service)
+        # Revue R2 #96 : une réconciliation à la fois ; bibliothèque lue mais vide = tout retirer.
+        self.assertIn("ReconcileQueue.enqueue {", service)
+        self.assertIn("await previous?.value", service)
+        self.assertIn("guard libraryLoaded else { return }", service)
+        self.assertNotIn("guard !documents.isEmpty else { return }", service)
 
     def test_tapping_a_notification_opens_the_note_even_from_a_cold_start(self):
         app = self.read("KyokashoApp.swift")

@@ -33,14 +33,18 @@ enum NoteNotifications {
     /// Reprogramme les rappels de notes (les autres notifications de l'app ne sont pas touchées).
     /// #96 (PLAN-16-001, E4) : numéro de page imprimé, autorisation relue après la demande, et seuls les rappels qui
     /// changent sont retirés ou ajoutés (`NoteReminderPlan`), au lieu de tout retirer puis tout recréer.
-    static func reschedule(database: AppDatabase, documents: [String: LibraryDocument], excluded: Set<String>) {
+    static func reschedule(database: AppDatabase, documents: [String: LibraryDocument], libraryLoaded: Bool,
+                           excluded: Set<String>) {
         // Revue R2 NOTIF (n°1) : bibliothèque pas encore lue (lancement) : on ne touche à rien, sinon tous les rappels
-        // seraient retirés faute de titres.
-        guard !documents.isEmpty else { return }
+        // seraient retirés faute de titres. Lue mais vide (dernier livre à la corbeille) : tout est retiré (revue R2 #96).
+        guard libraryLoaded else { return }
         let titles = documents.mapValues(\.title)
         let defaultMinute = defaultDueMinute, reminders = defaultReminders
         let generation = Generation.next()
-        Task.detached(priority: .utility) {
+        // Revue R2 #96 : une réconciliation à la fois, jusqu'au bout des écritures d'iOS ; une demande dépassée par une
+        // plus récente ne fait rien. Sinon une ancienne pouvait rajouter un rappel qu'une plus récente venait de retirer.
+        ReconcileQueue.enqueue {
+            guard Generation.isCurrent(generation) else { return }
             let notes: [OrganizedNote]
             do { notes = try database.organizedNotes(includeArchived: false, excludingDocuments: excluded) } catch {
                 Diagnostics.error("rappels des notes : \(error.localizedDescription)", "notes")
@@ -101,6 +105,21 @@ enum NoteNotifications {
             NoteReminderPlan.Trigger(components: $0.dateComponents, repeats: $0.repeats)
         }
         return .init(id: request.identifier, content: content, trigger: trigger)
+    }
+}
+
+/// File des réconciliations de rappels : chacune attend la fin complète de la précédente (revue R2 #96).
+private enum ReconcileQueue {
+    private static let lock = NSLock()
+    private static var tail: Task<Void, Never>?
+
+    static func enqueue(_ work: @escaping @Sendable () async -> Void) {
+        lock.lock(); defer { lock.unlock() }
+        let previous = tail
+        tail = Task.detached(priority: .utility) {
+            await previous?.value
+            await work()
+        }
     }
 }
 

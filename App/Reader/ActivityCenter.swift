@@ -20,13 +20,22 @@ final class ActivityCenter: @unchecked Sendable {
     }
     private var diagnosticRunning: [UUID: Observed] = [:]
     private var diagnosticLong = DiagnosticCPULog.LongWork()
+    /// Copie en mémoire du mode diagnostic (revue R2 D) : les chemins fréquents ne relisent pas les préférences.
+    private var diagnosticsOn = false
+
+    func setDiagnostics(_ on: Bool) {
+        lock.withLock {
+            diagnosticsOn = on
+            if !on { diagnosticRunning.removeAll(); diagnosticLong = .init() }
+        }
+    }
 
     /// `end` part avec le `defer` de l'appelant : une erreur ou une annulation ferment aussi la mesure.
     func begin(_ kind: Kind, detail: String? = nil, page: Int? = nil) -> UUID {
         let id = UUID()
         lock.withLock {
             ledger.begin(id, kind: kind.rawValue, detail: detail, at: Date())
-            if Diagnostics.enabled { diagnosticRunning[id] = Observed(kind: kind, start: ProcessInfo.processInfo.systemUptime,
+            if diagnosticsOn { diagnosticRunning[id] = Observed(kind: kind, start: ProcessInfo.processInfo.systemUptime,
                                                                        page: page, visiblePage: page == nil ? DiagnosticCPU.shared.visiblePage : nil) }
         }
         return id
@@ -34,7 +43,7 @@ final class ActivityCenter: @unchecked Sendable {
 
     func end(_ id: UUID) {
         lock.withLock {
-            diagnosticRunning.removeValue(forKey: id)
+            if diagnosticsOn { diagnosticRunning.removeValue(forKey: id) }
             ledger.end(id, at: Date())
         }
     }
@@ -48,7 +57,7 @@ final class ActivityCenter: @unchecked Sendable {
             lock.withLock {
                 ledger.addCPU(kind: kind.rawValue, seconds: spent)
                 ledger.end(id, at: Date())
-                if let observed = diagnosticRunning.removeValue(forKey: id), Diagnostics.enabled {
+                if diagnosticsOn, let observed = diagnosticRunning.removeValue(forKey: id) {
                     diagnosticLong.add(.init(kind: observed.kind, seconds: ProcessInfo.processInfo.systemUptime - observed.start,
                                              page: observed.page, visiblePage: observed.visiblePage, cpuSeconds: max(0, spent)))
                 }

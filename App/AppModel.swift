@@ -211,6 +211,8 @@ final class AppModel: ObservableObject {
                 }
                 // C1.3 : un document disparu (corbeille, suppression ailleurs) n'a plus d'onglet.
                 self.tabs.keep(only: Set(list.map(\.id)))
+                // Revue R2 #96 : une bibliothèque lue mais vide doit pouvoir retirer tous les rappels de notes.
+                self.libraryLoaded = true
             }
             .store(in: &cancellables)
         // Lus tout de suite (revue DeepSeek n°15) : sinon les documents rangés s'affichaient un instant hors de leur
@@ -558,6 +560,8 @@ final class AppModel: ObservableObject {
 
     /// Documents à la corbeille : leurs notes ne comptent ni dans la pastille ni dans l'écran « Notes ».
     var trashedDocumentIds: Set<String> { Set(trashedDocuments.map(\.id)) }
+    /// Vrai dès la première lecture de la bibliothèque (même vide) : distingue « pas encore lue » de « vide ».
+    private(set) var libraryLoaded = false
 
     func refreshNotesToReview() {
         let database = database, excluded = trashedDocumentIds
@@ -580,6 +584,7 @@ final class AppModel: ObservableObject {
         // PLAN-NOTIF-001 E3 : mêmes moments que la pastille (note changée, accueil, retour dans l'app).
         NoteNotifications.reschedule(database: database,
                                      documents: Dictionary(documents.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a }),
+                                     libraryLoaded: libraryLoaded,
                                      excluded: excluded)
     }
 

@@ -60,6 +60,8 @@ enum DiagnosticContext {
         guard Diagnostics.enabled else { return }
         let open = model?.openDocumentId
         if gesture?.document != open { gesture = nil }
+        // Revue R2 D : un geste de plus de 5 s n'explique plus un pic.
+        if let gesture, ProcessInfo.processInfo.systemUptime - gesture.time > 5 { self.gesture = nil }
         if panel?.document != open { panel = nil }
         var context = DiagnosticCPULog.Context()
         context.tabs = model?.tabs.ids.count
@@ -105,6 +107,7 @@ final class DiagnosticCPU: @unchecked Sendable {
                 MainActor.assumeIsolated { updateActivation() }
             }
         }
+        ActivityCenter.shared.setDiagnostics(enabled)
         if !enabled {
             DiagnosticContext.resetActions()
             ActivityCenter.shared.clearDiagnostic()
