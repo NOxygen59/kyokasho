@@ -128,7 +128,8 @@ final class NoteReminderPlanTests: XCTestCase {
     }
 
     func testPlafondSelectionneLesPlusProchesEtRetireUnRappelEvince() throws {
-        let notes = (0...60).reversed().map { note("n-\($0)", minute: $0) }
+        // `minute` est optionnel : sans type explicite, `$0` devenait `Int?` et l'identifiant « n-Optional(0) ».
+        let notes = (0...60).reversed().map { (i: Int) in note("n-\(i)", minute: i) }
         let farthest = try XCTUnwrap(additions(plan([notes[0]])).first)
         let result = plan(notes, pending: [pending(farthest)])
         XCTAssertEqual(additions(result).map(\.content.noteId), (0..<60).map { "n-\($0)" })
