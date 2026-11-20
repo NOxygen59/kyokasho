@@ -16,7 +16,9 @@ struct ReaderTabsHost: View {
     var body: some View {
         ZStack(alignment: .top) {
             if let id = model.openDocumentId, let document = model.documents.first(where: { $0.id == id }) {
+                // Le calque gère le fondu d'entrée ; le changement d'onglet ne doit pas le rejouer.
                 ReaderScreen(document: document, model: model).id(document.id)
+                    .transition(.identity)
             }
             if notice {
                 MemoryNotice(count: model.tabs.ids.count)
@@ -29,13 +31,10 @@ struct ReaderTabsHost: View {
             // Seulement quand un onglet s'ajoute au-delà du seuil, pas à la fermeture d'un onglet.
             if count >= DocumentTabs.warningCount, count > old { showNotice() }
         }
-        // Même bannière que dans la bibliothèque : elle suit l'utilisateur dans le lecteur (10/11/2026).
+        // Le diagnostic a un ancrage commun avec la bibliothèque, au-dessus de ce rappel.
         .safeAreaInset(edge: .top, spacing: 0) {
-            VStack(spacing: 0) {
-                DiagnosticSizeBanner()
-                // Rappel de luminosité (11/11/2026) : dans le lecteur seulement, c'est là que l'écran coûte.
-                BrightnessReminderBanner()
-            }
+            // Rappel de luminosité (11/11/2026) : dans le lecteur seulement, c'est là que l'écran coûte.
+            BrightnessReminderBanner()
         }
         // Lecteur ouvert depuis la bibliothèque avec déjà assez d'onglets : prévenir une fois à l'ouverture.
         .onAppear {

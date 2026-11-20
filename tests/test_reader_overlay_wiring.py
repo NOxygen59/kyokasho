@@ -19,8 +19,30 @@ class ReaderOverlayWiringTests(unittest.TestCase):
         visibility = root.split("private var showsReader: Bool {", 1)[1].split("var body:", 1)[0]
         self.assertIn("guard model.storageRecoveryError == nil, let id = model.openDocumentId", visibility)
         self.assertIn("return model.documents.contains { $0.id == id }", visibility)
-        self.assertRegex(root, r"\.overlay\s*\{\s*ZStack\s*\{\s*(?://[^\n]*\n\s*)*if showsReader\s*\{\s*ReaderTabsHost\(\)")
+        self.assertRegex(root, r"\.overlay\s*\{\s*ZStack\s*\{[^{}]*Color\.clear\s*\.allowsHitTesting\(false\)"
+                               r"[^{}]*if showsReader\s*\{\s*ReaderTabsHost\(\)")
         self.assertIn(".background(Atelier.canvas.ignoresSafeArea())", root)
+
+    def test_only_reader_insertion_fades_unless_reduce_motion_is_enabled(self):
+        root = source("KyokashoApp.swift")
+        self.assertIn(r"@Environment(\.accessibilityReduceMotion) private var reduceMotion", root)
+        layer = root.split("if showsReader {", 1)[1].split(".onAppear", 1)[0]
+        self.assertIn(".transition(.asymmetric(insertion: reduceMotion ? .identity : .opacity, removal: .identity))", layer)
+        self.assertRegex(layer, r"\}\s*\}\s*\.animation\(showsReader && !reduceMotion \? "
+                                r"\.easeOut\(duration: 0\.15\) : nil, value: showsReader\)")
+        self.assertEqual(layer.count(".animation("), 1)
+        self.assertNotIn("withAnimation", layer)
+        tabs = source("Reader/DocumentTabsBar.swift")
+        self.assertRegex(tabs, r"ReaderScreen\(document: document, model: model\)\.id\(document\.id\)\s*"
+                               r"\.transition\(\.identity\)")
+
+    def test_diagnostic_banner_is_anchored_outside_the_reader_and_library(self):
+        root = source("KyokashoApp.swift")
+        self.assertEqual(root.count("DiagnosticSizeBanner()"), 1)
+        self.assertNotIn("DiagnosticSizeBanner()", source("Reader/DocumentTabsBar.swift"))
+        self.assertRegex(root, r"value: showsReader\)\s*\}\s*(?://[^\n]*\n\s*)*"
+                               r"\.safeAreaInset\(edge: \.top, spacing: 0\)\s*\{\s*"
+                               r"if model\.storageRecoveryError == nil \{\s*DiagnosticSizeBanner\(\)")
 
     def test_library_is_isolated_and_intro_waits_without_unmounting_navigation(self):
         root = source("KyokashoApp.swift")

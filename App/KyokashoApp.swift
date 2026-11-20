@@ -134,8 +134,6 @@ struct RootView: View {
                                 UpdateBanner()
                                 DictionaryUpdateBanner().environmentObject(model.dictionary)
                                 AnalysisDurationBanner()
-                                // Permanente et non fermable : les fichiers de diagnostic prennent de la place.
-                                DiagnosticSizeBanner()
                             }
                         }
                 }
@@ -157,6 +155,8 @@ struct RootView: View {
         }
         .overlay {
             ZStack {
+                // Garder la pile en place pour que SwiftUI anime son enfant, pas l'apparition de la pile.
+                Color.clear.allowsHitTesting(false).accessibilityHidden(true)
                 // Un seul calque pour tous les onglets (#16), indépendant des présentations iOS (#93).
                 if showsReader {
                     ReaderTabsHost()
@@ -164,15 +164,21 @@ struct RootView: View {
                         // Le fond couvre les zones sûres, les commandes gardent leurs marges et le clavier.
                         .background(Atelier.canvas.ignoresSafeArea())
                         .environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review)
-                        .preferredColorScheme(themes.effectiveTheme.colorScheme)
                         .environment(\.themeRevision, themes.effectiveRevision)
                         .atelierFontDesign()
                         .tint(Atelier.Tint.read)
                         // Retrait immédiat : le lecteur rend sa mémoire sans attendre la fin d'un fondu.
-                        .transition(.asymmetric(insertion: .opacity, removal: .identity))
+                        .transition(.asymmetric(insertion: reduceMotion ? .identity : .opacity, removal: .identity))
+                        .zIndex(1)
                 }
             }
-            .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: showsReader)
+            .animation(showsReader && !reduceMotion ? .easeOut(duration: 0.15) : nil, value: showsReader)
+        }
+        // Permanente et non fermable : un seul ancrage, au-dessus des bannières propres à chaque écran.
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if model.storageRecoveryError == nil {
+                DiagnosticSizeBanner()
+            }
         }
         .onAppear {
             model.themeManager = themes
