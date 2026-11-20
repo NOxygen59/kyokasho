@@ -51,7 +51,9 @@ class StorageClearTimerWiringTests(unittest.TestCase):
     def test_both_messages_are_localized(self):
         path = ROOT / "App/Resources/Localizable.xcstrings"
         strings = json.loads(path.read_text(encoding="utf-8"))["strings"]
-        self.assertEqual(list(strings)[:2], [COUNTDOWN, READY])
+        # Présence, pas position : d'autres clés (notes de version) s'insèrent aussi en tête.
+        self.assertIn(COUNTDOWN, strings)
+        self.assertIn(READY, strings)
         for key in (COUNTDOWN, READY):
             for language in ("fr", "en", "zh-Hans"):
                 with self.subTest(key=key, language=language):
