@@ -9,6 +9,20 @@ public struct DiagnosticMachCPU {
     private var previous: (time: TimeInterval, cpu: TimeInterval)?
     public init() {}
 
+    /// Lit le compteur même si le fil tourne. L'appelant conserve le droit Mach pendant la lecture.
+    public static func threadCPUSeconds(_ thread: thread_t) -> TimeInterval? {
+        var info = thread_basic_info()
+        var count = mach_msg_type_number_t(MemoryLayout<thread_basic_info>.size / MemoryLayout<integer_t>.stride)
+        let result = withUnsafeMutablePointer(to: &info) {
+            $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
+                thread_info(thread, thread_flavor_t(THREAD_BASIC_INFO), $0, &count)
+            }
+        }
+        guard result == KERN_SUCCESS else { return nil }
+        return Double(info.user_time.seconds) + Double(info.system_time.seconds)
+            + Double(info.user_time.microseconds + info.system_time.microseconds) / 1_000_000
+    }
+
     public mutating func sample(mainID: UInt64) -> (percent: Double?, threads: [DiagnosticCPULog.ThreadLoad], cost: DiagnosticCPULog.Cost) {
         let start = ProcessInfo.processInfo.systemUptime
         let cpuStart = ThreadCPU.seconds()

@@ -4,9 +4,63 @@
 import Foundation
 
 public enum DiagnosticCPULog {
+    public static let activeLimit = 8
+
     public enum Kind: String, Sendable {
         case thumbnails, importing, comicImport, comicConversion, backup
         case pageRender, pageText, sharpening, tone, furigana
+        case ocr, analysis, aiReading
+    }
+
+    public enum Stage: String, Sendable {
+        case waiting, pdfText, ocr, aiReading, voting, translation, corrections, saving
+    }
+
+    /// Index source (base zéro), nombre de pages du document et étape issue d'une liste fermée.
+    public struct Progress: Sendable {
+        public let page: Int?
+        public let total: Int?
+        public let stage: Stage?
+
+        public init(page: Int? = nil, total: Int? = nil, stage: Stage? = nil) {
+            let validTotal = total.flatMap { $0 > 0 ? $0 : nil }
+            self.total = validTotal
+            self.page = page.flatMap { index in
+                index >= 0 && (validTotal.map { index < $0 } ?? true) ? index : nil
+            }
+            self.stage = stage
+        }
+    }
+
+    /// Additionne les segments synchrones ; un segment imbriqué sur le même fil est déjà compté.
+    public struct CPUTime: Sendable {
+        private var running: [UInt32: TimeInterval] = [:]
+        private var accumulated: TimeInterval?
+
+        public init() {}
+
+        public mutating func begin(thread: UInt32, at start: TimeInterval) -> Bool {
+            guard running[thread] == nil else { return false }
+            running[thread] = start
+            return true
+        }
+
+        public mutating func end(thread: UInt32, at end: TimeInterval?) {
+            guard let start = running.removeValue(forKey: thread), let elapsed = Self.delta(start, end) else { return }
+            accumulated = (accumulated ?? 0) + elapsed
+        }
+
+        public func seconds(read: (UInt32) -> TimeInterval?) -> TimeInterval? {
+            running.reduce(accumulated) { sum, segment in
+                guard let elapsed = Self.delta(segment.value, read(segment.key)) else { return sum }
+                return (sum ?? 0) + elapsed
+            }
+        }
+
+        private static func delta(_ start: TimeInterval, _ end: TimeInterval?) -> TimeInterval? {
+            guard let end, start.isFinite, end.isFinite, end >= start else { return nil }
+            return end - start
+        }
     }
 
     public enum Gesture: String, Sendable { case pageTurn, scroll, zoom, ocrResize }
@@ -41,13 +95,16 @@ public enum DiagnosticCPULog {
         public let page: Int?
         public let visiblePage: Int?
         public let cpuSeconds: TimeInterval?
+        public let progress: Progress?
 
-        public init(kind: Kind, seconds: TimeInterval, page: Int? = nil, visiblePage: Int? = nil, cpuSeconds: TimeInterval? = nil) {
+        public init(kind: Kind, seconds: TimeInterval, page: Int? = nil, visiblePage: Int? = nil,
+                    cpuSeconds: TimeInterval? = nil, progress: Progress? = nil) {
             self.kind = kind
             self.seconds = seconds
             self.page = page
             self.visiblePage = visiblePage
             self.cpuSeconds = cpuSeconds
+            self.progress = progress
         }
     }
 
@@ -148,10 +205,12 @@ public enum DiagnosticCPULog {
 
     private static func workLabel(_ work: Work) -> String {
         var label = "\(work.kind.rawValue):\(number(work.seconds * 1000))ms"
-        if let page = work.page { label += "@p\(page)" }
+        if let page = work.progress?.page ?? work.page { label += "@p\(page)" }
         else if let page = work.visiblePage { label += "@visible:\(page)" }
         else { label += "@p?" }
+        label += "/total:\(work.progress?.total.map(String.init) ?? "?")/étape:\(work.progress?.stage?.rawValue ?? "?")"
         if let cpu = work.cpuSeconds { label += "/cpu:\(number(cpu * 1000))ms" }
+        else { label += "/cpu:?" }
         return label
     }
 
@@ -162,9 +221,9 @@ public enum DiagnosticCPULog {
             let id = String(String($0.id, radix: 16).suffix(8))
             return "\($0.role?.rawValue ?? "fil")#\(id):\(number($0.percent))%"
         }
-        let running = active.prefix(8).map(workLabel).joined(separator: ",")
+        let running = active.prefix(activeLimit).map(workLabel).joined(separator: ",")
         let completed = long.entries.map(workLabel).joined(separator: ",")
-        var line = "total=\(number(percent))% fils=[\(top.joined(separator: ","))] actifs=[\(running)] actifs_omis=\(max(0, active.count - 8))"
+        var line = "total=\(number(percent))% fils=[\(top.joined(separator: ","))] actifs=[\(running)] actifs_omis=\(max(0, active.count - activeLimit))"
         line += " onglets=\(context.tabs.map(String.init) ?? "?") chargés=\(context.loaded.map(String.init) ?? "?")"
         line += " page=\(context.page.map(String.init) ?? "?") zoom=\(number(context.zoom, digits: 2))"
         line += " geste=\(context.gesture?.rawValue ?? "?") ocr=\(context.panel?.rawValue ?? "?")"

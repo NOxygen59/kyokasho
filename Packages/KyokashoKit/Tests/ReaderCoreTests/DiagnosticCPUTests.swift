@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 NOxygen59
 
+import Darwin
 import ReaderCore
 import XCTest
 
@@ -75,6 +76,70 @@ final class DiagnosticCPUTests: XCTestCase {
         XCTAssertTrue(line.contains("longs_omis=4"))
         XCTAssertFalse(line.contains("12345678"))
         XCTAssertFalse(line.contains("\n"))
+    }
+
+    func testCPUTimeCombinesActiveAndCompletedSegmentsWithoutDoubleCounting() {
+        var cpu = DiagnosticCPULog.CPUTime()
+        XCTAssertNil(cpu.seconds { _ in nil })
+        XCTAssertTrue(cpu.begin(thread: 11, at: 10))
+        XCTAssertFalse(cpu.begin(thread: 11, at: 10.125))
+        XCTAssertEqual(cpu.seconds { _ in 10.25 }, 0.25)
+        cpu.end(thread: 11, at: 10.5)
+        XCTAssertTrue(cpu.begin(thread: 11, at: 20)) // L'attente entre deux segments ne compte pas.
+        XCTAssertTrue(cpu.begin(thread: 12, at: 4))
+        XCTAssertEqual(cpu.seconds { $0 == 11 ? 20.25 : 4.125 }, 0.875)
+        cpu.end(thread: 12, at: nil)
+        cpu.end(thread: 11, at: 20.25)
+        XCTAssertEqual(cpu.seconds { _ in XCTFail("Aucun segment ouvert"); return nil }, 0.75)
+        var idle = DiagnosticCPULog.CPUTime()
+        XCTAssertTrue(idle.begin(thread: 11, at: 20))
+        XCTAssertNil(idle.seconds { _ in 19 })
+        XCTAssertEqual(idle.seconds { _ in 20 }, 0)
+    }
+
+    func testProgressFormatDistinguishesUnknownFromZeroCPU() throws {
+        let invalid = DiagnosticCPULog.Progress(page: 8, total: 8, stage: .waiting)
+        XCTAssertNil(invalid.page)
+        var policy = DiagnosticCPULog.Policy()
+        XCTAssertTrue(policy.admit(at: 0))
+        let decision = try XCTUnwrap(policy.decide(at: 0, percent: 100, cost: cost, hasLongWork: false))
+        let active: [DiagnosticCPULog.Work] = [
+            .init(kind: .analysis, seconds: 0.5, cpuSeconds: 0.125, progress: .init(page: 0, total: 8, stage: .voting)),
+            .init(kind: .aiReading, seconds: 0.375, progress: invalid),
+            .init(kind: .ocr, seconds: 0.25, cpuSeconds: 0)
+        ]
+        let line = DiagnosticCPULog.line(percent: 100, threads: [], active: active, context: .init(), long: .init(), cost: cost, decision: decision)
+        XCTAssertTrue(line.contains("analysis:500.0ms@p0/total:8/étape:voting/cpu:125.0ms"))
+        XCTAssertTrue(line.contains("aiReading:375.0ms@p?/total:8/étape:waiting/cpu:?"))
+        XCTAssertTrue(line.contains("ocr:250.0ms@p?/total:?/étape:?/cpu:0.0ms"))
+    }
+
+    func testMachReadsCPUOnAnotherThreadWithoutSuspendingIt() {
+        let started = DispatchSemaphore(value: 0)
+        let sampled = DispatchSemaphore(value: 0)
+        let finished = DispatchSemaphore(value: 0)
+        final class State: @unchecked Sendable {
+            // Les sémaphores protègent la publication et l'emprunt du droit.
+            var port: thread_t = 0
+            var before: TimeInterval?
+        }
+        let state = State()
+        Thread.detachNewThread {
+            let port = mach_thread_self()
+            defer { mach_port_deallocate(mach_task_self_, port); finished.signal() }
+            state.port = port
+            state.before = DiagnosticMachCPU.threadCPUSeconds(port)
+            let deadline = ProcessInfo.processInfo.systemUptime + 0.02
+            while ProcessInfo.processInfo.systemUptime < deadline {}
+            started.signal()
+            sampled.wait()
+        }
+        defer { sampled.signal(); XCTAssertEqual(finished.wait(timeout: .now() + 2), .success) }
+        guard started.wait(timeout: .now() + 2) == .success else { return XCTFail("Fil de test non prêt") }
+        guard let before = state.before, let after = DiagnosticMachCPU.threadCPUSeconds(state.port) else {
+            return XCTFail("Compteur Mach indisponible")
+        }
+        XCTAssertGreaterThan(after, before)
     }
 
     func testMachProbeAndMeasureHostCost() throws {

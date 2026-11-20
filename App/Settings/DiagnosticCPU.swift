@@ -165,7 +165,8 @@ final class DiagnosticCPU: @unchecked Sendable {
                                            hasLongWork: !long.entries.isEmpty) else { return }
         // Contexte et heure du geste lus ensemble ; âge revérifié à l'heure de l'écriture : un geste de plus de 5 s
         // n'explique plus ce pic, même si le fil principal a tardé à rafraîchir le contexte.
-        var (current, gestureTime) = contextLock.withLock { (context, self.gestureTime) }
+        let (stored, gestureTime) = contextLock.withLock { (context, self.gestureTime) }
+        var current = stored
         if current.gesture != nil, ProcessInfo.processInfo.systemUptime - (gestureTime ?? 0) > 5 { current.gesture = nil }
         let line = DiagnosticCPULog.line(percent: sample.percent, threads: sample.threads, active: center.diagnosticActive(),
                                          context: current, long: long, cost: sample.cost, decision: decision)

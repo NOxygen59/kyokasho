@@ -31,8 +31,25 @@ class DiagnosticCPUWiringTests(unittest.TestCase):
 
     def test_activity_snapshot_does_not_consume_monitor_ledger_or_details(self):
         center = source("App/Reader/ActivityCenter.swift")
-        self.assertIn("if diagnosticsOn { diagnosticRunning", center)
-        self.assertIn("if diagnosticsOn, let observed = diagnosticRunning.removeValue(forKey: id) {", center)
+        self.assertIn("if diagnosticsOn { register(", center)
+        self.assertIn("if diagnosticsOn { finishDiagnostic(id) }", center)
         active = center.split("func diagnosticActive()", 1)[1].split("func ", 1)[0]
         self.assertNotIn("ledger.snapshot", active)
         self.assertNotIn("detail", active)
+
+    def test_clock_access_is_guarded_and_never_suspends_threads(self):
+        center = source("App/Reader/ActivityCenter.swift")
+        start = center.split("private func startSegment", 1)[1].split("private func endSegment", 1)[0]
+        self.assertLess(start.index("guard diagnosticsOn"), start.index("mach_thread_self()"))
+        end = center.split("private func endSegment", 1)[1].split("func snapshot", 1)[0]
+        self.assertIn("defer { mach_port_deallocate", end)
+        mach = source("Packages/KyokashoKit/Sources/ReaderCore/DiagnosticMachCPU.swift")
+        for text in (center, mach, source("App/Settings/DiagnosticCPU.swift")):
+            self.assertNotIn("thread_suspend(", text)
+
+    def test_progress_updates_only_the_diagnostic_registry(self):
+        center = source("App/Reader/ActivityCenter.swift")
+        update = center.split("func updateDiagnostic", 1)[1].split("func endDiagnostic", 1)[0]
+        self.assertIn("progress: Progress", update)
+        self.assertIn("if diagnosticsOn { diagnosticRunning[id]?.progress = progress }", update)
+        self.assertNotIn("ledger", update)
