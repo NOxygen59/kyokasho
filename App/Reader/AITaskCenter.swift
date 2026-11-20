@@ -23,17 +23,19 @@ final class AITaskCenter: ObservableObject {
         /// Modèle et action affichés dans les pastilles, sans déduire le rôle du titre.
         let modelId: String?
         let activity: String?
+        let diagnosticID: UUID?
         var progress: (done: Int, total: Int)?
         /// Journal en direct (« Voir le détail »), 200 lignes au plus, recopié dans le journal de diagnostic (zone `ia`).
         var log: [String] = []
         /// Fin de la tâche (« Terminées récemment ») : `nil` tant qu'elle tourne.
         var outcome: String?
 
-        init(key: String, title: String, modelId: String?, activity: String?) {
+        init(key: String, title: String, modelId: String?, activity: String?, diagnosticID: UUID? = nil) {
             self.key = key
             self.title = title
             self.modelId = modelId
             self.activity = activity
+            self.diagnosticID = diagnosticID
         }
 
         static func == (a: Job, b: Job) -> Bool {
@@ -61,18 +63,23 @@ final class AITaskCenter: ObservableObject {
     /// Lance `work` sous `key` (rien si une tâche de même clé tourne déjà). Une erreur levée est gardée dans `errors`.
     @discardableResult
     func run(_ key: String, title: String, modelId: String? = nil, activity: String? = nil,
+             diagnosticKind: ActivityCenter.Kind? = nil,
              _ work: @escaping @MainActor (_ id: UUID) async throws -> Void) -> Bool {
         // Pas de nouvelle tâche IA pendant une sauvegarde complète (#51) : ses écritures viseraient la copie en cours.
         // Ni pour un document en cours de suppression (P3 n°6, revue R2) : ses caches sont sur le point d'être effacés.
         guard !isRunning(key), !PageShift.blocksAI(jobKey: key), !LibraryBackupService.inProgress,
               !Self.deletionBlocks(deletingDocumentIds, jobKey: key) else { return false }
-        let job = Job(key: key, title: title, modelId: modelId, activity: activity)
+        let diagnosticID = diagnosticKind.flatMap {
+            ActivityCenter.shared.beginDiagnostic($0, progress: .init(stage: .waiting))
+        }
+        let job = Job(key: key, title: title, modelId: modelId, activity: activity, diagnosticID: diagnosticID)
         jobs.append(job)
         errors[key] = nil
         // Début et fin écrits pour toutes les tâches, même celles qui ne journalisent rien d'autre (#47).
         log(job.id, String(localized: "Démarrée") + (modelId.map { " avec \(Self.modelName($0))" } ?? "")
             + (activity.map { " : \(AIActivityText.explain($0))" } ?? ""))
         tasks[job.id] = Task { [weak self] in
+            defer { ActivityCenter.shared.endDiagnostic(job.diagnosticID) }
             var failure: String?
             var cancelled = false
             do {

@@ -151,6 +151,8 @@ final class DocumentAnalysisService: ObservableObject {
         // l'attente de `cancelAndFinish` au bon document (revue DeepSeek constat n°1).
         taskDocumentId = id
         task = Task { [weak self] in
+            let cpuID = ActivityCenter.shared.beginDiagnostic(.analysis, progress: .init(total: document.pageCount, stage: .ocr))
+            defer { ActivityCenter.shared.endDiagnostic(cpuID) }
             defer {
                 UIApplication.shared.isIdleTimerDisabled = false
                 self?.progress = nil
@@ -163,6 +165,7 @@ final class DocumentAnalysisService: ObservableObject {
             var errors: [Int: String] = [:]
             for p in pages {
                 guard !Task.isCancelled, let self else { return }
+                ActivityCenter.shared.updateDiagnostic(cpuID, progress: .init(page: p, total: document.pageCount, stage: .ocr))
                 let engine = await Task.detached { OCRService.resolve(choice, url: url, pageIndex: p) }.value
                 do { base[p] = try await service.page(documentId: id, url: url, pageIndex: p, engine: engine) }
                 catch { errors[p] = String(localized: "OCR : \(error.localizedDescription)") }
@@ -174,6 +177,7 @@ final class DocumentAnalysisService: ObservableObject {
                 self.phase(String(localized: "Lecture \(Self.name(reader))"), total: pages.count)
                 for p in pages {
                     guard !Task.isCancelled else { break }
+                    ActivityCenter.shared.updateDiagnostic(cpuID, progress: .init(page: p, total: document.pageCount, stage: .aiReading))
                     let file = Self.rawURL(id, reader, p)
                     // Texte intégré au PDF : seul OvisOCR2 lit quand même la page, pour le texte des images (#41).
                     let wanted = base[p].map { $0.engine != OCREngineID.pdfText || reader == ovis } ?? false
@@ -186,7 +190,9 @@ final class DocumentAnalysisService: ObservableObject {
                             // BUG-001 : arrêtée, la génération rend le texte déjà produit sans lever d'erreur. Ce
                             // texte partiel n'est jamais gardé : le fichier ferait passer la page pour lue.
                             guard !Task.isCancelled else { break }
-                            try? DocumentAITextStore.write(text, documentId: id, reader: reader, page: p)
+                            try? ActivityCenter.shared.measure(activity: cpuID) {
+                                try DocumentAITextStore.write(text, documentId: id, reader: reader, page: p)
+                            }
                         } catch {
                             errors[p] = "\(Self.name(reader)) : \(error.localizedDescription)"
                         }
@@ -200,6 +206,7 @@ final class DocumentAnalysisService: ObservableObject {
             self.phase(String(localized: "Vote"), total: pages.count)
             for p in pages {
                 guard !Task.isCancelled else { return }
+                ActivityCenter.shared.updateDiagnostic(cpuID, progress: .init(page: p, total: document.pageCount, stage: .voting))
                 var page: DocumentAnalysis.Page
                 if let b = base[p], b.engine != OCREngineID.pdfText {
                     // Toutes les lectures gardées comptent, même d'un modèle non relancé cette fois.
@@ -260,6 +267,8 @@ final class DocumentAnalysisService: ObservableObject {
         // l'attente de `cancelAndFinish` au bon document (revue DeepSeek constat n°1).
         taskDocumentId = id
         task = Task { [weak self] in
+            let cpuID = ActivityCenter.shared.beginDiagnostic(.analysis, progress: .init(total: document.pageCount, stage: .translation))
+            defer { ActivityCenter.shared.endDiagnostic(cpuID) }
             defer {
                 UIApplication.shared.isIdleTimerDisabled = false
                 self?.progress = nil
@@ -269,6 +278,7 @@ final class DocumentAnalysisService: ObservableObject {
             }
             for (k, p) in pages.enumerated() {
                 guard !Task.isCancelled else { break }
+                ActivityCenter.shared.updateDiagnostic(cpuID, progress: .init(page: p, total: document.pageCount, stage: .translation))
                 guard let md = DocumentAITextStore.read(documentId: id, reader: ModelSpec.ovisocr2.id, page: p) else { continue }
                 do {
                     let glossary = language == .french ? DomainLexicon.shared.glossary : []
@@ -277,7 +287,9 @@ final class DocumentAnalysisService: ObservableObject {
                     }
                     // BUG-001 : traduction arrêtée = texte partiel, jamais gardé (la page serait comptée traduite).
                     guard !Task.isCancelled else { break }
-                    try? DocumentAITextStore.write(translated, documentId: id, reader: language.rawValue, page: p)
+                    try? ActivityCenter.shared.measure(activity: cpuID) {
+                        try DocumentAITextStore.write(translated, documentId: id, reader: language.rawValue, page: p)
+                    }
                 } catch {
                     self?.lastError = String(localized: "Traduction page \(p + 1) : \(error.localizedDescription)")
                 }
@@ -409,6 +421,8 @@ final class DocumentAnalysisService: ObservableObject {
         // l'attente de `cancelAndFinish` au bon document (revue DeepSeek constat n°1).
         taskDocumentId = id
         task = Task { [weak self] in
+            let cpuID = ActivityCenter.shared.beginDiagnostic(.analysis, progress: .init(total: document.pageCount, stage: .corrections))
+            defer { ActivityCenter.shared.endDiagnostic(cpuID) }
             defer {
                 self?.progress = nil
                 // Tâche finie (normalement ou annulée) : plus rien à attendre ensuite.
@@ -418,6 +432,7 @@ final class DocumentAnalysisService: ObservableObject {
             var total = 0
             for source in 0..<document.pageCount {
                 guard !Task.isCancelled, let self else { return }
+                ActivityCenter.shared.updateDiagnostic(cpuID, progress: .init(page: source, total: document.pageCount, stage: .corrections))
                 defer { self.step(done: source + 1) }
                 guard let reference = DocumentAITextStore.read(documentId: id, reader: ModelSpec.ovisocr2.id, page: source),
                       !reference.isEmpty else { continue }
@@ -431,7 +446,9 @@ final class DocumentAnalysisService: ObservableObject {
                 guard var page = cachedPage else { continue }
                 let snapshot = page
                 let suggestions = await Task.detached(priority: .userInitiated) {
-                    OCRReferenceDiff.suggestions(snapshot, reference: reference)
+                    ActivityCenter.shared.measure(activity: cpuID) {
+                        OCRReferenceDiff.suggestions(snapshot, reference: reference)
+                    }
                 }.value
                 var changed = 0
                 for suggestion in suggestions where page.lines.indices.contains(suggestion.line) {

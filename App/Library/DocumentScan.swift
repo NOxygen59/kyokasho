@@ -33,12 +33,15 @@ enum DocumentScan {
         let pages = (0..<document.pageCount).filter { !FileManager.default.fileExists(atPath: file(id, $0).path) }
         guard !pages.isEmpty else { return }
         let language = OCRTargetLanguage.forDocument(id)
-        AITaskCenter.shared.run(key(id), title: String(localized: "Lecture IA de « \(document.title) »"), modelId: ModelSpec.ovisocr2.id, activity: "lecture") { job in
+        AITaskCenter.shared.run(key(id), title: String(localized: "Lecture IA de « \(document.title) »"),
+                                modelId: ModelSpec.ovisocr2.id, activity: "lecture", diagnosticKind: .aiReading) { job in
             let center = AITaskCenter.shared
+            let cpuID = center.jobs.first { $0.id == job }?.diagnosticID
             center.log(job, "\(pages.count) page(s) à lire sur \(document.pageCount)")
             // Une lecture de document à la fois (import de plusieurs PDF) : un seul modèle, pas de va-et-vient.
             let mine = center.jobs.first { $0.id == job }?.started ?? .distantPast
             var waiting = false
+            ActivityCenter.shared.updateDiagnostic(cpuID, progress: .init(total: document.pageCount, stage: .waiting))
             while center.jobs.contains(where: { $0.key.hasPrefix("scan|") && $0.id != job && $0.started < mine }) {
                 if !waiting { center.log(job, "En attente de la lecture d'un autre document…"); waiting = true }
                 try await Task.sleep(nanoseconds: 3_000_000_000)
@@ -54,6 +57,7 @@ enum DocumentScan {
                 }
                 // Lue entre-temps (mise en page IA, vérification) : rien à refaire.
                 guard !FileManager.default.fileExists(atPath: file(id, page).path) else { continue }
+                ActivityCenter.shared.updateDiagnostic(cpuID, progress: .init(page: page, total: document.pageCount, stage: .aiReading))
                 let start = Date()
                 do {
                     let budget = await budget(id, page, ocr: ocr)
@@ -64,7 +68,10 @@ enum DocumentScan {
                     }
                     // Arrêtée : texte partiel, jamais gardé.
                     try Task.checkCancellation()
-                    try DocumentAITextStore.write(text, documentId: id, reader: ModelSpec.ovisocr2.id, page: page)
+                    ActivityCenter.shared.updateDiagnostic(cpuID, progress: .init(page: page, total: document.pageCount, stage: .saving))
+                    try ActivityCenter.shared.measure(activity: cpuID) {
+                        try DocumentAITextStore.write(text, documentId: id, reader: ModelSpec.ovisocr2.id, page: page)
+                    }
                     DocumentAnalysisService.shared.invalidatePage(page, documentId: id)
                     center.log(job, "p. \(page + 1) : \(text.count) caractères, \(Int(Date().timeIntervalSince(start))) s")
                     NotificationCenter.default.post(name: .aiPageRead, object: PageRead(documentId: id, page: page))

@@ -48,9 +48,12 @@ extension ReaderController {
         pageTextTask?.cancel()
         if document.capabilities.textAnalysis {
             let url = fileURL
+            let total = document.pageCount
             pageTextTask = Task.detached(priority: .utility) { [weak self] in
                 // Même règle que le toucher : un peu de texte suffit (folio, légende).
-                let has = ActivityCenter.shared.measure(.pageText) { PDFTextEngine.hasTextLayer(url: url, pageIndex: source) }
+                let has = ActivityCenter.shared.measure(.pageText, progress: .init(page: source, total: total, stage: .pdfText)) {
+                    PDFTextEngine.hasTextLayer(url: url, pageIndex: source)
+                }
                 await MainActor.run {
                     guard !Task.isCancelled, self?.currentSourcePage == source else { return }
                     self?.pageHasPDFText = has
@@ -197,6 +200,8 @@ extension ReaderController {
         let ticket = ocrSelection.ticket(for: source)
         if let cached = await policyCachedOCR(source: source) { return OCRCandidate(page: cached, ticket: ticket, fromCache: true) }
         let engine = await engineToRead(source: source)
+        let cpuID = ActivityCenter.shared.beginDiagnostic(.ocr, progress: .init(page: source, total: document.pageCount, stage: .ocr))
+        defer { ActivityCenter.shared.endDiagnostic(cpuID) }
         let page = try await model.ocr.page(documentId: document.id, url: fileURL, pageIndex: source, engine: engine)
         return OCRCandidate(page: page, ticket: ticket, fromCache: false)
     }
@@ -235,10 +240,14 @@ extension ReaderController {
                     // choix reste noté pour la page ; il reprendra la main si les corrections sont annulées.
                     candidate = OCRCandidate(page: corrected, ticket: ticket, fromCache: true)
                 } else if let engine {
+                    let cpuID = ActivityCenter.shared.beginDiagnostic(.ocr, progress: .init(page: source, total: reader.document.pageCount, stage: .ocr))
+                    defer { ActivityCenter.shared.endDiagnostic(cpuID) }
                     let page = try await service.page(documentId: documentId, url: url, pageIndex: source, engine: engine, force: force)
                     candidate = OCRCandidate(page: page, ticket: ticket, fromCache: false)
                 } else if force {
                     let id = await reader.engineToRead(source: source)
+                    let cpuID = ActivityCenter.shared.beginDiagnostic(.ocr, progress: .init(page: source, total: reader.document.pageCount, stage: .ocr))
+                    defer { ActivityCenter.shared.endDiagnostic(cpuID) }
                     let page = try await service.page(documentId: documentId, url: url, pageIndex: source, engine: id, force: true)
                     candidate = OCRCandidate(page: page, ticket: ticket, fromCache: false)
                 } else {

@@ -143,15 +143,16 @@ extension ReaderController {
         sharpenTask?.cancel()
         guard ScanSharpening.enabled else { return }
         let url = fileURL, id = document.id
+        let total = document.pageCount
         sharpenTask = Task.detached(priority: .utility) { [weak self] in
             var changed = false
             for page in pages {
                 guard !Task.isCancelled else { return }
                 // Page avec du texte intégré (PDF numérique) : déjà nette, rien à faire.
-                let hasText = ActivityCenter.shared.measure(.pageText, page: page) { PDFTextEngine.hasTextLayer(url: url, pageIndex: page) }
+                let hasText = ActivityCenter.shared.measure(.pageText, page: page, progress: .init(total: total)) { PDFTextEngine.hasTextLayer(url: url, pageIndex: page) }
                 guard !hasText else { continue }
                 let key = ScanSharpening.key(documentId: id, page: page)
-                let done = ActivityCenter.shared.measure(.sharpening, page: page) { (try? ScanSharpening.prepare(key: key, fileURL: url, page: page)) == true }
+                let done = ActivityCenter.shared.measure(.sharpening, page: page, progress: .init(total: total)) { (try? ScanSharpening.prepare(key: key, fileURL: url, page: page)) == true }
                 if done { changed = true }
             }
             guard changed, !Task.isCancelled else { return }
@@ -297,14 +298,15 @@ extension ReaderController {
         furiganaTask?.cancel()
         guard pageFuriganaOn else { return }
         let url = fileURL, id = document.id, purge = FuriganaLayer.purgeCount
+        let total = document.pageCount
         furiganaTask = Task.detached(priority: .utility) { [weak self] in
             var changed = false
             for source in pages {
                 guard !Task.isCancelled else { return }
                 let key = ScanSharpening.key(documentId: id, page: source)
                 guard !FuriganaLayer.has(key) else { continue }
-                guard ActivityCenter.shared.measure(.pageText, page: source, { PDFTextEngine.hasTextLayer(url: url, pageIndex: source) }) else { continue }
-                let marks: [FuriganaLayer.Mark]? = ActivityCenter.shared.measure(.furigana, page: source) {
+                guard ActivityCenter.shared.measure(.pageText, page: source, progress: .init(total: total), { PDFTextEngine.hasTextLayer(url: url, pageIndex: source) }) else { continue }
+                let marks: [FuriganaLayer.Mark]? = ActivityCenter.shared.measure(.furigana, page: source, progress: .init(total: total)) {
                     (try? PDFPool.withDocument(url) { doc -> [FuriganaLayer.Mark]? in
                         doc.page(at: source).map(FuriganaLayer.marks(from:))
                     }) ?? nil
@@ -384,12 +386,13 @@ extension ReaderController {
         ToneCache.keep(Set(window.map { ScanSharpening.key(documentId: id, page: $0) }), tone: tone)
         // D'abord les pages affichées, puis les voisines.
         let order = visible + window.filter { !visible.contains($0) }
+        let total = document.pageCount
         toneTask = Task.detached(priority: .utility) { [weak self] in
             var shownReady = false
             for page in order {
                 guard !Task.isCancelled else { return }
                 let key = ScanSharpening.key(documentId: id, page: page)
-                let ready = ActivityCenter.shared.measure(.tone, page: page) { ToneCache.prepare(key: key, fileURL: url, page: page, tone: tone) }
+                let ready = ActivityCenter.shared.measure(.tone, page: page, progress: .init(total: total)) { ToneCache.prepare(key: key, fileURL: url, page: page, tone: tone) }
                 if ready, visible.contains(page) { shownReady = true }
             }
             guard shownReady, !Task.isCancelled else { return }
