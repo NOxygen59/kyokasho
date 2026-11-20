@@ -130,6 +130,8 @@ struct ReaderScreen: View {
                             .frame(maxHeight: .infinity, alignment: .bottom)
                             .padding(.bottom, chromeVisible ? 110 : 24)
                             .transition(.move(edge: .bottom).combined(with: .opacity))
+                            // Seules les commandes passent devant le chrome, pas l’aperçu du trait.
+                            .zIndex(1)
                     }
                     if chromeVisible {
                         // Portrait : la bande des pages s'arrête au bord du panneau d'étude flottant (recette 1.3.2 (59), A11).
@@ -393,6 +395,8 @@ struct ReaderScreen: View {
             }
             .padding(.horizontal, Atelier.gap)
             .padding(.top, 8)
+            // La palette doit passer devant le conteneur de la barre, frère de cette rangée.
+            .zIndex(reader.hasSelection ? 1 : 0)
             GeometryReader { area in
                 ZStack(alignment: .topLeading) {
                     // Lecture visuelle : la barre d'outils n'a rien à proposer (dessin, dictionnaire, surlignage, étude, IA).

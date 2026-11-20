@@ -11,17 +11,46 @@ import WebKit
 
 struct SearchSheet: View {
     @ObservedObject var reader: ReaderController
+    @Environment(\.themeRevision) private var themeRevision
     /// Fermeture explicite : `close()` avec une recherche active peut fermer aussi le lecteur.
     var close: () -> Void
     @State private var query = ""
 
     var body: some View {
+        let _ = themeRevision
+        let shape = RoundedRectangle(cornerRadius: Atelier.radius, style: .continuous)
+        searchContent
+            .frame(maxWidth: 520, maxHeight: 560)
+            .clipShape(shape)
+            .background(Atelier.material(.regularMaterial), in: shape)
+            .atelierShapeShadow(shape, opacity: 0.3, radius: 16, y: 6)
+            .padding(Atelier.gap)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background {
+                Atelier.canvas.overlay(Atelier.scrim.opacity(0.35)).ignoresSafeArea(.container)
+            }
+            .tint(Atelier.Tint.read)
+            .atelierFontDesign()
+    }
+
+    private var title: String {
+        reader.searchResults.isEmpty ? String(localized: "Rechercher") : String(localized: "\(reader.searchResults.count) résultat(s)")
+    }
+
+    // Le champ natif garde la soumission, l’effacement et la gestion du clavier iPad.
+    private var searchContent: some View {
         NavigationStack {
             List {
                 if reader.isSearching && reader.searchResults.isEmpty {
-                    HStack { ProgressView(); Text("Recherche…").foregroundStyle(.secondary) }
+                    HStack(spacing: Atelier.gap) { ProgressView(); Text("Recherche…") }
+                        .font(.footnote)
+                        .foregroundStyle(Atelier.textSecondary)
+                        .listRowBackground(Color.clear)
                 } else if !query.isEmpty && reader.searchResults.isEmpty && !reader.isSearching {
-                    Text("Aucun résultat.").foregroundStyle(.secondary)
+                    Text("Aucun résultat.")
+                        .font(.footnote)
+                        .foregroundStyle(Atelier.textSecondary)
+                        .listRowBackground(Color.clear)
                 }
                 ForEach(reader.searchResults) { result in
                     Button {
@@ -29,19 +58,41 @@ struct SearchSheet: View {
                         close()
                     } label: {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("Page \(reader.document.pageLabel(result.sourcePage))").font(.caption.bold()).foregroundStyle(.secondary)
-                            Text(result.context).lineLimit(2)
+                            Text("Page \(reader.document.pageLabel(result.sourcePage))")
+                                .font(.caption.bold()).foregroundStyle(Atelier.textSecondary)
+                            Text(result.context).lineLimit(2).foregroundStyle(Atelier.textPrimary)
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparatorTint(Atelier.hairline)
                 }
             }
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
             .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: String(localized: "Mot ou phrase"))
             .onSubmit(of: .search) { reader.search(query) }
             .onChange(of: query) { if $0.isEmpty { reader.search("") } }
-            .navigationTitle(reader.searchResults.isEmpty ? String(localized: "Rechercher") : String(localized: "\(reader.searchResults.count) résultat(s)"))
+            .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("OK") { close() } } }
+            .toolbarBackground(.hidden, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    HStack(spacing: Atelier.gap / 2) {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundStyle(Atelier.Tint.read)
+                            .accessibilityHidden(true)
+                        Text(title).foregroundStyle(Atelier.textPrimary)
+                            .accessibilityAddTraits(.isHeader)
+                    }
+                    .font(.headline)
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("OK") { close() }
+                }
+            }
         }
     }
 }
