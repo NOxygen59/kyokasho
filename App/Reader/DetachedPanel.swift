@@ -152,6 +152,8 @@ struct DetachedPanel<Content: View>: View {
             .offset(x: 10, y: 10)
             .gesture(DragGesture(minimumDistance: 1, coordinateSpace: .global)
                 .updating($resize) { v, s, _ in s = v.translation }
+                // AV-16-01 D : recette 1.6.0, pic CPU à 90 % pendant ce geste ; le relevé du journal doit le nommer.
+                .onChanged { _ in DiagnosticContext.noteOCRResize() }
                 .onEnded { v in
                     if stableGestures {
                         commit(FloatingPanelGeometry.resized(base, by: v.translation, area: area, minimum: Self.minSize))

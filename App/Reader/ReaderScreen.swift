@@ -252,6 +252,7 @@ struct ReaderScreen: View {
         // ←/→ du clavier physique, prioritaires sur le focus des champs (RET-050, Issue #81).
         .background(ReaderArrowKeysHost(reader: reader).frame(width: 0, height: 0))
         .onChange(of: side) { ReaderArrowKeys.shared.webOpen = $0 == .web }
+        .onChange(of: side == .study ? studyMode : nil) { DiagnosticContext.setOCRMode($0, from: reader) }
         // État du panneau confié au prochain lecteur si l'on change d'onglet (lu une seule fois par son `init`).
         .onAppear {
             ReaderTabHandoff.shared.current = { [side, studyTab] in (side, studyTab) }
@@ -277,6 +278,9 @@ struct ReaderScreen: View {
                 studyMode = saved
             }
             reader.load()
+            // AV-16-01 D : contexte du relevé CPU (mode diagnostic seulement, sans effet sinon).
+            DiagnosticContext.observe(reader)
+            DiagnosticContext.setOCRMode(side == .study ? studyMode : nil, from: reader)
             ReaderArrowKeys.shared.webOpen = side == .web
             ReadingTimeTracker.shared.readerOpened(document: reader.document)
         }
