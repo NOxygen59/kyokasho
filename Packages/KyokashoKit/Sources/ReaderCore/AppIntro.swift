@@ -106,7 +106,7 @@ public struct ReleaseNotes: Equatable, Sendable, Identifiable {
         ], fixed: [
             String(localized: "Accueil : le lecteur s'affiche maintenant par-dessus l'accueil, au lieu d'une fenêtre qu'iOS pouvait refuser d'ouvrir juste après un menu ou l'export.", bundle: .main),
             String(localized: "Furigana, teinte et pages nettoyées : ils s'affichent de nouveau sur un livre aux pages de tailles différentes rouvert depuis le cache.", bundle: .main),
-            String(localized: "Pages égalisées : une préparation abîmée dans le cache est refaite d'elle-même au lieu de bloquer l'export.", bundle: .main),
+            String(localized: "Pages égalisées : une préparation abîmée dans le cache est maintenant refaite d'elle-même ; si elle échoue encore, l'export le signale comme avant.", bundle: .main),
             String(localized: "Enrichir le lexique : les comics ne sont plus proposés dans la liste des livres.", bundle: .main),
         ])
 

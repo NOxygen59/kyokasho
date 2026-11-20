@@ -89,24 +89,24 @@
         }
       }
     },
-    "Pages égalisées : une préparation abîmée dans le cache est refaite d'elle-même au lieu de bloquer l'export.": {
+    "Pages égalisées : une préparation abîmée dans le cache est maintenant refaite d'elle-même ; si elle échoue encore, l'export le signale comme avant.": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Equalized pages: a damaged preparation in the cache is redone automatically instead of blocking the export."
+            "value": "Equalized pages: a damaged preparation in the cache is now redone automatically; if it still fails, the export reports it as before."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pages égalisées : une préparation abîmée dans le cache est refaite d'elle-même au lieu de bloquer l'export."
+            "value": "Pages égalisées : une préparation abîmée dans le cache est maintenant refaite d'elle-même ; si elle échoue encore, l'export le signale comme avant."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "统一页面高度：缓存中损坏的预处理会自动重做，不再阻止导出。"
+            "value": "统一页面高度：缓存中损坏的预处理现在会自动重做；如果仍然失败，导出会像以前一样提示。"
           }
         }
       }
