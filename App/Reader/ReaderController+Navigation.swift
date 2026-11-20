@@ -50,10 +50,12 @@ extension ReaderController {
         pdfView.cancelPendingViewportRestoration()
         // Défilement continu : une page coupée en bas compte comme visible ; PDFKit tourne bien tout seul.
         guard settings.scrollMode == .paginated else {
+            DiagnosticContext.note(.pageTurn, from: self)
             forward ? pdfView.goToNextPage(nil) : pdfView.goToPreviousPage(nil)
             return
         }
         guard let target = turnTarget(forward: forward) else { return }
+        DiagnosticContext.note(.pageTurn, from: self)
         let animate = settings.scrollMode == .paginated && settings.transition == .slide
             && !pdfView.isUsingPageViewController && pdfView.isAtFit && !isAnimatingTurn
             && !UIAccessibility.isReduceMotionEnabled
@@ -98,6 +100,9 @@ extension ReaderController {
         }
         currentIndex = index
         updateCurrentSourcePage()
+        if changed, !rebuilding, Diagnostics.enabled {
+            DiagnosticContext.inferPageGesture(settings.scrollMode == .paginated ? .pageTurn : .scroll, from: self)
+        }
         ReadingTimeTracker.shared.pageViewed(currentSourcePage)
         if changed { tapLookupGeneration += 1 }
         if changed, lookupRequest != nil { endLookup() }
@@ -113,6 +118,7 @@ extension ReaderController {
 
     func updateCurrentSourcePage() {
         guard let pdf, presented.indices.contains(currentIndex) else { return }
+        DiagnosticContext.observe(self)
         var source = presented[currentIndex].source
         if settings.layout == .double {
             // Planche entière (même zoomée sur une page) : la page courante reste la première de la planche.
@@ -446,6 +452,7 @@ extension ReaderController {
     }
 
     @objc func handleDoubleTap(_ gesture: UITapGestureRecognizer) {
+        DiagnosticContext.note(.zoom, from: self)
         pendingFitToPage?.cancel()
         let point = gesture.location(in: pdfView)
         let fit = pdfView.scaleFactorForSizeToFit

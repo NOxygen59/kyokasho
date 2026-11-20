@@ -30,6 +30,8 @@ final class EnergyMeter {
     /// Au lancement : reprend le relevé s'il était allumé.
     func attach(_ model: AppModel) {
         self.model = model
+        DiagnosticContext.attach(model)
+        DiagnosticCPU.updateActivation()
         setEnabled(UserDefaults.standard.bool(forKey: Self.enabledKey))
     }
 
