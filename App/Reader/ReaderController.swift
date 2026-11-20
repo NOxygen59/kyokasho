@@ -352,19 +352,24 @@ final class ReaderController: NSObject, ObservableObject {
     nonisolated private static let equalizationLock = NSLock()
 
     /// PDF aux pages de même hauteur (`Caches/Equalized/<id>-<taille>-<date>.pdf`) et cadres d'origine des pages
-    /// (`.json`). `nil` : aucune page à changer (le PDF d'origine sert tel quel). Fait une fois par version du
-    /// fichier : ajouter des pages change sa taille et sa date, donc la préparation est refaite une fois.
+    /// (`.json`). `nil` : le PDF d'origine sert tel quel ; `onPreparationFailure` distingue l'échec du cas normal.
+    /// Fait une fois par version du fichier : ajouter des pages change sa taille et sa date.
     ///
     /// PLAN-DATA03-001 E3 (DEC-02 = A) : la hauteur commune est fixée une fois par document dans la base (`database`),
     /// reprise du PDF déjà préparé s'il existe ; ajouter des pages ou vider le cache ne la change plus, donc les
     /// annotations déjà posées gardent leur échelle.
-    nonisolated static func equalizedDocument(url: URL, documentId: String, database: AppDatabase?) -> (pdf: PDFDocument, sourceBoxes: [CGRect])? {
+    nonisolated static func equalizedDocument(url: URL, documentId: String, database: AppDatabase?,
+                                            onPreparationFailure: () -> Void = {}) -> (pdf: PDFDocument, sourceBoxes: [CGRect])? {
         // Revue R2 DATA-03 (n°3) : lecteur et export peuvent préparer en même temps ; une seule préparation à la fois
         // (l'une supprimait les fichiers que l'autre lisait). Jamais appelé depuis le fil principal.
         equalizationLock.lock()
         defer { equalizationLock.unlock() }
         let fm = FileManager.default
         let stored = (try? database?.equalizationReference(documentId: documentId)).flatMap { $0 }.map { CGFloat($0) }
+        func failed() -> (pdf: PDFDocument, sourceBoxes: [CGRect])? {
+            onPreparationFailure()
+            return nil
+        }
         func remember(_ height: CGFloat?) {
             guard stored == nil, let height else { return }
             try? database?.fixEqualizationReference(Double(height), documentId: documentId)
@@ -378,27 +383,35 @@ final class ReaderController: NSObject, ObservableObject {
         let folder = fm.urls(for: .cachesDirectory, in: .userDomainMask)[0].appendingPathComponent("Equalized", isDirectory: true)
         let base = folder.appendingPathComponent("\(documentId)-\(stamp)")
         let pdfFile = base.appendingPathExtension("pdf"), boxesFile = base.appendingPathExtension("json")
+        var rejectedNames = Set<String>()
         // C1.4 (audit du 09/11/2026) : un cache mal formé (ligne sans ses 4 valeurs) faisait planter l'app ; il est
         // maintenant ignoré et la préparation refaite (`EqualizedBoxes`).
         if let data = try? Data(contentsOf: boxesFile), let saved = try? JSONDecoder().decode([[CGFloat]].self, from: data),
            let boxes = EqualizedBoxes.rects(saved) {
             // Déjà préparé : liste vide = rien à changer dans ce PDF.
-            guard !boxes.isEmpty, let pdf = PDFDocument(url: pdfFile), pdf.pageCount == boxes.count else {
+            if boxes.isEmpty {
                 // Revue R2 DATA-03 (n°7) : seulement quand la préparation a dit « rien à changer » (hauteur réellement
                 // affichée), jamais pour un cache incohérent.
-                if stored == nil, boxes.isEmpty { remember(PDFDocument(url: url).flatMap(commonHeight)) }
+                if stored == nil { remember(PDFDocument(url: url).flatMap(commonHeight)) }
                 return nil
             }
-            // Recette 1.5.10 (3.2, 3.3) : mesure sur une autre instance, et seulement si la base n'a pas encore la hauteur.
-            // Lire les pages de `pdf` ici les créait en `PDFPage` simples, avant que le lecteur pose `TonedPageProvider` :
-            // sans `TonedPage`, ni furigana, ni teinte, ni page nettoyée sur un document égalisé ouvert depuis le cache.
-            if stored == nil { remember(PDFDocument(url: pdfFile).flatMap { preparedHeight($0, boxes) }) }
-            return (pdf, boxes)
+            if let pdf = PDFDocument(url: pdfFile), pdf.pageCount == boxes.count {
+                // Recette 1.5.10 (3.2, 3.3) : mesure sur une autre instance, et seulement si la base n'a pas encore la hauteur.
+                // Lire les pages de `pdf` ici les créait en `PDFPage` simples, avant que le lecteur pose `TonedPageProvider` :
+                // sans `TonedPage`, ni furigana, ni teinte, ni page nettoyée sur un document égalisé ouvert depuis le cache.
+                if stored == nil { remember(PDFDocument(url: pdfFile).flatMap { preparedHeight($0, boxes) }) }
+                return (pdf, boxes)
+            }
+            Diagnostics.error("paire d’égalisation incohérente rejetée : \(documentId.prefix(8))", "lecteur")
+            // Même si la suppression échoue, cette paire ne doit plus fournir de hauteur de référence.
+            rejectedNames = [pdfFile.lastPathComponent, boxesFile.lastPathComponent]
+            try? fm.removeItem(at: boxesFile)
+            try? fm.removeItem(at: pdfFile)
         }
-        guard let original = PDFDocument(url: url) else { return nil }
+        guard let original = PDFDocument(url: url) else { return failed() }
         try? fm.createDirectory(at: folder, withIntermediateDirectories: true)
         let previous = ((try? fm.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? [])
-            .filter { $0.lastPathComponent.hasPrefix(documentId + "-") }
+            .filter { $0.lastPathComponent.hasPrefix(documentId + "-") && !rejectedNames.contains($0.lastPathComponent) }
         // Référence : celle de la base, sinon celle de la version préparée précédente (avant que le fichier change),
         // sinon la règle commune.
         // Revue R2 DATA-03 (n°2) : la plus récente des versions **lisibles** (paire pdf + json), pas la première venue.
@@ -414,7 +427,7 @@ final class ReaderController: NSObject, ObservableObject {
                 break
             }
         }
-        guard let common = stored ?? inherited ?? commonHeight(original) else { return nil }
+        guard let common = stored ?? inherited ?? commonHeight(original) else { return failed() }
         remember(common)
         // Anciennes versions préparées de ce document : supprimées.
         for old in previous { try? fm.removeItem(at: old) }
@@ -423,7 +436,7 @@ final class ReaderController: NSObject, ObservableObject {
         var helpers: [PDFDocument] = []
         var rescaled = false
         for i in 0..<original.pageCount {
-            guard let page = original.page(at: i) else { return nil }
+            guard let page = original.page(at: i) else { return failed() }
             let box = page.bounds(for: .cropBox)
             boxes.append(box)
             let height = page.rotation % 180 == 0 ? box.height : box.width
@@ -441,16 +454,16 @@ final class ReaderController: NSObject, ObservableObject {
         }
         let output = PDFDocument()
         for (i, page) in pages.enumerated() {
-            guard let copy = page.copy() as? PDFPage else { return nil }
+            guard let copy = page.copy() as? PDFPage else { return failed() }
             output.insert(copy, at: i)
         }
         let temporary = folder.appendingPathComponent(UUID().uuidString + ".pdf")
-        guard output.write(to: temporary) else { return nil }
+        guard output.write(to: temporary) else { return failed() }
         try? fm.removeItem(at: pdfFile)
-        guard (try? fm.moveItem(at: temporary, to: pdfFile)) != nil else { return nil }
+        guard (try? fm.moveItem(at: temporary, to: pdfFile)) != nil else { return failed() }
         _ = helpers
         try? JSONEncoder().encode(boxes.map { [$0.minX, $0.minY, $0.width, $0.height] }).write(to: boxesFile, options: .atomic)
-        guard let pdf = PDFDocument(url: pdfFile), pdf.pageCount == boxes.count else { return nil }
+        guard let pdf = PDFDocument(url: pdfFile), pdf.pageCount == boxes.count else { return failed() }
         return (pdf, boxes)
     }
 
@@ -520,7 +533,9 @@ final class ReaderController: NSObject, ObservableObject {
                                           settings: ReaderSettings, database: AppDatabase?) -> Built? {
         // Pages remises à la même hauteur : préparées une fois par version du PDF (cache disque), ensuite lues
         // directement (plus de « Préparation des pages » à chaque ouverture).
-        let equalized = equalizedDocument(url: url, documentId: documentId, database: database)
+        let equalized = equalizedDocument(url: url, documentId: documentId, database: database) {
+            Diagnostics.error("échec de la préparation des pages égalisées : \(documentId.prefix(8)) ; repli sur le PDF d’origine", "lecteur")
+        }
         guard let pdf = equalized?.pdf ?? PDFDocument(url: url) else { return nil }
         pdf.delegate = TonedPageProvider.shared
         // Une page lue avant le délégué reste une `PDFPage` simple : rien de propre au lecteur n'y serait dessiné.
