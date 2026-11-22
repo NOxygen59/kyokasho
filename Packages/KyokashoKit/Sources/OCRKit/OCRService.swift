@@ -127,7 +127,10 @@ public actor OCRService {
                     JapaneseOCRText.normalize(result)
                 }
             }
-            if result.engine != OCREngineID.pdfText, let process { result = await process(result) }
+            if result.engine != OCREngineID.pdfText, let process {
+                result = await process(result)
+                try Task.checkCancellation()  // Abandonnée pendant la relecture : pas de résultat (revue finale Codex).
+            }
             if japanese {
                 result = DiagnosticThreadHook.measure(.ocrNormalize, documentID: documentId, page: pageIndex) {
                     JapaneseOCRText.normalize(result)
@@ -142,7 +145,10 @@ public actor OCRService {
         // La tâche détachée peut terminer même si son appelant a été annulé pendant PageShift : génération et
         // changement de pages en cours protègent l'écriture.
         guard documentsBeingReplaced[documentId] == nil,
-              documentGeneration[documentId, default: 0] == generation else { throw CancellationError() }
+              documentGeneration[documentId, default: 0] == generation,
+              // Lecture abandonnée ou déjà supplantée par une plus récente sur la même clé : elle n'écrit pas
+              // (elle écraserait le résultat récent). Le seul départ du créateur, lui, ne l'empêche pas.
+              !task.isCancelled, running[key] == task else { throw CancellationError() }
         // Une lecture menée à terme est mise en cache même si son créateur est parti (revue T3 Codex) : un coappelant
         // qui l'attendait (analyse du document) l'a reçue, et une lecture abandonnée a déjà levé dans la tâche.
         let json = try encoder.encode(result)

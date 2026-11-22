@@ -14,6 +14,8 @@ final class OCRServiceAbandonTests: XCTestCase {
     private final class GateEngine: OCREngine, @unchecked Sendable {
         let id: String
         let cooperative: Bool
+        /// Numéro de lecture qui échoue (pour isoler ce qu'écrit une lecture précédente).
+        var failingRun: Int?
         private let lock = NSLock()
         private var released = false
         private var starts = 0, cancels = 0, finishes = 0
@@ -32,8 +34,9 @@ final class OCRServiceAbandonTests: XCTestCase {
                 if cooperative, Task.isCancelled { lock.withLock { cancels += 1 }; throw CancellationError() }
                 Thread.sleep(forTimeInterval: 0.002)
             }
-            lock.withLock { finishes += 1 }
-            return OCRPage(engine: id, lines: [], durationMs: 0)
+            let run = lock.withLock { () -> Int in finishes += 1; return starts }
+            if run == failingRun { throw OCRError.pageUnavailable }
+            return OCRPage(engine: id, lines: [], durationMs: run)  // Numéro de lecture, pour les distinguer en base.
         }
     }
 
@@ -47,12 +50,16 @@ final class OCRServiceAbandonTests: XCTestCase {
         var value: Int? { lock.withLock { seen } }
     }
 
-    private func fixture(_ engine: GateEngine) throws -> (OCRService, String, String) {
+    private var database: AppDatabase!
+
+    private func fixture(_ engine: GateEngine,
+                         postProcess: (@Sendable (OCRPage) async -> OCRPage)? = nil) throws -> (OCRService, String, String) {
         let db = try AppDatabase.inMemory()
+        database = db
         let id = UUID().uuidString
         try db.save(LibraryDocument(id: id, title: "Synthétique", originalFileName: "test.pdf", pageCount: 1, fileSize: 1))
         OCRService.register(engine)
-        return (OCRService(database: db), id, "\(id)#0#\(engine.id)#r0")
+        return (OCRService(database: db, postProcess: postProcess), id, "\(id)#0#\(engine.id)#r0")
     }
 
     private struct NeverTrue: Error, CustomStringConvertible { let description: String }
@@ -94,9 +101,43 @@ final class OCRServiceAbandonTests: XCTestCase {
         XCTAssertEqual(page.engine, engine.id)
         XCTAssertEqual(engine.cancelCount, 0, "lecture annulée alors qu'un appelant l'attendait")
         XCTAssertEqual(engine.startCount, 1)
-        // Revue T3 Codex : le créateur parti, la lecture menée à terme est quand même en cache (pas de second moteur).
-        _ = try await service.page(documentId: id, url: url, pageIndex: 0, engine: engine.id)
-        XCTAssertEqual(engine.startCount, 1, "lecture terminée absente du cache")
+        // Revue T3 puis finale Codex : le créateur parti reçoit une annulation, et la lecture menée à terme est
+        // pourtant écrite en base (lue directement, sans passer par running[key]).
+        do { _ = try await reader.value; XCTFail("le créateur annulé a reçu un résultat") } catch is CancellationError {}
+        XCTAssertNotNil(try database.ocrResult(documentId: id, pageIndex: 0, engine: engine.id), "lecture terminée absente du cache")
+    }
+
+    /// Revue finale Codex de e790ca2 : une lecture abandonnée pendant sa relecture (moteur déjà fini) ne doit rien écrire
+    /// en base ; sinon elle pourrait écraser une lecture plus récente. La lecture suivante échoue exprès : la base doit
+    /// rester vide.
+    func testAbandonedDuringReviewWritesNothing() async throws {
+        let engine = GateEngine(cooperative: false)
+        engine.failingRun = 2
+        let reviewOpen = Flag()  // Porte de la relecture de la 1re lecture seulement.
+        let (service, id, key) = try fixture(engine, postProcess: { page in
+            if page.durationMs == 1 { while !reviewOpen.isOn { Thread.sleep(forTimeInterval: 0.002) } }
+            return page
+        })
+        defer { engine.release(); reviewOpen.turnOn() }
+        engine.release()  // Le moteur répond tout de suite ; la 1re lecture reste bloquée dans sa relecture.
+        let first = Task { try await service.page(documentId: id, url: url, pageIndex: 0, engine: engine.id) }
+        try await eventually("1re lecture en relecture") { await service.lectureState(key).waiters == 1 && engine.finishCount == 1 }
+        first.cancel()
+        try await eventually("1re lecture abandonnée") { await service.lectureState(key).abandoned }
+        let second = Task { try await service.page(documentId: id, url: url, pageIndex: 0, engine: engine.id) }
+        try await eventually("2e appel en attente") { await service.lectureState(key).waitingOnAbandoned == 1 }
+        reviewOpen.turnOn()  // La 1re lecture sort de sa relecture, abandonnée.
+        do { _ = try await second.value; XCTFail("la 2e lecture devait échouer") } catch {}
+        _ = try? await first.value
+        XCTAssertNil(try database.ocrResult(documentId: id, pageIndex: 0, engine: engine.id),
+                     "la lecture abandonnée a écrit en base")
+    }
+
+    private final class Flag: @unchecked Sendable {
+        private let lock = NSLock()
+        private var on = false
+        var isOn: Bool { lock.withLock { on } }
+        func turnOn() { lock.withLock { on = true } }
     }
 
     /// Revue T1 DeepSeek V4 Pro puis T3 Codex : l'appelant arrivé après l'abandon ne reçoit pas `CancellationError` ; il
