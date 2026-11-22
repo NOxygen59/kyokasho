@@ -55,6 +55,39 @@ struct ReaderTabsHost: View {
     }
 }
 
+extension Notification.Name {
+    /// Le lecteur a posé son PDF (ou échoué) : son calque peut apparaître (`ReaderReveal`).
+    static let readerContentReady = Notification.Name("kyokasho.readerContentReady")
+}
+
+/// Apparition du calque du lecteur (recette 1.6.1, 1.2 et 1.3). Le calque naît invisible, puis fond en 0,2 s une fois
+/// le PDF installé (au plus 0,5 s d'attente). Lancé plus tôt, le fondu tombait pendant la construction et l'installation
+/// du PDF sur le fil principal : SwiftUI n'en montrait rien et le lecteur apparaissait d'un coup. « Réduire les
+/// animations » : visible tout de suite, sans fondu. Un changement d'onglet ne le rejoue pas (calque déjà visible).
+struct ReaderReveal: ViewModifier {
+    let reduceMotion: Bool
+    @State private var shown = false
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(shown || reduceMotion ? 1 : 0)
+            .onReceive(NotificationCenter.default.publisher(for: .readerContentReady)) { _ in reveal() }
+            .task {
+                try? await Task.sleep(nanoseconds: 500_000_000)
+                reveal()
+            }
+    }
+
+    private func reveal() {
+        guard !shown else { return }
+        if reduceMotion {
+            shown = true
+        } else {
+            withAnimation(.easeOut(duration: 0.2)) { shown = true }
+        }
+    }
+}
+
 /// Notification de mémoire : « N documents ouverts… », avec un bouton qui affiche le moniteur.
 private struct MemoryNotice: View {
     let count: Int

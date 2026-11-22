@@ -155,7 +155,7 @@ struct RootView: View {
         }
         .overlay {
             ZStack {
-                // Garder la pile en place pour que SwiftUI anime son enfant, pas l'apparition de la pile.
+                // Pile gardée en place : le calque s'insère dedans sans transition propre (fondu géré par `ReaderReveal`).
                 Color.clear.allowsHitTesting(false).accessibilityHidden(true)
                 // Un seul calque pour tous les onglets (#16), indépendant des présentations iOS (#93).
                 if showsReader {
@@ -167,12 +167,13 @@ struct RootView: View {
                         .environment(\.themeRevision, themes.effectiveRevision)
                         .atelierFontDesign()
                         .tint(Atelier.Tint.read)
+                        // Recette 1.6.1 (1.2, 1.3) : fondu lancé une fois le PDF posé, rien si « Réduire les animations ».
+                        .modifier(ReaderReveal(reduceMotion: reduceMotion))
                         // Retrait immédiat : le lecteur rend sa mémoire sans attendre la fin d'un fondu.
-                        .transition(.asymmetric(insertion: reduceMotion ? .identity : .opacity, removal: .identity))
+                        .transition(.identity)
                         .zIndex(1)
                 }
             }
-            .animation(showsReader && !reduceMotion ? .easeOut(duration: 0.15) : nil, value: showsReader)
         }
         // Permanente et non fermable : un seul ancrage, au-dessus des bannières propres à chaque écran.
         .safeAreaInset(edge: .top, spacing: 0) {

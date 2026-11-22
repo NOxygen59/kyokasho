@@ -23,24 +23,37 @@ class ReaderOverlayWiringTests(unittest.TestCase):
                                r"[^{}]*if showsReader\s*\{\s*ReaderTabsHost\(\)")
         self.assertIn(".background(Atelier.canvas.ignoresSafeArea())", root)
 
-    def test_only_reader_insertion_fades_unless_reduce_motion_is_enabled(self):
+    def test_reader_fades_in_after_its_pdf_is_installed_unless_reduce_motion_is_enabled(self):
+        # Recette 1.6.1 (1.2, 1.3) : fondu lancé quand le PDF est posé, retrait immédiat, rien si « Réduire les animations ».
         root = source("KyokashoApp.swift")
         self.assertIn(r"@Environment(\.accessibilityReduceMotion) private var reduceMotion", root)
         layer = root.split("if showsReader {", 1)[1].split(".onAppear", 1)[0]
-        self.assertIn(".transition(.asymmetric(insertion: reduceMotion ? .identity : .opacity, removal: .identity))", layer)
-        self.assertRegex(layer, r"\}\s*\}\s*\.animation\(showsReader && !reduceMotion \? "
-                                r"\.easeOut\(duration: 0\.15\) : nil, value: showsReader\)")
-        self.assertEqual(layer.count(".animation("), 1)
+        self.assertIn(".modifier(ReaderReveal(reduceMotion: reduceMotion))", layer)
+        self.assertRegex(layer, r"\.modifier\(ReaderReveal\(reduceMotion: reduceMotion\)\)\s*(?://[^\n]*\n\s*)*"
+                                r"\.transition\(\.identity\)")
+        self.assertNotIn(".animation(", layer)
         self.assertNotIn("withAnimation", layer)
         tabs = source("Reader/DocumentTabsBar.swift")
         self.assertRegex(tabs, r"ReaderScreen\(document: document, model: model\)\.id\(document\.id\)\s*"
                                r"\.transition\(\.identity\)")
+        reveal = tabs.split("struct ReaderReveal: ViewModifier {", 1)[1].split("\n}\n", 1)[0]
+        self.assertIn("@State private var shown = false", reveal)
+        self.assertIn(".opacity(shown || reduceMotion ? 1 : 0)", reveal)
+        self.assertIn(".onReceive(NotificationCenter.default.publisher(for: .readerContentReady))", reveal)
+        self.assertIn("try? await Task.sleep(nanoseconds: 500_000_000)", reveal)
+        self.assertRegex(reveal, r"if reduceMotion \{\s*shown = true\s*\} else \{\s*"
+                                 r"withAnimation\(\.easeOut\(duration: 0\.2\)\) \{ shown = true \}")
+        # Le signal part une fois le PDF posé, et aussi en cas d'échec (le message d'erreur doit se voir).
+        controller = source("Reader/ReaderController.swift")
+        install = controller.split("func install(_ built: Built?", 1)[1].split("func markOpened()", 1)[0]
+        self.assertEqual(install.count("NotificationCenter.default.post(name: .readerContentReady"), 2)
+        self.assertLess(install.index("pdfView.document = pdf"), install.rindex(".readerContentReady"))
 
     def test_diagnostic_banner_is_anchored_outside_the_reader_and_library(self):
         root = source("KyokashoApp.swift")
         self.assertEqual(root.count("DiagnosticSizeBanner()"), 1)
         self.assertNotIn("DiagnosticSizeBanner()", source("Reader/DocumentTabsBar.swift"))
-        self.assertRegex(root, r"value: showsReader\)\s*\}\s*(?://[^\n]*\n\s*)*"
+        self.assertRegex(root, r"\.zIndex\(1\)\s*\}\s*\}\s*\}\s*(?://[^\n]*\n\s*)*"
                                r"\.safeAreaInset\(edge: \.top, spacing: 0\)\s*\{\s*"
                                r"if model\.storageRecoveryError == nil \{\s*DiagnosticSizeBanner\(\)")
 

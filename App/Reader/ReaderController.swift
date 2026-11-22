@@ -648,6 +648,7 @@ final class ReaderController: NSObject, ObservableObject {
         guard let built else {
             loadError = String(localized: "Impossible d'ouvrir ce PDF.")
             Diagnostics.error("PDF : échec de préparation", "lecteur")  // #93 : demandé → affiché → prêt ou échec
+            NotificationCenter.default.post(name: .readerContentReady, object: nil)  // Le message d'erreur doit se voir.
             return
         }
         Diagnostics.log("PDF prêt : \(built.presented.count) pages", "lecteur")
@@ -696,6 +697,7 @@ final class ReaderController: NSObject, ObservableObject {
         // La navigation annule les restaurations précédentes : ajuster le nouveau document après elle.
         pdfView.finishLayout(preserving: nil)
         rebuilding = false
+        NotificationCenter.default.post(name: .readerContentReady, object: nil)
         // Le rognage a besoin des repères de pages : lancé une fois le document installé.
         startAutoCropIfNeeded()
         schedulePageSettled()
