@@ -71,6 +71,9 @@ struct ReaderReveal: ViewModifier {
     func body(content: Content) -> some View {
         content
             .opacity(shown || reduceMotion ? 1 : 0)
+            // Réunion AV-16-02 (D1) : invisible, il ne prend ni toucher ni VoiceOver (la bibliothèque est déjà inerte).
+            .allowsHitTesting(shown || reduceMotion)
+            .accessibilityHidden(!(shown || reduceMotion))
             .onReceive(NotificationCenter.default.publisher(for: .readerContentReady)) { _ in reveal() }
             .task {
                 try? await Task.sleep(nanoseconds: 500_000_000)
