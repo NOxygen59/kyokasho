@@ -29,6 +29,8 @@ public actor OCRService {
     private var waiters: [String: Int] = [:]
     /// Tests seulement : appelants en attente de la fin d'une lecture abandonnée, par clé.
     private var waitingOnAbandoned: [String: Int] = [:]
+    /// Tests seulement : appelé dans l'acteur, au moment où `beginPageMutation` a fini d'attendre les lectures.
+    private var pageMutationBarrierPassed: (@Sendable () -> Void)?
     /// Un changement de pagination interdit les lectures et écritures sur les anciens index.
     private var documentsBeingReplaced: [String: Int] = [:]
     private var documentGeneration: [String: UInt64] = [:]
@@ -92,7 +94,8 @@ public actor OCRService {
         while let abandoned = running[key], abandoned.isCancelled {
             waitingOnAbandoned[key, default: 0] += 1
             _ = await abandoned.result
-            waitingOnAbandoned[key, default: 1] -= 1
+            let left = (waitingOnAbandoned[key] ?? 1) - 1
+            waitingOnAbandoned[key] = left > 0 ? left : nil
             try Task.checkCancellation()
             guard documentsBeingReplaced[documentId] == nil,
                   documentGeneration[documentId, default: 0] == generation else { throw CancellationError() }
@@ -235,6 +238,9 @@ public actor OCRService {
         (waiters[key] ?? 0, running[key] != nil, running[key]?.isCancelled ?? false, waitingOnAbandoned[key] ?? 0)
     }
 
+    /// Tests : crochet synchrone appelé à la sortie de la barrière de `beginPageMutation`.
+    func setPageMutationBarrierHook(_ hook: (@Sendable () -> Void)?) { pageMutationBarrierPassed = hook }
+
     /// Tests : un changement de pages du document a commencé (`beginPageMutation` a déjà capturé les lectures à attendre).
     func isReplacingPages(_ documentId: String) -> Bool { documentsBeingReplaced[documentId] != nil }
 
@@ -251,6 +257,7 @@ public actor OCRService {
         let tasks = running.filter { $0.key.hasPrefix(documentId + "#") }.map(\.value)
         tasks.forEach { $0.cancel() }
         for task in tasks { _ = await task.result }
+        pageMutationBarrierPassed?()
     }
 
     /// Rouvre l'entrée. La génération change aussi ici : une génération lue **pendant** le changement (l'acteur est

@@ -39,6 +39,14 @@ final class OCRServiceAbandonTests: XCTestCase {
 
     private let url = URL(fileURLWithPath: "/dev/null")
 
+    /// Valeur relevée par le crochet de la barrière (appelé dans l'acteur).
+    private final class SeenAtBarrier: @unchecked Sendable {
+        private let lock = NSLock()
+        private var seen: Int?
+        func record(_ value: Int) { lock.withLock { seen = value } }
+        var value: Int? { lock.withLock { seen } }
+    }
+
     private func fixture(_ engine: GateEngine) throws -> (OCRService, String, String) {
         let db = try AppDatabase.inMemory()
         let id = UUID().uuidString
@@ -116,9 +124,12 @@ final class OCRServiceAbandonTests: XCTestCase {
         try await eventually("moteur démarré") { await service.lectureState(key).waiters == 1 && engine.startCount == 1 }
         first.cancel()
         try await eventually("lecture abandonnée") { await service.lectureState(key).abandoned }
+        // Fin du moteur relevée dans l'acteur, à la sortie même de la barrière (revue finale Codex de 7304d95).
+        let seen = SeenAtBarrier()
+        await service.setPageMutationBarrierHook { seen.record(engine.finishCount) }
         let mutation = Task { () -> Int in
             await service.beginPageMutation(documentId: id)
-            return engine.finishCount
+            return seen.value ?? -1
         }
         // Entrée dans la barrière observée : `beginPageMutation` a déjà capturé la lecture à attendre.
         try await eventually("changement de pages commencé") { await service.isReplacingPages(id) }
