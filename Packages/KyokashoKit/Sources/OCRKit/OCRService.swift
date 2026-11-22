@@ -27,6 +27,8 @@ public actor OCRService {
     /// AV-16-02 G2 : appelants qui attendent encore chaque lecture en cours. Le dernier qui part (lecteur fermé, page
     /// quittée) arrête la lecture ; une analyse du document qui l'attend aussi la garde en vie.
     private var waiters: [String: Int] = [:]
+    /// Tests seulement : appelants en attente de la fin d'une lecture abandonnée, par clé.
+    private var waitingOnAbandoned: [String: Int] = [:]
     /// Un changement de pagination interdit les lectures et écritures sur les anciens index.
     private var documentsBeingReplaced: [String: Int] = [:]
     private var documentGeneration: [String: UInt64] = [:]
@@ -88,7 +90,9 @@ public actor OCRService {
         // rejoindre (elle lèverait CancellationError) ou en lancer une seconde en parallèle. Elle reste dans `running`
         // jusqu'à sa fin, donc `beginPageMutation` l'attend toujours (revue T3 Codex, repli D3).
         while let abandoned = running[key], abandoned.isCancelled {
+            waitingOnAbandoned[key, default: 0] += 1
             _ = await abandoned.result
+            waitingOnAbandoned[key, default: 1] -= 1
             try Task.checkCancellation()
             guard documentsBeingReplaced[documentId] == nil,
                   documentGeneration[documentId, default: 0] == generation else { throw CancellationError() }
@@ -227,9 +231,12 @@ public actor OCRService {
     }
 
     /// Tests : appelants comptés et état de la lecture d'une clé interne (`document#page#moteur#rRotation`).
-    func lectureState(_ key: String) -> (waiters: Int, running: Bool, abandoned: Bool) {
-        (waiters[key] ?? 0, running[key] != nil, running[key]?.isCancelled ?? false)
+    func lectureState(_ key: String) -> (waiters: Int, running: Bool, abandoned: Bool, waitingOnAbandoned: Int) {
+        (waiters[key] ?? 0, running[key] != nil, running[key]?.isCancelled ?? false, waitingOnAbandoned[key] ?? 0)
     }
+
+    /// Tests : un changement de pages du document a commencé (`beginPageMutation` a déjà capturé les lectures à attendre).
+    func isReplacingPages(_ documentId: String) -> Bool { documentsBeingReplaced[documentId] != nil }
 
     /// Annule les OCR en cours d'un document (page quittée, lecteur fermé).
     public func cancelAll(documentId: String) {

@@ -47,11 +47,13 @@ final class OCRServiceAbandonTests: XCTestCase {
         return (OCRService(database: db), id, "\(id)#0#\(engine.id)#r0")
     }
 
-    /// Attend une condition (5 s au plus) ; échoue sinon.
+    private struct NeverTrue: Error, CustomStringConvertible { let description: String }
+
+    /// Attend une condition (5 s au plus) ; lève une erreur sinon, ce qui arrête le test (et `defer` ouvre la porte).
     private func eventually(_ what: String, _ condition: () async -> Bool) async throws {
         let deadline = Date().addingTimeInterval(5)
         while !(await condition()) {
-            guard Date() < deadline else { return XCTFail("jamais vrai : \(what)") }
+            guard Date() < deadline else { throw NeverTrue(description: "jamais vrai : \(what)") }
             try await Task.sleep(nanoseconds: 2_000_000)
         }
     }
@@ -59,6 +61,7 @@ final class OCRServiceAbandonTests: XCTestCase {
     func testLastCallerCancelledStopsTheEngine() async throws {
         let engine = GateEngine(cooperative: true)
         let (service, id, key) = try fixture(engine)
+        defer { engine.release() }  // Jamais de moteur bloqué après un échec.
         let caller = Task { try await service.page(documentId: id, url: url, pageIndex: 0, engine: engine.id) }
         try await eventually("lecture lancée, un appelant") { await service.lectureState(key).waiters == 1 && engine.startCount == 1 }
         caller.cancel()
@@ -71,8 +74,9 @@ final class OCRServiceAbandonTests: XCTestCase {
     func testAnotherWaitingCallerKeepsTheEngineRunning() async throws {
         let engine = GateEngine(cooperative: true)
         let (service, id, key) = try fixture(engine)
+        defer { engine.release() }  // Jamais de moteur bloqué après un échec.
         let reader = Task { try await service.page(documentId: id, url: url, pageIndex: 0, engine: engine.id) }
-        try await eventually("lecteur inscrit") { await service.lectureState(key).waiters == 1 }
+        try await eventually("lecteur inscrit, moteur démarré") { await service.lectureState(key).waiters == 1 && engine.startCount == 1 }
         let analysis = Task { try await service.page(documentId: id, url: url, pageIndex: 0, engine: engine.id) }
         try await eventually("analyse inscrite") { await service.lectureState(key).waiters == 2 }
         reader.cancel()
@@ -89,12 +93,13 @@ final class OCRServiceAbandonTests: XCTestCase {
     func testCallerAfterAbandonWaitsForTheEndThenReadsAgain() async throws {
         let engine = GateEngine(cooperative: false)
         let (service, id, key) = try fixture(engine)
+        defer { engine.release() }  // Jamais de moteur bloqué après un échec.
         let first = Task { try await service.page(documentId: id, url: url, pageIndex: 0, engine: engine.id) }
-        try await eventually("première lecture inscrite") { await service.lectureState(key).waiters == 1 }
+        try await eventually("premier moteur démarré") { await service.lectureState(key).waiters == 1 && engine.startCount == 1 }
         first.cancel()
         try await eventually("lecture abandonnée, encore en cours") { await service.lectureState(key).abandoned }
         let second = Task { try await service.page(documentId: id, url: url, pageIndex: 0, engine: engine.id) }
-        try await Task.sleep(nanoseconds: 50_000_000)
+        try await eventually("second appel en attente de la fin") { await service.lectureState(key).waitingOnAbandoned == 1 }
         XCTAssertEqual(engine.startCount, 1, "seconde lecture lancée pendant l'ancienne")
         engine.release()
         let page = try await second.value
@@ -106,15 +111,18 @@ final class OCRServiceAbandonTests: XCTestCase {
     func testPageMutationWaitsForAnAbandonedRead() async throws {
         let engine = GateEngine(cooperative: false)
         let (service, id, key) = try fixture(engine)
+        defer { engine.release() }  // Jamais de moteur bloqué après un échec.
         let first = Task { try await service.page(documentId: id, url: url, pageIndex: 0, engine: engine.id) }
-        try await eventually("lecture inscrite") { await service.lectureState(key).waiters == 1 }
+        try await eventually("moteur démarré") { await service.lectureState(key).waiters == 1 && engine.startCount == 1 }
         first.cancel()
         try await eventually("lecture abandonnée") { await service.lectureState(key).abandoned }
         let mutation = Task { () -> Int in
             await service.beginPageMutation(documentId: id)
             return engine.finishCount
         }
-        try await Task.sleep(nanoseconds: 50_000_000)
+        // Entrée dans la barrière observée : `beginPageMutation` a déjà capturé la lecture à attendre.
+        try await eventually("changement de pages commencé") { await service.isReplacingPages(id) }
+        XCTAssertEqual(engine.finishCount, 0)
         engine.release()
         let finishedBeforeMutationEnded = await mutation.value
         XCTAssertEqual(finishedBeforeMutationEnded, 1, "changement de pages terminé avant la fin du moteur")
