@@ -20,6 +20,7 @@ struct ReaderScreen: View {
     @StateObject private var reader: ReaderController
     @StateObject private var lookup: LookupSession
     @State private var sheet: Sheet?
+    @State private var searchCardShown = false
     @State private var side: Side? = nil
     /// Colonne de droite **réellement réservée** à la page (Issue #69). Elle suit `docked`, mais à la fermeture
     /// elle n'est libérée qu'après l'animation de sortie du panneau : la largeur de PDFKit change une seule fois,
@@ -64,7 +65,7 @@ struct ReaderScreen: View {
     @Environment(\.scenePhase) private var scenePhase
 
     enum Sheet: String, Identifiable {
-        case search, ai, settings, pageCards, documentCards, pageOrientation, lineEditor, gestureHelp
+        case ai, settings, pageCards, documentCards, pageOrientation, lineEditor, gestureHelp
         var id: String { rawValue }
     }
 
@@ -126,7 +127,7 @@ struct ReaderScreen: View {
                     LookupHighlightLayer(rects: reader.lookupHighlight)
                     if reader.ocrHighlightMode {
                         OCRHighlightDragLayer(reader: reader, color: ocrHighlightColor)
-                        OCRHighlightControls(reader: reader)
+                        OCRHighlightControls(reader: reader, handlesEscape: !searchCardShown)
                             .frame(maxHeight: .infinity, alignment: .bottom)
                             .padding(.bottom, chromeVisible ? 110 : 24)
                             .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -157,10 +158,12 @@ struct ReaderScreen: View {
                                 .offset(x: frame.minX, y: frame.minY)
                                 .transition(.scale(scale: 0.96, anchor: .top).combined(with: .opacity))
                         }
-                        // Échap (Magic Keyboard) ferme le popup.
-                        Button("") { reader.endLookup() }
-                            .keyboardShortcut(.escape, modifiers: [])
-                            .opacity(0).allowsHitTesting(false)
+                        // Échap ferme le popup seulement si la carte de recherche n'est pas au premier plan.
+                        if !searchCardShown {
+                            Button("") { reader.endLookup() }
+                                .keyboardShortcut(.escape, modifiers: [])
+                                .opacity(0).allowsHitTesting(false)
+                        }
                     }
                     // Plus de flèches sur les bords de la page (#19) : elles sont rangées de part et d'autre du champ
                     // « page », en haut à droite. ← → au clavier : `ReaderArrowKeys` ; glisser tourne aussi les pages.
@@ -238,7 +241,7 @@ struct ReaderScreen: View {
                 ZStack {
                     if side == .study, studyMode != .docked {
                         DetachedPanel(area: geo.size) {
-                            StudyPanel(reader: reader, tab: $studyTab, openSearch: { sheet = .search }, openLineEditor: { sheet = .lineEditor },
+                            StudyPanel(reader: reader, tab: $studyTab, openSearch: { searchCardShown = true }, openLineEditor: { sheet = .lineEditor },
                                        openDocumentSettings: { sheet = .settings }, close: { self.side = nil }, fixedWidth: false)
                         }
                         .transition(.opacity)
@@ -246,6 +249,9 @@ struct ReaderScreen: View {
                 }
                 .animation(panelAnimation, value: side)
                 .animation(panelAnimation, value: studyMode)
+            }
+            .overlayPreferenceValue(SearchBarBounds.self) { barBounds in
+                SearchCardOverlay(reader: reader, isPresented: $searchCardShown, barBounds: barBounds)
             }
         }
         .background(Atelier.canvas.ignoresSafeArea())
@@ -333,7 +339,6 @@ struct ReaderScreen: View {
         .sheet(item: $sheet) { sheet in
             Group {
                 switch sheet {
-                case .search: SearchSheet(reader: reader, close: { self.sheet = nil })
                 case .ai: AIPageSheet(reader: reader, openWeb: { self.sheet = nil; side = .web })
                 case .settings: DocumentSettingsSheet(reader: reader)
                 case .lineEditor: OCRLineEditor(reader: reader)
@@ -403,6 +408,7 @@ struct ReaderScreen: View {
             }
             .padding(.horizontal, Atelier.gap)
             .padding(.top, 8)
+            .anchorPreference(key: SearchBarBounds.self, value: .bounds) { $0 }
             // La palette doit passer devant le conteneur de la barre, frère de cette rangée.
             .zIndex(reader.hasSelection ? 1 : 0)
             GeometryReader { area in
@@ -552,7 +558,7 @@ struct ReaderScreen: View {
                 .padding(.horizontal, 4)
             pageArrow(left: false)
             if capabilities.textAnalysis {
-                CapsuleButton(icon: "magnifyingglass", label: String(localized: "Rechercher")) { sheet = .search }
+                CapsuleButton(icon: "magnifyingglass", label: String(localized: "Rechercher")) { searchCardShown = true }
             }
             CapsuleButton(icon: reader.isCurrentPageBookmarked ? "bookmark.fill" : "bookmark", label: String(localized: "Signet"),
                           active: reader.isCurrentPageBookmarked) { reader.toggleBookmark() }
@@ -850,7 +856,7 @@ struct ReaderScreen: View {
     private func sidePanel(_ side: Side) -> some View {
         switch side {
         case .study:
-            StudyPanel(reader: reader, tab: $studyTab, openSearch: { sheet = .search }, openLineEditor: { sheet = .lineEditor },
+            StudyPanel(reader: reader, tab: $studyTab, openSearch: { searchCardShown = true }, openLineEditor: { sheet = .lineEditor },
                        openDocumentSettings: { sheet = .settings }, close: { self.side = nil })
         case .web:
             WebPanel(onClose: { self.side = nil })
@@ -1127,6 +1133,7 @@ struct OCRHighlightDragLayer: View {
 /// Commandes du mode « Surligner l'OCR » (recette 1.3.2 (62), L5) : surligner ou gommer, annuler (⌘Z), terminer.
 struct OCRHighlightControls: View {
     @ObservedObject var reader: ReaderController
+    let handlesEscape: Bool
 
     var body: some View {
         HStack(spacing: 12) {
@@ -1142,7 +1149,7 @@ struct OCRHighlightControls: View {
                 .accessibilityLabel("Annuler (⌘ Z)")
             Button("Terminé") { reader.setOCRHighlightMode(false) }
                 .fontWeight(.semibold)
-                .keyboardShortcut(.escape, modifiers: [])
+                .keyboardShortcut(handlesEscape ? KeyboardShortcut(.escape, modifiers: []) : nil)
         }
         .font(Atelier.font(14))
         .padding(.horizontal, 14).padding(.vertical, 8)
