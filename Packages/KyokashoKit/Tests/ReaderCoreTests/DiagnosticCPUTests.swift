@@ -2,8 +2,8 @@
 // Copyright (c) 2026 NOxygen59
 
 import Darwin
-import ReaderCore
 import XCTest
+@testable import ReaderCore
 
 final class DiagnosticCPUTests: XCTestCase {
     private let cost = DiagnosticCPULog.Cost(wall: 0.002, cpu: 0.001)
@@ -113,6 +113,28 @@ final class DiagnosticCPUTests: XCTestCase {
         XCTAssertTrue(line.contains("analysis:500.0ms@p0/total:8/étape:voting/cpu:125.0ms"))
         XCTAssertTrue(line.contains("aiReading:375.0ms@p?/total:8/étape:waiting/cpu:?"))
         XCTAssertTrue(line.contains("ocr:250.0ms@p?/total:?/étape:?/cpu:0.0ms"))
+    }
+
+    func testVLMPhasesUseClosedKindsAndOnlyAnAliasForTheDocument() throws {
+        let alias = DiagnosticThreads.Alias()
+        let prepare = DiagnosticCPULog.Work(kind: .aiPrepare, seconds: 0.5, document: alias, page: 7)
+        let generate = DiagnosticCPULog.Work(kind: .aiGenerate, seconds: 0.25, document: alias, page: 7, cpuSeconds: 0.125)
+        var policy = DiagnosticCPULog.Policy()
+        XCTAssertTrue(policy.admit(at: 1))
+        let decision = try XCTUnwrap(policy.decide(at: 1, percent: 100, cost: cost, hasLongWork: true))
+        let segment = DiagnosticThreads.Segment(kind: .aiGenerate, document: alias, page: 7, start: 0)
+        var long = DiagnosticCPULog.LongWork()
+        long.add(prepare)
+        let line = DiagnosticCPULog.line(percent: 100, threads: [.init(id: 1, percent: 100, name: "kyo.aiGenerate")],
+                                         active: [generate], context: .init(), long: long, cost: cost, decision: decision,
+                                         segments: [1: segment], at: 1)
+        XCTAssertTrue(line.contains("actifs=[aiGenerate:250.0ms@p7/total:?/étape:?/cpu:125.0ms/doc:\(alias.label)]"))
+        XCTAssertTrue(line.contains("longs=[aiPrepare:500.0ms@p7/total:?/étape:?/cpu:?/doc:\(alias.label)]"))
+        XCTAssertTrue(line.contains("/nom:kyo.aiGenerate/file:?/fonction:aiGenerate/doc:\(alias.label)/page:7/"))
+        XCTAssertNotNil(alias.label.range(of: "^[0-9a-f]{12}$", options: .regularExpression))
+        XCTAssertEqual(DiagnosticCPULog.Kind(rawValue: "aiPrepare"), .aiPrepare)
+        XCTAssertEqual(DiagnosticCPULog.Kind(rawValue: "aiGenerate"), .aiGenerate)
+        XCTAssertNil(DiagnosticCPULog.Kind(rawValue: "titre privé /chemin"))
     }
 
     func testMachReadsCPUOnAnotherThreadWithoutSuspendingIt() {

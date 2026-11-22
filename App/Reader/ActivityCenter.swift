@@ -16,13 +16,14 @@ final class ActivityCenter: @unchecked Sendable {
     private struct Observed {
         let kind: Kind
         let start: TimeInterval
+        let document: DiagnosticThreads.Alias?
         let page: Int?
         let visiblePage: Int?
         var progress: Progress?
         var cpu = DiagnosticCPULog.CPUTime()
 
         func work(at now: TimeInterval, readCPU: Bool = true) -> DiagnosticCPULog.Work {
-            .init(kind: kind, seconds: now - start, page: page, visiblePage: visiblePage,
+            .init(kind: kind, seconds: now - start, document: document, page: page, visiblePage: visiblePage,
                   cpuSeconds: readCPU ? cpu.seconds(read: DiagnosticMachCPU.threadCPUSeconds) : nil, progress: progress)
         }
     }
@@ -41,7 +42,11 @@ final class ActivityCenter: @unchecked Sendable {
         let hook: DiagnosticThreadHook.Begin = { [self] kind, documentID, page in
             self.beginSynchronous(kind, documentID: documentID, page: page)
         }
-        DiagnosticThreadHook.install(on ? hook : nil)
+        let asyncHook: DiagnosticThreadHook.BeginAsync = { [self] kind, documentID, page in
+            guard let id = self.beginDiagnostic(kind, documentID: documentID, page: page) else { return nil }
+            return { [self] in self.endDiagnostic(id) }
+        }
+        DiagnosticThreadHook.install(on ? hook : nil, async: on ? asyncHook : nil)
     }
 
     /// `end` part avec le `defer` de l'appelant : une erreur ou une annulation ferment aussi la mesure.
@@ -55,11 +60,11 @@ final class ActivityCenter: @unchecked Sendable {
     }
 
     /// Pour une tâche asynchrone qui a déjà son propre suivi UI. Ne chronomètre pas les `await` comme du CPU.
-    func beginDiagnostic(_ kind: Kind, progress: Progress? = nil) -> UUID? {
+    func beginDiagnostic(_ kind: Kind, documentID: String? = nil, page: Int? = nil, progress: Progress? = nil) -> UUID? {
         lock.withLock {
             guard diagnosticsOn else { return nil }
             let id = UUID()
-            register(id, kind: kind, page: nil, progress: progress, inferVisiblePage: false)
+            register(id, kind: kind, page: page, progress: progress, inferVisiblePage: false, documentID: documentID)
             return id
         }
     }
@@ -75,8 +80,15 @@ final class ActivityCenter: @unchecked Sendable {
     }
 
     // Le registre, la progression et les segments sont lus et modifiés sous le même verrou.
-    private func register(_ id: UUID, kind: Kind, page: Int?, progress: Progress?, inferVisiblePage: Bool = true) {
-        diagnosticRunning[id] = Observed(kind: kind, start: ProcessInfo.processInfo.systemUptime, page: page,
+    private func register(_ id: UUID, kind: Kind, page: Int?, progress: Progress?, inferVisiblePage: Bool = true,
+                          documentID: String? = nil) {
+        let document = documentID.map { key in
+            if let alias = aliases[key] { return alias }
+            let alias = DiagnosticThreads.Alias()
+            aliases[key] = alias
+            return alias
+        }
+        diagnosticRunning[id] = Observed(kind: kind, start: ProcessInfo.processInfo.systemUptime, document: document, page: page,
                                          visiblePage: page == nil && inferVisiblePage ? DiagnosticCPU.shared.visiblePage : nil,
                                          progress: progress)
     }
@@ -135,8 +147,8 @@ final class ActivityCenter: @unchecked Sendable {
         lock.withLock {
             guard diagnosticsOn else { return nil }
             let id = UUID()
-            register(id, kind: kind, page: page, progress: nil, inferVisiblePage: false)
-            let segment = startSegment(id, documentID: documentID)
+            register(id, kind: kind, page: page, progress: nil, inferVisiblePage: false, documentID: documentID)
+            let segment = startSegment(id)
             return { [self] in
                 lock.withLock {
                     if let segment { _ = endSegment(id, segment) }
@@ -155,7 +167,7 @@ final class ActivityCenter: @unchecked Sendable {
         let restoreName: (() -> Void)?
     }
 
-    private func startSegment(_ id: UUID, documentID: String? = nil) -> Segment? {
+    private func startSegment(_ id: UUID) -> Segment? {
         guard diagnosticsOn, let observed = diagnosticRunning[id] else { return nil }
         // Le droit reste vivant jusqu'au defer du segment, même si le diagnostic est désactivé entre-temps.
         let port = mach_thread_self()
@@ -166,13 +178,8 @@ final class ActivityCenter: @unchecked Sendable {
             var token: UUID?
             if pthread_threadid_np(nil, &thread) == 0 {
                 let parent = diagnosticThreads.current(thread: thread)
-                let alias = documentID.map { key in
-                    if let alias = aliases[key] { return alias }
-                    let alias = DiagnosticThreads.Alias()
-                    aliases[key] = alias
-                    return alias
-                } ?? parent?.document
-                let page = observed.progress?.page ?? observed.page ?? (documentID == nil ? parent?.page : nil)
+                let alias = observed.document ?? parent?.document
+                let page = observed.progress?.page ?? observed.page ?? (observed.document == nil ? parent?.page : nil)
                 token = diagnosticThreads.push(.init(kind: observed.kind, document: alias, page: page,
                                                      start: ProcessInfo.processInfo.systemUptime), thread: thread)
             }
@@ -249,7 +256,7 @@ extension DiagnosticCPULog.Kind {
         case .aiReading: return String(localized: "Lecture OCR")
         // Ces cas sont réservés au journal, jamais ajoutés au registre UI.
         case .readerBuild, .autoCrop, .pdfProbe, .ocrEngine, .ocrRender, .ocrNormalize, .vision,
-             .onnxSession, .onnxRun, .ovisRender, .neuralLayout, .readerClose, .pdfRelease: return rawValue
+             .onnxSession, .onnxRun, .ovisRender, .neuralLayout, .readerClose, .pdfRelease, .aiPrepare, .aiGenerate: return rawValue
         }
     }
 }

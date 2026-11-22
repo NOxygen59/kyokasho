@@ -127,6 +127,52 @@ final class DiagnosticThreadTests: XCTestCase {
         XCTAssertNil(registry.current(thread: key))
     }
 
+    func testAsyncPreparationUsesTaskContextAndClosesOnCancellation() async {
+        let began = expectation(description: "Préparation inscrite")
+        let ended = expectation(description: "Préparation close")
+        let generated = expectation(description: "Génération synchrone inscrite")
+        DiagnosticThreadHook.install({ kind, documentID, page in
+            XCTAssertEqual(kind, .aiGenerate)
+            XCTAssertEqual(documentID, "document-test")
+            XCTAssertEqual(page, 2)
+            generated.fulfill()
+            return nil
+        }, async: { kind, documentID, page in
+            XCTAssertEqual(kind, .aiPrepare)
+            XCTAssertEqual(documentID, "document-test")
+            XCTAssertEqual(page, 7)
+            began.fulfill()
+            return { ended.fulfill() }
+        })
+        defer { DiagnosticThreadHook.install(nil) }
+        do {
+            try await DiagnosticThreadHook.withContext(documentID: "document-test", page: 2) {
+                DiagnosticThreadHook.measure(.aiGenerate) {}
+                try await DiagnosticThreadHook.measureAsync(.aiPrepare, page: 7) {
+                    await Task.yield()
+                    throw CancellationError()
+                }
+            }
+            XCTFail("L'annulation doit remonter sans être remplacée")
+        } catch is CancellationError {
+            await fulfillment(of: [generated, began, ended], timeout: 1, enforceOrder: true)
+        } catch {
+            XCTFail("Erreur inattendue : \(error)")
+        }
+    }
+
+    func testDisabledHookDoesNotBuildContextAndReturnsUnchangedResult() async {
+        DiagnosticThreadHook.install(nil)
+        func makeContext() -> DiagnosticThreadHook.Context? {
+            XCTFail("Le contexte ne doit pas être construit hors diagnostic")
+            return nil
+        }
+        let marker = await DiagnosticThreadHook.withContext(makeContext()) {
+            await DiagnosticThreadHook.measureAsync(.aiPrepare) { 42 }
+        }
+        XCTAssertEqual(marker, 42)
+    }
+
     func testMeasureHostTickCoreCost() throws {
         var sampler = DiagnosticMachCPU()
         var history = DiagnosticThreads.History()

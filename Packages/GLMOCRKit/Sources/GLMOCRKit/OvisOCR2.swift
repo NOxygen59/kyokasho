@@ -29,10 +29,12 @@ public struct PageVLMReader: Sendable {
             throw OCRError.engineFailed("Pas assez de mémoire libre pour \(spec.title) (\(free / 1_048_576) Mo libres, \(minimumFreeMemory / 1_048_576) Mo nécessaires). Ferme les autres apps et réessaie.")
         }
         let image: CGImage
+        let page: Int?
         switch input {
         case .pdfPage(let url, let index, let rotation):
+            page = index
             image = try PageRenderer.render(url: url, pageIndex: index, longSide: longSide, additionalRotation: rotation)
-        case .image(let cg): image = cg
+        case .image(let cg): page = nil; image = cg
         }
         let user = UserInput(chat: [.user(prompt, images: [.ciImage(CIImage(cgImage: image))])], additionalContext: context)
         // Une erreur MLX (mémoire, noyau Metal) pendant la lecture devient une erreur Swift : la page est notée en
@@ -40,10 +42,14 @@ public struct PageVLMReader: Sendable {
         return try await GLMModel.using(directory: store.directory(spec), extraEOSTokens: []) { container in
         try await withError {
             try await container.perform { context in
-                let prepared = try await context.processor.prepare(input: user)
-                let result = try MLXLMCommon.generate(
-                    input: prepared, parameters: GenerateParameters(maxTokens: maxTokens, temperature: 0), context: context
-                ) { (_: [Int]) in Task.isCancelled ? .stop : .more }
+                let prepared = try await OCRThreadInstrumentation.measureAsync(.aiPrepare, page: page) {
+                    try await context.processor.prepare(input: user)
+                }
+                let result = try OCRThreadInstrumentation.measure(.aiGenerate, page: page) {
+                    try MLXLMCommon.generate(
+                        input: prepared, parameters: GenerateParameters(maxTokens: maxTokens, temperature: 0), context: context
+                    ) { (_: [Int]) in Task.isCancelled ? .stop : .more }
+                }
                 return result.output
             }
         }
@@ -159,10 +165,14 @@ public struct Qwen3VLReader: Sendable {
         return try await GLMModel.using(directory: base.store.directory(base.spec), extraEOSTokens: []) { container in
         try await withError {
             try await container.perform { context in
-                let prepared = try await context.processor.prepare(input: user)
-                let result = try MLXLMCommon.generate(
-                    input: prepared, parameters: GenerateParameters(maxTokens: budget, temperature: 0), context: context
-                ) { (_: [Int]) in Task.isCancelled ? .stop : .more }
+                let prepared = try await OCRThreadInstrumentation.measureAsync(.aiPrepare) {
+                    try await context.processor.prepare(input: user)
+                }
+                let result = try OCRThreadInstrumentation.measure(.aiGenerate) {
+                    try MLXLMCommon.generate(
+                        input: prepared, parameters: GenerateParameters(maxTokens: budget, temperature: 0), context: context
+                    ) { (_: [Int]) in Task.isCancelled ? .stop : .more }
+                }
                 return result.output
             }
         }

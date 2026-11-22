@@ -12,6 +12,7 @@ public enum DiagnosticCPULog {
         case ocr, analysis, aiReading
         case readerBuild, autoCrop, pdfProbe, ocrEngine, ocrRender, ocrNormalize, vision
         case onnxSession, onnxRun, ovisRender, neuralLayout, readerClose, pdfRelease
+        case aiPrepare, aiGenerate
     }
 
     public enum Stage: String, Sendable {
@@ -101,15 +102,18 @@ public enum DiagnosticCPULog {
     public struct Work: Sendable {
         public let kind: Kind
         public let seconds: TimeInterval
+        public let document: DiagnosticThreads.Alias?
         public let page: Int?
         public let visiblePage: Int?
         public let cpuSeconds: TimeInterval?
         public let progress: Progress?
 
-        public init(kind: Kind, seconds: TimeInterval, page: Int? = nil, visiblePage: Int? = nil,
+        public init(kind: Kind, seconds: TimeInterval, document: DiagnosticThreads.Alias? = nil,
+                    page: Int? = nil, visiblePage: Int? = nil,
                     cpuSeconds: TimeInterval? = nil, progress: Progress? = nil) {
             self.kind = kind
             self.seconds = seconds
+            self.document = document
             self.page = page
             self.visiblePage = visiblePage
             self.cpuSeconds = cpuSeconds
@@ -218,6 +222,7 @@ public enum DiagnosticCPULog {
         label += "/total:\(work.progress?.total.map(String.init) ?? "?")/étape:\(work.progress?.stage?.rawValue ?? "?")"
         if let cpu = work.cpuSeconds { label += "/cpu:\(number(cpu * 1000))ms" }
         else { label += "/cpu:?" }
+        if let document = work.document { label += "/doc:\(document.label)" }
         return label
     }
 

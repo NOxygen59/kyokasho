@@ -4,7 +4,7 @@
 import Darwin
 import Foundation
 
-/// Les paquets déclarent un segment synchrone sans connaître le registre de l'app.
+/// Les paquets déclarent leurs phases de travail sans connaître le registre de l'app.
 public enum DiagnosticThreadHook {
     public struct Context: Sendable {
         public let documentID: String
@@ -16,14 +16,18 @@ public enum DiagnosticThreadHook {
     }
 
     public typealias Begin = @Sendable (DiagnosticCPULog.Kind, String?, Int?) -> (() -> Void)?
+    public typealias BeginAsync = @Sendable (DiagnosticCPULog.Kind, String?, Int?) -> (@Sendable () -> Void)?
     private final class Slot: @unchecked Sendable {
         let lock = NSLock()
         var begin: Begin?
+        var beginAsync: BeginAsync?
     }
     private static let slot = Slot()
     private static let context = TaskLocal<Context?>(wrappedValue: nil)
 
-    public static func install(_ begin: Begin?) { slot.lock.withLock { slot.begin = begin } }
+    public static func install(_ begin: Begin?, async beginAsync: BeginAsync? = nil) {
+        slot.lock.withLock { slot.begin = begin; slot.beginAsync = beginAsync }
+    }
 
     public static func measure<T>(_ kind: DiagnosticCPULog.Kind, documentID: String? = nil, page: Int? = nil,
                                   useRenderKind: Bool = false, _ work: () throws -> T) rethrows -> T {
@@ -35,11 +39,28 @@ public enum DiagnosticThreadHook {
         return try work()
     }
 
+    /// Temps écoulé uniquement : le travail peut reprendre sur un autre fil.
+    public static func measureAsync<T>(_ kind: DiagnosticCPULog.Kind, page: Int? = nil,
+                                       _ work: () async throws -> T) async rethrows -> T {
+        guard let beginAsync = slot.lock.withLock({ slot.beginAsync }) else { return try await work() }
+        let scope = context.get()
+        let end = beginAsync(kind, scope?.documentID, page ?? scope?.page)
+        defer { end?() }
+        return try await work()
+    }
+
     /// L'identité voyage avec la tâche, jamais le nom du fil. Seul `measure` renomme le fil.
     public static func withContext<T>(documentID: String, page: Int, renderKind: DiagnosticCPULog.Kind = .ocrRender,
                                       _ work: () async throws -> T) async rethrows -> T {
-        guard slot.lock.withLock({ slot.begin != nil }) else { return try await work() }
-        return try await context.withValue(Context(documentID: documentID, page: page, renderKind: renderKind), operation: work)
+        try await withContext(Context(documentID: documentID, page: page, renderKind: renderKind), work)
+    }
+
+    /// Évite de construire le contexte d'une tâche lorsque le diagnostic est coupé.
+    public static func withContext<T>(_ scope: @autoclosure () -> Context?,
+                                      _ work: () async throws -> T) async rethrows -> T {
+        guard slot.lock.withLock({ slot.begin != nil || slot.beginAsync != nil }),
+              let scope = scope() else { return try await work() }
+        return try await context.withValue(scope, operation: work)
     }
 
     /// Ne renomme que si le nom précédent peut être restauré, sur ce même fil.

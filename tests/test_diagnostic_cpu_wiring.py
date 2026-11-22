@@ -65,10 +65,10 @@ class DiagnosticCPUWiringTests(unittest.TestCase):
 
     def test_g1_wires_packages_and_names_only_synchronous_segments(self):
         center = source("App/Reader/ActivityCenter.swift")
-        self.assertIn("DiagnosticThreadHook.install(on ? hook : nil)", center)
+        self.assertIn("DiagnosticThreadHook.install(on ? hook : nil, async: on ? asyncHook : nil)", center)
         self.assertIn("DiagnosticThreadHook.restoreNameAfterSetting(observed.kind)", center)
         hook = source("Packages/KyokashoKit/Sources/ReaderCore/DiagnosticThreadHook.swift")
-        measure = hook.split("public static func measure", 1)[1].split("public static func withContext", 1)[0]
+        measure = hook.split("public static func measure<", 1)[1].split("public static func measureAsync", 1)[0]
         self.assertIn("defer { end?() }", measure)
         self.assertNotRegex(measure, r"\b(?:await|async)\b")
         for path, marker in (
@@ -93,6 +93,33 @@ class DiagnosticCPUWiringTests(unittest.TestCase):
         self.assertIn("progress: Progress", update)
         self.assertIn("if diagnosticsOn { diagnosticRunning[id]?.progress = progress }", update)
         self.assertNotIn("ledger", update)
+
+    def test_ovis_phases_use_wall_time_for_prepare_and_a_sync_segment_for_generate(self):
+        ovis = source("Packages/GLMOCRKit/Sources/GLMOCRKit/OvisOCR2.swift")
+        prepare = r"OCRThreadInstrumentation\.measureAsync\(\.aiPrepare[^)]*\) \{\s*try await context\.processor\.prepare\(input: user\)\s*\}"
+        generate = r"try OCRThreadInstrumentation\.measure\(\.aiGenerate[^)]*\) \{\s*try MLXLMCommon\.generate\([^}]+Task\.isCancelled \? \.stop : \.more \}\s*\}"
+        for body in (ovis.split("public struct OvisOCR2Reader", 1)[0], ovis.split("public func translate(", 1)[1]):
+            self.assertRegex(body, prepare + r"\s*let result = " + generate)
+        hook = source("Packages/KyokashoKit/Sources/ReaderCore/DiagnosticThreadHook.swift")
+        async_measure = hook.split("public static func measureAsync", 1)[1].split("public static func withContext", 1)[0]
+        self.assertIn("guard let beginAsync", async_measure)
+        self.assertIn("defer { end?() }", async_measure)
+        self.assertNotIn("restoreNameAfterSetting", async_measure)
+        center = source("App/Reader/ActivityCenter.swift")
+        self.assertIn("self.beginDiagnostic(kind, documentID: documentID, page: page)", center)
+        self.assertIn("return { [self] in self.endDiagnostic(id) }", center)
+        begin = center.split("func beginDiagnostic(", 1)[1].split("func updateDiagnostic", 1)[0]
+        self.assertNotIn("startSegment", begin)
+        self.assertIn("inferVisiblePage: false", begin)
+
+    def test_manual_ovis_jobs_scope_the_document_while_scan_keeps_its_per_page_scope(self):
+        center = source("App/Reader/AITaskCenter.swift")
+        self.assertIn("DiagnosticThreadHook.withContext(Self.pageVLMContext(modelId: modelId, key: key))", center)
+        self.assertIn('case (ModelSpec.ovisocr2.id, "layout", 3)', center)
+        self.assertIn('case (ModelSpec.ovisocr2.id, "verify", 2):', center)
+        self.assertIn('(ModelSpec.qwen3vl4b.id, "translate", 3):', center)
+        scan = source("App/Library/DocumentScan.swift")
+        self.assertRegex(scan, r"withContext\(documentID: id, page: page, renderKind: \.ovisRender\) \{\s*try await OvisOCR2Reader")
 
     def test_ai_scan_uses_the_job_diagnostic_and_closes_it_on_exit(self):
         center = source("App/Reader/AITaskCenter.swift")

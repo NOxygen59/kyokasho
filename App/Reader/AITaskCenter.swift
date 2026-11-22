@@ -83,7 +83,13 @@ final class AITaskCenter: ObservableObject {
             var failure: String?
             var cancelled = false
             do {
-                try await work(job.id)
+                if modelId == ModelSpec.ovisocr2.id || modelId == ModelSpec.qwen3vl4b.id {
+                    try await DiagnosticThreadHook.withContext(Self.pageVLMContext(modelId: modelId, key: key)) {
+                        try await work(job.id)
+                    }
+                } else {
+                    try await work(job.id)
+                }
             } catch is CancellationError {
                 cancelled = true
             } catch {
@@ -104,6 +110,22 @@ final class AITaskCenter: ObservableObject {
     func setProgress(_ id: UUID, done: Int, total: Int) {
         guard let i = jobs.firstIndex(where: { $0.id == id }) else { return }
         jobs[i].progress = (done, total)
+    }
+
+    /// Le scan donne sa propre page à chaque lecture ; les tâches manuelles ont une clé fixe.
+    nonisolated private static func pageVLMContext(modelId: String?, key: String) -> DiagnosticThreadHook.Context? {
+        guard let modelId else { return nil }
+        let parts = key.split(separator: "|", maxSplits: 3, omittingEmptySubsequences: false)
+        guard parts.count >= 2, !parts[1].isEmpty else { return nil }
+        switch (modelId, parts[0], parts.count) {
+        case (ModelSpec.ovisocr2.id, "layout", 3), (ModelSpec.qwen3vl4b.id, "translate", 3):
+            guard let page = Int(parts[2]), page >= 0 else { return nil }
+            return .init(documentID: String(parts[1]), page: page)
+        case (ModelSpec.ovisocr2.id, "verify", 2):
+            return .init(documentID: String(parts[1]), page: nil)
+        default:
+            return nil
+        }
     }
 
     func log(_ id: UUID, _ line: String) {
