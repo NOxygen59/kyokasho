@@ -114,20 +114,24 @@ final class OCRServiceAbandonTests: XCTestCase {
         let engine = GateEngine(cooperative: false)
         engine.failingRun = 2
         let reviewOpen = Flag()  // Porte de la relecture de la 1re lecture seulement.
+        let inReview = Flag()    // Levé par la relecture elle-même : on est bien dedans (revue finale Codex de 547a48f).
         let (service, id, key) = try fixture(engine, postProcess: { page in
-            if page.durationMs == 1 { while !reviewOpen.isOn { Thread.sleep(forTimeInterval: 0.002) } }
+            if page.durationMs == 1 {
+                inReview.turnOn()
+                while !reviewOpen.isOn { Thread.sleep(forTimeInterval: 0.002) }
+            }
             return page
         })
         defer { engine.release(); reviewOpen.turnOn() }
         engine.release()  // Le moteur répond tout de suite ; la 1re lecture reste bloquée dans sa relecture.
         let first = Task { try await service.page(documentId: id, url: url, pageIndex: 0, engine: engine.id) }
-        try await eventually("1re lecture en relecture") { await service.lectureState(key).waiters == 1 && engine.finishCount == 1 }
+        try await eventually("1re lecture entrée en relecture") { inReview.isOn }
         first.cancel()
         try await eventually("1re lecture abandonnée") { await service.lectureState(key).abandoned }
         let second = Task { try await service.page(documentId: id, url: url, pageIndex: 0, engine: engine.id) }
         try await eventually("2e appel en attente") { await service.lectureState(key).waitingOnAbandoned == 1 }
         reviewOpen.turnOn()  // La 1re lecture sort de sa relecture, abandonnée.
-        do { _ = try await second.value; XCTFail("la 2e lecture devait échouer") } catch {}
+        do { _ = try await second.value; XCTFail("la 2e lecture devait échouer") } catch OCRError.pageUnavailable {}
         _ = try? await first.value
         XCTAssertNil(try database.ocrResult(documentId: id, pageIndex: 0, engine: engine.id),
                      "la lecture abandonnée a écrit en base")
