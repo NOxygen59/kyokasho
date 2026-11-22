@@ -74,9 +74,9 @@ Mode diagnostic activé (Réglages › Aide), l'app échantillonne ses fils une 
 
 - `fils` : les fils à **5 % ou plus**, **12 au maximum**, du plus chargé au moins chargé ; `fils_omis` compte ceux qui dépassent ce plafond.
 - `nom` : nom du fil accepté seulement s'il ne contient que `A-Z`, `a-z`, `0-9`, `-`, `.`, `_` (un seul caractère interdit fait rejeter le nom entier), coupé à 40 caractères ; sinon `sans-nom`.
-- `âge_s` : temps écoulé depuis la **première fois que ce fil a été vu sans interruption** dans la session de mesure ; un fil redevenu inactif ou un relevé manqué le remet à zéro. Ce n'est pas l'âge réel du fil.
+- `âge_s` : temps écoulé depuis la **première fois que ce fil a été vu** dans la session de mesure. Il repart de zéro seulement si le fil disparaît d'un relevé réussi ; un relevé manqué ne le remet pas à zéro (il coupe seulement la mesure de persistance). Ce n'est pas l'âge réel du fil.
 - `moy10s` : moyenne sur les 10 dernières secondes, calculée sur les compteurs cumulés du fil, pas sur l'estimation instantanée de Mach.
-- `fonction` : nom du travail mesuré en cours sur ce fil (`kyo.<type>`), sinon `inconnue`. Pendant une mesure, l'app renomme le fil en `kyo.` suivi du type, puis restaure le nom précédent.
+- `fonction` : type du travail mesuré en cours sur ce fil (par exemple `aiGenerate`), sinon `inconnue`. Pendant une mesure synchrone, l'app renomme aussi le fil en `kyo.` suivi de ce type, puis restaure le nom précédent : on peut donc voir `kyo.<type>` dans `nom`.
 - `doc` : alias tiré au hasard (12 caractères hexadécimaux) du document ; jamais son titre ni son chemin. `page` : page de la mesure quand elle est connue.
 
 `[cpu-persistant]` n'apparaît que si un fil reste à **80 % ou plus pendant plus de 10 s**. Une même ligne ne revient pas plus d'une fois par minute et par fil. Elle ajoute `âge_s` et `événements` : les **3 dernières catégories** du journal (hors `cpu`) écrites juste avant la détection. Un relevé manqué ou un trou de plus de 2,5 s remet le compteur à zéro : la preuve de chauffe doit être continue.

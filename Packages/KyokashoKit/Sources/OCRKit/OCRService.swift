@@ -146,8 +146,14 @@ public actor OCRService {
         // Une lecture menée à terme est mise en cache même si son créateur est parti (revue T3 Codex) : un coappelant
         // qui l'attendait (analyse du document) l'a reçue, et une lecture abandonnée a déjà levé dans la tâche.
         let json = try encoder.encode(result)
-        try database.save(OCRResultRecord(documentId: documentId, pageIndex: pageIndex, engine: engine,
-                                          json: json, durationMs: result.durationMs))
+        do {
+            try database.save(OCRResultRecord(documentId: documentId, pageIndex: pageIndex, engine: engine,
+                                              json: json, durationMs: result.durationMs))
+        } catch where Task.isCancelled {
+            // Créateur parti et écriture refusée (document supprimé entre-temps, revue T1 DeepSeek V4 Pro) :
+            // c'est une annulation, pas une erreur à afficher.
+            throw CancellationError()
+        }
         guard !Task.isCancelled else { throw CancellationError() }
         return result
     }
