@@ -24,7 +24,7 @@ final class ONNXModel: @unchecked Sendable {
         try options.setIntraOpNumThreads(Int32(threads))
         try options.setGraphOptimizationLevel(.all)
         // AV-16-02 G2 : fils de calcul en attente bloquante, pas en attente active (pas de CPU brûlé entre deux
-        // lectures). `try?` : une version d'ONNX Runtime qui ignore la clé garde son comportement, la session s'ouvre.
+        // lectures). `try?` couvre seulement l'ajout de la clé ; ces deux clés sont celles documentées par ONNX Runtime.
         try? options.addConfigEntry(withKey: "session.intra_op.allow_spinning", value: "0")
         try? options.addConfigEntry(withKey: "session.inter_op.allow_spinning", value: "0")
         if coreML { try? options.appendCoreMLExecutionProvider(with: ORTCoreMLExecutionProviderOptions()) }

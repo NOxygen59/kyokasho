@@ -67,4 +67,18 @@ final class OCRServiceAbandonTests: XCTestCase {
         XCTAssertFalse(engine.sawCancellation, "lecture annulée alors qu'un appelant l'attendait")
         XCTAssertTrue(engine.didFinish)
     }
+
+    /// Revue T1 DeepSeek V4 Pro : un appelant qui arrive juste après l'abandon lance une lecture neuve, il ne rejoint pas
+    /// la lecture annulée (il recevait `CancellationError`).
+    func testCallerArrivingAfterAbandonGetsAFreshRead() async throws {
+        let engine = WaitingEngine(id: "attente-\(UUID().uuidString)")
+        let (service, id) = try fixture(engine: engine)
+        let first = Task { try await service.page(documentId: id, url: url, pageIndex: 0, engine: engine.id) }
+        try await Task.sleep(nanoseconds: 100_000_000)
+        first.cancel()
+        let deadline = Date().addingTimeInterval(1)
+        while !engine.sawCancellation, Date() < deadline { try await Task.sleep(nanoseconds: 10_000_000) }
+        let page = try await service.page(documentId: id, url: url, pageIndex: 0, engine: engine.id)
+        XCTAssertEqual(page.engine, engine.id)
+    }
 }

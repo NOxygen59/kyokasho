@@ -114,7 +114,8 @@ public actor OCRService {
             return result
         }
         running[key] = task
-        defer { running[key] = nil; waiters[key] = nil }
+        // Seulement si la clé désigne encore cette lecture : `leave` a pu la retirer et une nouvelle a pu prendre sa place.
+        defer { if running[key] == task { running[key] = nil; waiters[key] = nil } }
         let result = try await wait(for: task, key: key)
         // La tâche détachée peut terminer même si son appelant a été annulé pendant PageShift.
         guard documentsBeingReplaced[documentId] == nil,
@@ -204,7 +205,12 @@ public actor OCRService {
         guard running[key] == task else { return }
         let n = (waiters[key] ?? 1) - 1
         waiters[key] = max(0, n)
-        if n <= 0 { task.cancel() }
+        guard n <= 0 else { return }
+        task.cancel()
+        // Retirée tout de suite (revue T1 DeepSeek V4 Pro) : un appelant qui arrive maintenant lance une lecture neuve
+        // au lieu de rejoindre une lecture déjà annulée.
+        running[key] = nil
+        waiters[key] = nil
     }
 
     /// Annule les OCR en cours d'un document (page quittée, lecteur fermé).
