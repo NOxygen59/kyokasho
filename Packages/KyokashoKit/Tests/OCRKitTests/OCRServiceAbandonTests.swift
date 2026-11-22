@@ -94,6 +94,9 @@ final class OCRServiceAbandonTests: XCTestCase {
         XCTAssertEqual(page.engine, engine.id)
         XCTAssertEqual(engine.cancelCount, 0, "lecture annulée alors qu'un appelant l'attendait")
         XCTAssertEqual(engine.startCount, 1)
+        // Revue T3 Codex : le créateur parti, la lecture menée à terme est quand même en cache (pas de second moteur).
+        _ = try await service.page(documentId: id, url: url, pageIndex: 0, engine: engine.id)
+        XCTAssertEqual(engine.startCount, 1, "lecture terminée absente du cache")
     }
 
     /// Revue T1 DeepSeek V4 Pro puis T3 Codex : l'appelant arrivé après l'abandon ne reçoit pas `CancellationError` ; il

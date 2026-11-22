@@ -139,13 +139,16 @@ public actor OCRService {
         // Seulement si la clé désigne encore cette lecture (un appelant arrivé après l'abandon a pu la remplacer).
         defer { if running[key] == task { running[key] = nil; waiters[key] = nil } }
         let result = try await wait(for: task, key: key)
-        // La tâche détachée peut terminer même si son appelant a été annulé pendant PageShift.
+        // La tâche détachée peut terminer même si son appelant a été annulé pendant PageShift : génération et
+        // changement de pages en cours protègent l'écriture.
         guard documentsBeingReplaced[documentId] == nil,
-              documentGeneration[documentId, default: 0] == generation,
-              !Task.isCancelled else { throw CancellationError() }
+              documentGeneration[documentId, default: 0] == generation else { throw CancellationError() }
+        // Une lecture menée à terme est mise en cache même si son créateur est parti (revue T3 Codex) : un coappelant
+        // qui l'attendait (analyse du document) l'a reçue, et une lecture abandonnée a déjà levé dans la tâche.
         let json = try encoder.encode(result)
         try database.save(OCRResultRecord(documentId: documentId, pageIndex: pageIndex, engine: engine,
                                           json: json, durationMs: result.durationMs))
+        guard !Task.isCancelled else { throw CancellationError() }
         return result
     }
 
