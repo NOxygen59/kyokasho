@@ -390,6 +390,7 @@ extension ReaderController {
         documentOCRTask?.cancel()
         settleWork?.cancel()
         hoverTask?.cancel()  // AV-16-02 G2 : seul travail du lecteur que la fermeture n'arrêtait pas.
+        cancelPendingViewportRestoration()  // G2 : pas de recalage différé de PDFKit sur une vue fermée.
         ink.flush()
         pdf?.cancelFindString()
         observers.forEach(NotificationCenter.default.removeObserver)
