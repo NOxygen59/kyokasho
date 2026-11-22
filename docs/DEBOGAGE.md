@@ -66,6 +66,32 @@ Pour un incident de données, arrêter les opérations qui modifient la ressourc
 
 Une correction est terminée lorsque le cas réduit échoue avant, réussit après, que les comportements proches sont préservés et que le statut iPad est explicitement renseigné. Conserver dans la PR le symptôme, la cause prouvée, la correction, les tests et les limites ; l'historique de chat seul ne suffit pas à la prochaine reprise.
 
+## Relevé CPU en mode diagnostic
+
+Mode diagnostic activé (Réglages › Aide), l'app échantillonne ses fils une fois par seconde et écrit deux familles de lignes. Elles servent à mesurer un gel, pas à le corriger.
+
+`[cpu]` est écrite quand le total de l'app dépasse 60 %, monte de 25 points, toutes les 30 s de mesure, ou à la fin d'un travail long. Chaque fil retenu est décrit par :
+
+- `fils` : les fils à **5 % ou plus**, **12 au maximum**, du plus chargé au moins chargé ; `fils_omis` compte ceux qui dépassent ce plafond.
+- `nom` : nom du fil accepté seulement s'il ne contient que `A-Z`, `a-z`, `0-9`, `-`, `.`, `_` (un seul caractère interdit fait rejeter le nom entier), coupé à 40 caractères ; sinon `sans-nom`.
+- `âge_s` : temps écoulé depuis la **première fois que ce fil a été vu sans interruption** dans la session de mesure ; un fil redevenu inactif ou un relevé manqué le remet à zéro. Ce n'est pas l'âge réel du fil.
+- `moy10s` : moyenne sur les 10 dernières secondes, calculée sur les compteurs cumulés du fil, pas sur l'estimation instantanée de Mach.
+- `fonction` : nom du travail mesuré en cours sur ce fil (`kyo.<type>`), sinon `inconnue`. Pendant une mesure, l'app renomme le fil en `kyo.` suivi du type, puis restaure le nom précédent.
+- `doc` : alias tiré au hasard (12 caractères hexadécimaux) du document ; jamais son titre ni son chemin. `page` : page de la mesure quand elle est connue.
+
+`[cpu-persistant]` n'apparaît que si un fil reste à **80 % ou plus pendant plus de 10 s**. Une même ligne ne revient pas plus d'une fois par minute et par fil. Elle ajoute `âge_s` et `événements` : les **3 dernières catégories** du journal (hors `cpu`) écrites juste avant la détection. Un relevé manqué ou un trou de plus de 2,5 s remet le compteur à zéro : la preuve de chauffe doit être continue.
+
+Ce qu'on ne peut pas conclure :
+
+- **Un nom ne prouve pas l'origine.** `kyo.<type>` dit seulement qu'un travail mesuré tournait sur ce fil ; les autres noms ne disent pas quel appelant a lancé le travail.
+- `fonction:inconnue` est normal pour les fils internes de PDFKit, ONNX Runtime, Vision et MLX : ces bibliothèques créent leurs propres fils et ne passent pas par nos mesures. Le fil inconnu peut être la cause du gel.
+- `fil#…` avec `sans-nom` signifie « aucun nom exploitable », pas « fil inactif ».
+- L'absence de `[cpu-persistant]` ne disculpe pas le CPU : il faut le seuil de 80 %, plus de 10 s, et des relevés continus.
+
+Avant de partager un extrait, le relire : `événements` donne du contexte, pas une cause, et **d'autres zones du journal écrivent des titres de documents**. Ne transmettre que les lignes utiles, jamais le journal brut ni une capture non recadrée.
+
+Vérifié dans `Packages/KyokashoKit/Sources/ReaderCore/DiagnosticThreadMonitor.swift`, `DiagnosticCPULog.swift`, `DiagnosticMachCPU.swift`, `DiagnosticThreadHook.swift`, `App/Settings/DiagnosticCPU.swift` et `App/Reader/ActivityCenter.swift` (22/11/2026).
+
 ## Mesurer le retard de défilement OCR (QA02)
 
 Mode diagnostic : `ocr-scroll` distingue événements HTML passifs (wheel/touch/scroll), délai du
