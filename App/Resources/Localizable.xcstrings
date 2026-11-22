@@ -23,46 +23,46 @@
         }
       }
     },
-    "Mode diagnostic : le journal liste les fils qui occupent le processeur (nom, âge, moyenne sur 10 secondes, travail en cours, page) et signale ceux qui restent très chargés plus de 10 secondes.": {
+    "Mode diagnostic : le journal liste les fils qui occupent le processeur (nom, temps depuis qu'il a été repéré, moyenne récente, travail en cours, page) et signale ceux qui restent très chargés plus de 10 secondes.": {
       "localizations": {
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mode diagnostic : le journal liste les fils qui occupent le processeur (nom, âge, moyenne sur 10 secondes, travail en cours, page) et signale ceux qui restent très chargés plus de 10 secondes."
+            "value": "Mode diagnostic : le journal liste les fils qui occupent le processeur (nom, temps depuis qu'il a été repéré, moyenne récente, travail en cours, page) et signale ceux qui restent très chargés plus de 10 secondes."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Diagnostic mode: the log lists the threads using the processor (name, age, 10-second average, current work, page) and flags those that stay very busy for more than 10 seconds."
+            "value": "Diagnostic mode: the log lists the threads using the processor (name, time since it was first seen, recent average, current work, page) and flags those that stay very busy for more than 10 seconds."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "诊断模式：日志列出占用处理器的线程（名称、存在时长、10 秒平均值、当前任务、页码），并标出持续高负载超过 10 秒的线程。"
+            "value": "诊断模式：日志列出占用处理器的线程（名称、首次发现以来的时长、近期平均值、当前任务、页码），并标出持续高负载超过 10 秒的线程。"
           }
         }
       }
     },
-    "Lecteur : il apparaît en fondu court une fois la page prête, et sans animation avec « Réduire les animations ».": {
+    "Lecteur : il apparaît en fondu court dès que la page est prête, au plus tard après une demi-seconde ; avec « Réduire les animations », il s'affiche tout de suite, sans animation.": {
       "localizations": {
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Lecteur : il apparaît en fondu court une fois la page prête, et sans animation avec « Réduire les animations »."
+            "value": "Lecteur : il apparaît en fondu court dès que la page est prête, au plus tard après une demi-seconde ; avec « Réduire les animations », il s'affiche tout de suite, sans animation."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Reader: it appears with a short fade once the page is ready, and without animation when Reduce Motion is on."
+            "value": "Reader: it appears with a short fade as soon as the page is ready, after half a second at most; with Reduce Motion on, it shows right away, without animation."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "阅读器：页面准备好后以短暂淡入出现；开启“减弱动态效果”时不再有动画。"
+            "value": "阅读器：页面准备好后立即以短暂淡入出现，最迟半秒；开启“减弱动态效果”时直接显示，没有动画。"
           }
         }
       }
