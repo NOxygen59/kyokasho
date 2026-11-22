@@ -109,7 +109,7 @@ final class StyleTokensGuardTests: XCTestCase {
             ("Library/DocumentScan.swift", "guard document.capabilities.study, UserDefaults"),
             ("Reader/ReaderController+Search.swift", "func search(_ query: String) {\n        guard document.capabilities.textAnalysis"),
             ("Reader/ReaderController+OCR.swift", "func ocr(engine: String) async throws -> OCRPage {\n        guard document.capabilities.textAnalysis"),
-            ("Reader/ReaderController+OCR.swift", "if document.capabilities.textAnalysis {\n            let url = fileURL\n            let total = document.pageCount\n            pageTextTask"),
+            ("Reader/ReaderController+OCR.swift", "if document.capabilities.textAnalysis {\n            let url = fileURL\n            let total = document.pageCount\n            let documentID = document.id\n            pageTextTask"),
             ("AppModel.swift", "capabilities.pageEditing == true else { return }"),
             ("Reader/ReaderScreen.swift", "if capabilities.pageEditing {\n                                    // #49"),
         ] {

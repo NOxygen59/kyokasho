@@ -73,10 +73,9 @@ private struct SearchCard: View {
             }
         }
         .clipShape(shape)
-        .background {
-            shape.fill(Atelier.material(.regularMaterial))
-                .atelierShadow(opacity: 0.3, radius: 16, y: 6)
-        }
+        .background(Atelier.material(.regularMaterial), in: shape)
+        // Contenu avec du texte : ombre de la forme seule (règle des jetons de style), comme l'ancienne feuille.
+        .atelierShapeShadow(shape, opacity: 0.3, radius: 16, y: 6)
         .overlay { shape.strokeBorder(Atelier.hairline, lineWidth: Atelier.border(1)).allowsHitTesting(false) }
         .tint(Atelier.Tint.read)
         .atelierFontDesign()

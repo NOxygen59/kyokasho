@@ -3,6 +3,12 @@
   "strings": {
     "Résultats : %lld": {
       "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Résultats : %lld"
+          }
+        },
         "en": {
           "stringUnit": {
             "state": "translated",
