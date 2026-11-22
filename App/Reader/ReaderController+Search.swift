@@ -97,6 +97,8 @@ extension ReaderController {
             await MainActor.run {
                 self?.documentOCRProgress = nil
                 self?.documentOCRTask = nil
+                // G2 : lecteur fermé ou lecture annulée, rien à relancer.
+                guard !Task.isCancelled, self?.closed == false else { return }
                 self?.schedulePageSettled()
             }
         }

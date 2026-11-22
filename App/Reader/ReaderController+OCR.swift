@@ -131,6 +131,8 @@ extension ReaderController {
     /// Vraie couche de texte (pas un scan avec image pleine page), hors du fil principal.
     func hasTextLayer(source: Int) async -> Bool {
         let url = fileURL
+        // G2 : une tâche détachée n'hérite pas de l'annulation ; un appelant déjà annulé (lecteur fermé) ne la lance pas.
+        guard !Task.isCancelled else { return false }
         return await Task.detached(priority: .utility) { PDFTextEngine.hasTextLayer(url: url, pageIndex: source) }.value
     }
 
@@ -387,6 +389,7 @@ extension ReaderController {
         ocrTask?.cancel()
         documentOCRTask?.cancel()
         settleWork?.cancel()
+        hoverTask?.cancel()  // AV-16-02 G2 : seul travail du lecteur que la fermeture n'arrêtait pas.
         ink.flush()
         pdf?.cancelFindString()
         observers.forEach(NotificationCenter.default.removeObserver)
