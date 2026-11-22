@@ -50,12 +50,12 @@ final class DiagnosticCPUTests: XCTestCase {
         XCTAssertTrue(line.contains("sonde_moy_ms=2.000 sonde_max_ms=2.000 sonde_cpu_moy_ms=1.000"))
     }
 
-    func testBoundedTypedFormatAndTopThree() throws {
+    func testBoundedTypedFormatAndHotThreads() throws {
         let threads: [DiagnosticCPULog.ThreadLoad] = [
             .init(id: 4, percent: 8), .init(id: 0x12345678abcdef01, percent: 91, role: .main),
             .init(id: 3, percent: 10), .init(id: 2, percent: 10), .init(id: 9, percent: .nan), .init(id: 7, percent: 0),
         ]
-        XCTAssertEqual(DiagnosticCPULog.topThreads(threads).map(\.id), [0x12345678abcdef01, 2, 3])
+        XCTAssertEqual(DiagnosticCPULog.topThreads(threads).map(\.id), [0x12345678abcdef01, 2, 3, 4])
         var long = DiagnosticCPULog.LongWork()
         long.add(.init(kind: .tone, seconds: 0.100, page: 1))
         XCTAssertTrue(long.entries.isEmpty)
@@ -70,11 +70,12 @@ final class DiagnosticCPUTests: XCTestCase {
         let decision = try XCTUnwrap(policy.decide(at: 0, percent: 125, cost: cost, hasLongWork: true))
         let active = Array(repeating: DiagnosticCPULog.Work(kind: .pageRender, seconds: 0.5, visiblePage: 12), count: 9)
         let line = DiagnosticCPULog.line(percent: 125, threads: threads, active: active, context: context, long: long, cost: cost, decision: decision)
-        XCTAssertTrue(line.contains("total=125.0% fils=[main#abcdef01:91.0%,fil#2:10.0%,fil#3:10.0%]"))
+        XCTAssertTrue(line.contains("total=125.0% fils=[main#12345678abcdef01:91.0%/nom:sans-nom"))
+        XCTAssertTrue(line.contains("fil#4:8.0%"))
         XCTAssertTrue(line.contains("actifs_omis=1 onglets=6 chargés=1 page=12 zoom=1.25 geste=ocrResize ocr=floating"))
         XCTAssertTrue(line.contains("pageRender:500.0ms@visible:12"))
         XCTAssertTrue(line.contains("longs_omis=4"))
-        XCTAssertFalse(line.contains("12345678"))
+
         XCTAssertFalse(line.contains("\n"))
     }
 
@@ -151,7 +152,7 @@ final class DiagnosticCPUTests: XCTestCase {
         for _ in 0..<runs {
             let value = probe.sample(mainID: 0)
             XCTAssertGreaterThanOrEqual(try XCTUnwrap(value.percent), 0)
-            XCTAssertLessThanOrEqual(value.threads.count, 3)
+            XCTAssertLessThanOrEqual(DiagnosticCPULog.topThreads(value.threads).count, DiagnosticThreads.limit)
             XCTAssertGreaterThanOrEqual(value.cost.cpu, 0)
             wall += value.cost.wall
             peak = max(peak, value.cost.wall)

@@ -28,14 +28,20 @@ final class ActivityCenter: @unchecked Sendable {
     }
     private var diagnosticRunning: [UUID: Observed] = [:]
     private var diagnosticLong = DiagnosticCPULog.LongWork()
+    private var diagnosticThreads = DiagnosticThreads.Registry()
+    private var aliases: [String: DiagnosticThreads.Alias] = [:]
     /// Copie en mémoire du mode diagnostic (revue R2 D) : les chemins fréquents ne relisent pas les préférences.
     private var diagnosticsOn = false
 
     func setDiagnostics(_ on: Bool) {
         lock.withLock {
             diagnosticsOn = on
-            if !on { diagnosticRunning.removeAll(); diagnosticLong = .init() }
+            if !on { diagnosticRunning.removeAll(); diagnosticLong = .init(); diagnosticThreads = .init() }
         }
+        let hook: DiagnosticThreadHook.Begin = { [self] kind, documentID, page in
+            self.beginSynchronous(kind, documentID: documentID, page: page)
+        }
+        DiagnosticThreadHook.install(on ? hook : nil)
     }
 
     /// `end` part avec le `defer` de l'appelant : une erreur ou une annulation ferment aussi la mesure.
@@ -117,15 +123,61 @@ final class ActivityCenter: @unchecked Sendable {
         return try work()
     }
 
-    private struct Segment { let port: thread_t; let start: TimeInterval }
+    /// Les nouveaux segments n'ajoutent rien au moniteur UI quand le diagnostic est coupé.
+    func measureDiagnostic<Result>(_ kind: Kind, documentID: String? = nil, page: Int? = nil,
+                                   _ work: () throws -> Result) rethrows -> Result {
+        let end = beginSynchronous(kind, documentID: documentID, page: page)
+        defer { end?() }
+        return try work()
+    }
 
-    private func startSegment(_ id: UUID) -> Segment? {
-        guard diagnosticsOn, diagnosticRunning[id] != nil else { return nil }
+    private func beginSynchronous(_ kind: Kind, documentID: String?, page: Int?) -> (() -> Void)? {
+        lock.withLock {
+            guard diagnosticsOn else { return nil }
+            let id = UUID()
+            register(id, kind: kind, page: page, progress: nil, inferVisiblePage: false)
+            let segment = startSegment(id, documentID: documentID)
+            return { [self] in
+                lock.withLock {
+                    if let segment { _ = endSegment(id, segment) }
+                    if diagnosticsOn { finishDiagnostic(id) }
+                }
+            }
+        }
+    }
+
+    private struct Segment {
+        let port: thread_t
+        let start: TimeInterval
+        let ownsCounter: Bool
+        let thread: UInt64
+        let token: UUID?
+        let restoreName: (() -> Void)?
+    }
+
+    private func startSegment(_ id: UUID, documentID: String? = nil) -> Segment? {
+        guard diagnosticsOn, let observed = diagnosticRunning[id] else { return nil }
         // Le droit reste vivant jusqu'au defer du segment, même si le diagnostic est désactivé entre-temps.
         let port = mach_thread_self()
-        if let start = DiagnosticMachCPU.threadCPUSeconds(port),
-           diagnosticRunning[id]?.cpu.begin(thread: port, at: start) == true {
-            return Segment(port: port, start: start)
+        if let start = DiagnosticMachCPU.threadCPUSeconds(port) {
+            // Le compteur logique peut déjà couvrir ce fil ; la pile suit tout de même le segment le plus précis.
+            let ownsCounter = diagnosticRunning[id]?.cpu.begin(thread: port, at: start) == true
+            var thread: UInt64 = 0
+            var token: UUID?
+            if pthread_threadid_np(nil, &thread) == 0 {
+                let parent = diagnosticThreads.current(thread: thread)
+                let alias = documentID.map { key in
+                    if let alias = aliases[key] { return alias }
+                    let alias = DiagnosticThreads.Alias()
+                    aliases[key] = alias
+                    return alias
+                } ?? parent?.document
+                let page = observed.progress?.page ?? observed.page ?? (documentID == nil ? parent?.page : nil)
+                token = diagnosticThreads.push(.init(kind: observed.kind, document: alias, page: page,
+                                                     start: ProcessInfo.processInfo.systemUptime), thread: thread)
+            }
+            return Segment(port: port, start: start, ownsCounter: ownsCounter, thread: thread, token: token,
+                           restoreName: DiagnosticThreadHook.restoreNameAfterSetting(observed.kind))
         }
         mach_port_deallocate(mach_task_self_, port)
         return nil
@@ -133,6 +185,9 @@ final class ActivityCenter: @unchecked Sendable {
 
     private func endSegment(_ id: UUID, _ segment: Segment, forLedger: Bool = false) -> TimeInterval? {
         defer { mach_port_deallocate(mach_task_self_, segment.port) }
+        segment.restoreName?()
+        if let token = segment.token { diagnosticThreads.pop(token, thread: segment.thread) }
+        guard segment.ownsCounter else { return nil }
         guard forLedger || (diagnosticsOn && diagnosticRunning[id] != nil) else { return nil }
         let end = DiagnosticMachCPU.threadCPUSeconds(segment.port)
         if diagnosticsOn { diagnosticRunning[id]?.cpu.end(thread: segment.port, at: end) }
@@ -140,6 +195,16 @@ final class ActivityCenter: @unchecked Sendable {
     }
 
     func snapshot() -> [ActivityLedger.Row] { lock.withLock { ledger.snapshot(at: Date()) } }
+
+    func diagnosticSegments(for threads: [UInt64], at time: TimeInterval) -> [UInt64: DiagnosticThreads.Segment] {
+        lock.withLock {
+            var result: [UInt64: DiagnosticThreads.Segment] = [:]
+            for thread in threads {
+                if let segment = diagnosticThreads.current(thread: thread), segment.start <= time { result[thread] = segment }
+            }
+            return result
+        }
+    }
 
     /// Ne consomme pas le relevé de l'accueil et ne reprend jamais ses libellés libres.
     func diagnosticActive() -> [DiagnosticCPULog.Work] {
@@ -162,7 +227,7 @@ final class ActivityCenter: @unchecked Sendable {
     }
 
     func clearDiagnostic() {
-        lock.withLock { diagnosticRunning.removeAll(); diagnosticLong = .init() }
+        lock.withLock { diagnosticRunning.removeAll(); diagnosticLong = .init(); diagnosticThreads = .init() }
     }
 }
 
@@ -182,6 +247,9 @@ extension DiagnosticCPULog.Kind {
         case .ocr: return String(localized: "OCR")
         case .analysis: return String(localized: "Analyse du document")
         case .aiReading: return String(localized: "Lecture OCR")
+        // Ces cas sont réservés au journal, jamais ajoutés au registre UI.
+        case .readerBuild, .autoCrop, .pdfProbe, .ocrEngine, .ocrRender, .ocrNormalize, .vision,
+             .onnxSession, .onnxRun, .ovisRender, .neuralLayout, .readerClose, .pdfRelease: return rawValue
         }
     }
 }

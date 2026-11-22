@@ -10,6 +10,8 @@ public enum DiagnosticCPULog {
         case thumbnails, importing, comicImport, comicConversion, backup
         case pageRender, pageText, sharpening, tone, furigana
         case ocr, analysis, aiReading
+        case readerBuild, autoCrop, pdfProbe, ocrEngine, ocrRender, ocrNormalize, vision
+        case onnxSession, onnxRun, ovisRender, neuralLayout, readerClose, pdfRelease
     }
 
     public enum Stage: String, Sendable {
@@ -81,11 +83,18 @@ public enum DiagnosticCPULog {
         public let id: UInt64
         public let percent: Double
         public let role: ThreadRole?
+        public let name: String?
+        public let queue: String?
+        public let cpuSeconds: TimeInterval?
 
-        public init(id: UInt64, percent: Double, role: ThreadRole? = nil) {
+        public init(id: UInt64, percent: Double, role: ThreadRole? = nil, name: String? = nil,
+                    queue: String? = nil, cpuSeconds: TimeInterval? = nil) {
             self.id = id
             self.percent = percent
             self.role = role
+            self.name = DiagnosticThreads.safeName(name)
+            self.queue = DiagnosticThreads.safeName(queue)
+            self.cpuSeconds = cpuSeconds
         }
     }
 
@@ -193,9 +202,7 @@ public enum DiagnosticCPULog {
     }
 
     public static func topThreads(_ threads: [ThreadLoad]) -> [ThreadLoad] {
-        Array(threads.filter { $0.percent.isFinite && $0.percent > 0 }.sorted {
-            $0.percent == $1.percent ? $0.id < $1.id : $0.percent > $1.percent
-        }.prefix(3))
+        Array(DiagnosticThreads.hot(threads).prefix(DiagnosticThreads.limit))
     }
 
     private static func number(_ value: Double?, digits: Int = 1) -> String {
@@ -214,21 +221,48 @@ public enum DiagnosticCPULog {
         return label
     }
 
-    /// N'accepte aucun texte libre (ni titres, ni détails d'activité, ni noms de fil arbitraires).
+    private static func threadLabel(_ load: ThreadLoad, segment: DiagnosticThreads.Segment?, at now: TimeInterval) -> String {
+        let name = load.name ?? "sans-nom"
+        let queue = load.queue ?? "?"
+        let runtime = [load.name, load.queue].compactMap { $0 }.contains { $0.hasSuffix(".cooperative") }
+            ? "/runtime:swift-probable" : ""
+        var label = "\(load.role?.rawValue ?? "fil")#\(String(load.id, radix: 16)):\(number(load.percent))%/nom:\(name)/file:\(queue)\(runtime)"
+        label += "/fonction:\(segment?.kind.rawValue ?? "inconnue")"
+        if let segment {
+            label += "/doc:\(segment.document?.label ?? "?")/page:\(segment.page.map(String.init) ?? "?")/segment_s:\(number(max(0, now - segment.start)))"
+        }
+        return label
+    }
+
+    public static func persistentLine(_ thread: DiagnosticThreads.Observation, segment: DiagnosticThreads.Segment?,
+                                      at now: TimeInterval) -> String {
+        let events = (thread.events ?? []).map(\.rawValue).joined(separator: ",")
+        return "\(threadLabel(thread.load, segment: segment, at: now))/âge_s:\(number(thread.age)) événements=[\(events)]"
+    }
+
+    /// N'accepte aucun titre, chemin ou détail libre ; les noms de fil et de file sont filtrés à la construction.
     public static func line(percent: Double?, threads: [ThreadLoad], active: [Work], context: Context,
-                            long: LongWork, cost: Cost, decision: Decision) -> String {
-        let top = topThreads(threads).map {
-            let id = String(String($0.id, radix: 16).suffix(8))
-            return "\($0.role?.rawValue ?? "fil")#\(id):\(number($0.percent))%"
+                            long: LongWork, cost: Cost, decision: Decision,
+                            observations: [DiagnosticThreads.Observation] = [],
+                            segments: [UInt64: DiagnosticThreads.Segment] = [:], at now: TimeInterval = 0,
+                            previousTick: Cost? = nil) -> String {
+        let hot = DiagnosticThreads.hot(threads)
+        let byID = Dictionary(observations.map { ($0.load.id, $0) }, uniquingKeysWith: { first, _ in first })
+        let top = hot.prefix(DiagnosticThreads.limit).map {
+            let observation = byID[$0.id]
+            return threadLabel($0, segment: segments[$0.id], at: now)
+                + "/âge_s:\(number(observation?.age))/moy10s:\(number(observation?.average))%"
         }
         let running = active.prefix(activeLimit).map(workLabel).joined(separator: ",")
         let completed = long.entries.map(workLabel).joined(separator: ",")
-        var line = "total=\(number(percent))% fils=[\(top.joined(separator: ","))] actifs=[\(running)] actifs_omis=\(max(0, active.count - activeLimit))"
+        var line = "total=\(number(percent))% fils=[\(top.joined(separator: ","))] fils_omis=\(max(0, hot.count - DiagnosticThreads.limit)) actifs=[\(running)] actifs_omis=\(max(0, active.count - activeLimit))"
         line += " onglets=\(context.tabs.map(String.init) ?? "?") chargés=\(context.loaded.map(String.init) ?? "?")"
         line += " page=\(context.page.map(String.init) ?? "?") zoom=\(number(context.zoom, digits: 2))"
         line += " geste=\(context.gesture?.rawValue ?? "?") ocr=\(context.panel?.rawValue ?? "?")"
         line += " longs=[\(completed)] longs_omis=\(long.omitted) seuil=\(decision.hot) pic=\(decision.spike)"
         line += " sonde_ms=\(number(cost.wall * 1000, digits: 3)) sonde_cpu_ms=\(number(cost.cpu * 1000, digits: 3))"
+        line += " tick_préc_ms=\(number(previousTick.map { $0.wall * 1000 }, digits: 3))"
+        line += " tick_préc_cpu_ms=\(number(previousTick.map { $0.cpu * 1000 }, digits: 3))"
         if let s = decision.summary {
             let mean = s.loads == 0 ? nil : s.sum / Double(s.loads)
             line += " résumé n=\(s.samples) total_moy=\(number(mean))% total_max=\(number(s.loads == 0 ? nil : s.peak))%"

@@ -465,11 +465,13 @@ struct StudyTextTab: View {
         if let cached = LayoutRegionsCache.shared.get(key) { regions = cached; return }
         // Zones de l'ancienne page / de l'autre moteur : retirées tout de suite (géométrie en attendant).
         regions = []
-        let url = reader.fileURL, page = reader.focusSource
+        let url = reader.fileURL, page = reader.focusSource, documentID = reader.document.id
         let rotation = await reader.model.ocr.additionalRotation(documentId: reader.document.id, pageIndex: page)
         let work = Task.detached(priority: .userInitiated) {
             Result {
-                try LayoutDetector.regions(.pdfPage(url: url, index: page, additionalRotation: rotation), engine: engine)
+                try ActivityCenter.shared.measureDiagnostic(.neuralLayout, documentID: documentID, page: page) {
+                    try LayoutDetector.regions(.pdfPage(url: url, index: page, additionalRotation: rotation), engine: engine)
+                }
             }
         }
         let result = await withTaskCancellationHandler { await work.value } onCancel: { work.cancel() }

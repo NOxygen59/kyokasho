@@ -49,10 +49,11 @@ extension ReaderController {
         if document.capabilities.textAnalysis {
             let url = fileURL
             let total = document.pageCount
+            let documentID = document.id
             pageTextTask = Task.detached(priority: .utility) { [weak self] in
                 // Même règle que le toucher : un peu de texte suffit (folio, légende).
                 let has = ActivityCenter.shared.measure(.pageText, progress: .init(page: source, total: total, stage: .pdfText)) {
-                    PDFTextEngine.hasTextLayer(url: url, pageIndex: source)
+                    PDFTextEngine.hasTextLayer(url: url, pageIndex: source, diagnosticDocumentID: documentID)
                 }
                 await MainActor.run {
                     guard !Task.isCancelled, self?.currentSourcePage == source else { return }
@@ -130,10 +131,12 @@ extension ReaderController {
 
     /// Vraie couche de texte (pas un scan avec image pleine page), hors du fil principal.
     func hasTextLayer(source: Int) async -> Bool {
-        let url = fileURL
+        let url = fileURL, documentID = document.id
         // G2 : une tâche détachée n'hérite pas de l'annulation ; un appelant déjà annulé (lecteur fermé) ne la lance pas.
         guard !Task.isCancelled else { return false }
-        return await Task.detached(priority: .utility) { PDFTextEngine.hasTextLayer(url: url, pageIndex: source) }.value
+        return await Task.detached(priority: .utility) {
+            PDFTextEngine.hasTextLayer(url: url, pageIndex: source, diagnosticDocumentID: documentID)
+        }.value
     }
 
     /// OCR de la page par un moteur autre que « texte du PDF » (celui du panneau, sinon le cache), sans effet sur la
@@ -375,6 +378,12 @@ extension ReaderController {
 
     /// Les tâches IA (relecture, vérification, mise en page, traduction) continuent : elles sont à `AITaskCenter`.
     func close() {
+        ActivityCenter.shared.measureDiagnostic(.readerClose, documentID: document.id, page: currentSourcePage) {
+            closeWork()
+        }
+    }
+
+    private func closeWork() {
         savePositionWork?.perform()
         cropTask?.cancel()
         sharpenTask?.cancel()
@@ -402,8 +411,8 @@ extension ReaderController {
         pdfView.document = nil
         pdf = nil
         pageStringCache = nil
-        let url = fileURL
-        DispatchQueue.global(qos: .utility).async { PDFPool.release(url) }
+        let url = fileURL, documentID = document.id
+        DispatchQueue.global(qos: .utility).async { PDFPool.release(url, diagnosticDocumentID: documentID) }
     }
 
     // MARK: Relecture de l'OCR

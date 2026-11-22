@@ -83,7 +83,8 @@ enum DiagnosticContext {
 /// Un seul minuteur et une seule décision d'écriture, indépendants du fil principal.
 final class DiagnosticCPU: @unchecked Sendable {
     static let shared = DiagnosticCPU()
-    private let queue = DispatchQueue(label: "fr.noxygen59.kyokasho.diagnostics.cpu", qos: .utility)
+    private static let queueLabel = "fr.noxygen59.kyokasho.diagnostics.cpu"
+    private let queue = DispatchQueue(label: DiagnosticCPU.queueLabel, qos: .utility)
     private let contextLock = NSLock()
     private let refreshSlot = DispatchSemaphore(value: 1)
     private var context = DiagnosticCPULog.Context()
@@ -93,6 +94,8 @@ final class DiagnosticCPU: @unchecked Sendable {
     private var timer: DispatchSourceTimer?
     private var sampler = DiagnosticMachCPU()
     private var policy = DiagnosticCPULog.Policy()
+    private var threadHistory = DiagnosticThreads.History()
+    private var previousTick: DiagnosticCPULog.Cost?
 
     @MainActor private static var lifecycleInstalled = false
 
@@ -142,6 +145,8 @@ final class DiagnosticCPU: @unchecked Sendable {
                 self.timer?.cancel()
                 self.timer = nil
                 self.sampler = DiagnosticMachCPU()
+                self.threadHistory.interrupt()
+                self.previousTick = nil
                 self.policy.resetWindow()
             }
         }
@@ -151,6 +156,11 @@ final class DiagnosticCPU: @unchecked Sendable {
         guard Diagnostics.enabled else { return }
         let now = ProcessInfo.processInfo.systemUptime
         guard policy.admit(at: now) else { return }
+        let cpuStart = ThreadCPU.seconds()
+        defer {
+            previousTick = .init(wall: ProcessInfo.processInfo.systemUptime - now,
+                                 cpu: max(0, ThreadCPU.seconds() - cpuStart))
+        }
         // Pas de pile de rafraîchissements si le dessin bloque le fil principal.
         if refreshSlot.wait(timeout: .now()) == .success {
             DispatchQueue.main.async {
@@ -158,9 +168,27 @@ final class DiagnosticCPU: @unchecked Sendable {
                 DiagnosticContext.refresh()
             }
         }
-        let sample = sampler.sample(mainID: mainID)
+        let cutoff = Date()
+        let sample = sampler.sample(mainID: mainID, samplerQueue: Self.queueLabel)
+        let sampledAt = ProcessInfo.processInfo.systemUptime
         let center = ActivityCenter.shared
         let long = center.takeDiagnosticLongWork()
+        let observations: [DiagnosticThreads.Observation]
+        if sample.complete {
+            observations = threadHistory.observe(sample.threads, at: now) {
+                DiagnosticThreads.recentCategories(Diagnostics.tail().lines, before: cutoff)
+            }
+        } else {
+            threadHistory.interrupt()
+            observations = []
+        }
+        let persistent = observations.filter { $0.events != nil }
+        let shown = DiagnosticCPULog.topThreads(sample.threads).map(\.id)
+        let segments = center.diagnosticSegments(for: shown + persistent.map { $0.load.id }, at: sampledAt)
+        for thread in persistent {
+            Diagnostics.log(DiagnosticCPULog.persistentLine(thread, segment: segments[thread.load.id], at: sampledAt),
+                            "cpu-persistant")
+        }
         guard let decision = policy.decide(at: now, percent: sample.percent, cost: sample.cost,
                                            hasLongWork: !long.entries.isEmpty) else { return }
         // Contexte et heure du geste lus ensemble ; âge revérifié à l'heure de l'écriture : un geste de plus de 5 s
@@ -169,7 +197,8 @@ final class DiagnosticCPU: @unchecked Sendable {
         var current = stored
         if current.gesture != nil, ProcessInfo.processInfo.systemUptime - (gestureTime ?? 0) > 5 { current.gesture = nil }
         let line = DiagnosticCPULog.line(percent: sample.percent, threads: sample.threads, active: center.diagnosticActive(),
-                                         context: current, long: long, cost: sample.cost, decision: decision)
+                                         context: current, long: long, cost: sample.cost, decision: decision,
+                                         observations: observations, segments: segments, at: sampledAt, previousTick: previousTick)
         Diagnostics.logCPU(line)
     }
 }

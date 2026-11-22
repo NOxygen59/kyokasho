@@ -47,6 +47,45 @@ class DiagnosticCPUWiringTests(unittest.TestCase):
         mach = source("Packages/KyokashoKit/Sources/ReaderCore/DiagnosticMachCPU.swift")
         for text in (center, mach, source("App/Settings/DiagnosticCPU.swift")):
             self.assertNotIn("thread_suspend(", text)
+        self.assertNotRegex(mach, r"\.dispatch_qaddr\b")
+        self.assertIn("pthread_threadid_np(nil, &thread)", start)
+        self.assertIn("diagnosticThreads.pop(token, thread: segment.thread)", end)
+        self.assertIn("segment.restoreName?()", end)
+
+    def test_g1_joins_the_same_mach_identity_and_uses_a_closed_event_history(self):
+        cpu = source("App/Settings/DiagnosticCPU.swift")
+        tick = cpu.split("private func tick", 1)[1]
+        self.assertLess(tick.index("sampler.sample("), tick.index("threadHistory.observe("))
+        self.assertLess(tick.index("let cutoff = Date()"), tick.index("sampler.sample("))
+        self.assertIn("DiagnosticThreads.recentCategories(Diagnostics.tail().lines, before: cutoff)", tick)
+        self.assertIn("shown + persistent.map { $0.load.id }", tick)
+        self.assertIn('"cpu-persistant")', tick)
+        mach = source("Packages/KyokashoKit/Sources/ReaderCore/DiagnosticMachCPU.swift")
+        self.assertIn(".init(id: info.thread_id,", mach)
+
+    def test_g1_wires_packages_and_names_only_synchronous_segments(self):
+        center = source("App/Reader/ActivityCenter.swift")
+        self.assertIn("DiagnosticThreadHook.install(on ? hook : nil)", center)
+        self.assertIn("DiagnosticThreadHook.restoreNameAfterSetting(observed.kind)", center)
+        hook = source("Packages/KyokashoKit/Sources/ReaderCore/DiagnosticThreadHook.swift")
+        measure = hook.split("public static func measure", 1)[1].split("public static func withContext", 1)[0]
+        self.assertIn("defer { end?() }", measure)
+        self.assertNotRegex(measure, r"\b(?:await|async)\b")
+        for path, marker in (
+            ("App/Library/DocumentScan.swift", "renderKind: .ovisRender"),
+            ("App/Reader/ReaderController.swift", "measureDiagnostic(.readerBuild"),
+            ("App/Reader/ReaderController+PageLayout.swift", "measureDiagnostic(.autoCrop"),
+            ("App/Reader/ReaderController+OCR.swift", "measureDiagnostic(.readerClose"),
+            ("App/Study/StudyPanel.swift", "measureDiagnostic(.neuralLayout"),
+            ("Packages/KyokashoKit/Sources/OCRKit/OCRService.swift", "withContext(documentID: documentId, page: pageIndex)"),
+            ("Packages/KyokashoKit/Sources/OCRKit/OCREngines.swift", "measure(.pdfRelease"),
+            ("Packages/KyokashoKit/Sources/OCRKit/OCREngines.swift", "measure(.pdfProbe"),
+            ("Packages/KyokashoKit/Sources/OCRKit/OCREngines.swift", "measure(.vision"),
+            ("Packages/KyokashoKit/Sources/ONNXOCRKit/ONNXEngines.swift", "measure(.onnxSession"),
+            ("Packages/KyokashoKit/Sources/ONNXOCRKit/ONNXEngines.swift", "measure(.onnxRun"),
+        ):
+            with self.subTest(path=path, marker=marker):
+                self.assertIn(marker, source(path))
 
     def test_progress_updates_only_the_diagnostic_registry(self):
         center = source("App/Reader/ActivityCenter.swift")

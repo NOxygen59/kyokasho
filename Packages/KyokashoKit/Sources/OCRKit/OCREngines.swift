@@ -7,6 +7,9 @@ import PDFKit
 import ReaderCore
 import Vision
 
+// Le paquet ONNX réutilise le crochet sans ajouter de dépendance à son manifeste.
+public typealias OCRThreadInstrumentation = DiagnosticThreadHook
+
 /// Ce qu'on donne à un moteur : une page de PDF, ou une image (banc d'essai).
 public enum OCRInput: @unchecked Sendable {
     case pdfPage(url: URL, index: Int, additionalRotation: Int = 0)
@@ -32,8 +35,10 @@ public enum PageRenderer {
     /// coûte 4× plus de mémoire), côté le plus long ≈ `longSide` pixels.
     public static func render(url: URL, pageIndex: Int, longSide: Int = 3000,
                               additionalRotation: Int = 0) throws -> CGImage {
-        try render(url: url, pageIndex: pageIndex, gray: true, additionalRotation: additionalRotation) {
-            size in Double(longSide) / max(size.width, size.height, 1)
+        try DiagnosticThreadHook.measure(.ocrRender, page: pageIndex, useRenderKind: true) {
+            try render(url: url, pageIndex: pageIndex, gray: true, additionalRotation: additionalRotation) {
+                size in Double(longSide) / max(size.width, size.height, 1)
+            }
         }
     }
 
@@ -117,6 +122,10 @@ public struct VisionOCREngine: OCREngine {
     public init() {}
 
     public func recognize(_ input: OCRInput) async throws -> OCRPage {
+        try DiagnosticThreadHook.measure(.ocrEngine) { try recognizeSync(input) }
+    }
+
+    private func recognizeSync(_ input: OCRInput) throws -> OCRPage {
         let start = Date()
         let image: CGImage
         switch input {
@@ -125,7 +134,7 @@ public struct VisionOCREngine: OCREngine {
         case .image(let cg): image = cg
         }
         try Task.checkCancellation()
-        let lines = try Self.run(image, languages: languages)
+        let lines = try DiagnosticThreadHook.measure(.vision) { try Self.run(image, languages: languages) }
         return OCRPage(engine: id, lines: lines, durationMs: Int(Date().timeIntervalSince(start) * 1000))
     }
 
@@ -188,12 +197,14 @@ public struct PDFTextEngine: OCREngine {
     public init() {}
 
     /// La page a-t-elle assez de texte intégré pour se passer d'OCR ? (Réponse gardée en mémoire.)
-    public static func hasTextLayer(url: URL, pageIndex: Int) -> Bool {
-        PDFPool.hasTextLayer(url: url, pageIndex: pageIndex) { document in
-            guard let s = document.page(at: pageIndex)?.string else { return false }
-            // Les scanners peuvent ajouter du texte OCR invisible sur une photo de la page. Pour placer les
-            // furigana, il faut alors relire l'image : les boîtes de ce texte PDF ne sont pas fiables.
-            return Self.isEnoughText(s) && !Self.hasPageSizedImage(url: url, pageIndex: pageIndex)
+    public static func hasTextLayer(url: URL, pageIndex: Int, diagnosticDocumentID: String? = nil) -> Bool {
+        DiagnosticThreadHook.measure(.pdfProbe, documentID: diagnosticDocumentID, page: pageIndex) {
+            PDFPool.hasTextLayer(url: url, pageIndex: pageIndex) { document in
+                guard let s = document.page(at: pageIndex)?.string else { return false }
+                // Les scanners peuvent ajouter du texte OCR invisible sur une photo de la page. Pour placer les
+                // furigana, il faut alors relire l'image : les boîtes de ce texte PDF ne sont pas fiables.
+                return Self.isEnoughText(s) && !Self.hasPageSizedImage(url: url, pageIndex: pageIndex)
+            }
         }
     }
 
@@ -271,10 +282,12 @@ public struct PDFTextEngine: OCREngine {
     public func recognize(_ input: OCRInput) async throws -> OCRPage {
         let start = Date()
         guard case .pdfPage(let url, let index, let additionalRotation) = input else { throw OCRError.noTextLayer }
-        return try PDFPool.withDocument(url) { document in
-            guard let page = document.page(at: index) else { throw OCRError.pageUnavailable }
-            let result = try Self.extract(page, start: start, engine: id)
-            return result.rotatedClockwise(additionalRotation)
+        return try DiagnosticThreadHook.measure(.ocrEngine, page: index) {
+            try PDFPool.withDocument(url) { document in
+                guard let page = document.page(at: index) else { throw OCRError.pageUnavailable }
+                let result = try Self.extract(page, start: start, engine: id)
+                return result.rotatedClockwise(additionalRotation)
+            }
         }
     }
 
@@ -366,11 +379,13 @@ public enum PDFPool {
 
     /// Libère les documents (lecteur fermé, document supprimé, manque de mémoire).
     /// Peut attendre la fin d'un OCR en cours : à appeler hors du fil principal.
-    public static func release(_ url: URL? = nil) {
-        lock.lock(); defer { lock.unlock() }
-        if url == nil || kit?.url == url { kit = nil }
-        if url == nil || cg?.url == url { cg = nil }
-        if let url { textLayer = textLayer.filter { !$0.key.hasPrefix(url.path + "#") } }
+    public static func release(_ url: URL? = nil, diagnosticDocumentID: String? = nil) {
+        DiagnosticThreadHook.measure(.pdfRelease, documentID: diagnosticDocumentID) {
+            lock.lock(); defer { lock.unlock() }
+            if url == nil || kit?.url == url { kit = nil }
+            if url == nil || cg?.url == url { cg = nil }
+            if let url { textLayer = textLayer.filter { !$0.key.hasPrefix(url.path + "#") } }
+        }
     }
 }
 

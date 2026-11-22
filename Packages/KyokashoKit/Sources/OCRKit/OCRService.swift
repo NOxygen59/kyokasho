@@ -95,13 +95,22 @@ public actor OCRService {
         let japanese = OCRTargetLanguage.forDocument(documentId) == .japanese
         // Relecture dans la même tâche : un second appel pour la même page reçoit le résultat déjà relu.
         let task = Task.detached(priority: .userInitiated) {
-            var result = try await implementation.recognize(.pdfPage(url: url, index: pageIndex,
-                                                                      additionalRotation: rotation))
+            var result = try await DiagnosticThreadHook.withContext(documentID: documentId, page: pageIndex) {
+                try await implementation.recognize(.pdfPage(url: url, index: pageIndex, additionalRotation: rotation))
+            }
             // Plus personne n'attend (G2) : pas de relecture coûteuse pour rien.
             try Task.checkCancellation()
-            if japanese { result = JapaneseOCRText.normalize(result) }
+            if japanese {
+                result = DiagnosticThreadHook.measure(.ocrNormalize, documentID: documentId, page: pageIndex) {
+                    JapaneseOCRText.normalize(result)
+                }
+            }
             if result.engine != OCREngineID.pdfText, let process { result = await process(result) }
-            if japanese { result = JapaneseOCRText.normalize(result) }
+            if japanese {
+                result = DiagnosticThreadHook.measure(.ocrNormalize, documentID: documentId, page: pageIndex) {
+                    JapaneseOCRText.normalize(result)
+                }
+            }
             return result
         }
         running[key] = task

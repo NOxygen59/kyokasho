@@ -28,7 +28,9 @@ final class ONNXModel: @unchecked Sendable {
         try? options.addConfigEntry(withKey: "session.intra_op.allow_spinning", value: "0")
         try? options.addConfigEntry(withKey: "session.inter_op.allow_spinning", value: "0")
         if coreML { try? options.appendCoreMLExecutionProvider(with: ORTCoreMLExecutionProviderOptions()) }
-        session = try ORTSession(env: env, modelPath: path.path, sessionOptions: options)
+        session = try OCRThreadInstrumentation.measure(.onnxSession) {
+            try ORTSession(env: env, modelPath: path.path, sessionOptions: options)
+        }
     }
 
     struct Tensor {
@@ -49,7 +51,9 @@ final class ONNXModel: @unchecked Sendable {
                 inputs[name] = try ORTValue(tensorData: data, elementType: .int64, shape: shape.map { NSNumber(value: $0) })
             }
             let names = try session.outputNames()
-            let outputs = try session.run(withInputs: inputs, outputNames: Set(names), runOptions: nil)
+            let outputs = try OCRThreadInstrumentation.measure(.onnxRun) {
+                try session.run(withInputs: inputs, outputNames: Set(names), runOptions: nil)
+            }
             var result: [String: Tensor] = [:]
             for (name, value) in outputs {
                 let shape = try value.tensorTypeAndShapeInfo().shape.map(\.intValue)
@@ -138,6 +142,10 @@ public struct PPOCREngine: OCREngine {
     public var isAvailable: Bool { store.isInstalled(.ppocr5) }
 
     public func recognize(_ input: OCRInput) async throws -> OCRPage {
+        try OCRThreadInstrumentation.measure(.ocrEngine) { try recognizeSync(input) }
+    }
+
+    private func recognizeSync(_ input: OCRInput) throws -> OCRPage {
         guard isAvailable else { throw OCRError.modelMissing(ModelSpec.ppocr5.title) }
         let start = Date()
         // Page en haute définition (les petits caractères restent lisibles dans les découpes de lignes) ;
@@ -224,6 +232,10 @@ public struct NDLOCREngine: OCREngine {
     public var isAvailable: Bool { store.isInstalled(.ndlocr) }
 
     public func recognize(_ input: OCRInput) async throws -> OCRPage {
+        try OCRThreadInstrumentation.measure(.ocrEngine) { try recognizeSync(input) }
+    }
+
+    private func recognizeSync(_ input: OCRInput) throws -> OCRPage {
         guard isAvailable else { throw OCRError.modelMissing(ModelSpec.ndlocr.title) }
         let start = Date()
         let image = try ONNXEngines.pageImage(input, longSide: 3000)

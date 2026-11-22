@@ -67,7 +67,9 @@ extension ReaderController {
             var batch: [Int: NormalizedRect] = [:]
             for (n, index) in ordered.enumerated() {
                 if Task.isCancelled { return }
-                if let crop = autoreleasepool(invoking: { Self.detectCrop(cg, pageIndex: index) }) {
+                if let crop = ActivityCenter.shared.measureDiagnostic(.autoCrop, documentID: documentId, page: index, {
+                    autoreleasepool { Self.detectCrop(cg, pageIndex: index) }
+                }) {
                     batch[index] = crop
                 }
                 // Petits lots autour de la page lue (vite visibles), puis gros lots : chaque lot

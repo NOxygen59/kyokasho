@@ -545,7 +545,9 @@ final class ReaderController: NSObject, ObservableObject {
         // Une seule construction à la fois : la précédente (plus à jour) est abandonnée.
         buildTask?.cancel()
         buildTask = Task.detached(priority: .userInitiated) { [weak self] in
-            let built = autoreleasepool { Self.build(url: url, documentId: documentId, transforms: transforms, settings: settings, database: database) }
+            let built = ActivityCenter.shared.measureDiagnostic(.readerBuild, documentID: documentId, page: source) {
+                autoreleasepool { Self.build(url: url, documentId: documentId, transforms: transforms, settings: settings, database: database) }
+            }
             guard !Task.isCancelled else { return }
             await self?.install(built, source: source, generation: generation)
         }
