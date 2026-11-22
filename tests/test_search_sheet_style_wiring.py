@@ -26,7 +26,7 @@ class SearchSheetStyleWiringTests(unittest.TestCase):
     def test_search_presents_a_single_atelier_card(self):
         search = (READER / "SearchCard.swift").read_text(encoding="utf-8")
         for token in (
-            "Atelier.material(.regularMaterial)", "Atelier.radius", ".atelierShadow(",
+            "Atelier.material(.regularMaterial)", "Atelier.radius", ".atelierShapeShadow(",
             "Atelier.Tint.read", ".topTrailing", "ViewThatFits(in: .vertical)",
             "reduceMotion ? nil", ".opacity.combined(with: .offset(y:",
         ):
