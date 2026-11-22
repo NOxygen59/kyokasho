@@ -10,6 +10,18 @@ import Foundation
 enum ReleaseHistory {
     static let past: [ReleaseNotes] = [
         // Candidates locales non publiées.
+        ReleaseNotes("1.6.1", "2026-11-20", published: false, String(localized: "Correctifs de la recette 1.6.0", bundle: .main), added: [
+                String(localized: "Mode diagnostic : lors d'un pic du processeur, le journal relève le contexte (tâches en cours avec leur page et leur étape, temps processeur quand il est mesuré, onglets ouverts, dernier geste récent).", bundle: .main),
+            ], fixed: [
+                String(localized: "Lecteur : il s'ouvre en fondu court et se ferme sans traîne.", bundle: .main),
+                String(localized: "Bannière de diagnostic : elle garde sa place en haut au retour à l'accueil.", bundle: .main),
+                String(localized: "Recherche dans un document : nouvelle présentation, dans le style de la confirmation de la corbeille.", bundle: .main),
+                String(localized: "Surligneur : ses actions passent au-dessus de la barre déplaçable.", bundle: .main),
+                String(localized: "Fenêtre OCR : les caractères douteux ne sont signalés que dans Brut, par une pastille orange sur l'onglet.", bundle: .main),
+                String(localized: "Lexique du domaine : « Enrichir » et « Remettre les termes de départ manquants » sont en haut de la page.", bundle: .main),
+                String(localized: "Notes : ouvrir une note affiche la fenêtre OCR sur l'onglet Notes.", bundle: .main),
+                String(localized: "Rappels de notes : numéro de page imprimé dans le titre ; rien n'est programmé si les notifications sont refusées ; seuls les rappels modifiés sont remplacés.", bundle: .main),
+            ]),
         ReleaseNotes("1.6.0", "2026-11-20", published: false, String(localized: "Correctifs de la recette 1.5.10", bundle: .main), added: [
                 String(localized: "Effacer le cache : quand des fichiers récents sont gardés, un petit compte à rebours indique quand ils pourront être effacés.", bundle: .main),
             ], fixed: [
