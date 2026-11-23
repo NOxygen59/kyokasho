@@ -67,5 +67,35 @@ class NewLayoutWiringTests(unittest.TestCase):
         self.assertTrue(sizes and min(sizes) >= 48, sizes)
 
 
+    def test_home_keeps_the_old_layout_when_the_switch_is_off(self):
+        home = source("Library/LibraryView.swift")
+        self.assertIn("private var newLayout: Bool { NewLayout.isAvailable && newLayoutPreference }", home)
+        self.assertIn("if newLayout { newSidebarContent } else { sidebarContent }", home)
+        self.assertIn("if newLayout { Atelier.canvas.ignoresSafeArea() } else { libraryBackdrop }", home)
+        self.assertRegex(home, r"if newLayout \{\s*newHeader\s*\} else \{\s*if usesCompactDocuments \{")
+        # L'ancienne colonne garde ses tuiles d'import ; la nouvelle les confie au menu « Importer ».
+        old = home.split("private var sidebarContent: some View {", 1)[1].split("private func sideRow", 1)[0]
+        self.assertIn('"Importer et convertir"', old)
+        header = home.split("private var newHeader: some View {", 1)[1].split("private func spaceTab", 1)[0]
+        for action in ("showImportOptions = true", "showDrive = true", "showMerge = true", "showImagesToPDF = true"):
+            self.assertIn(action, header)
+
+    def test_home_sidebar_keeps_every_command(self):
+        home = source("Library/LibraryView.swift")
+        new = home.split("private var newSidebarContent: some View {", 1)[1].split("private var sidebarContent", 1)[0]
+        for part in ("brandHeader", "libraryRows", "studyRows", "LocalAIEnergyCard()", "showBench = true",
+                     "showTrash = true", "showSettings = true", "showFolder(tile.folder.id)"):
+            self.assertIn(part, new)
+
+    def test_resume_row_lists_open_tabs_first_then_books_in_progress(self):
+        row = source("Library/ResumeRow.swift")
+        logic = row.split("static func documents(", 1)[1].split("\n    }\n", 1)[0]
+        self.assertIn("let inSpace = all.filter { $0.isInMangaSpace == manga }", logic)
+        self.assertIn("let open = tabs.compactMap { id in inSpace.first { $0.id == id } }", logic)
+        self.assertIn("!tabs.contains(doc.id) && doc.lastPageIndex > 0 && doc.lastPageIndex < doc.pageCount - 1", logic)
+        self.assertIn("return Array((open + inProgress).prefix(limit))", logic)
+        self.assertIn("close: { model.closeTab(document.id) }", row)
+
+
 if __name__ == "__main__":
     unittest.main()

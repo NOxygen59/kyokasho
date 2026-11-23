@@ -27,6 +27,9 @@ struct LibraryView: View {
     @AppStorage(ResourceMonitor.enabledKey) private var monitorEnabled = false
     @AppStorage(ResourceMonitor.shownKey) private var monitorShown = false
     @AppStorage("monitor.detailed") private var monitorDetailed = false
+    /// Nouvelle présentation (PLAN-REFONTE-001, E3). En portrait, la barre compacte reste au-dessus, comme avant.
+    @AppStorage(NewLayout.storageKey) private var newLayoutPreference = NewLayout.defaultEnabled
+    private var newLayout: Bool { NewLayout.isAvailable && newLayoutPreference }
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var showTrash = false
     @State private var analyzing: LibraryDocument?
@@ -212,7 +215,7 @@ struct LibraryView: View {
         GeometryReader { geo in
             let landscape = geo.size.width > geo.size.height
             ZStack {
-                libraryBackdrop
+                if newLayout { Atelier.canvas.ignoresSafeArea() } else { libraryBackdrop }
                 Group {
                     if landscape {
                         HStack(alignment: .top, spacing: Atelier.gap) {
@@ -465,8 +468,8 @@ struct LibraryView: View {
     private var sidebar: some View {
         VStack(alignment: .leading, spacing: 12) {
             ViewThatFits(in: .vertical) {
-                sidebarContent
-                ScrollView(showsIndicators: false) { sidebarContent }
+                currentSidebarContent
+                ScrollView(showsIndicators: false) { currentSidebarContent }
             }
             .frame(maxHeight: .infinity, alignment: .top)
             statsCard
@@ -476,8 +479,7 @@ struct LibraryView: View {
         .atelierPanel()
     }
 
-    private var sidebarContent: some View {
-        VStack(alignment: .leading, spacing: 22) {
+    private var brandHeader: some View {
             HStack(spacing: 10) {
                 Text(verbatim: space == .manga ? "漫" : "教").font(.custom("HiraMinProN-W6", size: 26))
                     .frame(width: 42, height: 42)
@@ -488,6 +490,9 @@ struct LibraryView: View {
                     Text(space == .manga ? "漫画 · lecture de manga" : "教科書 · atelier de lecture").font(Atelier.font(11)).foregroundStyle(Atelier.textTertiary)
                 }
             }
+    }
+
+    private var libraryRows: some View {
             VStack(alignment: .leading, spacing: 4) {
                 AtelierLabel(String(localized: "Bibliothèque")).padding(.bottom, 4)
                 sideRow(.all, icon: "square.grid.2x2", title: String(localized: "Tous les documents"), count: spaceDocuments.count)
@@ -496,6 +501,9 @@ struct LibraryView: View {
                 sideRow(.drive, icon: "externaldrive.badge.icloud", title: String(localized: "Depuis Drive"),
                         count: spaceDocuments.filter { $0.driveFileId != nil }.count)
             }
+    }
+
+    @ViewBuilder private var studyRows: some View {
             // Recette 1.5.8 : la colonne était trop remplie (13 lignes à la suite). Rien n'est retiré : ce qui sert chaque
             // jour reste en lignes avec pastille ; importer et convertir passent en tuiles ; banc d'essai, corbeille et
             // réglages en rangée du bas.
@@ -517,6 +525,66 @@ struct LibraryView: View {
                 actionRow(icon: "note.text", title: String(localized: "Notes"), tint: Atelier.Tint.annotate,
                           due: model.noteDueBadge) { showNotes = true }
             }
+    }
+
+    /// Nouvelle présentation (PLAN-REFONTE-001, E3) : la colonne sert à naviguer. Importer et convertir passent dans le
+    /// bouton « Importer » du haut ; les dossiers y sont listés ; Réviser est mis en avant au-dessus du temps de lecture.
+    @ViewBuilder private var currentSidebarContent: some View {
+        if newLayout { newSidebarContent } else { sidebarContent }
+    }
+
+    private var newSidebarContent: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            brandHeader
+            libraryRows
+            studyRows
+            if !folderLayout.tiles.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    AtelierLabel(String(localized: "Dossiers")).padding(.bottom, 4)
+                    ForEach(folderLayout.tiles) { tile in
+                        Button { showFolder(tile.folder.id) } label: {
+                            HStack(spacing: 12) {
+                                Image(systemName: "folder").font(Atelier.font(15, weight: .semibold))
+                                    .foregroundStyle(NewLayoutInk.accent).frame(width: 22)
+                                Text(verbatim: tile.folder.name).font(Atelier.font(15, weight: .medium)).lineLimit(1)
+                                    .foregroundStyle(Atelier.textPrimary)
+                                Spacer(minLength: 4)
+                                Text("\(tile.documents.count)").font(Atelier.font(13).monospacedDigit())
+                                    .foregroundStyle(Atelier.textSecondary)
+                            }
+                            .padding(.horizontal, 10).frame(height: 40)
+                            .background(openFolderId == tile.folder.id ? Atelier.surfaceHigh : Color.clear,
+                                        in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(PressScale())
+                        .accessibilityLabel(Text("Dossier \(tile.folder.name), \(tile.documents.count) documents"))
+                    }
+                }
+            }
+            LocalAIEnergyCard()
+            if space != .manga && review.counts.total > 0 {
+                NewLayoutPillButton(icon: "rectangle.stack.badge.play",
+                                    title: String(localized: "Réviser maintenant · \(review.counts.total)"), active: true) {
+                    showReview = true
+                }
+            }
+            HStack(spacing: 8) {
+                if space != .manga {
+                    toolTile(icon: "speedometer", title: String(localized: "Banc d'essai OCR"), tint: Atelier.Tint.japanese) { showBench = true }
+                }
+                toolTile(icon: "trash", title: String(localized: "Corbeille"), tint: Atelier.textSecondary,
+                         count: model.trashedDocuments.count) { showTrash = true }
+                toolTile(icon: "gearshape", title: String(localized: "Réglages"), tint: Atelier.textSecondary) { showSettings = true }
+            }
+        }
+    }
+
+    private var sidebarContent: some View {
+        VStack(alignment: .leading, spacing: 22) {
+            brandHeader
+            libraryRows
+            studyRows
             VStack(alignment: .leading, spacing: 8) {
                 AtelierLabel(String(localized: "Importer et convertir")).padding(.bottom, 2)
                 LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
@@ -753,6 +821,64 @@ struct LibraryView: View {
         }
     }
 
+    /// En-tête de la nouvelle présentation : espaces, recherche, Nouveau dossier, Sélectionner, Importer (avec les
+    /// outils de conversion), puis « Reprendre » et le titre de la liste.
+    private var newHeader: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(spacing: 10) {
+                HStack(spacing: 6) {
+                    spaceTab(.study, title: String(localized: "Livres & Manuels"), icon: "books.vertical")
+                    spaceTab(.manga, title: String(localized: "Manga"), icon: "book")
+                }
+                .fixedSize()
+                HStack(spacing: 8) {
+                    Image(systemName: "magnifyingglass").foregroundStyle(Atelier.textTertiary)
+                    TextField("Rechercher", text: $search).foregroundStyle(Atelier.textPrimary)
+                }
+                .padding(.horizontal, 16).frame(height: 52)
+                .frame(maxWidth: .infinity)
+                .newLayoutBar(radius: 26)
+                NewLayoutIconButton(icon: "folder.badge.plus", label: String(localized: "Nouveau dossier"), size: 52) {
+                    folderName = ""
+                    folderNaming = .create(moving: [])
+                }
+                .newLayoutBar(radius: 26)
+                if !model.documents.isEmpty {
+                    NewLayoutPillButton(icon: selecting ? "checkmark" : "checklist",
+                                        title: selecting ? String(localized: "Terminé") : String(localized: "Sélectionner"),
+                                        active: selecting) {
+                        selecting.toggle()
+                        if !selecting { batch = BatchDeletion() }
+                    }
+                    .newLayoutBar(radius: 24)
+                }
+                Menu {
+                    Button { showImportOptions = true } label: { Label("Fichiers", systemImage: "folder") }
+                    Button { showDrive = true } label: { Label("Google Drive", systemImage: "externaldrive.badge.icloud") }
+                    Divider()
+                    Button { showMerge = true } label: { Label("Fusionner des PDF", systemImage: "doc.on.doc") }
+                    if space != .manga {
+                        Button { showImagesToPDF = true } label: { Label("Images vers PDF", systemImage: "photo.on.rectangle.angled") }
+                    }
+                } label: {
+                    Label("Importer", systemImage: "plus")
+                        .font(Atelier.font(15, weight: .bold))
+                        .padding(.horizontal, 18).frame(height: 52)
+                        .foregroundStyle(NewLayoutInk.onAccent)
+                        .background(NewLayoutInk.accent, in: Capsule())
+                }
+            }
+            if currentFolder == nil && filter == .all && search.isEmpty {
+                ResumeRow(space: space)
+            }
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Text(ui: filterTitle).font(Atelier.font(28, weight: .bold)).foregroundStyle(Atelier.textPrimary)
+                Text("\(filtered.count) document\(filtered.count > 1 ? "s" : "")")
+                    .font(Atelier.font(15, weight: .semibold)).foregroundStyle(Atelier.textSecondary)
+            }
+        }
+    }
+
     private func spaceTab(_ value: LibrarySpace, title: String, icon: String) -> some View {
         let on = space == value
         let count = model.documents.filter { $0.isInMangaSpace == (value == .manga) }.count
@@ -797,6 +923,9 @@ struct LibraryView: View {
 
     private var main: some View {
         VStack(alignment: .leading, spacing: Atelier.gap) {
+            if newLayout {
+                newHeader
+            } else {
             if usesCompactDocuments {
                 VStack(alignment: .leading, spacing: 5) {
                     spaceTabs
@@ -834,6 +963,7 @@ struct LibraryView: View {
                 }
                 Button { showImportOptions = true } label: { Label("Importer", systemImage: "plus") }
                     .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.cloud))
+            }
             }
             ZStack(alignment: .topTrailing) {
                 VStack(alignment: .leading, spacing: Atelier.gap) {
@@ -1018,6 +1148,10 @@ struct LibraryView: View {
                     .allowsHitTesting(false)
             }
         }
+        // Nouvelle présentation : repère des livres déjà ouverts (onglet) ou proposés dans « Reprendre ».
+        .overlay(alignment: .topTrailing) {
+            if newLayout && !selecting { resumeMark(document).allowsHitTesting(false) }
+        }
         .background {
             if PersonalPadLibrary.isAvailable {
                 GeometryReader { card in
@@ -1027,6 +1161,27 @@ struct LibraryView: View {
             }
         }
         .contextMenu { if !selecting { menu(for: document) } }
+    }
+
+    @ViewBuilder
+    private func resumeMark(_ document: LibraryDocument) -> some View {
+        if model.tabs.ids.contains(document.id) {
+            Label("Ouvert", systemImage: "book.fill")
+                .font(Atelier.font(11, weight: .bold))
+                .padding(.horizontal, 9).frame(height: 24)
+                .foregroundStyle(NewLayoutInk.onAccent)
+                .background(NewLayoutInk.accent, in: Capsule())
+                .padding(.top, document.driveFileId != nil ? 46 : 8).padding(.trailing, 8)
+                .accessibilityLabel("Ouvert dans un onglet")
+        } else if ResumeRow.documents(tabs: model.tabs.ids, all: model.documents,
+                                      manga: document.isInMangaSpace).contains(where: { $0.id == document.id }) {
+            Image(systemName: "play.fill").font(Atelier.font(10, weight: .bold))
+                .frame(width: 24, height: 24)
+                .foregroundStyle(NewLayoutInk.accent)
+                .background(Atelier.surface, in: Circle())
+                .padding(.top, document.driveFileId != nil ? 46 : 8).padding(.trailing, 8)
+                .accessibilityLabel("Dans Reprendre")
+        }
     }
 
     /// En-tête du dossier ouvert : retour à l'accueil, nom, nombre, gestion du dossier.
