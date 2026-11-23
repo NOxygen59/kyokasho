@@ -310,8 +310,8 @@ struct ReaderScreen: View {
         .onChange(of: furiganaTint) { reader.setFuriganaTint($0) }
         .onChange(of: scanCleaning) { reader.setScanCleaning($0) }
         .onDisappear {
-            menuActions.detach()
             reader.close()
+            menuActions.detach()
             ReadingTimeTracker.shared.readerClosed(documentId: reader.document.id)
             // Réglage général rétabli pour les autres livres ; `nil` d'abord, pour ne pas l'enregistrer dans celui-ci.
             if let general = generalPanelMode {

@@ -59,7 +59,9 @@ final class ReaderGestureHelpTests: XCTestCase {
                      "Picker(\"Couleur\", selection: $ocrHighlightColor)", "Button(\"Supprimer le surlignage\"",
                      "reader.setDrawing(!reader.isDrawing)",
                      // Point d'accès et feuille de l'aide.
-                     "Button { sheet = .gestureHelp }", "case .gestureHelp: ReaderGestureHelpSheet("] {
+                     // Menu « … » : action passée par le relais `ReaderMenuActions` (revue R2 de la refonte).
+                     "menuActions.perform?(.gestureHelp)", "case .gestureHelp: sheet = .gestureHelp",
+                     "case .gestureHelp: ReaderGestureHelpSheet("] {
             XCTAssertTrue(screen.contains(name), name)
         }
         XCTAssertTrue(try read("Reader/ReaderController+Display.swift").contains("doubleTap.isEnabled = s.doubleTapZoom"))
