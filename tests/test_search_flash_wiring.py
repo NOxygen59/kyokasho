@@ -17,7 +17,7 @@ class SearchFlashWiringTests(unittest.TestCase):
         search = source("Reader/ReaderController+Search.swift")
         show = search.split("func show(_ result: SearchResult) {", 1)[1].split("\n    }\n", 1)[0]
         self.assertTrue(show.lstrip().startswith("clearSearchFlash()"))
-        self.assertIn("flashOCRMatch(source: result.sourcePage, query: lastSearchQuery, landing: pdfView.currentPage)", show)
+        self.assertIn("flashOCRMatch(source: result.sourcePage, query: lastSearchQuery)", show)
         self.assertIn("Task.sleep(nanoseconds: Self.searchFlashDuration)", show)
         self.assertIn("static let searchFlashDuration: UInt64 = 2_000_000_000", search)
         self.assertIn("lastSearchQuery = trimmed", search)
@@ -29,6 +29,8 @@ class SearchFlashWiringTests(unittest.TestCase):
         self.assertNotIn("highlights.append", flash)
         self.assertNotIn("saveHighlights", flash)
         self.assertIn("[weak self]", flash)
+        # Jamais de saut tardif qui écraserait une navigation de l'utilisateur (4e contre-revue Codex).
+        self.assertNotIn("pdfView.go(", flash)
         clear = search.split("func clearSearchFlash() {", 1)[1].split("\n    }\n", 1)[0]
         self.assertIn("item.page.removeAnnotation(item.annotation)", clear)
         self.assertIn("searchFlashTask?.cancel()", clear)
