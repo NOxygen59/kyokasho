@@ -48,9 +48,13 @@ extension ReaderController {
         pageTextTask?.cancel()
         if document.capabilities.textAnalysis {
             let url = fileURL
+            let total = document.pageCount
+            let documentID = document.id
             pageTextTask = Task.detached(priority: .utility) { [weak self] in
                 // Même règle que le toucher : un peu de texte suffit (folio, légende).
-                let has = ActivityCenter.shared.measure(.pageText) { PDFTextEngine.hasTextLayer(url: url, pageIndex: source) }
+                let has = ActivityCenter.shared.measure(.pageText, progress: .init(page: source, total: total, stage: .pdfText)) {
+                    PDFTextEngine.hasTextLayer(url: url, pageIndex: source, diagnosticDocumentID: documentID)
+                }
                 await MainActor.run {
                     guard !Task.isCancelled, self?.currentSourcePage == source else { return }
                     self?.pageHasPDFText = has
@@ -127,8 +131,12 @@ extension ReaderController {
 
     /// Vraie couche de texte (pas un scan avec image pleine page), hors du fil principal.
     func hasTextLayer(source: Int) async -> Bool {
-        let url = fileURL
-        return await Task.detached(priority: .utility) { PDFTextEngine.hasTextLayer(url: url, pageIndex: source) }.value
+        let url = fileURL, documentID = document.id
+        // G2 : une tâche détachée n'hérite pas de l'annulation ; un appelant déjà annulé (lecteur fermé) ne la lance pas.
+        guard !Task.isCancelled else { return false }
+        return await Task.detached(priority: .utility) {
+            PDFTextEngine.hasTextLayer(url: url, pageIndex: source, diagnosticDocumentID: documentID)
+        }.value
     }
 
     /// OCR de la page par un moteur autre que « texte du PDF » (celui du panneau, sinon le cache), sans effet sur la
@@ -197,6 +205,8 @@ extension ReaderController {
         let ticket = ocrSelection.ticket(for: source)
         if let cached = await policyCachedOCR(source: source) { return OCRCandidate(page: cached, ticket: ticket, fromCache: true) }
         let engine = await engineToRead(source: source)
+        let cpuID = ActivityCenter.shared.beginDiagnostic(.ocr, progress: .init(page: source, total: document.pageCount, stage: .ocr))
+        defer { ActivityCenter.shared.endDiagnostic(cpuID) }
         let page = try await model.ocr.page(documentId: document.id, url: fileURL, pageIndex: source, engine: engine)
         return OCRCandidate(page: page, ticket: ticket, fromCache: false)
     }
@@ -235,10 +245,14 @@ extension ReaderController {
                     // choix reste noté pour la page ; il reprendra la main si les corrections sont annulées.
                     candidate = OCRCandidate(page: corrected, ticket: ticket, fromCache: true)
                 } else if let engine {
+                    let cpuID = ActivityCenter.shared.beginDiagnostic(.ocr, progress: .init(page: source, total: reader.document.pageCount, stage: .ocr))
+                    defer { ActivityCenter.shared.endDiagnostic(cpuID) }
                     let page = try await service.page(documentId: documentId, url: url, pageIndex: source, engine: engine, force: force)
                     candidate = OCRCandidate(page: page, ticket: ticket, fromCache: false)
                 } else if force {
                     let id = await reader.engineToRead(source: source)
+                    let cpuID = ActivityCenter.shared.beginDiagnostic(.ocr, progress: .init(page: source, total: reader.document.pageCount, stage: .ocr))
+                    defer { ActivityCenter.shared.endDiagnostic(cpuID) }
                     let page = try await service.page(documentId: documentId, url: url, pageIndex: source, engine: id, force: true)
                     candidate = OCRCandidate(page: page, ticket: ticket, fromCache: false)
                 } else {
@@ -364,6 +378,12 @@ extension ReaderController {
 
     /// Les tâches IA (relecture, vérification, mise en page, traduction) continuent : elles sont à `AITaskCenter`.
     func close() {
+        ActivityCenter.shared.measureDiagnostic(.readerClose, documentID: document.id, page: currentSourcePage) {
+            closeWork()
+        }
+    }
+
+    private func closeWork() {
         savePositionWork?.perform()
         cropTask?.cancel()
         sharpenTask?.cancel()
@@ -378,6 +398,8 @@ extension ReaderController {
         ocrTask?.cancel()
         documentOCRTask?.cancel()
         settleWork?.cancel()
+        hoverTask?.cancel()  // AV-16-02 G2 : seul travail du lecteur que la fermeture n'arrêtait pas.
+        pdfView.cancelPendingViewportRestoration()  // G2 : pas de recalage différé de PDFKit sur une vue fermée.
         ink.flush()
         pdf?.cancelFindString()
         observers.forEach(NotificationCenter.default.removeObserver)
@@ -386,11 +408,13 @@ extension ReaderController {
         pageTextTask?.cancel()
         buildTask?.cancel()
         closed = true
-        pdfView.document = nil
+        // La vue PDF garde son document : vider `pdfView.document` pendant que PDFKit prépare encore des pages en
+        // arrière-plan faisait boucler ses fils (`PDFKit.PDFPageBackgroundManager`, gel de la 1.6.1-1.6.2, mesuré sur
+        // l'iPad le 22-23/11/2026). Le lecteur fermé étant maintenant libéré, la vue part avec son document.
         pdf = nil
         pageStringCache = nil
-        let url = fileURL
-        DispatchQueue.global(qos: .utility).async { PDFPool.release(url) }
+        let url = fileURL, documentID = document.id
+        DispatchQueue.global(qos: .utility).async { PDFPool.release(url, diagnosticDocumentID: documentID) }
     }
 
     // MARK: Relecture de l'OCR

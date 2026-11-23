@@ -250,6 +250,19 @@ public final class ReviewStore: @unchecked Sendable {
         }
     }
 
+    /// Cartes déjà créées pour ces clés, avec le document d'où chacune vient (`""` : aucun) — PLAN-CARTES-001, E2,
+    /// DEC-CA-03 : « déjà en carte » et « déjà en carte (autre livre) » dans « Créer des cartes de cette page ».
+    public func existingCardDocuments(_ keys: [String]) throws -> [String: String] {
+        guard !keys.isEmpty else { return [:] }
+        return try writer.read { db in
+            var out: [String: String] = [:]
+            let rows = try Row.fetchAll(db, StudyCard.select(Column("key"), Column("sourceDocumentId"))
+                .filter(keys.contains(Column("key"))))
+            for row in rows { out[row["key"]] = (row["sourceDocumentId"] as String?) ?? "" }
+            return out
+        }
+    }
+
     /// Cartes créées depuis un document (PLAN-CARTES-001, E1), par page puis date de création, **sans limite** : l'écran
     /// d'un livre doit les montrer toutes. `query` cherche dans les champs, comme le navigateur.
     public func cards(sourceDocumentId: String, query: String = "") throws -> [StudyCard] {

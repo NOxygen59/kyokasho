@@ -24,6 +24,13 @@ public actor OCRService {
 
     private let database: AppDatabase
     private var running: [String: Task<OCRPage, Error>] = [:]
+    /// AV-16-02 G2 : appelants qui attendent encore chaque lecture en cours. Le dernier qui part (lecteur fermé, page
+    /// quittée) arrête la lecture ; une analyse du document qui l'attend aussi la garde en vie.
+    private var waiters: [String: Int] = [:]
+    /// Tests seulement : appelants en attente de la fin d'une lecture abandonnée, par clé.
+    private var waitingOnAbandoned: [String: Int] = [:]
+    /// Tests seulement : appelé dans l'acteur, au moment où `beginPageMutation` a fini d'attendre les lectures.
+    private var pageMutationBarrierPassed: (@Sendable () -> Void)?
     /// Un changement de pagination interdit les lectures et écritures sur les anciens index.
     private var documentsBeingReplaced: [String: Int] = [:]
     private var documentGeneration: [String: UInt64] = [:]
@@ -75,13 +82,30 @@ public actor OCRService {
 
     /// Résultat de la page (cache, sinon calcul + mise en cache).
     public func page(documentId: String, url: URL, pageIndex: Int, engine: String, force: Bool = false) async throws -> OCRPage {
+        try Task.checkCancellation()
         guard documentsBeingReplaced[documentId] == nil else { throw CancellationError() }
         let generation = documentGeneration[documentId, default: 0]
         if !force, let hit = cached(documentId: documentId, pageIndex: pageIndex, engine: engine) { return hit }
         let rotation = additionalRotation(documentId: documentId, pageIndex: pageIndex)
         let key = "\(documentId)#\(pageIndex)#\(engine)#r\(rotation)"
+        // Lecture abandonnée (annulée par son dernier appelant) encore en cours : attendre sa fin réelle plutôt que la
+        // rejoindre (elle lèverait CancellationError) ou en lancer une seconde en parallèle. Elle reste dans `running`
+        // jusqu'à sa fin, donc `beginPageMutation` l'attend toujours (revue T3 Codex, repli D3).
+        while let abandoned = running[key], abandoned.isCancelled {
+            waitingOnAbandoned[key, default: 0] += 1
+            _ = await abandoned.result
+            let left = (waitingOnAbandoned[key] ?? 1) - 1
+            waitingOnAbandoned[key] = left > 0 ? left : nil
+            try Task.checkCancellation()
+            guard documentsBeingReplaced[documentId] == nil,
+                  documentGeneration[documentId, default: 0] == generation else { throw CancellationError() }
+            if running[key] == abandoned {
+                running[key] = nil
+                waiters[key] = nil
+            }
+        }
         if let existing = running[key] {
-            let result = try await existing.value
+            let result = try await wait(for: existing, key: key)
             guard documentsBeingReplaced[documentId] == nil,
                   documentGeneration[documentId, default: 0] == generation,
                   !Task.isCancelled else { throw CancellationError() }
@@ -92,23 +116,51 @@ public actor OCRService {
         let japanese = OCRTargetLanguage.forDocument(documentId) == .japanese
         // Relecture dans la même tâche : un second appel pour la même page reçoit le résultat déjà relu.
         let task = Task.detached(priority: .userInitiated) {
-            var result = try await implementation.recognize(.pdfPage(url: url, index: pageIndex,
-                                                                      additionalRotation: rotation))
-            if japanese { result = JapaneseOCRText.normalize(result) }
-            if result.engine != OCREngineID.pdfText, let process { result = await process(result) }
-            if japanese { result = JapaneseOCRText.normalize(result) }
+            try Task.checkCancellation()  // Abandonnée avant même de démarrer : aucun moteur lancé.
+            var result = try await DiagnosticThreadHook.withContext(documentID: documentId, page: pageIndex) {
+                try await implementation.recognize(.pdfPage(url: url, index: pageIndex, additionalRotation: rotation))
+            }
+            // Plus personne n'attend (G2) : pas de relecture coûteuse pour rien.
+            try Task.checkCancellation()
+            if japanese {
+                result = DiagnosticThreadHook.measure(.ocrNormalize, documentID: documentId, page: pageIndex) {
+                    JapaneseOCRText.normalize(result)
+                }
+            }
+            if result.engine != OCREngineID.pdfText, let process {
+                result = await process(result)
+                try Task.checkCancellation()  // Abandonnée pendant la relecture : pas de résultat (revue finale Codex).
+            }
+            if japanese {
+                result = DiagnosticThreadHook.measure(.ocrNormalize, documentID: documentId, page: pageIndex) {
+                    JapaneseOCRText.normalize(result)
+                }
+            }
             return result
         }
         running[key] = task
-        defer { running[key] = nil }
-        let result = try await task.value
-        // La tâche détachée peut terminer même si son appelant a été annulé pendant PageShift.
+        // Seulement si la clé désigne encore cette lecture (un appelant arrivé après l'abandon a pu la remplacer).
+        defer { if running[key] == task { running[key] = nil; waiters[key] = nil } }
+        let result = try await wait(for: task, key: key)
+        // La tâche détachée peut terminer même si son appelant a été annulé pendant PageShift : génération et
+        // changement de pages en cours protègent l'écriture.
         guard documentsBeingReplaced[documentId] == nil,
               documentGeneration[documentId, default: 0] == generation,
-              !Task.isCancelled else { throw CancellationError() }
+              // Lecture abandonnée ou déjà supplantée par une plus récente sur la même clé : elle n'écrit pas
+              // (elle écraserait le résultat récent). Le seul départ du créateur, lui, ne l'empêche pas.
+              !task.isCancelled, running[key] == task else { throw CancellationError() }
+        // Une lecture menée à terme est mise en cache même si son créateur est parti (revue T3 Codex) : un coappelant
+        // qui l'attendait (analyse du document) l'a reçue, et une lecture abandonnée a déjà levé dans la tâche.
         let json = try encoder.encode(result)
-        try database.save(OCRResultRecord(documentId: documentId, pageIndex: pageIndex, engine: engine,
-                                          json: json, durationMs: result.durationMs))
+        do {
+            try database.save(OCRResultRecord(documentId: documentId, pageIndex: pageIndex, engine: engine,
+                                              json: json, durationMs: result.durationMs))
+        } catch where Task.isCancelled {
+            // Créateur parti et écriture refusée (document supprimé entre-temps, revue T1 DeepSeek V4 Pro) :
+            // c'est une annulation, pas une erreur à afficher.
+            throw CancellationError()
+        }
+        guard !Task.isCancelled else { throw CancellationError() }
         return result
     }
 
@@ -171,6 +223,42 @@ public actor OCRService {
         return results
     }
 
+    /// Attend une lecture en cours en comptant l'appelant. Annulé, l'appelant cesse de compter : s'il était le dernier,
+    /// la lecture elle-même est annulée (une tâche détachée n'hérite pas de l'annulation de ceux qui l'attendent).
+    private func wait(for task: Task<OCRPage, Error>, key: String) async throws -> OCRPage {
+        waiters[key, default: 0] += 1
+        let result = try await withTaskCancellationHandler {
+            try await task.value
+        } onCancel: {
+            Task { await self.leave(key, task: task) }
+        }
+        // Fin normale : l'appelant ne compte plus. Annulé, `leave` s'en charge.
+        if !Task.isCancelled, running[key] == task, let n = waiters[key] { waiters[key] = max(0, n - 1) }
+        return result
+    }
+
+    /// Un appelant annulé s'en va ; le dernier annule la lecture. Ignoré si cette clé sert déjà une autre lecture.
+    private func leave(_ key: String, task: Task<OCRPage, Error>) {
+        guard running[key] == task else { return }
+        let n = (waiters[key] ?? 1) - 1
+        waiters[key] = max(0, n)
+        guard n <= 0 else { return }
+        // L'entrée reste dans `running` jusqu'à la fin réelle du moteur : `beginPageMutation` l'attend, et un appelant
+        // qui arrive entre-temps attend cette fin dans `page` au lieu de rejoindre une lecture annulée.
+        task.cancel()
+    }
+
+    /// Tests : appelants comptés et état de la lecture d'une clé interne (`document#page#moteur#rRotation`).
+    func lectureState(_ key: String) -> (waiters: Int, running: Bool, abandoned: Bool, waitingOnAbandoned: Int) {
+        (waiters[key] ?? 0, running[key] != nil, running[key]?.isCancelled ?? false, waitingOnAbandoned[key] ?? 0)
+    }
+
+    /// Tests : crochet synchrone appelé à la sortie de la barrière de `beginPageMutation`.
+    func setPageMutationBarrierHook(_ hook: (@Sendable () -> Void)?) { pageMutationBarrierPassed = hook }
+
+    /// Tests : un changement de pages du document a commencé (`beginPageMutation` a déjà capturé les lectures à attendre).
+    func isReplacingPages(_ documentId: String) -> Bool { documentsBeingReplaced[documentId] != nil }
+
     /// Annule les OCR en cours d'un document (page quittée, lecteur fermé).
     public func cancelAll(documentId: String) {
         for (key, task) in running where key.hasPrefix(documentId + "#") { task.cancel() }
@@ -184,6 +272,7 @@ public actor OCRService {
         let tasks = running.filter { $0.key.hasPrefix(documentId + "#") }.map(\.value)
         tasks.forEach { $0.cancel() }
         for task in tasks { _ = await task.result }
+        pageMutationBarrierPassed?()
     }
 
     /// Rouvre l'entrée. La génération change aussi ici : une génération lue **pendant** le changement (l'acteur est

@@ -7,6 +7,7 @@ import Foundation
 @testable import GLMOCRKit
 import MLX
 import OCRKit
+import ReaderCore
 import XCTest
 
 /// Avec le vrai modèle seulement : `KYOKASHO_MODELS=<dossier contenant ovisocr2/> swift test --filter OvisOCR2Tests`.
@@ -149,5 +150,42 @@ final class OvisOCR2Tests: XCTestCase {
         if let dump = env["KYOKASHO_DUMP"] { try? fr.write(toFile: "\(dump)/fr.md", atomically: true, encoding: .utf8) }
         XCTAssertEqual(AILayout.blocks(fr).filter { if case .figure = $0 { return true }; return false }.count,
                        AILayout.blocks(md).filter { if case .figure = $0 { return true }; return false }.count, "figures gardées")
+    }
+
+    /// PLAN-MODLOC-001, E3 : un modèle importé (famille Qwen3.5) se charge dans le chat et répond.
+    /// `KYOKASHO_LOCAL_MODEL_DIR=<dossier MLX converti>` ; le dossier est lu sur place par un lien, jamais modifié.
+    func testImportedLocalModelChats() async throws {
+        guard let path = ProcessInfo.processInfo.environment["KYOKASHO_LOCAL_MODEL_DIR"] else {
+            throw XCTSkip("KYOKASHO_LOCAL_MODEL_DIR absent")
+        }
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("modloc-chat-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let info = LocalModels.Info(id: "local-essai", name: "Essai", modelType: "qwen3_5", size: 0, importedAt: Date())
+        // Chaque fichier est lié sur place (rien n'est copié ni modifié), sauf tokenizer_config.json, copié puis
+        // normalisé comme le fait l'import.
+        let folder = root.appendingPathComponent(info.id, isDirectory: true)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let source = URL(fileURLWithPath: path, isDirectory: true)
+        for name in try FileManager.default.contentsOfDirectory(atPath: source.path) where !name.hasPrefix(".") {
+            let target = folder.appendingPathComponent(name)
+            if name == "tokenizer_config.json" {
+                try FileManager.default.copyItem(at: source.appendingPathComponent(name), to: target)
+            } else {
+                try FileManager.default.createSymbolicLink(at: target, withDestinationURL: source.appendingPathComponent(name))
+            }
+        }
+        try LocalModels.normalizeTokenizer(in: folder)
+        let store = ModelStore(root: root)
+        let chat = QwenChat(store: store, model: LocalModels.spec(info, in: root))
+        XCTAssertTrue(chat.isAvailable)
+        var settings = AIChatSettings()
+        settings.thinking = false
+        try await chat.start(history: [], settings: settings)
+        var answer = ""
+        for try await chunk in chat.stream("Réponds en une phrase : quelle est la capitale du Japon ?") { answer += chunk }
+        await chat.stop()
+        print("Réponse du modèle importé : \(answer.prefix(200))")
+        XCTAssertFalse(answer.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
     }
 }

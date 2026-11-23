@@ -38,8 +38,8 @@ enum StorageUsage {
 
         add(String(localized: "Documents (PDF)"), String(localized: "Tes PDF importés"), [app.appendingPathComponent("Documents", isDirectory: true)])
         // Un élément par modèle d'IA installé (les petits ensemble).
-        let titles = Dictionary(uniqueKeysWithValues: [ModelSpec.ndlocr, .ppocr5, .glmocr, .ovisocr2, .qwen3vl4b,
-                                                       .qwen35chat4b].map { ($0.id, $0.title) })
+        let titles = Dictionary(uniqueKeysWithValues: ([ModelSpec.ndlocr, .ppocr5, .glmocr, .ovisocr2, .qwen3vl4b,
+                                                        .qwen35chat4b] + LocalModels.specs()).map { ($0.id, $0.title) })
         var small: [URL] = []
         for folder in (try? fm.contentsOfDirectory(at: models, includingPropertiesForKeys: nil)) ?? [] {
             if folder.lastPathComponent == "unidic" { continue }
@@ -68,27 +68,35 @@ enum StorageUsage {
     /// « Effacer le cache » : seulement ce que l'app sait refaire (vignettes, pages nettoyées, téléchargements de
     /// mise à jour, fichiers temporaires). Jamais : PDF, base (OCR, notes, cartes), analyses IA, modèles, UniDic,
     /// dictionnaires, réglages. Les dossiers restent (les caches les attendent), seul leur contenu part ; ce qui
-    /// a bougé depuis moins de 5 min (export ou téléchargement en cours) est laissé. Rend la place libérée.
-    static func clearCaches() -> Int64 {
+    /// a bougé depuis moins de 5 min (export ou téléchargement en cours) est laissé. Rend la place libérée
+    /// et la date à laquelle le dernier élément gardé pour cette raison devient effaçable, s'il y en a un.
+    static func clearCaches() -> (bytes: Int64, recentUntil: Date?) {
         let fm = FileManager.default
         let caches = fm.urls(for: .cachesDirectory, in: .userDomainMask)[0]
         let roots = [caches, fm.temporaryDirectory]
         let before = roots.reduce(Int64(0)) { $0 + size(of: $1) }
-        let recent = Date().addingTimeInterval(-300)
+        let retention: TimeInterval = 300
+        let recent = Date().addingTimeInterval(-retention)
+        var latestKept: Date?
         func empty(_ folder: URL, depth: Int) {
             let keys: [URLResourceKey] = [.isDirectoryKey, .contentModificationDateKey]
             for item in (try? fm.contentsOfDirectory(at: folder, includingPropertiesForKeys: keys)) ?? [] {
                 let values = try? item.resourceValues(forKeys: Set(keys))
                 if values?.isDirectory == true, depth == 0 {
                     empty(item, depth: 1)
-                } else if (values?.contentModificationDate ?? .distantPast) < recent {
-                    try? fm.removeItem(at: item)
+                } else {
+                    let modified = values?.contentModificationDate ?? .distantPast
+                    if modified < recent {
+                        try? fm.removeItem(at: item)
+                    } else {
+                        latestKept = max(latestKept ?? modified, modified)
+                    }
                 }
             }
         }
         roots.forEach { empty($0, depth: 0) }
         let after = roots.reduce(Int64(0)) { $0 + size(of: $1) }
-        return max(0, before - after)
+        return (max(0, before - after), latestKept.map { $0.addingTimeInterval(retention) })
     }
 
     /// Taille sur le disque d'un fichier ou d'un dossier (0 s'il n'existe pas).
@@ -118,7 +126,7 @@ struct StorageUsageView: View {
     @State private var free: Int64?
     @State private var confirmClear = false
     @State private var clearing = false
-    @State private var cleared: Int64?
+    @State private var cleared: (bytes: Int64, recentUntil: Date?)?
 
     private var total: Int64 { items?.reduce(0) { $0 + $1.bytes } ?? 0 }
 
@@ -156,10 +164,15 @@ struct StorageUsageView: View {
                     }
                     .disabled(clearing)
                 } footer: {
-                    if let cleared {
-                        Text("\(StorageUsage.format(cleared)) libérés.")
-                    } else {
-                        Text("Vignettes, pages nettoyées, fichiers temporaires et cache web : l'app les refait au besoin. Tes PDF, notes, textes lus, analyses et modèles restent.")
+                    VStack(alignment: .leading, spacing: 4) {
+                        if let recentUntil = cleared?.recentUntil {
+                            recentCacheNotice(until: recentUntil)
+                        }
+                        if let cleared {
+                            Text("\(StorageUsage.format(cleared.bytes)) libérés.")
+                        } else {
+                            Text("Vignettes, pages nettoyées, fichiers temporaires et cache web : l'app les refait au besoin. Tes PDF, notes, textes lus, analyses et modèles restent.")
+                        }
                     }
                 }
                 Section("Détail") {
@@ -190,6 +203,21 @@ struct StorageUsageView: View {
         }
         .task { await refresh() }
         .refreshable { await refresh() }
+    }
+
+    private func recentCacheNotice(until deadline: Date) -> some View {
+        TimelineView(.periodic(from: .now, by: 1)) { context in
+            let remaining = deadline.timeIntervalSince(context.date)
+            if remaining > 0 {
+                // Arrondir au-dessus pour ne pas afficher 0:00 avant l'échéance.
+                let countdown = Duration.seconds(remaining.rounded(.up)).formatted(.time(pattern: .minuteSecond))
+                Text("Fichiers récents gardés : effaçables dans \(countdown)")
+            } else {
+                Text("Fichiers récents : effaçables maintenant")
+            }
+        }
+        .font(.caption)
+        .foregroundStyle(.secondary)
     }
 
     private func refresh() async {

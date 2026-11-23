@@ -30,6 +30,8 @@ final class EnergyMeter {
     /// Au lancement : reprend le relevé s'il était allumé.
     func attach(_ model: AppModel) {
         self.model = model
+        DiagnosticContext.attach(model)
+        DiagnosticCPU.updateActivation()
         setEnabled(UserDefaults.standard.bool(forKey: Self.enabledKey))
     }
 
@@ -72,6 +74,7 @@ final class EnergyMeter {
         guard let loaded = status.loaded else { return "" }
         let specs: [(ModelSpec, String)] = [(.ovisocr2, "OvisOCR2"), (.glmocr, "GLM-OCR"),
                                             (.qwen3vl4b, "Qwen3-VL"), (.qwen35chat4b, "Qwen3.5")]
+            + LocalModels.specs().map { ($0, $0.title) }   // modèles importés (PLAN-MODLOC-001, E3)
         return specs.filter { ModelStore.shared.directory($0.0) == loaded }.map(\.1).joined(separator: "+")
     }
 

@@ -6,11 +6,14 @@ import OCRKit
 import ONNXOCRKit
 import ReaderCore
 import SwiftUI
+import UserNotifications
 import UIKit
 
 @main
 struct KyokashoApp: App {
     init() {
+        // PLAN-NOTIF-001 E4 : posé au lancement, pour qu'une notification touchée app fermée ne soit pas perdue.
+        UNUserNotificationCenter.current().delegate = NoteNotificationDelegate.shared
         // Avant tout : journal de diagnostic et gestionnaire d'erreurs MLX (message noté avant un arrêt).
         Diagnostics.start()
         // Restauration préparée (#51) : appliquée avant que la moindre base soit ouverte.
@@ -75,9 +78,15 @@ struct RootView: View {
     @EnvironmentObject private var model: AppModel
     @ObservedObject private var dictionaryUpdates = DictionaryCatalogService.shared
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var retryingStorage = false
     /// N4 (revue R2) : confirmation avant de mettre un journal refusé de côté.
     @State private var confirmingAside = false
+
+    private var showsReader: Bool {
+        guard model.storageRecoveryError == nil, let id = model.openDocumentId else { return false }
+        return model.documents.contains { $0.id == id }
+    }
 
     var body: some View {
         Group {
@@ -125,8 +134,6 @@ struct RootView: View {
                                 UpdateBanner()
                                 DictionaryUpdateBanner().environmentObject(model.dictionary)
                                 AnalysisDurationBanner()
-                                // Permanente et non fermable : les fichiers de diagnostic prennent de la place.
-                                DiagnosticSizeBanner()
                             }
                         }
                 }
@@ -134,21 +141,45 @@ struct RootView: View {
         }
         // Tâches IA toujours en cours ; le moniteur de la bibliothèque est ancré à droite de la liste (recette 63).
         .overlay(alignment: .bottomLeading) { ActivityDock(showsMonitor: false).padding(Atelier.gap) }
+        .allowsHitTesting(!showsReader)
+        .accessibilityHidden(showsReader)
         .task { AppUpdate.shared.checkAtLaunch(); MorphologyService.shared.loadIfInstalled(); EnergyMeter.shared.attach(model) }
-        // Visite guidée au premier lancement, nouveautés après une mise à jour.
-        .modifier(IntroPresenter(hasLibrary: { [model] in !model.documents.isEmpty }))
-        // Une seule couverture pour tous les onglets (#16) : changer d'onglet remplace le lecteur sans refermer
-        // ni rouvrir la feuille plein écran.
-        .fullScreenCover(isPresented: Binding(
-            get: { model.storageRecoveryError == nil && model.openDocumentId.map { id in model.documents.contains { $0.id == id } } == true },
-            set: { if !$0 { model.openDocumentId = nil } }
-        )) {
-            ReaderTabsHost()
-                .environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review)
-                .preferredColorScheme(themes.effectiveTheme.colorScheme)
-                .environment(\.themeRevision, themes.effectiveRevision)
-                .atelierFontDesign()
-                .tint(Atelier.Tint.read)
+        .overlay {
+            // Différer visite et nouveautés pendant la lecture sans démonter la bibliothèque.
+            if !showsReader {
+                Color.clear
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+                    .modifier(IntroPresenter(hasLibrary: { [model] in !model.documents.isEmpty }))
+            }
+        }
+        .overlay {
+            ZStack {
+                // Pile gardée en place : le calque s'insère dedans sans transition propre (fondu géré par `ReaderReveal`).
+                Color.clear.allowsHitTesting(false).accessibilityHidden(true)
+                // Un seul calque pour tous les onglets (#16), indépendant des présentations iOS (#93).
+                if showsReader {
+                    ReaderTabsHost()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        // Le fond couvre les zones sûres, les commandes gardent leurs marges et le clavier.
+                        .background(Atelier.canvas.ignoresSafeArea())
+                        .environmentObject(model).environmentObject(model.dictionary).environmentObject(model.review)
+                        .environment(\.themeRevision, themes.effectiveRevision)
+                        .atelierFontDesign()
+                        .tint(Atelier.Tint.read)
+                        // Recette 1.6.1 (1.2, 1.3) : fondu lancé une fois le PDF posé, rien si « Réduire les animations ».
+                        .modifier(ReaderReveal(reduceMotion: reduceMotion))
+                        // Retrait immédiat : le lecteur rend sa mémoire sans attendre la fin d'un fondu.
+                        .transition(.identity)
+                        .zIndex(1)
+                }
+            }
+        }
+        // Permanente et non fermable : un seul ancrage, au-dessus des bannières propres à chaque écran.
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if model.storageRecoveryError == nil {
+                DiagnosticSizeBanner()
+            }
         }
         .onAppear {
             model.themeManager = themes
@@ -160,10 +191,13 @@ struct RootView: View {
         .onChange(of: scenePhase) { phase in
             if phase == .background { Self.releaseAI() }
             // Au retour dans l'app : la connexion a pu revenir ou un jour être passé (`DictionaryUpdateSchedule`).
+            // Rappels de notes reprogrammés au retour (un jour a pu passer).
+            if phase == .active { model.refreshNotesToReview() }
             if phase == .active, !LibraryBackupService.inProgress {
                 Task { await dictionaryUpdates.checkAutomaticallyIfDue(model: model.dictionary) }
             }
         }
+        .onAppear { NoteNotificationDelegate.shared.model = model }
         .task {
             // Après le chargement de la bibliothèque, et jamais par-dessus une sauvegarde en cours.
             guard !LibraryBackupService.inProgress else { return }

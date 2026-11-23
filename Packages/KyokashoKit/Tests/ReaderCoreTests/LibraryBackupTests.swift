@@ -139,4 +139,19 @@ final class LibraryBackupTests: XCTestCase {
         XCTAssertTrue(LibraryBackup.safePath("analysis/a/fr-1.md"))
         for bad in ["", "/a", "a/../b", "a//b", "./a", ".cache/x", "a\\b"] { XCTAssertFalse(LibraryBackup.safePath(bad), bad) }
     }
+
+    /// Recette 1.5.6 (4.2) : l'avancement monte sans retour en arrière et finit sur le total exact des fichiers écrits.
+    func testProgressIsMonotonicAndEndsOnTheTotal() throws {
+        let zip = root.appendingPathComponent("progress.kyokasho-sauvegarde")
+        var calls: [(Int, Int)] = []
+        try LibraryBackup.write(try source(try liveDatabase()), to: zip, appVersion: "test") { calls.append(($0, $1)) }
+        let last = try XCTUnwrap(calls.last)
+        XCTAssertEqual(last.0, last.1)
+        XCTAssertEqual(calls.map(\.0), calls.map(\.0).sorted())
+        XCTAssertTrue(calls.allSatisfy { $0.1 == last.1 })
+        XCTAssertLessThanOrEqual(calls.count, 101)
+        // Total = fichiers de l'archive hors manifeste.
+        let manifest = try LibraryBackup.open(zip, into: root.appendingPathComponent("progress-check"))
+        XCTAssertEqual(last.1, manifest.files.count)
+    }
 }

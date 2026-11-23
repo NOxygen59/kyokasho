@@ -9,7 +9,7 @@
 
 ## Tests existants
 
-Au SHA `f83aec8c61d88f1e6c119376590899c9c1ce2876` (25/10/2026), `Packages/KyokashoKit/Package.swift` déclare **neuf cibles de tests**, avec **163 déclarations `func test` dans 20 fichiers**. Ce relevé des sources n'est pas une nouvelle exécution. Les sept cibles / 142 tests du registre historique en bas de page décrivent la base avant les PR #2/#3. GLMOCRKit garde sa cible séparée de tests de modèles. `project.yml` ne déclare pas de cible XCTest de l'app ni de tests UI.
+**Relevé actuel : au SHA `6cd3759` (22/11/2026), 824 tests Swift exécutés dont 11 ignorés, et 208 tests Python réussis.** Ces chiffres viennent du résumé de `verifier_tout.sh` de ce SHA ; ce résumé n'est pas conservé dans le dépôt. Les sources comptent bien 824 déclarations `func test` dans 129 fichiers sous `Packages/KyokashoKit/Tests` (relevé des sources, pas une exécution). Le code de l'app (`App/`) n'a pas de cible XCTest : il est couvert par les tests Python de câblage de `tests/` et par les fonctions pures extraites dans les paquets. Relevé historique : Au SHA `f83aec8c61d88f1e6c119376590899c9c1ce2876` (25/10/2026), `Packages/KyokashoKit/Package.swift` déclare **neuf cibles de tests**, avec **163 déclarations `func test` dans 20 fichiers**. Ce relevé des sources n'est pas une nouvelle exécution. Les sept cibles / 142 tests du registre historique en bas de page décrivent la base avant les PR #2/#3. GLMOCRKit garde sa cible séparée de tests de modèles. `project.yml` ne déclare pas de cible XCTest de l'app ni de tests UI.
 
 **Campagne en préparation : [QA-02 — recette iPad PageShift et sauvegarde](RECETTE-IPAD-QA-02.md).** Elle détaille le corpus synthétique à fabriquer, les gestes, les attentes, les conditions d'arrêt, les autorisations et les fiches GitHub. Aucun essai iPad ni build n'est effectué par cette préparation.
 
@@ -99,7 +99,14 @@ datée : génération du projet Xcode (`xcodegen generate -q`, seulement si l'ou
 ./scripts/verifier_tout.sh; echo "code de sortie : $?"
 ```
 
-- Résumé : `build/verif/RESUME-<date>.md` — SHA court et long, branche, nombre de fichiers modifiés au lancement,
+Profils (lot C1, 13/11/2026) : sans option, profil **complet** (ci-dessus, plus les tests Swift de `Packages/GLMOCRKit`,
+dont la plupart sont ignorés sans les poids des modèles) — seul valable avant une candidate ou un push.
+`--rapide` lance seulement les tests Swift de `KyokashoKit` et les tests Python ; `--filtre <test>` cible les tests
+Swift (`swift test --filter`). Une étape non lancée est écrite « non exécutée (profil rapide) », jamais « réussie ».
+Un échec volontaire (test Python qui échoue) donne bien le code de sortie 1 et l'étape en échec dans le résumé
+(contrôlé le 13/11).
+
+- Résumé : `build/verif/RESUME-<date>-<sha>[-rapide].md`, recopié en `build/verif/RESUME-<date>.md` — SHA court et long, branche, nombre de fichiers modifiés au lancement,
   versions de macOS, Xcode et Swift, durée, puis une ligne par étape : tests Swift exécutés / ignorés / en échec,
   nombre de tests Python et leur verdict, résultat de la compilation avec le nombre de lignes `error:` du journal,
   liens documentaires examinés et erreurs éventuelles.

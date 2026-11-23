@@ -77,6 +77,21 @@ public enum Furigana {
         return result
     }
 
+    /// Conserve la lecture fournie, sinon propose une lecture locale. Si des kanji restent, renvoie une chaîne vide.
+    public static func completeReading(for term: String, preferred: String?) -> String {
+        completeReading(for: term, preferred: preferred, makeRubies: rubies(for:))
+    }
+
+    static func completeReading(for term: String, preferred: String?, makeRubies: (String) -> [Ruby]) -> String {
+        if let preferred, !preferred.isEmpty { return preferred }
+        let result = NSMutableString(string: term)
+        for ruby in makeRubies(term).sorted(by: { $0.utf16.location > $1.utf16.location }) {
+            result.replaceCharacters(in: ruby.utf16, with: ruby.reading)
+        }
+        let reading = (result as String).applyingTransform(.hiraganaToKatakana, reverse: true) ?? ""
+        return reading.contains(where: isKanji) ? "" : reading
+    }
+
     /// Découpe la lecture d'un mot entre ses groupes de kanji (les kana du mot servent de repères).
     /// Renvoie des plages de graphèmes du mot. Si l'alignement échoue : une lecture pour tout le mot
     /// s'il n'a que des kanji, sinon rien (mieux vaut pas de furigana qu'un furigana à cheval sur les kana).

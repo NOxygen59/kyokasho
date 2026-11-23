@@ -3,13 +3,14 @@
 
 # Documentation de Kyōkasho
 
-Ce dossier organise la reprise du projet à partir de **v1.3, build 40**. L'audit du 25 octobre 2026 porte sur le commit `16d2dd89e4cb811b0bc956ef2a225431ed83864a`, dont le code applicatif correspond à v1.3 (`7fb7362`). Ce n'est pas une nouvelle version de l'application.
+Ce dossier a organisé la reprise du projet à partir de **v1.3, build 40** (base historique ; version courante : 1.5.9). L'audit du 25 octobre 2026 porte sur le commit `16d2dd89e4cb811b0bc956ef2a225431ed83864a`, dont le code applicatif correspond à v1.3 (`7fb7362`). Ce n'est pas une nouvelle version de l'application.
 
 ## Choisir son point d'entrée
 
 | Besoin | Document |
 |---|---|
 | **Reprendre ou piloter le projet** (agents : lire d'abord [AGENTS.md](../AGENTS.md)) | [Plan directeur](PLAN-DIRECTEUR.md) |
+| Voir tout ce qui est ouvert, par lot, et la condition de clôture | [Registre des chantiers](REGISTRE-CHANTIERS.md) |
 | Apprendre à utiliser l'app | [Guide utilisateur](GUIDE-UTILISATEUR.md) |
 | Trouver un réglage ou comprendre son rangement | [Organisation des réglages](REGLAGES.md) |
 | Comprendre les capacités et les preuves disponibles | [Audit v1.3](AUDIT-V1.3.md) |

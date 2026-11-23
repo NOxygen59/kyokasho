@@ -14,6 +14,7 @@ struct StudyPanel: View {
     enum Tab: Hashable { case text, vocab, notes, marks, chat }
 
     @EnvironmentObject private var model: AppModel
+    @AppStorage(OwnerMode.unlockedKey) private var ownerUnlocked = false
     @ObservedObject var reader: ReaderController
     @Binding var tab: Tab
     var openSearch: () -> Void
@@ -62,7 +63,7 @@ struct StudyPanel: View {
             PillTabs(items: [(Tab.text, "character.ja", String(localized: "Texte")), (.vocab, "character.book.closed.ja", String(localized: "Dico")),
                              (.notes, "text.bubble", String(localized: "Notes")), (.marks, "bookmark", String(localized: "Repères")),
                              (.chat, "bubble.left.and.bubble.right", String(localized: "Chat"))]
-                                .filter { $0.0 != .chat || reader.document.capabilities.chat },
+                                .filter { $0.0 != .chat || chatAllowed },
                      selection: $tab, tint: tint)
             Group {
                 switch tab {
@@ -81,7 +82,7 @@ struct StudyPanel: View {
                 case .notes: StudyNotesTab(reader: reader)
                 case .marks: StudyMarksTab(reader: reader, openSearch: openSearch)
                 // Onglet repris d'un document précédent : pas de chat sur un manga.
-                case .chat where !reader.document.capabilities.chat: StudyTextTab(reader: reader, openLineEditor: openLineEditor, openDocumentSettings: openDocumentSettings)
+                case .chat where !chatAllowed: StudyTextTab(reader: reader, openLineEditor: openLineEditor, openDocumentSettings: openDocumentSettings)
                 case .chat: QwenChatView(document: reader.document, embedded: true,
                                          focusPage: reader.document.pageLabel(reader.focusSource),
                                          openPage: { reader.go(toSource: $0) },
@@ -103,11 +104,16 @@ struct StudyPanel: View {
         .onChange(of: reader.document.id) { _ in normalizeTab() }
         // Même document rangé en Manga pendant la lecture : la capacité Chat disparaît sans changer d'identifiant.
         .onChange(of: reader.document.capabilities.chat) { _ in normalizeTab() }
+        // Mode propriétaire reverrouillé pendant la lecture : l'onglet Chat disparaît (PLAN-MODLOC-001, DEC-03).
+        .onChange(of: ownerUnlocked) { _ in normalizeTab() }
     }
 
     private func normalizeTab() {
-        if tab == .chat && !reader.document.capabilities.chat { tab = .text }
+        if tab == .chat && !chatAllowed { tab = .text }
     }
+
+    /// Chat possible pour ce document (pas de manga) et mode propriétaire déverrouillé (PLAN-MODLOC-001, DEC-03).
+    private var chatAllowed: Bool { reader.document.capabilities.chat && ownerUnlocked }
 
     private var tint: Color {
         switch tab {
@@ -120,6 +126,17 @@ struct StudyPanel: View {
 }
 
 // MARK: - Texte + traduction
+
+/// Relais des actions des menus de l'onglet Texte. iOS 16 garde en vie les actions d'un `Menu` SwiftUI après la
+/// disparition de sa vue : quand elles capturaient la vue, le lecteur entier restait en mémoire après la fermeture du
+/// livre, et vider sa vue PDF faisait boucler les fils de PDFKit (gel de la 1.6.1-1.6.2, trouvé sur l'iPad le
+/// 23/11/2026 par bissection). Le lecteur est tenu faiblement et le relais est vidé à la disparition de l'onglet.
+@MainActor
+final class StudyMenuActions {
+    weak var reader: ReaderController?
+    var openDocumentSettings: (() -> Void)?
+    func detach() { reader = nil; openDocumentSettings = nil }
+}
 
 struct StudyTextTab: View {
     @EnvironmentObject private var model: AppModel
@@ -163,6 +180,7 @@ struct StudyTextTab: View {
     @State private var translating = false
     @State private var translateError: String?
     @State private var showCompare = false
+    @State private var menuActions = StudyMenuActions()
     @State private var query = ""
     @State private var matches: [PageTextSearch.Match] = []
     /// Les indices de lignes ne valent que pour cet OCR et cette page, capturés à l'ouverture du dialogue.
@@ -207,11 +225,13 @@ struct StudyTextTab: View {
                         if let layoutError, formatted {
                             Text(layoutError).font(.caption).foregroundStyle(Atelier.textTertiary)
                         }
-                        doubtRow(page)
+                        if !aiLayout && !formatted { doubtRow(page) }
                         if aiLayout {
                             AILayoutView(reader: reader, furigana: furigana, hoverReset: hoverReset) { handleLookup($0) }
                         } else if furigana {
+                            // Ne pas garder le HTML souligné de Brut en attendant le rendu formaté.
                             FuriganaTextView(page: page, formatted: formatted, regions: regions, hoverReset: hoverReset) { handleLookup($0) }
+                                .id(formatted)
                         } else if formatted {
                             FormattedOCRText(page: page, regions: regions)
                         } else {
@@ -276,6 +296,7 @@ struct StudyTextTab: View {
             }
         }
         .overlay(alignment: .topLeading) { bubbleOverlay }
+        .onDisappear { menuActions.detach() }
         .onChange(of: shift.pressed) { pressed in
             // Bulle ouverte au survol avec Maj : relâcher Maj la ferme (Issue #13).
             if !pressed, bubble?.hover == true { closeBubble() }
@@ -457,11 +478,13 @@ struct StudyTextTab: View {
         if let cached = LayoutRegionsCache.shared.get(key) { regions = cached; return }
         // Zones de l'ancienne page / de l'autre moteur : retirées tout de suite (géométrie en attendant).
         regions = []
-        let url = reader.fileURL, page = reader.focusSource
+        let url = reader.fileURL, page = reader.focusSource, documentID = reader.document.id
         let rotation = await reader.model.ocr.additionalRotation(documentId: reader.document.id, pageIndex: page)
         let work = Task.detached(priority: .userInitiated) {
             Result {
-                try LayoutDetector.regions(.pdfPage(url: url, index: page, additionalRotation: rotation), engine: engine)
+                try ActivityCenter.shared.measureDiagnostic(.neuralLayout, documentID: documentID, page: page) {
+                    try LayoutDetector.regions(.pdfPage(url: url, index: page, additionalRotation: rotation), engine: engine)
+                }
             }
         }
         let result = await withTaskCancellationHandler { await work.value } onCancel: { work.cancel() }
@@ -514,49 +537,57 @@ struct StudyTextTab: View {
     /// IA, vérification), puis les moteurs, puis les actions, puis les réglages du document.
     private var engineMenu: some View {
         let indicator = indicator
+        // Les actions ne capturent ni la vue ni le lecteur (voir `StudyMenuActions`) : relais faible et liaisons.
+        let actions = menuActions
+        actions.reader = reader
+        actions.openDocumentSettings = openDocumentSettings
+        let aiLayoutBinding = $aiLayout, showVerifyBinding = $showVerify, showCompareBinding = $showCompare
+        let verifyTitle = reader.shownSources.count > 1 ? String(localized: "Vérifier la double page (OvisOCR2)") : String(localized: "Vérifier la page (OvisOCR2)")
+        let pinned = reader.pinnedEngines[reader.focusSource].flatMap { reader.settings.ocrEngine.rawValue != $0 ? $0 : nil }
+        let hasDocumentSettings = openDocumentSettings != nil
+        let aiLayoutOn = aiLayout
         return Menu {
             if OvisOCR2Reader().isAvailable {
                 // Sa lecture s'affiche dans « Mise en page IA » (#39).
-                Button { aiLayout = true } label: {
+                Button { aiLayoutBinding.wrappedValue = true } label: {
                     Label("OvisOCR2 (mise en page IA)", systemImage: "sparkles.rectangle.stack")
                 }
                 Button {
-                    reader.verifyShownPages()
-                    showVerify = true
+                    actions.reader?.verifyShownPages()
+                    showVerifyBinding.wrappedValue = true
                 } label: {
-                    Label(reader.shownSources.count > 1 ? String(localized: "Vérifier la double page (OvisOCR2)") : String(localized: "Vérifier la page (OvisOCR2)"),
-                          systemImage: "checkmark.seal")
+                    Label(verifyTitle, systemImage: "checkmark.seal")
                 }
                 Divider()
             }
             ForEach([OCREngineID.pdfText, OCREngineID.vision] + OCREngineMenu.extra, id: \.self) { id in
                 // Quitter la mise en page IA : sinon le texte du moteur choisi resterait caché.
-                Button { aiLayout = false; reader.runOCR(engine: id) } label: {
+                Button { aiLayoutBinding.wrappedValue = false; actions.reader?.runOCR(engine: id) } label: {
                     // Coche : le moteur du texte affiché, le même que le libellé du menu. Ni coche ni « (choisi) » en
                     // « Mise en page IA » : le texte lu vient d'OvisOCR2 (revue DeepSeek de 2a9da9e, A5).
-                    Label(!aiLayout && indicator.differs && id == indicator.chosen
+                    Label(!aiLayoutOn && indicator.differs && id == indicator.chosen
                             ? String(localized: "\(OCREngineID.displayName(id)) (choisi)") : OCREngineID.displayName(id),
-                          systemImage: !aiLayout && id == indicator.shown ? "checkmark" : OCREngineMenu.icon(id))
+                          systemImage: !aiLayoutOn && id == indicator.shown ? "checkmark" : OCREngineMenu.icon(id))
                 }
             }
             Divider()
             // Moteur choisi ci-dessus : retenu pour cette page seulement ; ici, pour tout le document.
-            if let pinned = reader.pinnedEngines[reader.focusSource], reader.settings.ocrEngine.rawValue != pinned {
+            if let pinned {
                 Button {
-                    reader.keepPinnedEngineForDocument()
+                    actions.reader?.keepPinnedEngineForDocument()
                 } label: {
                     Label("Garder \(OCREngineID.displayName(pinned)) pour ce document", systemImage: "pin")
                 }
             }
-            Button { reader.runOCR(engine: reader.ocrPage?.engine, force: true) } label: {
+            Button { actions.reader?.runOCR(engine: actions.reader?.ocrPage?.engine, force: true) } label: {
                 Label("Relancer", systemImage: "arrow.clockwise")
             }
-            Button { showCompare = true } label: {
+            Button { showCompareBinding.wrappedValue = true } label: {
                 Label("Comparer les moteurs", systemImage: "square.split.2x1")
             }
-            if let openDocumentSettings {
+            if hasDocumentSettings {
                 Divider()
-                Button(action: openDocumentSettings) {
+                Button { actions.openDocumentSettings?() } label: {
                     Label("Pagination et réglages de ce document", systemImage: "slider.horizontal.3")
                 }
             }
@@ -611,13 +642,30 @@ struct StudyTextTab: View {
     }
 
     private var displayPicker: some View {
-        Picker("Affichage", selection: Binding(get: { aiLayout ? 2 : (formatted ? 0 : 1) },
-                                               set: { aiLayout = $0 == 2; if $0 < 2 { formatted = $0 == 0 } })) {
+        let hasDoubtfulCharacters = reader.ocrPage?.lines.contains { $0.doubt?.isEmpty == false } == true
+        let ai = $aiLayout, fm = $formatted  // Liaisons seules : la sélection ne capture pas la vue (voir `StudyMenuActions`).
+        return Picker("Affichage", selection: Binding(get: { ai.wrappedValue ? 2 : (fm.wrappedValue ? 0 : 1) },
+                                                      set: { ai.wrappedValue = $0 == 2; if $0 < 2 { fm.wrappedValue = $0 == 0 } })) {
             Text("Mis en forme").tag(0)
-            Text("Brut").tag(1)
+            Text("Brut")
+                .tag(1)
+                .accessibilityLabel(hasDoubtfulCharacters ? Text("Brut : caractères douteux") : Text("Brut"))
             Image(systemName: "sparkles").tag(2).accessibilityLabel("Mise en page IA")
         }
         .pickerStyle(.segmented)
+        .overlay {
+            if hasDoubtfulCharacters {
+                // Le sélecteur natif garde son libellé ; la pastille décore le segment du milieu.
+                GeometryReader { proxy in
+                    Circle()
+                        .fill(.orange)
+                        .frame(width: 6, height: 6)
+                        .position(x: proxy.size.width * 2 / 3 - 8, y: 7)
+                }
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+            }
+        }
     }
 
     @ViewBuilder
@@ -712,7 +760,7 @@ struct StudyTextTab: View {
         return out
     }
 
-    /// « N caractères douteux » + relecture par l'IA (GLM-OCR) ou indication pour corriger à la main.
+    /// « N caractères douteux » + relecture par l'IA (GLM-OCR), dans Brut.
     @ViewBuilder
     private func doubtRow(_ page: OCRPage) -> some View {
         let lines = OCRProofreader.doubtful(page)
@@ -736,10 +784,6 @@ struct StudyTextTab: View {
                 }
             }
             .foregroundStyle(Atelier.textSecondary)
-            if formatted {
-                Text("Pour corriger à la main : « Brut », puis appui long sur la ligne.")
-                    .font(.caption2).foregroundStyle(Atelier.textTertiary)
-            }
         }
     }
 

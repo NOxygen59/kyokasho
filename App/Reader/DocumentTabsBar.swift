@@ -16,7 +16,9 @@ struct ReaderTabsHost: View {
     var body: some View {
         ZStack(alignment: .top) {
             if let id = model.openDocumentId, let document = model.documents.first(where: { $0.id == id }) {
+                // Le calque gère le fondu d'entrée ; le changement d'onglet ne doit pas le rejouer.
                 ReaderScreen(document: document, model: model).id(document.id)
+                    .transition(.identity)
             }
             if notice {
                 MemoryNotice(count: model.tabs.ids.count)
@@ -29,16 +31,16 @@ struct ReaderTabsHost: View {
             // Seulement quand un onglet s'ajoute au-delà du seuil, pas à la fermeture d'un onglet.
             if count >= DocumentTabs.warningCount, count > old { showNotice() }
         }
-        // Même bannière que dans la bibliothèque : elle suit l'utilisateur dans le lecteur (10/11/2026).
+        // Le diagnostic a un ancrage commun avec la bibliothèque, au-dessus de ce rappel.
         .safeAreaInset(edge: .top, spacing: 0) {
-            VStack(spacing: 0) {
-                DiagnosticSizeBanner()
-                // Rappel de luminosité (11/11/2026) : dans le lecteur seulement, c'est là que l'écran coûte.
-                BrightnessReminderBanner()
-            }
+            // Rappel de luminosité (11/11/2026) : dans le lecteur seulement, c'est là que l'écran coûte.
+            BrightnessReminderBanner()
         }
         // Lecteur ouvert depuis la bibliothèque avec déjà assez d'onglets : prévenir une fois à l'ouverture.
-        .onAppear { if model.tabs.showsMemoryWarning { showNotice() } }
+        .onAppear {
+            Diagnostics.log("lecteur affiché", "lecteur")
+            if model.tabs.showsMemoryWarning { showNotice() }
+        }
         .onDisappear { hideTask?.cancel() }
     }
 
@@ -49,6 +51,42 @@ struct ReaderTabsHost: View {
             try? await Task.sleep(nanoseconds: 3_000_000_000)
             guard !Task.isCancelled else { return }
             withAnimation(.easeIn(duration: 0.3)) { notice = false }
+        }
+    }
+}
+
+extension Notification.Name {
+    /// Le lecteur a posé son PDF (ou échoué) : son calque peut apparaître (`ReaderReveal`).
+    static let readerContentReady = Notification.Name("kyokasho.readerContentReady")
+}
+
+/// Apparition du calque du lecteur (recette 1.6.1, 1.2 et 1.3). Le calque naît invisible, puis fond en 0,2 s une fois
+/// le PDF installé (au plus 0,5 s d'attente). Lancé plus tôt, le fondu tombait pendant la construction et l'installation
+/// du PDF sur le fil principal : SwiftUI n'en montrait rien et le lecteur apparaissait d'un coup. « Réduire les
+/// animations » : visible tout de suite, sans fondu. Un changement d'onglet ne le rejoue pas (calque déjà visible).
+struct ReaderReveal: ViewModifier {
+    let reduceMotion: Bool
+    @State private var shown = false
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(shown || reduceMotion ? 1 : 0)
+            // Réunion AV-16-02 (D1) : invisible, il ne prend ni toucher ni VoiceOver (la bibliothèque est déjà inerte).
+            .allowsHitTesting(shown || reduceMotion)
+            .accessibilityHidden(!(shown || reduceMotion))
+            .onReceive(NotificationCenter.default.publisher(for: .readerContentReady)) { _ in reveal() }
+            .task {
+                try? await Task.sleep(nanoseconds: 500_000_000)
+                reveal()
+            }
+    }
+
+    private func reveal() {
+        guard !shown else { return }
+        if reduceMotion {
+            shown = true
+        } else {
+            withAnimation(.easeOut(duration: 0.2)) { shown = true }
         }
     }
 }

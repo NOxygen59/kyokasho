@@ -10,6 +10,87 @@ import Foundation
 enum ReleaseHistory {
     static let past: [ReleaseNotes] = [
         // Candidates locales non publiées.
+        ReleaseNotes("1.6.2", "2026-11-22", published: false, String(localized: "Correctifs de la recette 1.6.1", bundle: .main), added: [
+                String(localized: "Mode diagnostic : le journal liste les fils qui occupent le processeur (nom, temps depuis qu'il a été repéré, moyenne récente, travail en cours, page) et signale ceux qui restent très chargés plus de 10 secondes.", bundle: .main),
+            ], fixed: [
+                String(localized: "Lecteur : il apparaît en fondu court dès que la page est prête, au plus tard après une demi-seconde ; avec « Réduire les animations », il s'affiche tout de suite, sans animation.", bundle: .main),
+                String(localized: "Recherche dans un document : une carte en haut à droite ; le livre reste utilisable derrière et toucher un résultat garde la carte ouverte.", bundle: .main),
+                String(localized: "Fermer un document arrête les lectures OCR que plus rien n'attend, le survol du dictionnaire et le recalage de la page.", bundle: .main),
+                String(localized: "Lectures OCR : une lecture terminée reste en cache même si on a quitté la page, et une lecture abandonnée n'écrase plus un résultat plus récent.", bundle: .main),
+            ]),
+        ReleaseNotes("1.6.1", "2026-11-20", published: false, String(localized: "Correctifs de la recette 1.6.0", bundle: .main), added: [
+                String(localized: "Mode diagnostic : lors d'un pic du processeur, le journal relève le contexte (tâches en cours avec leur page et leur étape, temps processeur quand il est mesuré, onglets ouverts, dernier geste récent).", bundle: .main),
+            ], fixed: [
+                String(localized: "Lecteur : il s'ouvre en fondu court et se ferme sans traîne.", bundle: .main),
+                String(localized: "Bannière de diagnostic : elle garde sa place en haut au retour à l'accueil.", bundle: .main),
+                String(localized: "Recherche dans un document : nouvelle présentation, dans le style de la confirmation de la corbeille.", bundle: .main),
+                String(localized: "Surligneur : ses actions passent au-dessus de la barre déplaçable.", bundle: .main),
+                String(localized: "Fenêtre OCR : les caractères douteux ne sont signalés que dans Brut, par une pastille orange sur l'onglet.", bundle: .main),
+                String(localized: "Lexique du domaine : « Enrichir » et « Remettre les termes de départ manquants » sont en haut de la page.", bundle: .main),
+                String(localized: "Notes : ouvrir une note affiche la fenêtre OCR sur l'onglet Notes.", bundle: .main),
+                String(localized: "Rappels de notes : numéro de page imprimé dans le titre ; rien n'est programmé si les notifications sont refusées ; seuls les rappels modifiés sont remplacés.", bundle: .main),
+            ]),
+        ReleaseNotes("1.6.0", "2026-11-20", published: false, String(localized: "Correctifs de la recette 1.5.10", bundle: .main), added: [
+                String(localized: "Effacer le cache : quand des fichiers récents sont gardés, un petit compte à rebours indique quand ils pourront être effacés.", bundle: .main),
+            ], fixed: [
+                String(localized: "Accueil : le lecteur s'affiche maintenant par-dessus l'accueil, au lieu d'une fenêtre qu'iOS pouvait refuser d'ouvrir juste après un menu ou l'export.", bundle: .main),
+                String(localized: "Furigana, teinte et pages nettoyées : ils s'affichent de nouveau sur un livre aux pages de tailles différentes rouvert depuis le cache.", bundle: .main),
+                String(localized: "Pages égalisées : une préparation abîmée dans le cache est maintenant refaite d'elle-même ; si elle échoue encore, l'export le signale comme avant.", bundle: .main),
+                String(localized: "Enrichir le lexique : les comics ne sont plus proposés dans la liste des livres.", bundle: .main),
+            ]),
+        ReleaseNotes("1.5.10", "2026-11-20", published: false, String(localized: "Correctifs de la recette 1.5.9", bundle: .main), added: [
+            ], fixed: [
+                String(localized: "Accueil : un document ouvert juste après la fermeture d'un menu ou de la fenêtre d'export est redemandé automatiquement s'il ne s'est pas affiché.", bundle: .main),
+                String(localized: "Furigana : ils reviennent d'eux-mêmes sur la page ouverte quand l'app a dû libérer de la mémoire ou vider son cache, et au retour dans l'app.", bundle: .main),
+                String(localized: "Cartes de la page : un mot sans lecture connue n'a plus son kanji recopié comme lecture ; elle est laissée vide si aucune lecture complète n'est trouvée.", bundle: .main),
+            ]),
+        ReleaseNotes("1.5.9", "2026-11-14", published: false, String(localized: "Rappels de notes, annotations exactes à l'export et correctifs de la recette 1.5.8", bundle: .main), added: [
+                String(localized: "Notes : un « ! » sur l'accueil, noir si une échéance arrive dans les 7 jours, rouge si elle est aujourd'hui ou dépassée.", bundle: .main),
+                String(localized: "Notes : une heure d'échéance et jusqu'à trois rappels par note, avec une notification d'iOS qui ouvre la note.", bundle: .main),
+                String(localized: "Accueil : la colonne de gauche est regroupée (Étudier, Importer et convertir), et entrer dans un dossier est animé.", bundle: .main),
+            ], fixed: [
+                String(localized: "Export « PDF annoté » et images : surlignages, dessins et notes restent sur leur mot, même sur une page d'une autre taille, et la page garde la rotation choisie dans l'app.", bundle: .main),
+                String(localized: "Dossiers : les pastilles de sélection se mettent à jour dans un dossier.", bundle: .main),
+                String(localized: "Barre à poignée : elle ne bouge plus au passage du Pencil, et sa poignée ne se cache plus contre le bord.", bundle: .main),
+            ]),
+        ReleaseNotes("1.5.8", "2026-11-13", published: false, String(localized: "Correctifs de la recette 1.5.7", bundle: .main), added: [
+                String(localized: "Notes : chaque note affiche sa date et son heure de création ou de modification.", bundle: .main),
+            ], fixed: [
+                String(localized: "Accueil : créer ou renommer un dossier se fait dans une fenêtre de l'app, avec un bouton « Créer » qui marche.", bundle: .main),
+                String(localized: "Barre flottante : elle ne bouge plus au passage entre Pencil et doigt, et une poignée plus grande la déplace.", bundle: .main),
+                String(localized: "Écran Notes plus clair : filtres en pastilles, et chaque note montre son livre, sa page, son échéance et ses étiquettes.", bundle: .main),
+            ]),
+        ReleaseNotes("1.5.7", "2026-11-13", published: false, String(localized: "Notes, dossiers, cartes et correctifs de la recette 1.5.6", bundle: .main), added: [
+                String(localized: "Notes : un écran « Notes » sur l'accueil réunit toutes les notes, par échéance, avec filtres et archives ; une pastille compte les notes à revoir.", bundle: .main),
+                String(localized: "Notes : régler une note (échéance, priorité, classeur, étiquettes, archive), une seule ou plusieurs à la fois.", bundle: .main),
+                String(localized: "Accueil : des dossiers pour ranger les documents.", bundle: .main),
+                String(localized: "Cartes : un écran « Cartes de ce document » pour voir, modifier, suspendre, supprimer et exporter les cartes d'un livre.", bundle: .main),
+                String(localized: "Cartes de la page : tous les mots de la page trouvés dans tes dictionnaires, en plus du lexique du cours.", bundle: .main),
+                String(localized: "Sauvegarde : une barre montre l'avancement.", bundle: .main),
+            ], fixed: [
+                String(localized: "Pencil en page simple avec glissement : la page ne glisse plus au premier trait, aussi sur un document d'une page et à la réouverture.", bundle: .main),
+                String(localized: "Chat du livre : l'IA sait quel document et quelle page sont ouverts.", bundle: .main),
+                String(localized: "Vérification Drive : le rapport dit quel fichier est suivi, son nom sur Drive et s'il est dans la corbeille de Drive.", bundle: .main),
+                String(localized: "Accueil : un document déplacé hors de la vue quitte la sélection.", bundle: .main),
+                String(localized: "Cartes : la définition entière est gardée, plus seulement son début.", bundle: .main),
+                String(localized: "Mise à jour Drive : un document ne reçoit plus un dossier de l'autre espace.", bundle: .main),
+            ]),
+        ReleaseNotes("1.5.6", "2026-11-11", published: false, String(localized: "Lexique, aide des gestes et correctifs de la recette 1.5.5", bundle: .main), added: [
+                String(localized: "Lexique : tous les mots des dictionnaires actifs, page par page, avec lecture et sens ; recherche par début de mot et fiche du mot.", bundle: .main),
+                String(localized: "Lexique : une étoile garde le mot, « + carte » crée sa carte de révision, et « Mes mots » ne montre que les mots gardés.", bundle: .main),
+                String(localized: "Lecteur : menu « … » → « Aide : gestes de lecture » explique les gestes de ce document.", bundle: .main),
+                String(localized: "Lecteur sur batterie : un rappel s'affiche quand la luminosité dépasse 90 % (la batterie descend presque trois fois plus vite).", bundle: .main),
+            ], fixed: [
+                String(localized: "Dessin au Pencil en page simple avec glissement : il marche dès l'ouverture du document, sans devoir tourner une page.", bundle: .main),
+                String(localized: "Chat du livre ouvert depuis l'accueil : il se ferme avec « Fermer », et le livre s'ouvre ensuite normalement.", bundle: .main),
+                String(localized: "Création de cartes : la liste des termes défile jusqu'au dernier.", bundle: .main),
+                String(localized: "La fenêtre « Nouveautés » s'affiche de nouveau après une mise à jour.", bundle: .main),
+                String(localized: "« Arrêter » une analyse ou une traduction ne laisse plus un texte coupé compté comme page lue.", bundle: .main),
+                String(localized: "« Supprimer définitivement » refusé pendant une sauvegarde : le document reste dans la corbeille.", bundle: .main),
+                String(localized: "Un effacement en échec ne fait plus réapparaître toute la corbeille dans la bibliothèque.", bundle: .main),
+                String(localized: "Une note ou une carte d'une page qui n'existe plus ne ferme plus l'app.", bundle: .main),
+                String(localized: "Relevé de batterie : le résumé reste lisible après une coupe du fichier, et une charge termine bien une session.", bundle: .main),
+            ]),
         ReleaseNotes("1.5.5", "2026-11-10", published: false, String(localized: "Pencil, chat du livre, navigateur et mises à jour Drive plus sûres", bundle: .main), added: [
             String(localized: "Chat du livre : il répond aussi aux questions générales, en le signalant, et liste les pages citées.", bundle: .main),
             String(localized: "Navigateur intégré : la connexion Google s'ouvre dans une vraie fenêtre ; la barre d'adresse cherche avec Brave.", bundle: .main),

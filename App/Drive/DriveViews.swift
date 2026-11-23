@@ -411,11 +411,28 @@ extension AppModel {
         // P2 n°4 (revue R2) : les conflits « cible déjà présente » sont visibles dans ce rapport ;
         // les données de l'ancienne version sont mises de côté dans « Conflits-remplacement ».
         var conflicts: [String] = []
+        // Recette 1.5.6 (6.1) : un cours suit **son** fichier Drive (identifiant + empreinte du contenu), jamais un
+        // nom ; le rapport dit quel fichier a été comparé, s'il a été renommé ou mis à la corbeille sur Drive.
+        var checked: [String] = []
+        // Relecture finale f7b5026 (B1, N1) : cours dont le fichier Drive est dans la corbeille de Drive, comptés à part
+        // (jamais retrouvés dans le texte traduit) et listés avant l'explication sur les noms.
+        var inDriveTrash: [String] = []
         for document in linked {
             guard let fileId = document.driveFileId else { continue }
             do {
                 let file = try await GoogleDrive.shared.metadata(fileId: fileId)
-                guard file.revision != document.driveRevision else { continue }
+                let onlineName = (file.name as NSString).deletingPathExtension
+                // Corbeille de Drive : rien n'est remplacé ni effacé ici, la copie locale reste telle quelle.
+                if file.trashed == true {
+                    inDriveTrash.append(String(localized: "« \(document.title) » : son fichier Drive est dans la corbeille de Drive ; copie locale gardée."))
+                    continue
+                }
+                guard file.revision != document.driveRevision else {
+                    checked.append(onlineName == document.title
+                        ? String(localized: "« \(document.title) » : contenu identique sur Drive.")
+                        : String(localized: "« \(document.title) » : contenu identique sur Drive (fichier suivi, nommé « \(onlineName) » sur Drive)."))
+                    continue
+                }
                 let url = try await GoogleDrive.shared.download(file) { _ in }
                 try await importFromDrive(url: url, file: file)
                 updated.append(document.title)
@@ -437,9 +454,19 @@ extension AppModel {
             }
         }
         var lines: [String] = []
-        lines.append(updated.isEmpty ? String(localized: "Tout est à jour (\(linked.count) document(s)).") : String(localized: "Mis à jour : ") + updated.joined(separator: ", "))
+        // « Tout est à jour » seulement si chaque cours a été vérifié et qu'aucun n'est dans la corbeille de Drive
+        // (relectures finales f2b3d49 N4, f7b5026 B1 et N2).
+        lines.append(!updated.isEmpty ? String(localized: "Mis à jour : ") + updated.joined(separator: ", ")
+                     : !failures.isEmpty ? String(localized: "Vérification incomplète : \(linked.count - failures.count) document(s) sur \(linked.count) vérifié(s).")
+                     : !inDriveTrash.isEmpty ? String(localized: "Aucune nouvelle version à télécharger (\(linked.count) document(s)).")
+                     : String(localized: "Tout est à jour (\(linked.count) document(s))."))
+        lines += inDriveTrash
         if !failures.isEmpty { lines.append(String(localized: "Erreurs : ") + failures.joined(separator: " ; ")) }
         if !conflicts.isEmpty { lines.append(conflicts.joined(separator: " ; ")) }
+        if !checked.isEmpty {
+            lines.append(String(localized: "Chaque cours suit son propre fichier Drive (pas son nom) : un autre fichier renommé pareil n'est pas pris en compte."))
+            lines += checked
+        }
         return lines.joined(separator: "\n")
     }
 }

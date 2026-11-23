@@ -97,6 +97,11 @@ struct DomainLexiconView: View {
     var body: some View {
         List {
             Section {
+                // Lexique du design d'intérieur (#50, D4) : termes relevés dans les manuels ou importés, à valider.
+                Button { showHarvest = true } label: { Label("Enrichir : relever dans mes manuels, importer un glossaire", systemImage: "sparkles") }
+                Button("Remettre les termes de départ manquants") { lexicon.restoreStarter() }
+            }
+            Section {
                 ForEach(shown) { e in
                     Button { editing = e } label: {
                         VStack(alignment: .leading, spacing: 2) {
@@ -111,11 +116,6 @@ struct DomainLexiconView: View {
                 .onDelete { offsets in lexicon.delete(offsets.map { shown[$0].id }) }
             } footer: {
                 Text("\(lexicon.entries.count) termes. Un terme du lexique compte comme un mot connu pour la relecture de l'OCR (moins de faux « caractères douteux ») et l'analyse ; son sens est imposé aux traductions de Qwen3-VL ; lecture et sens aident le chat.")
-            }
-            Section {
-                // Lexique du design d'intérieur (#50, D4) : termes relevés dans les manuels ou importés, à valider.
-                Button { showHarvest = true } label: { Label("Enrichir : relever dans mes manuels, importer un glossaire", systemImage: "sparkles") }
-                Button("Remettre les termes de départ manquants") { lexicon.restoreStarter() }
             }
         }
         .searchable(text: $search, prompt: String(localized: "Chercher un terme"))

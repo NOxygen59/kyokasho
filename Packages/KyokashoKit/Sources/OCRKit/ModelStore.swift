@@ -38,6 +38,10 @@ public struct ModelSpec: Identifiable, Sendable, Equatable {
         }
     }
 
+    /// Famille Qwen3.5 (gabarit de conversation, réflexion) : le modèle officiel et les modèles importés
+    /// (PLAN-MODLOC-001, E3 ; `LocalModels.supportedTypes` = qwen3_5).
+    public static func isQwen35Family(_ id: String) -> Bool { id == "qwen35chat4b" || LocalModels.isLocal(id) }
+
     /// Fichier principal téléchargé (le plus gros), pour afficher son adresse.
     public var mainDownload: URL? { files.max { $0.size < $1.size }?.url }
 }

@@ -23,17 +23,19 @@ final class AITaskCenter: ObservableObject {
         /// Modèle et action affichés dans les pastilles, sans déduire le rôle du titre.
         let modelId: String?
         let activity: String?
+        let diagnosticID: UUID?
         var progress: (done: Int, total: Int)?
         /// Journal en direct (« Voir le détail »), 200 lignes au plus, recopié dans le journal de diagnostic (zone `ia`).
         var log: [String] = []
         /// Fin de la tâche (« Terminées récemment ») : `nil` tant qu'elle tourne.
         var outcome: String?
 
-        init(key: String, title: String, modelId: String?, activity: String?) {
+        init(key: String, title: String, modelId: String?, activity: String?, diagnosticID: UUID? = nil) {
             self.key = key
             self.title = title
             self.modelId = modelId
             self.activity = activity
+            self.diagnosticID = diagnosticID
         }
 
         static func == (a: Job, b: Job) -> Bool {
@@ -61,22 +63,33 @@ final class AITaskCenter: ObservableObject {
     /// Lance `work` sous `key` (rien si une tâche de même clé tourne déjà). Une erreur levée est gardée dans `errors`.
     @discardableResult
     func run(_ key: String, title: String, modelId: String? = nil, activity: String? = nil,
+             diagnosticKind: ActivityCenter.Kind? = nil,
              _ work: @escaping @MainActor (_ id: UUID) async throws -> Void) -> Bool {
         // Pas de nouvelle tâche IA pendant une sauvegarde complète (#51) : ses écritures viseraient la copie en cours.
         // Ni pour un document en cours de suppression (P3 n°6, revue R2) : ses caches sont sur le point d'être effacés.
         guard !isRunning(key), !PageShift.blocksAI(jobKey: key), !LibraryBackupService.inProgress,
               !Self.deletionBlocks(deletingDocumentIds, jobKey: key) else { return false }
-        let job = Job(key: key, title: title, modelId: modelId, activity: activity)
+        let diagnosticID = diagnosticKind.flatMap {
+            ActivityCenter.shared.beginDiagnostic($0, progress: .init(stage: .waiting))
+        }
+        let job = Job(key: key, title: title, modelId: modelId, activity: activity, diagnosticID: diagnosticID)
         jobs.append(job)
         errors[key] = nil
         // Début et fin écrits pour toutes les tâches, même celles qui ne journalisent rien d'autre (#47).
         log(job.id, String(localized: "Démarrée") + (modelId.map { " avec \(Self.modelName($0))" } ?? "")
             + (activity.map { " : \(AIActivityText.explain($0))" } ?? ""))
         tasks[job.id] = Task { [weak self] in
+            defer { ActivityCenter.shared.endDiagnostic(job.diagnosticID) }
             var failure: String?
             var cancelled = false
             do {
-                try await work(job.id)
+                if modelId == ModelSpec.ovisocr2.id || modelId == ModelSpec.qwen3vl4b.id {
+                    try await DiagnosticThreadHook.withContext(Self.pageVLMContext(modelId: modelId, key: key)) {
+                        try await work(job.id)
+                    }
+                } else {
+                    try await work(job.id)
+                }
             } catch is CancellationError {
                 cancelled = true
             } catch {
@@ -97,6 +110,22 @@ final class AITaskCenter: ObservableObject {
     func setProgress(_ id: UUID, done: Int, total: Int) {
         guard let i = jobs.firstIndex(where: { $0.id == id }) else { return }
         jobs[i].progress = (done, total)
+    }
+
+    /// Le scan donne sa propre page à chaque lecture ; les tâches manuelles ont une clé fixe.
+    nonisolated private static func pageVLMContext(modelId: String?, key: String) -> DiagnosticThreadHook.Context? {
+        guard let modelId else { return nil }
+        let parts = key.split(separator: "|", maxSplits: 3, omittingEmptySubsequences: false)
+        guard parts.count >= 2, !parts[1].isEmpty else { return nil }
+        switch (modelId, parts[0], parts.count) {
+        case (ModelSpec.ovisocr2.id, "layout", 3), (ModelSpec.qwen3vl4b.id, "translate", 3):
+            guard let page = Int(parts[2]), page >= 0 else { return nil }
+            return .init(documentID: String(parts[1]), page: page)
+        case (ModelSpec.ovisocr2.id, "verify", 2):
+            return .init(documentID: String(parts[1]), page: nil)
+        default:
+            return nil
+        }
     }
 
     func log(_ id: UUID, _ line: String) {
@@ -124,7 +153,7 @@ final class AITaskCenter: ObservableObject {
         case ModelSpec.glmocr.id: return "GLM-OCR"
         case ModelSpec.qwen3vl4b.id: return "Qwen3-VL"
         case ModelSpec.qwen35chat4b.id: return "Qwen3.5"
-        default: return id
+        default: return LocalModels.name(id) ?? id
         }
     }
 
@@ -289,12 +318,12 @@ struct AITaskPill: View {
     }
 
     private var badges: [Badge] {
-        [
+        ([
             (ModelSpec.ovisocr2, "OvisOCR2"),
             (ModelSpec.glmocr, "GLM-OCR"),
             (ModelSpec.qwen3vl4b, "Qwen3-VL"),
             (ModelSpec.qwen35chat4b, "Qwen3.5")
-        ].compactMap { spec, name in
+        ] + LocalModels.specs().map { ($0, $0.title) }).compactMap { spec, name in
             let url = ModelStore.shared.directory(spec)
             let jobs = center.jobs.filter { $0.modelId == spec.id }
             let phase = analysis.progress?.phase ?? ""
@@ -307,7 +336,7 @@ struct AITaskPill: View {
             }
             if monitor.status?.loading == url { return Badge(id: spec.id, name: name, activity: "chargement", active: true) }
             if monitor.status?.loaded == url, monitor.status?.inUse == true {
-                let chatActive = spec.id == ModelSpec.qwen3vl4b.id || spec.id == ModelSpec.qwen35chat4b.id
+                let chatActive = spec.id == ModelSpec.qwen3vl4b.id || ModelSpec.isQwen35Family(spec.id)
                 let activity = jobs.count > 1 ? "\(jobs.count) tâches" : jobs.first?.activity ?? analysisActivity
                     ?? (chatActive ? "chat" : "utilisée")
                 return Badge(id: spec.id, name: name, activity: activity, active: true)

@@ -41,7 +41,7 @@ Lire le diff ; distinguer production, tests et documents. Vérifier l'absence de
 
 ## Livraison demandée par NOxygen59
 
-La procédure historique détaillée reste au § 5 de la feuille de route. Ordre recommandé : figer le code, exécuter les contrôles, préparer la note « Modifications / Vérifié / Non vérifié », puis attribuer seulement le numéro demandé. Construire le `.tipa` avec `build_ipa.sh`, garder archive et dSYM exacts, vérifier le paquet, créer tag/release, puis mettre à jour l'avis du dépôt auxiliaire selon la procédure existante.
+La procédure historique détaillée reste au § 5 de la feuille de route. Ordre recommandé : figer le code, exécuter les contrôles, préparer la note « Modifications / Vérifié / Non vérifié », puis attribuer seulement le numéro demandé. Construire le `.tipa` avec `build_ipa.sh` (lot B1, 13/11/2026 : il écrit aussi `dist/Kyokasho-<version>.manifeste.json` — version, commit, Xcode/Swift/SDK, empreintes des `Package.resolved` et des lexiques, relecture finale, taille et SHA-256 du paquet, UUID du binaire et du dSYM contrôlés — et `dist/Kyokasho-<version>.dSYM.zip` ; il refuse un lexique qui n'est pas la révision de `packaging/lexique-attendu.txt`), garder archive et dSYM exacts, vérifier le paquet, créer tag/release, puis mettre à jour l'avis du dépôt auxiliaire selon la procédure existante.
 
 Dans une fiche de livraison, conserver : SHA/tag, version/build, versions Xcode/Swift, révisions des deux forks, hachage SHA-256 du `.tipa`, UUID arm64 du binaire/dSYM, commandes et résumé des résultats, anomalies ouvertes et retour iPad. Ne pas écraser la seule archive utile à un crash encore non symbolisé.
 

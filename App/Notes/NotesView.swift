@@ -8,8 +8,11 @@ import SwiftUI
 ///
 /// Toutes les notes de tous les livres, groupées par échéance (En retard, Aujourd'hui, Cette semaine, Plus tard, Sans
 /// échéance), avec filtres (classeur, étiquette, priorité, livre, texte) et la vue « Archivées » (DEC-T4-D). Toucher une
-/// note ouvre son livre à sa page et fait clignoter son ancre. Les réglages d'une note (échéance, priorité, étiquettes,
-/// classeur, archive) arrivent à l'étape E3 : ici, lecture seulement.
+/// note ouvre son livre à sa page et fait clignoter son ancre.
+///
+/// Étape E3 (DEC-T4-09 A) : appui long sur une note → « Ranger… » (`NoteSettingsView`) ou archiver ; glisser vers la
+/// gauche → archiver / désarchiver ; « Choisir » → sélection multiple, puis échéance, priorité, classeur, étiquette ou
+/// archive pour toutes les notes choisies d'un coup (`AppDatabase.apply`, tout ou rien).
 ///
 /// Calcul pur testé : `NoteListing`. Lecture en base hors du fil principal, sans les dessins (`organizedNotes`).
 struct NotesView: View {
@@ -23,6 +26,15 @@ struct NotesView: View {
     @State private var tags: [NoteTag] = []
     @State private var filter = NoteListing.Filter()
     @State private var loaded = false
+    /// Sélection multiple (E3) : actif quand `selecting`.
+    @State private var selecting = false
+    @State private var selection = Set<String>()
+    /// Note dont on règle le rangement (feuille `NoteSettingsView`).
+    @State private var settingsFor: PageComment?
+    @State private var choosingDue = false
+    @State private var remindersSettings = false
+    @State private var chosenDue = NoteSettingsView.defaultDue()
+    @State private var actionError: String?
 
     private var sections: [NoteListing.Section] {
         NoteListing.sections(notes, filter: filter, today: Date(),
@@ -37,16 +49,30 @@ struct NotesView: View {
 
     var body: some View {
         NavigationStack {
-            List {
+            List(selection: $selection) {
                 Section {
                     Picker("", selection: $filter.archived) {
                         Text("À faire").tag(false)
                         Text("Archivées").tag(true)
                     }
                     .pickerStyle(.segmented)
-                    if filter.folderId != nil || filter.tagId != nil || filter.priority != nil || filter.documentId != nil {
-                        Button("Retirer les filtres") {
-                            filter = NoteListing.Filter(text: filter.text, archived: filter.archived)
+                    // Recette 1.5.7 (4.1) : ce qu'on regarde se lit d'un coup d'œil (combien, quels filtres).
+                    if loaded, loadError == nil {
+                        Text(summary).font(Atelier.font(13)).foregroundStyle(Atelier.textSecondary)
+                    }
+                    if !activeFilters.isEmpty {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 6) {
+                                ForEach(activeFilters, id: \.id) { chip in
+                                    Button { chip.clear() } label: {
+                                        Label(chip.label, systemImage: "xmark.circle.fill").font(Atelier.font(12, weight: .medium))
+                                            .padding(.horizontal, 10).padding(.vertical, 5)
+                                            .background(Atelier.Tint.read.opacity(0.15), in: Capsule())
+                                    }
+                                    .buttonStyle(.plain)
+                                    .accessibilityLabel(String(localized: "Retirer le filtre \(chip.label)"))
+                                }
+                            }
                         }
                     }
                 }
@@ -56,22 +82,49 @@ struct NotesView: View {
                 } else if loaded && sections.isEmpty {
                     Text(emptyText).foregroundStyle(Atelier.textSecondary)
                 }
+                if let actionError {
+                    Text(actionError).foregroundStyle(.red)
+                }
                 ForEach(sections, id: \.group) { section in
-                    Section(Self.title(section.group)) {
+                    Section {
                         ForEach(section.notes) { item in
-                            Button { open(item.note) } label: { row(item) }
-                                .buttonStyle(.plain)
+                            noteRow(item)
                         }
+                    } header: {
+                        sectionHeader(section)
                     }
                 }
             }
+            .environment(\.editMode, .constant(selecting ? .active : .inactive))
+            // Revue DeepSeek D-07 F1 : jamais de note choisie qui n'est plus affichée (filtre, onglet, recherche).
+            .onChange(of: filter) { _ in selection.formIntersection(visibleIds) }
             .searchable(text: $filter.text, prompt: String(localized: "Chercher dans les notes"))
             .navigationTitle("Notes")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) { Button("OK") { dismiss() } }
-                ToolbarItem(placement: .navigationBarLeading) { filterMenu }
+                // Relecture finale f2b3d49 (N5) : « Choisir » à gauche avec le filtre, « OK » seul à droite (iOS 16 peut
+                // replier deux éléments de droite dans un menu).
+                ToolbarItemGroup(placement: .navigationBarLeading) {
+                    filterMenu
+                    // PLAN-NOTIF-001 E4 : heure et rappel par défaut, autorisation des notifications.
+                    Button { remindersSettings = true } label: { Image(systemName: "bell") }
+                        .accessibilityLabel("Rappels")
+                    Button(selecting ? String(localized: "Terminé") : String(localized: "Choisir")) {
+                        selecting.toggle()
+                        selection = []
+                    }
+                    .disabled(!selecting && notes.isEmpty)
+                }
+                ToolbarItemGroup(placement: .bottomBar) {
+                    if selecting { selectionBar }
+                }
             }
+            .sheet(item: $settingsFor, onDismiss: { Task { await reload() } }) { note in
+                NoteSettingsView(database: model.database, noteId: note.id) { model.refreshNotesToReview() }
+            }
+            .sheet(isPresented: $choosingDue) { dueSheet }
+            .sheet(isPresented: $remindersSettings, onDismiss: { model.refreshNotesToReview() }) { NoteReminderSettingsView() }
             .task { await reload() }
         }
     }
@@ -105,50 +158,219 @@ struct NotesView: View {
         }
     }
 
+    /// Ligne : toucher ouvre la note (hors sélection) ; appui long et glissement pour la ranger (E3).
+    @ViewBuilder
+    private func noteRow(_ item: OrganizedNote) -> some View {
+        if selecting {
+            row(item).tag(item.id)
+        } else {
+            Button { open(item.note) } label: { row(item) }
+                .buttonStyle(.plain)
+                .contextMenu {
+                    Button { settingsFor = item.note } label: { Label("Ranger…", systemImage: "slider.horizontal.3") }
+                    archiveButton([item.id], archived: item.organization.archived)
+                }
+                .swipeActions(edge: .trailing) {
+                    archiveButton([item.id], archived: item.organization.archived).tint(Atelier.Tint.read)
+                }
+        }
+    }
+
+    private func archiveButton(_ ids: [String], archived: Bool) -> some View {
+        Button { apply(.archived(!archived), to: ids) } label: {
+            Label(archived ? String(localized: "Désarchiver") : String(localized: "Archiver"),
+                  systemImage: archived ? "tray.and.arrow.up" : "archivebox")
+        }
+    }
+
+    // MARK: Sélection multiple (E3)
+
+    /// Barre du bas : réglages appliqués à toutes les notes choisies.
+    @ViewBuilder
+    private var selectionBar: some View {
+        let ids = Array(selection)
+        let none = selection.isEmpty
+        Menu {
+            Button("Aujourd'hui") { apply(.due(NoteDay.string(Date())), to: ids) }
+            Button("Demain") { apply(.due(NoteDay.string(NoteDay.calendar.date(byAdding: .day, value: 1, to: Date()) ?? Date())), to: ids) }
+            Button("Dans 7 jours") { apply(.due(NoteDay.string(NoteSettingsView.defaultDue())), to: ids) }
+            Button("Choisir une date…") { choosingDue = true }
+            Button("Sans échéance", role: .destructive) { apply(.due(nil), to: ids) }
+        } label: { Label("Échéance", systemImage: "calendar") }
+        .disabled(none)
+        Menu {
+            ForEach(NotePriority.allCases.reversed(), id: \.self) { p in
+                Button(Self.title(p)) { apply(.priority(p), to: ids) }
+            }
+        } label: { Label("Priorité", systemImage: "exclamationmark.circle") }
+        .disabled(none)
+        Menu {
+            ForEach(folders) { f in Button(f.name) { apply(.folder(f.id), to: ids) } }
+            Button("Aucun classeur") { apply(.folder(nil), to: ids) }
+        } label: { Label("Classeur", systemImage: "folder") }
+        .disabled(none)
+        Menu {
+            Section("Ajouter") {
+                ForEach(tags) { t in Button("#" + t.name) { apply(.addTag(t.id), to: ids) } }
+            }
+            Section("Retirer") {
+                ForEach(tags) { t in Button("#" + t.name, role: .destructive) { apply(.removeTag(t.id), to: ids) } }
+            }
+        } label: { Label("Étiquette", systemImage: "tag") }
+        .disabled(none)
+        Spacer()
+        Text(String(localized: "\(selection.count) choisie(s)")).font(Atelier.font(13)).foregroundStyle(Atelier.textSecondary)
+        Spacer()
+        archiveButton(ids, archived: filter.archived).disabled(none)
+    }
+
+    private var visibleIds: Set<String> { Set(sections.flatMap(\.notes).map(\.id)) }
+
+    private var dueSheet: some View {
+        NavigationStack {
+            DatePicker(String(localized: "Avant le"), selection: $chosenDue, displayedComponents: .date)
+                .datePickerStyle(.graphical)
+                .environment(\.calendar, NoteDay.calendar)
+                .padding()
+                .navigationTitle("Échéance")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) { Button("Annuler") { choosingDue = false } }
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Appliquer") {
+                            apply(.due(NoteDay.string(chosenDue)), to: Array(selection))
+                            choosingDue = false
+                        }
+                    }
+                }
+        }
+        .presentationDetents([.medium, .large])
+    }
+
+    /// Écrit hors du fil principal, puis relit l'écran et la pastille. Tout ou rien (une transaction).
+    private func apply(_ change: NoteChange, to ids: [String]) {
+        guard !ids.isEmpty else { return }
+        let database = model.database
+        Task {
+            let result = await Task.detached(priority: .userInitiated) { Result { try database.apply(change, to: ids) } }.value
+            switch result {
+            case .failure(let error): actionError = error.localizedDescription
+            case .success: actionError = nil
+            }
+            // Une note archivée ou désarchivée quitte la vue affichée : la sélection ne garde que ce qui reste visible ;
+            // plus rien de choisi après un lot → fin du mode sélection (revue D-07 F16).
+            await reload()
+            selection.formIntersection(visibleIds)
+            if selecting, selection.isEmpty, case .success = result { selecting = false }
+            model.refreshNotesToReview()
+        }
+    }
+
+    /// Ligne d'une note (recette 1.5.7, 4.1) : trait de couleur de la priorité, texte, livre et page, **date et heure**,
+    /// échéance en pastille, classeur et étiquettes en pastilles.
     private func row(_ item: OrganizedNote) -> some View {
         let note = item.note, o = item.organization
         let document = model.documents.first { $0.id == note.documentId }
         let group = NoteListing.group(dueDay: o.dueDay, today: Date())
         return HStack(alignment: .top, spacing: 10) {
-            Image(systemName: o.priority == .high ? "exclamationmark.circle.fill" : o.priority == .low ? "arrow.down.circle" : "note.text")
-                .foregroundStyle(o.priority == .high ? Atelier.Tint.annotate : Atelier.textTertiary)
-                .frame(width: 22)
-                .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 4) {
-                if o.priority != .normal {
-                    Text(Self.title(o.priority)).font(Atelier.font(11, weight: .semibold))
-                        .foregroundStyle(o.priority == .high ? Atelier.Tint.annotate : Atelier.textTertiary)
-                }
+            VStack(alignment: .leading, spacing: 5) {
                 Text(Self.firstLine(note)).font(Atelier.font(16, weight: .semibold)).foregroundStyle(Atelier.textPrimary).lineLimit(2)
-                HStack(spacing: 6) {
-                    if let document {
-                        Text(String(localized: "\(document.title) · p. \(document.pageLabel(note.pageIndex))"))
-                            .lineLimit(1)
+                if let document {
+                    Label(String(localized: "\(document.title) · p. \(document.pageLabel(note.pageIndex))"), systemImage: "book.closed")
+                        .font(Atelier.font(13)).foregroundStyle(Atelier.textSecondary).lineLimit(1)
+                }
+                Label(Self.dateLabel(note), systemImage: "clock")
+                    .font(Atelier.font(12)).foregroundStyle(Atelier.textTertiary)
+                let chips = chips(for: o)
+                if o.dueDay != nil || o.priority != .normal || !chips.isEmpty {
+                    // Revue D-07 (n°12) : les pastilles défilent au lieu d'être coupées.
+                    ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 6) {
+                        if let due = o.dueDay {
+                            chip(Self.dueLabel(due), icon: "calendar",
+                                 tint: group == .overdue ? .red : group == .today ? Atelier.Tint.annotate : Atelier.textSecondary)
+                        }
+                        if o.priority != .normal {
+                            chip(Self.title(o.priority), icon: o.priority == .high ? "exclamationmark" : "arrow.down",
+                                 tint: o.priority == .high ? Atelier.Tint.annotate : Atelier.textSecondary)
+                        }
+                        ForEach(chips, id: \.id) { chip($0.label, icon: nil, tint: Atelier.Tint.read) }
                     }
-                    if let due = o.dueDay {
-                        Text(Self.dueLabel(due))
-                            .foregroundStyle(group == .overdue ? Color.red : group == .today ? Atelier.Tint.annotate : Atelier.textSecondary)
+                    .lineLimit(1)
                     }
                 }
-                .font(Atelier.font(13)).foregroundStyle(Atelier.textSecondary)
-                let labels = labels(for: o)
-                if !labels.isEmpty {
-                    Text(labels).font(Atelier.font(12, weight: .medium)).foregroundStyle(Atelier.Tint.read).lineLimit(1)
-                }
+            }
+            .padding(.leading, 10)
+            // Revue D-07 (n°8) : trait de priorité sur toute la hauteur de la note.
+            .overlay(alignment: .leading) {
+                RoundedRectangle(cornerRadius: Atelier.corner(2))
+                    .fill(o.priority == .high ? Atelier.Tint.annotate : o.priority == .low ? Atelier.textTertiary.opacity(0.4) : Color.clear)
+                    .frame(width: 4)
+                    .accessibilityHidden(true)
             }
             Spacer(minLength: 0)
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, 4)
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
     }
 
-    /// Classeur puis étiquettes, sur une ligne.
-    private func labels(for o: NoteOrganization) -> String {
-        var parts: [String] = []
-        if let folder = folders.first(where: { $0.id == o.folderId }) { parts.append("▸ " + folder.name) }
-        parts += tags.filter { o.tagIds.contains($0.id) }.map { "#" + $0.name }
-        return parts.joined(separator: "  ")
+    private func chip(_ text: String, icon: String?, tint: Color) -> some View {
+        Group {
+            if let icon { Label(text, systemImage: icon) } else { Text(text) }
+        }
+        .font(Atelier.font(11, weight: .semibold)).foregroundStyle(tint)
+        .padding(.horizontal, 8).padding(.vertical, 3)
+        .background(tint.opacity(0.12), in: Capsule())
+    }
+
+    /// Classeur puis étiquettes, chacun en pastille, identifiés par leur identifiant (revue D-07 n°9 : deux noms pareils).
+    private func chips(for o: NoteOrganization) -> [(id: String, label: String)] {
+        var parts: [(id: String, label: String)] = []
+        if let folder = folders.first(where: { $0.id == o.folderId }) { parts.append(("f-" + folder.id, "▸ " + folder.name)) }
+        return parts + tags.filter { o.tagIds.contains($0.id) }.map { ("t-" + $0.id, "#" + $0.name) }
+    }
+
+    /// En-tête de groupe : icône, nom, nombre de notes ; en retard en rouge.
+    private func sectionHeader(_ section: NoteListing.Section) -> some View {
+        let (icon, tint): (String, Color) = switch section.group {
+        case .overdue: ("exclamationmark.triangle.fill", .red)
+        case .today: ("sun.max.fill", Atelier.Tint.annotate)
+        case .tomorrow: ("sunrise.fill", Atelier.Tint.annotate)
+        case .thisWeek: ("calendar", Atelier.Tint.read)
+        case .later: ("calendar.badge.clock", Atelier.textSecondary)
+        case .noDue: ("tray", Atelier.textSecondary)
+        case .archived: ("archivebox", Atelier.textSecondary)
+        }
+        return Label("\(Self.title(section.group)) (\(section.notes.count))", systemImage: icon)
+            .font(Atelier.font(13, weight: .bold)).foregroundStyle(tint)
+    }
+
+    /// « 3 notes · 1 à revoir » pour la vue affichée.
+    private var summary: String {
+        let all = sections   // calculé une fois (revue D-07 n°10)
+        let shown = all.reduce(0) { $0 + $1.notes.count }
+        let toReview = all.filter { [.overdue, .today, .tomorrow].contains($0.group) }.reduce(0) { $0 + $1.notes.count }
+        return toReview > 0 ? String(localized: "\(shown) note(s) · \(toReview) à revoir") : String(localized: "\(shown) note(s)")
+    }
+
+    /// Filtres posés, à retirer d'un toucher.
+    private var activeFilters: [(id: String, label: String, clear: () -> Void)] {
+        var list: [(id: String, label: String, clear: () -> Void)] = []
+        if let id = filter.folderId { list.append(("folder", "▸ " + (folders.first { $0.id == id }?.name ?? "?"), { filter.folderId = nil })) }
+        if let id = filter.tagId { list.append(("tag", "#" + (tags.first { $0.id == id }?.name ?? "?"), { filter.tagId = nil })) }
+        if let priority = filter.priority { list.append(("priority", Self.title(priority), { filter.priority = nil })) }
+        if let id = filter.documentId { list.append(("book", model.documents.first { $0.id == id }?.title ?? "?", { filter.documentId = nil })) }
+        return list
+    }
+
+    /// « Créée le 13 nov. 2026 à 14:05 », plus « · modifiée le … » si elle a changé plus d'une minute après (revue D-07
+    /// n°11 : la première saisie suit de près la création, ce n'est pas une modification).
+    static func dateLabel(_ note: PageComment) -> String {
+        let format = Date.FormatStyle(date: .abbreviated, time: .shortened)
+        let created = String(localized: "Créée le \(note.createdAt.formatted(format))")
+        guard note.updatedAt.timeIntervalSince(note.createdAt) > 60 else { return created }
+        return created + " · " + String(localized: "modifiée le \(note.updatedAt.formatted(format))")
     }
 
     private func open(_ note: PageComment) {

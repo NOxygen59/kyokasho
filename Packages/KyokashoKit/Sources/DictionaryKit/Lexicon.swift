@@ -168,6 +168,49 @@ extension DictionaryDatabase {
         }
     }
 
+    /// Mots d'une page (PLAN-CARTES-001, E2) : pour chaque forme, le mot des dictionnaires donnés qui l'écrit ainsi,
+    /// en une seule lecture de la base (index `term_expression`). Plusieurs lectures pour une forme (上手 じょうず /
+    /// うわて) : celle de `readingHint` si une source la donne, sinon celle de la source la plus prioritaire.
+    /// Formes absentes de tous les dictionnaires : pas de clé dans le résultat (DEC-CA-02 : seuls les mots trouvés
+    /// sont proposés). Annuler la tâche appelante arrête la lecture entre deux formes.
+    public func lexiconWords(dictionaryIds: Set<Int64>,
+                             expressions: [(expression: String, readingHint: String)]) throws -> [String: LexiconWord] {
+        guard !dictionaryIds.isEmpty, !expressions.isEmpty else { return [:] }
+        let ids = dictionaryIds.sorted()
+        return try writer.read { db in
+            var titles: [Int64: String] = [:]
+            var priorities: [Int64: Int] = [:]
+            for info in try DictionaryInfo.filter(ids.contains(Column("id"))).fetchAll(db) {
+                guard let id = info.id else { continue }
+                titles[id] = info.title
+                priorities[id] = info.priority
+            }
+            let marks = Array(repeating: "?", count: ids.count).joined(separator: ",")
+            let sql = """
+                SELECT id, dictionaryId, expression, reading, glossary FROM term INDEXED BY term_expression
+                WHERE expression = ? AND dictionaryId IN (\(marks)) ORDER BY reading, id
+                """
+            var found: [String: LexiconWord] = [:]
+            for (expression, hint) in expressions where found[expression] == nil {
+                if Task.isCancelled { throw CancellationError() }
+                var arguments: [any DatabaseValueConvertible] = [expression]
+                arguments += ids
+                let groups = Self.group(try Self.fetch(db, sql: sql, arguments: StatementArguments(arguments)))
+                guard !groups.isEmpty else { continue }
+                // Revue D-07 F10 : lecture comparée en hiragana des deux côtés (un dictionnaire peut stocker des katakana).
+                let hiraganaHint = Self.hiragana(hint)
+                let best = groups.first { !hint.isEmpty && Self.hiragana($0.key.reading) == hiraganaHint } ?? groups.min { a, b in
+                    let pa = a.rows.map { priorities[$0.dictionaryId] ?? Int.max }.min() ?? Int.max
+                    let pb = b.rows.map { priorities[$0.dictionaryId] ?? Int.max }.min() ?? Int.max
+                    return pa != pb ? pa < pb : a.rows.count > b.rows.count
+                }!
+                let word = Self.word(best.key, rows: best.rows, titles: titles, priorities: priorities)
+                if !word.senses.isEmpty { found[expression] = word }
+            }
+            return found
+        }
+    }
+
     // MARK: - Lecture
 
     struct LexiconRow {
@@ -272,6 +315,10 @@ extension DictionaryDatabase {
         let flat = text.replacingOccurrences(of: "\n", with: " ")
         guard flat.count > lexiconShortLength else { return flat }
         return String(flat.prefix(lexiconShortLength - 1)) + "…"
+    }
+
+    static func hiragana(_ text: String) -> String {
+        text.applyingTransform(.hiraganaToKatakana, reverse: true) ?? text
     }
 
     /// Hiragana, katakana et marque de prolongation seulement.

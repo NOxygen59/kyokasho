@@ -32,6 +32,11 @@ enum Diagnostics {
         write(message(), level: .info, area: area)
     }
 
+    static func logCPU(_ message: String) {
+        guard enabled else { return }
+        write(message, area: "cpu", diagnosticOnly: true)
+    }
+
     /// Erreur : toujours notée.
     static func error(_ message: String, _ area: String = "app") {
         write(message, level: .erreur, area: area)
@@ -45,9 +50,14 @@ enum Diagnostics {
     /// Une ligne : heure ISO, niveau, zone, message. Écrite tout de suite si `sync`
     /// (utilisé juste avant un arrêt de l'app).
     static func write(_ message: String, level: Level = .info, area: String = "app", sync: Bool = false) {
+        write(message, level: level, area: area, sync: sync, diagnosticOnly: false)
+    }
+
+    private static func write(_ message: String, level: Level = .info, area: String, sync: Bool = false, diagnosticOnly: Bool) {
         let now = Date()
         let text = DiagnosticFiles.journalLine(level, area: area, message: message, at: now) + "\n"
         let work = {
+            guard !diagnosticOnly || enabled else { return }
             try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
             if let size = fileSize(limitPath: file), size > limit {
                 // Trop gros : on garde la seconde moitié. La coupe est écrite **en tête** du fichier (date, taille
@@ -213,6 +223,7 @@ struct DiagnosticsSection: View {
     var body: some View {
         Section {
             Toggle("Mode diagnostic", isOn: $enabled)
+                .onChange(of: enabled) { _ in DiagnosticCPU.updateActivation() }
             Button { showLog = true } label: {
                 Label("Voir le journal", systemImage: "doc.text.magnifyingglass")
             }

@@ -32,7 +32,8 @@ final class StyleTokensGuardTests: XCTestCase {
         // Enquête furigana iPad / Mac (07/11/2026) : un seul moteur par page alimente zones et furigana ; un calcul dont
         // le moteur n'est plus retenu n'est pas publié, et le texte du PDF ne remplace pas un OCR retenu.
         XCTAssertTrue(display.contains("guard !closed, selectedEngines[source] == ocr.engine else {"))
-        XCTAssertTrue(display.contains("selectedEngines[source] == engine else { return }"))
+        XCTAssertTrue(display.contains("selectedEngines[source] == engine, FuriganaLayer.purgeCount == purge else { return }"))
+        // #94 (PLAN-1510-001 E2) : une lecture calculée avant une purge du cache n'est jamais publiée après elle.
         // Revue Codex de d87e048 (R1, R2) : une seule adoption gardée et versionnée change le moteur retenu ; aucune
         // écriture directe de la sélection ne subsiste dans le lecteur.
         XCTAssertTrue(display.contains("guard !closed, ocrSelection.adopt(candidate.page.engine, ticket: candidate.ticket,"))
@@ -71,7 +72,7 @@ final class StyleTokensGuardTests: XCTestCase {
         let controller = try String(contentsOf: reader.appendingPathComponent("ReaderController.swift"), encoding: .utf8)
         XCTAssertTrue(controller.contains("guard source == self.focusSource else { self.reloadShownPage(source, engine: engine); return }"))
         XCTAssertTrue(display.contains("overridingPin: OCRSelectionPolicy.isCorrected(candidate.page)"))
-        XCTAssertTrue(display.contains("guard retained == nil || retained == OCREngineID.pdfText else { return false }"))
+        XCTAssertTrue(display.contains("guard retained == nil || retained == OCREngineID.pdfText, FuriganaLayer.purgeCount == purge else { return false }"))
         XCTAssertEqual(display.components(separatedBy: "FuriganaLayer.set(").count, 3, "publication de showOCR et de scheduleFurigana, pas d'autre")
         let close = try String(contentsOf: reader.appendingPathComponent("ReaderController+OCR.swift"), encoding: .utf8)
         XCTAssertTrue(close.contains("for page in furiganaGeneration.keys { furiganaGeneration[page, default: 0] += 1 }"))
@@ -108,7 +109,7 @@ final class StyleTokensGuardTests: XCTestCase {
             ("Library/DocumentScan.swift", "guard document.capabilities.study, UserDefaults"),
             ("Reader/ReaderController+Search.swift", "func search(_ query: String) {\n        guard document.capabilities.textAnalysis"),
             ("Reader/ReaderController+OCR.swift", "func ocr(engine: String) async throws -> OCRPage {\n        guard document.capabilities.textAnalysis"),
-            ("Reader/ReaderController+OCR.swift", "if document.capabilities.textAnalysis {\n            let url = fileURL\n            pageTextTask"),
+            ("Reader/ReaderController+OCR.swift", "if document.capabilities.textAnalysis {\n            let url = fileURL\n            let total = document.pageCount\n            let documentID = document.id\n            pageTextTask"),
             ("AppModel.swift", "capabilities.pageEditing == true else { return }"),
             ("Reader/ReaderScreen.swift", "if capabilities.pageEditing {\n                                    // #49"),
         ] {
@@ -194,6 +195,7 @@ final class StyleTokensGuardTests: XCTestCase {
         "Reader/ReaderStatusBadge.swift": 7, // batterie et heure : blanc sur noir translucide, lisibles sur toute page
         "Settings/SettingsView.swift": 4,    // noms des fonds de page
         "Library/DocumentExport.swift": 2,   // dessin dans le PDF exporté
+        "Library/LibraryView.swift": 2,      // « ! » noir des échéances de notes (PLAN-NOTIF-001, demande de NOxygen59)
     ]
 
     func testInterfaceUsesStyleTokensInsteadOfWhiteOrBlack() throws {
@@ -272,7 +274,8 @@ final class StyleTokensGuardTests: XCTestCase {
         func read(_ path: String) throws -> String { try String(contentsOf: app.appendingPathComponent(path), encoding: .utf8) }
         // Panneau de gauche : outils d'étude masqués en Manga ; sections Manga puis CBZ.
         let library = try read("Library/LibraryView.swift")
-        XCTAssertEqual(library.components(separatedBy: "if space != .manga {").count, 3)
+        // Recette 1.5.8 : trois gardes (étude, images vers PDF, banc d'essai) depuis la nouvelle colonne de gauche.
+        XCTAssertEqual(library.components(separatedBy: "if space != .manga {").count, 4)
         XCTAssertTrue(library.contains("return LibrarySections.groupManga(loose)")) // PLAN-T5-001 E2 : hors dossier
         // Tableau de bord : coins arrondis même pour un style à angles droits.
         XCTAssertTrue(library.contains("static var dashboardRadius: CGFloat { max(Atelier.corner(26), 18) }"))

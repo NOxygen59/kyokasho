@@ -19,7 +19,7 @@ au cadrage et à la feuille de route ; **ChatGPT Codex contribue au développeme
 `AGENTS.md` (racine) renvoie ici. Ce qui suit est ce qu'un nouvel assistant doit savoir avant d'écrire une ligne.
 
 **Où sont les choses**
-- Code : dépôt **privé** `NOxygen59/kyokasho` (branche `main`, tags `vX.Y.Z`, `.tipa` dans les releases GitHub).
+- Code : dépôt **public** `NOxygen59/kyokasho` (branche `main`, tags `vX.Y.Z`, `.tipa` dans les releases GitHub).
 - **Le dépôt local est de nouveau présent** dans `~/Projets-iPad/kyokasho`. Le dépôt `NOxygen59/kyokasho-models`
   n'est pas cloné localement ; `latest.json` peut être mis à jour avec le connecteur GitHub. Les forks MLX sont encore là :
   `~/Projets-iPad/mlx-swift`, `~/Projets-iPad/mlx-swift-lm` (branche `ipad-ios16`, poussés).
@@ -148,7 +148,7 @@ s'il y en a, sinon l'étape suivante non cochée (§ 7 bis puis § 8). Pas de si
 - **Pushs autorisés** : l'utilisateur a autorisé le 23/10 l'envoi sur `main` de `NOxygen59/kyokasho`, ainsi que
   les futurs pushs de ce projet. Les releases nécessitent toujours sa demande et son numéro de version.
 - **Simulateur interdit** sauf « tu peux tester ». Tests sur l'iPad : c'est l'utilisateur qui les fait (release).
-- Usage perso, jamais distribué. Dépôt **privé** `NOxygen59/kyokasho`, bundle `fr.noxygen59.kyokasho`.
+- Usage perso, jamais distribué. Dépôt **public** `NOxygen59/kyokasho`, bundle `fr.noxygen59.kyokasho`.
   **iOS 16.0** minimum (iPad Pro 12.9" M1 8 Go, iOS 16.6.1, TrollStore + jailbreak Dopamine). App **paysage**.
 - **Rétroportage iOS 16** : combler ce qui manque par du code **équivalent**, jamais retirer la fonction ni couper un
   contrôle du compilateur (voir `docs/IA-LOCALE.md`). Forks MLX : `NOxygen59/mlx-swift`, `NOxygen59/mlx-swift-lm`
@@ -160,7 +160,7 @@ s'il y en a, sinon l'étape suivante non cochée (§ 7 bis puis § 8). Pas de si
   `THIRD_PARTY_NOTICES.md` + `AboutView` (`App/Settings/SettingsView.swift`, fonction `credit`).
 - **Jamais** de PDF, dictionnaire, modèle ni donnée tierce dans le dépôt. Modèles = téléchargés à la demande.
 - En ligne seulement : DeepL (option), téléchargements demandés (audio, modèles), navigateur à côté, avis de mise à
-  jour (`latest.json` 1×/lancement) + API GitHub des releases du dépôt privé si GitHub est connecté.
+  jour (`latest.json` 1×/lancement) + API GitHub des releases du dépôt si GitHub est connecté.
 - Télécharger sur le Mac : dire quoi / d'où / taille et **demander** (sauf OvisOCR2 et Qwen3-VL : autorisés le
   22/10 pour tester). Le PDF d'essai est gardé hors du dépôt
   (manuel japonais de design d'intérieur, 24 p.) — utile pour tester, **jamais** dans le dépôt.

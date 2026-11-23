@@ -35,6 +35,7 @@ extension ReaderController {
     }
 
     func applyDisplaySettings(refit: Bool = false) {
+        DiagnosticContext.observe(self)
         registerFuriganaChoice()
         let viewport = refit ? nil : pdfView.captureViewport()
         let s = settings
@@ -88,6 +89,8 @@ extension ReaderController {
         var changed = 0, scrolls = 0
         func walk(_ view: UIView) {
             for sub in view.subviews where !(sub is PKCanvasView) {
+                // Revue D-07 (F2) : une page recréée par PDFKit sans repasser par une fenêtre retrouve aussi sa dépendance.
+                (sub as? InkPageView)?.holdPageScrollsForPencil()
                 if let scroll = sub as? UIScrollView {
                     scrolls += 1
                     let pan = scroll.panGestureRecognizer
@@ -140,15 +143,16 @@ extension ReaderController {
         sharpenTask?.cancel()
         guard ScanSharpening.enabled else { return }
         let url = fileURL, id = document.id
+        let total = document.pageCount
         sharpenTask = Task.detached(priority: .utility) { [weak self] in
             var changed = false
             for page in pages {
                 guard !Task.isCancelled else { return }
                 // Page avec du texte intégré (PDF numérique) : déjà nette, rien à faire.
-                let hasText = ActivityCenter.shared.measure(.pageText) { PDFTextEngine.hasTextLayer(url: url, pageIndex: page) }
+                let hasText = ActivityCenter.shared.measure(.pageText, page: page, progress: .init(total: total)) { PDFTextEngine.hasTextLayer(url: url, pageIndex: page) }
                 guard !hasText else { continue }
                 let key = ScanSharpening.key(documentId: id, page: page)
-                let done = ActivityCenter.shared.measure(.sharpening) { (try? ScanSharpening.prepare(key: key, fileURL: url, page: page)) == true }
+                let done = ActivityCenter.shared.measure(.sharpening, page: page, progress: .init(total: total)) { (try? ScanSharpening.prepare(key: key, fileURL: url, page: page)) == true }
                 if done { changed = true }
             }
             guard changed, !Task.isCancelled else { return }
@@ -221,6 +225,7 @@ extension ReaderController {
         // Calculs lancés l'un après l'autre pour la même page : seul le dernier est gardé.
         furiganaGeneration[source, default: 0] += 1
         let generation = furiganaGeneration[source, default: 0]
+        let purge = FuriganaLayer.purgeCount
         // Texte d'OvisOCR2 (scan à l'import, vérification, mise en page IA) : lectures d'après lui.
         let documentId = document.id
         let translator = model.dictionary.translator
@@ -263,18 +268,18 @@ extension ReaderController {
                             + "texte Ovis \(reference?.count ?? 0) caractères, \(marks.count) lectures", "furigana")
             // Préparée ici : la publication, sur le fil principal, n'a plus qu'à la ranger.
             let page = FuriganaLayer.PreparedPage(marks, signature: signature)
-            await self?.publishPageFurigana(page, key: key, source: source, generation: generation, engine: ocr.engine)
+            await self?.publishPageFurigana(page, key: key, source: source, generation: generation, engine: ocr.engine, purge: purge)
         }
     }
 
     /// Contrôle et publication d'un seul tenant sur le fil principal : rien ne peut s'intercaler. Un calcul annulé
     /// (fermeture, remplacement) a pu rendre des lectures de secours : elles ne doivent pas entrer dans le cache.
     private func publishPageFurigana(_ page: FuriganaLayer.PreparedPage, key: String, source: Int, generation: Int,
-                                     engine: String) {
+                                     engine: String, purge: Int) {
         // Moteur retenu changé pendant le calcul (choix dans le panneau, réglage) : ces lectures ne sont plus les bonnes.
         // `drawOCR` n'est appelé qu'après adoption : un moteur retenu vide signifie un réglage remis à zéro entre-temps.
         guard !closed, !Task.isCancelled, furiganaGeneration[source] == generation,
-              selectedEngines[source] == engine else { return }
+              selectedEngines[source] == engine, FuriganaLayer.purgeCount == purge else { return }
         FuriganaLayer.set(page, for: key)
         pdfView.requestRedraw()
     }
@@ -292,15 +297,16 @@ extension ReaderController {
     func scheduleFurigana(_ pages: [Int]) {
         furiganaTask?.cancel()
         guard pageFuriganaOn else { return }
-        let url = fileURL, id = document.id
+        let url = fileURL, id = document.id, purge = FuriganaLayer.purgeCount
+        let total = document.pageCount
         furiganaTask = Task.detached(priority: .utility) { [weak self] in
             var changed = false
             for source in pages {
                 guard !Task.isCancelled else { return }
                 let key = ScanSharpening.key(documentId: id, page: source)
                 guard !FuriganaLayer.has(key) else { continue }
-                guard ActivityCenter.shared.measure(.pageText, { PDFTextEngine.hasTextLayer(url: url, pageIndex: source) }) else { continue }
-                let marks: [FuriganaLayer.Mark]? = ActivityCenter.shared.measure(.furigana) {
+                guard ActivityCenter.shared.measure(.pageText, page: source, progress: .init(total: total), { PDFTextEngine.hasTextLayer(url: url, pageIndex: source) }) else { continue }
+                let marks: [FuriganaLayer.Mark]? = ActivityCenter.shared.measure(.furigana, page: source, progress: .init(total: total)) {
                     (try? PDFPool.withDocument(url) { doc -> [FuriganaLayer.Mark]? in
                         doc.page(at: source).map(FuriganaLayer.marks(from:))
                     }) ?? nil
@@ -311,7 +317,7 @@ extension ReaderController {
                 let allowed = await MainActor.run { () -> Bool in
                     guard let self, !self.closed, !Task.isCancelled else { return false }
                     let retained = self.selectedEngines[source]
-                    guard retained == nil || retained == OCREngineID.pdfText else { return false }
+                    guard retained == nil || retained == OCREngineID.pdfText, FuriganaLayer.purgeCount == purge else { return false }
                     FuriganaLayer.set(marks, for: key)
                     return true
                 }
@@ -320,6 +326,16 @@ extension ReaderController {
             guard changed, !Task.isCancelled else { return }
             await self?.pdfView.requestRedraw()
         }
+    }
+
+    /// #94 : pages visibles sans furigana en mémoire alors qu'ils sont activés → même recalcul qu'à l'arrivée sur la page,
+    /// en gardant le panneau. Rien n'est relancé si toutes les pages visibles ont encore les leurs.
+    func refreshMissingFurigana() {
+        guard !closed, pageFuriganaOn, document.capabilities.textAnalysis else { return }
+        let missing = visibleSources().filter { !FuriganaLayer.has(ScanSharpening.key(documentId: document.id, page: $0)) }
+        guard !missing.isEmpty else { return }
+        Diagnostics.log("Furigana : recalcul de \(missing.count) page(s) visible(s) après purge ou retour", "furigana")
+        schedulePageSettled(samePageKeeps: true)
     }
 
     func setFuriganaTint(_ tint: FuriganaLayer.Tint) {
@@ -370,12 +386,13 @@ extension ReaderController {
         ToneCache.keep(Set(window.map { ScanSharpening.key(documentId: id, page: $0) }), tone: tone)
         // D'abord les pages affichées, puis les voisines.
         let order = visible + window.filter { !visible.contains($0) }
+        let total = document.pageCount
         toneTask = Task.detached(priority: .utility) { [weak self] in
             var shownReady = false
             for page in order {
                 guard !Task.isCancelled else { return }
                 let key = ScanSharpening.key(documentId: id, page: page)
-                let ready = ActivityCenter.shared.measure(.tone) { ToneCache.prepare(key: key, fileURL: url, page: page, tone: tone) }
+                let ready = ActivityCenter.shared.measure(.tone, page: page, progress: .init(total: total)) { ToneCache.prepare(key: key, fileURL: url, page: page, tone: tone) }
                 if ready, visible.contains(page) { shownReady = true }
             }
             guard shownReady, !Task.isCancelled else { return }

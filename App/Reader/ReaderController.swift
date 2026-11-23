@@ -15,6 +15,8 @@ import UIKit
 /// toucher, notifications ; le reste par thème dans `ReaderController+*.swift`.
 @MainActor
 final class ReaderController: NSObject, ObservableObject {
+    /// Trace de la libération du lecteur fermé (journal de diagnostic) : sa fuite causait le gel de la 1.6.1-1.6.2.
+    deinit { DispatchQueue.main.async { Diagnostics.log("lecteur libéré", "lecteur") } }
     let model: AppModel
     @Published var document: LibraryDocument
     let pdfView = ReaderPDFView()
@@ -41,7 +43,11 @@ final class ReaderController: NSObject, ObservableObject {
     @Published var bookmarks: [Bookmark] = []
     @Published var tappedHighlight: Highlight?
     /// Note ouverte dans la fenêtre flottante.
-    @Published var openNote: PageComment?
+    @Published var openNote: PageComment? {
+        // Fenêtre de note fermée ou changée : rappels reprogrammés avec le texte enregistré (revue R2 NOTIF n°6),
+        // pas à chaque mot tapé.
+        didSet { if let old = oldValue, old.id != openNote?.id { model.refreshNotesAfterPendingWrites() } }
+    }
     /// Note qui attend son ancre : le prochain toucher sur la page la pose.
     @Published var placingAnchorFor: PageComment?
     /// Notes du document (ancres affichées sur les pages).
@@ -252,7 +258,9 @@ final class ReaderController: NSObject, ObservableObject {
     var rebuilding = false
     var observers: [NSObjectProtocol] = []
     /// Note dont l'ancre clignotera une fois les pages installées (ouverture depuis l'écran « Notes »).
-    var pendingAnchorNote: PageComment?
+    private var pendingAnchorNote: (noteId: String, opening: Int)?
+    /// Intention d'ouverture du dernier saut effectué, pour afficher Notes sans relire la demande.
+    @Published private(set) var completedNoteJump: Int?
     /// Abonnements Combine du lecteur (demandes « aller à la note » de l’écran Notes).
     var cancellables: Set<AnyCancellable> = []
     /// Fin d'une tâche IA (peut-être lancée par un lecteur précédent) : la page affichée est relue du cache.
@@ -321,15 +329,35 @@ final class ReaderController: NSObject, ObservableObject {
         // Écran « Notes » (PLAN-T4-001 E2) : ouvert pour une note, le livre part de sa page, puis l'ancre clignote.
         // La demande est consommée dans tous les cas (revue DeepSeek F2) : une note supprimée entre-temps ne laisse pas
         // une demande pendante qu'un prochain ouvrage du livre suivrait sans raison.
-        var jumpNote: PageComment?
-        if let jump = model.noteJump, jump.documentId == document.id {
-            jumpNote = notes.first { $0.id == jump.noteId }
-            model.noteJump = nil
-        }
-        rebuild(keepingSource: jumpNote?.pageIndex ?? document.lastPageIndex)
+        acceptNoteJump()
+        rebuild(keepingSource: document.lastPageIndex)
         markOpened()
-        // Le clignotement attend la fin de la construction des pages (`install`, revue DeepSeek F8).
-        pendingAnchorNote = jumpNote
+    }
+
+    private func acceptNoteJump() {
+        guard !closed, model.openDocumentId == document.id,
+              let jump = model.noteJump, jump.documentId == document.id else { return }
+        model.noteJump = nil
+        pendingAnchorNote = nil
+        guard notes.contains(where: { $0.id == jump.noteId }) else { return }
+        let pending = (noteId: jump.noteId, opening: model.openRequestSerial)
+        if pdf == nil {
+            // Le clignotement attend la fin de la construction des pages (`install`, revue DeepSeek F8).
+            pendingAnchorNote = pending
+        } else {
+            completeNoteJump(pending)
+        }
+    }
+
+    private func noteForJump(_ pending: (noteId: String, opening: Int)) -> PageComment? {
+        guard !closed, model.openDocumentId == document.id, pending.opening == model.openRequestSerial else { return nil }
+        return notes.first { $0.id == pending.noteId }
+    }
+
+    private func completeNoteJump(_ pending: (noteId: String, opening: Int)) {
+        guard let note = noteForJump(pending) else { return }
+        goToAnchor(note)
+        completedNoteJump = pending.opening
     }
 
     /// Résultat de la construction (fait hors du fil principal) : document affiché + repères.
@@ -345,39 +373,98 @@ final class ReaderController: NSObject, ObservableObject {
         let pendingBounds: [(page: PDFPage, box: CGRect)]
     }
 
+    nonisolated private static let equalizationLock = NSLock()
+
     /// PDF aux pages de même hauteur (`Caches/Equalized/<id>-<taille>-<date>.pdf`) et cadres d'origine des pages
-    /// (`.json`). `nil` : aucune page à changer (le PDF d'origine sert tel quel). Fait une fois par version du
-    /// fichier : ajouter des pages change sa taille et sa date, donc la préparation est refaite une fois.
-    nonisolated static func equalizedDocument(url: URL, documentId: String) -> (pdf: PDFDocument, sourceBoxes: [CGRect])? {
+    /// (`.json`). `nil` : le PDF d'origine sert tel quel ; `onPreparationFailure` distingue l'échec du cas normal.
+    /// Fait une fois par version du fichier : ajouter des pages change sa taille et sa date.
+    ///
+    /// PLAN-DATA03-001 E3 (DEC-02 = A) : la hauteur commune est fixée une fois par document dans la base (`database`),
+    /// reprise du PDF déjà préparé s'il existe ; ajouter des pages ou vider le cache ne la change plus, donc les
+    /// annotations déjà posées gardent leur échelle.
+    nonisolated static func equalizedDocument(url: URL, documentId: String, database: AppDatabase?,
+                                            onPreparationFailure: () -> Void = {}) -> (pdf: PDFDocument, sourceBoxes: [CGRect])? {
+        // Revue R2 DATA-03 (n°3) : lecteur et export peuvent préparer en même temps ; une seule préparation à la fois
+        // (l'une supprimait les fichiers que l'autre lisait). Jamais appelé depuis le fil principal.
+        equalizationLock.lock()
+        defer { equalizationLock.unlock() }
         let fm = FileManager.default
+        let stored = (try? database?.equalizationReference(documentId: documentId)).flatMap { $0 }.map { CGFloat($0) }
+        func failed() -> (pdf: PDFDocument, sourceBoxes: [CGRect])? {
+            onPreparationFailure()
+            return nil
+        }
+        func remember(_ height: CGFloat?) {
+            guard stored == nil, let height else { return }
+            try? database?.fixEqualizationReference(Double(height), documentId: documentId)
+        }
+        func preparedHeight(_ pdf: PDFDocument, _ boxes: [CGRect]) -> CGFloat? {
+            PageEqualization.referenceHeight(displayed: (0..<pdf.pageCount).compactMap { pdf.page(at: $0) }
+                .map { ($0.bounds(for: .cropBox), $0.rotation) }, sourceBoxes: boxes)
+        }
         let values = try? url.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey])
         let stamp = "\(values?.fileSize ?? 0)-\(Int(values?.contentModificationDate?.timeIntervalSince1970 ?? 0))"
         let folder = fm.urls(for: .cachesDirectory, in: .userDomainMask)[0].appendingPathComponent("Equalized", isDirectory: true)
         let base = folder.appendingPathComponent("\(documentId)-\(stamp)")
         let pdfFile = base.appendingPathExtension("pdf"), boxesFile = base.appendingPathExtension("json")
+        var rejectedNames = Set<String>()
         // C1.4 (audit du 09/11/2026) : un cache mal formé (ligne sans ses 4 valeurs) faisait planter l'app ; il est
         // maintenant ignoré et la préparation refaite (`EqualizedBoxes`).
         if let data = try? Data(contentsOf: boxesFile), let saved = try? JSONDecoder().decode([[CGFloat]].self, from: data),
            let boxes = EqualizedBoxes.rects(saved) {
             // Déjà préparé : liste vide = rien à changer dans ce PDF.
-            guard !boxes.isEmpty, let pdf = PDFDocument(url: pdfFile), pdf.pageCount == boxes.count else { return nil }
-            return (pdf, boxes)
+            if boxes.isEmpty {
+                // Revue R2 DATA-03 (n°7) : seulement quand la préparation a dit « rien à changer » (hauteur réellement
+                // affichée), jamais pour un cache incohérent.
+                if stored == nil { remember(PDFDocument(url: url).flatMap(commonHeight)) }
+                return nil
+            }
+            if let pdf = PDFDocument(url: pdfFile), pdf.pageCount == boxes.count {
+                // Recette 1.5.10 (3.2, 3.3) : mesure sur une autre instance, et seulement si la base n'a pas encore la hauteur.
+                // Lire les pages de `pdf` ici les créait en `PDFPage` simples, avant que le lecteur pose `TonedPageProvider` :
+                // sans `TonedPage`, ni furigana, ni teinte, ni page nettoyée sur un document égalisé ouvert depuis le cache.
+                if stored == nil { remember(PDFDocument(url: pdfFile).flatMap { preparedHeight($0, boxes) }) }
+                return (pdf, boxes)
+            }
+            Diagnostics.error("paire d’égalisation incohérente rejetée : \(documentId.prefix(8))", "lecteur")
+            // Même si la suppression échoue, cette paire ne doit plus fournir de hauteur de référence.
+            rejectedNames = [pdfFile.lastPathComponent, boxesFile.lastPathComponent]
+            try? fm.removeItem(at: boxesFile)
+            try? fm.removeItem(at: pdfFile)
         }
-        guard let original = PDFDocument(url: url), let common = commonHeight(original) else { return nil }
+        guard let original = PDFDocument(url: url) else { return failed() }
         try? fm.createDirectory(at: folder, withIntermediateDirectories: true)
+        let previous = ((try? fm.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? [])
+            .filter { $0.lastPathComponent.hasPrefix(documentId + "-") && !rejectedNames.contains($0.lastPathComponent) }
+        // Référence : celle de la base, sinon celle de la version préparée précédente (avant que le fichier change),
+        // sinon la règle commune.
+        // Revue R2 DATA-03 (n°2) : la plus récente des versions **lisibles** (paire pdf + json), pas la première venue.
+        var inherited: CGFloat?
+        if stored == nil {
+            let date = { (u: URL) in (try? u.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast }
+            for oldPDF in previous.filter({ $0.pathExtension == "pdf" }).sorted(by: { date($0) > date($1) }) {
+                guard let data = try? Data(contentsOf: oldPDF.deletingPathExtension().appendingPathExtension("json")),
+                      let saved = try? JSONDecoder().decode([[CGFloat]].self, from: data),
+                      let oldBoxes = EqualizedBoxes.rects(saved), let oldDoc = PDFDocument(url: oldPDF),
+                      let height = preparedHeight(oldDoc, oldBoxes) else { continue }
+                inherited = height
+                break
+            }
+        }
+        guard let common = stored ?? inherited ?? commonHeight(original) else { return failed() }
+        remember(common)
         // Anciennes versions préparées de ce document : supprimées.
-        for old in (try? fm.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)) ?? []
-        where old.lastPathComponent.hasPrefix(documentId + "-") { try? fm.removeItem(at: old) }
+        for old in previous { try? fm.removeItem(at: old) }
         var boxes: [CGRect] = []
         var pages: [PDFPage] = []
         var helpers: [PDFDocument] = []
         var rescaled = false
         for i in 0..<original.pageCount {
-            guard let page = original.page(at: i) else { return nil }
+            guard let page = original.page(at: i) else { return failed() }
             let box = page.bounds(for: .cropBox)
             boxes.append(box)
             let height = page.rotation % 180 == 0 ? box.height : box.width
-            if height > 0, abs(common / height - 1) > 0.03, let (scaled, doc) = scaledPage(page, factor: common / height) {
+            if let factor = PageEqualization.factor(height: height, common: common), let (scaled, doc) = scaledPage(page, factor: factor) {
                 pages.append(scaled)
                 helpers.append(doc)
                 rescaled = true
@@ -391,16 +478,16 @@ final class ReaderController: NSObject, ObservableObject {
         }
         let output = PDFDocument()
         for (i, page) in pages.enumerated() {
-            guard let copy = page.copy() as? PDFPage else { return nil }
+            guard let copy = page.copy() as? PDFPage else { return failed() }
             output.insert(copy, at: i)
         }
         let temporary = folder.appendingPathComponent(UUID().uuidString + ".pdf")
-        guard output.write(to: temporary) else { return nil }
+        guard output.write(to: temporary) else { return failed() }
         try? fm.removeItem(at: pdfFile)
-        guard (try? fm.moveItem(at: temporary, to: pdfFile)) != nil else { return nil }
+        guard (try? fm.moveItem(at: temporary, to: pdfFile)) != nil else { return failed() }
         _ = helpers
         try? JSONEncoder().encode(boxes.map { [$0.minX, $0.minY, $0.width, $0.height] }).write(to: boxesFile, options: .atomic)
-        guard let pdf = PDFDocument(url: pdfFile), pdf.pageCount == boxes.count else { return nil }
+        guard let pdf = PDFDocument(url: pdfFile), pdf.pageCount == boxes.count else { return failed() }
         return (pdf, boxes)
     }
 
@@ -432,15 +519,12 @@ final class ReaderController: NSObject, ObservableObject {
         return (scaled, doc)
     }
 
-    /// Hauteur la plus courante des pages (telles qu'affichées, rotation comprise), arrondie au point.
+    /// Hauteur la plus courante des pages (telles qu'affichées, rotation comprise), arrondie au point ; à égalité, la
+    /// plus grande (PLAN-DATA03-001, DEC-03 = A). Calcul dans `PageEqualization` (testé).
     nonisolated static func commonHeight(_ pdf: PDFDocument) -> CGFloat? {
-        var counts: [Int: Int] = [:]
-        for i in 0..<pdf.pageCount {
-            guard let page = pdf.page(at: i) else { continue }
-            let b = page.bounds(for: .cropBox)
-            counts[Int((page.rotation % 180 == 0 ? b.height : b.width).rounded()), default: 0] += 1
-        }
-        return counts.max { $0.value < $1.value }.map { CGFloat($0.key) }
+        PageEqualization.commonHeight((0..<pdf.pageCount).compactMap { pdf.page(at: $0) }.map {
+            PageEqualization.displayedHeight(box: $0.bounds(for: .cropBox), rotation: $0.rotation)
+        })
     }
 
     /// Numéro de la dernière construction demandée : un résultat plus ancien est ignoré.
@@ -458,24 +542,32 @@ final class ReaderController: NSObject, ObservableObject {
         pageStringCache = nil
         rebuildGeneration += 1
         let generation = rebuildGeneration
-        let url = fileURL, transforms = transforms, settings = settings, documentId = document.id
+        let url = fileURL, transforms = transforms, settings = settings, documentId = document.id, database = model.database
         isBuilding = true
         // Une seule construction à la fois : la précédente (plus à jour) est abandonnée.
         buildTask?.cancel()
         buildTask = Task.detached(priority: .userInitiated) { [weak self] in
-            let built = autoreleasepool { Self.build(url: url, documentId: documentId, transforms: transforms, settings: settings) }
+            let built = ActivityCenter.shared.measureDiagnostic(.readerBuild, documentID: documentId, page: source) {
+                autoreleasepool { Self.build(url: url, documentId: documentId, transforms: transforms, settings: settings, database: database) }
+            }
             guard !Task.isCancelled else { return }
             await self?.install(built, source: source, generation: generation)
         }
     }
 
     nonisolated static func build(url: URL, documentId: String, transforms: [Int: PageTransform],
-                                          settings: ReaderSettings) -> Built? {
+                                          settings: ReaderSettings, database: AppDatabase?) -> Built? {
         // Pages remises à la même hauteur : préparées une fois par version du PDF (cache disque), ensuite lues
         // directement (plus de « Préparation des pages » à chaque ouverture).
-        let equalized = equalizedDocument(url: url, documentId: documentId)
+        let equalized = equalizedDocument(url: url, documentId: documentId, database: database) {
+            Diagnostics.error("échec de la préparation des pages égalisées : \(documentId.prefix(8)) ; repli sur le PDF d’origine", "lecteur")
+        }
         guard let pdf = equalized?.pdf ?? PDFDocument(url: url) else { return nil }
         pdf.delegate = TonedPageProvider.shared
+        // Une page lue avant le délégué reste une `PDFPage` simple : rien de propre au lecteur n'y serait dessiné.
+        if pdf.pageCount > 0, !(pdf.page(at: 0) is TonedPage) {
+            Diagnostics.error("pages créées avant la préparation du lecteur : furigana et teinte impossibles", "lecteur")
+        }
         let sourceBoxes = equalized?.sourceBoxes
         var boxes: [Int: CGRect] = [:]
         var rotations: [Int: Int] = [:]
@@ -552,17 +644,18 @@ final class ReaderController: NSObject, ObservableObject {
     func install(_ built: Built?, source: Int, generation: Int) {
         guard generation == rebuildGeneration, !closed else { return }
         isBuilding = false
+        let pending = pendingAnchorNote
+        pendingAnchorNote = nil
+        let pendingNote = pending.flatMap { noteForJump($0) }
         // Page tournée pendant la construction : on reste où l'utilisateur est allé.
-        let target = pdf == nil ? source : currentSourcePage
+        let target = pdf == nil ? (pendingNote?.pageIndex ?? source) : currentSourcePage
         guard let built else {
             loadError = String(localized: "Impossible d'ouvrir ce PDF.")
+            Diagnostics.error("PDF : échec de préparation", "lecteur")  // #93 : demandé → affiché → prêt ou échec
+            NotificationCenter.default.post(name: .readerContentReady, object: nil)  // Le message d'erreur doit se voir.
             return
         }
-        if let note = pendingAnchorNote {
-            pendingAnchorNote = nil
-            // Après la fin de cette installation (même tour de boucle) : PDF et pages sont en place.
-            DispatchQueue.main.async { [weak self] in self?.goToAnchor(note) }
-        }
+        Diagnostics.log("PDF prêt : \(built.presented.count) pages", "lecteur")
         originalBoxes = built.boxes
         originalRotations = built.rotations
         splitSources = built.splits
@@ -608,12 +701,17 @@ final class ReaderController: NSObject, ObservableObject {
         // La navigation annule les restaurations précédentes : ajuster le nouveau document après elle.
         pdfView.finishLayout(preserving: nil)
         rebuilding = false
+        NotificationCenter.default.post(name: .readerContentReady, object: nil)
         // Le rognage a besoin des repères de pages : lancé une fois le document installé.
         startAutoCropIfNeeded()
         schedulePageSettled()
         if pendingDrawingRestore {
             pendingDrawingRestore = false
             setDrawing(true)
+        }
+        if let pending, pendingNote != nil {
+            // Après l'installation du PDF, revérifier qu'aucune ouverture n'a pris la main.
+            DispatchQueue.main.async { [weak self] in self?.completeNoteJump(pending) }
         }
     }
 
@@ -917,16 +1015,14 @@ final class ReaderController: NSObject, ObservableObject {
     // MARK: Notifications
 
     func observe() {
-        // Livre déjà ouvert quand une de ses notes est choisie. Aujourd'hui l'écran « Notes » ne s'ouvre que lecteur
-        // fermé (revue DeepSeek F11) : ce chemin servira quand on pourra l'atteindre depuis le lecteur (E3).
+        // À chaud (revue DeepSeek F11) : la livraison différée ne doit pas consommer un saut déjà remplacé.
         // (`insert` plutôt que `.store(in:)` : un contrôle source réserve `.store(` aux écritures OCR du lecteur.)
         cancellables.insert(model.$noteJump
             .receive(on: DispatchQueue.main)
             .sink { [weak self] jump in
-                guard let self, let jump, jump.documentId == self.document.id, self.pdf != nil,
-                      let note = self.notes.first(where: { $0.id == jump.noteId }) else { return }
-                self.model.noteJump = nil
-                self.goToAnchor(note)
+                guard let self, let jump, self.model.noteJump == jump,
+                      self.pdf != nil || self.isBuilding else { return }
+                self.acceptNoteJump()
             })
         let center = NotificationCenter.default
         observers.append(center.addObserver(forName: .PDFViewPageChanged, object: pdfView, queue: .main) { [weak self] _ in
@@ -965,6 +1061,12 @@ final class ReaderController: NSObject, ObservableObject {
         })
         // Pages pas encore lues par l'IA : lecture en tâche de l'app (continue après la fermeture du lecteur).
         DocumentScan.start(document, url: fileURL, ocr: model.ocr)
+        // #94 : furigana vidés pendant la lecture, ou retour au premier plan : recalcul des pages visibles qui n'en ont plus.
+        for name in [FuriganaLayer.didClearMemory, UIApplication.willEnterForegroundNotification] {
+            observers.append(center.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.refreshMissingFurigana() }
+            })
+        }
         observers.append(center.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated {
                 self?.savePositionWork?.perform()

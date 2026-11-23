@@ -7,45 +7,6 @@ import SwiftUI
 import UniformTypeIdentifiers
 import WebKit
 
-// MARK: - Recherche
-
-struct SearchSheet: View {
-    @ObservedObject var reader: ReaderController
-    /// Fermeture explicite : `close()` avec une recherche active peut fermer aussi le lecteur.
-    var close: () -> Void
-    @State private var query = ""
-
-    var body: some View {
-        NavigationStack {
-            List {
-                if reader.isSearching && reader.searchResults.isEmpty {
-                    HStack { ProgressView(); Text("Recherche…").foregroundStyle(.secondary) }
-                } else if !query.isEmpty && reader.searchResults.isEmpty && !reader.isSearching {
-                    Text("Aucun résultat.").foregroundStyle(.secondary)
-                }
-                ForEach(reader.searchResults) { result in
-                    Button {
-                        reader.show(result)
-                        close()
-                    } label: {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Page \(reader.document.pageLabel(result.sourcePage))").font(.caption.bold()).foregroundStyle(.secondary)
-                            Text(result.context).lineLimit(2)
-                        }
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always), prompt: String(localized: "Mot ou phrase"))
-            .onSubmit(of: .search) { reader.search(query) }
-            .onChange(of: query) { if $0.isEmpty { reader.search("") } }
-            .navigationTitle(reader.searchResults.isEmpty ? String(localized: "Rechercher") : String(localized: "\(reader.searchResults.count) résultat(s)"))
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("OK") { close() } } }
-        }
-    }
-}
-
 // MARK: - Page vers IA
 
 struct AIPageSheet: View {
