@@ -191,6 +191,7 @@ struct PageGridSheet: View {
     let close: () -> Void
     let go: (Int) -> Void
     let deletePages: () -> Void
+    @State private var confirmingDelete = false
 
     var body: some View {
         NavigationStack {
@@ -220,12 +221,19 @@ struct PageGridSheet: View {
             }
             .background(Atelier.canvas)
             .navigationTitle("Pages du document")
+            // Revue R2 Codex : on peut renoncer avant que le livre se ferme (#49 : supprimer exige le livre fermé).
+            .alert("Supprimer des pages ?", isPresented: $confirmingDelete) {
+                Button("Annuler", role: .cancel) {}
+                Button("Continuer", role: .destructive) { close(); deletePages() }
+            } message: {
+                Text("Le livre se ferme, puis « Pages du document » s'ouvre pour choisir les pages à supprimer.")
+            }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Fermer", action: close) }
                 if canDelete {
                     ToolbarItem(placement: .primaryAction) {
-                        Button(role: .destructive) { close(); deletePages() } label: {
+                        Button(role: .destructive) { confirmingDelete = true } label: {
                             Label("Supprimer des pages…", systemImage: "trash")
                         }
                     }
@@ -254,5 +262,22 @@ private struct PageGridThumbnail: View {
                                                page: source, width: 240) { image = $0 }
                 }
             }
+    }
+}
+
+/// Croix du panneau : rond de 36 pt dans une zone de 44 pt en nouvelle présentation ; **rien** de changé sinon.
+struct NewLayoutCloseTarget: ViewModifier {
+    let on: Bool
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if on {
+            content.frame(width: 36, height: 36)
+                .background(Atelier.surfaceHigh, in: Circle())
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
+        } else {
+            content
+        }
     }
 }

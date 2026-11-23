@@ -169,6 +169,8 @@ struct DocumentTabsBar: View {
 /// `visible` onglets, les autres passent dans un menu « … ». Mêmes actions que `DocumentTabsBar`.
 struct DocumentTileBar: View {
     let current: String
+    /// Page affichée par le lecteur (la position enregistrée n'est publiée qu'à la fermeture du livre).
+    let currentPageLabel: String
     var visible = 6
     @EnvironmentObject private var model: AppModel
     private var openDocuments: [LibraryDocument] {
@@ -187,14 +189,17 @@ struct DocumentTileBar: View {
     }
 
     var body: some View {
-        let docs = openDocuments
-        let shown = Array(docs.prefix(visible))
-        let hidden = Array(docs.dropFirst(visible))
+        let (shown, hidden) = split(openDocuments)
         HStack(spacing: 8) {
             ForEach(shown) { document in tile(document) }
             if !hidden.isEmpty {
                 Menu {
-                    ForEach(hidden) { d in Button(d.title) { select(d) } }
+                    ForEach(hidden) { d in
+                        Menu(d.title) {
+                            Button { select(d) } label: { Label("Afficher", systemImage: "book") }
+                            Button(role: .destructive) { close(d) } label: { Label("Fermer l'onglet", systemImage: "xmark") }
+                        }
+                    }
                 } label: {
                     Text(verbatim: "+\(hidden.count)").font(Atelier.font(14, weight: .bold))
                         .frame(width: 44, height: 44).foregroundStyle(Atelier.textSecondary)
@@ -216,6 +221,16 @@ struct DocumentTileBar: View {
         }
     }
 
+    /// Onglets montrés et rangés dans « +N » ; l'onglet affiché reste toujours visible, même ouvert après les autres.
+    private func split(_ docs: [LibraryDocument]) -> (shown: [LibraryDocument], hidden: [LibraryDocument]) {
+        var shown = Array(docs.prefix(visible))
+        if let active = docs.first(where: { $0.id == current }), !shown.contains(where: { $0.id == current }), !shown.isEmpty {
+            shown[shown.count - 1] = active
+        }
+        let hidden = docs.filter { d in !shown.contains { $0.id == d.id } }
+        return (shown, hidden)
+    }
+
     @ViewBuilder
     private func tile(_ document: LibraryDocument) -> some View {
         let on = document.id == current
@@ -229,7 +244,7 @@ struct DocumentTileBar: View {
                 VStack(alignment: .leading, spacing: 1) {
                     Text(document.title).font(Atelier.font(15, weight: .semibold)).lineLimit(1)
                         .foregroundStyle(Atelier.textPrimary)
-                    Text(verbatim: "p. \(document.pageLabel(document.lastPageIndex)) / \(document.pageLabel(document.pageCount - 1))")
+                    Text(verbatim: "p. \(currentPageLabel) / \(document.pageLabel(document.pageCount - 1))")
                         .font(Atelier.font(12).monospacedDigit()).foregroundStyle(Atelier.textSecondary)
                 }
                 .frame(maxWidth: 260, alignment: .leading)
@@ -245,9 +260,14 @@ struct DocumentTileBar: View {
             .newLayoutBar(radius: Atelier.corner(18))
             .accessibilityElement(children: .contain)
         } else {
+            // Fermer un autre onglet sans l'afficher : appui long, ou action VoiceOver (revue R2 Codex).
             Button { select(document) } label: { square }
                 .buttonStyle(PressScale())
+                .contextMenu {
+                    Button(role: .destructive) { close(document) } label: { Label("Fermer l'onglet", systemImage: "xmark") }
+                }
                 .accessibilityLabel(document.title)
+                .accessibilityAction(named: Text("Fermer l'onglet")) { close(document) }
         }
     }
 

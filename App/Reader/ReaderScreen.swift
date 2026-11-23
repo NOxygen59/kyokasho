@@ -748,7 +748,7 @@ struct ReaderScreen: View {
         VStack(spacing: 0) {
             HStack(alignment: .top, spacing: 10) {
                 NewLayoutRoundButton(icon: "books.vertical", label: String(localized: "Bibliothèque")) { model.openDocumentId = nil }
-                DocumentTileBar(current: reader.document.id)
+                DocumentTileBar(current: reader.document.id, currentPageLabel: reader.document.pageLabel(reader.currentSourcePage))
                 Spacer(minLength: 8)
                 if reader.hasSelection {
                     HighlightMenu { reader.highlightSelection(color: $0) }

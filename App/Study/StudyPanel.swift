@@ -59,10 +59,7 @@ struct StudyPanel: View {
                     Image(systemName: "xmark").font(Atelier.font(14, weight: .semibold))
                         .foregroundStyle(Atelier.textSecondary)
                         .frame(minWidth: 22, minHeight: 22)
-                        .frame(width: newLayout ? 36 : nil, height: newLayout ? 36 : nil)
-                        .background(newLayout ? Atelier.surfaceHigh : Color.clear, in: Circle())
-                        .frame(minWidth: 44, minHeight: 44)
-                        .contentShape(Rectangle())
+                        .modifier(NewLayoutCloseTarget(on: newLayout))
                 }
                 .padding(.leading, 6)
                 .accessibilityLabel("Fermer le panneau d'étude")
@@ -554,9 +551,10 @@ struct StudyTextTab: View {
         }
     }
 
-    /// « Lu par NDLOCR · page 52 » : discret, sous la ligne d'affichage.
+    /// « Lu par NDLOCR · page 52 » : discret, sous la ligne d'affichage. En mise en page IA, le texte vient d'OvisOCR2.
     private var newSourceLine: String {
         let page = reader.document.pageLabel(reader.focusSource)
+        if aiLayout { return String(localized: "Mise en page IA (OvisOCR2) · page \(page)") }
         guard let engine = indicator.shown else { return String(localized: "Page \(page)") }
         return String(localized: "Lu par \(OCREngineID.displayName(engine)) · page \(page)")
     }

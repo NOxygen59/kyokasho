@@ -760,7 +760,14 @@ struct LibraryView: View {
     private var newStatsCardContent: some View {
         let now = Date()
         let stats = ReadingStats(sessions: readingTime.log.sessions, period: .week, filter: space == .manga ? .manga : .study)
-        let today = stats.buckets.last.map { Calendar.current.isDate($0.start, inSameDayAs: now) ? $0.total : 0 } ?? 0
+        // Part de chaque séance tombée aujourd'hui (une séance commencée hier soir compte pour sa partie d'aujourd'hui).
+        let dayStart = Calendar.current.startOfDay(for: now)
+        let manga = space == .manga
+        let today = readingTime.log.sessions.reduce(0.0) { total, session in
+            guard (session.scope == .manga) == manga else { return total }
+            let end = session.start.addingTimeInterval(TimeInterval(session.seconds))
+            return total + max(0, min(end, now).timeIntervalSince(max(session.start, dayStart)))
+        }
         let time = readingTime.breakdown(documents: model.documents + model.trashedDocuments, at: now)
         return VStack(alignment: .leading, spacing: 8) {
             HStack {
