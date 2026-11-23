@@ -28,6 +28,15 @@ final class OCRSearchMatchTests: XCTestCase {
         XCTAssertEqual(groups[1].map(\.x), [0.0, 0.1], accuracy: 1e-9)
     }
 
+    func testSkipsAnOccurrenceWithoutBoxesForTheNextOne() {
+        var broken = line("試着室", y: 0.1)
+        broken.charBoxes = []
+        let page = OCRPage(engine: "test", lines: [broken, line("ここは試着室", y: 0.4)], durationMs: 0)
+        let groups = page.matchBoxes(of: "試着室")
+        XCTAssertEqual(groups.count, 1)
+        XCTAssertEqual(groups[0].first?.y ?? -1, 0.4, accuracy: 1e-9)
+    }
+
     func testIgnoresWidthCaseAndSurroundingSpaces() {
         let page = OCRPage(engine: "test", lines: [line("ＰＤＦ page")], durationMs: 0)
         XCTAssertEqual(page.matchBoxes(of: " pdf ").first?.count, 3)

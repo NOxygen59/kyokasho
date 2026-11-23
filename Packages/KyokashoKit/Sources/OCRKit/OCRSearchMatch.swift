@@ -13,18 +13,29 @@ extension OCRPage {
         let needle = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !needle.isEmpty else { return [] }
         let joined = lines.map(\.text).joined()
-        guard let range = joined.range(of: needle, options: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive])
-        else { return [] }
+        let options: String.CompareOptions = [.caseInsensitive, .diacriticInsensitive, .widthInsensitive]
+        var from = joined.startIndex
+        // Occurrence suivante si une ligne touchée n'a pas ses boîtes (contre-revue Codex).
+        while let range = joined.range(of: needle, options: options, range: from..<joined.endIndex) {
+            if let groups = boxes(joined: joined, range: range) { return groups }
+            from = range.upperBound
+        }
+        return []
+    }
+
+    /// Boîtes d'une occurrence, ligne par ligne ; `nil` si une ligne touchée n'a pas une boîte par caractère.
+    private func boxes(joined: String, range: Range<String.Index>) -> [[NormBox]]? {
         // Index en graphèmes : `charBoxes` a une boîte par graphème de `text`.
         let start = joined.distance(from: joined.startIndex, to: range.lowerBound)
         let end = start + joined.distance(from: range.lowerBound, to: range.upperBound)
+        guard end > start else { return nil }
         var groups: [[NormBox]] = []
         var offset = 0
         for line in lines {
             let count = line.text.count
             let low = max(start, offset), high = min(end, offset + count)
             if low < high {
-                guard high - offset <= line.charBoxes.count else { return [] }
+                guard high - offset <= line.charBoxes.count else { return nil }
                 groups.append(Array(line.charBoxes[(low - offset)..<(high - offset)]))
             }
             offset += count

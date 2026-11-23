@@ -44,6 +44,9 @@ extension ReaderController {
         searchResults = all
     }
 
+    /// Moteurs fouillés par la recherche, dans son ordre de préférence (repris par le surlignage bref).
+    static let searchEngines = [OCREngineID.glmocr, OCREngineID.ndlocr, OCREngineID.ppocr5, OCREngineID.vision]
+
     func search(_ query: String) {
         guard document.capabilities.textAnalysis, let pdf else { return }
         pdf.cancelFindString()
@@ -62,7 +65,7 @@ extension ReaderController {
         pdf.beginFindString(trimmed, withOptions: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive])
         // Pages scannées : recherche aussi dans le texte OCR en cache.
         let documentId = document.id
-        let engines = [OCREngineID.glmocr, OCREngineID.ndlocr, OCREngineID.ppocr5, OCREngineID.vision]
+        let engines = Self.searchEngines
         let service = model.ocr
         Task { [weak self] in
             let hits = await service.search(trimmed, documentId: documentId, engines: engines)
@@ -132,24 +135,21 @@ extension ReaderController {
     /// Page scannée : le mot est retrouvé dans l'OCR en cache et surligné par une annotation **temporaire** (dans le
     /// repère de la page, elle suit le zoom et le défilement), retirée après 2 s, au résultat suivant ou à la fermeture.
     /// Rien n'est enregistré : ni dans les surlignages de l'utilisateur, ni dans le fichier.
-    /// Contre-revue Codex : le moteur retenu pour la page d'abord, puis ceux de la recherche (le résultat peut venir
-    /// d'un autre) ; lecture du cache par le service, **sans** tenir le lecteur (référence faible reprise ensuite) ;
-    /// page coupée : seule la moitié qui contient le mot est surlignée et montrée.
+    /// Contre-revues Codex : moteurs essayés **dans l'ordre de la recherche** (`OCRService.search` garde le premier qui
+    /// a la page : même texte, même première occurrence que l'extrait) ; lecture du cache par le service, **sans** tenir
+    /// le lecteur ; page coupée : chaque morceau va sur la moitié qu'il touche ; pas de saut si la page a changé depuis.
     private func flashOCRMatch(source: Int, query: String) {
         guard !query.isEmpty else { return }
         let service = model.ocr, documentId = document.id
-        var engines = [OCREngineID.glmocr, OCREngineID.ndlocr, OCREngineID.ppocr5, OCREngineID.vision]
-        if let selected = selectedEngines[source] {
-            engines.removeAll { $0 == selected }
-            engines.insert(selected, at: 0)
-        }
+        let engines = Self.searchEngines
         searchFlashTask = Task { @MainActor [weak self] in
             var groups: [[NormBox]] = []
             for engine in engines {
                 guard !Task.isCancelled else { return }
                 if let page = await service.cached(documentId: documentId, pageIndex: source, engine: engine) {
+                    // Premier moteur qui a la page, comme la recherche : on s'arrête là, trouvé ou non.
                     groups = page.matchBoxes(of: query)
-                    if !groups.isEmpty { break }
+                    break
                 }
             }
             guard !Task.isCancelled, !groups.isEmpty, let self, let frame = self.pageFrame(ofSource: source),
@@ -158,18 +158,21 @@ extension ReaderController {
                 group.map(frame.pageRect).reduce(CGRect?.none) { ($0 ?? $1).union($1) }?.insetBy(dx: -2, dy: -2)
             }
             let all = self.pages(forSource: source, in: pdf)
-            let shown = all.filter { page in rects.contains { page.bounds(for: .cropBox).intersects($0) } }
-            let targets = shown.isEmpty ? all : shown
-            for page in targets {
-                for rect in rects {
-                    let annotation = PDFAnnotation(bounds: rect, forType: .highlight, withProperties: nil)
-                    annotation.color = UIColor.systemOrange.withAlphaComponent(0.55)
-                    annotation.userName = "flash:recherche"
-                    page.addAnnotation(annotation)
-                    self.searchFlashAnnotations.append((page, annotation))
-                }
+            // Chaque morceau sur la (les) moitié(s) qu'il touche ; toutes les pages de la source sinon.
+            var placed: [(page: PDFPage, rect: CGRect)] = []
+            for rect in rects {
+                let touched = all.filter { $0.bounds(for: .cropBox).intersects(rect) }
+                for page in touched.isEmpty ? all : touched { placed.append((page, rect)) }
             }
-            if let page = targets.first, let rect = rects.first { self.pdfView.go(to: rect, on: page) }
+            for item in placed {
+                let annotation = PDFAnnotation(bounds: item.rect, forType: .highlight, withProperties: nil)
+                annotation.color = UIColor.systemOrange.withAlphaComponent(0.55)
+                annotation.userName = "flash:recherche"
+                item.page.addAnnotation(annotation)
+                self.searchFlashAnnotations.append((item.page, annotation))
+            }
+            // Pas de saut tardif si l'on a tourné la page pendant la lecture du cache.
+            if self.currentSourcePage == source, let first = placed.first { self.pdfView.go(to: first.rect, on: first.page) }
             try? await Task.sleep(nanoseconds: Self.searchFlashDuration)
             guard !Task.isCancelled else { return }
             self.clearSearchFlash()
