@@ -527,7 +527,11 @@ struct StudyTextTab: View {
     /// passent par les mêmes relais et liaisons que l'ancienne rangée (aucune capture du lecteur, voir
     /// `StudyMenuActions`).
     private var newTextHeader: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        // Contenu du menu construit ICI, hors du bloc `Menu { }` : ce bloc est une fermeture qu'iOS 16 garde en vie
+        // après la fermeture du livre ; y appeler `engineMenu` ou `$furigana` capturait la vue, donc le lecteur
+        // (recette 1.6.4, point 13 : lecteur jamais libéré tant que le panneau était ouvert, mesuré sur l'iPad).
+        let engine = engineMenu, layout = layoutMenu, furiganaBinding = $furigana
+        return VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
                 displayPicker.frame(maxWidth: .infinity)
                 NewLayoutIconButton(icon: "magnifyingglass", label: String(localized: "Rechercher dans la page"),
@@ -536,9 +540,9 @@ struct StudyTextTab: View {
                     if !searchShown { query = "" }
                 }
                 Menu {
-                    engineMenu
-                    layoutMenu
-                    Toggle(isOn: $furigana) { Label("Furigana sur le texte extrait", systemImage: "textformat.size") }
+                    engine
+                    layout
+                    Toggle(isOn: furiganaBinding) { Label("Furigana sur le texte extrait", systemImage: "textformat.size") }
                 } label: {
                     Image(systemName: "ellipsis").font(Atelier.font(17, weight: .semibold))
                         .frame(width: 44, height: 44).foregroundStyle(Atelier.textPrimary)
