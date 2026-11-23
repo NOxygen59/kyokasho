@@ -1,6 +1,50 @@
 {
   "sourceLanguage": "fr",
   "strings": {
+    "Voir toutes les pages": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voir toutes les pages"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "See all pages"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "查看所有页面"
+          }
+        }
+      }
+    },
+    "Pages du document": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pages du document"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Document pages"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文档页面"
+          }
+        }
+      }
+    },
     "lues": {
       "localizations": {
         "fr": {

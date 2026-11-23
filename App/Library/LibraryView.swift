@@ -1722,6 +1722,16 @@ struct FolderCard: View {
                 }
                 .clipShape(RoundedRectangle(cornerRadius: Atelier.corner(12), style: .continuous))
                 .overlay(RoundedRectangle(cornerRadius: Atelier.corner(12), style: .continuous).strokeBorder(Atelier.hairline))
+                // Nouvelle présentation (maquette E3) : onglet de chemise, pour distinguer un dossier d'un document.
+                .overlay(alignment: .topLeading) {
+                    if NewLayout.isEnabled {
+                        UnevenRoundedRectangleShim(radius: Atelier.corner(8))
+                            .fill(NewLayoutInk.accent.opacity(0.85))
+                            .frame(width: 70, height: 12)
+                            .padding(.leading, 14)
+                            .accessibilityHidden(true)
+                    }
+                }
             Text(name).font(Atelier.font(15, weight: .semibold)).lineLimit(2)
                 .foregroundStyle(Atelier.textPrimary)
             Text(documents.count == 1 ? String(localized: "1 document") : String(localized: "\(documents.count) documents"))

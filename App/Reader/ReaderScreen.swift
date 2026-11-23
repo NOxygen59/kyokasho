@@ -73,7 +73,7 @@ struct ReaderScreen: View {
     @Environment(\.scenePhase) private var scenePhase
 
     enum Sheet: String, Identifiable {
-        case ai, settings, pageCards, documentCards, pageOrientation, lineEditor, gestureHelp
+        case ai, settings, pageCards, documentCards, pageOrientation, lineEditor, gestureHelp, allPages
         var id: String { rawValue }
     }
 
@@ -364,6 +364,13 @@ struct ReaderScreen: View {
                 case .lineEditor: OCRLineEditor(reader: reader)
                 case .gestureHelp: ReaderGestureHelpSheet(context: gestureHelpContext, close: { self.sheet = nil })
                 case .pageCards: PageCardsView(reader: reader)
+                case .allPages:
+                    PageGridSheet(document: reader.document, current: reader.currentSourcePage,
+                                  canDelete: capabilities.pageEditing, close: { self.sheet = nil }) { [weak reader] source in
+                        reader?.go(toSource: source)
+                    } deletePages: { [model, documentId = reader.document.id, page = reader.focusSource] in
+                        model.requestPageEdit(documentId: documentId, page: page)
+                    }
                 // PLAN-CARTES-001, E1 : sans export ici (l'export se fait depuis l'accueil, livre fermé).
                 case .documentCards: DocumentCardsView(document: reader.document)
                 case .pageOrientation:
@@ -783,18 +790,29 @@ struct ReaderScreen: View {
                 if filmstripMounted && !reader.isDrawing {
                     PageFilmstrip(reader: reader)
                         .overlay(alignment: .topLeading) {
-                            if capabilities.pageEditing {
-                                // #49 : supprimer des pages ferme le lecteur, puis ouvre « Pages du document » sur la page.
-                                Button { model.requestPageEdit(documentId: reader.document.id, page: reader.focusSource) } label: {
-                                    Image(systemName: "trash").font(Atelier.font(13, weight: .bold))
-                                        .frame(width: 34, height: 34).foregroundStyle(Atelier.Tint.japanese)
+                            HStack(spacing: 0) {
+                                // Maquette E0 : toutes les pages en grille, dans le lecteur.
+                                Button { sheet = .allPages } label: {
+                                    Image(systemName: "square.grid.3x3").font(Atelier.font(13, weight: .bold))
+                                        .frame(width: 34, height: 34).foregroundStyle(NewLayoutInk.accent)
                                         .background(Atelier.surface, in: Circle())
                                         .frame(width: 44, height: 44).contentShape(Rectangle())
                                 }
                                 .buttonStyle(PressScale())
-                                .accessibilityLabel("Supprimer des pages")
-                                .offset(x: 10, y: -14)
+                                .accessibilityLabel("Voir toutes les pages")
+                                if capabilities.pageEditing {
+                                    // #49 : supprimer des pages ferme le lecteur, puis ouvre « Pages du document » sur la page.
+                                    Button { model.requestPageEdit(documentId: reader.document.id, page: reader.focusSource) } label: {
+                                        Image(systemName: "trash").font(Atelier.font(13, weight: .bold))
+                                            .frame(width: 34, height: 34).foregroundStyle(Atelier.Tint.japanese)
+                                            .background(Atelier.surface, in: Circle())
+                                            .frame(width: 44, height: 44).contentShape(Rectangle())
+                                    }
+                                    .buttonStyle(PressScale())
+                                    .accessibilityLabel("Supprimer des pages")
+                                }
                             }
+                            .offset(x: 10, y: -14)
                         }
                         .offset(y: filmstripVisible || reduceMotion ? 0 : 24)
                         .opacity(filmstripVisible ? 1 : 0)

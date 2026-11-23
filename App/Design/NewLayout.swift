@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 NOxygen59
 
+import ReaderCore
 import SwiftUI
 
 // Composants de la nouvelle présentation (PLAN-REFONTE-001, maquettes E0 et E3) : forme fixe (pilules, cibles de
@@ -160,5 +161,98 @@ struct NewLayoutBanner: ViewModifier {
         } else {
             content
         }
+    }
+}
+
+/// Onglet de chemise : arrondi en bas seulement (`UnevenRoundedRectangle` n'existe qu'à partir d'iOS 17).
+struct UnevenRoundedRectangleShim: Shape {
+    let radius: CGFloat
+    func path(in rect: CGRect) -> Path {
+        let r = min(radius, rect.height, rect.width / 2)
+        var p = Path()
+        p.move(to: CGPoint(x: rect.minX, y: rect.minY))
+        p.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
+        p.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY - r))
+        p.addQuadCurve(to: CGPoint(x: rect.maxX - r, y: rect.maxY), control: CGPoint(x: rect.maxX, y: rect.maxY))
+        p.addLine(to: CGPoint(x: rect.minX + r, y: rect.maxY))
+        p.addQuadCurve(to: CGPoint(x: rect.minX, y: rect.maxY - r), control: CGPoint(x: rect.minX, y: rect.maxY))
+        p.closeSubpath()
+        return p
+    }
+}
+
+/// Toutes les pages du document en grille, dans le lecteur (maquette E0) : toucher une page y va ; « Supprimer des
+/// pages… » garde le chemin d'origine (le livre se ferme, puis « Pages du document », #49). Vignettes du cache commun.
+struct PageGridSheet: View {
+    @EnvironmentObject private var model: AppModel
+    let document: LibraryDocument
+    let current: Int
+    let canDelete: Bool
+    let close: () -> Void
+    let go: (Int) -> Void
+    let deletePages: () -> Void
+
+    var body: some View {
+        NavigationStack {
+            ScrollViewReader { proxy in
+                ScrollView {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 110), spacing: 16)], spacing: 18) {
+                        ForEach(0..<document.pageCount, id: \.self) { source in
+                            Button { go(source); close() } label: {
+                                VStack(spacing: 6) {
+                                    PageGridThumbnail(document: document, source: source)
+                                        .overlay(RoundedRectangle(cornerRadius: Atelier.corner(6), style: .continuous)
+                                            .strokeBorder(source == current ? NewLayoutInk.accent : Atelier.hairline,
+                                                          lineWidth: Atelier.border(source == current ? 3 : 1)))
+                                    Text(verbatim: document.pageLabel(source)).font(Atelier.font(12, weight: .semibold).monospacedDigit())
+                                        .foregroundStyle(source == current ? NewLayoutInk.accent : Atelier.textSecondary)
+                                }
+                            }
+                            .buttonStyle(PressScale())
+                            .id(source)
+                            .accessibilityLabel(Text("Page \(document.pageLabel(source))"))
+                            .accessibilityAddTraits(source == current ? .isSelected : [])
+                        }
+                    }
+                    .padding(20)
+                }
+                .onAppear { proxy.scrollTo(current, anchor: .center) }
+            }
+            .background(Atelier.canvas)
+            .navigationTitle("Pages du document")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Fermer", action: close) }
+                if canDelete {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button(role: .destructive) { close(); deletePages() } label: {
+                            Label("Supprimer des pages…", systemImage: "trash")
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+private struct PageGridThumbnail: View {
+    @EnvironmentObject private var model: AppModel
+    let document: LibraryDocument
+    let source: Int
+    @State private var image: UIImage?
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: Atelier.corner(6), style: .continuous).fill(Atelier.surface)
+            .aspectRatio(0.72, contentMode: .fit)
+            .overlay { if let image { Image(uiImage: image).resizable().scaledToFit() } }
+            .clipShape(RoundedRectangle(cornerRadius: Atelier.corner(6), style: .continuous))
+            .onAppear {
+                if let cached = model.thumbnails.cached(documentId: document.id, page: source, width: 240) {
+                    image = cached
+                } else {
+                    model.thumbnails.thumbnail(documentId: document.id, fileURL: model.storage.url(for: document.id),
+                                               page: source, width: 240) { image = $0 }
+                }
+            }
     }
 }
