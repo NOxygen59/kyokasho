@@ -103,9 +103,9 @@ public struct ReleaseNotes: Equatable, Sendable, Identifiable {
     /// elle que montre la fenêtre « Nouveautés » ; les versions précédentes vont dans `ReleaseHistory`.
     public static let current = ReleaseNotes("1.6.3", "2026-11-23", published: false, String(localized: "Finalité des grandes optimisations", bundle: .main), added: [
         ], fixed: [
-            String(localized: "Gel du processeur corrigé : un livre fermé est maintenant vraiment libéré ; avant, il restait en mémoire et faisait tourner l'iPad à plusieurs centaines de pour cent, surtout avec plusieurs onglets.", bundle: .main),
-            String(localized: "Mémoire : ouvrir et fermer des livres ne la fait plus grimper ; un seul livre est chargé à la fois, les onglets en arrière-plan ne coûtent presque rien.", bundle: .main),
-            String(localized: "Mode diagnostic : le journal note quand un livre fermé est libéré.", bundle: .main),
+            String(localized: "Gel corrigé : un livre fermé est maintenant libéré ; avant, il restait en mémoire et le processeur pouvait rester bloqué, surtout après plusieurs livres ouverts et fermés.", bundle: .main),
+            String(localized: "Mémoire : lors de nos essais, ouvrir puis fermer six livres plusieurs fois ne la faisait plus grimper.", bundle: .main),
+            String(localized: "Mode diagnostic : le journal signale la libération du lecteur à la fermeture d'un livre.", bundle: .main),
         ])
 
     /// Notes de `version` (« 1.3.2 », sans le numéro de build) : la version elle-même, jamais une build de test.

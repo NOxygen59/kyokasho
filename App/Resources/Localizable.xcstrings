@@ -12,7 +12,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The end of the big optimizations"
+            "value": "Wrapping up the major optimizations"
           }
         },
         "zh-Hans": {
@@ -23,68 +23,68 @@
         }
       }
     },
-    "Gel du processeur corrigé : un livre fermé est maintenant vraiment libéré ; avant, il restait en mémoire et faisait tourner l'iPad à plusieurs centaines de pour cent, surtout avec plusieurs onglets.": {
+    "Gel corrigé : un livre fermé est maintenant libéré ; avant, il restait en mémoire et le processeur pouvait rester bloqué, surtout après plusieurs livres ouverts et fermés.": {
       "localizations": {
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Gel du processeur corrigé : un livre fermé est maintenant vraiment libéré ; avant, il restait en mémoire et faisait tourner l'iPad à plusieurs centaines de pour cent, surtout avec plusieurs onglets."
+            "value": "Gel corrigé : un livre fermé est maintenant libéré ; avant, il restait en mémoire et le processeur pouvait rester bloqué, surtout après plusieurs livres ouverts et fermés."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Processor freeze fixed: a closed book is now really released; before, it stayed in memory and kept the iPad running at several hundred percent, especially with several tabs."
+            "value": "Freeze fixed: a closed book is now released; before, it stayed in memory and the processor could stay stuck, especially after several books were opened and closed."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "已修复处理器卡死：关闭的书现在会被真正释放；以前它会留在内存中，使 iPad 持续高负载，多标签页时尤甚。"
+            "value": "已修复卡死：关闭的书现在会被释放；以前它会留在内存中，处理器可能一直处于高负载，打开并关闭多本书后尤为明显。"
           }
         }
       }
     },
-    "Mémoire : ouvrir et fermer des livres ne la fait plus grimper ; un seul livre est chargé à la fois, les onglets en arrière-plan ne coûtent presque rien.": {
+    "Mémoire : lors de nos essais, ouvrir puis fermer six livres plusieurs fois ne la faisait plus grimper.": {
       "localizations": {
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mémoire : ouvrir et fermer des livres ne la fait plus grimper ; un seul livre est chargé à la fois, les onglets en arrière-plan ne coûtent presque rien."
+            "value": "Mémoire : lors de nos essais, ouvrir puis fermer six livres plusieurs fois ne la faisait plus grimper."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Memory: opening and closing books no longer makes it climb; only one book is loaded at a time, background tabs cost almost nothing."
+            "value": "Memory: in our tests, opening and closing six books several times no longer made it climb."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "内存：打开和关闭书籍不再使内存不断增长；一次只加载一本书，后台标签页几乎不占资源。"
+            "value": "内存：在我们的测试中，多次打开并关闭六本书后，内存不再持续增长。"
           }
         }
       }
     },
-    "Mode diagnostic : le journal note quand un livre fermé est libéré.": {
+    "Mode diagnostic : le journal signale la libération du lecteur à la fermeture d'un livre.": {
       "localizations": {
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Mode diagnostic : le journal note quand un livre fermé est libéré."
+            "value": "Mode diagnostic : le journal signale la libération du lecteur à la fermeture d'un livre."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Diagnostic mode: the log notes when a closed book is released."
+            "value": "Diagnostic mode: the log reports when the reader is released after a book is closed."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "诊断模式：日志会记录关闭的书何时被释放。"
+            "value": "诊断模式：关闭书籍后，日志会记录阅读器被释放。"
           }
         }
       }
