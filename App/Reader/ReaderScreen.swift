@@ -827,15 +827,7 @@ struct ReaderScreen: View {
                 }
                 // Pendant le dessin, la palette d'outils d'iOS occupe le bas : seule la barre d'annotation reste.
                 if !reader.isDrawing {
-                    // Libellés retirés si la barre ne tient pas (navigateur à côté, Split View) : rien n'est coupé.
-                    ViewThatFits(in: .horizontal) {
-                        bottomBar(compact: false)
-                        // Recette 1.6.4 (point 5) : « Annoter » garde son nom tant que la place le permet.
-                        bottomBar(compact: true, annotateLabel: true)
-                        bottomBar(compact: true)
-                        // Dernier repli (navigateur à côté sur un écran étroit) : la barre défile, rien n'est coupé.
-                        ScrollView(.horizontal, showsIndicators: false) { bottomBar(compact: true) }
-                    }
+                    bottomBar
                 }
             }
             .padding(.horizontal, Atelier.gap)
@@ -848,7 +840,10 @@ struct ReaderScreen: View {
 
     /// Capsule du haut : Rechercher, Signet, Affichage (Aa), « … », puis Étudier ; le moniteur la prolonge vers le bas.
     private func newActionsCapsule(compact: Bool) -> some View {
-        VStack(spacing: 0) {
+        // Contenu des menus construit hors des fermetures `Menu { }`, gardées en vie par iOS 16 (y compris dans les
+        // versions que `ViewThatFits` essaie puis écarte) : seuls les relais et liaisons y restent (recette 1.6.4, point 13).
+        let display = displayMenuItems, more = moreMenuItems
+        return VStack(spacing: 0) {
             HStack(spacing: 2) {
                 if capabilities.textAnalysis {
                     NewLayoutIconButton(icon: "magnifyingglass", label: String(localized: "Rechercher")) { searchCardShown = true }
@@ -856,12 +851,12 @@ struct ReaderScreen: View {
                 NewLayoutIconButton(icon: reader.isCurrentPageBookmarked ? "bookmark.fill" : "bookmark",
                                     label: String(localized: "Signet"), active: reader.isCurrentPageBookmarked,
                                     tint: Atelier.Tint.annotate) { reader.toggleBookmark() }
-                Menu { displayMenuItems } label: {
+                Menu { display } label: {
                     Text(verbatim: "Aa").font(Atelier.font(17, weight: .semibold))
                         .frame(width: 48, height: 48).foregroundStyle(Atelier.textPrimary)
                 }
                 .accessibilityLabel("Affichage")
-                Menu { moreMenuItems } label: {
+                Menu { more } label: {
                     Image(systemName: "ellipsis").font(Atelier.font(17, weight: .semibold))
                         .frame(width: 48, height: 48).foregroundStyle(Atelier.textPrimary)
                 }
@@ -886,7 +881,29 @@ struct ReaderScreen: View {
     }
 
     /// Grande barre du bas : cibles de 56 pt, libellés visibles.
-    private func bottomBar(compact: Bool, annotateLabel: Bool = false) -> some View {
+    /// Grande barre du bas. Seuls les outils de gauche ont plusieurs versions (libellés retirés si la place manque :
+    /// panneau ouvert, navigateur à côté, Split View) ; le compteur de pages et la droite n'existent qu'en un exemplaire.
+    /// Recette 1.6.4 (point 13, bissection sur l'iPad) : avec toute la barre dans `ViewThatFits`, chaque version essayée
+    /// portait son propre champ de page (contrôle UIKit) et le lecteur fermé n'était plus libéré dès que la version large
+    /// ne tenait pas.
+    private var bottomBar: some View {
+        HStack(spacing: 6) {
+            ViewThatFits(in: .horizontal) {
+                bottomTools(compact: false).fixedSize()
+                // Recette 1.6.4 (point 5) : « Annoter » garde son nom tant que la place le permet.
+                bottomTools(compact: true, annotateLabel: true).fixedSize()
+                bottomTools(compact: true).fixedSize()
+                // Dernier repli (navigateur à côté sur un écran étroit) : les outils défilent, rien n'est coupé.
+                ScrollView(.horizontal, showsIndicators: false) { bottomTools(compact: true).fixedSize() }
+            }
+            bottomTail.fixedSize()
+        }
+        .padding(6)
+        .newLayoutBar(radius: 34)
+    }
+
+    /// Outils de gauche de la barre du bas : page précédente, Lire, Annoter, 辞, survol, ふりがな.
+    private func bottomTools(compact: Bool, annotateLabel: Bool = false) -> some View {
         HStack(spacing: 6) {
             newPageArrow(left: true)
             if capabilities.annotations {
@@ -937,6 +954,12 @@ struct ReaderScreen: View {
                     }
                 }
             }
+        }
+    }
+
+    /// Droite de la barre du bas, en un seul exemplaire : compteur de pages, page suivante, IA, navigateur.
+    private var bottomTail: some View {
+        HStack(spacing: 6) {
             Rectangle().fill(Atelier.hairline).frame(width: 1, height: 30).padding(.horizontal, 2)
             pageCounter
             newPageArrow(left: false)
@@ -949,9 +972,6 @@ struct ReaderScreen: View {
                                     tint: Atelier.Tint.ai, size: 56) { side = side == .web ? nil : .web }
             }
         }
-        .padding(6)
-        .newLayoutBar(radius: 34)
-        .fixedSize()
     }
 
     /// Bouton des vignettes (aperçu de toutes les pages) et champ « page » : même saisie que l'ancienne capsule.

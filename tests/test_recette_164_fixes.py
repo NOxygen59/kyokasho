@@ -32,7 +32,12 @@ class Recette164FixesTests(unittest.TestCase):
         screen = source("App/Reader/ReaderScreen.swift")
         self.assertIn(".opacity(reader.pageHasText ? 1 : 0)", screen)
         self.assertNotIn("if reader.pageHasText {\n                    NewLayoutIconButton", screen)
-        self.assertIn("bottomBar(compact: true, annotateLabel: true)", screen)
+        self.assertIn("bottomTools(compact: true, annotateLabel: true)", screen)
+        # Point 13 : le champ de page (UIKit) hors des versions essayées par ViewThatFits.
+        tools = screen.split("private func bottomTools(", 1)[1].split("private var bottomTail", 1)[0]
+        self.assertNotIn("pageCounter", tools)
+        self.assertNotIn("TextField", tools)
+        self.assertIn("bottomTail.fixedSize()", screen)
 
     def test_resume_cards_can_be_dismissed_and_keep_natural_height(self):
         row = source("App/Library/ResumeRow.swift")
