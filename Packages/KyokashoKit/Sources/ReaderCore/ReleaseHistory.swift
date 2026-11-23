@@ -14,8 +14,7 @@ enum ReleaseHistory {
             String(localized: "Mémoire : lors de nos essais, ouvrir puis fermer six livres plusieurs fois ne la faisait plus grimper.", bundle: .main),
             String(localized: "Mode diagnostic : le journal signale la libération du lecteur à la fermeture d'un livre.", bundle: .main),
         ]),
-        // Candidates locales non publiées.
-        ReleaseNotes("1.6.2", "2026-11-22", published: false, String(localized: "Correctifs de la recette 1.6.1", bundle: .main), added: [
+        ReleaseNotes("1.6.2", "2026-11-22", String(localized: "Correctifs de la recette 1.6.1", bundle: .main), added: [
                 String(localized: "Mode diagnostic : le journal liste les fils qui occupent le processeur (nom, temps depuis qu'il a été repéré, moyenne récente, travail en cours, page) et signale ceux qui restent très chargés plus de 10 secondes.", bundle: .main),
             ], fixed: [
                 String(localized: "Lecteur : il apparaît en fondu court dès que la page est prête, au plus tard après une demi-seconde ; avec « Réduire les animations », il s'affiche tout de suite, sans animation.", bundle: .main),
@@ -23,7 +22,7 @@ enum ReleaseHistory {
                 String(localized: "Fermer un document arrête les lectures OCR que plus rien n'attend, le survol du dictionnaire et le recalage de la page.", bundle: .main),
                 String(localized: "Lectures OCR : une lecture terminée reste en cache même si on a quitté la page, et une lecture abandonnée n'écrase plus un résultat plus récent.", bundle: .main),
             ]),
-        ReleaseNotes("1.6.1", "2026-11-20", published: false, String(localized: "Correctifs de la recette 1.6.0", bundle: .main), added: [
+        ReleaseNotes("1.6.1", "2026-11-20", String(localized: "Correctifs de la recette 1.6.0", bundle: .main), added: [
                 String(localized: "Mode diagnostic : lors d'un pic du processeur, le journal relève le contexte (tâches en cours avec leur page et leur étape, temps processeur quand il est mesuré, onglets ouverts, dernier geste récent).", bundle: .main),
             ], fixed: [
                 String(localized: "Lecteur : il s'ouvre en fondu court et se ferme sans traîne.", bundle: .main),
@@ -35,6 +34,7 @@ enum ReleaseHistory {
                 String(localized: "Notes : ouvrir une note affiche la fenêtre OCR sur l'onglet Notes.", bundle: .main),
                 String(localized: "Rappels de notes : numéro de page imprimé dans le titre ; rien n'est programmé si les notifications sont refusées ; seuls les rappels modifiés sont remplacés.", bundle: .main),
             ]),
+        // Candidates locales non publiées, sauf la 1.5.9 (release GitHub).
         ReleaseNotes("1.6.0", "2026-11-20", published: false, String(localized: "Correctifs de la recette 1.5.10", bundle: .main), added: [
                 String(localized: "Effacer le cache : quand des fichiers récents sont gardés, un petit compte à rebours indique quand ils pourront être effacés.", bundle: .main),
             ], fixed: [
@@ -49,7 +49,7 @@ enum ReleaseHistory {
                 String(localized: "Furigana : ils reviennent d'eux-mêmes sur la page ouverte quand l'app a dû libérer de la mémoire ou vider son cache, et au retour dans l'app.", bundle: .main),
                 String(localized: "Cartes de la page : un mot sans lecture connue n'a plus son kanji recopié comme lecture ; elle est laissée vide si aucune lecture complète n'est trouvée.", bundle: .main),
             ]),
-        ReleaseNotes("1.5.9", "2026-11-14", published: false, String(localized: "Rappels de notes, annotations exactes à l'export et correctifs de la recette 1.5.8", bundle: .main), added: [
+        ReleaseNotes("1.5.9", "2026-11-14", String(localized: "Rappels de notes, annotations exactes à l'export et correctifs de la recette 1.5.8", bundle: .main), added: [
                 String(localized: "Notes : un « ! » sur l'accueil, noir si une échéance arrive dans les 7 jours, rouge si elle est aujourd'hui ou dépassée.", bundle: .main),
                 String(localized: "Notes : une heure d'échéance et jusqu'à trois rappels par note, avec une notification d'iOS qui ouvre la note.", bundle: .main),
                 String(localized: "Accueil : la colonne de gauche est regroupée (Étudier, Importer et convertir), et entrer dans un dossier est animé.", bundle: .main),

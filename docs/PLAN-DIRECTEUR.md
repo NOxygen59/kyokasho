@@ -219,7 +219,15 @@ Une anomalie critique démontrée peut modifier cet ordre, avec justification en
 
 ## 8. Point de reprise pour le prochain chat
 
-**État au 19/11/2026 (relevé de cette note, sur le Mac de travail) :**
+**État au 23/11/2026 (relevé de cette note, sur le Mac de travail) :**
+
+- `main` = `6091c72` (1.6.3). Releases GitHub publiées : v1.5.9, v1.6.1 (pré-version), v1.6.2, v1.6.3 (gel du lecteur fermé corrigé, recette iPad 7/7).
+- Refonte graphique (plan `PLAN-REFONTE-001`, maquettes E0 lecteur et E3 accueil) : branche `claude/refonte-ui`, candidate **1.6.4 (116) « Refonte graphique »**, publiée en release GitHub v1.6.4. Interrupteur « Nouvelle présentation » (Réglages → Général → Thèmes et couleurs), désactivé par défaut ; désactivé, l'app reste comme la 1.6.3. **Recette iPad à faire.** Reportés : fenêtres étroites (Split View, Slide Over) et texte agrandi d'iOS.
+- La candidate 1.6.4 (115) « Refonte Graphit » de Codex (branche `codex/refonte-164-rejete`) est rejetée par NOxygen59 et n'a pas été publiée.
+- Suite : recette 1.6.4, puis fusion vers `main` sur accord de NOxygen59 ; ensuite les autres menus qui retiennent le lecteur, le cache des dictionnaires et le mode pilote.
+- Preuve rejouable en une commande : `./scripts/verifier_tout.sh`. GitHub Actions reste désactivé (CI-0).
+
+**État au 19/11/2026 (historique) :**
 
 - **Ce qui est ouvert, par lot : [registre des chantiers](REGISTRE-CHANTIERS.md)** (réunion du 19/11, seule table active).
 - Branche de travail `claude/modloc` : candidate 1.5.9 (97) = `56bfdc1`, poussée ; pointe locale au-dessus = documentation. PR #91 vers `main` (relevé du 19/11 ; fusionnée depuis), **non fusionnée et bloquée** jusqu'à la 1.5.10 recettée. `origin/main` = `859a2c7` (fusion de la PR #89 du 11/11). La candidate `56bfdc1` contient les 1.5.7, 1.5.8 et 1.5.9 (43 commits au-dessus de `main`, plus deux commits sur la pointe locale : documentation, garde-fou anti-fuite et son test) : MODLOC, NOTIF, DATA-03, B1, hooks anti-fuite, corrections des recettes 1.5.7 et 1.5.8.
