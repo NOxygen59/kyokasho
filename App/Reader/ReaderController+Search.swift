@@ -63,6 +63,8 @@ extension ReaderController {
             return
         }
         isSearching = true
+        // Armé avant PDFKit : sa fin de recherche ne doit pas afficher « Aucun résultat » avant la recherche OCR.
+        ocrSearchRunning = true
         pdf.beginFindString(trimmed, withOptions: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive])
         // Pages scannées : recherche aussi dans le texte OCR en cache, puis dans le texte des lectures IA (OvisOCR2, ou
         // ta correction) des pages sans résultat OCR. Hors du fil principal ; « Recherche… » reste affiché jusqu'au bout
@@ -71,7 +73,6 @@ extension ReaderController {
         let engines = Self.searchEngines
         let service = model.ocr
         let pageCount = document.pageCount
-        ocrSearchRunning = true
         Task { [weak self] in
             let hits = await Task.detached(priority: .userInitiated) { () -> [(page: Int, context: String, ai: Bool)] in
                 let ocr = service.search(trimmed, documentId: documentId, engines: engines)
@@ -96,8 +97,18 @@ extension ReaderController {
     /// extrait, sauf `skipping` (déjà trouvées dans l'OCR). Mêmes règles de comparaison que la recherche OCR.
     nonisolated static func aiTextHits(_ query: String, documentId: String, pageCount: Int,
                                        skipping: Set<Int>) -> [(page: Int, context: String)] {
+        // Seulement les pages qui ont une lecture IA ou une correction (un seul parcours du dossier, pas une ouverture
+        // de fichier par page).
+        let folder = DocumentAITextStore.folder.appendingPathComponent(documentId, isDirectory: true)
+        let names = (try? FileManager.default.contentsOfDirectory(atPath: folder.path)) ?? []
+        let readers = [ModelSpec.ovisocr2.id, DocumentAITextStore.correctedReader]
+        let pages = Set(names.compactMap { name -> Int? in
+            guard name.hasSuffix(".md"), let dash = name.lastIndex(of: "-"),
+                  readers.contains(String(name[..<dash])) else { return nil }
+            return Int(name[name.index(after: dash)...].dropLast(3))
+        })
         var results: [(Int, String)] = []
-        for page in 0..<pageCount where !skipping.contains(page) {
+        for page in pages.sorted() where page < pageCount && !skipping.contains(page) {
             guard let text = DocumentAITextStore.read(documentId: documentId, reader: ModelSpec.ovisocr2.id, page: page),
                   let range = text.range(of: query, options: [.caseInsensitive, .widthInsensitive, .diacriticInsensitive])
             else { continue }

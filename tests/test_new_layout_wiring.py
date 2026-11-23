@@ -82,10 +82,14 @@ class NewLayoutWiringTests(unittest.TestCase):
 
     def test_home_sidebar_keeps_every_command(self):
         home = source("Library/LibraryView.swift")
-        new = home.split("private var newSidebarContent: some View {", 1)[1].split("private var sidebarContent", 1)[0]
-        for part in ("brandHeader", "libraryRows", "studyRows", "LocalAIEnergyCard()", "showBench = true",
-                     "showTrash = true", "showSettings = true", "showFolder(tile.folder.id)"):
+        new = home.split("private var newSidebarContent: some View {", 1)[1].split("private var newSidebarFooter", 1)[0]
+        for part in ("brandHeader", "libraryRows", "studyRows", "LocalAIEnergyCard()", "showFolder(tile.folder.id)"):
             self.assertIn(part, new)
+        # Recette 1.6.4 : Réviser et la rangée Banc / Corbeille / Réglages, sous la carte « Aujourd'hui ».
+        footer = home.split("private var newSidebarFooter: some View {", 1)[1].split("private func footerTile", 1)[0]
+        for part in ("showReview = true", "showBench = true", "showTrash = true", "showSettings = true"):
+            self.assertIn(part, footer)
+        self.assertIn("if newLayout { newSidebarFooter }", home)
 
     def test_resume_row_lists_open_tabs_first_then_books_in_progress(self):
         row = source("Library/ResumeRow.swift")

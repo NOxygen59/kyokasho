@@ -404,7 +404,7 @@ struct StudyTextTab: View {
                     }
                     showVerify = true
                 }
-                NewLayoutIconButton(icon: "arrow.clockwise", label: String(localized: "Rescanner"), size: 40) {
+                NewLayoutIconButton(icon: "arrow.clockwise", label: String(localized: "Rescanner"), size: 44) {
                     reader.verifyShownPages(force: true)
                     showVerify = true
                 }

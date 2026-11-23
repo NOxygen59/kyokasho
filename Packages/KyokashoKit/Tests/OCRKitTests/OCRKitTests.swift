@@ -203,10 +203,10 @@ final class ServiceTests: XCTestCase {
         try db.save(OCRResultRecord(documentId: "d", pageIndex: 2, engine: OCREngineID.vision,
                                     json: try JSONEncoder().encode(page), durationMs: 1))
         let service = OCRService(database: db)
-        let hits = await service.search("局部", documentId: "d", engines: [OCREngineID.vision])
+        let hits = service.search("局部", documentId: "d", engines: [OCREngineID.vision])
         XCTAssertEqual(hits.map(\.page), [2])
         XCTAssertTrue(hits[0].context.contains("局部照明"))
-        let none = await service.search("家具", documentId: "d", engines: [OCREngineID.vision])
+        let none = service.search("家具", documentId: "d", engines: [OCREngineID.vision])
         XCTAssertTrue(none.isEmpty)
     }
 

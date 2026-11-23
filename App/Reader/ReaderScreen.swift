@@ -252,7 +252,7 @@ struct ReaderScreen: View {
                 ZStack {
                     if side == .study, studyMode != .docked {
                         DetachedPanel(area: geo.size) {
-                            StudyPanel(reader: reader, tab: $studyTab, openSearch: { searchCardShown = true }, openLineEditor: { sheet = .lineEditor },
+                            StudyPanel(reader: reader, tab: $studyTab, openSearch: { searchCardShown = true }, openLineEditor: { [sheet = $sheet] in sheet.wrappedValue = .lineEditor },
                                        openDocumentSettings: { [sheet = $sheet] in sheet.wrappedValue = .settings }, close: { self.side = nil }, fixedWidth: false)
                         }
                         .transition(.opacity)
@@ -1237,7 +1237,7 @@ struct ReaderScreen: View {
     private func sidePanel(_ side: Side) -> some View {
         switch side {
         case .study:
-            StudyPanel(reader: reader, tab: $studyTab, openSearch: { searchCardShown = true }, openLineEditor: { sheet = .lineEditor },
+            StudyPanel(reader: reader, tab: $studyTab, openSearch: { searchCardShown = true }, openLineEditor: { [sheet = $sheet] in sheet.wrappedValue = .lineEditor },
                        openDocumentSettings: { [sheet = $sheet] in sheet.wrappedValue = .settings }, close: { self.side = nil })
         case .web:
             WebPanel(onClose: { self.side = nil })
