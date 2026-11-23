@@ -147,6 +147,9 @@ struct LookupPopup: View {
     @State private var translateError: String?
     @State private var editingFrench = false
     @State private var frenchDraft = ""
+    /// Nouvelle présentation (maquette E0) : grande fiche du premier mot au-dessus des définitions.
+    @AppStorage(NewLayout.storageKey) private var newLayoutPreference = NewLayout.defaultEnabled
+    private var newLayout: Bool { NewLayout.isAvailable && newLayoutPreference }
 
     /// Premier mot trouvé, s'il n'a que des définitions anglaises (traduction française possible).
     private var englishTerm: TermResult? {
@@ -201,6 +204,9 @@ struct LookupPopup: View {
             .foregroundStyle(Atelier.textSecondary)
             .padding(.horizontal, 14).padding(.vertical, 10)
             Divider().overlay(Atelier.hairline)
+            if newLayout, dictionaryModel.hasTermDictionaries, let term = session.currentTerms.first {
+                wordCard(term)
+            }
             if !dictionaryModel.hasTermDictionaries {
                 VStack(spacing: 8) {
                     Text("Aucun dictionnaire").font(.headline).foregroundStyle(Atelier.textPrimary)
@@ -246,6 +252,40 @@ struct LookupPopup: View {
         .clipShape(RoundedRectangle(cornerRadius: Atelier.radius, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: Atelier.radius, style: .continuous).strokeBorder(Atelier.Tint.japanese.opacity(0.35), lineWidth: Atelier.border(1)))
         .atelierShapeShadow(RoundedRectangle(cornerRadius: Atelier.radius, style: .continuous), opacity: 0.55, radius: 24, y: 10)
+    }
+
+    /// Grande fiche (maquette E0) : mot, lecture, niveau JLPT s'il est donné par un dictionnaire, puis les deux gestes
+    /// les plus fréquents en gros boutons. Mêmes chemins que les liens des définitions (`.card(0)`, `playAudio`).
+    private func wordCard(_ term: TermResult) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Text(term.expression).font(.custom("HiraginoSans-W6", size: compact ? 24 : 28))
+                    .foregroundStyle(Atelier.textPrimary).lineLimit(1).minimumScaleFactor(0.6)
+                if !term.reading.isEmpty, term.reading != term.expression {
+                    Text(term.reading).font(.custom("HiraginoSans-W3", size: 15)).foregroundStyle(NewLayoutInk.accent)
+                }
+                Spacer(minLength: 4)
+                if let level = term.jlptLevel {
+                    Text(verbatim: level).font(Atelier.font(12, weight: .bold))
+                        .padding(.horizontal, 9).padding(.vertical, 3)
+                        .foregroundStyle(Atelier.onAccentInk)
+                        .background(Atelier.Tint.read, in: Capsule())
+                        .accessibilityLabel(Text("Niveau JLPT \(level)"))
+                }
+            }
+            HStack(spacing: 8) {
+                if onAddCard != nil {
+                    NewLayoutPillButton(icon: "plus", title: String(localized: "Ajouter aux cartes"), active: true,
+                                        selectable: false) { handle(.card(index: 0)) }
+                }
+                NewLayoutIconButton(icon: "speaker.wave.2", label: String(localized: "Écouter"), filled: true, size: 48) {
+                    Task { await dictionaryModel.playAudio(term: term.expression, reading: term.reading) }
+                }
+            }
+        }
+        .padding(.horizontal, 14).padding(.vertical, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(NewLayoutInk.accent.opacity(0.09))
     }
 
     private func handle(_ message: LookupMessage) {

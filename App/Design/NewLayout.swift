@@ -281,3 +281,30 @@ struct NewLayoutCloseTarget: ViewModifier {
         }
     }
 }
+
+/// Ligne en carte (notes, repères) dans la nouvelle présentation ; inchangée sinon.
+struct NewLayoutCardRow: ViewModifier {
+    let on: Bool
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if on {
+            content.padding(12)
+                .frame(minHeight: 44)
+                .background(Atelier.surfaceHigh, in: RoundedRectangle(cornerRadius: Atelier.corner(14), style: .continuous))
+                .contentShape(Rectangle())
+        } else {
+            content
+        }
+    }
+}
+
+/// Texte posé sur la couleur principale (bulle de l'utilisateur dans le chat) ; rien de changé hors refonte.
+struct NewLayoutOnAccentText: ViewModifier {
+    let on: Bool
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if on { content.foregroundStyle(NewLayoutInk.onAccent) } else { content }
+    }
+}

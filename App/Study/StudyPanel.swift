@@ -1027,6 +1027,9 @@ struct StudyNotesTab: View {
     @State private var editingID: String?
     @State private var editText = ""
     @FocusState private var editFocused: Bool
+    /// Nouvelle présentation (maquette E0) : notes en cartes, « Ajouter » en grand bouton.
+    @AppStorage(NewLayout.storageKey) private var newLayoutPreference = NewLayout.defaultEnabled
+    private var newLayout: Bool { NewLayout.isAvailable && newLayoutPreference }
 
     private var page: Int { reader.focusSource }
     private let drafts = NoteDraftStore.shared
@@ -1047,9 +1050,15 @@ struct StudyNotesTab: View {
             .padding(8)
             .background(Atelier.surfaceHigh, in: RoundedRectangle(cornerRadius: Atelier.smallRadius, style: .continuous))
             HStack {
-                Button("Ajouter") { add() }
-                    .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.annotate))
-                    .disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                Group {
+                    if newLayout {
+                        NewLayoutPillButton(icon: "plus", title: String(localized: "Ajouter"), active: true, selectable: false) { add() }
+                    } else {
+                        Button("Ajouter") { add() }
+                            .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.annotate))
+                    }
+                }
+                .disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 Button { reader.newNote() } label: { Label("Flottante", systemImage: "note.text.badge.plus") }
                     .font(Atelier.font(13, weight: .semibold))
                     .foregroundStyle(Atelier.Tint.annotate)
@@ -1189,6 +1198,7 @@ struct StudyNotesTab: View {
                 .accessibilityLabel("Modifier la note")
             }
         }
+        .modifier(NewLayoutCardRow(on: newLayout))
         .contentShape(Rectangle())
         .onTapGesture { if editingID != comment.id { reader.openNote = comment } }
         .contextMenu {
@@ -1224,6 +1234,9 @@ struct StudyNotesTab: View {
 struct StudyMarksTab: View {
     @ObservedObject var reader: ReaderController
     var openSearch: () -> Void
+    /// Nouvelle présentation (maquette E0) : repères en cartes, page en tête de ligne.
+    @AppStorage(NewLayout.storageKey) private var newLayoutPreference = NewLayout.defaultEnabled
+    private var newLayout: Bool { NewLayout.isAvailable && newLayoutPreference }
 
     var body: some View {
         ScrollView {
@@ -1232,7 +1245,9 @@ struct StudyMarksTab: View {
                     Label("Rechercher dans le document", systemImage: "magnifyingglass")
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(10)
-                        .background(Atelier.surfaceHigh, in: RoundedRectangle(cornerRadius: Atelier.smallRadius, style: .continuous))
+                        .frame(minHeight: newLayout ? 44 : nil)
+                        .background(Atelier.surfaceHigh, in: RoundedRectangle(cornerRadius: newLayout ? Atelier.corner(22) : Atelier.smallRadius,
+                                                                            style: .continuous))
                 }
                 .foregroundStyle(Atelier.textPrimary)
                 AtelierLabel(String(localized: "Signets · \(reader.bookmarks.count)"), tint: Atelier.Tint.read)
@@ -1259,8 +1274,10 @@ struct StudyMarksTab: View {
                 Image(systemName: icon).foregroundStyle(tint)
                 Text(title).lineLimit(2).foregroundStyle(Atelier.textPrimary)
                 Spacer()
-                Text(reader.document.pageLabel(page)).font(Atelier.mono).foregroundStyle(Atelier.textTertiary)
+                Text(reader.document.pageLabel(page)).font(newLayout ? Atelier.font(14, weight: .bold).monospacedDigit() : Atelier.mono)
+                    .foregroundStyle(newLayout ? NewLayoutInk.accent : Atelier.textTertiary)
             }
+            .modifier(NewLayoutCardRow(on: newLayout))
         }
         .buttonStyle(.plain)
     }
