@@ -763,7 +763,7 @@ struct ReaderScreen: View {
                         .frame(height: filmstripVisible ? nil : 0)
                         .transition(.opacity.combined(with: .offset(y: reduceMotion ? 0 : 24)))
                 }
-                if annotating && capabilities.annotations {
+                if annotationToolsShown && capabilities.annotations {
                     annotationBar
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
@@ -825,9 +825,9 @@ struct ReaderScreen: View {
             newPageArrow(left: true)
             if capabilities.annotations {
                 NewLayoutPillButton(icon: "hand.point.up.left", title: String(localized: "Lire"),
-                                    active: !annotating && !reader.lookupMode, large: true) { stopAnnotating() }
-                NewLayoutPillButton(icon: "pencil.tip", title: String(localized: "Annoter"), active: annotating, large: true) {
-                    annotating ? stopAnnotating() : startAnnotating()
+                                    active: !annotationToolsShown && !reader.lookupMode, large: true) { stopAnnotating() }
+                NewLayoutPillButton(icon: "pencil.tip", title: String(localized: "Annoter"), active: annotationToolsShown, large: true) {
+                    annotationToolsShown ? stopAnnotating() : startAnnotating()
                 }
                 Button {
                     reader.lookupMode.toggle()
@@ -930,6 +930,12 @@ struct ReaderScreen: View {
     }
 
     private enum AnnotationTool { case draw, highlight, pencilLookup }
+
+    /// Barre d'annotation visible dès qu'un outil est actif, même lancé ailleurs (dessin rétabli après une
+    /// reconstruction du document) : sans elle, le bas resterait vide pendant le dessin, sans « Terminé ».
+    private var annotationToolsShown: Bool {
+        annotating || reader.isDrawing || reader.ocrHighlightMode || reader.pencilLookup
+    }
 
     /// Un seul outil à la fois : en choisir un coupe les deux autres (comme l'ancienne barre d'outils).
     private func selectAnnotationTool(_ tool: AnnotationTool) {

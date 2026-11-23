@@ -58,12 +58,12 @@ private struct ResumeCard: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 14) {
-            RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Atelier.surfaceHigh)
+            RoundedRectangle(cornerRadius: Atelier.corner(10), style: .continuous).fill(Atelier.surfaceHigh)
                 .frame(width: 84, height: 112)
                 .overlay {
                     if let image { Image(uiImage: image).resizable().scaledToFit() }
                 }
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .clipShape(RoundedRectangle(cornerRadius: Atelier.corner(10), style: .continuous))
             VStack(alignment: .leading, spacing: 5) {
                 if isOpen {
                     Text("Ouvert").font(Atelier.font(11, weight: .bold)).textCase(.uppercase)

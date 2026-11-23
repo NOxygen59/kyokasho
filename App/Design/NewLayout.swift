@@ -18,15 +18,11 @@ extension View {
     /// Fond d'une barre de la nouvelle présentation : surface pleine, filet et ombre douce. Un filet visible détache
     /// la barre d'un fond clair (sans lui, le blanc sur papier ne se voit pas ; relecture D-07 du plan).
     func newLayoutBar(radius: CGFloat) -> some View {
-        background {
-            RoundedRectangle(cornerRadius: radius, style: .continuous)
-                .fill(Atelier.surface)
-                .shadow(color: Atelier.shadow.opacity(0.10), radius: 12, y: 5)
-        }
-        .overlay {
-            RoundedRectangle(cornerRadius: radius, style: .continuous)
-                .strokeBorder(Atelier.hairline, lineWidth: 1)
-        }
+        atelierShapeShadow(RoundedRectangle(cornerRadius: radius, style: .continuous), opacity: 0.10, radius: 12, y: 5)
+            .overlay {
+                RoundedRectangle(cornerRadius: radius, style: .continuous)
+                    .strokeBorder(Atelier.hairline, lineWidth: Atelier.border(1))
+            }
     }
 }
 

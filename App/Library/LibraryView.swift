@@ -554,7 +554,7 @@ struct LibraryView: View {
                             }
                             .padding(.horizontal, 10).frame(height: 40)
                             .background(openFolderId == tile.folder.id ? Atelier.surfaceHigh : Color.clear,
-                                        in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                        in: RoundedRectangle(cornerRadius: Atelier.corner(12), style: .continuous))
                             .contentShape(Rectangle())
                         }
                         .buttonStyle(PressScale())

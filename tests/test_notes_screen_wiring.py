@@ -24,7 +24,9 @@ class NotesScreenWiringTests(unittest.TestCase):
     def test_notes_entry_is_outside_the_manga_only_block(self):
         # Revue DeepSeek F1 : les PDF de Manga ont aussi des notes.
         library = (APP / "Library/LibraryView.swift").read_text(encoding="utf-8")
-        before_merge = library[:library.index('title: String(localized: "Fusionner des PDF")')]
+        # Rubrique « Étudier » partagée par les deux colonnes depuis la refonte (E3).
+        rows = library.split("@ViewBuilder private var studyRows: some View {", 1)[1].split("@ViewBuilder private var currentSidebarContent", 1)[0]
+        before_merge = rows
         last_block = before_merge.rindex("if space != .manga {")
         notes_row = before_merge.index('actionRow(icon: "note.text"')
         closing = before_merge.index("}", last_block)
