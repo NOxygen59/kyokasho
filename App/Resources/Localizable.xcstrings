@@ -1,6 +1,94 @@
 {
   "sourceLanguage": "fr",
   "strings": {
+    "Papier (encre bleue)": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Papier (encre bleue)"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paper (blue ink)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "纸张（蓝墨）"
+          }
+        }
+      }
+    },
+    "Papier washi · encre bleue": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Papier washi · encre bleue"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Washi paper · blue ink"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "和纸 · 蓝墨"
+          }
+        }
+      }
+    },
+    "Nouvelle présentation": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nouvelle présentation"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New layout"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新版界面"
+          }
+        }
+      }
+    },
+    "Lecteur et accueil redessinés, aux couleurs de ton thème. Désactivée, tout redevient comme avant.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lecteur et accueil redessinés, aux couleurs de ton thème. Désactivée, tout redevient comme avant."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Redesigned reader and home screen, in your theme's colours. Turn it off to get everything back as before."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重新设计的阅读器和主页，采用你的主题颜色。关闭后一切恢复原样。"
+          }
+        }
+      }
+    },
     "Finalité des grandes optimisations": {
       "localizations": {
         "fr": {
