@@ -802,17 +802,15 @@ struct LibraryView: View {
                 Spacer()
                 Image(systemName: dashboardIcon).font(Atelier.font(12)).foregroundStyle(Atelier.textTertiary)
             }
-            HStack(alignment: .firstTextBaseline, spacing: 14) {
-                // Chiffres sur une ligne (recette 1.6.4 : « 36 / min » coupé).
-                HStack(alignment: .firstTextBaseline, spacing: 4) {
-                    Text(verbatim: "\(Int(today / 60)) min").font(Atelier.font(26, weight: .bold)).foregroundStyle(Atelier.textPrimary)
-                        .lineLimit(1).fixedSize()
-                    Text("lues").font(Atelier.font(12)).foregroundStyle(Atelier.textSecondary)
-                }
-                HStack(alignment: .firstTextBaseline, spacing: 4) {
+            // Recette 1.6.4 : seulement les minutes et les jours de série, avec une flamme (les mots « lues » et « de série »
+            // se coupaient lettre par lettre dans une colonne étroite) ; VoiceOver lit la phrase complète (plus bas).
+            HStack(alignment: .firstTextBaseline, spacing: 16) {
+                Text(verbatim: "\(Int(today / 60)) min").font(Atelier.font(26, weight: .bold)).foregroundStyle(Atelier.textPrimary)
+                    .lineLimit(1).minimumScaleFactor(0.6)
+                HStack(alignment: .firstTextBaseline, spacing: 5) {
+                    Image(systemName: "flame.fill").font(Atelier.font(18, weight: .semibold)).foregroundStyle(.orange)
                     Text(verbatim: "\(stats.currentStreak) j").font(Atelier.font(26, weight: .bold)).foregroundStyle(Atelier.textPrimary)
-                        .lineLimit(1).fixedSize()
-                    Text("de série").font(Atelier.font(12)).foregroundStyle(Atelier.textSecondary)
+                        .lineLimit(1).minimumScaleFactor(0.6)
                 }
             }
             Text("Total \(ReadingClock.format(space == .manga ? time.manga : time.study(total: readingTime.clock.elapsed(at: now))))")
