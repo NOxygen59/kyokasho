@@ -149,21 +149,6 @@ struct NewLayoutPanel: ViewModifier {
     }
 }
 
-/// Bandeau discret (corrections IA) dans la nouvelle présentation ; inchangé sinon.
-struct NewLayoutBanner: ViewModifier {
-    let on: Bool
-
-    @ViewBuilder
-    func body(content: Content) -> some View {
-        if on {
-            content.padding(10)
-                .background(NewLayoutInk.accent.opacity(0.09), in: RoundedRectangle(cornerRadius: Atelier.corner(14), style: .continuous))
-        } else {
-            content
-        }
-    }
-}
-
 /// Onglet de chemise : arrondi en bas seulement (`UnevenRoundedRectangle` n'existe qu'à partir d'iOS 17).
 struct UnevenRoundedRectangleShim: Shape {
     let radius: CGFloat

@@ -143,7 +143,9 @@ struct StudyPanel: View {
 final class StudyMenuActions {
     weak var reader: ReaderController?
     var openDocumentSettings: (() -> Void)?
-    func detach() { reader = nil; openDocumentSettings = nil }
+    /// « Corriger le texte » dans le menu ⋯ de la nouvelle présentation (recette 1.6.4, point 8).
+    var openLineEditor: (() -> Void)?
+    func detach() { reader = nil; openDocumentSettings = nil; openLineEditor = nil }
 }
 
 struct StudyTextTab: View {
@@ -224,7 +226,7 @@ struct StudyTextTab: View {
                 VStack(alignment: .leading, spacing: 14) {
                     if reader.ocrPage != nil && (!newLayout || searchShown || !query.isEmpty) { PageSearchField(query: $query) }
                     if newLayout { engineMismatchNote } else { engineRow }
-                    verificationRow.modifier(NewLayoutBanner(on: newLayout))
+                    if newLayout { newVerificationBanner } else { verificationRow }
                     switch (reader.ocrPage, reader.ocrState) {
                     case (_, .running):
                         HStack(spacing: 10) { ProgressView().tint(Atelier.Tint.japanese); Text("Lecture de la page…") }
@@ -383,6 +385,36 @@ struct StudyTextTab: View {
         .disabled(reader.ocrPage == nil || reader.ocrState == .running)
     }
 
+    /// Nouvelle présentation (maquette E0, recette 1.6.4 point 8) : une seule ligne « ✓ N corrections proposées par
+    /// l'IA », Voir et ↻ Rescanner ; « Corriger le texte » passe dans le menu ⋯. Mêmes actions que `verificationRow`.
+    @ViewBuilder
+    private var newVerificationBanner: some View {
+        if OvisOCR2Reader().isAvailable {
+            let current = reader.verifications.filter { reader.shownSources.contains($0.source) }
+            let count = current.reduce(0) { $0 + $1.suggestions.count }
+            HStack(spacing: 8) {
+                Label(count > 0 ? String(localized: "\(count) corrections proposées par l'IA") : String(localized: "Corrections IA"),
+                      systemImage: "checkmark.seal")
+                    .font(Atelier.font(13, weight: .semibold)).foregroundStyle(Atelier.textPrimary)
+                    .lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
+                NewLayoutPillButton(icon: nil, title: String(localized: "Voir"), active: true, selectable: false) {
+                    if !aiTasks.isRunning(reader.verifyKey) &&
+                        (reader.verifyState != .done || current.count != reader.shownSources.count) {
+                        reader.verifyShownPages()
+                    }
+                    showVerify = true
+                }
+                NewLayoutIconButton(icon: "arrow.clockwise", label: String(localized: "Rescanner"), size: 40) {
+                    reader.verifyShownPages(force: true)
+                    showVerify = true
+                }
+                .disabled(aiTasks.isRunning(reader.verifyKey))
+            }
+            .padding(.vertical, 6).padding(.leading, 12).padding(.trailing, 6)
+            .background(NewLayoutInk.accent.opacity(0.14), in: RoundedRectangle(cornerRadius: Atelier.corner(14), style: .continuous))
+        }
+    }
+
     /// Zones de mise en page de la page de travail (modèle choisi, gardées en mémoire par page).
     // MARK: Bulle de contexte du dictionnaire (Issue #13)
 
@@ -531,6 +563,9 @@ struct StudyTextTab: View {
         // après la fermeture du livre ; y appeler `engineMenu` ou `$furigana` capturait la vue, donc le lecteur
         // (recette 1.6.4, point 13 : lecteur jamais libéré tant que le panneau était ouvert, mesuré sur l'iPad).
         let engine = engineMenu, layout = layoutMenu, furiganaBinding = $furigana
+        let actions = menuActions
+        actions.openLineEditor = openLineEditor
+        let canEdit = reader.ocrPage != nil && reader.ocrState != .running
         return VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
                 displayPicker.frame(maxWidth: .infinity)
@@ -543,6 +578,9 @@ struct StudyTextTab: View {
                     engine
                     layout
                     Toggle(isOn: furiganaBinding) { Label("Furigana sur le texte extrait", systemImage: "textformat.size") }
+                    Divider()
+                    Button { [actions] in actions.openLineEditor?() } label: { Label("Corriger le texte", systemImage: "pencil") }
+                        .disabled(!canEdit)
                 } label: {
                     Image(systemName: "ellipsis").font(Atelier.font(17, weight: .semibold))
                         .frame(width: 44, height: 44).foregroundStyle(Atelier.textPrimary)

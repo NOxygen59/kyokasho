@@ -473,6 +473,7 @@ struct LibraryView: View {
             }
             .frame(maxHeight: .infinity, alignment: .top)
             statsCard
+            if newLayout { newSidebarFooter }
         }
         .padding(18)
         .frame(maxHeight: .infinity, alignment: .top)
@@ -564,6 +565,13 @@ struct LibraryView: View {
                 }
             }
             LocalAIEnergyCard()
+        }
+    }
+
+    /// Nouvelle présentation, bas de la colonne (maquette E3, recette 1.6.4 point 3) : sous la carte « Aujourd'hui »,
+    /// Réviser puis une rangée basse Banc / Corbeille / Réglages (icône et nom sur une ligne).
+    private var newSidebarFooter: some View {
+        VStack(spacing: 8) {
             if space != .manga && review.counts.total > 0 {
                 NewLayoutPillButton(icon: "rectangle.stack.badge.play",
                                     title: String(localized: "Réviser maintenant · \(review.counts.total)"), active: true,
@@ -571,15 +579,34 @@ struct LibraryView: View {
                     showReview = true
                 }
             }
-            HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 if space != .manga {
-                    toolTile(icon: "speedometer", title: String(localized: "Banc d'essai OCR"), tint: Atelier.Tint.japanese) { showBench = true }
+                    footerTile(icon: "speedometer", title: String(localized: "Banc"),
+                               accessibility: String(localized: "Banc d'essai OCR")) { showBench = true }
                 }
-                toolTile(icon: "trash", title: String(localized: "Corbeille"), tint: Atelier.textSecondary,
-                         count: model.trashedDocuments.count) { showTrash = true }
-                toolTile(icon: "gearshape", title: String(localized: "Réglages"), tint: Atelier.textSecondary) { showSettings = true }
+                footerTile(icon: "trash", title: String(localized: "Corbeille"), count: model.trashedDocuments.count) { showTrash = true }
+                footerTile(icon: "gearshape", title: String(localized: "Réglages")) { showSettings = true }
             }
         }
+    }
+
+    private func footerTile(icon: String, title: String, accessibility: String? = nil, count: Int = 0,
+                            action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 5) {
+                Image(systemName: icon).font(Atelier.font(13, weight: .semibold))
+                Text(ui: title).font(Atelier.font(12.5, weight: .semibold)).lineLimit(1).minimumScaleFactor(0.8)
+                if count > 0 {
+                    Text("\(count)").font(Atelier.font(11, weight: .bold).monospacedDigit()).foregroundStyle(Atelier.textSecondary)
+                }
+            }
+            .foregroundStyle(Atelier.textPrimary)
+            .frame(maxWidth: .infinity, minHeight: 46)
+            .background(Atelier.surfaceHigh, in: RoundedRectangle(cornerRadius: Atelier.corner(14), style: .continuous))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(PressScale())
+        .accessibilityLabel(Text(verbatim: count > 0 ? "\(accessibility ?? title), \(count)" : accessibility ?? title))
     }
 
     private var sidebarContent: some View {
@@ -776,12 +803,15 @@ struct LibraryView: View {
                 Image(systemName: dashboardIcon).font(Atelier.font(12)).foregroundStyle(Atelier.textTertiary)
             }
             HStack(alignment: .firstTextBaseline, spacing: 14) {
+                // Chiffres sur une ligne (recette 1.6.4 : « 36 / min » coupé).
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
                     Text(verbatim: "\(Int(today / 60)) min").font(Atelier.font(26, weight: .bold)).foregroundStyle(Atelier.textPrimary)
+                        .lineLimit(1).fixedSize()
                     Text("lues").font(Atelier.font(12)).foregroundStyle(Atelier.textSecondary)
                 }
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
                     Text(verbatim: "\(stats.currentStreak) j").font(Atelier.font(26, weight: .bold)).foregroundStyle(Atelier.textPrimary)
+                        .lineLimit(1).fixedSize()
                     Text("de série").font(Atelier.font(12)).foregroundStyle(Atelier.textSecondary)
                 }
             }

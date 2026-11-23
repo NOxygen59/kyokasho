@@ -830,6 +830,8 @@ struct ReaderScreen: View {
                     // Libellés retirés si la barre ne tient pas (navigateur à côté, Split View) : rien n'est coupé.
                     ViewThatFits(in: .horizontal) {
                         bottomBar(compact: false)
+                        // Recette 1.6.4 (point 5) : « Annoter » garde son nom tant que la place le permet.
+                        bottomBar(compact: true, annotateLabel: true)
                         bottomBar(compact: true)
                         // Dernier repli (navigateur à côté sur un écran étroit) : la barre défile, rien n'est coupé.
                         ScrollView(.horizontal, showsIndicators: false) { bottomBar(compact: true) }
@@ -884,14 +886,14 @@ struct ReaderScreen: View {
     }
 
     /// Grande barre du bas : cibles de 56 pt, libellés visibles.
-    private func bottomBar(compact: Bool) -> some View {
+    private func bottomBar(compact: Bool, annotateLabel: Bool = false) -> some View {
         HStack(spacing: 6) {
             newPageArrow(left: true)
             if capabilities.annotations {
                 NewLayoutPillButton(icon: "hand.point.up.left", title: String(localized: "Lire"),
                                     active: !annotationToolsShown && !reader.lookupMode, large: true, compact: compact) { stopAnnotating() }
                 NewLayoutPillButton(icon: "pencil.tip", title: String(localized: "Annoter"), active: annotationToolsShown,
-                                    large: true, compact: compact) {
+                                    large: true, compact: compact && !annotateLabel) {
                     annotationToolsShown ? stopAnnotating() : startAnnotating()
                 }
                 Button {
@@ -910,14 +912,17 @@ struct ReaderScreen: View {
                 .buttonStyle(PressScale())
                 .accessibilityLabel("Dictionnaire au toucher")
                 .accessibilityAddTraits(reader.lookupMode ? .isSelected : [])
-                // Survol au curseur : visible dès que la page a du texte, comme dans l'ancienne barre d'outils.
-                if reader.pageHasText {
-                    NewLayoutIconButton(icon: "cursorarrow.rays", label: String(localized: "Dictionnaire au survol (curseur)"),
-                                        active: reader.hoverLookup, size: 56) {
-                        reader.hoverLookup.toggle()
-                        if !reader.hoverLookup { reader.endLookup() }
-                    }
+                // Survol au curseur : visible dès que la page a du texte, comme dans l'ancienne barre d'outils. Sa place
+                // reste réservée sinon : la largeur de la barre ne change plus en tournant la page, donc le choix des
+                // libellés non plus (recette 1.6.4, point 5 : « Annoter » apparaissait une demi-seconde puis disparaissait).
+                NewLayoutIconButton(icon: "cursorarrow.rays", label: String(localized: "Dictionnaire au survol (curseur)"),
+                                    active: reader.hoverLookup, size: 56) {
+                    reader.hoverLookup.toggle()
+                    if !reader.hoverLookup { reader.endLookup() }
                 }
+                .opacity(reader.pageHasText ? 1 : 0)
+                .disabled(!reader.pageHasText)
+                .accessibilityHidden(!reader.pageHasText)
             }
             if capabilities.textAnalysis {
                 let pageFurigana = reader.document.isInMangaSpace ? reader.pageFuriganaOn : furigana

@@ -237,7 +237,9 @@ struct DocumentTileBar: View {
         let square = Text(verbatim: Self.glyph(document.title)).font(.custom("HiraginoSans-W6", size: 20))
             .foregroundStyle(Color(hex: 0x1E272C))
             .frame(width: 44, height: 44)
-            .background(Self.tileColor(document.id), in: RoundedRectangle(cornerRadius: Atelier.corner(14), style: .continuous))
+            // Arrondi suivant le style, comme la barre qui l'entoure : rond avec les pastilles arrondies (recette 1.6.4,
+            // point 8 : la pastille restait trop carrée), plus anguleux avec un style à petits coins.
+            .background(Self.tileColor(document.id), in: RoundedRectangle(cornerRadius: Atelier.corner(22, height: 44), style: .continuous))
         if on {
             HStack(spacing: 10) {
                 square

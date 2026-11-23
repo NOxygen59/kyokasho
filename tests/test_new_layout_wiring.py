@@ -95,7 +95,8 @@ class NewLayoutWiringTests(unittest.TestCase):
         self.assertIn("doc.isInMangaSpace == manga && !tabs.contains(doc.id)", logic)
         self.assertIn("&& doc.lastPageIndex > 0 && doc.lastPageIndex < doc.pageCount - 1", logic)
         self.assertIn("return open + inProgress.prefix(max(0, limit - open.count))", logic)
-        self.assertIn("close: { model.closeTab(document.id) }", row)
+        self.assertIn("close: { remove(document) }", row)
+        self.assertIn("model.closeTab(document.id); return", row)
 
 
     def test_reader_menus_do_not_capture_the_reader(self):

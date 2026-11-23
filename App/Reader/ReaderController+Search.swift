@@ -57,27 +57,55 @@ extension ReaderController {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         lastSearchQuery = trimmed
         guard !trimmed.isEmpty else {
+            ocrSearchRunning = false
             isSearching = false
             pdfView.highlightedSelections = nil
             return
         }
         isSearching = true
         pdf.beginFindString(trimmed, withOptions: [.caseInsensitive, .diacriticInsensitive, .widthInsensitive])
-        // Pages scannées : recherche aussi dans le texte OCR en cache.
+        // Pages scannées : recherche aussi dans le texte OCR en cache, puis dans le texte des lectures IA (OvisOCR2, ou
+        // ta correction) des pages sans résultat OCR. Hors du fil principal ; « Recherche… » reste affiché jusqu'au bout
+        // (recette 1.6.4, point 11 : la carte disait « Aucun résultat » avant la fin de la recherche OCR).
         let documentId = document.id
         let engines = Self.searchEngines
         let service = model.ocr
+        let pageCount = document.pageCount
+        ocrSearchRunning = true
         Task { [weak self] in
-            let hits = await service.search(trimmed, documentId: documentId, engines: engines)
+            let hits = await Task.detached(priority: .userInitiated) { () -> [(page: Int, context: String, ai: Bool)] in
+                let ocr = service.search(trimmed, documentId: documentId, engines: engines)
+                let found = Set(ocr.map(\.page))
+                let ai = Self.aiTextHits(trimmed, documentId: documentId, pageCount: pageCount, skipping: found)
+                return ocr.map { ($0.page, $0.context, false) } + ai.map { ($0.page, $0.context, true) }
+            }.value
             guard let self, token == self.searchToken else { return }
+            self.ocrSearchRunning = false
             let pdfPages = Set((self.searchResults + self.pendingResults).filter { !$0.fromOCR }.map(\.sourcePage))
             for hit in hits where !pdfPages.contains(hit.page) {
                 let index = PresentationLayout.presentedIndex(ofSource: hit.page, in: self.presented)
                 self.enqueue(SearchResult(selection: nil, presentedIndex: index, sourcePage: hit.page,
-                                          context: "📷 " + hit.context.replacingOccurrences(of: "\n", with: " ")))
+                                          context: (hit.ai ? "✦ " : "📷 ") + hit.context.replacingOccurrences(of: "\n", with: " ")))
             }
+            self.isSearching = self.pdf?.isFinding ?? false
             self.flushResults()
         }
+    }
+
+    /// Pages dont la lecture IA (OvisOCR2, ou la correction de l'utilisateur, qui passe d'abord) contient `query`, avec un
+    /// extrait, sauf `skipping` (déjà trouvées dans l'OCR). Mêmes règles de comparaison que la recherche OCR.
+    nonisolated static func aiTextHits(_ query: String, documentId: String, pageCount: Int,
+                                       skipping: Set<Int>) -> [(page: Int, context: String)] {
+        var results: [(Int, String)] = []
+        for page in 0..<pageCount where !skipping.contains(page) {
+            guard let text = DocumentAITextStore.read(documentId: documentId, reader: ModelSpec.ovisocr2.id, page: page),
+                  let range = text.range(of: query, options: [.caseInsensitive, .widthInsensitive, .diacriticInsensitive])
+            else { continue }
+            let start = text.index(range.lowerBound, offsetBy: -15, limitedBy: text.startIndex) ?? text.startIndex
+            let end = text.index(range.upperBound, offsetBy: 25, limitedBy: text.endIndex) ?? text.endIndex
+            results.append((page, String(text[start..<end])))
+        }
+        return results
     }
 
     /// Lit (OCR) toutes les pages qui n'ont pas encore de texte, en tâche de fond.
