@@ -726,8 +726,11 @@ struct StudyTextTab: View {
     @ViewBuilder
     private var layoutMenu: some View {
         if formatted && !aiLayout {
+            // Liaison prise hors de la fermeture du Menu (gardée en vie par iOS 16) : pas de capture de la vue, donc
+            // du lecteur (relecture GLM du correctif 1.6.4, point 13).
+            let engineBinding = $layoutEngineRaw
             Menu {
-                LayoutEnginePicker(selection: $layoutEngineRaw)
+                LayoutEnginePicker(selection: engineBinding)
             } label: {
                 HStack(spacing: 4) {
                     Image(systemName: "rectangle.3.group")

@@ -45,6 +45,9 @@ class ReaderReleaseWiringTests(unittest.TestCase):
         self.assertIn("let engine = engineMenu, layout = layoutMenu, furiganaBinding = $furigana", header)
         body = header.split("                Menu {\n", 1)[1].split("} label:", 1)[0]
         self.assertNotRegex(body, r"engineMenu|layoutMenu|\$|\breader\b|self")
+        layout = panel.split("private var layoutMenu: some View {", 1)[1].split("} label: {", 1)[0]
+        self.assertIn("let engineBinding = $layoutEngineRaw", layout)
+        self.assertNotIn("selection: $layoutEngineRaw", layout.split("Menu {", 1)[1])
 
     def test_reader_release_is_logged(self):
         self.assertRegex(source("Reader/ReaderController.swift"), r'deinit \{[^\n]*Diagnostics\.log\("lecteur libéré"')
