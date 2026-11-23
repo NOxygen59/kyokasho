@@ -58851,24 +58851,24 @@
         }
       }
     },
-    "Nouvelle présentation sur iPad : lecteur, panneau d'étude et accueil redessinés, aux couleurs de ton thème. À activer dans Réglages → Thèmes et couleurs ; désactivée, tout reste comme avant.": {
+    "Nouvelle présentation sur iPad : lecteur, panneau d'étude et accueil redessinés, aux couleurs de ton thème. À activer dans Réglages → Général → Thèmes et couleurs ; désactivée, tout reste comme avant.": {
       "localizations": {
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Nouvelle présentation sur iPad : lecteur, panneau d'étude et accueil redessinés, aux couleurs de ton thème. À activer dans Réglages → Thèmes et couleurs ; désactivée, tout reste comme avant."
+            "value": "Nouvelle présentation sur iPad : lecteur, panneau d'étude et accueil redessinés, aux couleurs de ton thème. À activer dans Réglages → Général → Thèmes et couleurs ; désactivée, tout reste comme avant."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "New layout on iPad: redesigned reader, study panel and home screen, in your theme's colors. Turn it on in Settings → Themes and colors; when off, everything stays as before."
+            "value": "New layout on iPad: redesigned reader, study panel and home screen, in your theme's colors. Turn it on in Settings → General → Themes and colors; when off, everything stays as before."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "iPad 新界面：重新设计的阅读器、学习面板和主页，采用你的主题配色。在“设置 → 主题和颜色”中开启；关闭时一切保持原样。"
+            "value": "iPad 新界面：重新设计的阅读器、学习面板和主页，采用你的主题配色。在“设置 → 通用 → 主题和颜色”中开启；关闭时一切保持原样。"
           }
         }
       }

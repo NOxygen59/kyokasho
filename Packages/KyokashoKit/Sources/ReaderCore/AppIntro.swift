@@ -102,7 +102,7 @@ public struct ReleaseNotes: Equatable, Sendable, Identifiable {
     /// La version en cours de préparation : seulement ce qu'elle change (décision de NOxygen59 du 04/11/2026). C'est
     /// elle que montre la fenêtre « Nouveautés » ; les versions précédentes vont dans `ReleaseHistory`.
     public static let current = ReleaseNotes("1.6.4", "2026-11-23", published: false, String(localized: "Refonte graphique", bundle: .main), added: [
-            String(localized: "Nouvelle présentation sur iPad : lecteur, panneau d'étude et accueil redessinés, aux couleurs de ton thème. À activer dans Réglages → Thèmes et couleurs ; désactivée, tout reste comme avant.", bundle: .main),
+            String(localized: "Nouvelle présentation sur iPad : lecteur, panneau d'étude et accueil redessinés, aux couleurs de ton thème. À activer dans Réglages → Général → Thèmes et couleurs ; désactivée, tout reste comme avant.", bundle: .main),
             String(localized: "Lecteur : barre du haut et grande barre du bas, outils d'annotation regroupés, grille de toutes les pages du document.", bundle: .main),
             String(localized: "Accueil : bouton Reprendre, carte « Aujourd'hui » et dossiers en onglets de chemise.", bundle: .main),
             String(localized: "Grande fiche de mot, et onglets Notes, Repères et Chat remis au style de la nouvelle présentation.", bundle: .main),
