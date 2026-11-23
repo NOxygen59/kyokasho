@@ -163,6 +163,110 @@ struct DocumentTabsBar: View {
     }
 }
 
+/// Onglets en tuiles de la nouvelle présentation (PLAN-REFONTE-001, maquette E0) : une tuile par livre ouvert avec son
+/// premier caractère (souvent un kanji), le livre affiché déplié avec titre, page et ✕, puis « + ». Pas de zone
+/// défilante (les boutons SwiftUI dans un défilement ne recevaient pas le toucher, recette 1.3.2 (63)) : au-delà de
+/// `visible` onglets, les autres passent dans un menu « … ». Mêmes actions que `DocumentTabsBar`.
+struct DocumentTileBar: View {
+    let current: String
+    var visible = 6
+    @EnvironmentObject private var model: AppModel
+    private var openDocuments: [LibraryDocument] {
+        model.tabs.ids.compactMap { id in model.documents.first { $0.id == id } }
+    }
+
+    /// Pastels propres aux livres (jamais les couleurs à sens du thème), choisis d'après l'identifiant.
+    private static let pastels: [UInt32] = [0xF6D9D2, 0xD3EBDF, 0xE2DCF7, 0xF8E7C2, 0xD5E4F5, 0xF2D6E6]
+    static func tileColor(_ id: String) -> Color {
+        Color(hex: pastels[Int(id.unicodeScalars.reduce(0) { ($0 &* 31 &+ Int($1.value)) & 0xFFFF }) % pastels.count])
+    }
+    /// Premier caractère du titre ; kanji ou kana de préférence, sinon la première lettre.
+    static func glyph(_ title: String) -> String {
+        let japanese = title.first { ch in ch.unicodeScalars.contains { (0x3040...0x9FFF).contains($0.value) } }
+        return String(japanese ?? title.first(where: { $0.isLetter || $0.isNumber }) ?? "?")
+    }
+
+    var body: some View {
+        let docs = openDocuments
+        let shown = Array(docs.prefix(visible))
+        let hidden = Array(docs.dropFirst(visible))
+        HStack(spacing: 8) {
+            ForEach(shown) { document in tile(document) }
+            if !hidden.isEmpty {
+                Menu {
+                    ForEach(hidden) { d in Button(d.title) { select(d) } }
+                } label: {
+                    Text(verbatim: "+\(hidden.count)").font(Atelier.font(14, weight: .bold))
+                        .frame(width: 44, height: 44).foregroundStyle(Atelier.textSecondary)
+                        .background(Atelier.surfaceHigh, in: RoundedRectangle(cornerRadius: Atelier.corner(14), style: .continuous))
+                }
+                .accessibilityLabel("Autres onglets ouverts")
+            }
+            Menu {
+                ForEach(model.documents.filter { !model.tabs.ids.contains($0.id) }) { document in
+                    Button(document.title) { ReaderTabHandoff.shared.prepare(); model.openDocumentId = document.id }
+                }
+            } label: {
+                Image(systemName: "plus").font(Atelier.font(15, weight: .bold))
+                    .frame(width: 44, height: 44).foregroundStyle(Atelier.textSecondary)
+                    .overlay(RoundedRectangle(cornerRadius: Atelier.corner(14), style: .continuous)
+                        .strokeBorder(Atelier.hairline, style: StrokeStyle(lineWidth: Atelier.border(1.5), dash: [4, 3])))
+            }
+            .accessibilityLabel("Ouvrir un autre document dans un onglet")
+        }
+    }
+
+    @ViewBuilder
+    private func tile(_ document: LibraryDocument) -> some View {
+        let on = document.id == current
+        let square = Text(verbatim: Self.glyph(document.title)).font(.custom("HiraginoSans-W6", size: 20))
+            .foregroundStyle(Color(hex: 0x1E272C))
+            .frame(width: 44, height: 44)
+            .background(Self.tileColor(document.id), in: RoundedRectangle(cornerRadius: Atelier.corner(14), style: .continuous))
+        if on {
+            HStack(spacing: 10) {
+                square
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(document.title).font(Atelier.font(15, weight: .semibold)).lineLimit(1)
+                        .foregroundStyle(Atelier.textPrimary)
+                    Text(verbatim: "p. \(document.pageLabel(document.lastPageIndex)) / \(document.pageLabel(document.pageCount - 1))")
+                        .font(Atelier.font(12).monospacedDigit()).foregroundStyle(Atelier.textSecondary)
+                }
+                .frame(maxWidth: 260, alignment: .leading)
+                Button { close(document) } label: {
+                    Image(systemName: "xmark").font(Atelier.font(12, weight: .bold))
+                        .foregroundStyle(Atelier.textSecondary)
+                        .frame(width: 44, height: 44).contentShape(Rectangle())
+                }
+                .buttonStyle(PressScale())
+                .accessibilityLabel("Fermer l'onglet")
+            }
+            .padding(.leading, 4)
+            .newLayoutBar(radius: Atelier.corner(18))
+            .accessibilityElement(children: .contain)
+        } else {
+            Button { select(document) } label: { square }
+                .buttonStyle(PressScale())
+                .accessibilityLabel(document.title)
+        }
+    }
+
+    private func select(_ document: LibraryDocument) {
+        guard document.id != current else { return }
+        Diagnostics.log("onglets : passage à « \(document.title) »", "lecteur")
+        ReaderTabHandoff.shared.prepare()
+        model.openDocumentId = document.id
+    }
+
+    private func close(_ document: LibraryDocument) {
+        Diagnostics.log("onglets : fermeture de « \(document.title) »", "lecteur")
+        ReaderTabHandoff.shared.prepare()
+        model.closeTab(document.id)
+        // Dernier onglet fermé : retour à la bibliothèque, rien à reprendre.
+        if model.openDocumentId == nil { _ = ReaderTabHandoff.shared.take() }
+    }
+}
+
 /// Pastilles des onglets en UIKit : `UIScrollView` horizontal et `UIButton` (titre et ×), mis à jour sans tout
 /// recréer. Couleurs du thème (Atelier) ; l'onglet affiché est rempli de la teinte de lecture.
 struct TabStripView: UIViewRepresentable {

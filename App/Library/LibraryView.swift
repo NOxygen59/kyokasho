@@ -716,7 +716,7 @@ struct LibraryView: View {
 
     /// Temps de lecture active, à la place de « Progression XX/XX pages » (RET-037, #52).
     private var statsCard: some View {
-        Button { statsTapped() } label: { statsCardContent }
+        Button { statsTapped() } label: { statsCardBody }
             .buttonStyle(PressScale())
             // Revue D-07 (n°5) : une décision en attente ne survit pas à l'écran.
             .onDisappear { cancelStatsBurst() }
@@ -750,6 +750,43 @@ struct LibraryView: View {
 
     /// Icône du tableau de bord, ou cadenas pendant le retour de la bascule.
     private var dashboardIcon: String { ownerFlash.map { $0 ? "lock.open.fill" : "lock.fill" } ?? "chart.bar.fill" }
+
+    /// Nouvelle présentation (maquette E3) : carte « Aujourd'hui » — minutes lues aujourd'hui, série en cours (mêmes
+    /// calculs que le tableau de bord, `ReadingStats` sur 7 jours, espace affiché), puis le total d'avant.
+    @ViewBuilder private var statsCardBody: some View {
+        if newLayout { newStatsCardContent } else { statsCardContent }
+    }
+
+    private var newStatsCardContent: some View {
+        let now = Date()
+        let stats = ReadingStats(sessions: readingTime.log.sessions, period: .week, filter: space == .manga ? .manga : .study)
+        let today = stats.buckets.last.map { Calendar.current.isDate($0.start, inSameDayAs: now) ? $0.total : 0 } ?? 0
+        let time = readingTime.breakdown(documents: model.documents + model.trashedDocuments, at: now)
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                AtelierLabel(String(localized: "Aujourd'hui"))
+                Spacer()
+                Image(systemName: dashboardIcon).font(Atelier.font(12)).foregroundStyle(Atelier.textTertiary)
+            }
+            HStack(alignment: .firstTextBaseline, spacing: 14) {
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
+                    Text(verbatim: "\(Int(today / 60)) min").font(Atelier.font(26, weight: .bold)).foregroundStyle(Atelier.textPrimary)
+                    Text("lues").font(Atelier.font(12)).foregroundStyle(Atelier.textSecondary)
+                }
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
+                    Text(verbatim: "\(stats.currentStreak) j").font(Atelier.font(26, weight: .bold)).foregroundStyle(Atelier.textPrimary)
+                    Text("de série").font(Atelier.font(12)).foregroundStyle(Atelier.textSecondary)
+                }
+            }
+            Text("Total \(ReadingClock.format(space == .manga ? time.manga : time.study(total: readingTime.clock.elapsed(at: now))))")
+                .font(Atelier.font(12)).foregroundStyle(Atelier.textSecondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .background(Atelier.surfaceHigh, in: RoundedRectangle(cornerRadius: Atelier.corner(14), style: .continuous))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(Text("Aujourd'hui : \(Int(today / 60)) minutes lues, série de \(stats.currentStreak) jours"))
+    }
 
     private var statsCardContent: some View {
         VStack(alignment: .leading, spacing: 8) {
