@@ -309,6 +309,10 @@ struct ReaderScreen: View {
         .onChange(of: pageTone) { reader.setPageTone($0) }
         .onChange(of: furiganaTint) { reader.setFuriganaTint($0) }
         .onChange(of: scanCleaning) { reader.setScanCleaning($0) }
+        // « Terminé » (ou Échap) des commandes du surligneur : Annoter se ferme aussi s'il ne reste aucun outil.
+        .onChange(of: reader.ocrHighlightMode) { on in
+            if !on, !reader.isDrawing, !reader.pencilLookup { annotating = false }
+        }
         .onDisappear {
             reader.close()
             menuActions.detach()
@@ -805,6 +809,8 @@ struct ReaderScreen: View {
                     ViewThatFits(in: .horizontal) {
                         bottomBar(compact: false)
                         bottomBar(compact: true)
+                        // Dernier repli (navigateur à côté sur un écran étroit) : la barre défile, rien n'est coupé.
+                        ScrollView(.horizontal, showsIndicators: false) { bottomBar(compact: true) }
                     }
                 }
             }

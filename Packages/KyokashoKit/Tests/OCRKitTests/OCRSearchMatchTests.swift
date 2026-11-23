@@ -4,24 +4,34 @@
 import OCRKit
 import XCTest
 
-/// Surlignage de 2 s du mot d'un résultat de recherche (1.6.4) : boîtes des bons caractères.
+/// Surlignage de 2 s du mot d'un résultat de recherche (1.6.4) : boîtes des bons caractères, ligne par ligne.
 final class OCRSearchMatchTests: XCTestCase {
-    private func line(_ text: String) -> OCRLine {
-        let boxes = text.enumerated().map { NormBox(x: Double($0.offset) * 0.1, y: 0.2, w: 0.1, h: 0.05) }
-        return OCRLine(text: text, box: NormBox(x: 0, y: 0.2, w: 1, h: 0.05), charBoxes: boxes,
+    private func line(_ text: String, y: Double = 0.2) -> OCRLine {
+        let boxes = text.enumerated().map { NormBox(x: Double($0.offset) * 0.1, y: y, w: 0.1, h: 0.05) }
+        return OCRLine(text: text, box: NormBox(x: 0, y: y, w: 1, h: 0.05), charBoxes: boxes,
                        measuredCharBoxes: true, vertical: false, confidence: 1)
     }
 
     func testFindsTheCharactersOfTheWord() {
         let page = OCRPage(engine: "test", lines: [line("店員：いらっしゃいませ。"), line("こちらは試着室です。")], durationMs: 0)
-        let boxes = page.matchBoxes(of: "試着室")
-        XCTAssertEqual(boxes.map(\.x), [0.4, 0.5, 0.6].map { $0 }, accuracy: 1e-9)
+        let groups = page.matchBoxes(of: "試着室")
+        XCTAssertEqual(groups.count, 1)
+        XCTAssertEqual(groups.first?.map(\.x) ?? [], [0.4, 0.5, 0.6], accuracy: 1e-9)
+    }
+
+    func testWordCutBetweenTwoLinesGivesOneGroupPerLine() {
+        // Même recherche que `OCRService.search` : lignes mises bout à bout.
+        let page = OCRPage(engine: "test", lines: [line("こちらは試", y: 0.2), line("着室です。", y: 0.3)], durationMs: 0)
+        let groups = page.matchBoxes(of: "試着室")
+        XCTAssertEqual(groups.map(\.count), [1, 2])
+        XCTAssertEqual(groups[0][0].y, 0.2, accuracy: 1e-9)
+        XCTAssertEqual(groups[1].map(\.x), [0.0, 0.1], accuracy: 1e-9)
     }
 
     func testIgnoresWidthCaseAndSurroundingSpaces() {
         let page = OCRPage(engine: "test", lines: [line("ＰＤＦ page")], durationMs: 0)
-        XCTAssertEqual(page.matchBoxes(of: " pdf ").count, 3)
-        XCTAssertEqual(page.matchBoxes(of: "PAGE").first?.x ?? -1, 0.4, accuracy: 1e-9)
+        XCTAssertEqual(page.matchBoxes(of: " pdf ").first?.count, 3)
+        XCTAssertEqual(page.matchBoxes(of: "PAGE").first?.first?.x ?? -1, 0.4, accuracy: 1e-9)
     }
 
     func testNothingWhenAbsentEmptyOrBoxesMissing() {

@@ -130,23 +130,46 @@ extension ReaderController {
     }
 
     /// Page scannée : le mot est retrouvé dans l'OCR en cache et surligné par une annotation **temporaire** (dans le
-    /// repère de la page, elle suit le zoom et le défilement), retirée après 2 s ou au résultat suivant. Rien n'est
-    /// enregistré : ni dans les surlignages de l'utilisateur, ni dans le fichier.
+    /// repère de la page, elle suit le zoom et le défilement), retirée après 2 s, au résultat suivant ou à la fermeture.
+    /// Rien n'est enregistré : ni dans les surlignages de l'utilisateur, ni dans le fichier.
+    /// Contre-revue Codex : le moteur retenu pour la page d'abord, puis ceux de la recherche (le résultat peut venir
+    /// d'un autre) ; lecture du cache par le service, **sans** tenir le lecteur (référence faible reprise ensuite) ;
+    /// page coupée : seule la moitié qui contient le mot est surlignée et montrée.
     private func flashOCRMatch(source: Int, query: String) {
         guard !query.isEmpty else { return }
+        let service = model.ocr, documentId = document.id
+        var engines = [OCREngineID.glmocr, OCREngineID.ndlocr, OCREngineID.ppocr5, OCREngineID.vision]
+        if let selected = selectedEngines[source] {
+            engines.removeAll { $0 == selected }
+            engines.insert(selected, at: 0)
+        }
         searchFlashTask = Task { @MainActor [weak self] in
-            guard let self, let ocr = await self.cachedOCR(source: source), !Task.isCancelled,
-                  let frame = self.pageFrame(ofSource: source), let pdf = self.pdf else { return }
-            let boxes = ocr.matchBoxes(of: query)
-            guard let first = boxes.first else { return }
-            let rect = boxes.dropFirst().reduce(frame.pageRect(first)) { $0.union(frame.pageRect($1)) }.insetBy(dx: -2, dy: -2)
-            for page in self.pages(forSource: source, in: pdf) {
-                let annotation = PDFAnnotation(bounds: rect, forType: .highlight, withProperties: nil)
-                annotation.color = UIColor.systemOrange.withAlphaComponent(0.55)
-                annotation.userName = "flash:recherche"
-                page.addAnnotation(annotation)
-                self.searchFlashAnnotations.append((page, annotation))
+            var groups: [[NormBox]] = []
+            for engine in engines {
+                guard !Task.isCancelled else { return }
+                if let page = await service.cached(documentId: documentId, pageIndex: source, engine: engine) {
+                    groups = page.matchBoxes(of: query)
+                    if !groups.isEmpty { break }
+                }
             }
+            guard !Task.isCancelled, !groups.isEmpty, let self, let frame = self.pageFrame(ofSource: source),
+                  let pdf = self.pdf else { return }
+            let rects = groups.compactMap { group in
+                group.map(frame.pageRect).reduce(CGRect?.none) { ($0 ?? $1).union($1) }?.insetBy(dx: -2, dy: -2)
+            }
+            let all = self.pages(forSource: source, in: pdf)
+            let shown = all.filter { page in rects.contains { page.bounds(for: .cropBox).intersects($0) } }
+            let targets = shown.isEmpty ? all : shown
+            for page in targets {
+                for rect in rects {
+                    let annotation = PDFAnnotation(bounds: rect, forType: .highlight, withProperties: nil)
+                    annotation.color = UIColor.systemOrange.withAlphaComponent(0.55)
+                    annotation.userName = "flash:recherche"
+                    page.addAnnotation(annotation)
+                    self.searchFlashAnnotations.append((page, annotation))
+                }
+            }
+            if let page = targets.first, let rect = rects.first { self.pdfView.go(to: rect, on: page) }
             try? await Task.sleep(nanoseconds: Self.searchFlashDuration)
             guard !Task.isCancelled else { return }
             self.clearSearchFlash()
@@ -166,6 +189,8 @@ extension ReaderController {
 
     /// Pages données (sources) en une image : côte à côte dans l'ordre affiché (double page « les deux »).
     func renderSources(_ sources: [Int], maxWidth: CGFloat = 2048) -> UIImage? {
+        // Contre-revue Codex : le surlignage bref ne doit pas partir dans l'image (Page vers IA, copie).
+        clearSearchFlash()
         guard let pdf else { return nil }
         let pages: [PDFPage] = presented.indices.filter { sources.contains(presented[$0].source) }.compactMap { pdf.page(at: $0) }
         guard !pages.isEmpty else { return nil }
