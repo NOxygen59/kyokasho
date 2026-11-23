@@ -17,7 +17,7 @@ class SearchFlashWiringTests(unittest.TestCase):
         search = source("Reader/ReaderController+Search.swift")
         show = search.split("func show(_ result: SearchResult) {", 1)[1].split("\n    }\n", 1)[0]
         self.assertTrue(show.lstrip().startswith("clearSearchFlash()"))
-        self.assertIn("flashOCRMatch(source: result.sourcePage, query: lastSearchQuery)", show)
+        self.assertIn("flashOCRMatch(source: result.sourcePage, query: lastSearchQuery, landing: pdfView.currentPage)", show)
         self.assertIn("Task.sleep(nanoseconds: Self.searchFlashDuration)", show)
         self.assertIn("static let searchFlashDuration: UInt64 = 2_000_000_000", search)
         self.assertIn("lastSearchQuery = trimmed", search)
