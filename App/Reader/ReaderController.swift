@@ -15,6 +15,8 @@ import UIKit
 /// toucher, notifications ; le reste par thème dans `ReaderController+*.swift`.
 @MainActor
 final class ReaderController: NSObject, ObservableObject {
+    /// Trace de la libération du lecteur fermé (journal de diagnostic) : sa fuite causait le gel de la 1.6.1-1.6.2.
+    deinit { DispatchQueue.main.async { Diagnostics.log("lecteur libéré", "lecteur") } }
     let model: AppModel
     @Published var document: LibraryDocument
     let pdfView = ReaderPDFView()

@@ -101,13 +101,11 @@ public struct ReleaseNotes: Equatable, Sendable, Identifiable {
 
     /// La version en cours de préparation : seulement ce qu'elle change (décision de NOxygen59 du 04/11/2026). C'est
     /// elle que montre la fenêtre « Nouveautés » ; les versions précédentes vont dans `ReleaseHistory`.
-    public static let current = ReleaseNotes("1.6.2", "2026-11-22", published: false, String(localized: "Correctifs de la recette 1.6.1", bundle: .main), added: [
-            String(localized: "Mode diagnostic : le journal liste les fils qui occupent le processeur (nom, temps depuis qu'il a été repéré, moyenne récente, travail en cours, page) et signale ceux qui restent très chargés plus de 10 secondes.", bundle: .main),
+    public static let current = ReleaseNotes("1.6.3", "2026-11-23", published: false, String(localized: "Finalité des grandes optimisations", bundle: .main), added: [
         ], fixed: [
-            String(localized: "Lecteur : il apparaît en fondu court dès que la page est prête, au plus tard après une demi-seconde ; avec « Réduire les animations », il s'affiche tout de suite, sans animation.", bundle: .main),
-            String(localized: "Recherche dans un document : une carte en haut à droite ; le livre reste utilisable derrière et toucher un résultat garde la carte ouverte.", bundle: .main),
-            String(localized: "Fermer un document arrête les lectures OCR que plus rien n'attend, le survol du dictionnaire et le recalage de la page.", bundle: .main),
-            String(localized: "Lectures OCR : une lecture terminée reste en cache même si on a quitté la page, et une lecture abandonnée n'écrase plus un résultat plus récent.", bundle: .main),
+            String(localized: "Gel du processeur corrigé : un livre fermé est maintenant vraiment libéré ; avant, il restait en mémoire et faisait tourner l'iPad à plusieurs centaines de pour cent, surtout avec plusieurs onglets.", bundle: .main),
+            String(localized: "Mémoire : ouvrir et fermer des livres ne la fait plus grimper ; un seul livre est chargé à la fois, les onglets en arrière-plan ne coûtent presque rien.", bundle: .main),
+            String(localized: "Mode diagnostic : le journal note quand un livre fermé est libéré.", bundle: .main),
         ])
 
     /// Notes de `version` (« 1.3.2 », sans le numéro de build) : la version elle-même, jamais une build de test.

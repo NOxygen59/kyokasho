@@ -242,7 +242,7 @@ struct ReaderScreen: View {
                     if side == .study, studyMode != .docked {
                         DetachedPanel(area: geo.size) {
                             StudyPanel(reader: reader, tab: $studyTab, openSearch: { searchCardShown = true }, openLineEditor: { sheet = .lineEditor },
-                                       openDocumentSettings: { sheet = .settings }, close: { self.side = nil }, fixedWidth: false)
+                                       openDocumentSettings: { [sheet = $sheet] in sheet.wrappedValue = .settings }, close: { self.side = nil }, fixedWidth: false)
                         }
                         .transition(.opacity)
                     }
@@ -857,7 +857,7 @@ struct ReaderScreen: View {
         switch side {
         case .study:
             StudyPanel(reader: reader, tab: $studyTab, openSearch: { searchCardShown = true }, openLineEditor: { sheet = .lineEditor },
-                       openDocumentSettings: { sheet = .settings }, close: { self.side = nil })
+                       openDocumentSettings: { [sheet = $sheet] in sheet.wrappedValue = .settings }, close: { self.side = nil })
         case .web:
             WebPanel(onClose: { self.side = nil })
                 .frame(width: 440)

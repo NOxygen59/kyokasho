@@ -127,6 +127,17 @@ struct StudyPanel: View {
 
 // MARK: - Texte + traduction
 
+/// Relais des actions des menus de l'onglet Texte. iOS 16 garde en vie les actions d'un `Menu` SwiftUI après la
+/// disparition de sa vue : quand elles capturaient la vue, le lecteur entier restait en mémoire après la fermeture du
+/// livre, et vider sa vue PDF faisait boucler les fils de PDFKit (gel de la 1.6.1-1.6.2, trouvé sur l'iPad le
+/// 23/11/2026 par bissection). Le lecteur est tenu faiblement et le relais est vidé à la disparition de l'onglet.
+@MainActor
+final class StudyMenuActions {
+    weak var reader: ReaderController?
+    var openDocumentSettings: (() -> Void)?
+    func detach() { reader = nil; openDocumentSettings = nil }
+}
+
 struct StudyTextTab: View {
     @EnvironmentObject private var model: AppModel
     @ObservedObject var reader: ReaderController
@@ -169,6 +180,7 @@ struct StudyTextTab: View {
     @State private var translating = false
     @State private var translateError: String?
     @State private var showCompare = false
+    @State private var menuActions = StudyMenuActions()
     @State private var query = ""
     @State private var matches: [PageTextSearch.Match] = []
     /// Les indices de lignes ne valent que pour cet OCR et cette page, capturés à l'ouverture du dialogue.
@@ -284,6 +296,7 @@ struct StudyTextTab: View {
             }
         }
         .overlay(alignment: .topLeading) { bubbleOverlay }
+        .onDisappear { menuActions.detach() }
         .onChange(of: shift.pressed) { pressed in
             // Bulle ouverte au survol avec Maj : relâcher Maj la ferme (Issue #13).
             if !pressed, bubble?.hover == true { closeBubble() }
@@ -524,49 +537,57 @@ struct StudyTextTab: View {
     /// IA, vérification), puis les moteurs, puis les actions, puis les réglages du document.
     private var engineMenu: some View {
         let indicator = indicator
+        // Les actions ne capturent ni la vue ni le lecteur (voir `StudyMenuActions`) : relais faible et liaisons.
+        let actions = menuActions
+        actions.reader = reader
+        actions.openDocumentSettings = openDocumentSettings
+        let aiLayoutBinding = $aiLayout, showVerifyBinding = $showVerify, showCompareBinding = $showCompare
+        let verifyTitle = reader.shownSources.count > 1 ? String(localized: "Vérifier la double page (OvisOCR2)") : String(localized: "Vérifier la page (OvisOCR2)")
+        let pinned = reader.pinnedEngines[reader.focusSource].flatMap { reader.settings.ocrEngine.rawValue != $0 ? $0 : nil }
+        let hasDocumentSettings = openDocumentSettings != nil
+        let aiLayoutOn = aiLayout
         return Menu {
             if OvisOCR2Reader().isAvailable {
                 // Sa lecture s'affiche dans « Mise en page IA » (#39).
-                Button { aiLayout = true } label: {
+                Button { aiLayoutBinding.wrappedValue = true } label: {
                     Label("OvisOCR2 (mise en page IA)", systemImage: "sparkles.rectangle.stack")
                 }
                 Button {
-                    reader.verifyShownPages()
-                    showVerify = true
+                    actions.reader?.verifyShownPages()
+                    showVerifyBinding.wrappedValue = true
                 } label: {
-                    Label(reader.shownSources.count > 1 ? String(localized: "Vérifier la double page (OvisOCR2)") : String(localized: "Vérifier la page (OvisOCR2)"),
-                          systemImage: "checkmark.seal")
+                    Label(verifyTitle, systemImage: "checkmark.seal")
                 }
                 Divider()
             }
             ForEach([OCREngineID.pdfText, OCREngineID.vision] + OCREngineMenu.extra, id: \.self) { id in
                 // Quitter la mise en page IA : sinon le texte du moteur choisi resterait caché.
-                Button { aiLayout = false; reader.runOCR(engine: id) } label: {
+                Button { aiLayoutBinding.wrappedValue = false; actions.reader?.runOCR(engine: id) } label: {
                     // Coche : le moteur du texte affiché, le même que le libellé du menu. Ni coche ni « (choisi) » en
                     // « Mise en page IA » : le texte lu vient d'OvisOCR2 (revue DeepSeek de 2a9da9e, A5).
-                    Label(!aiLayout && indicator.differs && id == indicator.chosen
+                    Label(!aiLayoutOn && indicator.differs && id == indicator.chosen
                             ? String(localized: "\(OCREngineID.displayName(id)) (choisi)") : OCREngineID.displayName(id),
-                          systemImage: !aiLayout && id == indicator.shown ? "checkmark" : OCREngineMenu.icon(id))
+                          systemImage: !aiLayoutOn && id == indicator.shown ? "checkmark" : OCREngineMenu.icon(id))
                 }
             }
             Divider()
             // Moteur choisi ci-dessus : retenu pour cette page seulement ; ici, pour tout le document.
-            if let pinned = reader.pinnedEngines[reader.focusSource], reader.settings.ocrEngine.rawValue != pinned {
+            if let pinned {
                 Button {
-                    reader.keepPinnedEngineForDocument()
+                    actions.reader?.keepPinnedEngineForDocument()
                 } label: {
                     Label("Garder \(OCREngineID.displayName(pinned)) pour ce document", systemImage: "pin")
                 }
             }
-            Button { reader.runOCR(engine: reader.ocrPage?.engine, force: true) } label: {
+            Button { actions.reader?.runOCR(engine: actions.reader?.ocrPage?.engine, force: true) } label: {
                 Label("Relancer", systemImage: "arrow.clockwise")
             }
-            Button { showCompare = true } label: {
+            Button { showCompareBinding.wrappedValue = true } label: {
                 Label("Comparer les moteurs", systemImage: "square.split.2x1")
             }
-            if let openDocumentSettings {
+            if hasDocumentSettings {
                 Divider()
-                Button(action: openDocumentSettings) {
+                Button { actions.openDocumentSettings?() } label: {
                     Label("Pagination et réglages de ce document", systemImage: "slider.horizontal.3")
                 }
             }
@@ -622,8 +643,9 @@ struct StudyTextTab: View {
 
     private var displayPicker: some View {
         let hasDoubtfulCharacters = reader.ocrPage?.lines.contains { $0.doubt?.isEmpty == false } == true
-        return Picker("Affichage", selection: Binding(get: { aiLayout ? 2 : (formatted ? 0 : 1) },
-                                                      set: { aiLayout = $0 == 2; if $0 < 2 { formatted = $0 == 0 } })) {
+        let ai = $aiLayout, fm = $formatted  // Liaisons seules : la sélection ne capture pas la vue (voir `StudyMenuActions`).
+        return Picker("Affichage", selection: Binding(get: { ai.wrappedValue ? 2 : (fm.wrappedValue ? 0 : 1) },
+                                                      set: { ai.wrappedValue = $0 == 2; if $0 < 2 { fm.wrappedValue = $0 == 0 } })) {
             Text("Mis en forme").tag(0)
             Text("Brut")
                 .tag(1)

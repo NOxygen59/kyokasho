@@ -408,7 +408,9 @@ extension ReaderController {
         pageTextTask?.cancel()
         buildTask?.cancel()
         closed = true
-        pdfView.document = nil
+        // La vue PDF garde son document : vider `pdfView.document` pendant que PDFKit prépare encore des pages en
+        // arrière-plan faisait boucler ses fils (`PDFKit.PDFPageBackgroundManager`, gel de la 1.6.1-1.6.2, mesuré sur
+        // l'iPad le 22-23/11/2026). Le lecteur fermé étant maintenant libéré, la vue part avec son document.
         pdf = nil
         pageStringCache = nil
         let url = fileURL, documentID = document.id

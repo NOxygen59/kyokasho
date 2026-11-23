@@ -10,6 +10,14 @@ import Foundation
 enum ReleaseHistory {
     static let past: [ReleaseNotes] = [
         // Candidates locales non publiées.
+        ReleaseNotes("1.6.2", "2026-11-22", published: false, String(localized: "Correctifs de la recette 1.6.1", bundle: .main), added: [
+                String(localized: "Mode diagnostic : le journal liste les fils qui occupent le processeur (nom, temps depuis qu'il a été repéré, moyenne récente, travail en cours, page) et signale ceux qui restent très chargés plus de 10 secondes.", bundle: .main),
+            ], fixed: [
+                String(localized: "Lecteur : il apparaît en fondu court dès que la page est prête, au plus tard après une demi-seconde ; avec « Réduire les animations », il s'affiche tout de suite, sans animation.", bundle: .main),
+                String(localized: "Recherche dans un document : une carte en haut à droite ; le livre reste utilisable derrière et toucher un résultat garde la carte ouverte.", bundle: .main),
+                String(localized: "Fermer un document arrête les lectures OCR que plus rien n'attend, le survol du dictionnaire et le recalage de la page.", bundle: .main),
+                String(localized: "Lectures OCR : une lecture terminée reste en cache même si on a quitté la page, et une lecture abandonnée n'écrase plus un résultat plus récent.", bundle: .main),
+            ]),
         ReleaseNotes("1.6.1", "2026-11-20", published: false, String(localized: "Correctifs de la recette 1.6.0", bundle: .main), added: [
                 String(localized: "Mode diagnostic : lors d'un pic du processeur, le journal relève le contexte (tâches en cours avec leur page et leur étape, temps processeur quand il est mesuré, onglets ouverts, dernier geste récent).", bundle: .main),
             ], fixed: [
