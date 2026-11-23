@@ -318,7 +318,7 @@ struct StudyTextTab: View {
         .onChange(of: reader.focusSource) { _ in closeBubble() }
         .sheet(item: $presentedLookup, onDismiss: { lookup?.clear() }) { lookup in
             // Fenêtre compacte du dictionnaire (mot touché dans le texte à furigana).
-            LookupPopup(session: lookup, added: model.review.keys, onAddCard: { term in
+            LookupPopup(session: lookup, added: model.review.keys, showsWordCard: true, onAddCard: { term in
                 model.review.add(term, sentence: reader.ocrPage?.lines.first { $0.text.contains(term.matchedText) }?.text,
                                  source: "\(reader.document.title) · p. \(reader.document.pageLabel(reader.focusSource))",
                                  image: nil, documentId: reader.document.id, page: reader.focusSource,
@@ -450,7 +450,7 @@ struct StudyTextTab: View {
                 // La bulle « sort » du mot : ancre de l'animation sur le mot, en haut ou en bas selon le placement.
                 let anchor = UnitPoint(x: frame.width > 0 ? min(max((word.midX - frame.minX) / frame.width, 0), 1) : 0.5,
                                        y: frame.minY >= word.maxY ? 0 : 1)
-                LookupPopup(session: bubble.session, added: model.review.keys, onAddCard: { term in
+                LookupPopup(session: bubble.session, added: model.review.keys, showsWordCard: true, onAddCard: { term in
                     model.review.add(term, sentence: reader.ocrPage?.lines.first { $0.text.contains(term.matchedText) }?.text,
                                      source: "\(reader.document.title) · p. \(reader.document.pageLabel(reader.focusSource))",
                                      image: nil, documentId: reader.document.id, page: reader.focusSource,

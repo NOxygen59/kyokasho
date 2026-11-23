@@ -159,7 +159,7 @@ struct ReaderScreen: View {
                     if let request = reader.lookupRequest {
                         GeometryReader { area in
                             let frame = PopupPlacement.frame(for: request, in: area.size)
-                            LookupPopup(session: lookup, added: review.keys, onAddCard: { term in
+                            LookupPopup(session: lookup, added: review.keys, showsWordCard: true, onAddCard: { term in
                                 review.add(term, sentence: reader.lookupContext?.sentence, source: reader.lookupSourceLabel,
                                            image: review.settings.includeImage ? reader.lookupLineJPEG() : nil,
                                            documentId: reader.document.id, page: reader.lookupContext?.source,

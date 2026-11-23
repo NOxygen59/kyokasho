@@ -597,8 +597,8 @@ struct QwenChatView: View {
         .font(newLayout ? Atelier.font(15, weight: .semibold) : .caption)
         .buttonStyle(.plain)
         .foregroundStyle(Atelier.textSecondary)
-        // Nouvelle présentation : icônes plus grandes et plus espacées, faciles à toucher au doigt.
-        .imageScale(newLayout ? .large : .medium)
+        // Nouvelle présentation : icônes plus grandes et plus espacées ; hors refonte, échelle héritée comme avant.
+        .modifier(NewLayoutLargeIcons(on: newLayout))
     }
 
     /// Questions types quand la conversation est vide (#37) : un toucher les envoie.

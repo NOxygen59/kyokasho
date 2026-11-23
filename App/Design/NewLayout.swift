@@ -308,3 +308,13 @@ struct NewLayoutOnAccentText: ViewModifier {
         if on { content.foregroundStyle(NewLayoutInk.onAccent) } else { content }
     }
 }
+
+/// Icônes agrandies dans la nouvelle présentation ; échelle héritée inchangée sinon.
+struct NewLayoutLargeIcons: ViewModifier {
+    let on: Bool
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if on { content.imageScale(.large) } else { content }
+    }
+}
