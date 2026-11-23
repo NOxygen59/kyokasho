@@ -105,3 +105,60 @@ struct NewLayoutPillButton: View {
         .accessibilityAddTraits(active && selectable ? .isSelected : [])
     }
 }
+
+/// Onglets du panneau d'étude dans la nouvelle présentation (maquette E0) : piste grise, onglet choisi en carte
+/// claire, **titres toujours visibles** (l'ancienne version ne montrait que celui de l'onglet actif).
+struct NewLayoutTabs<T: Hashable>: View {
+    let items: [(T, String)]   // valeur, titre
+    @Binding var selection: T
+
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(items.indices, id: \.self) { i in
+                let (value, title) = items[i]
+                let on = value == selection
+                Button {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { selection = value }
+                } label: {
+                    Text(verbatim: title).font(Atelier.font(14, weight: .bold)).lineLimit(1).minimumScaleFactor(0.8)
+                        .frame(maxWidth: .infinity).frame(height: 40)
+                        .foregroundStyle(on ? NewLayoutInk.accent : Atelier.textSecondary)
+                        .background {
+                            if on { Color.clear.atelierShapeShadow(Capsule(), opacity: 0.12, radius: 3, y: 1) }
+                        }
+                        .contentShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(title)
+                .accessibilityAddTraits(on ? .isSelected : [])
+            }
+        }
+        .padding(4)
+        .background(Atelier.surfaceHigh, in: Capsule())
+    }
+}
+
+/// Enveloppe d'un panneau : carte claire de la nouvelle présentation, ou panneau Atelier d'origine.
+struct NewLayoutPanel: ViewModifier {
+    let on: Bool
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if on { content.newLayoutBar(radius: Atelier.corner(22)) } else { content.atelierPanel() }
+    }
+}
+
+/// Bandeau discret (corrections IA) dans la nouvelle présentation ; inchangé sinon.
+struct NewLayoutBanner: ViewModifier {
+    let on: Bool
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if on {
+            content.padding(10)
+                .background(NewLayoutInk.accent.opacity(0.09), in: RoundedRectangle(cornerRadius: Atelier.corner(14), style: .continuous))
+        } else {
+            content
+        }
+    }
+}

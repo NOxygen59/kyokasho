@@ -25,6 +25,9 @@ struct StudyPanel: View {
     var close: () -> Void
     /// Colonne de droite : largeur fixe ; fenêtre ou plein écran (`DetachedPanel`) : toute la place donnée.
     var fixedWidth = true
+    /// Nouvelle présentation (PLAN-REFONTE-001, E2) : carte claire, onglets titrés, en-tête allégé.
+    @AppStorage(NewLayout.storageKey) private var newLayoutPreference = NewLayout.defaultEnabled
+    private var newLayout: Bool { NewLayout.isAvailable && newLayoutPreference }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -56,15 +59,23 @@ struct StudyPanel: View {
                     Image(systemName: "xmark").font(Atelier.font(14, weight: .semibold))
                         .foregroundStyle(Atelier.textSecondary)
                         .frame(minWidth: 22, minHeight: 22)
+                        .frame(width: newLayout ? 36 : nil, height: newLayout ? 36 : nil)
+                        .background(newLayout ? Atelier.surfaceHigh : Color.clear, in: Circle())
+                        .frame(minWidth: 44, minHeight: 44)
+                        .contentShape(Rectangle())
                 }
                 .padding(.leading, 6)
                 .accessibilityLabel("Fermer le panneau d'étude")
             }
-            PillTabs(items: [(Tab.text, "character.ja", String(localized: "Texte")), (.vocab, "character.book.closed.ja", String(localized: "Dico")),
-                             (.notes, "text.bubble", String(localized: "Notes")), (.marks, "bookmark", String(localized: "Repères")),
-                             (.chat, "bubble.left.and.bubble.right", String(localized: "Chat"))]
-                                .filter { $0.0 != .chat || chatAllowed },
-                     selection: $tab, tint: tint)
+            let tabs = [(Tab.text, "character.ja", String(localized: "Texte")), (.vocab, "character.book.closed.ja", String(localized: "Dico")),
+                        (.notes, "text.bubble", String(localized: "Notes")), (.marks, "bookmark", String(localized: "Repères")),
+                        (.chat, "bubble.left.and.bubble.right", String(localized: "Chat"))]
+                .filter { $0.0 != .chat || chatAllowed }
+            if newLayout {
+                NewLayoutTabs(items: tabs.map { ($0.0, $0.2) }, selection: $tab)
+            } else {
+                PillTabs(items: tabs, selection: $tab, tint: tint)
+            }
             Group {
                 switch tab {
                 case .text: StudyTextTab(reader: reader, openLineEditor: openLineEditor, openDocumentSettings: openDocumentSettings)
@@ -97,7 +108,7 @@ struct StudyPanel: View {
         .padding(16)
         .frame(width: fixedWidth ? Atelier.panelWidth : nil)
         .frame(maxWidth: fixedWidth ? nil : .infinity, maxHeight: .infinity)
-        .atelierPanel()
+        .modifier(NewLayoutPanel(on: newLayout))
         // Onglet Chat repris d'un document qui l'avait : ramené sur Texte dès la reprise, titre et pilules compris
         // (revue après recette 1.4.8, P3 1).
         .onAppear(perform: normalizeTab)
@@ -201,16 +212,22 @@ struct StudyTextTab: View {
     /// Réglages d'`AILayoutView` (mêmes clés) : la traduction affichée est celle que copie le bouton.
     @AppStorage("study.aiLayoutFrench") private var aiLayoutTranslation = false
     @AppStorage("study.translationLanguage") private var translationLanguage = TranslationLanguage.french.rawValue
+    /// Nouvelle présentation (E2, maquette E0) : une ligne Mis en forme / Brut / ✦, ⌕ et ⋯ au lieu de la rangée de
+    /// pilules ; champ de recherche dans la page affiché à la demande ; corrections IA en bandeau.
+    @AppStorage(NewLayout.storageKey) private var newLayoutPreference = NewLayout.defaultEnabled
+    private var newLayout: Bool { NewLayout.isAvailable && newLayoutPreference }
+    @State private var searchShown = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
+            if newLayout { newTextHeader }
             // Barre de langue de la mise en page IA, hors du défilement : visible même en bas de la page (#17).
             if aiLayout, query.isEmpty, reader.ocrPage != nil { AILayoutLanguageBar(reader: reader) }
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-                    if reader.ocrPage != nil { PageSearchField(query: $query) }
-                    engineRow
-                    verificationRow
+                    if reader.ocrPage != nil && (!newLayout || searchShown || !query.isEmpty) { PageSearchField(query: $query) }
+                    if newLayout { engineMismatchNote } else { engineRow }
+                    verificationRow.modifier(NewLayoutBanner(on: newLayout))
                     switch (reader.ocrPage, reader.ocrState) {
                     case (_, .running):
                         HStack(spacing: 10) { ProgressView().tint(Atelier.Tint.japanese); Text("Lecture de la page…") }
@@ -508,6 +525,42 @@ struct StudyTextTab: View {
     /// colonne de droite, tout tenait sur une ligne et s'écrasait. `ViewThatFits` garde une ligne quand la place suffit
     /// (fenêtre large, plein écran) et passe sur deux lignes sinon ; il mesure la place réellement donnée, donc suit le
     /// mode du panneau et la rotation sans connaître ce mode.
+    /// En-tête de l'onglet Texte, nouvelle présentation : affichage, recherche dans la page, puis « ⋯ » qui regroupe
+    /// le moteur de lecture (même menu qu'avant), le moteur de mise en page et les furigana du texte. Les actions
+    /// passent par les mêmes relais et liaisons que l'ancienne rangée (aucune capture du lecteur, voir
+    /// `StudyMenuActions`).
+    private var newTextHeader: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                displayPicker.frame(maxWidth: .infinity)
+                NewLayoutIconButton(icon: "magnifyingglass", label: String(localized: "Rechercher dans la page"),
+                                    active: searchShown || !query.isEmpty, size: 44) {
+                    searchShown.toggle()
+                    if !searchShown { query = "" }
+                }
+                Menu {
+                    engineMenu
+                    layoutMenu
+                    Toggle(isOn: $furigana) { Label("Furigana sur le texte extrait", systemImage: "textformat.size") }
+                } label: {
+                    Image(systemName: "ellipsis").font(Atelier.font(17, weight: .semibold))
+                        .frame(width: 44, height: 44).foregroundStyle(Atelier.textPrimary)
+                        .contentShape(Rectangle())
+                }
+                .accessibilityLabel("Outils du texte")
+            }
+            Text(verbatim: newSourceLine)
+                .font(Atelier.font(12)).foregroundStyle(Atelier.textSecondary).lineLimit(1)
+        }
+    }
+
+    /// « Lu par NDLOCR · page 52 » : discret, sous la ligne d'affichage.
+    private var newSourceLine: String {
+        let page = reader.document.pageLabel(reader.focusSource)
+        guard let engine = indicator.shown else { return String(localized: "Page \(page)") }
+        return String(localized: "Lu par \(OCREngineID.displayName(engine)) · page \(page)")
+    }
+
     private var engineRow: some View {
         VStack(alignment: .leading, spacing: 6) {
             ViewThatFits(in: .horizontal) {

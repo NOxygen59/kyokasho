@@ -475,7 +475,22 @@ struct AILayoutLanguageBar: View {
     }
 
     /// Langue de traduction (français par défaut) : chaque langue a ses propres fichiers, les deux restent gardés.
+    /// Nouvelle présentation (maquette E0) : choix FR / EN visible, au lieu de la petite pastille-menu.
+    @ViewBuilder
     private var languageMenu: some View {
+        if NewLayout.isEnabled {
+            Picker("Langue de traduction", selection: $language) {
+                ForEach(TranslationLanguage.allCases) { Text(verbatim: $0.rawValue.uppercased()).tag($0.rawValue) }
+            }
+            .pickerStyle(.segmented)
+            .frame(width: 96)
+            .accessibilityLabel("Langue de traduction : \(target.title)")
+        } else {
+            oldLanguageMenu
+        }
+    }
+
+    private var oldLanguageMenu: some View {
         Menu {
             Picker("Langue de traduction", selection: $language) {
                 ForEach(TranslationLanguage.allCases) { Text($0.title).tag($0.rawValue) }
