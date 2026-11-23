@@ -231,16 +231,21 @@ struct DocumentTileBar: View {
         return (shown, hidden)
     }
 
+    /// À partir de ce nombre de livres ouverts, le livre affiché reste lui aussi en pastille (recette 1.6.4 : son titre et
+    /// sa page se tassaient sur plusieurs lignes quand beaucoup de livres étaient ouverts).
+    static let pillsOnlyFrom = 4
+
     @ViewBuilder
     private func tile(_ document: LibraryDocument) -> some View {
         let on = document.id == current
+        let expanded = on && openDocuments.count < Self.pillsOnlyFrom
         let square = Text(verbatim: Self.glyph(document.title)).font(.custom("HiraginoSans-W6", size: 20))
             .foregroundStyle(Color(hex: 0x1E272C))
             .frame(width: 44, height: 44)
             // Arrondi suivant le style, comme la barre qui l'entoure : rond avec les pastilles arrondies (recette 1.6.4,
             // point 8 : la pastille restait trop carrée), plus anguleux avec un style à petits coins.
             .background(Self.tileColor(document.id), in: RoundedRectangle(cornerRadius: Atelier.corner(22, height: 44), style: .continuous))
-        if on {
+        if expanded {
             HStack(spacing: 10) {
                 square
                 VStack(alignment: .leading, spacing: 1) {
@@ -263,12 +268,21 @@ struct DocumentTileBar: View {
             .accessibilityElement(children: .contain)
         } else {
             // Fermer un autre onglet sans l'afficher : appui long, ou action VoiceOver (revue R2 Codex).
-            Button { select(document) } label: { square }
+            Button { select(document) } label: {
+                // Livre affiché en pastille : anneau de la teinte d'accent pour le distinguer.
+                square.overlay {
+                    if on {
+                        RoundedRectangle(cornerRadius: Atelier.corner(22, height: 44), style: .continuous)
+                            .strokeBorder(NewLayoutInk.accent, lineWidth: Atelier.border(2.5))
+                    }
+                }
+            }
                 .buttonStyle(PressScale())
                 .contextMenu {
                     Button(role: .destructive) { close(document) } label: { Label("Fermer l'onglet", systemImage: "xmark") }
                 }
                 .accessibilityLabel(document.title)
+                .accessibilityAddTraits(on ? .isSelected : [])
                 .accessibilityAction(named: Text("Fermer l'onglet")) { close(document) }
         }
     }
