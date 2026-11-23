@@ -950,13 +950,29 @@ struct ReaderScreen: View {
     }
 
     /// Outils d'Annoter : un seul actif à la fois (dessiner, surligner le texte, Pencil-dictionnaire), puis Terminé.
+    /// Relecture finale Codex : « Terminé » reste toujours visible ; les outils passent en icônes, puis défilent, quand
+    /// la place manque (Split View étroite, navigateur à côté).
     private var annotationBar: some View {
         HStack(spacing: 6) {
-            NewLayoutPillButton(icon: "pencil.tip", title: String(localized: "Dessiner"), active: reader.isDrawing) {
-                selectAnnotationTool(.draw)
+            ViewThatFits(in: .horizontal) {
+                annotationTools(compact: false)
+                annotationTools(compact: true)
+                ScrollView(.horizontal, showsIndicators: false) { annotationTools(compact: true) }
             }
+            Rectangle().fill(Atelier.hairline).frame(width: 1, height: 26).padding(.horizontal, 2)
+            NewLayoutPillButton(icon: nil, title: String(localized: "Terminé"), active: true, selectable: false) { stopAnnotating() }
+                .fixedSize()
+        }
+        .padding(6)
+        .newLayoutBar(radius: 28)
+    }
+
+    private func annotationTools(compact: Bool) -> some View {
+        HStack(spacing: 6) {
+            NewLayoutPillButton(icon: "pencil.tip", title: String(localized: "Dessiner"), active: reader.isDrawing,
+                                compact: compact) { selectAnnotationTool(.draw) }
             NewLayoutPillButton(icon: "highlighter", title: String(localized: "Surligner le texte"),
-                                active: reader.ocrHighlightMode) { selectAnnotationTool(.highlight) }
+                                active: reader.ocrHighlightMode, compact: compact) { selectAnnotationTool(.highlight) }
                 .contextMenu {
                     Picker("Couleur", selection: $ocrHighlightColor) {
                         ForEach(HighlightColor.allCases, id: \.self) { Text(Self.colorName($0)).tag($0) }
@@ -965,13 +981,9 @@ struct ReaderScreen: View {
             // Pencil → dictionnaire : seulement si l'option est activée dans les réglages.
             if pencilOption {
                 NewLayoutPillButton(icon: "applepencil", title: String(localized: "Le Pencil cherche"),
-                                    active: reader.pencilLookup) { selectAnnotationTool(.pencilLookup) }
+                                    active: reader.pencilLookup, compact: compact) { selectAnnotationTool(.pencilLookup) }
             }
-            Rectangle().fill(Atelier.hairline).frame(width: 1, height: 26).padding(.horizontal, 2)
-            NewLayoutPillButton(icon: nil, title: String(localized: "Terminé"), active: true, selectable: false) { stopAnnotating() }
         }
-        .padding(6)
-        .newLayoutBar(radius: 28)
         .fixedSize()
     }
 
