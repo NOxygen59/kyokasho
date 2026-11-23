@@ -34,7 +34,7 @@ enum ReleaseHistory {
                 String(localized: "Notes : ouvrir une note affiche la fenêtre OCR sur l'onglet Notes.", bundle: .main),
                 String(localized: "Rappels de notes : numéro de page imprimé dans le titre ; rien n'est programmé si les notifications sont refusées ; seuls les rappels modifiés sont remplacés.", bundle: .main),
             ]),
-        // Candidates locales non publiées, sauf la 1.5.9 (release GitHub).
+        // À partir d'ici, candidates locales non publiées (`published: false`), sauf la 1.5.9 plus bas (release GitHub).
         ReleaseNotes("1.6.0", "2026-11-20", published: false, String(localized: "Correctifs de la recette 1.5.10", bundle: .main), added: [
                 String(localized: "Effacer le cache : quand des fichiers récents sont gardés, un petit compte à rebours indique quand ils pourront être effacés.", bundle: .main),
             ], fixed: [

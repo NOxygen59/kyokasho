@@ -221,7 +221,7 @@ Une anomalie critique démontrée peut modifier cet ordre, avec justification en
 
 **État au 23/11/2026 (relevé de cette note, sur le Mac de travail) :**
 
-- `main` = `6091c72` (1.6.3). Releases GitHub publiées : v1.5.9, v1.6.1 (pré-version), v1.6.2, v1.6.3 (gel du lecteur fermé corrigé, recette iPad 7/7).
+- `main` = `6091c72` (1.6.3). Dernières releases GitHub : v1.5.9, v1.6.1 (pré-version), v1.6.2, v1.6.3 (gel du lecteur fermé corrigé, recette iPad 7/7).
 - Refonte graphique (plan `PLAN-REFONTE-001`, maquettes E0 lecteur et E3 accueil) : branche `claude/refonte-ui`, candidate **1.6.4 (116) « Refonte graphique »**, publiée en release GitHub v1.6.4. Interrupteur « Nouvelle présentation » (Réglages → Général → Thèmes et couleurs), désactivé par défaut ; désactivé, l'app reste comme la 1.6.3. **Recette iPad à faire.** Reportés : fenêtres étroites (Split View, Slide Over) et texte agrandi d'iOS.
 - La candidate 1.6.4 (115) « Refonte Graphit » de Codex (branche `codex/refonte-164-rejete`) est rejetée par NOxygen59 et n'a pas été publiée.
 - Suite : recette 1.6.4, puis fusion vers `main` sur accord de NOxygen59 ; ensuite les autres menus qui retiennent le lecteur, le cache des dictionnaires et le mode pilote.
