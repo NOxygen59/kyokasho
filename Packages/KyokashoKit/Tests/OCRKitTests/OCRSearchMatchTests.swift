@@ -28,13 +28,14 @@ final class OCRSearchMatchTests: XCTestCase {
         XCTAssertEqual(groups[1].map(\.x), [0.0, 0.1], accuracy: 1e-9)
     }
 
-    func testSkipsAnOccurrenceWithoutBoxesForTheNextOne() {
+    func testOnlyTheFirstOccurrenceLikeTheExcerpt() {
+        // L'extrait des résultats montre la première occurrence : sans ses boîtes, rien plutôt qu'un autre endroit.
         var broken = line("試着室", y: 0.1)
         broken.charBoxes = []
         let page = OCRPage(engine: "test", lines: [broken, line("ここは試着室", y: 0.4)], durationMs: 0)
-        let groups = page.matchBoxes(of: "試着室")
-        XCTAssertEqual(groups.count, 1)
-        XCTAssertEqual(groups[0].first?.y ?? -1, 0.4, accuracy: 1e-9)
+        XCTAssertTrue(page.matchBoxes(of: "試着室").isEmpty)
+        let twice = OCRPage(engine: "test", lines: [line("試着室と試着室", y: 0.4)], durationMs: 0)
+        XCTAssertEqual(twice.matchBoxes(of: "試着室").first?.first?.x ?? -1, 0.0, accuracy: 1e-9)
     }
 
     func testIgnoresWidthCaseAndSurroundingSpaces() {

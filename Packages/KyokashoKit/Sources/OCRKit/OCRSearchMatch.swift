@@ -7,20 +7,16 @@ extension OCRPage {
     /// Boîtes des caractères de la première occurrence de `query`, **groupées par ligne**, pour surligner brièvement le
     /// mot d'un résultat de recherche (idée de la recette 1.6.2, version 1.6.4). Cherche dans le texte des lignes mis
     /// bout à bout, comme `OCRService.search` : un mot coupé entre deux lignes est trouvé (un groupe par ligne). Mêmes
-    /// tolérances : casse, accents, pleine / demi-chasse. Vide si le mot est absent ou si une ligne touchée n'a pas une
-    /// boîte par caractère.
+    /// tolérances : casse, accents, pleine / demi-chasse. **Toujours la première occurrence**, celle de l'extrait affiché
+    /// dans les résultats (3e contre-revue Codex : concordance plutôt que repli) ; vide si le mot est absent ou si une
+    /// ligne touchée n'a pas une boîte par caractère.
     public func matchBoxes(of query: String) -> [[NormBox]] {
         let needle = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !needle.isEmpty else { return [] }
         let joined = lines.map(\.text).joined()
         let options: String.CompareOptions = [.caseInsensitive, .diacriticInsensitive, .widthInsensitive]
-        var from = joined.startIndex
-        // Occurrence suivante si une ligne touchée n'a pas ses boîtes (contre-revue Codex).
-        while let range = joined.range(of: needle, options: options, range: from..<joined.endIndex) {
-            if let groups = boxes(joined: joined, range: range) { return groups }
-            from = range.upperBound
-        }
-        return []
+        guard let range = joined.range(of: needle, options: options) else { return [] }
+        return boxes(joined: joined, range: range) ?? []
     }
 
     /// Boîtes d'une occurrence, ligne par ligne ; `nil` si une ligne touchée n'a pas une boîte par caractère.

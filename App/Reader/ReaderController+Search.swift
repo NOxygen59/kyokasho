@@ -119,7 +119,7 @@ extension ReaderController {
         clearSearchFlash()
         guard let selection = result.selection else {
             go(toSource: result.sourcePage)
-            flashOCRMatch(source: result.sourcePage, query: lastSearchQuery)
+            flashOCRMatch(source: result.sourcePage, query: lastSearchQuery, landing: pdfView.currentPage)
             return
         }
         pdfView.go(to: selection)
@@ -137,8 +137,9 @@ extension ReaderController {
     /// Rien n'est enregistré : ni dans les surlignages de l'utilisateur, ni dans le fichier.
     /// Contre-revues Codex : moteurs essayés **dans l'ordre de la recherche** (`OCRService.search` garde le premier qui
     /// a la page : même texte, même première occurrence que l'extrait) ; lecture du cache par le service, **sans** tenir
-    /// le lecteur ; page coupée : chaque morceau va sur la moitié qu'il touche ; pas de saut si la page a changé depuis.
-    private func flashOCRMatch(source: Int, query: String) {
+    /// le lecteur ; page coupée : chaque morceau va sur la moitié qu'il touche ; pas de saut si la page affichée a changé
+    /// depuis le toucher (`landing`).
+    private func flashOCRMatch(source: Int, query: String, landing: PDFPage?) {
         guard !query.isEmpty else { return }
         let service = model.ocr, documentId = document.id
         let engines = Self.searchEngines
@@ -171,8 +172,12 @@ extension ReaderController {
                 item.page.addAnnotation(annotation)
                 self.searchFlashAnnotations.append((item.page, annotation))
             }
-            // Pas de saut tardif si l'on a tourné la page pendant la lecture du cache.
-            if self.currentSourcePage == source, let first = placed.first { self.pdfView.go(to: first.rect, on: first.page) }
+            // Pas de saut tardif : seulement si la page affichée est encore celle où le résultat nous a menés (toute
+            // navigation entre-temps, même vers l'autre moitié d'une page coupée, l'annule). Double page : vaut aussi
+            // pour un mot sur la seconde page de la planche.
+            if let landing, self.pdfView.currentPage === landing, let first = placed.first {
+                self.pdfView.go(to: first.rect, on: first.page)
+            }
             try? await Task.sleep(nanoseconds: Self.searchFlashDuration)
             guard !Task.isCancelled else { return }
             self.clearSearchFlash()
