@@ -9,6 +9,7 @@ import SwiftUI
 /// comme avant (`closeTab`), Reprendre rouvre le livre à sa dernière page (`openDocumentId`).
 struct ResumeRow: View {
     @EnvironmentObject private var model: AppModel
+    @ScaledMetric(relativeTo: .body) private var typeScale: CGFloat = 1
     let space: LibrarySpace
 
     /// Documents à reprendre : **tous** les onglets ouverts (les deux espaces, pour pouvoir les fermer d'ici comme
@@ -29,9 +30,16 @@ struct ResumeRow: View {
     var body: some View {
         if !items.isEmpty {
             VStack(alignment: .leading, spacing: 10) {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                    Text("Reprendre").font(Atelier.font(17, weight: .bold)).foregroundStyle(Atelier.textPrimary)
-                    Text("ouverts et en cours").font(Atelier.font(13)).foregroundStyle(Atelier.textSecondary)
+                ViewThatFits(in: .horizontal) {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        title
+                        subtitle
+                    }
+                    .fixedSize()
+                    VStack(alignment: .leading, spacing: 2) {
+                        title
+                        subtitle
+                    }
                 }
                 // Défile au-delà de trois cartes (beaucoup d'onglets ouverts).
                 ScrollView(.horizontal, showsIndicators: false) {
@@ -48,10 +56,19 @@ struct ResumeRow: View {
             }
         }
     }
+
+    private var title: some View {
+        Text("Reprendre").font(Atelier.font(17 * typeScale, weight: .bold)).foregroundStyle(Atelier.textPrimary)
+    }
+
+    private var subtitle: some View {
+        Text("ouverts et en cours").font(Atelier.font(13 * typeScale)).foregroundStyle(Atelier.textSecondary)
+    }
 }
 
 private struct ResumeCard: View {
     @EnvironmentObject private var model: AppModel
+    @ScaledMetric(relativeTo: .body) private var typeScale: CGFloat = 1
     let document: LibraryDocument
     let isOpen: Bool
     let resume: () -> Void
@@ -72,15 +89,14 @@ private struct ResumeCard: View {
                 .clipShape(RoundedRectangle(cornerRadius: Atelier.corner(10), style: .continuous))
             VStack(alignment: .leading, spacing: 5) {
                 if isOpen {
-                    Text("Ouvert").font(Atelier.font(11, weight: .bold)).textCase(.uppercase)
+                    Text("Ouvert").font(Atelier.font(11 * typeScale, weight: .bold)).textCase(.uppercase)
                         .foregroundStyle(NewLayoutInk.accent)
                 }
-                Text(document.title).font(Atelier.font(15, weight: .semibold)).lineLimit(2)
+                Text(document.title).font(Atelier.font(15 * typeScale, weight: .semibold)).lineLimit(typeScale > 1.2 ? nil : 2)
                     .foregroundStyle(Atelier.textPrimary)
                 Text(verbatim: "p. \(document.pageLabel(document.lastPageIndex)) / \(document.pageLabel(document.pageCount - 1))")
-                    .font(Atelier.font(12).monospacedDigit()).foregroundStyle(Atelier.textSecondary)
+                    .font(Atelier.font(12 * typeScale).monospacedDigit()).foregroundStyle(Atelier.textSecondary)
                 ProgressView(value: progress).tint(NewLayoutInk.accent)
-                Spacer(minLength: 4)
                 NewLayoutPillButton(icon: nil, title: String(localized: "Reprendre"), active: true, selectable: false, action: resume)
                     .accessibilityLabel(Text("Reprendre « \(document.title) »"))
             }

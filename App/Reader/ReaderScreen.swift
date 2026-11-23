@@ -61,6 +61,7 @@ struct ReaderScreen: View {
     /// Couleur du mode « Surligner l'OCR » (#23), choisie par appui long sur son bouton.
     @AppStorage("highlight.ocrColor") private var ocrHighlightColor = HighlightColor.yellow
     @State private var pageField = ""
+    @ScaledMetric(relativeTo: .body) private var typeScale: CGFloat = 1
     /// Nouvelle présentation (PLAN-REFONTE-001, E1) : barre du haut et grande barre du bas à la place de la capsule
     /// du titre et de la barre d'outils flottante. Lue à chaque affichage ; désactivée, le lecteur reste inchangé.
     @AppStorage(NewLayout.storageKey) private var newLayoutPreference = NewLayout.defaultEnabled
@@ -78,6 +79,7 @@ struct ReaderScreen: View {
     }
 
     enum Side: Equatable { case study, web }
+    private static let webPanelWidth: CGFloat = 440
     private var capabilities: DocumentCapabilities { reader.document.capabilities }
     /// Ce que l'aide aux gestes doit décrire pour ce document, avec ses réglages du moment (rien n'est enregistré).
     private var gestureHelpContext: ReaderGestureHelp.Context {
@@ -122,8 +124,11 @@ struct ReaderScreen: View {
             // (panneau recréé, fenêtre de correction fermée, disposition recalculée).
             let measured = keyboardFreeSize == .zero ? geo.size : keyboardFreeSize
             let landscape = measured.width > measured.height
-            let reservesSide = reservedSide == .web || (reservedSide == .study && landscape)
-            let panelWidth: CGFloat = (reservedSide ?? docked) == .web ? 440 : Atelier.panelWidth
+            let panelWidth: CGFloat = reservedSide == .web ? Self.webPanelWidth : Atelier.panelWidth
+            // Au-dessous de 320 pt pour le PDF, le panneau passe entre les deux barres.
+            let dockingFits = !newLayout || geo.size.width >= panelWidth + 320 + Atelier.gap * 3
+            let reservesSide = dockingFits && (reservedSide == .web || (reservedSide == .study && landscape))
+            let floatingSide = reservesSide ? nil : docked
             let inset: CGFloat = reservesSide ? Atelier.gap : 0
             let documentWidth = max(1, geo.size.width - (reservesSide ? panelWidth + Atelier.gap * 3 : 0))
             let documentHeight = max(1, geo.size.height - inset * 2)
@@ -135,22 +140,24 @@ struct ReaderScreen: View {
                     LookupHighlightLayer(rects: reader.lookupHighlight)
                     if reader.ocrHighlightMode {
                         OCRHighlightDragLayer(reader: reader, color: ocrHighlightColor)
-                        OCRHighlightControls(reader: reader, handlesEscape: !searchCardShown)
-                            .frame(maxHeight: .infinity, alignment: .bottom)
-                            .padding(.bottom, chromeVisible ? (newLayout ? 180 : 110) : 24)
-                            .transition(.move(edge: .bottom).combined(with: .opacity))
-                            // Seules les commandes passent devant le chrome, pas l’aperçu du trait.
-                            .zIndex(1)
+                        if !newLayout {
+                            OCRHighlightControls(reader: reader, handlesEscape: !searchCardShown)
+                                .frame(maxHeight: .infinity, alignment: .bottom)
+                                .padding(.bottom, chromeVisible ? 110 : 24)
+                                .transition(.move(edge: .bottom).combined(with: .opacity))
+                                .zIndex(1)
+                        }
                     }
-                    if chromeVisible {
-                        // Portrait : la bande des pages s'arrête au bord du panneau d'étude flottant (recette 1.3.2 (59), A11).
+                    if newLayout {
+                        newChrome(width: documentWidth, floatingSide: floatingSide)
+                    } else if chromeVisible {
+                        // Portrait : la bande des pages s'arrête au bord du panneau d'étude flottant.
                         let trailing = FilmstripLayout.trailingInset(
                             portraitPanelShown: docked == .study && !landscape, panelWidth: panelWidth, gap: Atelier.gap)
-                        Group {
-                            if newLayout { newChrome(filmstripTrailing: trailing) } else { chrome(filmstripTrailing: trailing) }
-                        }
-                        .transition(.opacity)
-                    } else {
+                        chrome(filmstripTrailing: trailing)
+                            .transition(.opacity)
+                    }
+                    if !chromeVisible {
                         ReaderStatusBadge()
                             .transition(.opacity)
                         restoreBarsButton
@@ -197,9 +204,11 @@ struct ReaderScreen: View {
                 .clipped()
                 .overlay(alignment: .bottomLeading) {
                     // Moniteur fixé puis pastilles IA (#47) ; plus de moniteur flottant à déplacer.
-                    ActivityDock(showsMonitor: false)
-                        .padding(.leading, Atelier.gap)
-                        .padding(.bottom, chromeVisible && filmstripVisible && !reader.isDrawing ? 120 : Atelier.gap)
+                    if !newLayout {
+                        ActivityDock(showsMonitor: false)
+                            .padding(.leading, Atelier.gap)
+                            .padding(.bottom, chromeVisible && filmstripVisible && !reader.isDrawing ? 120 : Atelier.gap)
+                    }
                 }
                 .animation(.easeOut(duration: 0.18), value: chromeVisible)
                 if reservesSide {
@@ -238,7 +247,7 @@ struct ReaderScreen: View {
             }
             .overlay(alignment: .trailing) {
                 // En portrait seulement, le panneau reste flottant sur la page.
-                if docked == .study, !landscape {
+                if !newLayout, docked == .study, !landscape {
                     sidePanel(.study)
                         .padding(.vertical, Atelier.gap)
                         .frame(width: panelWidth, height: documentHeight)
@@ -737,39 +746,31 @@ struct ReaderScreen: View {
 
     /// Barre du haut (bibliothèque, onglets, actions, Étudier) et grande barre du bas (Lire, Annoter, 辞, ふりがな,
     /// pages, IA, navigateur). Mêmes actions que l'ancienne présentation ; seule la disposition change.
-    private func newChrome(filmstripTrailing: CGFloat) -> some View {
+    private func newChrome(width: CGFloat, floatingSide: Side?) -> some View {
         VStack(spacing: 0) {
-            HStack(alignment: .top, spacing: 10) {
-                NewLayoutRoundButton(icon: "books.vertical", label: String(localized: "Bibliothèque")) { model.openDocumentId = nil }
-                DocumentTabsBar(current: reader.document.id)
-                    .padding(.top, 8)
-                Spacer(minLength: 8)
-                if reader.hasSelection {
-                    HighlightMenu { reader.highlightSelection(color: $0) }
-                        .transition(.scale.combined(with: .opacity))
+            if chromeVisible {
+                newTopBar(width: width)
+                if monitorEnabled && monitorShown {
+                    ResourceMonitorPanel(expandsDown: true, fillsWidth: true, adaptiveHeader: true)
+                        .frame(maxWidth: 340)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                        .padding(.horizontal, Atelier.gap)
                 }
-                // Relecture finale Codex : repli quand la place manque (Split View, navigateur à côté) — « Étudier »
-                // en icône, puis capsule défilante ; rien n'est rogné.
-                ViewThatFits(in: .horizontal) {
-                    newActionsCapsule(compact: false).fixedSize()
-                    newActionsCapsule(compact: true).fixedSize()
-                    ScrollView(.horizontal, showsIndicators: false) { newActionsCapsule(compact: true).fixedSize() }
-                }
-                .frame(height: 56, alignment: .top)
-                .zIndex(1)
             }
-            .padding(.horizontal, Atelier.gap)
-            .padding(.top, 8)
-            .anchorPreference(key: SearchBarBounds.self, value: .bounds) { $0 }
-            .zIndex(1)
             GeometryReader { area in
                 ZStack(alignment: .topLeading) {
-                    if let note = reader.openNote {
+                    if let floatingSide {
+                        let preferred = floatingSide == .web ? Self.webPanelWidth : Atelier.panelWidth
+                        sidePanel(floatingSide, floating: true)
+                            .frame(width: min(preferred, area.size.width), height: area.size.height)
+                            .frame(maxWidth: .infinity, alignment: .trailing)
+                    }
+                    if chromeVisible, let note = reader.openNote {
                         NoteWindow(reader: reader, note: note, area: area.size)
                     }
-                    if reader.placingAnchorFor != nil {
+                    if chromeVisible, reader.placingAnchorFor != nil {
                         HStack(spacing: 10) {
-                            Text("Touche le mot de la page où ancrer la note").font(Atelier.font(14, weight: .semibold))
+                            Text("Touche le mot de la page où ancrer la note").font(Atelier.font(14 * typeScale, weight: .semibold))
                             Button("Annuler") { reader.placingAnchorFor = nil }.fontWeight(.bold)
                         }
                         .foregroundStyle(Atelier.onAccentInk.opacity(0.85))
@@ -781,7 +782,9 @@ struct ReaderScreen: View {
             }
             .padding(Atelier.gap)
             VStack(spacing: 10) {
-                if filmstripMounted && !reader.isDrawing {
+                AITaskPill(scrollsBadges: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                if chromeVisible && filmstripMounted && !reader.isDrawing {
                     PageFilmstrip(reader: reader)
                         .overlay(alignment: .topLeading) {
                             if capabilities.pageEditing {
@@ -797,6 +800,7 @@ struct ReaderScreen: View {
                                 .offset(x: 10, y: -14)
                             }
                         }
+                        .padding(.top, 4)
                         .offset(y: filmstripVisible || reduceMotion ? 0 : 24)
                         .opacity(filmstripVisible ? 1 : 0)
                         .allowsHitTesting(filmstripVisible)
@@ -804,66 +808,92 @@ struct ReaderScreen: View {
                         .frame(height: filmstripVisible ? nil : 0)
                         .transition(.opacity.combined(with: .offset(y: reduceMotion ? 0 : 24)))
                 }
-                if annotationToolsShown && capabilities.annotations {
+                if reader.ocrHighlightMode {
+                    OCRHighlightControls(reader: reader, handlesEscape: !searchCardShown, adaptive: true)
+                        .transition(.opacity)
+                }
+                if chromeVisible && annotationToolsShown && capabilities.annotations {
                     annotationBar
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
-                // Pendant le dessin, la palette d'outils d'iOS occupe le bas : seule la barre d'annotation reste.
-                if !reader.isDrawing {
-                    // Libellés retirés si la barre ne tient pas (navigateur à côté, Split View) : rien n'est coupé.
+                // Pendant le dessin, la palette d'outils d'iOS occupe le bas.
+                if chromeVisible && !reader.isDrawing {
                     ViewThatFits(in: .horizontal) {
                         bottomBar(compact: false)
                         bottomBar(compact: true)
-                        // Dernier repli (navigateur à côté sur un écran étroit) : la barre défile, rien n'est coupé.
-                        ScrollView(.horizontal, showsIndicators: false) { bottomBar(compact: true) }
+                        ScrollView(.horizontal, showsIndicators: false) { bottomBar(compact: false) }
                     }
+                    .fixedSize(horizontal: false, vertical: true)
                 }
             }
             .padding(.horizontal, Atelier.gap)
             .padding(.bottom, 12)
-            .padding(.trailing, filmstripTrailing)
-            .animation(panelAnimation, value: filmstripTrailing)
             .animation(.easeOut(duration: 0.18), value: annotating)
         }
     }
 
-    /// Capsule du haut : Rechercher, Signet, Affichage (Aa), « … », puis Étudier ; le moniteur la prolonge vers le bas.
-    private func newActionsCapsule(compact: Bool) -> some View {
-        VStack(spacing: 0) {
-            HStack(spacing: 2) {
-                if capabilities.textAnalysis {
-                    NewLayoutIconButton(icon: "magnifyingglass", label: String(localized: "Rechercher")) { searchCardShown = true }
+    /// En largeur réduite les onglets gardent leur propre rangée et leur bouton +.
+    private func newTopBar(width: CGFloat) -> some View {
+        let stacked = width < 600 || typeScale > 1.2
+        let rows = stacked ? AnyLayout(VStackLayout(alignment: .leading, spacing: 6))
+                           : AnyLayout(HStackLayout(alignment: .center, spacing: 10))
+        return VStack(alignment: .trailing, spacing: 6) {
+            rows {
+                HStack(spacing: 10) {
+                    NewLayoutRoundButton(icon: "books.vertical", label: String(localized: "Bibliothèque")) { model.openDocumentId = nil }
+                    DocumentTabsBar(current: reader.document.id)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                NewLayoutIconButton(icon: reader.isCurrentPageBookmarked ? "bookmark.fill" : "bookmark",
-                                    label: String(localized: "Signet"), active: reader.isCurrentPageBookmarked,
-                                    tint: Atelier.Tint.annotate) { reader.toggleBookmark() }
-                Menu { displayMenuItems } label: {
-                    Text(verbatim: "Aa").font(Atelier.font(17, weight: .semibold))
-                        .frame(width: 48, height: 48).foregroundStyle(Atelier.textPrimary)
+                ViewThatFits(in: .horizontal) {
+                    newActionsCapsule(compact: false)
+                    newActionsCapsule(compact: true)
+                    ScrollView(.horizontal, showsIndicators: false) { newActionsCapsule(compact: false) }
                 }
-                .accessibilityLabel("Affichage")
-                Menu { moreMenuItems } label: {
-                    Image(systemName: "ellipsis").font(Atelier.font(17, weight: .semibold))
-                        .frame(width: 48, height: 48).foregroundStyle(Atelier.textPrimary)
-                }
-                .accessibilityLabel("Plus")
-                if capabilities.study {
-                    Rectangle().fill(Atelier.hairline).frame(width: 1, height: 26).padding(.horizontal, 4)
-                    NewLayoutPillButton(icon: "sidebar.trailing", title: String(localized: "Étudier"),
-                                        active: side == .study, compact: compact) { toggleStudyPanel() }
-                }
+                .fixedSize(horizontal: false, vertical: true)
             }
-            if monitorEnabled && monitorShown {
-                Rectangle().fill(Atelier.hairline).frame(height: 1).padding(.horizontal, 10)
-                    .transition(.opacity)
-                ResourceMonitorPanel(expandsDown: true, fillsWidth: true, embedded: true)
-                    .transition(.opacity.combined(with: .move(edge: .top)))
+            .anchorPreference(key: SearchBarBounds.self, value: .bounds) { $0 }
+            if reader.hasSelection {
+                ViewThatFits(in: .horizontal) {
+                    HighlightMenu { reader.highlightSelection(color: $0) }.fixedSize()
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HighlightMenu { reader.highlightSelection(color: $0) }.fixedSize()
+                    }
+                }
+                .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(.horizontal, Atelier.gap)
+        .padding(.top, 8)
+    }
+
+    /// Le moniteur reste dans sa propre rangée, hors du défilement horizontal.
+    private func newActionsCapsule(compact: Bool) -> some View {
+        HStack(spacing: 2) {
+            if capabilities.textAnalysis {
+                NewLayoutIconButton(icon: "magnifyingglass", label: String(localized: "Rechercher")) { searchCardShown = true }
+            }
+            NewLayoutIconButton(icon: reader.isCurrentPageBookmarked ? "bookmark.fill" : "bookmark",
+                                label: String(localized: "Signet"), active: reader.isCurrentPageBookmarked,
+                                tint: Atelier.Tint.annotate) { reader.toggleBookmark() }
+            Menu { displayMenuItems } label: {
+                Text(verbatim: "Aa").font(Atelier.font(17 * typeScale, weight: .semibold))
+                    .frame(minWidth: 48, minHeight: 48).foregroundStyle(Atelier.textPrimary)
+            }
+            .accessibilityLabel("Affichage")
+            Menu { moreMenuItems } label: {
+                Image(systemName: "ellipsis").font(Atelier.font(17, weight: .semibold))
+                    .frame(width: 48, height: 48).foregroundStyle(Atelier.textPrimary)
+            }
+            .accessibilityLabel("Plus")
+            if capabilities.study {
+                Rectangle().fill(Atelier.hairline).frame(width: 1, height: 26).padding(.horizontal, 4)
+                NewLayoutPillButton(icon: "sidebar.trailing", title: String(localized: "Étudier"),
+                                    active: side == .study, compact: compact) { toggleStudyPanel() }
             }
         }
         .padding(4)
         .newLayoutBar(radius: 28)
-        .animation(reduceMotion ? .easeOut(duration: 0.15) : .spring(response: 0.42, dampingFraction: 0.9),
-                   value: monitorEnabled && monitorShown)
+        .fixedSize()
     }
 
     /// Grande barre du bas : cibles de 56 pt, libellés visibles.
@@ -938,17 +968,17 @@ struct ReaderScreen: View {
             NewLayoutIconButton(icon: "square.grid.3x2", label: String(localized: "Aperçu des pages"),
                                 active: filmstripVisible, size: 48) { setFilmstrip(!filmstripVisible) }
             TextField(reader.document.pageLabel(reader.currentSourcePage), text: $pageField)
-                .font(Atelier.font(16, weight: .semibold).monospacedDigit())
+                .font(Atelier.font(16 * typeScale, weight: .semibold).monospacedDigit())
                 .multilineTextAlignment(.center)
                 .keyboardType(.numbersAndPunctuation)
                 .submitLabel(.go)
                 .onSubmit(goToTypedPage)
-                .frame(width: 56)
+                .frame(width: 56 * typeScale)
                 .padding(.vertical, 8)
                 .background(Atelier.surfaceHigh, in: Capsule())
                 .accessibilityLabel("Aller à la page")
             Text(verbatim: "/ \(reader.document.pageLabel(reader.document.pageCount - 1))")
-                .font(Atelier.font(15, weight: .semibold).monospacedDigit())
+                .font(Atelier.font(15 * typeScale, weight: .semibold).monospacedDigit())
                 .foregroundStyle(Atelier.textSecondary)
                 .padding(.trailing, 6)
         }
@@ -962,8 +992,9 @@ struct ReaderScreen: View {
             ViewThatFits(in: .horizontal) {
                 annotationTools(compact: false)
                 annotationTools(compact: true)
-                ScrollView(.horizontal, showsIndicators: false) { annotationTools(compact: true) }
+                ScrollView(.horizontal, showsIndicators: false) { annotationTools(compact: false) }
             }
+            .fixedSize(horizontal: false, vertical: true)
             Rectangle().fill(Atelier.hairline).frame(width: 1, height: 26).padding(.horizontal, 2)
             NewLayoutPillButton(icon: nil, title: String(localized: "Terminé"), active: true, selectable: false) { stopAnnotating() }
                 .fixedSize()
@@ -1212,14 +1243,13 @@ struct ReaderScreen: View {
     }
 
     @ViewBuilder
-    private func sidePanel(_ side: Side) -> some View {
+    private func sidePanel(_ side: Side, floating: Bool = false) -> some View {
         switch side {
         case .study:
             StudyPanel(reader: reader, tab: $studyTab, openSearch: { searchCardShown = true }, openLineEditor: { sheet = .lineEditor },
-                       openDocumentSettings: { [sheet = $sheet] in sheet.wrappedValue = .settings }, close: { self.side = nil })
+                       openDocumentSettings: { [sheet = $sheet] in sheet.wrappedValue = .settings }, close: { self.side = nil }, fixedWidth: !floating)
         case .web:
-            WebPanel(onClose: { self.side = nil })
-                .frame(width: 440)
+            WebPanel(onClose: { self.side = nil }, compact: floating)
                 .clipShape(RoundedRectangle(cornerRadius: Atelier.radius, style: .continuous))
                 .atelierPanel()
         }
@@ -1493,15 +1523,41 @@ struct OCRHighlightDragLayer: View {
 struct OCRHighlightControls: View {
     @ObservedObject var reader: ReaderController
     let handlesEscape: Bool
+    var adaptive = false
+    @ScaledMetric(relativeTo: .body) private var typeScale: CGFloat = 1
 
     var body: some View {
-        HStack(spacing: 12) {
-            Picker("Outil", selection: $reader.ocrHighlightErasing) {
-                Label("Surligner", systemImage: "highlighter").tag(false)
-                Label("Gomme", systemImage: "eraser").tag(true)
+        Group {
+            if adaptive {
+                ViewThatFits(in: .horizontal) {
+                    commands(compact: false).fixedSize()
+                    commands(compact: true).fixedSize()
+                    ScrollView(.horizontal, showsIndicators: false) { commands(compact: true).fixedSize() }
+                }
+                .fixedSize(horizontal: false, vertical: true)
+            } else {
+                commands(compact: false)
             }
-            .pickerStyle(.segmented)
-            .frame(width: 200)
+        }
+        .font(Atelier.font(14 * (adaptive ? typeScale : 1)))
+        .padding(.horizontal, 14).padding(.vertical, 8)
+        .atelierPanel(radius: 20)
+    }
+
+    private var tools: some View {
+        Picker("Outil", selection: $reader.ocrHighlightErasing) {
+            Label("Surligner", systemImage: "highlighter").tag(false)
+            Label("Gomme", systemImage: "eraser").tag(true)
+        }
+    }
+
+    private func commands(compact: Bool) -> some View {
+        HStack(spacing: 12) {
+            if compact {
+                tools.pickerStyle(.menu)
+            } else {
+                tools.pickerStyle(.segmented).frame(width: 200 * (adaptive ? typeScale : 1))
+            }
             Button { reader.undoHighlight() } label: { Image(systemName: "arrow.uturn.backward") }
                 .keyboardShortcut("z", modifiers: .command)
                 .disabled(reader.highlightUndo.isEmpty)
@@ -1510,9 +1566,6 @@ struct OCRHighlightControls: View {
                 .fontWeight(.semibold)
                 .keyboardShortcut(handlesEscape ? KeyboardShortcut(.escape, modifiers: []) : nil)
         }
-        .font(Atelier.font(14))
-        .padding(.horizontal, 14).padding(.vertical, 8)
-        .atelierPanel(radius: 20)
     }
 }
 

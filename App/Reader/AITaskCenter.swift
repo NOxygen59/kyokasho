@@ -231,6 +231,7 @@ private final class AIModelBadgeMonitor: ObservableObject {
 /// deux confirmations (une tâche IA coûte des minutes).
 struct AITaskPill: View {
     static let visibleKey = "ai.showActivityBadges"
+    var scrollsBadges = false
 
     @ObservedObject private var center = AITaskCenter.shared
     @ObservedObject private var analysis = DocumentAnalysisService.shared
@@ -250,27 +251,12 @@ struct AITaskPill: View {
 
     var body: some View {
         // Conteneur permanent : la dernière tâche peut finir pendant la confirmation.
-        HStack(spacing: 6) {
-            if visible {
-                ForEach(badges) { badge in
-                    Button { showList = true } label: {
-                        HStack(spacing: 5) {
-                            Circle().fill(badge.active ? Atelier.Tint.ai : Atelier.textSecondary)
-                                .frame(width: 5, height: 5)
-                            Text("\(badge.name) · \(AIActivityText.label(badge.activity))")
-                                .font(Atelier.font(11, weight: .medium))
-                                .lineLimit(1)
-                        }
-                        .foregroundStyle(Atelier.textPrimary)
-                        .padding(.horizontal, 9).padding(.vertical, 6)
-                        .atelierPanel(radius: 14)
-                        .opacity(badge.active ? 0.82 : 0.48)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("\(badge.name), \(AIActivityText.label(badge.activity))")
-                    // Sort de la gauche (du moniteur, #47) ; fondu seul si « Réduire les animations ».
-                    .transition(reduceMotion ? .opacity : .move(edge: .leading).combined(with: .opacity))
-                }
+        Group {
+            if scrollsBadges, visible, !badges.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) { badgeRow.fixedSize() }
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                badgeRow
             }
         }
         .animation(reduceMotion ? .easeOut(duration: 0.15) : .spring(response: 0.4, dampingFraction: 0.85),
@@ -302,6 +288,32 @@ struct AITaskPill: View {
                 if stopAll { center.cancelAll() } else if let stopping { center.cancel(stopping.id) }
                 stopping = nil
                 stopAll = false
+            }
+        }
+    }
+
+    private var badgeRow: some View {
+        HStack(spacing: 6) {
+            if visible {
+                ForEach(badges) { badge in
+                    Button { showList = true } label: {
+                        HStack(spacing: 5) {
+                            Circle().fill(badge.active ? Atelier.Tint.ai : Atelier.textSecondary)
+                                .frame(width: 5, height: 5)
+                            Text("\(badge.name) · \(AIActivityText.label(badge.activity))")
+                                .font(Atelier.font(11, weight: .medium))
+                                .lineLimit(1)
+                        }
+                        .foregroundStyle(Atelier.textPrimary)
+                        .padding(.horizontal, 9).padding(.vertical, 6)
+                        .atelierPanel(radius: 14)
+                        .opacity(badge.active ? 0.82 : 0.48)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("\(badge.name), \(AIActivityText.label(badge.activity))")
+                    // Sort de la gauche (du moniteur, #47) ; fondu seul si « Réduire les animations ».
+                    .transition(reduceMotion ? .opacity : .move(edge: .leading).combined(with: .opacity))
+                }
             }
         }
     }

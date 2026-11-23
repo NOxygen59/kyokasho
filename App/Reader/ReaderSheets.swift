@@ -162,6 +162,7 @@ struct PromptEditor: View {
 /// Petit navigateur ouvert à tous les sites (claude.ai, dictionnaires en ligne, recherche…).
 struct WebPanel: View {
     var onClose: () -> Void
+    var compact = false
     @Environment(\.openURL) private var openURL
     @StateObject private var state = WebState(view: WebView.shared)
     @State private var address = ""
@@ -177,6 +178,14 @@ struct WebPanel: View {
         ("DeepL", "https://www.deepl.com/translator"),
     ]
 
+    private var addressField: some View {
+        TextField("Adresse ou recherche", text: $address)
+            .textFieldStyle(.roundedBorder)
+            .keyboardType(.webSearch).autocorrectionDisabled().textInputAutocapitalization(.never)
+            .focused($editing)
+            .onSubmit { go(address) }
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             VStack(spacing: 8) {
@@ -185,11 +194,8 @@ struct WebPanel: View {
                         .disabled(!state.canGoBack).accessibilityLabel("Page précédente")
                     Button { state.view.goForward() } label: { Image(systemName: "chevron.right") }
                         .disabled(!state.canGoForward).accessibilityLabel("Page suivante")
-                    TextField("Adresse ou recherche", text: $address)
-                        .textFieldStyle(.roundedBorder)
-                        .keyboardType(.webSearch).autocorrectionDisabled().textInputAutocapitalization(.never)
-                        .focused($editing)
-                        .onSubmit { go(address) }
+                    if !compact { addressField }
+                    if compact { Spacer(minLength: 0) }
                     Button { if state.loading { state.view.stopLoading() } else { state.view.reload() } } label: {
                         Image(systemName: state.loading ? "xmark" : "arrow.clockwise")
                     }
@@ -198,6 +204,7 @@ struct WebPanel: View {
                         .accessibilityLabel("Ouvrir dans Safari")
                     Button(action: onClose) { Image(systemName: "xmark.circle.fill") }.accessibilityLabel("Fermer")
                 }
+                if compact { addressField }
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 6) {
                         ForEach(Self.shortcuts, id: \.url) { site in

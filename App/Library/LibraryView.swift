@@ -14,6 +14,7 @@ struct LibraryView: View {
 
     @EnvironmentObject private var model: AppModel
     @State private var filter: Filter = .all
+    @ScaledMetric(relativeTo: .body) private var typeScale: CGFloat = 1
     @State private var showImportOptions = false
     /// Paquet Kyōkasho ouvert et vérifié, en attente d'accord (document déjà présent) ou de résultat.
     @State private var pendingPackage: DocumentPackageService.Pending?
@@ -217,16 +218,16 @@ struct LibraryView: View {
             ZStack {
                 if newLayout { Atelier.canvas.ignoresSafeArea() } else { libraryBackdrop }
                 Group {
-                    if landscape {
+                    if landscape && (!newLayout || geo.size.width >= 650) {
                         HStack(alignment: .top, spacing: Atelier.gap) {
                             sidebar.frame(width: 248)
-                            main
+                            main(width: geo.size.width - 248 - Atelier.gap * 3)
                         }
                         .padding(Atelier.gap)
                     } else {
                         VStack(spacing: Atelier.gap) {
-                            compactBar
-                            main
+                            if newLayout { newCompactBar } else { compactBar }
+                            main(width: geo.size.width - Atelier.gap * 2)
                         }
                         .padding(Atelier.gap)
                     }
@@ -546,13 +547,14 @@ struct LibraryView: View {
                             HStack(spacing: 12) {
                                 Image(systemName: "folder").font(Atelier.font(15, weight: .semibold))
                                     .foregroundStyle(NewLayoutInk.accent).frame(width: 22)
-                                Text(verbatim: tile.folder.name).font(Atelier.font(15, weight: .medium)).lineLimit(1)
+                                Text(verbatim: tile.folder.name).font(Atelier.font(15 * typeScale, weight: .medium))
+                                    .fixedSize(horizontal: false, vertical: true)
                                     .foregroundStyle(Atelier.textPrimary)
                                 Spacer(minLength: 4)
-                                Text("\(tile.documents.count)").font(Atelier.font(13).monospacedDigit())
+                                Text("\(tile.documents.count)").font(Atelier.font(13 * typeScale).monospacedDigit())
                                     .foregroundStyle(Atelier.textSecondary)
                             }
-                            .padding(.horizontal, 10).frame(height: 44)
+                            .padding(.horizontal, 10).padding(.vertical, 6).frame(minHeight: 44)
                             .background(openFolderId == tile.folder.id ? Atelier.surfaceHigh : Color.clear,
                                         in: RoundedRectangle(cornerRadius: Atelier.corner(12), style: .continuous))
                             .contentShape(Rectangle())
@@ -775,6 +777,48 @@ struct LibraryView: View {
         .background(Atelier.surfaceHigh, in: RoundedRectangle(cornerRadius: Atelier.corner(14), style: .continuous))
     }
 
+    /// Le filtre et les outils tiennent dans une rangée, même à côté d'une autre app.
+    private var newCompactBar: some View {
+        HStack(spacing: 8) {
+            Picker(selection: $filter) {
+                Text("Tous").tag(Filter.all)
+                Text("En cours").tag(Filter.inProgress)
+                Text("Drive").tag(Filter.drive)
+            } label: {
+                Label("Filtrer", systemImage: "line.3.horizontal.decrease")
+            }
+            .pickerStyle(.menu)
+            .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+            NewLayoutIconButton(icon: dashboardIcon, label: String(localized: "Tableau de bord")) { statsTapped() }
+                .onDisappear { cancelStatsBurst() }
+            Menu {
+                if space != .manga {
+                    Button { showReview = true } label: { Label("Révisions", systemImage: "rectangle.stack.badge.play") }
+                    Button { showDictionary = true } label: { Label("Dictionnaire", systemImage: "character.book.closed.ja") }
+                    Button { showLexicon = true } label: { Label("Lexique", systemImage: "text.book.closed") }
+                    Button { showBench = true } label: { Label("Banc d'essai OCR", systemImage: "speedometer") }
+                }
+                Button { showNotes = true } label: {
+                    Label(model.notesToReview > 0 ? String(localized: "Notes · \(model.notesToReview) à revoir")
+                          : String(localized: "Notes"), systemImage: "note.text")
+                }
+                Button { showTrash = true } label: { Label("Corbeille", systemImage: "trash") }
+                Button { showSettings = true } label: { Label("Réglages", systemImage: "gearshape") }
+            } label: {
+                Label("Outils", systemImage: "ellipsis.circle")
+                    .labelStyle(.iconOnly)
+                    .font(Atelier.font(18, weight: .semibold))
+                    .frame(width: 48, height: 48)
+            }
+            .overlay(alignment: .topTrailing) {
+                dueMark(model.noteDueBadge).scaleEffect(0.75).allowsHitTesting(false)
+            }
+        }
+        .padding(.horizontal, 8)
+        .newLayoutBar(radius: 24)
+    }
+
     /// Portrait : barre compacte en haut.
     private var compactBar: some View {
         HStack(spacing: 12) {
@@ -823,78 +867,132 @@ struct LibraryView: View {
         }
     }
 
-    /// En-tête de la nouvelle présentation : espaces, recherche, Nouveau dossier, Sélectionner, Importer (avec les
-    /// outils de conversion), puis « Reprendre » et le titre de la liste.
-    private var newHeader: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack(spacing: 10) {
-                HStack(spacing: 6) {
-                    spaceTab(.study, title: String(localized: "Livres & Manuels"), icon: "books.vertical")
-                    spaceTab(.manga, title: String(localized: "Manga"), icon: "book")
+    /// La recherche garde son champ pendant le changement de disposition (rotation et Split View).
+    private func newHeader(width: CGFloat) -> some View {
+        let compact = width < 780 || typeScale > 1.2
+        let rows = compact ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8))
+                           : AnyLayout(HStackLayout(spacing: 10))
+        return VStack(alignment: .leading, spacing: 12) {
+            rows {
+                if !compact {
+                    HStack(spacing: 6) {
+                        spaceTab(.study, title: String(localized: "Livres & Manuels"), icon: "books.vertical")
+                        spaceTab(.manga, title: String(localized: "Manga"), icon: "book")
+                    }
+                    .fixedSize()
                 }
-                .fixedSize()
                 HStack(spacing: 8) {
                     Image(systemName: "magnifyingglass").foregroundStyle(Atelier.textTertiary)
-                    TextField("Rechercher", text: $search).foregroundStyle(Atelier.textPrimary)
+                    TextField("Rechercher", text: $search)
+                        .font(Atelier.font(16 * typeScale)).foregroundStyle(Atelier.textPrimary)
                 }
-                .padding(.horizontal, 16).frame(height: 52)
+                .padding(.horizontal, 16).padding(.vertical, 8)
+                .frame(minHeight: 52)
                 .frame(maxWidth: .infinity)
                 .newLayoutBar(radius: 26)
-                NewLayoutIconButton(icon: "folder.badge.plus", label: String(localized: "Nouveau dossier"), size: 52) {
-                    folderName = ""
-                    folderNaming = .create(moving: [])
-                }
-                .newLayoutBar(radius: 26)
-                if !model.documents.isEmpty {
-                    NewLayoutPillButton(icon: selecting ? "checkmark" : "checklist",
-                                        title: selecting ? String(localized: "Terminé") : String(localized: "Sélectionner"),
-                                        active: selecting) {
-                        selecting.toggle()
-                        if !selecting { batch = BatchDeletion() }
+                HStack(spacing: 8) {
+                    if compact {
+                        spaceMenu
+                        Spacer(minLength: 0)
                     }
-                    .newLayoutBar(radius: 24)
+                    newHeaderActions(compact: compact)
                 }
-                Menu {
-                    Button { showImportOptions = true } label: { Label("Fichiers", systemImage: "folder") }
-                    Button { showDrive = true } label: { Label("Google Drive", systemImage: "externaldrive.badge.icloud") }
-                    Divider()
-                    Button { showMerge = true } label: { Label("Fusionner des PDF", systemImage: "doc.on.doc") }
-                    if space != .manga {
-                        Button { showImagesToPDF = true } label: { Label("Images vers PDF", systemImage: "photo.on.rectangle.angled") }
-                    }
-                } label: {
-                    Label("Importer", systemImage: "plus")
-                        .font(Atelier.font(15, weight: .bold))
-                        .padding(.horizontal, 18).frame(height: 52)
-                        .foregroundStyle(NewLayoutInk.onAccent)
-                        .background(NewLayoutInk.accent, in: Capsule())
-                }
+                .fixedSize(horizontal: !compact, vertical: true)
             }
             if currentFolder == nil && filter == .all && search.isEmpty {
                 ResumeRow(space: space)
+            } else {
+                OpenDocumentsStrip(compact: true, palette: themes.effectiveTheme)
             }
-            HStack(alignment: .firstTextBaseline, spacing: 10) {
-                Text(ui: filterTitle).font(Atelier.font(28, weight: .bold)).foregroundStyle(Atelier.textPrimary)
+            let heading = compact ? AnyLayout(VStackLayout(alignment: .leading, spacing: 2))
+                                  : AnyLayout(HStackLayout(alignment: .firstTextBaseline, spacing: 10))
+            heading {
+                Text(ui: filterTitle).font(Atelier.font(28 * typeScale, weight: .bold)).foregroundStyle(Atelier.textPrimary)
                 Text("\(filtered.count) document\(filtered.count > 1 ? "s" : "")")
-                    .font(Atelier.font(15, weight: .semibold)).foregroundStyle(Atelier.textSecondary)
+                    .font(Atelier.font(15 * typeScale, weight: .semibold)).foregroundStyle(Atelier.textSecondary)
             }
         }
+    }
+
+    private func newHeaderActions(compact: Bool) -> some View {
+        HStack(spacing: 8) {
+            NewLayoutIconButton(icon: "folder.badge.plus", label: String(localized: "Nouveau dossier"), size: 52) {
+                folderName = ""
+                folderNaming = .create(moving: [])
+            }
+            .newLayoutBar(radius: 26)
+            if !model.documents.isEmpty {
+                NewLayoutPillButton(icon: selecting ? "checkmark" : "checklist",
+                                    title: selecting ? String(localized: "Terminé") : String(localized: "Sélectionner"),
+                                    active: selecting, compact: compact) {
+                    selecting.toggle()
+                    if !selecting { batch = BatchDeletion() }
+                }
+                .newLayoutBar(radius: 24)
+            }
+            Menu {
+                Button { showImportOptions = true } label: { Label("Fichiers", systemImage: "folder") }
+                Button { showDrive = true } label: { Label("Google Drive", systemImage: "externaldrive.badge.icloud") }
+                Divider()
+                Button { showMerge = true } label: { Label("Fusionner des PDF", systemImage: "doc.on.doc") }
+                if space != .manga {
+                    Button { showImagesToPDF = true } label: { Label("Images vers PDF", systemImage: "photo.on.rectangle.angled") }
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "plus")
+                    if !compact { Text("Importer") }
+                }
+                .font(Atelier.font(15 * (compact ? 1 : typeScale), weight: .bold))
+                .padding(.horizontal, compact ? 0 : 18)
+                .frame(minWidth: 52, minHeight: 52)
+                .foregroundStyle(NewLayoutInk.onAccent)
+                .background(NewLayoutInk.accent, in: Capsule())
+            }
+            .accessibilityLabel("Importer")
+        }
+    }
+
+    private var spaceMenu: some View {
+        Menu {
+            Button { selectSpace(.study) } label: {
+                Label("Livres & Manuels", systemImage: space == .study ? "checkmark" : "books.vertical")
+            }
+            Button { selectSpace(.manga) } label: {
+                Label("Manga", systemImage: space == .manga ? "checkmark" : "book")
+            }
+        } label: {
+            Label {
+                Text(verbatim: spaceTitle)
+                    .font(Atelier.font(14 * typeScale, weight: .semibold))
+                    .fixedSize(horizontal: false, vertical: true)
+            } icon: {
+                Image(systemName: space == .manga ? "book" : "books.vertical")
+            }
+            .padding(.horizontal, 10)
+            .frame(minHeight: 48)
+        }
+        .newLayoutBar(radius: 24)
+    }
+
+    private func selectSpace(_ value: LibrarySpace) {
+        guard space != value else { return }
+        selecting = false
+        openFolderId = nil
+        batch = BatchDeletion()
+        captureAppearance()
+        space = value
+        themes.showLibrarySpace(value)
     }
 
     private func spaceTab(_ value: LibrarySpace, title: String, icon: String) -> some View {
         let on = space == value
         let count = model.documents.filter { $0.isInMangaSpace == (value == .manga) }.count
         return Button {
-            guard !on else { return }
-            selecting = false
-            openFolderId = nil
-            batch = BatchDeletion()
-            captureAppearance()
-            space = value
-            themes.showLibrarySpace(value)
+            selectSpace(value)
         } label: {
             Label { Text(ui: "\(title) · \(count)") } icon: { Image(systemName: icon) }
-                .font(Atelier.font(14, weight: .semibold))
+                .font(Atelier.font(14 * (newLayout ? typeScale : 1), weight: .semibold))
                 .padding(.horizontal, 14).padding(.vertical, 9)
                 .foregroundStyle(on ? Atelier.onAccentInk.opacity(0.85) : Atelier.textPrimary)
                 .background(Capsule().fill(on ? Atelier.Tint.japanese : Atelier.surfaceHigh))
@@ -923,10 +1021,10 @@ struct LibraryView: View {
         }
     }
 
-    private var main: some View {
+    private func main(width: CGFloat) -> some View {
         VStack(alignment: .leading, spacing: Atelier.gap) {
             if newLayout {
-                newHeader
+                newHeader(width: width)
             } else {
             if usesCompactDocuments {
                 VStack(alignment: .leading, spacing: 5) {

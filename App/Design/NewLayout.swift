@@ -72,6 +72,7 @@ struct NewLayoutIconButton: View {
 
 /// Bouton libellé en pilule ; actif : plein de la couleur principale (forme et couleur, pas la couleur seule).
 struct NewLayoutPillButton: View {
+    @ScaledMetric(relativeTo: .body) private var typeScale: CGFloat = 1
     let icon: String?
     let title: String
     var active = false
@@ -90,12 +91,14 @@ struct NewLayoutPillButton: View {
             HStack(spacing: 7) {
                 if let icon { Image(systemName: icon).font(Atelier.font(large ? 17 : 15, weight: .semibold)) }
                 if !(compact && icon != nil) {
-                    Text(verbatim: title).font(Atelier.font(large ? 16 : 15, weight: .bold)).lineLimit(1)
+                    Text(verbatim: title).font(Atelier.font((large ? 16 : 15) * typeScale, weight: .bold))
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
             .padding(.horizontal, compact ? 14 : large ? 18 : 15)
             .frame(minWidth: large ? 56 : 48)
-            .frame(height: large ? 56 : 48)
+            .padding(.vertical, 8)
+            .frame(minHeight: large ? 56 : 48)
             .foregroundStyle(active ? NewLayoutInk.onAccent : Atelier.textPrimary)
             .background(active ? NewLayoutInk.accent : Color.clear, in: Capsule())
             .contentShape(Capsule())

@@ -36,11 +36,12 @@ class NewLayoutWiringTests(unittest.TestCase):
     def test_reader_keeps_the_old_chrome_when_the_switch_is_off(self):
         reader = source("Reader/ReaderScreen.swift")
         self.assertIn("private var newLayout: Bool { NewLayout.isAvailable && newLayoutPreference }", reader)
-        self.assertRegex(reader, r"if newLayout \{ newChrome\(filmstripTrailing: trailing\) \} "
-                                 r"else \{ chrome\(filmstripTrailing: trailing\) \}")
+        self.assertRegex(reader, r"if newLayout \{\s*newChrome\(width: documentWidth, floatingSide: floatingSide\)"
+                                 r"\s*\} else if chromeVisible \{")
+        self.assertIn("chrome(filmstripTrailing: trailing)", reader)
         # L'ancienne barre d'outils flottante n'existe que dans l'ancien chrome.
         old = reader.split("private func chrome(filmstripTrailing: CGFloat)", 1)[1].split("private func setFilmstrip", 1)[0]
-        new = reader.split("private func newChrome(filmstripTrailing: CGFloat)", 1)[1].split("private func newActionsCapsule(compact: Bool)", 1)[0]
+        new = reader.split("private func newChrome(width: CGFloat, floatingSide: Side?)", 1)[1].split("private func newActionsCapsule(compact: Bool)", 1)[0]
         self.assertIn("FloatingToolbar(", old)
         self.assertNotIn("FloatingToolbar(", new)
 
@@ -61,7 +62,7 @@ class NewLayoutWiringTests(unittest.TestCase):
 
     def test_bottom_bar_targets_are_large_enough(self):
         components = source("Design/NewLayout.swift")
-        self.assertIn(".frame(height: large ? 56 : 48)", components)
+        self.assertIn(".frame(minHeight: large ? 56 : 48)", components)
         # Boutons icône de la nouvelle présentation (`size: N) {` : appel suivi de son action), pas les polices.
         sizes = [int(n) for n in re.findall(r"size: (\d+)\) \{", source("Reader/ReaderScreen.swift"))]
         self.assertTrue(sizes and min(sizes) >= 48, sizes)
@@ -72,11 +73,11 @@ class NewLayoutWiringTests(unittest.TestCase):
         self.assertIn("private var newLayout: Bool { NewLayout.isAvailable && newLayoutPreference }", home)
         self.assertIn("if newLayout { newSidebarContent } else { sidebarContent }", home)
         self.assertIn("if newLayout { Atelier.canvas.ignoresSafeArea() } else { libraryBackdrop }", home)
-        self.assertRegex(home, r"if newLayout \{\s*newHeader\s*\} else \{\s*if usesCompactDocuments \{")
+        self.assertRegex(home, r"if newLayout \{\s*newHeader\(width: width\)\s*\} else \{\s*if usesCompactDocuments \{")
         # L'ancienne colonne garde ses tuiles d'import ; la nouvelle les confie au menu « Importer ».
         old = home.split("private var sidebarContent: some View {", 1)[1].split("private func sideRow", 1)[0]
         self.assertIn('"Importer et convertir"', old)
-        header = home.split("private var newHeader: some View {", 1)[1].split("private func spaceTab", 1)[0]
+        header = home.split("private func newHeaderActions(compact: Bool)", 1)[1].split("private var spaceMenu", 1)[0]
         for action in ("showImportOptions = true", "showDrive = true", "showMerge = true", "showImagesToPDF = true"):
             self.assertIn(action, header)
 
@@ -97,6 +98,34 @@ class NewLayoutWiringTests(unittest.TestCase):
         self.assertIn("return open + inProgress.prefix(max(0, limit - open.count))", logic)
         self.assertIn("close: { model.closeTab(document.id) }", row)
 
+
+    def test_reader_floating_panel_and_bottom_controls_use_separate_rows(self):
+        reader = source("Reader/ReaderScreen.swift")
+        self.assertIn("let reservesSide = dockingFits &&", reader)
+        self.assertIn("let floatingSide = reservesSide ? nil : docked", reader)
+        self.assertIn("if !newLayout, docked == .study, !landscape", reader)
+        chrome = reader.split("private func newChrome", 1)[1].split("private func newTopBar", 1)[0]
+        self.assertNotIn("filmstripTrailing", chrome)
+        self.assertLess(chrome.index("ResourceMonitorPanel("), chrome.index("GeometryReader"))
+        self.assertLess(chrome.index("sidePanel(floatingSide, floating: true)"), chrome.index("AITaskPill("))
+        self.assertLess(chrome.index("PageFilmstrip("), chrome.index("OCRHighlightControls("))
+        self.assertLess(chrome.index("OCRHighlightControls("), chrome.index("annotationBar"))
+
+    def test_home_keeps_tabs_available_outside_unfiltered_root(self):
+        home = source("Library/LibraryView.swift")
+        self.assertRegex(home, r"if currentFolder == nil && filter == \.all && search\.isEmpty \{"
+                                 r"\s*ResumeRow\(space: space\)\s*\} else \{"
+                                 r"\s*OpenDocumentsStrip\(compact: true,")
+        strip = source("Library/OpenDocumentsStrip.swift")
+        self.assertIn("model.closeTab(document.id)", strip)
+
+    def test_new_labels_follow_dynamic_type(self):
+        components = source("Design/NewLayout.swift").split("struct NewLayoutPillButton", 1)[1]
+        self.assertIn("@ScaledMetric", components)
+        self.assertIn("(large ? 16 : 15) * typeScale", components)
+        self.assertNotIn(".lineLimit(1)", components)
+        for path in ("Reader/ReaderScreen.swift", "Library/LibraryView.swift", "Library/ResumeRow.swift"):
+            self.assertIn("@ScaledMetric", source(path), path)
 
     def test_reader_menus_do_not_capture_the_reader(self):
         # Revue R2 Codex (P1) : les actions des menus passent par un relais retiré à la fermeture.

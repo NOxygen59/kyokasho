@@ -156,6 +156,8 @@ struct ResourceMonitorPanel: View {
     var embedded = false
     /// Accueil seulement : la liste des activités, relevée tant que le panneau reste déplié.
     var showsActivities = false
+    /// La rangée du lecteur peut se resserrer jusqu'à une colonne de Split View.
+    var adaptiveHeader = false
     @ObservedObject private var monitor = ResourceMonitor.shared
     @AppStorage(ResourceMonitor.shownKey) private var shown = false
     @AppStorage("monitor.detailed") private var detailed = false
@@ -197,24 +199,38 @@ struct ResourceMonitorPanel: View {
     @ViewBuilder
     private var header: some View {
         if valuesOnOwnRow {
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 8) {
-                    Image(systemName: "gauge.with.dots.needle.33percent").foregroundStyle(Atelier.Tint.read)
-                    Spacer(minLength: 4)
-                    headerButtons
-                }
-                .buttonStyle(.plain)
-                HStack(spacing: 4) { values(stretched: true) }
+            stackedHeader
+        } else if adaptiveHeader {
+            ViewThatFits(in: .horizontal) {
+                inlineHeader.fixedSize(horizontal: true, vertical: false)
+                stackedHeader
             }
         } else {
+            inlineHeader
+        }
+    }
+
+    private var stackedHeader: some View {
+        VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 8) {
                 Image(systemName: "gauge.with.dots.needle.33percent").foregroundStyle(Atelier.Tint.read)
-                values(stretched: false)
-                if fillsWidth { Spacer(minLength: 4) }
+                Spacer(minLength: 4)
                 headerButtons
             }
             .buttonStyle(.plain)
+            HStack(spacing: 4) { values(stretched: true) }
         }
+    }
+
+    private var inlineHeader: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "gauge.with.dots.needle.33percent").foregroundStyle(Atelier.Tint.read)
+            values(stretched: false)
+            if fillsWidth { Spacer(minLength: 4) }
+            headerButtons
+        }
+        .buttonStyle(.plain)
+        .frame(maxWidth: fillsWidth ? .infinity : nil)
     }
 
     @ViewBuilder
