@@ -23,24 +23,24 @@
         }
       }
     },
-    "Gel corrigé : un livre fermé est maintenant libéré ; avant, il restait en mémoire et le processeur pouvait rester bloqué, surtout après plusieurs livres ouverts et fermés.": {
+    "Gel corrigé : un livre fermé est maintenant libéré ; avant, il restait en mémoire et le processeur pouvait rester très chargé, au point de faire chauffer l'iPad, surtout après plusieurs livres ouverts et fermés.": {
       "localizations": {
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Gel corrigé : un livre fermé est maintenant libéré ; avant, il restait en mémoire et le processeur pouvait rester bloqué, surtout après plusieurs livres ouverts et fermés."
+            "value": "Gel corrigé : un livre fermé est maintenant libéré ; avant, il restait en mémoire et le processeur pouvait rester très chargé, au point de faire chauffer l'iPad, surtout après plusieurs livres ouverts et fermés."
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Freeze fixed: a closed book is now released; before, it stayed in memory and the processor could stay stuck, especially after several books were opened and closed."
+            "value": "Freeze fixed: a closed book is now released; before, it stayed in memory and the processor could stay heavily loaded, enough to make the iPad hot, especially after several books were opened and closed."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "已修复卡死：关闭的书现在会被释放；以前它会留在内存中，处理器可能一直处于高负载，打开并关闭多本书后尤为明显。"
+            "value": "已修复卡死：关闭的书现在会被释放；以前它会留在内存中，处理器可能一直处于高负载，甚至让 iPad 发热，打开并关闭多本书后尤为明显。"
           }
         }
       }
@@ -62,7 +62,7 @@
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "内存：在我们的测试中，多次打开并关闭六本书后，内存不再持续增长。"
+            "value": "内存：在我们的测试中，多次打开并关闭六本书后，内存不再上涨。"
           }
         }
       }

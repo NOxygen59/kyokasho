@@ -103,7 +103,7 @@ public struct ReleaseNotes: Equatable, Sendable, Identifiable {
     /// elle que montre la fenêtre « Nouveautés » ; les versions précédentes vont dans `ReleaseHistory`.
     public static let current = ReleaseNotes("1.6.3", "2026-11-23", published: false, String(localized: "Finalité des grandes optimisations", bundle: .main), added: [
         ], fixed: [
-            String(localized: "Gel corrigé : un livre fermé est maintenant libéré ; avant, il restait en mémoire et le processeur pouvait rester bloqué, surtout après plusieurs livres ouverts et fermés.", bundle: .main),
+            String(localized: "Gel corrigé : un livre fermé est maintenant libéré ; avant, il restait en mémoire et le processeur pouvait rester très chargé, au point de faire chauffer l'iPad, surtout après plusieurs livres ouverts et fermés.", bundle: .main),
             String(localized: "Mémoire : lors de nos essais, ouvrir puis fermer six livres plusieurs fois ne la faisait plus grimper.", bundle: .main),
             String(localized: "Mode diagnostic : le journal signale la libération du lecteur à la fermeture d'un livre.", bundle: .main),
         ])
