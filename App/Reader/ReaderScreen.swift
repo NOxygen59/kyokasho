@@ -748,10 +748,15 @@ struct ReaderScreen: View {
                     HighlightMenu { reader.highlightSelection(color: $0) }
                         .transition(.scale.combined(with: .opacity))
                 }
-                newActionsCapsule
-                    .fixedSize()
-                    .frame(height: 56, alignment: .top)
-                    .zIndex(1)
+                // Relecture finale Codex : repli quand la place manque (Split View, navigateur à côté) — « Étudier »
+                // en icône, puis capsule défilante ; rien n'est rogné.
+                ViewThatFits(in: .horizontal) {
+                    newActionsCapsule(compact: false).fixedSize()
+                    newActionsCapsule(compact: true).fixedSize()
+                    ScrollView(.horizontal, showsIndicators: false) { newActionsCapsule(compact: true).fixedSize() }
+                }
+                .frame(height: 56, alignment: .top)
+                .zIndex(1)
             }
             .padding(.horizontal, Atelier.gap)
             .padding(.top, 8)
@@ -823,7 +828,7 @@ struct ReaderScreen: View {
     }
 
     /// Capsule du haut : Rechercher, Signet, Affichage (Aa), « … », puis Étudier ; le moniteur la prolonge vers le bas.
-    private var newActionsCapsule: some View {
+    private func newActionsCapsule(compact: Bool) -> some View {
         VStack(spacing: 0) {
             HStack(spacing: 2) {
                 if capabilities.textAnalysis {
@@ -845,7 +850,7 @@ struct ReaderScreen: View {
                 if capabilities.study {
                     Rectangle().fill(Atelier.hairline).frame(width: 1, height: 26).padding(.horizontal, 4)
                     NewLayoutPillButton(icon: "sidebar.trailing", title: String(localized: "Étudier"),
-                                        active: side == .study) { toggleStudyPanel() }
+                                        active: side == .study, compact: compact) { toggleStudyPanel() }
                 }
             }
             if monitorEnabled && monitorShown {

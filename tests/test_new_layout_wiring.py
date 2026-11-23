@@ -40,7 +40,7 @@ class NewLayoutWiringTests(unittest.TestCase):
                                  r"else \{ chrome\(filmstripTrailing: trailing\) \}")
         # L'ancienne barre d'outils flottante n'existe que dans l'ancien chrome.
         old = reader.split("private func chrome(filmstripTrailing: CGFloat)", 1)[1].split("private func setFilmstrip", 1)[0]
-        new = reader.split("private func newChrome(filmstripTrailing: CGFloat)", 1)[1].split("private var newActionsCapsule", 1)[0]
+        new = reader.split("private func newChrome(filmstripTrailing: CGFloat)", 1)[1].split("private func newActionsCapsule(compact: Bool)", 1)[0]
         self.assertIn("FloatingToolbar(", old)
         self.assertNotIn("FloatingToolbar(", new)
 
