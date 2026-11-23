@@ -101,11 +101,13 @@ public struct ReleaseNotes: Equatable, Sendable, Identifiable {
 
     /// La version en cours de préparation : seulement ce qu'elle change (décision de NOxygen59 du 04/11/2026). C'est
     /// elle que montre la fenêtre « Nouveautés » ; les versions précédentes vont dans `ReleaseHistory`.
-    public static let current = ReleaseNotes("1.6.3", "2026-11-23", published: false, String(localized: "Finalité des grandes optimisations", bundle: .main), added: [
-        ], fixed: [
-            String(localized: "Gel corrigé : un livre fermé est maintenant libéré ; avant, il restait en mémoire et le processeur pouvait rester très chargé, au point de faire chauffer l'iPad, surtout après plusieurs livres ouverts et fermés.", bundle: .main),
-            String(localized: "Mémoire : lors de nos essais, ouvrir puis fermer six livres plusieurs fois ne la faisait plus grimper.", bundle: .main),
-            String(localized: "Mode diagnostic : le journal signale la libération du lecteur à la fermeture d'un livre.", bundle: .main),
+    public static let current = ReleaseNotes("1.6.4", "2026-11-23", published: false, String(localized: "Refonte graphique", bundle: .main), added: [
+            String(localized: "Nouvelle présentation sur iPad : lecteur, panneau d'étude et accueil redessinés, aux couleurs de ton thème. À activer dans Réglages → Thèmes et couleurs ; désactivée, tout reste comme avant.", bundle: .main),
+            String(localized: "Lecteur : barre du haut et grande barre du bas, outils d'annotation regroupés, grille de toutes les pages du document.", bundle: .main),
+            String(localized: "Accueil : bouton Reprendre, carte « Aujourd'hui » et dossiers en onglets de chemise.", bundle: .main),
+            String(localized: "Grande fiche de mot, et onglets Notes, Repères et Chat remis au style de la nouvelle présentation.", bundle: .main),
+            String(localized: "Papier : un nouveau thème clair pour la lecture.", bundle: .main),
+            String(localized: "Recherche dans un document : le mot trouvé est surligné deux secondes sur la page.", bundle: .main),
         ])
 
     /// Notes de `version` (« 1.3.2 », sans le numéro de build) : la version elle-même, jamais une build de test.

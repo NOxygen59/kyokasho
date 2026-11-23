@@ -9,6 +9,11 @@ import Foundation
 /// développeur.
 enum ReleaseHistory {
     static let past: [ReleaseNotes] = [
+        ReleaseNotes("1.6.3", "2026-11-23", String(localized: "Finalité des grandes optimisations", bundle: .main), fixed: [
+            String(localized: "Gel corrigé : un livre fermé est maintenant libéré ; avant, il restait en mémoire et le processeur pouvait rester très chargé, au point de faire chauffer l'iPad, surtout après plusieurs livres ouverts et fermés.", bundle: .main),
+            String(localized: "Mémoire : lors de nos essais, ouvrir puis fermer six livres plusieurs fois ne la faisait plus grimper.", bundle: .main),
+            String(localized: "Mode diagnostic : le journal signale la libération du lecteur à la fermeture d'un livre.", bundle: .main),
+        ]),
         // Candidates locales non publiées.
         ReleaseNotes("1.6.2", "2026-11-22", published: false, String(localized: "Correctifs de la recette 1.6.1", bundle: .main), added: [
                 String(localized: "Mode diagnostic : le journal liste les fils qui occupent le processeur (nom, temps depuis qu'il a été repéré, moyenne récente, travail en cours, page) et signale ceux qui restent très chargés plus de 10 secondes.", bundle: .main),

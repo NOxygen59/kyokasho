@@ -58828,6 +58828,160 @@
           }
         }
       }
+    },
+    "Refonte graphique": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Refonte graphique"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Visual redesign"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "界面重新设计"
+          }
+        }
+      }
+    },
+    "Nouvelle présentation sur iPad : lecteur, panneau d'étude et accueil redessinés, aux couleurs de ton thème. À activer dans Réglages → Thèmes et couleurs ; désactivée, tout reste comme avant.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nouvelle présentation sur iPad : lecteur, panneau d'étude et accueil redessinés, aux couleurs de ton thème. À activer dans Réglages → Thèmes et couleurs ; désactivée, tout reste comme avant."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New layout on iPad: redesigned reader, study panel and home screen, in your theme's colors. Turn it on in Settings → Themes and colors; when off, everything stays as before."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iPad 新界面：重新设计的阅读器、学习面板和主页，采用你的主题配色。在“设置 → 主题和颜色”中开启；关闭时一切保持原样。"
+          }
+        }
+      }
+    },
+    "Lecteur : barre du haut et grande barre du bas, outils d'annotation regroupés, grille de toutes les pages du document.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lecteur : barre du haut et grande barre du bas, outils d'annotation regroupés, grille de toutes les pages du document."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reader: top bar and large bottom bar, annotation tools grouped together, grid of all the document's pages."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "阅读器：顶部栏和大号底部栏，批注工具集中在一起，文档所有页面的网格。"
+          }
+        }
+      }
+    },
+    "Accueil : bouton Reprendre, carte « Aujourd'hui » et dossiers en onglets de chemise.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accueil : bouton Reprendre, carte « Aujourd'hui » et dossiers en onglets de chemise."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Home: Resume button, “Today” card and folders shown as file-folder tabs."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "主页：“继续”按钮、“今天”卡片，文件夹以文件夹标签形式显示。"
+          }
+        }
+      }
+    },
+    "Grande fiche de mot, et onglets Notes, Repères et Chat remis au style de la nouvelle présentation.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grande fiche de mot, et onglets Notes, Repères et Chat remis au style de la nouvelle présentation."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Large word card, and Notes, Bookmarks and Chat tabs restyled to match the new layout."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "大号单词卡片，笔记、书签和聊天标签页改为新界面的风格。"
+          }
+        }
+      }
+    },
+    "Papier : un nouveau thème clair pour la lecture.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Papier : un nouveau thème clair pour la lecture."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paper: a new light theme for reading."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "纸张：一款新的浅色阅读主题。"
+          }
+        }
+      }
+    },
+    "Recherche dans un document : le mot trouvé est surligné deux secondes sur la page.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recherche dans un document : le mot trouvé est surligné deux secondes sur la page."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search in a document: the word found is highlighted on the page for two seconds."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文档内搜索：找到的词会在页面上高亮两秒。"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
