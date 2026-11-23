@@ -17,7 +17,8 @@ class OwnerModeWiringTests(unittest.TestCase):
 
     def test_stats_card_counts_taps_then_decides(self):
         library = self.read("Library/LibraryView.swift")
-        self.assertIn("Button { statsTapped() } label: { statsCardContent }", library)
+        self.assertIn("Button { statsTapped() } label: { statsCardBody }", library)  # ancienne carte ou « Aujourd'hui » (refonte)
+        self.assertIn("if newLayout { newStatsCardContent } else { statsCardContent }", library)
         self.assertIn("case .single: showDashboard = true", library)
         self.assertIn("case .toggleOwnerMode:\n                OwnerMode.toggle()", library)
         # Revue D-07 : portrait (bouton « Tableau de bord ») et retour visuel sans vibreur.
