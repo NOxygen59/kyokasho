@@ -385,6 +385,7 @@ extension ReaderController {
 
     private func closeWork() {
         savePositionWork?.perform()
+        clearSearchFlash()
         cropTask?.cancel()
         sharpenTask?.cancel()
         toneTask?.cancel()

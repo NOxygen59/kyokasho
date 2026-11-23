@@ -95,6 +95,11 @@ final class ReaderController: NSObject, ObservableObject {
     /// Numéro de la recherche en cours : les résultats OCR d'une ancienne recherche sont ignorés.
     var searchToken = 0
     var flushScheduled = false
+    /// Dernier texte cherché : sert à retrouver le mot sur une page scannée (résultat venu de l'OCR).
+    var lastSearchQuery = ""
+    /// Surlignage bref (2 s) du mot d'un résultat touché : tâche de retrait et annotations temporaires posées.
+    var searchFlashTask: Task<Void, Never>?
+    var searchFlashAnnotations: [(page: PDFPage, annotation: PDFAnnotation)] = []
 
     // MARK: Dictionnaire au toucher
     /// Modes d'outil gardés **pour ce document** (écriture, 辞, Pencil), relus à l'ouverture (Issue #15).

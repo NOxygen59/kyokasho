@@ -52,6 +52,7 @@ extension ReaderController {
         searchToken += 1
         let token = searchToken
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        lastSearchQuery = trimmed
         guard !trimmed.isEmpty else {
             isSearching = false
             pdfView.highlightedSelections = nil
@@ -108,14 +109,57 @@ extension ReaderController {
         documentOCRTask?.cancel()
     }
 
+    /// Durée du surlignage du mot touché dans les résultats (idée de la recette 1.6.2, version 1.6.4).
+    static let searchFlashDuration: UInt64 = 2_000_000_000
+
     func show(_ result: SearchResult) {
+        clearSearchFlash()
         guard let selection = result.selection else {
             go(toSource: result.sourcePage)
+            flashOCRMatch(source: result.sourcePage, query: lastSearchQuery)
             return
         }
         pdfView.go(to: selection)
         selection.color = UIColor.systemOrange.withAlphaComponent(0.6)
         pdfView.highlightedSelections = [selection]
+        searchFlashTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: Self.searchFlashDuration)
+            guard !Task.isCancelled else { return }
+            self?.clearSearchFlash()
+        }
+    }
+
+    /// Page scannée : le mot est retrouvé dans l'OCR en cache et surligné par une annotation **temporaire** (dans le
+    /// repère de la page, elle suit le zoom et le défilement), retirée après 2 s ou au résultat suivant. Rien n'est
+    /// enregistré : ni dans les surlignages de l'utilisateur, ni dans le fichier.
+    private func flashOCRMatch(source: Int, query: String) {
+        guard !query.isEmpty else { return }
+        searchFlashTask = Task { @MainActor [weak self] in
+            guard let self, let ocr = await self.cachedOCR(source: source), !Task.isCancelled,
+                  let frame = self.pageFrame(ofSource: source), let pdf = self.pdf else { return }
+            let boxes = ocr.matchBoxes(of: query)
+            guard let first = boxes.first else { return }
+            let rect = boxes.dropFirst().reduce(frame.pageRect(first)) { $0.union(frame.pageRect($1)) }.insetBy(dx: -2, dy: -2)
+            for page in self.pages(forSource: source, in: pdf) {
+                let annotation = PDFAnnotation(bounds: rect, forType: .highlight, withProperties: nil)
+                annotation.color = UIColor.systemOrange.withAlphaComponent(0.55)
+                annotation.userName = "flash:recherche"
+                page.addAnnotation(annotation)
+                self.searchFlashAnnotations.append((page, annotation))
+            }
+            try? await Task.sleep(nanoseconds: Self.searchFlashDuration)
+            guard !Task.isCancelled else { return }
+            self.clearSearchFlash()
+        }
+    }
+
+    /// Retire le surlignage bref (annotations temporaires et sélection orange) et annule son minuteur.
+    func clearSearchFlash() {
+        searchFlashTask?.cancel()
+        searchFlashTask = nil
+        for item in searchFlashAnnotations { item.page.removeAnnotation(item.annotation) }
+        searchFlashAnnotations = []
+        pdfView.highlightedSelections = nil
     }
 
     // MARK: Image de la page (pour l'IA)
