@@ -61,8 +61,14 @@ class SearchSheetStyleWiringTests(unittest.TestCase):
         self.assertIn("OCRHighlightDragLayer", preview)
         self.assertNotIn(".zIndex", preview)
         self.assertRegex(controls, r"\.zIndex\([1-9]\d*\)")
-        # Nouvelle présentation (E1) : au-dessus de la grande barre du bas.
-        self.assertIn(".padding(.bottom, chromeVisible ? (newLayout ? 180 : 110) : 24)", controls)
+        self.assertIn("if !newLayout", preview)
+        self.assertIn(".padding(.bottom, chromeVisible ? 110 : 24)", controls)
+        # Nouvelle présentation : commandes dans le flux de la barre, aperçu sur la page.
+        chrome = self.screen.split("private func newChrome", 1)[1].split("private func newTopBar", 1)[0]
+        self.assertNotIn("OCRHighlightDragLayer", chrome)
+        self.assertIn("handlesEscape: !searchCardShown, adaptive: true", chrome)
+        self.assertLess(chrome.index("PageFilmstrip("), chrome.index("OCRHighlightControls("))
+        self.assertLess(chrome.index("OCRHighlightControls("), chrome.index("bottomBar("))
         self.assertIn("handlesEscape: !searchCardShown", mode)
         self.assertIn(".keyboardShortcut(handlesEscape ? KeyboardShortcut(.escape, modifiers: []) : nil)", self.screen)
 
