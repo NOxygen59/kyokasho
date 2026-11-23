@@ -67,6 +67,8 @@ struct ReaderScreen: View {
     private var newLayout: Bool { NewLayout.isAvailable && newLayoutPreference }
     /// Outils d'annotation ouverts dans la nouvelle présentation (Dessiner, Surligner le texte, Le Pencil cherche).
     @State private var annotating = false
+    /// Actions des menus Affichage et « … » (voir `ReaderMenuActions`) : aucune ne capture la vue ni le lecteur.
+    @State private var menuActions = ReaderMenuActions()
     @ObservedObject private var shift = ShiftKey.shared
     @Environment(\.scenePhase) private var scenePhase
 
@@ -303,7 +305,12 @@ struct ReaderScreen: View {
             ReaderArrowKeys.shared.webOpen = side == .web
             ReadingTimeTracker.shared.readerOpened(document: reader.document)
         }
+        .onAppear { menuActions.perform = { command in runMenuCommand(command) } }
+        .onChange(of: pageTone) { reader.setPageTone($0) }
+        .onChange(of: furiganaTint) { reader.setFuriganaTint($0) }
+        .onChange(of: scanCleaning) { reader.setScanCleaning($0) }
         .onDisappear {
+            menuActions.detach()
             reader.close()
             ReadingTimeTracker.shared.readerClosed(documentId: reader.document.id)
             // Réglage général rétabli pour les autres livres ; `nil` d'abord, pour ne pas l'enregistrer dans celui-ci.
@@ -617,20 +624,21 @@ struct ReaderScreen: View {
 
     /// Menu Affichage (pour tous les livres) : fond de page, couleur des furigana, nettoyage, zones OCR.
     @ViewBuilder private var displayMenuItems: some View {
-                    Picker(selection: Binding(get: { pageTone }, set: { pageTone = $0; reader.setPageTone($0) })) {
+                    // Liaisons seules ; le lecteur suit par `.onChange` (voir `ReaderMenuActions`).
+                    Picker(selection: $pageTone) {
                         ForEach(PageTone.allCases) { Label($0.title, systemImage: $0.icon).tag($0) }
                     } label: {
                         Label("Fond de page", systemImage: "circle.lefthalf.filled")
                     }
                     .pickerStyle(.menu)
                     if capabilities.textAnalysis {
-                        Picker(selection: Binding(get: { furiganaTint }, set: { furiganaTint = $0; reader.setFuriganaTint($0) })) {
+                        Picker(selection: $furiganaTint) {
                             ForEach(FuriganaLayer.Tint.allCases) { Text($0.title).tag($0) }
                         } label: {
                             Label("Couleur des furigana", systemImage: "paintpalette")
                         }
                         .pickerStyle(.menu)
-                        Picker(selection: Binding(get: { scanCleaning }, set: { scanCleaning = $0; reader.setScanCleaning($0) })) {
+                        Picker(selection: $scanCleaning) {
                             ForEach(ScanSharpening.Method.allCases.filter { $0 != .degan || ScanSharpening.isInstalled }) {
                                 Text($0.title).tag($0)
                             }
@@ -638,7 +646,7 @@ struct ReaderScreen: View {
                             Label("Nettoyage des scans", systemImage: "wand.and.stars")
                         }
                         .pickerStyle(.menu)
-                        Button { reader.setShowOCRBoxes(!showOCRBoxes) } label: {
+                        Button { [menuActions] in menuActions.perform?(.toggleOCRBoxes) } label: {
                             Label(showOCRBoxes ? String(localized: "Masquer les zones OCR") : String(localized: "Montrer les zones OCR"),
                                   systemImage: "rectangle.dashed")
                         }
@@ -649,24 +657,24 @@ struct ReaderScreen: View {
     @ViewBuilder private var moreMenuItems: some View {
                 if capabilities.pageEditing {
                     Menu {
-                        Button { sheet = .pageCards } label: {
+                        Button { [menuActions] in menuActions.perform?(.pageCards) } label: {
                             Label("Créer des cartes de cette page", systemImage: "rectangle.stack.badge.plus")
                         }
-                        Button { sheet = .documentCards } label: {
+                        Button { [menuActions] in menuActions.perform?(.documentCards) } label: {
                             Label("Cartes de ce document", systemImage: "rectangle.stack")
                         }
-                        Button { sheet = .pageOrientation } label: {
+                        Button { [menuActions] in menuActions.perform?(.pageOrientation) } label: {
                             Label("Orientation des pages…", systemImage: "rotate.right")
                         }
-                        Button { reader.toggleSplitCurrentPage() } label: {
+                        Button { [menuActions] in menuActions.perform?(.toggleSplit) } label: {
                             Label(reader.isCurrentPageSplit ? String(localized: "Ne plus couper la page") : String(localized: "Couper la page en deux"),
                                   systemImage: "rectangle.split.2x1")
                         }
-                        Button { reader.setFirstPage(reader.currentSourcePage) } label: {
+                        Button { [menuActions] in menuActions.perform?(.firstPageHere) } label: {
                             Label("Cette page est la page 1", systemImage: "1.circle")
                         }
                         if reader.document.firstPageIndex != 0 {
-                            Button { reader.setFirstPage(0) } label: {
+                            Button { [menuActions] in menuActions.perform?(.firstPageReset) } label: {
                                 Label("Numéros du PDF (page 1 = début)", systemImage: "arrow.uturn.backward")
                             }
                         }
@@ -674,28 +682,51 @@ struct ReaderScreen: View {
                         Label("Cette page", systemImage: "doc")
                     }
                 }
+                if newLayout && capabilities.study && capabilities.textAnalysis {
+                    Button { [menuActions] in menuActions.perform?(.textTab) } label: { Label("Texte de la page", systemImage: "character.ja") }
+                    Button { [menuActions] in menuActions.perform?(.vocabTab) } label: { Label("Dictionnaire", systemImage: "character.book.closed.ja") }
+                }
                 if capabilities.annotations {
-                    Button { openStudy(.notes) } label: { Label("Notes de la page", systemImage: "text.bubble") }
-                    Button { reader.newNote() } label: { Label("Nouvelle note flottante", systemImage: "note.text.badge.plus") }
+                    Button { [menuActions] in menuActions.perform?(.notes) } label: { Label("Notes de la page", systemImage: "text.bubble") }
+                    Button { [menuActions] in menuActions.perform?(.newNote) } label: { Label("Nouvelle note flottante", systemImage: "note.text.badge.plus") }
                 }
                 if monitorEnabled {
                     Toggle(isOn: $monitorShown) { Label("Moniteur de ressources", systemImage: "gauge.with.dots.needle.33percent") }
                 }
                 if deepl.hasKey {
                     // Information seulement (mise à jour à l'ouverture du livre et après chaque traduction).
-                    Button { Task { await deepl.refreshUsage() } } label: {
+                    Button { Task { await DeepLService.shared.refreshUsage() } } label: {
                         Label(deepl.usageText.map { String(localized: "DeepL : \($0)") } ?? String(localized: "DeepL : quota inconnu (toucher pour actualiser)"),
                               systemImage: "character.bubble")
                     }
                 }
                 Divider()
                 // Aide aux gestes (FEAT-AIDE) : dans le menu, pour ne rien ajouter à une barre déjà pleine en portrait.
-                Button { sheet = .gestureHelp } label: {
+                Button { [menuActions] in menuActions.perform?(.gestureHelp) } label: {
                     Label("Aide : gestes de lecture", systemImage: "questionmark.circle")
                 }
-                Button { sheet = .settings } label: {
+                Button { [menuActions] in menuActions.perform?(.settings) } label: {
                     Label("Pagination et réglages de ce document", systemImage: "slider.horizontal.3")
                 }
+    }
+
+    /// Exécute une commande des menus partagés (appelée par le relais tant que le lecteur est affiché).
+    private func runMenuCommand(_ command: ReaderMenuActions.Command) {
+        switch command {
+        case .pageCards: sheet = .pageCards
+        case .documentCards: sheet = .documentCards
+        case .pageOrientation: sheet = .pageOrientation
+        case .toggleSplit: reader.toggleSplitCurrentPage()
+        case .firstPageHere: reader.setFirstPage(reader.currentSourcePage)
+        case .firstPageReset: reader.setFirstPage(0)
+        case .notes: openStudy(.notes)
+        case .newNote: reader.newNote()
+        case .gestureHelp: sheet = .gestureHelp
+        case .settings: sheet = .settings
+        case .toggleOCRBoxes: reader.setShowOCRBoxes(!showOCRBoxes)
+        case .textTab: openStudy(.text)
+        case .vocabTab: openStudy(.vocab)
+        }
     }
 
     // MARK: Nouvelle présentation (PLAN-REFONTE-001, E1)
@@ -750,6 +781,7 @@ struct ReaderScreen: View {
                                     Image(systemName: "trash").font(Atelier.font(13, weight: .bold))
                                         .frame(width: 34, height: 34).foregroundStyle(Atelier.Tint.japanese)
                                         .background(Atelier.surface, in: Circle())
+                                        .frame(width: 44, height: 44).contentShape(Rectangle())
                                 }
                                 .buttonStyle(PressScale())
                                 .accessibilityLabel("Supprimer des pages")
@@ -769,7 +801,11 @@ struct ReaderScreen: View {
                 }
                 // Pendant le dessin, la palette d'outils d'iOS occupe le bas : seule la barre d'annotation reste.
                 if !reader.isDrawing {
-                    bottomBar
+                    // Libellés retirés si la barre ne tient pas (navigateur à côté, Split View) : rien n'est coupé.
+                    ViewThatFits(in: .horizontal) {
+                        bottomBar(compact: false)
+                        bottomBar(compact: true)
+                    }
                 }
             }
             .padding(.horizontal, Atelier.gap)
@@ -820,18 +856,22 @@ struct ReaderScreen: View {
     }
 
     /// Grande barre du bas : cibles de 56 pt, libellés visibles.
-    private var bottomBar: some View {
+    private func bottomBar(compact: Bool) -> some View {
         HStack(spacing: 6) {
             newPageArrow(left: true)
             if capabilities.annotations {
                 NewLayoutPillButton(icon: "hand.point.up.left", title: String(localized: "Lire"),
-                                    active: !annotationToolsShown && !reader.lookupMode, large: true) { stopAnnotating() }
-                NewLayoutPillButton(icon: "pencil.tip", title: String(localized: "Annoter"), active: annotationToolsShown, large: true) {
+                                    active: !annotationToolsShown && !reader.lookupMode, large: true, compact: compact) { stopAnnotating() }
+                NewLayoutPillButton(icon: "pencil.tip", title: String(localized: "Annoter"), active: annotationToolsShown,
+                                    large: true, compact: compact) {
                     annotationToolsShown ? stopAnnotating() : startAnnotating()
                 }
                 Button {
-                    reader.lookupMode.toggle()
-                    if reader.lookupMode { stopAnnotating() } else { reader.endLookup() }
+                    // Couper d'abord les outils d'annotation (qui coupent aussi le dictionnaire), puis basculer.
+                    let on = !reader.lookupMode
+                    if on { stopAnnotating() }
+                    reader.lookupMode = on
+                    if !on { reader.endLookup() }
                 } label: {
                     Text("辞").font(.custom("HiraMinProN-W6", size: 22))
                         .frame(width: 56, height: 56)
@@ -853,7 +893,7 @@ struct ReaderScreen: View {
             }
             if capabilities.textAnalysis {
                 let pageFurigana = reader.document.isInMangaSpace ? reader.pageFuriganaOn : furigana
-                NewLayoutPillButton(icon: nil, title: "ふりがな", active: pageFurigana, large: true,
+                NewLayoutPillButton(icon: nil, title: compact ? "ふ" : "ふりがな", active: pageFurigana, large: true,
                                     accessibility: pageFurigana ? String(localized: "Masquer les furigana de la page")
                                                                 : String(localized: "Afficher les furigana de la page")) {
                     if reader.document.isInMangaSpace {
@@ -922,7 +962,7 @@ struct ReaderScreen: View {
                                     active: reader.pencilLookup) { selectAnnotationTool(.pencilLookup) }
             }
             Rectangle().fill(Atelier.hairline).frame(width: 1, height: 26).padding(.horizontal, 2)
-            NewLayoutPillButton(icon: nil, title: String(localized: "Terminé"), active: true) { stopAnnotating() }
+            NewLayoutPillButton(icon: nil, title: String(localized: "Terminé"), active: true, selectable: false) { stopAnnotating() }
         }
         .padding(6)
         .newLayoutBar(radius: 28)
@@ -1480,4 +1520,18 @@ final class ReaderTabHandoff {
 private struct KeyboardFreeSizeKey: PreferenceKey {
     static var defaultValue: CGSize { .zero }
     static func reduce(value: inout CGSize, nextValue: () -> CGSize) { value = nextValue() }
+}
+
+/// Relais des actions des menus Affichage et « … » du lecteur (revue R2 Codex de la refonte, P1). iOS 16 garde en
+/// vie les actions d'un `Menu` SwiftUI après la disparition de sa vue ; si elles capturaient la vue ou le lecteur,
+/// le lecteur fermé restait en mémoire (gel de la 1.6.1-1.6.2, voir `StudyMenuActions`). Les menus ne tiennent que ce
+/// relais ; sa commande, posée à l'apparition du lecteur, est retirée à sa disparition.
+@MainActor
+final class ReaderMenuActions {
+    enum Command {
+        case pageCards, documentCards, pageOrientation, toggleSplit, firstPageHere, firstPageReset
+        case notes, newNote, gestureHelp, settings, toggleOCRBoxes, textTab, vocabTab
+    }
+    var perform: ((Command) -> Void)?
+    func detach() { perform = nil }
 }

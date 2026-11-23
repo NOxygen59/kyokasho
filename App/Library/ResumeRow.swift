@@ -11,14 +11,15 @@ struct ResumeRow: View {
     @EnvironmentObject private var model: AppModel
     let space: LibrarySpace
 
-    /// Documents à reprendre, ouverts d'abord (ordre des onglets), puis en cours ; les autres espaces sont exclus.
+    /// Documents à reprendre : **tous** les onglets ouverts (les deux espaces, pour pouvoir les fermer d'ici comme
+    /// avec l'ancien bandeau), puis les livres en cours de l'espace affiché jusqu'à `limit` cartes.
     static func documents(tabs: [String], all: [LibraryDocument], manga: Bool, limit: Int = 3) -> [LibraryDocument] {
-        let inSpace = all.filter { $0.isInMangaSpace == manga }
-        let open = tabs.compactMap { id in inSpace.first { $0.id == id } }
-        let inProgress = inSpace.filter { doc in
-            !tabs.contains(doc.id) && doc.lastPageIndex > 0 && doc.lastPageIndex < doc.pageCount - 1
+        let open = tabs.compactMap { id in all.first { $0.id == id } }
+        let inProgress = all.filter { doc in
+            doc.isInMangaSpace == manga && !tabs.contains(doc.id)
+                && doc.lastPageIndex > 0 && doc.lastPageIndex < doc.pageCount - 1
         }
-        return Array((open + inProgress).prefix(limit))
+        return open + inProgress.prefix(max(0, limit - open.count))
     }
 
     private var items: [LibraryDocument] {
@@ -32,12 +33,17 @@ struct ResumeRow: View {
                     Text("Reprendre").font(Atelier.font(17, weight: .bold)).foregroundStyle(Atelier.textPrimary)
                     Text("ouverts et en cours").font(Atelier.font(13)).foregroundStyle(Atelier.textSecondary)
                 }
-                HStack(alignment: .top, spacing: 14) {
-                    ForEach(items) { document in
-                        ResumeCard(document: document, isOpen: model.tabs.ids.contains(document.id),
-                                   resume: { model.openDocumentId = document.id },
-                                   close: { model.closeTab(document.id) })
+                // Défile au-delà de trois cartes (beaucoup d'onglets ouverts).
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(alignment: .top, spacing: 14) {
+                        ForEach(items) { document in
+                            ResumeCard(document: document, isOpen: model.tabs.ids.contains(document.id),
+                                       resume: { model.openDocumentId = document.id },
+                                       close: { model.closeTab(document.id) })
+                                .frame(width: 330)
+                        }
                     }
+                    .padding(.vertical, 6).padding(.horizontal, 2)
                 }
             }
         }
@@ -75,7 +81,7 @@ private struct ResumeCard: View {
                     .font(Atelier.font(12).monospacedDigit()).foregroundStyle(Atelier.textSecondary)
                 ProgressView(value: progress).tint(NewLayoutInk.accent)
                 Spacer(minLength: 4)
-                NewLayoutPillButton(icon: nil, title: String(localized: "Reprendre"), active: true, action: resume)
+                NewLayoutPillButton(icon: nil, title: String(localized: "Reprendre"), active: true, selectable: false, action: resume)
                     .accessibilityLabel(Text("Reprendre « \(document.title) »"))
             }
             if isOpen {
@@ -83,6 +89,7 @@ private struct ResumeCard: View {
                     Image(systemName: "xmark").font(Atelier.font(12, weight: .bold))
                         .frame(width: 32, height: 32).foregroundStyle(Atelier.textSecondary)
                         .background(Atelier.surfaceHigh, in: Circle())
+                        .frame(width: 44, height: 44).contentShape(Rectangle())
                 }
                 .buttonStyle(PressScale())
                 .accessibilityLabel("Fermer l'onglet")
@@ -90,7 +97,7 @@ private struct ResumeCard: View {
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .newLayoutBar(radius: 20)
+        .newLayoutBar(radius: Atelier.corner(20))
         .onAppear(perform: load)
         .onChange(of: document.id) { _ in load() }
     }

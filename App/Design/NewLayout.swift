@@ -79,15 +79,22 @@ struct NewLayoutPillButton: View {
     var large = false
     /// Libellé lu par VoiceOver quand il diffère du titre affiché.
     var accessibility: String? = nil
+    /// Icône seule quand la place manque (le titre reste lu par VoiceOver).
+    var compact = false
+    /// Faux pour une simple action mise en avant (Reprendre, Terminé) : pas de trait « sélectionné » pour VoiceOver.
+    var selectable = true
     var action: () -> Void
 
     var body: some View {
         Button(action: action) {
             HStack(spacing: 7) {
                 if let icon { Image(systemName: icon).font(Atelier.font(large ? 17 : 15, weight: .semibold)) }
-                Text(verbatim: title).font(Atelier.font(large ? 16 : 15, weight: .bold)).lineLimit(1)
+                if !(compact && icon != nil) {
+                    Text(verbatim: title).font(Atelier.font(large ? 16 : 15, weight: .bold)).lineLimit(1)
+                }
             }
-            .padding(.horizontal, large ? 18 : 15)
+            .padding(.horizontal, compact ? 14 : large ? 18 : 15)
+            .frame(minWidth: large ? 56 : 48)
             .frame(height: large ? 56 : 48)
             .foregroundStyle(active ? NewLayoutInk.onAccent : Atelier.textPrimary)
             .background(active ? NewLayoutInk.accent : Color.clear, in: Capsule())
@@ -95,6 +102,6 @@ struct NewLayoutPillButton: View {
         }
         .buttonStyle(PressScale())
         .accessibilityLabel(accessibility ?? title)
-        .accessibilityAddTraits(active ? .isSelected : [])
+        .accessibilityAddTraits(active && selectable ? .isSelected : [])
     }
 }

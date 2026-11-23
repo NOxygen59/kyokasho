@@ -90,11 +90,31 @@ class NewLayoutWiringTests(unittest.TestCase):
     def test_resume_row_lists_open_tabs_first_then_books_in_progress(self):
         row = source("Library/ResumeRow.swift")
         logic = row.split("static func documents(", 1)[1].split("\n    }\n", 1)[0]
-        self.assertIn("let inSpace = all.filter { $0.isInMangaSpace == manga }", logic)
-        self.assertIn("let open = tabs.compactMap { id in inSpace.first { $0.id == id } }", logic)
-        self.assertIn("!tabs.contains(doc.id) && doc.lastPageIndex > 0 && doc.lastPageIndex < doc.pageCount - 1", logic)
-        self.assertIn("return Array((open + inProgress).prefix(limit))", logic)
+        # Tous les onglets ouverts (fermables d'ici, revue R2 P3), puis les livres en cours de l'espace.
+        self.assertIn("let open = tabs.compactMap { id in all.first { $0.id == id } }", logic)
+        self.assertIn("doc.isInMangaSpace == manga && !tabs.contains(doc.id)", logic)
+        self.assertIn("&& doc.lastPageIndex > 0 && doc.lastPageIndex < doc.pageCount - 1", logic)
+        self.assertIn("return open + inProgress.prefix(max(0, limit - open.count))", logic)
         self.assertIn("close: { model.closeTab(document.id) }", row)
+
+
+    def test_reader_menus_do_not_capture_the_reader(self):
+        # Revue R2 Codex (P1) : les actions des menus passent par un relais retiré à la fermeture.
+        reader = source("Reader/ReaderScreen.swift")
+        menus = reader.split("@ViewBuilder private var displayMenuItems: some View {", 1)[1].split(
+            "private func runMenuCommand", 1)[0]
+        self.assertNotIn("reader.", menus.replace("reader.isCurrentPageSplit", "").replace("reader.document.firstPageIndex", ""))
+        self.assertNotIn("sheet = .", menus)
+        self.assertNotIn("Binding(get:", menus)
+        self.assertIn("menuActions.detach()", reader)
+        relay = reader.split("final class ReaderMenuActions {", 1)[1]
+        self.assertIn("func detach() { perform = nil }", relay)
+
+    def test_lookup_button_turns_the_dictionary_on(self):
+        # Revue R2 Codex (P1) : couper l'annotation avant d'activer, pas après.
+        reader = source("Reader/ReaderScreen.swift")
+        button = reader.split("let on = !reader.lookupMode", 1)[1].split("} label:", 1)[0]
+        self.assertLess(button.index("if on { stopAnnotating() }"), button.index("reader.lookupMode = on"))
 
 
 if __name__ == "__main__":

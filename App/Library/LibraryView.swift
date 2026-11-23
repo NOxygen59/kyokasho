@@ -552,20 +552,22 @@ struct LibraryView: View {
                                 Text("\(tile.documents.count)").font(Atelier.font(13).monospacedDigit())
                                     .foregroundStyle(Atelier.textSecondary)
                             }
-                            .padding(.horizontal, 10).frame(height: 40)
+                            .padding(.horizontal, 10).frame(height: 44)
                             .background(openFolderId == tile.folder.id ? Atelier.surfaceHigh : Color.clear,
                                         in: RoundedRectangle(cornerRadius: Atelier.corner(12), style: .continuous))
                             .contentShape(Rectangle())
                         }
                         .buttonStyle(PressScale())
                         .accessibilityLabel(Text("Dossier \(tile.folder.name), \(tile.documents.count) documents"))
+                        .accessibilityAddTraits(openFolderId == tile.folder.id ? .isSelected : [])
                     }
                 }
             }
             LocalAIEnergyCard()
             if space != .manga && review.counts.total > 0 {
                 NewLayoutPillButton(icon: "rectangle.stack.badge.play",
-                                    title: String(localized: "Réviser maintenant · \(review.counts.total)"), active: true) {
+                                    title: String(localized: "Réviser maintenant · \(review.counts.total)"), active: true,
+                                    selectable: false) {
                     showReview = true
                 }
             }
