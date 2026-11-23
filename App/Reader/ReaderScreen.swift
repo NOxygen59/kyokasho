@@ -737,6 +737,32 @@ struct ReaderScreen: View {
         case .toggleOCRBoxes: reader.setShowOCRBoxes(!showOCRBoxes)
         case .textTab: openStudy(.text)
         case .vocabTab: openStudy(.vocab)
+        case .read: stopAnnotating()
+        case .annotate: annotationToolsShown ? stopAnnotating() : startAnnotating()
+        case .lookup:
+            // Couper d'abord les outils d'annotation (qui coupent aussi le dictionnaire), puis basculer.
+            let on = !reader.lookupMode
+            if on { stopAnnotating() }
+            reader.lookupMode = on
+            if !on { reader.endLookup() }
+        case .hover:
+            reader.hoverLookup.toggle()
+            if !reader.hoverLookup { reader.endLookup() }
+        case .furigana:
+            if reader.document.isInMangaSpace {
+                reader.setFurigana(!reader.pageFuriganaOn)
+            } else {
+                furigana.toggle()
+                reader.setFurigana(furigana)
+            }
+        case .pageArrow(let left):
+            (reader.settings.direction == .rightToLeft) == left ? reader.next() : reader.previous()
+        case .openSearch: searchCardShown = true
+        case .bookmark: reader.toggleBookmark()
+        case .study: toggleStudyPanel()
+        case .drawTool: selectAnnotationTool(.draw)
+        case .highlightTool: selectAnnotationTool(.highlight)
+        case .pencilTool: selectAnnotationTool(.pencilLookup)
         }
     }
 
@@ -846,11 +872,11 @@ struct ReaderScreen: View {
         return VStack(spacing: 0) {
             HStack(spacing: 2) {
                 if capabilities.textAnalysis {
-                    NewLayoutIconButton(icon: "magnifyingglass", label: String(localized: "Rechercher")) { searchCardShown = true }
+                    NewLayoutIconButton(icon: "magnifyingglass", label: String(localized: "Rechercher")) { [menuActions] in menuActions.perform?(.openSearch) }
                 }
                 NewLayoutIconButton(icon: reader.isCurrentPageBookmarked ? "bookmark.fill" : "bookmark",
                                     label: String(localized: "Signet"), active: reader.isCurrentPageBookmarked,
-                                    tint: Atelier.Tint.annotate) { reader.toggleBookmark() }
+                                    tint: Atelier.Tint.annotate) { [menuActions] in menuActions.perform?(.bookmark) }
                 Menu { display } label: {
                     Text(verbatim: "Aa").font(Atelier.font(17, weight: .semibold))
                         .frame(width: 48, height: 48).foregroundStyle(Atelier.textPrimary)
@@ -864,7 +890,7 @@ struct ReaderScreen: View {
                 if capabilities.study {
                     Rectangle().fill(Atelier.hairline).frame(width: 1, height: 26).padding(.horizontal, 4)
                     NewLayoutPillButton(icon: "sidebar.trailing", title: String(localized: "Étudier"),
-                                        active: side == .study, compact: compact) { toggleStudyPanel() }
+                                        active: side == .study, compact: compact) { [menuActions] in menuActions.perform?(.study) }
                 }
             }
             if monitorEnabled && monitorShown {
@@ -908,18 +934,10 @@ struct ReaderScreen: View {
             newPageArrow(left: true)
             if capabilities.annotations {
                 NewLayoutPillButton(icon: "hand.point.up.left", title: String(localized: "Lire"),
-                                    active: !annotationToolsShown && !reader.lookupMode, large: true, compact: compact) { stopAnnotating() }
+                                    active: !annotationToolsShown && !reader.lookupMode, large: true, compact: compact) { [menuActions] in menuActions.perform?(.read) }
                 NewLayoutPillButton(icon: "pencil.tip", title: String(localized: "Annoter"), active: annotationToolsShown,
-                                    large: true, compact: compact && !annotateLabel) {
-                    annotationToolsShown ? stopAnnotating() : startAnnotating()
-                }
-                Button {
-                    // Couper d'abord les outils d'annotation (qui coupent aussi le dictionnaire), puis basculer.
-                    let on = !reader.lookupMode
-                    if on { stopAnnotating() }
-                    reader.lookupMode = on
-                    if !on { reader.endLookup() }
-                } label: {
+                                    large: true, compact: compact && !annotateLabel) { [menuActions] in menuActions.perform?(.annotate) }
+                Button { [menuActions] in menuActions.perform?(.lookup) } label: {
                     Text("辞").font(.custom("HiraMinProN-W6", size: 22))
                         .frame(width: 56, height: 56)
                         .foregroundStyle(reader.lookupMode ? Atelier.onAccentInk : Atelier.textPrimary)
@@ -933,10 +951,7 @@ struct ReaderScreen: View {
                 // reste réservée sinon : la largeur de la barre ne change plus en tournant la page, donc le choix des
                 // libellés non plus (recette 1.6.4, point 5 : « Annoter » apparaissait une demi-seconde puis disparaissait).
                 NewLayoutIconButton(icon: "cursorarrow.rays", label: String(localized: "Dictionnaire au survol (curseur)"),
-                                    active: reader.hoverLookup, size: 56) {
-                    reader.hoverLookup.toggle()
-                    if !reader.hoverLookup { reader.endLookup() }
-                }
+                                    active: reader.hoverLookup, size: 56) { [menuActions] in menuActions.perform?(.hover) }
                 .opacity(reader.pageHasText ? 1 : 0)
                 .disabled(!reader.pageHasText)
                 .accessibilityHidden(!reader.pageHasText)
@@ -945,14 +960,7 @@ struct ReaderScreen: View {
                 let pageFurigana = reader.document.isInMangaSpace ? reader.pageFuriganaOn : furigana
                 NewLayoutPillButton(icon: nil, title: compact ? "ふ" : "ふりがな", active: pageFurigana, large: true,
                                     accessibility: pageFurigana ? String(localized: "Masquer les furigana de la page")
-                                                                : String(localized: "Afficher les furigana de la page")) {
-                    if reader.document.isInMangaSpace {
-                        reader.setFurigana(!pageFurigana)
-                    } else {
-                        furigana.toggle()
-                        reader.setFurigana(furigana)
-                    }
-                }
+                                                                : String(localized: "Afficher les furigana de la page")) { [menuActions] in menuActions.perform?(.furigana) }
             }
         }
     }
@@ -1017,9 +1025,9 @@ struct ReaderScreen: View {
     private func annotationTools(compact: Bool) -> some View {
         HStack(spacing: 6) {
             NewLayoutPillButton(icon: "pencil.tip", title: String(localized: "Dessiner"), active: reader.isDrawing,
-                                compact: compact) { selectAnnotationTool(.draw) }
+                                compact: compact) { [menuActions] in menuActions.perform?(.drawTool) }
             NewLayoutPillButton(icon: "highlighter", title: String(localized: "Surligner le texte"),
-                                active: reader.ocrHighlightMode, compact: compact) { selectAnnotationTool(.highlight) }
+                                active: reader.ocrHighlightMode, compact: compact) { [menuActions] in menuActions.perform?(.highlightTool) }
                 .contextMenu {
                     Picker("Couleur", selection: $ocrHighlightColor) {
                         ForEach(HighlightColor.allCases, id: \.self) { Text(Self.colorName($0)).tag($0) }
@@ -1028,7 +1036,7 @@ struct ReaderScreen: View {
             // Pencil → dictionnaire : seulement si l'option est activée dans les réglages.
             if pencilOption {
                 NewLayoutPillButton(icon: "applepencil", title: String(localized: "Le Pencil cherche"),
-                                    active: reader.pencilLookup, compact: compact) { selectAnnotationTool(.pencilLookup) }
+                                    active: reader.pencilLookup, compact: compact) { [menuActions] in menuActions.perform?(.pencilTool) }
             }
         }
         .fixedSize()
@@ -1073,9 +1081,7 @@ struct ReaderScreen: View {
         let forward = (reader.settings.direction == .rightToLeft) == left
         return NewLayoutIconButton(icon: left ? "chevron.left" : "chevron.right",
                                    label: forward ? String(localized: "Page suivante") : String(localized: "Page précédente"),
-                                   filled: true, size: 56) {
-            forward ? reader.next() : reader.previous()
-        }
+                                   filled: true, size: 56) { [menuActions] in menuActions.perform?(.pageArrow(left: left)) }
     }
 
     private func railDivider(_ vertical: Bool) -> some View {
@@ -1596,6 +1602,10 @@ final class ReaderMenuActions {
     enum Command {
         case pageCards, documentCards, pageOrientation, toggleSplit, firstPageHere, firstPageReset
         case notes, newNote, gestureHelp, settings, toggleOCRBoxes, textTab, vocabTab
+        // Barres de la nouvelle présentation : leurs versions sont essayées par `ViewThatFits`, qui garde en vie sous
+        // iOS 16 des copies écartées ; leurs boutons ne tiennent donc que ce relais (recette 1.6.4, point 13).
+        case read, annotate, lookup, hover, furigana, pageArrow(left: Bool), openSearch, bookmark, study
+        case drawTool, highlightTool, pencilTool
     }
     var perform: ((Command) -> Void)?
     func detach() { perform = nil }

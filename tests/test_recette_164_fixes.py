@@ -45,6 +45,23 @@ class Recette164FixesTests(unittest.TestCase):
         self.assertIn(".fixedSize(horizontal: false, vertical: true)", row)
         self.assertIn('Text("Retirer de Reprendre")', row)
 
+    def test_bars_tried_by_view_that_fits_only_hold_the_relay(self):
+        # Point 13 : les versions écartées par ViewThatFits restent en vie sous iOS 16 ; leurs boutons ne doivent
+        # tenir que le relais faible, jamais l'écran (donc le lecteur).
+        screen = source("App/Reader/ReaderScreen.swift")
+        bodies = [
+            screen.split("private func bottomTools(", 1)[1].split("private var bottomTail", 1)[0],
+            screen.split("private func annotationTools(", 1)[1].split("private enum AnnotationTool", 1)[0],
+            screen.split("private func newActionsCapsule(", 1)[1].split("if monitorEnabled && monitorShown", 1)[0],
+            screen.split("private func newPageArrow(", 1)[1].split("private func railDivider", 1)[0],
+        ]
+        for body in bodies:
+            for action in ("selectAnnotationTool(", "stopAnnotating()", "startAnnotating()", "reader.toggleBookmark()",
+                           "toggleStudyPanel()", "searchCardShown = true", "reader.next()", "reader.endLookup()",
+                           "reader.setFurigana("):
+                self.assertNotIn(action, body)
+            self.assertIn("[menuActions] in menuActions.perform?", body)
+
 
 if __name__ == "__main__":
     unittest.main()
