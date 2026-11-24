@@ -134,6 +134,9 @@ struct LookupPopup: View {
     @ObservedObject var session: LookupSession
     /// Clés des cartes existantes (✓ dans les résultats).
     var added: Set<String> = []
+    /// Nouvelle présentation (maquette E0) : grande fiche du premier mot au-dessus des définitions, **seulement** dans
+    /// le lecteur et son panneau ; les écrans Dictionnaire et Lexique de l'accueil restent inchangés.
+    var showsWordCard = false
     /// Ajoute une carte ; renvoie un petit message à afficher (doublon, erreur…), ou `nil`.
     var onAddCard: ((TermResult) -> String?)? = nil
     /// Bulle de la fenêtre OCR : mot et définitions seulement (`GlossaryRenderer.compactCSS`).
@@ -147,6 +150,10 @@ struct LookupPopup: View {
     @State private var translateError: String?
     @State private var editingFrench = false
     @State private var frenchDraft = ""
+    @AppStorage(NewLayout.storageKey) private var newLayoutPreference = NewLayout.defaultEnabled
+    private var newLayout: Bool { NewLayout.isAvailable && newLayoutPreference && showsWordCard }
+    /// Ajout de carte en cours depuis la fiche : un second toucher n'est pas compté comme doublon (revue R2 Codex).
+    @State private var addingCard = false
 
     /// Premier mot trouvé, s'il n'a que des définitions anglaises (traduction française possible).
     private var englishTerm: TermResult? {
@@ -201,6 +208,9 @@ struct LookupPopup: View {
             .foregroundStyle(Atelier.textSecondary)
             .padding(.horizontal, 14).padding(.vertical, 10)
             Divider().overlay(Atelier.hairline)
+            if newLayout, dictionaryModel.hasTermDictionaries, let term = session.currentTerms.first {
+                wordCard(term)
+            }
             if !dictionaryModel.hasTermDictionaries {
                 VStack(spacing: 8) {
                     Text("Aucun dictionnaire").font(.headline).foregroundStyle(Atelier.textPrimary)
@@ -248,11 +258,59 @@ struct LookupPopup: View {
         .atelierShapeShadow(RoundedRectangle(cornerRadius: Atelier.radius, style: .continuous), opacity: 0.55, radius: 24, y: 10)
     }
 
+    /// Grande fiche (maquette E0) : mot, lecture, niveau JLPT s'il est donné par un dictionnaire, puis les deux gestes
+    /// les plus fréquents en gros boutons. Mêmes chemins que les liens des définitions (`.card(0)`, `playAudio`).
+    private func wordCard(_ term: TermResult) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Text(term.expression).font(.custom("HiraginoSans-W6", size: compact ? 24 : 28))
+                    .foregroundStyle(Atelier.textPrimary).lineLimit(1).minimumScaleFactor(0.6)
+                if !term.reading.isEmpty, term.reading != term.expression {
+                    Text(term.reading).font(.custom("HiraginoSans-W3", size: 15)).foregroundStyle(NewLayoutInk.accent)
+                }
+                Spacer(minLength: 4)
+                // Même préférence que les étiquettes des définitions (Réglages du dictionnaire → Étiquettes).
+                if dictionaryModel.profile.display.showTags, let level = term.jlptLevel {
+                    Text(verbatim: level).font(Atelier.font(12, weight: .bold))
+                        .padding(.horizontal, 9).padding(.vertical, 3)
+                        .foregroundStyle(Atelier.onAccentInk)
+                        .background(Atelier.Tint.read, in: Capsule())
+                        .accessibilityLabel(Text("Niveau JLPT \(level)"))
+                }
+            }
+            HStack(spacing: 8) {
+                if onAddCard != nil {
+                    NewLayoutPillButton(icon: "plus", title: String(localized: "Ajouter aux cartes"), active: true,
+                                        selectable: false) {
+                        guard !addingCard else { return }
+                        addingCard = true
+                        handle(.card(index: 0))
+                        Task { @MainActor in
+                            try? await Task.sleep(nanoseconds: 1_500_000_000)
+                            addingCard = false
+                        }
+                    }
+                    .disabled(addingCard)
+                }
+                NewLayoutIconButton(icon: "speaker.wave.2", label: String(localized: "Écouter"), filled: true, size: 48) {
+                    // Ne capture que le modèle et les chaînes : jamais le popup ni, par lui, le lecteur.
+                    Task { [dictionaryModel, expression = term.expression, reading = term.reading] in
+                        await dictionaryModel.playAudio(term: expression, reading: reading)
+                    }
+                }
+            }
+        }
+        .padding(.horizontal, 14).padding(.vertical, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(NewLayoutInk.accent.opacity(0.09))
+    }
+
     private func handle(_ message: LookupMessage) {
         switch message {
         case .lookup(let text): session.push(text)
         case .kanji(let c): session.pushKanji(c)
-        case .audio(let term, let reading): Task { await dictionaryModel.playAudio(term: term, reading: reading) }
+        // Ne capture que le modèle : une lecture audio lente ne garde ni le popup ni le lecteur (revue R2 Codex).
+        case .audio(let term, let reading): Task { [dictionaryModel] in await dictionaryModel.playAudio(term: term, reading: reading) }
         case .french(let action):
             guard let term = englishTerm else { return }
             let key = DefinitionTranslations.key(term)

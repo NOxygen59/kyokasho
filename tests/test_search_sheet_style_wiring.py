@@ -21,7 +21,7 @@ class SearchSheetStyleWiringTests(unittest.TestCase):
         self.assertNotIn("sheet = .search", self.screen)
         self.assertIn(".overlayPreferenceValue(SearchBarBounds.self)", self.screen)
         self.assertIn(".anchorPreference(key: SearchBarBounds.self, value: .bounds)", self.screen)
-        self.assertEqual(self.screen.count("searchCardShown = true"), 3)
+        self.assertEqual(self.screen.count("searchCardShown = true"), 4)  # + Rechercher de la nouvelle présentation (E1)
 
     def test_search_presents_a_single_atelier_card(self):
         search = (READER / "SearchCard.swift").read_text(encoding="utf-8")
@@ -61,7 +61,8 @@ class SearchSheetStyleWiringTests(unittest.TestCase):
         self.assertIn("OCRHighlightDragLayer", preview)
         self.assertNotIn(".zIndex", preview)
         self.assertRegex(controls, r"\.zIndex\([1-9]\d*\)")
-        self.assertIn(".padding(.bottom, chromeVisible ? 110 : 24)", controls)
+        # Nouvelle présentation (E1) : au-dessus de la grande barre du bas.
+        self.assertIn(".padding(.bottom, chromeVisible ? (newLayout ? 180 : 110) : 24)", controls)
         self.assertIn("handlesEscape: !searchCardShown", mode)
         self.assertIn(".keyboardShortcut(handlesEscape ? KeyboardShortcut(.escape, modifiers: []) : nil)", self.screen)
 

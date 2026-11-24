@@ -94,7 +94,14 @@ final class ReaderController: NSObject, ObservableObject {
     var pendingResults: [SearchResult] = []
     /// Numéro de la recherche en cours : les résultats OCR d'une ancienne recherche sont ignorés.
     var searchToken = 0
+    /// Recherche dans le texte OCR et IA en cours : la fin de la recherche PDFKit ne suffit pas à dire « fini ».
+    var ocrSearchRunning = false
     var flushScheduled = false
+    /// Dernier texte cherché : sert à retrouver le mot sur une page scannée (résultat venu de l'OCR).
+    var lastSearchQuery = ""
+    /// Surlignage bref (2 s) du mot d'un résultat touché : tâche de retrait et annotations temporaires posées.
+    var searchFlashTask: Task<Void, Never>?
+    var searchFlashAnnotations: [(page: PDFPage, annotation: PDFAnnotation)] = []
 
     // MARK: Dictionnaire au toucher
     /// Modes d'outil gardés **pour ce document** (écriture, 辞, Pencil), relus à l'ouverture (Issue #15).
@@ -1117,7 +1124,7 @@ extension ReaderController: PDFDocumentDelegate {
 
     nonisolated func documentDidEndDocumentFind(_ notification: Notification) {
         MainActor.assumeIsolated {
-            isSearching = false
+            isSearching = ocrSearchRunning
             flushResults()
         }
     }

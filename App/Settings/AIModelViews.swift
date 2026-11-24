@@ -532,6 +532,9 @@ struct QwenChatView: View {
         Task { await chat.reset() }
     }
 
+    /// Chat du livre dans la nouvelle présentation (maquette E0) : bulles plus nettes, actions et puces à toucher au doigt.
+    private var newLayout: Bool { embedded && NewLayout.isEnabled }
+
     private func bubble(_ m: QwenChat.Message, index: Int) -> some View {
         let mine = m.role == .user
         let streaming = answering != nil && index == messages.count - 1
@@ -557,9 +560,10 @@ struct QwenChatView: View {
                 }
                 if !mine, !streaming, !m.text.isEmpty { answerActions(m, index: index) }
             }
-                .padding(.horizontal, 12).padding(.vertical, 8)
-                .background(mine ? Atelier.Tint.ai.opacity(0.25) : Atelier.surfaceHigh,
-                            in: RoundedRectangle(cornerRadius: Atelier.corner(14), style: .continuous))
+                .padding(.horizontal, newLayout ? 14 : 12).padding(.vertical, newLayout ? 10 : 8)
+                .modifier(NewLayoutOnAccentText(on: newLayout && mine))
+                .background(mine ? (newLayout ? NewLayoutInk.accent : Atelier.Tint.ai.opacity(0.25)) : Atelier.surfaceHigh,
+                            in: RoundedRectangle(cornerRadius: Atelier.corner(newLayout ? 16 : 14), style: .continuous))
                 .contextMenu {
                     Button { copy(m.text) } label: { Label("Copier", systemImage: "doc.on.doc") }
                     if mine {
@@ -572,7 +576,7 @@ struct QwenChatView: View {
 
     /// Actions sous une réponse (#chat de la fenêtre OCR) : copier, relancer, note, lire, partager.
     private func answerActions(_ m: QwenChat.Message, index: Int) -> some View {
-        HStack(spacing: 14) {
+        HStack(spacing: newLayout ? 24 : 14) {
             Button { copy(m.text) } label: { Image(systemName: "doc.on.doc") }
                 .accessibilityLabel("Copier la réponse")
             if index == messages.count - 1, index > 0 {
@@ -590,9 +594,11 @@ struct QwenChatView: View {
             Button { ShareSheetPresenter.present([m.text]) } label: { Image(systemName: "square.and.arrow.up") }
                 .accessibilityLabel("Partager la réponse")
         }
-        .font(.caption)
+        .font(newLayout ? Atelier.font(15, weight: .semibold) : .caption)
         .buttonStyle(.plain)
         .foregroundStyle(Atelier.textSecondary)
+        // Nouvelle présentation : icônes plus grandes et plus espacées ; hors refonte, échelle héritée comme avant.
+        .modifier(NewLayoutLargeIcons(on: newLayout))
     }
 
     /// Questions types quand la conversation est vide (#37) : un toucher les envoie.
@@ -633,8 +639,8 @@ struct QwenChatView: View {
 
     private func chip(_ title: String, _ icon: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Label(title, systemImage: icon).font(.caption2.weight(.semibold))
-                .padding(.horizontal, 9).padding(.vertical, 5)
+            Label(title, systemImage: icon).font(newLayout ? Atelier.font(13, weight: .semibold) : .caption2.weight(.semibold))
+                .padding(.horizontal, newLayout ? 12 : 9).padding(.vertical, newLayout ? 8 : 5)
                 .background(Atelier.surfaceHigh, in: Capsule())
         }
         .buttonStyle(.plain)

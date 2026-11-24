@@ -18,6 +18,21 @@ enum PersonalPadLibrary {
     }
 }
 
+/// Nouvelle présentation (refonte graphique, PLAN-REFONTE-001) : lecteur et accueil iPad redessinés ; leurs couleurs
+/// restent celles du thème actif (avenant AV-REFONTE-01). Désactivée par défaut ; désactivée, tout redevient comme
+/// avant. Clé à part : elle n'écrit jamais `theme.id`, `style.id` ni les palettes d'espace, et une ancienne version
+/// qui ne la connaît pas l'ignore.
+enum NewLayout {
+    static let storageKey = "appearance.readerRefresh"
+    static let defaultEnabled = false
+
+    /// Réservée à l'iPad, comme l'accueil personnel (le Mac garde sa présentation).
+    static var isAvailable: Bool { PersonalPadLibrary.isAvailable }
+    static var isEnabled: Bool {
+        isAvailable && (UserDefaults.standard.object(forKey: storageKey) as? Bool ?? defaultEnabled)
+    }
+}
+
 /// Un thème = une palette : fonds, une couleur par fonction, un fond dessiné (`ThemeBackdrop`), et sa variante
 /// (lot 3 des styles, planche choisie par NOxygen59 le 29/10/2026) : **nuit** (fonds sombres, tous les thèmes
 /// d'origine), **clair** ou **sépia** (fonds clairs : interface iOS en mode clair, encres foncées).
@@ -58,6 +73,7 @@ struct Theme: Identifiable, Equatable {
         switch id {
         case "atelier": return String(localized: "Graphite profond · menthe patinée")
         case "clair": return String(localized: "Papier blanc · encre graphite")
+        case "papier": return String(localized: "Papier washi · encre bleue")
         case "sepia": return String(localized: "Papier ancien · encre brune")
         case "brutal": return String(localized: "Crème et encre · couleurs franches")
         case "swiss": return String(localized: "Blanc, noir · rouge suisse")
@@ -87,6 +103,7 @@ struct Theme: Identifiable, Equatable {
         switch id {
         case "atelier": return "pencil.and.ruler"
         case "clair": return "sun.max"
+        case "papier": return "book"
         case "sepia": return "book.closed"
         case "brutal": return "square.stack.3d.up.fill"
         case "swiss": return "square.grid.3x3"
@@ -194,6 +211,17 @@ struct Theme: Identifiable, Equatable {
         isLight: true, onAccent: Color(hex: 0xFFFFFF), contrast: Color(hex: 0x1B2226), shadowTint: Color(hex: 0x1B2226),
         secondaryLevel: 0.82, tertiaryLevel: 0.72)
 
+    /// Couleurs de la maquette Washi de la refonte (PLAN-REFONTE-001, AV-REFONTE-01) : papier, encre bleue. Identifiant
+    /// distinct de `washi` (thème sombre d'origine, inchangé). Vert relevé à `1C7356` pour tenir 4,5:1 sur le fond.
+    static let papier = Theme(
+        id: "papier", name: String(localized: "Papier (encre bleue)"),
+        canvas: Color(hex: 0xEEEDE8), surface: Color(hex: 0xFFFFFF), surfaceHigh: Color(hex: 0xF3F2EE),
+        ink: Color(hex: 0x1E272C),
+        read: Color(hex: 0x1C7356), annotate: Color(hex: 0x8A5A00), japanese: Color(hex: 0xB5402F),
+        ai: Color(hex: 0x6347B8), cloud: Color(hex: 0x2C4A86), backdrop: .paper,
+        isLight: true, onAccent: Color(hex: 0xFFFFFF), contrast: Color(hex: 0x1E272C), shadowTint: Color(hex: 0x1E272C),
+        secondaryLevel: 0.82, tertiaryLevel: 0.72)
+
     /// Variante sépia de la planche du 29/10/2026.
     static let sepia = Theme(
         id: "sepia", name: String(localized: "Sépia (papier ancien)"),
@@ -239,7 +267,7 @@ struct Theme: Identifiable, Equatable {
         isLight: true, onAccent: Color(hex: 0xFBF7EF), contrast: Color(hex: 0x2E2A24), shadowTint: Color(hex: 0x2E2A24),
         secondaryLevel: 0.82, tertiaryLevel: 0.75)
 
-    static let all: [Theme] = [.atelier, .clair, .sepia, .brutal, .swiss, .synthwave, .terre, .washi, .architecte, .interieur, .soir, .encre, .sakura,
+    static let all: [Theme] = [.atelier, .clair, .papier, .sepia, .brutal, .swiss, .synthwave, .terre, .washi, .architecte, .interieur, .soir, .encre, .sakura,
                                .foret, .braise, .sable, .lagon]
 
     /// Thème en cours (lu par `Atelier`). Changé par `ThemeManager`.
@@ -373,10 +401,22 @@ struct ThemePickerView: View {
     @EnvironmentObject private var themes: ThemeManager
     @AppStorage("appearance.themePatterns") private var patternsEnabled = true
     @AppStorage(PersonalPadLibrary.compactDocumentsKey) private var compactDocuments = true
+    @AppStorage(NewLayout.storageKey) private var newLayout = NewLayout.defaultEnabled
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 22) {
+                if NewLayout.isAvailable {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Toggle("Nouvelle présentation", isOn: $newLayout)
+                            .font(Atelier.font(17, weight: .semibold))
+                            .tint(Atelier.Tint.cloud)
+                        Text("Lecteur et accueil redessinés, aux couleurs de ton thème. Désactivée, tout redevient comme avant.")
+                            .font(Atelier.font(13)).foregroundStyle(Atelier.textSecondary)
+                    }
+                    .padding(16)
+                    .atelierPanel()
+                }
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Choisis ton style.").font(.title2.weight(.semibold))
                         .foregroundStyle(Atelier.textPrimary)

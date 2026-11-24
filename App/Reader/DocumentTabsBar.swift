@@ -8,6 +8,14 @@ import SwiftUI
 /// mémoire, sa page est gardée) ; un seul document est chargé à la fois.
 struct ReaderTabsHost: View {
     @EnvironmentObject private var model: AppModel
+
+    /// Document à sa dernière page lue dans cette séance (changement d'onglet), bornée à ses pages actuelles.
+    static func atLatestPage(_ document: LibraryDocument, _ page: Int?) -> LibraryDocument {
+        guard let page else { return document }
+        var copy = document
+        copy.lastPageIndex = min(max(page, 0), max(document.pageCount - 1, 0))
+        return copy
+    }
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// Bulle mémoire façon notification (recette 1.3.2 (62), L8) : glisse du haut, repart après 3 s.
     @State private var notice = false
@@ -17,7 +25,7 @@ struct ReaderTabsHost: View {
         ZStack(alignment: .top) {
             if let id = model.openDocumentId, let document = model.documents.first(where: { $0.id == id }) {
                 // Le calque gère le fondu d'entrée ; le changement d'onglet ne doit pas le rejouer.
-                ReaderScreen(document: document, model: model).id(document.id)
+                ReaderScreen(document: Self.atLatestPage(document, model.latestReadingPage[id]), model: model).id(document.id)
                     .transition(.identity)
             }
             if notice {
@@ -144,6 +152,146 @@ struct DocumentTabsBar: View {
                 }
                 .accessibilityLabel("Ouvrir un autre document dans un onglet")
             }
+        }
+    }
+
+    private func select(_ document: LibraryDocument) {
+        guard document.id != current else { return }
+        Diagnostics.log("onglets : passage à « \(document.title) »", "lecteur")
+        ReaderTabHandoff.shared.prepare()
+        model.openDocumentId = document.id
+    }
+
+    private func close(_ document: LibraryDocument) {
+        Diagnostics.log("onglets : fermeture de « \(document.title) »", "lecteur")
+        ReaderTabHandoff.shared.prepare()
+        model.closeTab(document.id)
+        // Dernier onglet fermé : retour à la bibliothèque, rien à reprendre.
+        if model.openDocumentId == nil { _ = ReaderTabHandoff.shared.take() }
+    }
+}
+
+/// Onglets en tuiles de la nouvelle présentation (PLAN-REFONTE-001, maquette E0) : une tuile par livre ouvert avec son
+/// premier caractère (souvent un kanji), le livre affiché déplié avec titre, page et ✕, puis « + ». Pas de zone
+/// défilante (les boutons SwiftUI dans un défilement ne recevaient pas le toucher, recette 1.3.2 (63)) : au-delà de
+/// `visible` onglets, les autres passent dans un menu « … ». Mêmes actions que `DocumentTabsBar`.
+struct DocumentTileBar: View {
+    let current: String
+    /// Page affichée par le lecteur (la position enregistrée n'est publiée qu'à la fermeture du livre).
+    let currentPageLabel: String
+    var visible = 6
+    @EnvironmentObject private var model: AppModel
+    private var openDocuments: [LibraryDocument] {
+        model.tabs.ids.compactMap { id in model.documents.first { $0.id == id } }
+    }
+
+    /// Pastels propres aux livres (jamais les couleurs à sens du thème), choisis d'après l'identifiant.
+    private static let pastels: [UInt32] = [0xF6D9D2, 0xD3EBDF, 0xE2DCF7, 0xF8E7C2, 0xD5E4F5, 0xF2D6E6]
+    static func tileColor(_ id: String) -> Color {
+        Color(hex: pastels[Int(id.unicodeScalars.reduce(0) { ($0 &* 31 &+ Int($1.value)) & 0xFFFF }) % pastels.count])
+    }
+    /// Premier caractère du titre ; kanji ou kana de préférence, sinon la première lettre.
+    static func glyph(_ title: String) -> String {
+        let japanese = title.first { ch in ch.unicodeScalars.contains { (0x3040...0x9FFF).contains($0.value) } }
+        return String(japanese ?? title.first(where: { $0.isLetter || $0.isNumber }) ?? "?")
+    }
+
+    var body: some View {
+        let (shown, hidden) = split(openDocuments)
+        HStack(spacing: 8) {
+            ForEach(shown) { document in tile(document) }
+            if !hidden.isEmpty {
+                Menu {
+                    ForEach(hidden) { d in
+                        Menu(d.title) {
+                            Button { select(d) } label: { Label("Afficher", systemImage: "book") }
+                            Button(role: .destructive) { close(d) } label: { Label("Fermer l'onglet", systemImage: "xmark") }
+                        }
+                    }
+                } label: {
+                    Text(verbatim: "+\(hidden.count)").font(Atelier.font(14, weight: .bold))
+                        .frame(width: 44, height: 44).foregroundStyle(Atelier.textSecondary)
+                        .background(Atelier.surfaceHigh, in: RoundedRectangle(cornerRadius: Atelier.corner(14), style: .continuous))
+                }
+                .accessibilityLabel("Autres onglets ouverts")
+            }
+            Menu {
+                ForEach(model.documents.filter { !model.tabs.ids.contains($0.id) }) { document in
+                    Button(document.title) { ReaderTabHandoff.shared.prepare(); model.openDocumentId = document.id }
+                }
+            } label: {
+                Image(systemName: "plus").font(Atelier.font(15, weight: .bold))
+                    .frame(width: 44, height: 44).foregroundStyle(Atelier.textSecondary)
+                    .overlay(RoundedRectangle(cornerRadius: Atelier.corner(14), style: .continuous)
+                        .strokeBorder(Atelier.hairline, style: StrokeStyle(lineWidth: Atelier.border(1.5), dash: [4, 3])))
+            }
+            .accessibilityLabel("Ouvrir un autre document dans un onglet")
+        }
+    }
+
+    /// Onglets montrés et rangés dans « +N » ; l'onglet affiché reste toujours visible, même ouvert après les autres.
+    private func split(_ docs: [LibraryDocument]) -> (shown: [LibraryDocument], hidden: [LibraryDocument]) {
+        var shown = Array(docs.prefix(visible))
+        if let active = docs.first(where: { $0.id == current }), !shown.contains(where: { $0.id == current }), !shown.isEmpty {
+            shown[shown.count - 1] = active
+        }
+        let hidden = docs.filter { d in !shown.contains { $0.id == d.id } }
+        return (shown, hidden)
+    }
+
+    /// À partir de ce nombre de livres ouverts, le livre affiché reste lui aussi en pastille (recette 1.6.4 : son titre et
+    /// sa page se tassaient sur plusieurs lignes quand beaucoup de livres étaient ouverts).
+    static let pillsOnlyFrom = 4
+
+    @ViewBuilder
+    private func tile(_ document: LibraryDocument) -> some View {
+        let on = document.id == current
+        let expanded = on && openDocuments.count < Self.pillsOnlyFrom
+        let square = Text(verbatim: Self.glyph(document.title)).font(.custom("HiraginoSans-W6", size: 20))
+            .foregroundStyle(Color(hex: 0x1E272C))
+            .frame(width: 44, height: 44)
+            // Arrondi suivant le style, comme la barre qui l'entoure : rond avec les pastilles arrondies (recette 1.6.4,
+            // point 8 : la pastille restait trop carrée), plus anguleux avec un style à petits coins.
+            .background(Self.tileColor(document.id), in: RoundedRectangle(cornerRadius: Atelier.corner(22, height: 44), style: .continuous))
+        if expanded {
+            HStack(spacing: 10) {
+                square
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(document.title).font(Atelier.font(15, weight: .semibold)).lineLimit(1)
+                        .foregroundStyle(Atelier.textPrimary)
+                    Text(verbatim: "p. \(currentPageLabel) / \(document.pageLabel(document.pageCount - 1))")
+                        .font(Atelier.font(12).monospacedDigit()).foregroundStyle(Atelier.textSecondary)
+                }
+                .frame(maxWidth: 260, alignment: .leading)
+                Button { close(document) } label: {
+                    Image(systemName: "xmark").font(Atelier.font(12, weight: .bold))
+                        .foregroundStyle(Atelier.textSecondary)
+                        .frame(width: 44, height: 44).contentShape(Rectangle())
+                }
+                .buttonStyle(PressScale())
+                .accessibilityLabel("Fermer l'onglet")
+            }
+            .padding(.leading, 4)
+            .newLayoutBar(radius: Atelier.corner(18))
+            .accessibilityElement(children: .contain)
+        } else {
+            // Fermer un autre onglet sans l'afficher : appui long, ou action VoiceOver (revue R2 Codex).
+            Button { select(document) } label: {
+                // Livre affiché en pastille : anneau de la teinte d'accent pour le distinguer.
+                square.overlay {
+                    if on {
+                        RoundedRectangle(cornerRadius: Atelier.corner(22, height: 44), style: .continuous)
+                            .strokeBorder(NewLayoutInk.accent, lineWidth: Atelier.border(2.5))
+                    }
+                }
+            }
+                .buttonStyle(PressScale())
+                .contextMenu {
+                    Button(role: .destructive) { close(document) } label: { Label("Fermer l'onglet", systemImage: "xmark") }
+                }
+                .accessibilityLabel(document.title)
+                .accessibilityAddTraits(on ? .isSelected : [])
+                .accessibilityAction(named: Text("Fermer l'onglet")) { close(document) }
         }
     }
 

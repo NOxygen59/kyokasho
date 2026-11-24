@@ -110,6 +110,14 @@ public struct DocumentImporter: Sendable {
         return (pdf.numberOfPages, title)
     }
 
+    /// `base`, ou `base (2)`, `base (3)`… : le premier titre absent de `taken`.
+    public static func uniqueTitle(_ base: String, taken: Set<String>) -> String {
+        guard taken.contains(base) else { return base }
+        var n = 2
+        while taken.contains("\(base) (\(n))") { n += 1 }
+        return "\(base) (\(n))"
+    }
+
     /// Importe le fichier `source` (déjà téléchargé et lisible).
     /// - Parameter preferFileNameTitle: utilise le nom du fichier plutôt que le titre des métadonnées
     ///   (souvent vide ou générique, ex. « Microsoft PowerPoint - … »).
@@ -134,7 +142,10 @@ public struct DocumentImporter: Sendable {
         let (pageCount, metadataTitle) = try Self.inspect(source)
         let fileName = displayName ?? source.lastPathComponent
         let baseName = (fileName as NSString).deletingPathExtension
-        let title = preferFileNameTitle ? baseName : (metadataTitle ?? baseName)
+        // Retour d'usage du 24/11/2026 : deux PDF différents de même nom (« Images — Photo 1 ») se confondaient dans la
+        // bibliothèque. Un titre déjà pris reçoit « (2) », « (3) »… ; rien n'est jamais remplacé (identifiant = contenu).
+        let taken = Set((try? database.allDocuments())?.map(\.title) ?? [])
+        let title = Self.uniqueTitle(preferFileNameTitle ? baseName : (metadataTitle ?? baseName), taken: taken)
 
         try FileManager.default.createDirectory(at: storage.root, withIntermediateDirectories: true)
         let destination = storage.url(for: hash)

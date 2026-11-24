@@ -275,7 +275,9 @@ final class StyleTokensGuardTests: XCTestCase {
         // Panneau de gauche : outils d'étude masqués en Manga ; sections Manga puis CBZ.
         let library = try read("Library/LibraryView.swift")
         // Recette 1.5.8 : trois gardes (étude, images vers PDF, banc d'essai) depuis la nouvelle colonne de gauche.
-        XCTAssertEqual(library.components(separatedBy: "if space != .manga {").count, 4)
+        // PLAN-REFONTE-001 E3 : deux de plus dans la nouvelle présentation (banc d'essai de la colonne, Images vers PDF
+        // du menu Importer).
+        XCTAssertEqual(library.components(separatedBy: "if space != .manga {").count, 6)
         XCTAssertTrue(library.contains("return LibrarySections.groupManga(loose)")) // PLAN-T5-001 E2 : hors dossier
         // Tableau de bord : coins arrondis même pour un style à angles droits.
         XCTAssertTrue(library.contains("static var dashboardRadius: CGFloat { max(Atelier.corner(26), 18) }"))

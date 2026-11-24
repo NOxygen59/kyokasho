@@ -25,6 +25,9 @@ struct StudyPanel: View {
     var close: () -> Void
     /// Colonne de droite : largeur fixe ; fenêtre ou plein écran (`DetachedPanel`) : toute la place donnée.
     var fixedWidth = true
+    /// Nouvelle présentation (PLAN-REFONTE-001, E2) : carte claire, onglets titrés, en-tête allégé.
+    @AppStorage(NewLayout.storageKey) private var newLayoutPreference = NewLayout.defaultEnabled
+    private var newLayout: Bool { NewLayout.isAvailable && newLayoutPreference }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -56,15 +59,20 @@ struct StudyPanel: View {
                     Image(systemName: "xmark").font(Atelier.font(14, weight: .semibold))
                         .foregroundStyle(Atelier.textSecondary)
                         .frame(minWidth: 22, minHeight: 22)
+                        .modifier(NewLayoutCloseTarget(on: newLayout))
                 }
                 .padding(.leading, 6)
                 .accessibilityLabel("Fermer le panneau d'étude")
             }
-            PillTabs(items: [(Tab.text, "character.ja", String(localized: "Texte")), (.vocab, "character.book.closed.ja", String(localized: "Dico")),
-                             (.notes, "text.bubble", String(localized: "Notes")), (.marks, "bookmark", String(localized: "Repères")),
-                             (.chat, "bubble.left.and.bubble.right", String(localized: "Chat"))]
-                                .filter { $0.0 != .chat || chatAllowed },
-                     selection: $tab, tint: tint)
+            let tabs = [(Tab.text, "character.ja", String(localized: "Texte")), (.vocab, "character.book.closed.ja", String(localized: "Dico")),
+                        (.notes, "text.bubble", String(localized: "Notes")), (.marks, "bookmark", String(localized: "Repères")),
+                        (.chat, "bubble.left.and.bubble.right", String(localized: "Chat"))]
+                .filter { $0.0 != .chat || chatAllowed }
+            if newLayout {
+                NewLayoutTabs(items: tabs.map { ($0.0, $0.2) }, selection: $tab)
+            } else {
+                PillTabs(items: tabs, selection: $tab, tint: tint)
+            }
             Group {
                 switch tab {
                 case .text: StudyTextTab(reader: reader, openLineEditor: openLineEditor, openDocumentSettings: openDocumentSettings)
@@ -97,7 +105,7 @@ struct StudyPanel: View {
         .padding(16)
         .frame(width: fixedWidth ? Atelier.panelWidth : nil)
         .frame(maxWidth: fixedWidth ? nil : .infinity, maxHeight: .infinity)
-        .atelierPanel()
+        .modifier(NewLayoutPanel(on: newLayout))
         // Onglet Chat repris d'un document qui l'avait : ramené sur Texte dès la reprise, titre et pilules compris
         // (revue après recette 1.4.8, P3 1).
         .onAppear(perform: normalizeTab)
@@ -135,7 +143,9 @@ struct StudyPanel: View {
 final class StudyMenuActions {
     weak var reader: ReaderController?
     var openDocumentSettings: (() -> Void)?
-    func detach() { reader = nil; openDocumentSettings = nil }
+    /// « Corriger le texte » dans le menu ⋯ de la nouvelle présentation (recette 1.6.4, point 8).
+    var openLineEditor: (() -> Void)?
+    func detach() { reader = nil; openDocumentSettings = nil; openLineEditor = nil }
 }
 
 struct StudyTextTab: View {
@@ -201,16 +211,22 @@ struct StudyTextTab: View {
     /// Réglages d'`AILayoutView` (mêmes clés) : la traduction affichée est celle que copie le bouton.
     @AppStorage("study.aiLayoutFrench") private var aiLayoutTranslation = false
     @AppStorage("study.translationLanguage") private var translationLanguage = TranslationLanguage.french.rawValue
+    /// Nouvelle présentation (E2, maquette E0) : une ligne Mis en forme / Brut / ✦, ⌕ et ⋯ au lieu de la rangée de
+    /// pilules ; champ de recherche dans la page affiché à la demande ; corrections IA en bandeau.
+    @AppStorage(NewLayout.storageKey) private var newLayoutPreference = NewLayout.defaultEnabled
+    private var newLayout: Bool { NewLayout.isAvailable && newLayoutPreference }
+    @State private var searchShown = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
+            if newLayout { newTextHeader }
             // Barre de langue de la mise en page IA, hors du défilement : visible même en bas de la page (#17).
             if aiLayout, query.isEmpty, reader.ocrPage != nil { AILayoutLanguageBar(reader: reader) }
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-                    if reader.ocrPage != nil { PageSearchField(query: $query) }
-                    engineRow
-                    verificationRow
+                    if reader.ocrPage != nil && (!newLayout || searchShown || !query.isEmpty) { PageSearchField(query: $query) }
+                    if newLayout { engineMismatchNote } else { engineRow }
+                    if newLayout { newVerificationBanner } else { verificationRow }
                     switch (reader.ocrPage, reader.ocrState) {
                     case (_, .running):
                         HStack(spacing: 10) { ProgressView().tint(Atelier.Tint.japanese); Text("Lecture de la page…") }
@@ -265,7 +281,9 @@ struct StudyTextTab: View {
                     documentOCRRow
                 }
                 // Place pour le bouton Copier posé en bas à droite : la fin du texte reste lisible.
-                .padding(.bottom, reader.ocrPage == nil ? 0 : 44)
+                // 72 : la pilule Copier de la nouvelle présentation est plus haute (retour d'usage du 24/11 : fin du texte
+                // de la mise en page IA cachée).
+                .padding(.bottom, reader.ocrPage == nil ? 0 : 72)
             }
         }
         .overlay(alignment: .bottomTrailing) { copyButton }
@@ -304,7 +322,7 @@ struct StudyTextTab: View {
         .onChange(of: reader.focusSource) { _ in closeBubble() }
         .sheet(item: $presentedLookup, onDismiss: { lookup?.clear() }) { lookup in
             // Fenêtre compacte du dictionnaire (mot touché dans le texte à furigana).
-            LookupPopup(session: lookup, added: model.review.keys, onAddCard: { term in
+            LookupPopup(session: lookup, added: model.review.keys, showsWordCard: true, onAddCard: { term in
                 model.review.add(term, sentence: reader.ocrPage?.lines.first { $0.text.contains(term.matchedText) }?.text,
                                  source: "\(reader.document.title) · p. \(reader.document.pageLabel(reader.focusSource))",
                                  image: nil, documentId: reader.document.id, page: reader.focusSource,
@@ -367,6 +385,36 @@ struct StudyTextTab: View {
         .font(.caption.weight(.semibold))
         .foregroundStyle(Atelier.Tint.ai)
         .disabled(reader.ocrPage == nil || reader.ocrState == .running)
+    }
+
+    /// Nouvelle présentation (maquette E0, recette 1.6.4 point 8) : une seule ligne « ✓ N corrections proposées par
+    /// l'IA », Voir et ↻ Rescanner ; « Corriger le texte » passe dans le menu ⋯. Mêmes actions que `verificationRow`.
+    @ViewBuilder
+    private var newVerificationBanner: some View {
+        if OvisOCR2Reader().isAvailable {
+            let current = reader.verifications.filter { reader.shownSources.contains($0.source) }
+            let count = current.reduce(0) { $0 + $1.suggestions.count }
+            HStack(spacing: 8) {
+                Label(count > 0 ? String(localized: "\(count) corrections proposées par l'IA") : String(localized: "Corrections IA"),
+                      systemImage: "checkmark.seal")
+                    .font(Atelier.font(13, weight: .semibold)).foregroundStyle(Atelier.textPrimary)
+                    .lineLimit(1).frame(maxWidth: .infinity, alignment: .leading)
+                NewLayoutPillButton(icon: nil, title: String(localized: "Voir"), active: true, selectable: false) {
+                    if !aiTasks.isRunning(reader.verifyKey) &&
+                        (reader.verifyState != .done || current.count != reader.shownSources.count) {
+                        reader.verifyShownPages()
+                    }
+                    showVerify = true
+                }
+                NewLayoutIconButton(icon: "arrow.clockwise", label: String(localized: "Rescanner"), size: 44) {
+                    reader.verifyShownPages(force: true)
+                    showVerify = true
+                }
+                .disabled(aiTasks.isRunning(reader.verifyKey))
+            }
+            .padding(.vertical, 6).padding(.leading, 12).padding(.trailing, 6)
+            .background(NewLayoutInk.accent.opacity(0.14), in: RoundedRectangle(cornerRadius: Atelier.corner(14), style: .continuous))
+        }
     }
 
     /// Zones de mise en page de la page de travail (modèle choisi, gardées en mémoire par page).
@@ -436,7 +484,7 @@ struct StudyTextTab: View {
                 // La bulle « sort » du mot : ancre de l'animation sur le mot, en haut ou en bas selon le placement.
                 let anchor = UnitPoint(x: frame.width > 0 ? min(max((word.midX - frame.minX) / frame.width, 0), 1) : 0.5,
                                        y: frame.minY >= word.maxY ? 0 : 1)
-                LookupPopup(session: bubble.session, added: model.review.keys, onAddCard: { term in
+                LookupPopup(session: bubble.session, added: model.review.keys, showsWordCard: true, onAddCard: { term in
                     model.review.add(term, sentence: reader.ocrPage?.lines.first { $0.text.contains(term.matchedText) }?.text,
                                      source: "\(reader.document.title) · p. \(reader.document.pageLabel(reader.focusSource))",
                                      image: nil, documentId: reader.document.id, page: reader.focusSource,
@@ -508,6 +556,53 @@ struct StudyTextTab: View {
     /// colonne de droite, tout tenait sur une ligne et s'écrasait. `ViewThatFits` garde une ligne quand la place suffit
     /// (fenêtre large, plein écran) et passe sur deux lignes sinon ; il mesure la place réellement donnée, donc suit le
     /// mode du panneau et la rotation sans connaître ce mode.
+    /// En-tête de l'onglet Texte, nouvelle présentation : affichage, recherche dans la page, puis « ⋯ » qui regroupe
+    /// le moteur de lecture (même menu qu'avant), le moteur de mise en page et les furigana du texte. Les actions
+    /// passent par les mêmes relais et liaisons que l'ancienne rangée (aucune capture du lecteur, voir
+    /// `StudyMenuActions`).
+    private var newTextHeader: some View {
+        // Contenu du menu construit ICI, hors du bloc `Menu { }` : ce bloc est une fermeture qu'iOS 16 garde en vie
+        // après la fermeture du livre ; y appeler `engineMenu` ou `$furigana` capturait la vue, donc le lecteur
+        // (recette 1.6.4, point 13 : lecteur jamais libéré tant que le panneau était ouvert, mesuré sur l'iPad).
+        let engine = engineMenu, layout = layoutMenu, furiganaBinding = $furigana
+        let actions = menuActions
+        actions.openLineEditor = openLineEditor
+        let canEdit = reader.ocrPage != nil && reader.ocrState != .running
+        return VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                displayPicker.frame(maxWidth: .infinity)
+                NewLayoutIconButton(icon: "magnifyingglass", label: String(localized: "Rechercher dans la page"),
+                                    active: searchShown || !query.isEmpty, size: 44) {
+                    searchShown.toggle()
+                    if !searchShown { query = "" }
+                }
+                Menu {
+                    engine
+                    layout
+                    Toggle(isOn: furiganaBinding) { Label("Furigana sur le texte extrait", systemImage: "textformat.size") }
+                    Divider()
+                    Button { [actions] in actions.openLineEditor?() } label: { Label("Corriger le texte", systemImage: "pencil") }
+                        .disabled(!canEdit)
+                } label: {
+                    Image(systemName: "ellipsis").font(Atelier.font(17, weight: .semibold))
+                        .frame(width: 44, height: 44).foregroundStyle(Atelier.textPrimary)
+                        .contentShape(Rectangle())
+                }
+                .accessibilityLabel("Outils du texte")
+            }
+            Text(verbatim: newSourceLine)
+                .font(Atelier.font(12)).foregroundStyle(Atelier.textSecondary).lineLimit(1)
+        }
+    }
+
+    /// « Lu par NDLOCR · page 52 » : discret, sous la ligne d'affichage. En mise en page IA, le texte vient d'OvisOCR2.
+    private var newSourceLine: String {
+        let page = reader.document.pageLabel(reader.focusSource)
+        if aiLayout { return String(localized: "Mise en page IA (OvisOCR2) · page \(page)") }
+        guard let engine = indicator.shown else { return String(localized: "Page \(page)") }
+        return String(localized: "Lu par \(OCREngineID.displayName(engine)) · page \(page)")
+    }
+
     private var engineRow: some View {
         VStack(alignment: .leading, spacing: 6) {
             ViewThatFits(in: .horizontal) {
@@ -671,8 +766,11 @@ struct StudyTextTab: View {
     @ViewBuilder
     private var layoutMenu: some View {
         if formatted && !aiLayout {
+            // Liaison prise hors de la fermeture du Menu (gardée en vie par iOS 16) : pas de capture de la vue, donc
+            // du lecteur (relecture GLM du correctif 1.6.4, point 13).
+            let engineBinding = $layoutEngineRaw
             Menu {
-                LayoutEnginePicker(selection: $layoutEngineRaw)
+                LayoutEnginePicker(selection: engineBinding)
             } label: {
                 HStack(spacing: 4) {
                     Image(systemName: "rectangle.3.group")
@@ -976,6 +1074,9 @@ struct StudyNotesTab: View {
     @State private var editingID: String?
     @State private var editText = ""
     @FocusState private var editFocused: Bool
+    /// Nouvelle présentation (maquette E0) : notes en cartes, « Ajouter » en grand bouton.
+    @AppStorage(NewLayout.storageKey) private var newLayoutPreference = NewLayout.defaultEnabled
+    private var newLayout: Bool { NewLayout.isAvailable && newLayoutPreference }
 
     private var page: Int { reader.focusSource }
     private let drafts = NoteDraftStore.shared
@@ -996,9 +1097,15 @@ struct StudyNotesTab: View {
             .padding(8)
             .background(Atelier.surfaceHigh, in: RoundedRectangle(cornerRadius: Atelier.smallRadius, style: .continuous))
             HStack {
-                Button("Ajouter") { add() }
-                    .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.annotate))
-                    .disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                Group {
+                    if newLayout {
+                        NewLayoutPillButton(icon: "plus", title: String(localized: "Ajouter"), active: true, selectable: false) { add() }
+                    } else {
+                        Button("Ajouter") { add() }
+                            .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.annotate))
+                    }
+                }
+                .disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 Button { reader.newNote() } label: { Label("Flottante", systemImage: "note.text.badge.plus") }
                     .font(Atelier.font(13, weight: .semibold))
                     .foregroundStyle(Atelier.Tint.annotate)
@@ -1138,6 +1245,7 @@ struct StudyNotesTab: View {
                 .accessibilityLabel("Modifier la note")
             }
         }
+        .modifier(NewLayoutCardRow(on: newLayout))
         .contentShape(Rectangle())
         .onTapGesture { if editingID != comment.id { reader.openNote = comment } }
         .contextMenu {
@@ -1173,6 +1281,9 @@ struct StudyNotesTab: View {
 struct StudyMarksTab: View {
     @ObservedObject var reader: ReaderController
     var openSearch: () -> Void
+    /// Nouvelle présentation (maquette E0) : repères en cartes, page en tête de ligne.
+    @AppStorage(NewLayout.storageKey) private var newLayoutPreference = NewLayout.defaultEnabled
+    private var newLayout: Bool { NewLayout.isAvailable && newLayoutPreference }
 
     var body: some View {
         ScrollView {
@@ -1181,7 +1292,9 @@ struct StudyMarksTab: View {
                     Label("Rechercher dans le document", systemImage: "magnifyingglass")
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(10)
-                        .background(Atelier.surfaceHigh, in: RoundedRectangle(cornerRadius: Atelier.smallRadius, style: .continuous))
+                        .frame(minHeight: newLayout ? 44 : nil)
+                        .background(Atelier.surfaceHigh, in: RoundedRectangle(cornerRadius: newLayout ? Atelier.corner(22) : Atelier.smallRadius,
+                                                                            style: .continuous))
                 }
                 .foregroundStyle(Atelier.textPrimary)
                 AtelierLabel(String(localized: "Signets · \(reader.bookmarks.count)"), tint: Atelier.Tint.read)
@@ -1208,8 +1321,10 @@ struct StudyMarksTab: View {
                 Image(systemName: icon).foregroundStyle(tint)
                 Text(title).lineLimit(2).foregroundStyle(Atelier.textPrimary)
                 Spacer()
-                Text(reader.document.pageLabel(page)).font(Atelier.mono).foregroundStyle(Atelier.textTertiary)
+                Text(reader.document.pageLabel(page)).font(newLayout ? Atelier.font(14, weight: .bold).monospacedDigit() : Atelier.mono)
+                    .foregroundStyle(newLayout ? NewLayoutInk.accent : Atelier.textTertiary)
             }
+            .modifier(NewLayoutCardRow(on: newLayout))
         }
         .buttonStyle(.plain)
     }

@@ -51,7 +51,8 @@ enum Atelier {
         AppStyle.current.usesMaterials ? AnyShapeStyle(base) : AnyShapeStyle(surface)
     }
     static let gap: CGFloat = 14
-    static let panelWidth: CGFloat = 372
+    /// Panneau d'étude ancré : 420 pt dans la nouvelle présentation (maquette E0), 372 sinon.
+    static var panelWidth: CGFloat { NewLayout.isEnabled ? 420 : 372 }
 
     // MARK: Typographie
 

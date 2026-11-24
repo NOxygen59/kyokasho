@@ -27,6 +27,9 @@ struct LibraryView: View {
     @AppStorage(ResourceMonitor.enabledKey) private var monitorEnabled = false
     @AppStorage(ResourceMonitor.shownKey) private var monitorShown = false
     @AppStorage("monitor.detailed") private var monitorDetailed = false
+    /// Nouvelle présentation (PLAN-REFONTE-001, E3). En portrait, la barre compacte reste au-dessus, comme avant.
+    @AppStorage(NewLayout.storageKey) private var newLayoutPreference = NewLayout.defaultEnabled
+    private var newLayout: Bool { NewLayout.isAvailable && newLayoutPreference }
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var showTrash = false
     @State private var analyzing: LibraryDocument?
@@ -212,7 +215,7 @@ struct LibraryView: View {
         GeometryReader { geo in
             let landscape = geo.size.width > geo.size.height
             ZStack {
-                libraryBackdrop
+                if newLayout { Atelier.canvas.ignoresSafeArea() } else { libraryBackdrop }
                 Group {
                     if landscape {
                         HStack(alignment: .top, spacing: Atelier.gap) {
@@ -465,19 +468,19 @@ struct LibraryView: View {
     private var sidebar: some View {
         VStack(alignment: .leading, spacing: 12) {
             ViewThatFits(in: .vertical) {
-                sidebarContent
-                ScrollView(showsIndicators: false) { sidebarContent }
+                currentSidebarContent
+                ScrollView(showsIndicators: false) { currentSidebarContent }
             }
             .frame(maxHeight: .infinity, alignment: .top)
             statsCard
+            if newLayout { newSidebarFooter }
         }
         .padding(18)
         .frame(maxHeight: .infinity, alignment: .top)
         .atelierPanel()
     }
 
-    private var sidebarContent: some View {
-        VStack(alignment: .leading, spacing: 22) {
+    private var brandHeader: some View {
             HStack(spacing: 10) {
                 Text(verbatim: space == .manga ? "漫" : "教").font(.custom("HiraMinProN-W6", size: 26))
                     .frame(width: 42, height: 42)
@@ -488,6 +491,9 @@ struct LibraryView: View {
                     Text(space == .manga ? "漫画 · lecture de manga" : "教科書 · atelier de lecture").font(Atelier.font(11)).foregroundStyle(Atelier.textTertiary)
                 }
             }
+    }
+
+    private var libraryRows: some View {
             VStack(alignment: .leading, spacing: 4) {
                 AtelierLabel(String(localized: "Bibliothèque")).padding(.bottom, 4)
                 sideRow(.all, icon: "square.grid.2x2", title: String(localized: "Tous les documents"), count: spaceDocuments.count)
@@ -496,6 +502,9 @@ struct LibraryView: View {
                 sideRow(.drive, icon: "externaldrive.badge.icloud", title: String(localized: "Depuis Drive"),
                         count: spaceDocuments.filter { $0.driveFileId != nil }.count)
             }
+    }
+
+    @ViewBuilder private var studyRows: some View {
             // Recette 1.5.8 : la colonne était trop remplie (13 lignes à la suite). Rien n'est retiré : ce qui sert chaque
             // jour reste en lignes avec pastille ; importer et convertir passent en tuiles ; banc d'essai, corbeille et
             // réglages en rangée du bas.
@@ -517,6 +526,94 @@ struct LibraryView: View {
                 actionRow(icon: "note.text", title: String(localized: "Notes"), tint: Atelier.Tint.annotate,
                           due: model.noteDueBadge) { showNotes = true }
             }
+    }
+
+    /// Nouvelle présentation (PLAN-REFONTE-001, E3) : la colonne sert à naviguer. Importer et convertir passent dans le
+    /// bouton « Importer » du haut ; les dossiers y sont listés ; Réviser est mis en avant au-dessus du temps de lecture.
+    @ViewBuilder private var currentSidebarContent: some View {
+        if newLayout { newSidebarContent } else { sidebarContent }
+    }
+
+    private var newSidebarContent: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            brandHeader
+            libraryRows
+            studyRows
+            if !folderLayout.tiles.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    AtelierLabel(String(localized: "Dossiers")).padding(.bottom, 4)
+                    ForEach(folderLayout.tiles) { tile in
+                        Button { showFolder(tile.folder.id) } label: {
+                            HStack(spacing: 12) {
+                                Image(systemName: "folder").font(Atelier.font(15, weight: .semibold))
+                                    .foregroundStyle(NewLayoutInk.accent).frame(width: 22)
+                                Text(verbatim: tile.folder.name).font(Atelier.font(15, weight: .medium)).lineLimit(1)
+                                    .foregroundStyle(Atelier.textPrimary)
+                                Spacer(minLength: 4)
+                                Text("\(tile.documents.count)").font(Atelier.font(13).monospacedDigit())
+                                    .foregroundStyle(Atelier.textSecondary)
+                            }
+                            .padding(.horizontal, 10).frame(height: 44)
+                            .background(openFolderId == tile.folder.id ? Atelier.surfaceHigh : Color.clear,
+                                        in: RoundedRectangle(cornerRadius: Atelier.corner(12), style: .continuous))
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(PressScale())
+                        .accessibilityLabel(Text("Dossier \(tile.folder.name), \(tile.documents.count) documents"))
+                        .accessibilityAddTraits(openFolderId == tile.folder.id ? .isSelected : [])
+                    }
+                }
+            }
+            LocalAIEnergyCard()
+        }
+    }
+
+    /// Nouvelle présentation, bas de la colonne (maquette E3, recette 1.6.4 point 3) : sous la carte « Aujourd'hui »,
+    /// Réviser puis une rangée basse Banc / Corbeille / Réglages (icône et nom sur une ligne).
+    private var newSidebarFooter: some View {
+        VStack(spacing: 8) {
+            if space != .manga && review.counts.total > 0 {
+                NewLayoutPillButton(icon: "rectangle.stack.badge.play",
+                                    title: String(localized: "Réviser maintenant · \(review.counts.total)"), active: true,
+                                    selectable: false) {
+                    showReview = true
+                }
+            }
+            HStack(spacing: 6) {
+                if space != .manga {
+                    footerTile(icon: "speedometer", title: String(localized: "Banc"),
+                               accessibility: String(localized: "Banc d'essai OCR")) { showBench = true }
+                }
+                footerTile(icon: "trash", title: String(localized: "Corbeille"), count: model.trashedDocuments.count) { showTrash = true }
+                footerTile(icon: "gearshape", title: String(localized: "Réglages")) { showSettings = true }
+            }
+        }
+    }
+
+    private func footerTile(icon: String, title: String, accessibility: String? = nil, count: Int = 0,
+                            action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 5) {
+                Image(systemName: icon).font(Atelier.font(13, weight: .semibold))
+                Text(ui: title).font(Atelier.font(12.5, weight: .semibold)).lineLimit(1).minimumScaleFactor(0.8)
+                if count > 0 {
+                    Text("\(count)").font(Atelier.font(11, weight: .bold).monospacedDigit()).foregroundStyle(Atelier.textSecondary)
+                }
+            }
+            .foregroundStyle(Atelier.textPrimary)
+            .frame(maxWidth: .infinity, minHeight: 46)
+            .background(Atelier.surfaceHigh, in: RoundedRectangle(cornerRadius: Atelier.corner(14), style: .continuous))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(PressScale())
+        .accessibilityLabel(Text(verbatim: count > 0 ? "\(accessibility ?? title), \(count)" : accessibility ?? title))
+    }
+
+    private var sidebarContent: some View {
+        VStack(alignment: .leading, spacing: 22) {
+            brandHeader
+            libraryRows
+            studyRows
             VStack(alignment: .leading, spacing: 8) {
                 AtelierLabel(String(localized: "Importer et convertir")).padding(.bottom, 2)
                 LazyVGrid(columns: [GridItem(.flexible(), spacing: 8), GridItem(.flexible(), spacing: 8)], spacing: 8) {
@@ -646,7 +743,7 @@ struct LibraryView: View {
 
     /// Temps de lecture active, à la place de « Progression XX/XX pages » (RET-037, #52).
     private var statsCard: some View {
-        Button { statsTapped() } label: { statsCardContent }
+        Button { statsTapped() } label: { statsCardBody }
             .buttonStyle(PressScale())
             // Revue D-07 (n°5) : une décision en attente ne survit pas à l'écran.
             .onDisappear { cancelStatsBurst() }
@@ -680,6 +777,51 @@ struct LibraryView: View {
 
     /// Icône du tableau de bord, ou cadenas pendant le retour de la bascule.
     private var dashboardIcon: String { ownerFlash.map { $0 ? "lock.open.fill" : "lock.fill" } ?? "chart.bar.fill" }
+
+    /// Nouvelle présentation (maquette E3) : carte « Aujourd'hui » — minutes lues aujourd'hui, série en cours (mêmes
+    /// calculs que le tableau de bord, `ReadingStats` sur 7 jours, espace affiché), puis le total d'avant.
+    @ViewBuilder private var statsCardBody: some View {
+        if newLayout { newStatsCardContent } else { statsCardContent }
+    }
+
+    private var newStatsCardContent: some View {
+        let now = Date()
+        let stats = ReadingStats(sessions: readingTime.log.sessions, period: .week, filter: space == .manga ? .manga : .study)
+        // Part de chaque séance tombée aujourd'hui (une séance commencée hier soir compte pour sa partie d'aujourd'hui).
+        let dayStart = Calendar.current.startOfDay(for: now)
+        let manga = space == .manga
+        let today = readingTime.log.sessions.reduce(0.0) { total, session in
+            guard (session.scope == .manga) == manga else { return total }
+            let end = session.start.addingTimeInterval(TimeInterval(session.seconds))
+            return total + max(0, min(end, now).timeIntervalSince(max(session.start, dayStart)))
+        }
+        let time = readingTime.breakdown(documents: model.documents + model.trashedDocuments, at: now)
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                AtelierLabel(String(localized: "Aujourd'hui"))
+                Spacer()
+                Image(systemName: dashboardIcon).font(Atelier.font(12)).foregroundStyle(Atelier.textTertiary)
+            }
+            // Recette 1.6.4 : seulement les minutes et les jours de série, avec une flamme (les mots « lues » et « de série »
+            // se coupaient lettre par lettre dans une colonne étroite) ; VoiceOver lit la phrase complète (plus bas).
+            HStack(alignment: .firstTextBaseline, spacing: 16) {
+                Text(verbatim: "\(Int(today / 60)) min").font(Atelier.font(26, weight: .bold)).foregroundStyle(Atelier.textPrimary)
+                    .lineLimit(1).minimumScaleFactor(0.6)
+                HStack(alignment: .firstTextBaseline, spacing: 5) {
+                    Image(systemName: "flame.fill").font(Atelier.font(18, weight: .semibold)).foregroundStyle(.orange)
+                    Text(verbatim: "\(stats.currentStreak) j").font(Atelier.font(26, weight: .bold)).foregroundStyle(Atelier.textPrimary)
+                        .lineLimit(1).minimumScaleFactor(0.6)
+                }
+            }
+            Text("Total \(ReadingClock.format(space == .manga ? time.manga : time.study(total: readingTime.clock.elapsed(at: now))))")
+                .font(Atelier.font(12)).foregroundStyle(Atelier.textSecondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .background(Atelier.surfaceHigh, in: RoundedRectangle(cornerRadius: Atelier.corner(14), style: .continuous))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(Text("Aujourd'hui : \(Int(today / 60)) minutes lues, série de \(stats.currentStreak) jours"))
+    }
 
     private var statsCardContent: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -753,6 +895,64 @@ struct LibraryView: View {
         }
     }
 
+    /// En-tête de la nouvelle présentation : espaces, recherche, Nouveau dossier, Sélectionner, Importer (avec les
+    /// outils de conversion), puis « Reprendre » et le titre de la liste.
+    private var newHeader: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack(spacing: 10) {
+                HStack(spacing: 6) {
+                    spaceTab(.study, title: String(localized: "Livres & Manuels"), icon: "books.vertical")
+                    spaceTab(.manga, title: String(localized: "Manga"), icon: "book")
+                }
+                .fixedSize()
+                HStack(spacing: 8) {
+                    Image(systemName: "magnifyingglass").foregroundStyle(Atelier.textTertiary)
+                    TextField("Rechercher", text: $search).foregroundStyle(Atelier.textPrimary)
+                }
+                .padding(.horizontal, 16).frame(height: 52)
+                .frame(maxWidth: .infinity)
+                .newLayoutBar(radius: 26)
+                NewLayoutIconButton(icon: "folder.badge.plus", label: String(localized: "Nouveau dossier"), size: 52) {
+                    folderName = ""
+                    folderNaming = .create(moving: [])
+                }
+                .newLayoutBar(radius: 26)
+                if !model.documents.isEmpty {
+                    NewLayoutPillButton(icon: selecting ? "checkmark" : "checklist",
+                                        title: selecting ? String(localized: "Terminé") : String(localized: "Sélectionner"),
+                                        active: selecting) {
+                        selecting.toggle()
+                        if !selecting { batch = BatchDeletion() }
+                    }
+                    .newLayoutBar(radius: 24)
+                }
+                Menu {
+                    Button { showImportOptions = true } label: { Label("Fichiers", systemImage: "folder") }
+                    Button { showDrive = true } label: { Label("Google Drive", systemImage: "externaldrive.badge.icloud") }
+                    Divider()
+                    Button { showMerge = true } label: { Label("Fusionner des PDF", systemImage: "doc.on.doc") }
+                    if space != .manga {
+                        Button { showImagesToPDF = true } label: { Label("Images vers PDF", systemImage: "photo.on.rectangle.angled") }
+                    }
+                } label: {
+                    Label("Importer", systemImage: "plus")
+                        .font(Atelier.font(15, weight: .bold))
+                        .padding(.horizontal, 18).frame(height: 52)
+                        .foregroundStyle(NewLayoutInk.onAccent)
+                        .background(NewLayoutInk.accent, in: Capsule())
+                }
+            }
+            if currentFolder == nil && filter == .all && search.isEmpty {
+                ResumeRow(space: space)
+            }
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Text(ui: filterTitle).font(Atelier.font(28, weight: .bold)).foregroundStyle(Atelier.textPrimary)
+                Text("\(filtered.count) document\(filtered.count > 1 ? "s" : "")")
+                    .font(Atelier.font(15, weight: .semibold)).foregroundStyle(Atelier.textSecondary)
+            }
+        }
+    }
+
     private func spaceTab(_ value: LibrarySpace, title: String, icon: String) -> some View {
         let on = space == value
         let count = model.documents.filter { $0.isInMangaSpace == (value == .manga) }.count
@@ -797,6 +997,9 @@ struct LibraryView: View {
 
     private var main: some View {
         VStack(alignment: .leading, spacing: Atelier.gap) {
+            if newLayout {
+                newHeader
+            } else {
             if usesCompactDocuments {
                 VStack(alignment: .leading, spacing: 5) {
                     spaceTabs
@@ -834,6 +1037,7 @@ struct LibraryView: View {
                 }
                 Button { showImportOptions = true } label: { Label("Importer", systemImage: "plus") }
                     .buttonStyle(AtelierButtonStyle(tint: Atelier.Tint.cloud))
+            }
             }
             ZStack(alignment: .topTrailing) {
                 VStack(alignment: .leading, spacing: Atelier.gap) {
@@ -1018,6 +1222,10 @@ struct LibraryView: View {
                     .allowsHitTesting(false)
             }
         }
+        // Nouvelle présentation : repère des livres déjà ouverts (onglet) ou proposés dans « Reprendre ».
+        .overlay(alignment: .topTrailing) {
+            if newLayout && !selecting { resumeMark(document).allowsHitTesting(false) }
+        }
         .background {
             if PersonalPadLibrary.isAvailable {
                 GeometryReader { card in
@@ -1027,6 +1235,27 @@ struct LibraryView: View {
             }
         }
         .contextMenu { if !selecting { menu(for: document) } }
+    }
+
+    @ViewBuilder
+    private func resumeMark(_ document: LibraryDocument) -> some View {
+        if model.tabs.ids.contains(document.id) {
+            Label("Ouvert", systemImage: "book.fill")
+                .font(Atelier.font(11, weight: .bold))
+                .padding(.horizontal, 9).frame(height: 24)
+                .foregroundStyle(NewLayoutInk.onAccent)
+                .background(NewLayoutInk.accent, in: Capsule())
+                .padding(.top, document.driveFileId != nil ? 46 : 8).padding(.trailing, 8)
+                .accessibilityLabel("Ouvert dans un onglet")
+        } else if ResumeRow.documents(tabs: model.tabs.ids, all: model.documents,
+                                      manga: document.isInMangaSpace).contains(where: { $0.id == document.id }) {
+            Image(systemName: "play.fill").font(Atelier.font(10, weight: .bold))
+                .frame(width: 24, height: 24)
+                .foregroundStyle(NewLayoutInk.accent)
+                .background(Atelier.surface, in: Circle())
+                .padding(.top, document.driveFileId != nil ? 46 : 8).padding(.trailing, 8)
+                .accessibilityLabel("Dans Reprendre")
+        }
     }
 
     /// En-tête du dossier ouvert : retour à l'accueil, nom, nombre, gestion du dossier.
@@ -1528,6 +1757,16 @@ struct FolderCard: View {
                 }
                 .clipShape(RoundedRectangle(cornerRadius: Atelier.corner(12), style: .continuous))
                 .overlay(RoundedRectangle(cornerRadius: Atelier.corner(12), style: .continuous).strokeBorder(Atelier.hairline))
+                // Nouvelle présentation (maquette E3) : onglet de chemise, pour distinguer un dossier d'un document.
+                .overlay(alignment: .topLeading) {
+                    if NewLayout.isEnabled {
+                        UnevenRoundedRectangleShim(radius: Atelier.corner(8))
+                            .fill(NewLayoutInk.accent.opacity(0.85))
+                            .frame(width: 70, height: 12)
+                            .padding(.leading, 14)
+                            .accessibilityHidden(true)
+                    }
+                }
             Text(name).font(Atelier.font(15, weight: .semibold)).lineLimit(2)
                 .foregroundStyle(Atelier.textPrimary)
             Text(documents.count == 1 ? String(localized: "1 document") : String(localized: "\(documents.count) documents"))

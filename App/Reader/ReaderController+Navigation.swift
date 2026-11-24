@@ -137,6 +137,7 @@ extension ReaderController {
         let id = document.id
         let page = currentSourcePage
         document.lastPageIndex = page
+        model.latestReadingPage[id] = page
         let work = DispatchWorkItem { [model] in
             model.persist { try $0.updateReadingPosition(documentId: id, pageIndex: page) }
         }

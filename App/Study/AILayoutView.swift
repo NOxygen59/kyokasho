@@ -230,6 +230,12 @@ struct AILayoutView: View {
         .formula .frac{display:inline-flex;vertical-align:middle;flex-direction:column;text-align:center;font-size:.86em}
         .formula .frac>span:first-child{border-bottom:1px solid;padding:0 .15em}
         .formula .radicand{border-top:1px solid;padding:0 .12em}
+        /* Retour d'usage du 24/11 : rien ne doit dépasser la largeur du panneau, sinon toute la page est réduite pour
+           tenir (texte trop petit). Tableaux à la largeur du panneau, mots coupés au besoin ; formule large défilante. */
+        body{overflow-wrap:anywhere}
+        table{width:100%;max-width:100%;table-layout:fixed} td,th{word-break:break-word}
+        img,svg{max-width:100%;height:auto}
+        .formula{max-width:100%;overflow-x:auto;vertical-align:bottom}
         </style>
         """
         // Français : police sans empattement, interligne normal (pas de place à garder pour des furigana). Limité au
@@ -475,7 +481,22 @@ struct AILayoutLanguageBar: View {
     }
 
     /// Langue de traduction (français par défaut) : chaque langue a ses propres fichiers, les deux restent gardés.
+    /// Nouvelle présentation (maquette E0) : choix FR / EN visible, au lieu de la petite pastille-menu.
+    @ViewBuilder
     private var languageMenu: some View {
+        if NewLayout.isEnabled {
+            Picker("Langue de traduction", selection: $language) {
+                ForEach(TranslationLanguage.allCases) { Text(verbatim: $0.rawValue.uppercased()).tag($0.rawValue) }
+            }
+            .pickerStyle(.segmented)
+            .frame(width: 96)
+            .accessibilityLabel("Langue de traduction : \(target.title)")
+        } else {
+            oldLanguageMenu
+        }
+    }
+
+    private var oldLanguageMenu: some View {
         Menu {
             Picker("Langue de traduction", selection: $language) {
                 ForEach(TranslationLanguage.allCases) { Text($0.title).tag($0.rawValue) }

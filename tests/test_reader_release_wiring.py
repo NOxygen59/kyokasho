@@ -38,6 +38,24 @@ class ReaderReleaseWiringTests(unittest.TestCase):
         self.assertEqual(screen.count("openDocumentSettings: { [sheet = $sheet] in sheet.wrappedValue = .settings }"), 2)
         self.assertNotIn("openDocumentSettings: { sheet = .settings }", screen)
 
+    def test_new_text_header_menu_builds_its_content_outside_the_closure(self):
+        # Recette 1.6.4 (13) : `Menu { engineMenu … $furigana }` capturait la vue, le lecteur n'était jamais libéré.
+        panel = source("Study/StudyPanel.swift")
+        header = panel.split("private var newTextHeader: some View {", 1)[1].split("\n    }\n", 1)[0]
+        self.assertIn("let engine = engineMenu, layout = layoutMenu, furiganaBinding = $furigana", header)
+        body = header.split("                Menu {\n", 1)[1].split("} label:", 1)[0]
+        self.assertNotRegex(body, r"engineMenu|layoutMenu|\$|\breader\b|self")
+        layout = panel.split("private var layoutMenu: some View {", 1)[1].split("} label: {", 1)[0]
+        self.assertIn("let engineBinding = $layoutEngineRaw", layout)
+        self.assertNotIn("selection: $layoutEngineRaw", layout.split("Menu {", 1)[1])
+
+    def test_close_hides_the_pencil_palette(self):
+        # Paquet 123 : le lecteur fermé étant libéré, la palette Pencil restait affichée sur la bibliothèque.
+        ocr = source("Reader/ReaderController+OCR.swift")
+        close = ocr.split("private func closeWork() {", 1)[1].split("\n    }\n", 1)[0]
+        self.assertIn("ink.showToolPicker(false)", close)
+        self.assertIn("ink.setEditing(false)", close)
+
     def test_reader_release_is_logged(self):
         self.assertRegex(source("Reader/ReaderController.swift"), r'deinit \{[^\n]*Diagnostics\.log\("lecteur libéré"')
 

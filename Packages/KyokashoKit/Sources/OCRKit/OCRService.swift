@@ -198,15 +198,20 @@ public actor OCRService {
     /// Pages (source) dont le texte OCR contient `query`, avec un extrait autour.
     /// Un seul résultat par page et par moteur préféré (premier moteur de `engines` qui a la page).
     // FDR-6.2 : décode toutes les pages → index FTS5 (GRDB) rempli à l'enregistrement. Voir § 6 étape 6.
-    public func search(_ query: String, documentId: String, engines: [String]) -> [(page: Int, context: String)] {
+    /// `nonisolated` (recette 1.6.4, point 11) : la recherche ne fait plus la queue derrière les lectures OCR en cours de
+    /// l'acteur, qui pouvaient la retarder au point que la carte affichait « Aucun résultat ». Elle ne lit que la base
+    /// (sûre entre fils) avec son propre décodeur, et les rotations des pages en une seule requête au lieu d'une par page.
+    public nonisolated func search(_ query: String, documentId: String, engines: [String]) -> [(page: Int, context: String)] {
         let needle = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !needle.isEmpty, let records = try? database.ocrResults(documentId: documentId) else { return [] }
         let japanese = OCRTargetLanguage.forDocument(documentId) == .japanese
+        let rotations = ((try? database.pageTransforms(documentId: documentId)) ?? [:]).mapValues(\.rotation)
+        let decoder = JSONDecoder()
         var bestByPage: [Int: OCRPage] = [:]
         for record in records {
             guard let rank = engines.firstIndex(of: record.engine),
                   let stored = try? decoder.decode(OCRPage.self, from: record.json),
-                  let page = stored.readable(atAdditionalRotation: additionalRotation(documentId: documentId, pageIndex: record.pageIndex))
+                  let page = stored.readable(atAdditionalRotation: rotations[record.pageIndex] ?? 0)
             else { continue }
             if let current = bestByPage[record.pageIndex], let currentRank = engines.firstIndex(of: current.engine),
                currentRank <= rank { continue }

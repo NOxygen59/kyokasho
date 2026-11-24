@@ -279,6 +279,16 @@ final class ImporterTests: XCTestCase {
         XCTAssertEqual(try importer.database.allDocuments().count, 1)
     }
 
+    /// Retour d'usage du 24/11/2026 : deux PDF différents de même nom ne se confondent plus, rien n'est remplacé.
+    func testDifferentPDFsWithSameNameGetDistinctTitles() throws {
+        let a = try importer.importFile(at: try makePDF(pages: 1, marker: "a"), displayName: "Images — Photo 1.pdf").document
+        let b = try importer.importFile(at: try makePDF(pages: 1, marker: "b"), displayName: "Images — Photo 1.pdf").document
+        let c = try importer.importFile(at: try makePDF(pages: 1, marker: "c"), displayName: "Images — Photo 1.pdf").document
+        XCTAssertEqual([a.title, b.title, c.title], ["Images — Photo 1", "Images — Photo 1 (2)", "Images — Photo 1 (3)"])
+        XCTAssertEqual(try importer.database.allDocuments().count, 3)
+        XCTAssertEqual(DocumentImporter.uniqueTitle("x", taken: ["x", "x (2)", "x (4)"]), "x (3)")
+    }
+
     func testMetadataTitleOption() throws {
         let pdf = try makePDF(pages: 1)
         let result = try importer.importFile(at: pdf, displayName: "x.pdf", preferFileNameTitle: false)

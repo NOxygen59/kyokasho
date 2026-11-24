@@ -1,6 +1,754 @@
 {
   "sourceLanguage": "fr",
   "strings": {
+    "Ajouter aux cartes": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajouter aux cartes"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add to cards"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "加入卡片"
+          }
+        }
+      }
+    },
+    "Écouter": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Écouter"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Listen"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "收听"
+          }
+        }
+      }
+    },
+    "Niveau JLPT %@": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Niveau JLPT %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "JLPT level %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "JLPT 等级 %@"
+          }
+        }
+      }
+    },
+    "Afficher": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Afficher"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "显示"
+          }
+        }
+      }
+    },
+    "Mise en page IA (OvisOCR2) · page %@": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mise en page IA (OvisOCR2) · page %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI layout (OvisOCR2) · page %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI 排版（OvisOCR2）· 第 %@ 页"
+          }
+        }
+      }
+    },
+    "Supprimer des pages ?": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Supprimer des pages ?"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Delete pages?"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "删除页面？"
+          }
+        }
+      }
+    },
+    "Le livre se ferme, puis « Pages du document » s'ouvre pour choisir les pages à supprimer.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le livre se ferme, puis « Pages du document » s'ouvre pour choisir les pages à supprimer."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The book closes, then “Document pages” opens so you can choose the pages to delete."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "书本将关闭，然后打开「文档页面」以选择要删除的页面。"
+          }
+        }
+      }
+    },
+    "Voir toutes les pages": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voir toutes les pages"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "See all pages"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "查看所有页面"
+          }
+        }
+      }
+    },
+    "Pages du document": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pages du document"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Document pages"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文档页面"
+          }
+        }
+      }
+    },
+    "lues": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "lues"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "read"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已读"
+          }
+        }
+      }
+    },
+    "de série": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "de série"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "streak"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "连续"
+          }
+        }
+      }
+    },
+    "Total %@": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Total %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Total %@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "总计 %@"
+          }
+        }
+      }
+    },
+    "Autres onglets ouverts": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Autres onglets ouverts"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Other open tabs"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "其他已打开的标签页"
+          }
+        }
+      }
+    },
+    "Aujourd'hui : %lld minutes lues, série de %lld jours": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aujourd'hui : %lld minutes lues, série de %lld jours"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Today: %1$lld minutes read, %2$lld-day streak"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "今天：已读 %1$lld 分钟，连续 %2$lld 天"
+          }
+        }
+      }
+    },
+    "Lu par %@ · page %@": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lu par %@ · page %@"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Read by %1$@ · page %2$@"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "由 %1$@ 识别 · 第 %2$@ 页"
+          }
+        }
+      }
+    },
+    "Rechercher dans la page": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rechercher dans la page"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search this page"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在本页搜索"
+          }
+        }
+      }
+    },
+    "Outils du texte": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Outils du texte"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Text tools"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文本工具"
+          }
+        }
+      }
+    },
+    "Reprendre": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reprendre"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resume"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "继续阅读"
+          }
+        }
+      }
+    },
+    "ouverts et en cours": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ouverts et en cours"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "open and in progress"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已打开和进行中"
+          }
+        }
+      }
+    },
+    "Ouvert": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ouvert"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已打开"
+          }
+        }
+      }
+    },
+    "Reprendre « %@ »": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reprendre « %@ »"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resume “%@”"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "继续阅读「%@」"
+          }
+        }
+      }
+    },
+    "Fermer l'onglet": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fermer l'onglet"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Close tab"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "关闭标签页"
+          }
+        }
+      }
+    },
+    "Réviser maintenant · %lld": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Réviser maintenant · %lld"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Review now · %lld"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "立即复习 · %lld"
+          }
+        }
+      }
+    },
+    "Dans Reprendre": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dans Reprendre"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In Resume"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "在继续阅读中"
+          }
+        }
+      }
+    },
+    "Ouvert dans un onglet": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ouvert dans un onglet"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open in a tab"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已在标签页中打开"
+          }
+        }
+      }
+    },
+    "Dessiner": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dessiner"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Draw"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "绘图"
+          }
+        }
+      }
+    },
+    "Surligner le texte": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Surligner le texte"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Highlight text"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "高亮文字"
+          }
+        }
+      }
+    },
+    "Le Pencil cherche": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le Pencil cherche"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pencil looks up"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pencil 查词"
+          }
+        }
+      }
+    },
+    "Aperçu des pages": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aperçu des pages"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Page overview"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "页面预览"
+          }
+        }
+      }
+    },
+    "Plus": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Plus"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "More"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "更多"
+          }
+        }
+      }
+    },
+    "Papier (encre bleue)": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Papier (encre bleue)"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paper (blue ink)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "纸张（蓝墨）"
+          }
+        }
+      }
+    },
+    "Papier washi · encre bleue": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Papier washi · encre bleue"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Washi paper · blue ink"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "和纸 · 蓝墨"
+          }
+        }
+      }
+    },
+    "Nouvelle présentation": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nouvelle présentation"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New layout"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "新版界面"
+          }
+        }
+      }
+    },
+    "Lecteur et accueil redessinés, aux couleurs de ton thème. Désactivée, tout redevient comme avant.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lecteur et accueil redessinés, aux couleurs de ton thème. Désactivée, tout redevient comme avant."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Redesigned reader and home screen, in your theme's colours. Turn it off to get everything back as before."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "重新设计的阅读器和主页，采用你的主题颜色。关闭后一切恢复原样。"
+          }
+        }
+      }
+    },
     "Finalité des grandes optimisations": {
       "localizations": {
         "fr": {
@@ -58077,6 +58825,512 @@
           "stringUnit": {
             "state": "translated",
             "value": "替换：新文件的分析报告已存在，旧报告已移至“Conflits-remplacement”。"
+          }
+        }
+      }
+    },
+    "Refonte graphique": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Refonte graphique"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Visual redesign"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "界面重新设计"
+          }
+        }
+      }
+    },
+    "Nouvelle présentation sur iPad : lecteur, panneau d'étude et accueil redessinés, aux couleurs de ton thème. À activer dans Réglages → Général → Thèmes et couleurs ; désactivée, tout reste comme avant.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nouvelle présentation sur iPad : lecteur, panneau d'étude et accueil redessinés, aux couleurs de ton thème. À activer dans Réglages → Général → Thèmes et couleurs ; désactivée, tout reste comme avant."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New layout on iPad: redesigned reader, study panel and home screen, in your theme's colors. Turn it on in Settings → General → Themes and colors; when off, everything stays as before."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iPad 新界面：重新设计的阅读器、学习面板和主页，采用你的主题配色。在“设置 → 通用 → 主题和颜色”中开启；关闭时一切保持原样。"
+          }
+        }
+      }
+    },
+    "Lecteur : barre du haut et grande barre du bas, outils d'annotation regroupés, grille de toutes les pages du document.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lecteur : barre du haut et grande barre du bas, outils d'annotation regroupés, grille de toutes les pages du document."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reader: top bar and large bottom bar, annotation tools grouped together, grid of all the document's pages."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "阅读器：顶部栏和大号底部栏，批注工具集中在一起，文档所有页面的网格。"
+          }
+        }
+      }
+    },
+    "Accueil : bouton Reprendre, carte « Aujourd'hui » et dossiers en onglets de chemise.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accueil : bouton Reprendre, carte « Aujourd'hui » et dossiers en onglets de chemise."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Home: Resume button, “Today” card and folders shown as file-folder tabs."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "主页：“继续”按钮、“今天”卡片，文件夹以文件夹标签形式显示。"
+          }
+        }
+      }
+    },
+    "Grande fiche de mot, et onglets Notes, Repères et Chat remis au style de la nouvelle présentation.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grande fiche de mot, et onglets Notes, Repères et Chat remis au style de la nouvelle présentation."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Large word card, and Notes, Bookmarks and Chat tabs restyled to match the new layout."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "大号单词卡片，笔记、书签和聊天标签页改为新界面的风格。"
+          }
+        }
+      }
+    },
+    "Papier : un nouveau thème clair pour la lecture.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Papier : un nouveau thème clair pour la lecture."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paper: a new light theme for reading."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "纸张：一款新的浅色阅读主题。"
+          }
+        }
+      }
+    },
+    "Recherche dans un document : le mot trouvé est surligné deux secondes sur la page.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recherche dans un document : le mot trouvé est surligné deux secondes sur la page."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search in a document: the word found is highlighted on the page for two seconds."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文档内搜索：找到的词会在页面上高亮两秒。"
+          }
+        }
+      }
+    },
+    "Banc": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Banc"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bench"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "测试台"
+          }
+        }
+      }
+    },
+    "Retirer de Reprendre": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retirer de Reprendre"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove from Resume"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "从“继续”中移除"
+          }
+        }
+      }
+    },
+    "%lld corrections proposées par l'IA": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld corrections proposées par l'IA"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld corrections suggested by the AI"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI 建议了 %lld 处更正"
+          }
+        }
+      }
+    },
+    "Voir": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voir"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "View"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "查看"
+          }
+        }
+      }
+    },
+    "Déplier Reprendre": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Déplier Reprendre"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Expand Resume"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "展开“继续”"
+          }
+        }
+      }
+    },
+    "Replier Reprendre": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Replier Reprendre"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Collapse Resume"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "收起“继续”"
+          }
+        }
+      }
+    },
+    "Correctifs de la refonte": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Correctifs de la refonte"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Redesign fixes"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "界面重新设计的修正"
+          }
+        }
+      }
+    },
+    "Accueil : la rangée Reprendre se replie en pastilles rondes, et chaque carte a son ✕ pour fermer l'onglet ou retirer le livre.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accueil : la rangée Reprendre se replie en pastilles rondes, et chaque carte a son ✕ pour fermer l'onglet ou retirer le livre."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Home: the Resume row collapses into round pills, and each card has its ✕ to close the tab or remove the book."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "主页：“继续”一栏可收起为圆形标签，每张卡片都有 ✕，可关闭标签页或移除该书。"
+          }
+        }
+      }
+    },
+    "Carte « Aujourd'hui » : les minutes lues et les jours de série, avec une flamme.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carte « Aujourd'hui » : les minutes lues et les jours de série, avec une flamme."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“Today” card: minutes read and streak days, with a flame."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "“今天”卡片：显示阅读分钟数和连续天数，并带有火焰图标。"
+          }
+        }
+      }
+    },
+    "Mémoire : un livre fermé est de nouveau libéré avec la nouvelle présentation ; avant, la mémoire montait à chaque livre ouvert.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mémoire : un livre fermé est de nouveau libéré avec la nouvelle présentation ; avant, la mémoire montait à chaque livre ouvert."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Memory: a closed book is released again with the new layout; before, memory grew with each book opened."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "内存：在新界面中，关闭的书会再次被释放；此前每打开一本书内存都会增加。"
+          }
+        }
+      }
+    },
+    "Recherche dans un document : elle trouve aussi le texte de la mise en page IA et ne dit plus « Aucun résultat » avant la fin.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recherche dans un document : elle trouve aussi le texte de la mise en page IA et ne dit plus « Aucun résultat » avant la fin."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Search in a document: it also finds the AI layout text and no longer says “No results” before it has finished."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文档内搜索：也能找到 AI 排版的文本，并且在完成前不再显示“无结果”。"
+          }
+        }
+      }
+    },
+    "Onglets : un livre rouvert par son onglet reprend à la dernière page lue.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Onglets : un livre rouvert par son onglet reprend à la dernière page lue."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tabs: a book reopened from its tab returns to the last page read."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "标签页：通过标签页重新打开的书会回到上次阅读的页面。"
+          }
+        }
+      }
+    },
+    "Mise en page IA : les tableaux et les images restent dans la largeur du panneau, et la fin du texte n'est plus cachée par Copier.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mise en page IA : les tableaux et les images restent dans la largeur du panneau, et la fin du texte n'est plus cachée par Copier."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI layout: tables and images stay within the panel width, and the end of the text is no longer hidden by Copy."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AI 排版：表格和图片保持在面板宽度内，文本末尾不再被“复制”按钮遮挡。"
+          }
+        }
+      }
+    },
+    "Import : deux PDF différents de même nom ne se confondent plus, le second est nommé « … (2) ».": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import : deux PDF différents de même nom ne se confondent plus, le second est nommé « … (2) »."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Import: two different PDFs with the same name are no longer confused; the second is named “… (2)”."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "导入：两个同名的不同 PDF 不再混淆，第二个会命名为“…（2）”。"
+          }
+        }
+      }
+    },
+    "Barre du bas : « Annoter » garde son nom ; la palette Pencil disparaît à la fermeture du livre.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Barre du bas : « Annoter » garde son nom ; la palette Pencil disparaît à la fermeture du livre."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bottom bar: “Annotate” keeps its name; the Pencil palette disappears when the book is closed."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "底部栏：“批注”保留名称；关闭书籍时 Pencil 工具栏会消失。"
+          }
+        }
+      }
+    },
+    "Onglet Texte : les corrections IA tiennent sur une ligne ; à partir de 4 livres ouverts, les onglets passent en pastilles.": {
+      "localizations": {
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Onglet Texte : les corrections IA tiennent sur une ligne ; à partir de 4 livres ouverts, les onglets passent en pastilles."
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Text tab: AI corrections fit on one line; from 4 open books, tabs become pills."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文本标签页：AI 更正显示为一行；打开 4 本书及以上时，标签页变为圆形标签。"
           }
         }
       }
