@@ -47,6 +47,9 @@ class Recette164FixesTests(unittest.TestCase):
         # Retour d'usage du 24/11 : rangée repliable en pastilles rondes, choix gardé.
         self.assertIn('@AppStorage("library.resumeCollapsed")', row)
         self.assertIn("DocumentTileBar.glyph(document.title)", row)
+        # Demande du 24/11 : ✕ rouge tant que l'onglet est ouvert, gris ensuite ; pastille bleue repliée = onglet ouvert.
+        self.assertIn("isOpen ? Color(.systemRed) : Atelier.textSecondary", row)
+        self.assertIn("if model.tabs.ids.contains(document.id) {\n                                            Circle().fill(Color(.systemBlue))", row)
 
     def test_bars_tried_by_view_that_fits_only_hold_the_relay(self):
         # Point 13 : les versions écartées par ViewThatFits restent en vie sous iOS 16 ; leurs boutons ne doivent

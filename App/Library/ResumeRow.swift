@@ -80,6 +80,14 @@ struct ResumeRow: View {
                                     .foregroundStyle(Color(hex: 0x1E272C))
                                     .frame(width: 44, height: 44)
                                     .background(DocumentTileBar.tileColor(document.id), in: Circle())
+                                    // Demande du 24/11 : petite pastille bleue = livre encore ouvert dans un onglet.
+                                    .overlay(alignment: .topTrailing) {
+                                        if model.tabs.ids.contains(document.id) {
+                                            Circle().fill(Color(.systemBlue)).frame(width: 12, height: 12)
+                                                .overlay(Circle().stroke(Atelier.canvas, lineWidth: Atelier.border(2)))
+                                                .offset(x: 1, y: -1)
+                                        }
+                                    }
                             }
                             .buttonStyle(PressScale())
                             .contextMenu {
@@ -148,8 +156,10 @@ private struct ResumeCard: View {
                     Spacer(minLength: 0)
                     // ✕ sur chaque carte, à côté de Reprendre (recette 1.6.4, point 3).
                     Button(action: close) {
+                        // Demande du 24/11 : rouge tant que l'onglet est ouvert (même lecteur déchargé de la mémoire,
+                        // `isOpen` ne lit que les onglets) ; gris une fois l'onglet fermé, le livre restant en cours.
                         Image(systemName: "xmark").font(Atelier.font(12, weight: .bold))
-                            .frame(width: 32, height: 32).foregroundStyle(Atelier.textSecondary)
+                            .frame(width: 32, height: 32).foregroundStyle(isOpen ? Color(.systemRed) : Atelier.textSecondary)
                             .background(Atelier.surfaceHigh, in: Circle())
                             .frame(width: 44, height: 44).contentShape(Rectangle())
                     }
