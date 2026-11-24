@@ -62,6 +62,15 @@ class Recette164FixesTests(unittest.TestCase):
                 self.assertNotIn(action, body)
             self.assertIn("[menuActions] in menuActions.perform?", body)
 
+    def test_switching_tabs_reopens_at_latest_page(self):
+        # Retour d'usage du 24/11 : un onglet rouvert reprenait la page de son ouverture.
+        nav = source("App/Reader/ReaderController+Navigation.swift")
+        self.assertIn("model.latestReadingPage[id] = page", nav)
+        host = source("App/Reader/DocumentTabsBar.swift")
+        self.assertIn("Self.atLatestPage(document, model.latestReadingPage[id])", host)
+        app = source("App/AppModel.swift")
+        self.assertEqual(app.count("latestReadingPage = [:]"), 2)
+
 
 if __name__ == "__main__":
     unittest.main()

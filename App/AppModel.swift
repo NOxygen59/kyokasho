@@ -93,6 +93,7 @@ final class AppModel: ObservableObject {
             if openDocumentId == nil, let pending = pendingDocuments {
                 pendingDocuments = nil
                 documents = pending
+                latestReadingPage = [:]
             }
         }
     }
@@ -105,6 +106,9 @@ final class AppModel: ObservableObject {
     /// Liste reçue pendant la lecture quand seule la position de lecture a changé : pas publiée
     /// tout de suite (sinon la bibliothèque, derrière le lecteur, se redessine à chaque page tournée).
     private var pendingDocuments: [LibraryDocument]?
+    /// Dernière page lue de chaque livre, tenue dès qu'elle change (la liste `documents` ne la reçoit qu'au retour à la
+    /// bibliothèque) : un onglet rouvert reprend là où on l'a laissé (retour d'usage du 24/11/2026).
+    var latestReadingPage: [String: Int] = [:]
     /// Documents nouvellement importés dont la catégorie reste à demander (« Livre ou manuel ? », RET-039, #54).
     @Published private(set) var categoryQuestions: [LibraryDocument] = []
     /// Import d'un seul fichier : il s'ouvre une fois la question répondue.
@@ -203,6 +207,8 @@ final class AppModel: ObservableObject {
                 } else {
                     self.pendingDocuments = nil
                     self.documents = list
+                    // La base fait foi de nouveau (pages ajoutées ou supprimées comprises).
+                    self.latestReadingPage = [:]
                 }
                 // Revue R2 NOTIF (n°2) : notification touchée app fermée, rejouée une fois la bibliothèque chargée.
                 if let waiting = self.noteToOpenWhenLoaded, !list.isEmpty {

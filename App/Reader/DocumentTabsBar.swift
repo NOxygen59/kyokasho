@@ -8,6 +8,14 @@ import SwiftUI
 /// mémoire, sa page est gardée) ; un seul document est chargé à la fois.
 struct ReaderTabsHost: View {
     @EnvironmentObject private var model: AppModel
+
+    /// Document à sa dernière page lue dans cette séance (changement d'onglet), bornée à ses pages actuelles.
+    static func atLatestPage(_ document: LibraryDocument, _ page: Int?) -> LibraryDocument {
+        guard let page else { return document }
+        var copy = document
+        copy.lastPageIndex = min(max(page, 0), max(document.pageCount - 1, 0))
+        return copy
+    }
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// Bulle mémoire façon notification (recette 1.3.2 (62), L8) : glisse du haut, repart après 3 s.
     @State private var notice = false
@@ -17,7 +25,7 @@ struct ReaderTabsHost: View {
         ZStack(alignment: .top) {
             if let id = model.openDocumentId, let document = model.documents.first(where: { $0.id == id }) {
                 // Le calque gère le fondu d'entrée ; le changement d'onglet ne doit pas le rejouer.
-                ReaderScreen(document: document, model: model).id(document.id)
+                ReaderScreen(document: Self.atLatestPage(document, model.latestReadingPage[id]), model: model).id(document.id)
                     .transition(.identity)
             }
             if notice {
