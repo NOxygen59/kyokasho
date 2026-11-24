@@ -38,6 +38,14 @@ struct ResumeRow: View {
         return open + inProgress.prefix(max(0, limit - open.count))
     }
 
+    /// Rouvrir un livre le remet dans Reprendre (mesure SSH du 24/11 : retiré à sa page, rouvert puis refermé à la même
+    /// page, il restait caché). Appelé à chaque ouverture (`AppModel.openDocumentId`).
+    static func forgetDismissal(_ id: String, defaults: UserDefaults = .standard) {
+        var all = dismissed(defaults.string(forKey: dismissedKey) ?? "")
+        guard all.removeValue(forKey: id) != nil else { return }
+        defaults.set(all.map { "\($0.key):\($0.value)" }.sorted().joined(separator: ","), forKey: dismissedKey)
+    }
+
     @AppStorage(ResumeRow.dismissedKey) private var dismissedRaw = ""
     /// Rangée repliée en pastilles (retour d'usage du 24/11), gardée d'une ouverture à l'autre.
     @AppStorage("library.resumeCollapsed") private var collapsed = false

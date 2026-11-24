@@ -49,6 +49,9 @@ class Recette164FixesTests(unittest.TestCase):
         self.assertIn("DocumentTileBar.glyph(document.title)", row)
         # Demande du 24/11 : ✕ rouge tant que l'onglet est ouvert, gris ensuite ; pastille bleue repliée = onglet ouvert.
         self.assertIn("isOpen ? Color(.systemRed) : Atelier.textSecondary", row)
+        # Mesure SSH du 24/11 : rouvrir un livre retiré de Reprendre l'y remet.
+        self.assertIn("ResumeRow.forgetDismissal(openDocumentId)", source("App/AppModel.swift"))
+        self.assertIn("all.removeValue(forKey: id)", row)
         self.assertIn("if model.tabs.ids.contains(document.id) {\n                                            Circle().fill(Color(.systemBlue))", row)
 
     def test_bars_tried_by_view_that_fits_only_hold_the_relay(self):
