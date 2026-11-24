@@ -45387,6 +45387,226 @@
         }
       }
     },
+    "Genkō (cahier de kanji)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Genkō (kanji notebook)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Genkō (cahier de kanji)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "稿纸（汉字练习本）"
+          }
+        }
+      }
+    },
+    "Riso (affiche imprimée)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riso (printed poster)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riso (affiche imprimée)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "孔版（印刷海报）"
+          }
+        }
+      }
+    },
+    "Shōwa (kissaten rétro)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shōwa (retro kissaten)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shōwa (kissaten rétro)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "昭和（复古咖啡馆）"
+          }
+        }
+      }
+    },
+    "Kokuban (tableau de classe)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kokuban (classroom board)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Kokuban (tableau de classe)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "黑板（教室）"
+          }
+        }
+      }
+    },
+    "Contour (kanji en relief)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Contour (kanji in relief)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Contour (kanji en relief)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "等高线（浮雕汉字）"
+          }
+        }
+      }
+    },
+    "Feuille d'exercice · cases vertes": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Practice sheet · green squares"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Feuille d'exercice · cases vertes"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "练习纸 · 绿色方格"
+          }
+        }
+      }
+    },
+    "Trame rose et bleue · impression décalée": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pink and blue halftone · offset print"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trame rose et bleue · impression décalée"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "粉蓝网点 · 错位印刷"
+          }
+        }
+      }
+    },
+    "Café des années 70 · moutarde et avocat": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1970s café · mustard and avocado"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Café des années 70 · moutarde et avocat"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "七十年代咖啡馆 · 芥末黄与牛油果绿"
+          }
+        }
+      }
+    },
+    "Tableau vert · craies de couleur": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Green board · coloured chalk"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tableau vert · craies de couleur"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "绿色黑板 · 彩色粉笔"
+          }
+        }
+      }
+    },
+    "Bleu nuit · kanji en courbes de niveau": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Midnight blue · kanji in contour lines"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bleu nuit · kanji en courbes de niveau"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "午夜蓝 · 等高线汉字"
+          }
+        }
+      }
+    },
     "Sakura (nuit de printemps)": {
       "localizations": {
         "en": {

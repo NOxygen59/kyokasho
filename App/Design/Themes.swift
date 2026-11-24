@@ -89,6 +89,11 @@ struct Theme: Identifiable, Equatable {
         case "soir": return String(localized: "Prune nocturne · lumière ambrée")
         case "encre": return String(localized: "Encre de charbon · laiton brossé")
         case "sakura": return String(localized: "Rose poudré · nuit de printemps")
+        case "genko": return String(localized: "Feuille d'exercice · cases vertes")
+        case "riso": return String(localized: "Trame rose et bleue · impression décalée")
+        case "showa": return String(localized: "Café des années 70 · moutarde et avocat")
+        case "kokuban": return String(localized: "Tableau vert · craies de couleur")
+        case "contour": return String(localized: "Bleu nuit · kanji en courbes de niveau")
         default: return ""
         }
     }
@@ -96,6 +101,8 @@ struct Theme: Identifiable, Equatable {
     enum Backdrop: Equatable {
         case plain, grid, paper, engraving, blocks, swiss, neon, earth, forest, embers, dunes, waves
         case washi, blueprint, floorplan, dusk, ink, sakura
+        /// Lot du 24/11/2026 (maquette v3 choisie par NOxygen59) : fonds tirés de l'écriture et de l'école japonaises.
+        case genko, riso, showa, kokuban, contour
     }
 
     /// Repère visuel du thème, utilisé dans les aperçus sans texte supplémentaire à traduire.
@@ -119,6 +126,11 @@ struct Theme: Identifiable, Equatable {
         case "soir": return "moon.haze"
         case "encre": return "paintbrush.pointed"
         case "sakura": return "camera.macro"
+        case "genko": return "pencil.line"
+        case "riso": return "circle.grid.3x3.fill"
+        case "showa": return "cup.and.saucer"
+        case "kokuban": return "studentdesk"
+        case "contour": return "mountain.2"
         default: return "circle"
         }
     }
@@ -201,6 +213,47 @@ struct Theme: Identifiable, Equatable {
         read: Color(hex: 0xB9D1BF), annotate: Color(hex: 0xE9D0A8), japanese: Color(hex: 0xF1B1CB),
         ai: Color(hex: 0xD1C1EB), cloud: Color(hex: 0xB4CCE6), backdrop: .sakura)
 
+    // Lot du 24/11/2026 (maquette `THEMES-ORIGINAUX-v3`) : contrastes calculés, chaque couleur de fonction tient 4,5:1
+    // sur les trois fonds et sous le texte posé dessus (`onAccent`).
+    static let showa = Theme(
+        id: "showa", name: String(localized: "Shōwa (kissaten rétro)"),
+        canvas: Color(hex: 0x261A13), surface: Color(hex: 0x35261C), surfaceHigh: Color(hex: 0x473425),
+        ink: Color(hex: 0xFBEEDA),
+        read: Color(hex: 0xF3B53F), annotate: Color(hex: 0xF29B5B), japanese: Color(hex: 0xFF8F78),
+        ai: Color(hex: 0xD3B8F2), cloud: Color(hex: 0xA9D39A), backdrop: .showa, onAccent: Color(hex: 0x1E140D))
+
+    static let kokuban = Theme(
+        id: "kokuban", name: String(localized: "Kokuban (tableau de classe)"),
+        canvas: Color(hex: 0x1E3832), surface: Color(hex: 0x27453E), surfaceHigh: Color(hex: 0x32544B),
+        ink: Color(hex: 0xF2F4EE),
+        read: Color(hex: 0xF2E38B), annotate: Color(hex: 0xF5C38A), japanese: Color(hex: 0xF7B3C2),
+        ai: Color(hex: 0xD6C9F7), cloud: Color(hex: 0xA9D4F5), backdrop: .kokuban, onAccent: Color(hex: 0x15241F))
+
+    static let contour = Theme(
+        id: "contour", name: String(localized: "Contour (kanji en relief)"),
+        canvas: Color(hex: 0x10131C), surface: Color(hex: 0x1A1F2C), surfaceHigh: Color(hex: 0x252B3B),
+        ink: Color(hex: 0xEEF0F6),
+        read: Color(hex: 0x9DB8FF), annotate: Color(hex: 0xF0CC80), japanese: Color(hex: 0xFF9C8A),
+        ai: Color(hex: 0xCDB8FF), cloud: Color(hex: 0x86D9C9), backdrop: .contour, onAccent: Color(hex: 0x10131C))
+
+    static let genko = Theme(
+        id: "genko", name: String(localized: "Genkō (cahier de kanji)"),
+        canvas: Color(hex: 0xF3EEDD), surface: Color(hex: 0xFFFCF3), surfaceHigh: Color(hex: 0xE8E1CB),
+        ink: Color(hex: 0x2A251E),
+        read: Color(hex: 0x2D6A4C), annotate: Color(hex: 0x7A5600), japanese: Color(hex: 0xB3361F),
+        ai: Color(hex: 0x4C479E), cloud: Color(hex: 0x285C85), backdrop: .genko,
+        isLight: true, onAccent: Color(hex: 0xFFFFFF), contrast: Color(hex: 0x2A251E), shadowTint: Color(hex: 0x2A251E),
+        secondaryLevel: 0.82, tertiaryLevel: 0.72)
+
+    static let riso = Theme(
+        id: "riso", name: String(localized: "Riso (affiche imprimée)"),
+        canvas: Color(hex: 0xF5EFE4), surface: Color(hex: 0xFFFDF8), surfaceHigh: Color(hex: 0xECE3D3),
+        ink: Color(hex: 0x1C1A33),
+        read: Color(hex: 0x2F38B5), annotate: Color(hex: 0xA3470A), japanese: Color(hex: 0xC2106F),
+        ai: Color(hex: 0x6A2BB8), cloud: Color(hex: 0x00706F), backdrop: .riso,
+        isLight: true, onAccent: Color(hex: 0xFFFFFF), contrast: Color(hex: 0x1C1A33), shadowTint: Color(hex: 0x1C1A33),
+        secondaryLevel: 0.82, tertiaryLevel: 0.72)
+
     /// Variante claire de la planche du 29/10/2026 : teintes de fonction foncées (texte blanc dessus, 4,5:1).
     static let clair = Theme(
         id: "clair", name: String(localized: "Clair (papier blanc)"),
@@ -268,7 +321,7 @@ struct Theme: Identifiable, Equatable {
         secondaryLevel: 0.82, tertiaryLevel: 0.75)
 
     static let all: [Theme] = [.atelier, .clair, .papier, .sepia, .brutal, .swiss, .synthwave, .terre, .washi, .architecte, .interieur, .soir, .encre, .sakura,
-                               .foret, .braise, .sable, .lagon]
+                               .foret, .braise, .sable, .lagon, .genko, .riso, .showa, .kokuban, .contour]
 
     /// Thème en cours (lu par `Atelier`). Changé par `ThemeManager`.
     static var current: Theme = .atelier

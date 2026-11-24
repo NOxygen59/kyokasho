@@ -39,6 +39,11 @@ struct ThemeBackdrop: View {
             case .dusk: Self.dusk(&context, size, theme)
             case .ink: Self.ink(&context, size, theme)
             case .sakura: Self.sakura(&context, size, theme)
+            case .genko: Self.genko(&context, size, theme)
+            case .riso: Self.riso(&context, size, theme)
+            case .showa: Self.showa(&context, size, theme)
+            case .kokuban: Self.kokuban(&context, size, theme)
+            case .contour: Self.contour(&context, size, theme)
             }
             if let style { Self.signature(&context, size, theme, style) }
         }
