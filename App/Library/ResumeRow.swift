@@ -39,6 +39,8 @@ struct ResumeRow: View {
     }
 
     @AppStorage(ResumeRow.dismissedKey) private var dismissedRaw = ""
+    /// Rangée repliée en pastilles (retour d'usage du 24/11), gardée d'une ouverture à l'autre.
+    @AppStorage("library.resumeCollapsed") private var collapsed = false
 
     private var items: [LibraryDocument] {
         Self.documents(tabs: model.tabs.ids, all: model.documents, manga: space == .manga, dismissed: Self.dismissed(dismissedRaw))
@@ -55,21 +57,54 @@ struct ResumeRow: View {
     var body: some View {
         if !items.isEmpty {
             VStack(alignment: .leading, spacing: 10) {
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                HStack(alignment: .center, spacing: 8) {
                     Text("Reprendre").font(Atelier.font(17, weight: .bold)).foregroundStyle(Atelier.textPrimary)
-                    Text("ouverts et en cours").font(Atelier.font(13)).foregroundStyle(Atelier.textSecondary)
+                    if !collapsed {
+                        Text("ouverts et en cours").font(Atelier.font(13)).foregroundStyle(Atelier.textSecondary)
+                    }
+                    // Retour d'usage du 24/11 : rangée repliable ; repliée, des pastilles rondes comme les onglets du lecteur.
+                    Button { withAnimation(.easeOut(duration: 0.2)) { collapsed.toggle() } } label: {
+                        Image(systemName: collapsed ? "chevron.down" : "chevron.up").font(Atelier.font(13, weight: .bold))
+                            .frame(width: 32, height: 32).foregroundStyle(Atelier.textSecondary)
+                            .background(Atelier.surfaceHigh, in: Circle())
+                            .frame(width: 44, height: 44).contentShape(Rectangle())
+                    }
+                    .buttonStyle(PressScale())
+                    .accessibilityLabel(collapsed ? Text("Déplier Reprendre") : Text("Replier Reprendre"))
                 }
-                // Défile au-delà de trois cartes (beaucoup d'onglets ouverts).
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(alignment: .top, spacing: 14) {
+                if collapsed {
+                    HStack(spacing: 8) {
                         ForEach(items) { document in
-                            ResumeCard(document: document, isOpen: model.tabs.ids.contains(document.id),
-                                       resume: { model.openDocumentId = document.id },
-                                       close: { remove(document) })
-                                .frame(width: 290)  // Retour d'usage du 24/11 : un peu plus petite.
+                            Button { model.openDocumentId = document.id } label: {
+                                Text(verbatim: DocumentTileBar.glyph(document.title)).font(.custom("HiraginoSans-W6", size: 20))
+                                    .foregroundStyle(Color(hex: 0x1E272C))
+                                    .frame(width: 44, height: 44)
+                                    .background(DocumentTileBar.tileColor(document.id), in: Circle())
+                            }
+                            .buttonStyle(PressScale())
+                            .contextMenu {
+                                Button(role: .destructive) { remove(document) } label: {
+                                    model.tabs.ids.contains(document.id)
+                                        ? Label("Fermer l'onglet", systemImage: "xmark")
+                                        : Label("Retirer de Reprendre", systemImage: "xmark")
+                                }
+                            }
+                            .accessibilityLabel(Text("Reprendre « \(document.title) »"))
                         }
                     }
-                    .padding(.vertical, 6).padding(.horizontal, 2)
+                } else {
+                    // Défile au-delà de trois cartes (beaucoup d'onglets ouverts).
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(alignment: .top, spacing: 14) {
+                            ForEach(items) { document in
+                                ResumeCard(document: document, isOpen: model.tabs.ids.contains(document.id),
+                                           resume: { model.openDocumentId = document.id },
+                                           close: { remove(document) })
+                                    .frame(width: 290)  // Retour d'usage du 24/11 : un peu plus petite.
+                            }
+                        }
+                        .padding(.vertical, 6).padding(.horizontal, 2)
+                    }
                 }
             }
         }
