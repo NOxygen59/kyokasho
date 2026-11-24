@@ -36,11 +36,11 @@ class NewLayoutWiringTests(unittest.TestCase):
     def test_reader_keeps_the_old_chrome_when_the_switch_is_off(self):
         reader = source("Reader/ReaderScreen.swift")
         self.assertIn("private var newLayout: Bool { NewLayout.isAvailable && newLayoutPreference }", reader)
-        self.assertRegex(reader, r"if newLayout \{ newChrome\(filmstripTrailing: trailing\) \} "
+        self.assertRegex(reader, r"if newLayout \{ newChrome\(filmstripTrailing: trailing, width: documentWidth\) \} "
                                  r"else \{ chrome\(filmstripTrailing: trailing\) \}")
         # L'ancienne barre d'outils flottante n'existe que dans l'ancien chrome.
         old = reader.split("private func chrome(filmstripTrailing: CGFloat)", 1)[1].split("private func setFilmstrip", 1)[0]
-        new = reader.split("private func newChrome(filmstripTrailing: CGFloat)", 1)[1].split("private func newActionsCapsule(compact: Bool)", 1)[0]
+        new = reader.split("private func newChrome(filmstripTrailing: CGFloat, width: CGFloat)", 1)[1].split("private func newActionsCapsule(compact: Bool)", 1)[0]
         self.assertIn("FloatingToolbar(", old)
         self.assertNotIn("FloatingToolbar(", new)
 

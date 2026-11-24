@@ -71,6 +71,14 @@ class Recette164FixesTests(unittest.TestCase):
         app = source("App/AppModel.swift")
         self.assertEqual(app.count("latestReadingPage = [:]"), 2)
 
+    def test_reader_bars_never_use_view_that_fits(self):
+        # Point 13 (paquets 119-122 sur l'iPad) : ViewThatFits dans les barres retenait le lecteur fermé.
+        screen = source("App/Reader/ReaderScreen.swift")
+        code = "\n".join(l for l in screen.splitlines() if not l.strip().startswith("//"))
+        self.assertNotIn("ViewThatFits(", code)
+        self.assertIn("bottomBar(width: barWidth)", screen)
+        self.assertIn("annotationBar(width: barWidth)", screen)
+
 
 if __name__ == "__main__":
     unittest.main()

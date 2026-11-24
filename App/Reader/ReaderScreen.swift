@@ -147,7 +147,7 @@ struct ReaderScreen: View {
                         let trailing = FilmstripLayout.trailingInset(
                             portraitPanelShown: docked == .study && !landscape, panelWidth: panelWidth, gap: Atelier.gap)
                         Group {
-                            if newLayout { newChrome(filmstripTrailing: trailing) } else { chrome(filmstripTrailing: trailing) }
+                            if newLayout { newChrome(filmstripTrailing: trailing, width: documentWidth) } else { chrome(filmstripTrailing: trailing) }
                         }
                         .transition(.opacity)
                     } else {
@@ -770,8 +770,10 @@ struct ReaderScreen: View {
 
     /// Barre du haut (bibliothèque, onglets, actions, Étudier) et grande barre du bas (Lire, Annoter, 辞, ふりがな,
     /// pages, IA, navigateur). Mêmes actions que l'ancienne présentation ; seule la disposition change.
-    private func newChrome(filmstripTrailing: CGFloat) -> some View {
-        VStack(spacing: 0) {
+    private func newChrome(filmstripTrailing: CGFloat, width: CGFloat) -> some View {
+        // Largeur offerte aux barres : la variante (libellés ou icônes) est choisie d'après elle, sans `ViewThatFits`.
+        let barWidth = width - filmstripTrailing - Atelier.gap * 2
+        return VStack(spacing: 0) {
             HStack(alignment: .top, spacing: 10) {
                 NewLayoutRoundButton(icon: "books.vertical", label: String(localized: "Bibliothèque")) { model.openDocumentId = nil }
                 DocumentTileBar(current: reader.document.id, currentPageLabel: reader.document.pageLabel(reader.currentSourcePage))
@@ -782,11 +784,8 @@ struct ReaderScreen: View {
                 }
                 // Relecture finale Codex : repli quand la place manque (Split View, navigateur à côté) — « Étudier »
                 // en icône, puis capsule défilante ; rien n'est rogné.
-                ViewThatFits(in: .horizontal) {
-                    newActionsCapsule(compact: false).fixedSize()
-                    newActionsCapsule(compact: true).fixedSize()
-                    ScrollView(.horizontal, showsIndicators: false) { newActionsCapsule(compact: true).fixedSize() }
-                }
+                // « Étudier » en icône quand le panneau ou le navigateur est ouvert, ou si la place manque.
+                newActionsCapsule(compact: side != nil || barWidth < Self.wideTopBar).fixedSize()
                 .frame(height: 56, alignment: .top)
                 .zIndex(1)
             }
@@ -848,12 +847,12 @@ struct ReaderScreen: View {
                         .transition(.opacity.combined(with: .offset(y: reduceMotion ? 0 : 24)))
                 }
                 if annotationToolsShown && capabilities.annotations {
-                    annotationBar
+                    annotationBar(width: barWidth)
                         .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
                 // Pendant le dessin, la palette d'outils d'iOS occupe le bas : seule la barre d'annotation reste.
                 if !reader.isDrawing {
-                    bottomBar
+                    bottomBar(width: barWidth)
                 }
             }
             .padding(.horizontal, Atelier.gap)
@@ -866,8 +865,8 @@ struct ReaderScreen: View {
 
     /// Capsule du haut : Rechercher, Signet, Affichage (Aa), « … », puis Étudier ; le moniteur la prolonge vers le bas.
     private func newActionsCapsule(compact: Bool) -> some View {
-        // Contenu des menus construit hors des fermetures `Menu { }`, gardées en vie par iOS 16 (y compris dans les
-        // versions que `ViewThatFits` essaie puis écarte) : seuls les relais et liaisons y restent (recette 1.6.4, point 13).
+        // Contenu des menus construit hors des fermetures `Menu { }`, gardées en vie par iOS 16 : seuls les relais et
+        // liaisons y restent (recette 1.6.4, point 13).
         let display = displayMenuItems, more = moreMenuItems
         return VStack(spacing: 0) {
             HStack(spacing: 2) {
@@ -909,16 +908,17 @@ struct ReaderScreen: View {
     /// Grande barre du bas : cibles de 56 pt, libellés visibles.
     /// Grande barre du bas. Seuls les outils de gauche ont plusieurs versions (libellés retirés si la place manque :
     /// panneau ouvert, navigateur à côté, Split View) ; le compteur de pages et la droite n'existent qu'en un exemplaire.
-    /// Recette 1.6.4 (point 13, bissection sur l'iPad) : avec toute la barre dans `ViewThatFits`, chaque version essayée
-    /// portait son propre champ de page (contrôle UIKit) et le lecteur fermé n'était plus libéré dès que la version large
-    /// ne tenait pas.
-    private var bottomBar: some View {
+    /// Version choisie d'après la largeur (voir `bottomBarWidths`), jamais par `ViewThatFits`.
+    private func bottomBar(width: CGFloat) -> some View {
         HStack(spacing: 6) {
-            ViewThatFits(in: .horizontal) {
+            if width >= Self.bottomBarWidths.full {
                 bottomTools(compact: false).fixedSize()
+            } else if width >= Self.bottomBarWidths.annotate {
                 // Recette 1.6.4 (point 5) : « Annoter » garde son nom tant que la place le permet.
                 bottomTools(compact: true, annotateLabel: true).fixedSize()
+            } else if width >= Self.bottomBarWidths.compact {
                 bottomTools(compact: true).fixedSize()
+            } else {
                 // Dernier repli (navigateur à côté sur un écran étroit) : les outils défilent, rien n'est coupé.
                 ScrollView(.horizontal, showsIndicators: false) { bottomTools(compact: true).fixedSize() }
             }
@@ -927,6 +927,14 @@ struct ReaderScreen: View {
         .padding(6)
         .newLayoutBar(radius: 34)
     }
+
+    /// Seuils de largeur des barres (pt), pris avec de la marge sur leur taille réelle. Recette 1.6.4 (point 13,
+    /// bissection sur l'iPad, paquets 119-122) : `ViewThatFits` gardait en vie les lecteurs fermés dès que la version
+    /// large ne tenait pas (panneau ouvert) ; sans lui, 7 lecteurs sur 7 libérés. Le choix se fait donc à la largeur.
+    static let bottomBarWidths = (full: CGFloat(960), annotate: CGFloat(860), compact: CGFloat(780))
+    static let wideTopBar: CGFloat = 1100
+    static let wideAnnotationBar: CGFloat = 820
+    static let compactAnnotationBar: CGFloat = 420
 
     /// Outils de gauche de la barre du bas : page précédente, Lire, Annoter, 辞, survol, ふりがな.
     private func bottomTools(compact: Bool, annotateLabel: Bool = false) -> some View {
@@ -1007,11 +1015,13 @@ struct ReaderScreen: View {
     /// Outils d'Annoter : un seul actif à la fois (dessiner, surligner le texte, Pencil-dictionnaire), puis Terminé.
     /// Relecture finale Codex : « Terminé » reste toujours visible ; les outils passent en icônes, puis défilent, quand
     /// la place manque (Split View étroite, navigateur à côté).
-    private var annotationBar: some View {
+    private func annotationBar(width: CGFloat) -> some View {
         HStack(spacing: 6) {
-            ViewThatFits(in: .horizontal) {
+            if width >= Self.wideAnnotationBar {
                 annotationTools(compact: false)
+            } else if width >= Self.compactAnnotationBar {
                 annotationTools(compact: true)
+            } else {
                 ScrollView(.horizontal, showsIndicators: false) { annotationTools(compact: true) }
             }
             Rectangle().fill(Atelier.hairline).frame(width: 1, height: 26).padding(.horizontal, 2)
@@ -1602,8 +1612,8 @@ final class ReaderMenuActions {
     enum Command {
         case pageCards, documentCards, pageOrientation, toggleSplit, firstPageHere, firstPageReset
         case notes, newNote, gestureHelp, settings, toggleOCRBoxes, textTab, vocabTab
-        // Barres de la nouvelle présentation : leurs versions sont essayées par `ViewThatFits`, qui garde en vie sous
-        // iOS 16 des copies écartées ; leurs boutons ne tiennent donc que ce relais (recette 1.6.4, point 13).
+        // Boutons des barres de la nouvelle présentation : ils ne tiennent que ce relais, jamais l'écran (recette 1.6.4,
+        // point 13 ; précaution en plus du retrait de `ViewThatFits`).
         case read, annotate, lookup, hover, furigana, pageArrow(left: Bool), openSearch, bookmark, study
         case drawTool, highlightTool, pencilTool
     }
