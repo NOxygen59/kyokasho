@@ -14,7 +14,7 @@ extension ThemeBackdrop {
     /// pâlissent jusqu'aux cases vides ; croix de repère pointillées ; petit hanamaru rouge sur la meilleure copie.
     static func genko(_ c: inout GraphicsContext, _ s: CGSize, _ t: Theme) {
         let cell = min(40, s.height / 14), gap = cell * 0.25
-        let left = s.width - 2 * (cell + gap) - cell * 0.5
+        let left = max(cell * 0.5, s.width - 2 * (cell + gap) - cell * 0.5)  // fenêtre très étroite
         let fades: [Double] = [0.42, 0.26, 0.18, 0.12, 0.08, 0.05]
         let kanji = ["学", "読"]  // lu de droite à gauche : 読 (lire) puis 学 (apprendre)
         var frames = Path(), guides = Path()
@@ -152,7 +152,7 @@ extension ThemeBackdrop {
             let width = CGFloat(i) * m * 0.026
             c.stroke(glyph, with: .color(t.read.opacity(0.07 + Double(rings - i) * 0.022)),
                      style: StrokeStyle(lineWidth: width, lineJoin: .round))
-            c.stroke(glyph, with: .color(t.canvas), style: StrokeStyle(lineWidth: width - hair * 2.4, lineJoin: .round))
+            c.stroke(glyph, with: .color(t.canvas), style: StrokeStyle(lineWidth: max(hair, width - hair * 2.4), lineJoin: .round))
         }
         c.fill(glyph, with: .color(t.canvas))
         c.stroke(glyph, with: .color(t.annotate.opacity(0.35)), lineWidth: hair * 1.4)
