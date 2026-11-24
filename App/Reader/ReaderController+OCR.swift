@@ -402,6 +402,11 @@ extension ReaderController {
         hoverTask?.cancel()  // AV-16-02 G2 : seul travail du lecteur que la fermeture n'arrêtait pas.
         pdfView.cancelPendingViewportRestoration()  // G2 : pas de recalage différé de PDFKit sur une vue fermée.
         ink.flush()
+        // Palette Pencil d'iOS masquée explicitement : le lecteur fermé étant libéré, elle restait sinon affichée sur la
+        // bibliothèque (paquet 123, 24/11/2026).
+        ink.setEditing(false)
+        ink.showToolPicker(false)
+        pdfView.resignFirstResponder()
         pdf?.cancelFindString()
         observers.forEach(NotificationCenter.default.removeObserver)
         observers.removeAll()

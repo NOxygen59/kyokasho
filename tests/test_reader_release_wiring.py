@@ -49,6 +49,13 @@ class ReaderReleaseWiringTests(unittest.TestCase):
         self.assertIn("let engineBinding = $layoutEngineRaw", layout)
         self.assertNotIn("selection: $layoutEngineRaw", layout.split("Menu {", 1)[1])
 
+    def test_close_hides_the_pencil_palette(self):
+        # Paquet 123 : le lecteur fermé étant libéré, la palette Pencil restait affichée sur la bibliothèque.
+        ocr = source("Reader/ReaderController+OCR.swift")
+        close = ocr.split("private func closeWork() {", 1)[1].split("\n    }\n", 1)[0]
+        self.assertIn("ink.showToolPicker(false)", close)
+        self.assertIn("ink.setEditing(false)", close)
+
     def test_reader_release_is_logged(self):
         self.assertRegex(source("Reader/ReaderController.swift"), r'deinit \{[^\n]*Diagnostics\.log\("lecteur libéré"')
 
