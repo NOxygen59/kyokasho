@@ -219,6 +219,8 @@ Une anomalie critique démontrée peut modifier cet ordre, avec justification en
 
 ## 8. Point de reprise pour le prochain chat
 
+**État au 24/11/2026 :** recette 1.6.4 (116) 12/14 corrigée sur `claude/refonte-ui` : lecteur fermé de nouveau libéré (`ViewThatFits` retiré des barres du lecteur, 12/12 mesurés sur l'iPad par SSH), recherche OCR et IA, retours d'usage (onglets à la dernière page, mise en page IA, import de même nom, Reprendre repliable). Candidate **1.6.5 (126) « Correctifs de la refonte »** et release GitHub v1.6.5 sur demande de NOxygen59. Fusion vers `main` : sur accord.
+
 **État au 23/11/2026 (relevé de cette note, sur le Mac de travail) :**
 
 - `main` = `6091c72` (1.6.3). Dernières releases GitHub : v1.5.9, v1.6.1 (pré-version), v1.6.2, v1.6.3 (gel du lecteur fermé corrigé, recette iPad 7/7).

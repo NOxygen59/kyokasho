@@ -9,6 +9,14 @@ import Foundation
 /// développeur.
 enum ReleaseHistory {
     static let past: [ReleaseNotes] = [
+        ReleaseNotes("1.6.4", "2026-11-23", String(localized: "Refonte graphique", bundle: .main), added: [
+                String(localized: "Nouvelle présentation sur iPad : lecteur, panneau d'étude et accueil redessinés, aux couleurs de ton thème. À activer dans Réglages → Général → Thèmes et couleurs ; désactivée, tout reste comme avant.", bundle: .main),
+                String(localized: "Lecteur : barre du haut et grande barre du bas, outils d'annotation regroupés, grille de toutes les pages du document.", bundle: .main),
+                String(localized: "Accueil : bouton Reprendre, carte « Aujourd'hui » et dossiers en onglets de chemise.", bundle: .main),
+                String(localized: "Grande fiche de mot, et onglets Notes, Repères et Chat remis au style de la nouvelle présentation.", bundle: .main),
+                String(localized: "Papier : un nouveau thème clair pour la lecture.", bundle: .main),
+                String(localized: "Recherche dans un document : le mot trouvé est surligné deux secondes sur la page.", bundle: .main),
+            ]),
         ReleaseNotes("1.6.3", "2026-11-23", String(localized: "Finalité des grandes optimisations", bundle: .main), fixed: [
             String(localized: "Gel corrigé : un livre fermé est maintenant libéré ; avant, il restait en mémoire et le processeur pouvait rester très chargé, au point de faire chauffer l'iPad, surtout après plusieurs livres ouverts et fermés.", bundle: .main),
             String(localized: "Mémoire : lors de nos essais, ouvrir puis fermer six livres plusieurs fois ne la faisait plus grimper.", bundle: .main),
