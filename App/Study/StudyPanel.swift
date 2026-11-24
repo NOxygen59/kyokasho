@@ -281,7 +281,9 @@ struct StudyTextTab: View {
                     documentOCRRow
                 }
                 // Place pour le bouton Copier posé en bas à droite : la fin du texte reste lisible.
-                .padding(.bottom, reader.ocrPage == nil ? 0 : 44)
+                // 72 : la pilule Copier de la nouvelle présentation est plus haute (retour d'usage du 24/11 : fin du texte
+                // de la mise en page IA cachée).
+                .padding(.bottom, reader.ocrPage == nil ? 0 : 72)
             }
         }
         .overlay(alignment: .bottomTrailing) { copyButton }

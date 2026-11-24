@@ -66,7 +66,7 @@ struct ResumeRow: View {
                             ResumeCard(document: document, isOpen: model.tabs.ids.contains(document.id),
                                        resume: { model.openDocumentId = document.id },
                                        close: { remove(document) })
-                                .frame(width: 330)
+                                .frame(width: 290)  // Retour d'usage du 24/11 : un peu plus petite.
                         }
                     }
                     .padding(.vertical, 6).padding(.horizontal, 2)
@@ -91,7 +91,7 @@ private struct ResumeCard: View {
     var body: some View {
         HStack(alignment: .top, spacing: 14) {
             RoundedRectangle(cornerRadius: Atelier.corner(10), style: .continuous).fill(Atelier.surfaceHigh)
-                .frame(width: 84, height: 112)
+                .frame(width: 66, height: 88)
                 .overlay {
                     if let image { Image(uiImage: image).resizable().scaledToFit() }
                 }
@@ -101,7 +101,7 @@ private struct ResumeCard: View {
                     Text("Ouvert").font(Atelier.font(11, weight: .bold)).textCase(.uppercase)
                         .foregroundStyle(NewLayoutInk.accent)
                 }
-                Text(document.title).font(Atelier.font(15, weight: .semibold)).lineLimit(2)
+                Text(document.title).font(Atelier.font(14, weight: .semibold)).lineLimit(2)
                     .foregroundStyle(Atelier.textPrimary)
                 Text(verbatim: "p. \(document.pageLabel(document.lastPageIndex)) / \(document.pageLabel(document.pageCount - 1))")
                     .font(Atelier.font(12).monospacedDigit()).foregroundStyle(Atelier.textSecondary)
