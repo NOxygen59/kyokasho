@@ -19,7 +19,9 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/groue/GRDB.swift.git", from: "7.11.1"),
         .package(url: "https://github.com/weichsel/ZIPFoundation.git", from: "0.9.20"),
-        .package(url: "https://github.com/microsoft/onnxruntime-swift-package-manager", exact: "1.24.2"),
+        // Miroir NOxygen59 (24/11/2026) : le dépôt de Microsoft et download.onnxruntime.ai sont hors ligne. Branche
+        // `kyokasho` = tag 1.24.2 de Microsoft, binaires originaux (mêmes empreintes) servis par la release du miroir.
+        .package(url: "https://github.com/NOxygen59/onnxruntime-swift-package-manager", revision: "bfb3fbbe50a563dbc3bcb8984596905f6352d03f"),
         // Branche main fixée : le tag 5.0.0 garde l API en interne.
         .package(url: "https://github.com/open-spaced-repetition/swift-fsrs", revision: "4fbaf20184d62f82a9f44f343337c61a2c5483e9"),
     ],

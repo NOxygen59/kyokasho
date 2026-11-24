@@ -40,10 +40,9 @@
     {
       "identity" : "onnxruntime-swift-package-manager",
       "kind" : "remoteSourceControl",
-      "location" : "https://github.com/microsoft/onnxruntime-swift-package-manager",
+      "location" : "https://github.com/NOxygen59/onnxruntime-swift-package-manager",
       "state" : {
-        "revision" : "b7fb7f7dea8a2469e6335d95a61b8f36d0dc83b2",
-        "version" : "1.24.2"
+        "revision" : "bfb3fbbe50a563dbc3bcb8984596905f6352d03f"
       }
     },
     {

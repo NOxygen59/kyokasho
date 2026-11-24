@@ -516,7 +516,7 @@ struct AboutView: View {
                 credit("unidic-lite", "Paul McCann", "MIT", "https://github.com/polm/unidic-lite")
             }
             Section("OCR") {
-                credit(String(localized: "ONNX Runtime"), "Microsoft", "MIT", "https://github.com/microsoft/onnxruntime-swift-package-manager")
+                credit(String(localized: "ONNX Runtime"), "Microsoft", "MIT", "https://github.com/NOxygen59/onnxruntime-swift-package-manager")
                 credit(String(localized: "PP-OCRv5 (modèles téléchargés)"), "PaddlePaddle · RapidAI", "Apache-2.0", "https://github.com/PaddlePaddle/PaddleOCR")
                 credit(String(localized: "NDLOCR-Lite (modèles téléchargés)"), "国立国会図書館 (National Diet Library)", "CC-BY-4.0", "https://github.com/ndl-lab/ndlocr-lite")
                 credit(String(localized: "PP-DocLayout v3 (mise en page, modèle téléchargé)"), "PaddlePaddle · conversion RapidAI", "Apache-2.0", "https://github.com/RapidAI/RapidLayout")
