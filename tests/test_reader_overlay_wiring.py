@@ -34,7 +34,7 @@ class ReaderOverlayWiringTests(unittest.TestCase):
         self.assertNotIn(".animation(", layer)
         self.assertNotIn("withAnimation", layer)
         tabs = source("Reader/DocumentTabsBar.swift")
-        self.assertRegex(tabs, r"ReaderScreen\(document: document, model: model\)\.id\(document\.id\)\s*"
+        self.assertRegex(tabs, r"ReaderScreen\(document: (?:document|Self\.atLatestPage\(document, model\.latestReadingPage\[id\]\)), model: model\)\.id\(document\.id\)\s*"
                                r"\.transition\(\.identity\)")
         reveal = tabs.split("struct ReaderReveal: ViewModifier {", 1)[1].split("\n}\n", 1)[0]
         self.assertIn("@State private var shown = false", reveal)
