@@ -25,6 +25,11 @@ public enum ReaderBarLayout {
     /// navigateur ouvert se ferme.
     public static let webPanelMinWindow: CGFloat = 440 + 42 + 371
 
+    /// Fenêtre minimale pour ancrer le panneau d'étude en colonne (fenêtre plus large que haute) : sa colonne (420) et
+    /// ses marges (3 × 14) doivent laisser le plancher des barres (343 + 2 × 14). En dessous, il flotte au-dessus des
+    /// barres comme en fenêtre étroite (fenêtre libre du tweak de NOxygen59, 25/11).
+    public static let studyDockMinWindow: CGFloat = 420 + 42 + 371
+
     /// Disposition de la barre du haut.
     public struct Top: Equatable {
         /// Onglets montrés en tête (le livre affiché en fait toujours partie) ; les autres vont dans « +N ».

@@ -109,7 +109,11 @@ class NewLayoutWiringTests(unittest.TestCase):
         self.assertIn("ReaderBarLayout.top(width: width - Atelier.gap * 2", reader)
         self.assertIn("let narrow = geo.size.width < ReaderBarLayout.narrowWindow", reader)
         # Panneau flottant au-dessus de la barre du bas, jamais plus large que la fenêtre (AV-FENETRES-001 A).
-        self.assertIn("!landscape && !(newLayout && narrow)", reader)
+        self.assertIn("portraitPanelShown: docked == .study && !dockable && !floatsOverBars", reader)
+        # Fenêtre libre large mais étroite : ancrage seulement si la colonne laisse aux barres leur plancher.
+        self.assertIn("let dockable = landscape && (!newLayout || geo.size.width >= ReaderBarLayout.studyDockMinWindow)", reader)
+        self.assertIn("reservedSide == .study && dockable", reader)
+        self.assertIn(".onChange(of: dockable) { _ in finishDockTransition() }", reader)
         self.assertIn(".padding(.bottom, fits ? floatingPanelBottomReserve : 0)", reader)
         self.assertIn("min(panelWidth, geo.size.width - Atelier.gap * 2)", reader)
         # Navigateur à côté : seulement s'il laisse sa place au lecteur ; fermé si la fenêtre rétrécit.

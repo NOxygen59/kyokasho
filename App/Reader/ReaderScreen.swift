@@ -126,7 +126,11 @@ struct ReaderScreen: View {
             // (AV-FENETRES-001). Le navigateur à côté n'est proposé que s'il laisse au lecteur sa largeur minimale.
             let narrow = geo.size.width < ReaderBarLayout.narrowWindow
             let webAllowed = geo.size.width >= ReaderBarLayout.webPanelMinWindow
-            let reservesSide = reservedSide == .web || (reservedSide == .study && landscape)
+            // Fenêtre libre plus large que haute mais étroite : la colonne du panneau (462 pt) ne laisserait pas aux
+            // barres leur plancher ; le panneau flotte alors au-dessus des barres, comme en Split View.
+            let dockable = landscape && (!newLayout || geo.size.width >= ReaderBarLayout.studyDockMinWindow)
+            let floatsOverBars = newLayout && (narrow || (landscape && !dockable))
+            let reservesSide = reservedSide == .web || (reservedSide == .study && dockable)
             let panelWidth: CGFloat = (reservedSide ?? docked) == .web ? 440 : Atelier.panelWidth
             let inset: CGFloat = reservesSide ? Atelier.gap : 0
             let documentWidth = max(1, geo.size.width - (reservesSide ? panelWidth + Atelier.gap * 3 : 0))
@@ -149,7 +153,7 @@ struct ReaderScreen: View {
                     if chromeVisible {
                         // Portrait : la bande des pages s'arrête au bord du panneau d'étude flottant (recette 1.3.2 (59), A11).
                         let trailing = FilmstripLayout.trailingInset(
-                            portraitPanelShown: docked == .study && !landscape && !(newLayout && narrow), panelWidth: panelWidth, gap: Atelier.gap)
+                            portraitPanelShown: docked == .study && !dockable && !floatsOverBars, panelWidth: panelWidth, gap: Atelier.gap)
                         Group {
                             if newLayout { newChrome(filmstripTrailing: trailing, width: documentWidth, webAllowed: webAllowed) } else { chrome(filmstripTrailing: trailing) }
                         }
@@ -229,6 +233,7 @@ struct ReaderScreen: View {
                 finishDockTransition()
             }
             .onChange(of: docked) { syncDock(to: $0) }
+            .onChange(of: dockable) { _ in finishDockTransition() }
             .onChange(of: webAllowed) { if !$0, side == .web { side = nil } }
             // Chaque livre retient sa position du panneau ; le réglage général reste celui des livres sans choix.
             .onChange(of: studyMode) { mode in
@@ -239,12 +244,12 @@ struct ReaderScreen: View {
                 reservedSide = docked
                 reader.adaptLayout(portrait: !landscape)
                 // Paysage (taille réelle de la vue, pas l'orientation de la scène) : panneau d'étude ouvert d'office.
-                if landscape, !autoOpenedSide, capabilities.study { autoOpenedSide = true; side = .study }
+                if dockable, !autoOpenedSide, capabilities.study { autoOpenedSide = true; side = .study }
             }
             .overlay(alignment: .trailing) {
                 // En portrait seulement, le panneau reste flottant sur la page.
-                if docked == .study, !landscape {
-                    let fits = newLayout && narrow
+                if docked == .study, !dockable {
+                    let fits = floatsOverBars
                     // Fenêtre étroite : au-dessus de la barre du bas (et d'Annoter), jamais plus large que la fenêtre.
                     sidePanel(.study, fixedWidth: !fits)
                         .padding(.vertical, Atelier.gap)

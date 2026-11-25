@@ -35,6 +35,12 @@ final class ReaderBarLayoutTests: XCTestCase {
         XCTAssertEqual(t, .init(visibleTabs: 1, currentTitle: false, newTabButton: false, slim: true))
     }
 
+    func testDockedPanelAndBrowserLeaveTheBarFloor() {
+        // Colonne (420 ou 440) + 3 × 14 de marges, puis 2 × 14 autour des barres : il reste au moins le plancher.
+        XCTAssertGreaterThanOrEqual(ReaderBarLayout.studyDockMinWindow - 420 - 42 - 28, 343)
+        XCTAssertGreaterThanOrEqual(ReaderBarLayout.webPanelMinWindow - 440 - 42 - 28, 343)
+    }
+
     func testNeverWiderThanOffered() {
         // Plancher : Bibliothèque, livre affiché, « +N » et capsule resserrée = 343 pt (Split View ⅓ = 347).
         for width in stride(from: CGFloat(343), through: 1400, by: 7) {
