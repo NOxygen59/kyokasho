@@ -123,6 +123,9 @@ final class ActivityCenter: @unchecked Sendable {
         diagnosticLong.add(observed.work(at: ProcessInfo.processInfo.systemUptime))
     }
 
+    /// Travaux suivis à cet instant (E2c), lus sous le verrou : figés au moment d'une alerte mémoire.
+    func trackedSnapshot() -> DiagnosticOngoing { lock.withLock { tracked.snapshot } }
+
     func end(_ id: UUID) {
         let published: DiagnosticOngoing? = lock.withLock {
             if diagnosticsOn { diagnosticRunning.removeValue(forKey: id) }

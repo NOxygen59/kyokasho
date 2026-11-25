@@ -89,6 +89,13 @@ class DiagnosticSessionWiringTests(unittest.TestCase):
         self.assertLess(update.index("machine.commit(ongoing: latest)"), update.index("file.write(state)"))
         self.assertIn("return first", update)
         self.assertIn('"travail_connu_alerte_memoire"', ctrl0)
+        # B2 (passage 2) : travaux figés au signal ; mémoire inconnue explicite.
+        self.assertIn("ongoing: ActivityCenter.shared.trackedSnapshot())", ctrl0)
+        self.assertIn('DiagnosticCount("memoire_inconnue", 1)', ctrl0)
+        # B4 (passage 2) : phase réelle notée au signal de fond, avant toute écriture en attente.
+        close = ctrl0.split("private func close() {", 1)[1].split("\n    }", 1)[0]
+        self.assertLess(close.index("setForeground(false)"), close.index("handle(.background)"))
+        self.assertIn("guard let file, isForeground, machine.armed", ctrl0)
         self.assertLess(begin.index("lock.withLock"), begin.index("DiagnosticSessionController.shared.updateOngoing(published)"))
         end = center.split("    func end(_ id: UUID) {", 1)[1].split("\n    }\n", 1)[0]
         self.assertIn("return tracked.end(id)", end)

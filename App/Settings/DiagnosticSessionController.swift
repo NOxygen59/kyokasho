@@ -67,6 +67,7 @@ final class DiagnosticSessionController: @unchecked Sendable {
             // Retour au premier plan sans clôture : l'assertion demandée tôt est rendue.
             self?.earlyAssertion?.end()
             self?.earlyAssertion = nil
+            self?.setForeground(true)
             self?.handle(.foreground)
         }
         observers = [
@@ -114,6 +115,9 @@ final class DiagnosticSessionController: @unchecked Sendable {
     /// (fin d'écriture ou expiration) : une clôture ancienne ne peut pas rendre celle d'une autre (revue R2 E2a, B1).
     /// Fil principal (notification).
     private func close() {
+        // Phase réelle notée tout de suite : aucune écriture de travaux ou de mémoire en attente ne passe après le
+        // signal de fond, même si l'écriture de clôture échoue (revue R2 E2c, B4).
+        setForeground(false)
         // L'assertion anticipée n'est reprise que si iOS l'a accordée et qu'elle court encore.
         let early = earlyAssertion
         earlyAssertion = nil
@@ -141,13 +145,17 @@ final class DiagnosticSessionController: @unchecked Sendable {
             // les écritures suivantes ni pour l'alerte mémoire (B3). L'écriture n'a lieu que session armée.
             let previous = machine.ongoing
             machine.commit(ongoing: latest)
-            guard let file, machine.armed, machine.ongoing != previous,
+            guard let file, isForeground, machine.armed, machine.ongoing != previous,
                   let state = machine.next(ongoing: nil, now: Date(), memoryMB: nil) else { return }
             file.write(state)
         }
     }
     private let pendingLock = NSLock()
     private var pendingOngoing: DiagnosticOngoing?
+    /// Phase réelle du processus, notée au signal (fil principal), distincte de l'état écrit.
+    private var foreground = false
+    private func setForeground(_ value: Bool) { pendingLock.withLock { foreground = value } }
+    private var isForeground: Bool { pendingLock.withLock { foreground } }
 
     /// Un seul observateur de la pression mémoire pour le processus (E2c), installé une fois. L'empreinte est relevée
     /// **avant** les libérations (0 = inconnue), notée dans l'état armé avec les travaux en cours, puis les
@@ -156,24 +164,29 @@ final class DiagnosticSessionController: @unchecked Sendable {
         guard memoryObserver == nil else { return }
         memoryObserver = NotificationCenter.default.addObserver(forName: UIApplication.didReceiveMemoryWarningNotification,
                                                                 object: nil, queue: .main) { [weak self] _ in
+            // Empreinte et travaux figés au moment du signal (revue R2 E2c, B2).
             let footprint = Int(Diagnostics.footprintMB())
-            self?.memoryWarning(memoryMB: footprint > 0 ? footprint : nil)
+            self?.memoryWarning(memoryMB: footprint > 0 ? footprint : nil, ongoing: ActivityCenter.shared.trackedSnapshot())
             release()
         }
     }
 
-    private func memoryWarning(memoryMB: Int?) {
+    private func memoryWarning(memoryMB: Int?, ongoing: DiagnosticOngoing) {
+        let foregroundNow = isForeground
         queue.async { [self] in
-            let ongoing = machine.ongoing
             var counts = [DiagnosticCount("operations_suivies", ongoing.entries.count)]
             if ongoing.truncated { counts.append(DiagnosticCount("tronquee", 1)) }
+            if memoryMB == nil { counts.append(DiagnosticCount("memoire_inconnue", 1)) }
             DiagnosticCenter.shared.emit(.alerte, DiagnosticEvent(.alerte, .memoire, "alerte_memoire", memoryMB: memoryMB, counts: counts))
             // Travaux connus au moment de l'alerte, avec leur op (revue R2 E2c, B2).
             for entry in ongoing.entries {
                 DiagnosticCenter.shared.emit(.alerte, DiagnosticEvent(.alerte, entry.kind.zone, "travail_connu_alerte_memoire",
                                                                       op: DiagnosticOperation(raw: entry.op)))
             }
-            if let file, let state = machine.next(ongoing: nil, now: Date(), memoryMB: memoryMB) { file.write(state) }
+            // Jamais en fond : une clôture ratée ne doit pas être réécrite « armée » (B4).
+            if foregroundNow, isForeground, let file, let state = machine.next(ongoing: nil, now: Date(), memoryMB: memoryMB) {
+                file.write(state)
+            }
         }
     }
 
