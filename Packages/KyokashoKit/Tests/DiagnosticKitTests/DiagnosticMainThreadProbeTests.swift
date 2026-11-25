@@ -100,6 +100,19 @@ final class DiagnosticMainThreadProbeTests: XCTestCase {
         XCTAssertNotNil(probe.observe(sent: at(20_000), answered: at(20_600)))
     }
 
+    /// Revue R2 E2e passage 2, B1 : silence devenu trop long **après** la réponse (réveil tardif traité avant elle).
+    func testHoleThatStartsAfterTheAnswerDoesNotRejectIt() {
+        var probe = DiagnosticMainThreadProbe()
+        _ = probe.observe(sent: at(0), answered: at(1))
+        probe.send(at: at(1_000))
+        probe.tick(at: at(1_500))
+        probe.tick(at: at(4_000))   // trou à partir de 3 500, réponse lue à 1 800
+        XCTAssertEqual(probe.observe(sent: at(1_000), answered: at(1_800))?.durationMs, 800)
+        probe.send(at: at(15_000))
+        probe.tick(at: at(15_500))
+        XCTAssertNotNil(probe.observe(sent: at(15_000), answered: at(15_600)), "mesure suivante publiable")
+    }
+
     func testThresholdBoundary() {
         var probe = DiagnosticMainThreadProbe()
         _ = probe.observe(sent: at(0), answered: at(1))

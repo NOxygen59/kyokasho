@@ -40,7 +40,8 @@ public struct DiagnosticMainThreadProbe: Sendable {
 
     private var warm = false
     private var lastTickNs: UInt64?
-    private var hole = false
+    /// Instant où le silence de l'observateur a dépassé `observationHoleNs` (le plus ancien depuis l'envoi).
+    private var holeAtNs: UInt64?
     private var lastLineNs: UInt64?
     private var omitted = 0
     private var omittedWorstMs = 0
@@ -50,20 +51,23 @@ public struct DiagnosticMainThreadProbe: Sendable {
     /// Nouveau départ (mode allumé, retour au premier plan) : la mesure suivante est ignorée.
     public mutating func rearm() { warm = false }
 
-    /// Chaque réveil de l'observateur, requête en vol ou non. Un silence plus long que `observationHoleNs` marque la
-    /// requête en vol comme traversant un trou d'observation.
+    /// Chaque réveil de l'observateur, requête en vol ou non. Un silence plus long que `observationHoleNs` note
+    /// **l'instant** où il a dépassé le seuil : seule une réponse lue après cet instant a traversé le trou (revue R2
+    /// E2e, passage 2, B1 : un réveil tardif traité avant la réponse ne la rejette pas).
     public mutating func tick(at now: Instant) {
         // La chronologie de l'observateur ne recule jamais : une réponse horodatée avant un réveil déjà traité
         // (fil principal préempté entre sa lecture d'horloge et son envoi) n'invente pas de trou (revue R2 E2e, B1).
         if let last = lastTickNs, now.uptimeNs < last { return }
-        if let last = lastTickNs, now.uptimeNs - last > Self.observationHoleNs { hole = true }
+        if let last = lastTickNs, now.uptimeNs - last > Self.observationHoleNs, holeAtNs == nil {
+            holeAtNs = last + Self.observationHoleNs
+        }
         lastTickNs = now.uptimeNs
     }
 
     /// Envoi d'un battement : départ d'une nouvelle mesure, sans trou.
     public mutating func send(at now: Instant) {
         lastTickNs = now.uptimeNs
-        hole = false
+        holeAtNs = nil
     }
 
     /// Une réponse du fil principal. Renvoie l'événement à écrire, ou nil.
@@ -74,8 +78,8 @@ public struct DiagnosticMainThreadProbe: Sendable {
         if lastTickNs.map({ $0 < sent.uptimeNs }) ?? true { send(at: sent) }
         // Trou jusqu'à la réponse elle-même (processus repris : réponse et réveil arrivent ensemble).
         tick(at: answered)
-        let crossedHole = hole
-        hole = false
+        let crossedHole = holeAtNs.map { $0 <= answered.uptimeNs } ?? false
+        holeAtNs = nil
         guard !crossedHole else { return nil }
         guard answered.uptimeNs >= sent.uptimeNs, answered.continuousNs >= sent.continuousNs else { return nil }
         let delayNs = answered.uptimeNs - sent.uptimeNs
