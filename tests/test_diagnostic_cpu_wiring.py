@@ -28,7 +28,7 @@ class DiagnosticCPUWiringTests(unittest.TestCase):
         # PLAN-DIAG-001 (AV-03) : même filtre, ligne au contrat commun (zone, op, étape).
         self.assertIn("enqueue(DiagnosticLine.monitor(.info, zone: zone, op: op, step: step, measures: measures, at: Date()), sync: false,\n                diagnosticOnly: true)", journal)
         self.assertIn("guard !diagnosticOnly || enabled else { return }", journal)
-        self.assertIn(".onChange(of: enabled) { _ in\n                    DiagnosticCPU.updateActivation()\n                    Diagnostics.updateDetail()", journal)
+        self.assertIn(".onChange(of: enabled) { _ in\n                    DiagnosticCPU.updateActivation()\n                    DiagnosticMainThreadMonitor.updateActivation()\n                    Diagnostics.updateDetail()", journal)
         self.assertIn("DiagnosticCPU.updateActivation()", source("App/Settings/EnergyMeter.swift"))
 
     def test_activity_snapshot_does_not_consume_monitor_ledger_or_details(self):

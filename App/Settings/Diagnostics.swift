@@ -320,6 +320,7 @@ struct DiagnosticsSection: View {
             Toggle("Mode diagnostic", isOn: $enabled)
                 .onChange(of: enabled) { _ in
                     DiagnosticCPU.updateActivation()
+                    DiagnosticMainThreadMonitor.updateActivation()
                     Diagnostics.updateDetail()
                 }
             #if !targetEnvironment(macCatalyst)
