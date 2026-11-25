@@ -36,11 +36,11 @@ class NewLayoutWiringTests(unittest.TestCase):
     def test_reader_keeps_the_old_chrome_when_the_switch_is_off(self):
         reader = source("Reader/ReaderScreen.swift")
         self.assertIn("private var newLayout: Bool { NewLayout.isAvailable && newLayoutPreference }", reader)
-        self.assertRegex(reader, r"if newLayout \{ newChrome\(filmstripTrailing: trailing, width: documentWidth\) \} "
+        self.assertRegex(reader, r"if newLayout \{ newChrome\(filmstripTrailing: trailing, width: documentWidth, webAllowed: webAllowed\) \} "
                                  r"else \{ chrome\(filmstripTrailing: trailing\) \}")
         # L'ancienne barre d'outils flottante n'existe que dans l'ancien chrome.
         old = reader.split("private func chrome(filmstripTrailing: CGFloat)", 1)[1].split("private func setFilmstrip", 1)[0]
-        new = reader.split("private func newChrome(filmstripTrailing: CGFloat, width: CGFloat)", 1)[1].split("private func newActionsCapsule(compact: Bool)", 1)[0]
+        new = reader.split("private func newChrome(filmstripTrailing: CGFloat, width: CGFloat, webAllowed: Bool)", 1)[1].split("private func newActionsCapsule(", 1)[0]
         self.assertIn("FloatingToolbar(", old)
         self.assertNotIn("FloatingToolbar(", new)
 
@@ -102,6 +102,24 @@ class NewLayoutWiringTests(unittest.TestCase):
         self.assertIn("close: { remove(document) }", row)
         self.assertIn("model.closeTab(document.id); return", row)
 
+
+    def test_narrow_windows_keep_every_bar_on_screen(self):
+        # PLAN-FENETRES-001 (Split View ½ mesuré à 678 pt : chrome de -84 à 763) : variantes choisies à la largeur.
+        reader = source("Reader/ReaderScreen.swift")
+        self.assertIn("ReaderBarLayout.top(width: width - Atelier.gap * 2", reader)
+        self.assertIn("let narrow = geo.size.width < ReaderBarLayout.narrowWindow", reader)
+        # Panneau flottant au-dessus de la barre du bas, jamais plus large que la fenêtre (AV-FENETRES-001 A).
+        self.assertIn("!landscape && !(newLayout && narrow)", reader)
+        self.assertIn(".padding(.bottom, fits ? floatingPanelBottomReserve : 0)", reader)
+        self.assertIn("min(panelWidth, geo.size.width - Atelier.gap * 2)", reader)
+        # Navigateur à côté : seulement s'il laisse sa place au lecteur ; fermé si la fenêtre rétrécit.
+        self.assertIn(".onChange(of: webAllowed) { if !$0, side == .web { side = nil } }", reader)
+        # Boutons retirés des barres : dans « … », par le relais.
+        self.assertIn("menuActions.perform?(.pageToAI)", reader)
+        self.assertIn("menuActions.perform?(.toggleWeb)", reader)
+        tiles = source("Reader/DocumentTabsBar.swift")
+        self.assertIn("let expanded = on && showsTitle && openDocuments.count < Self.pillsOnlyFrom", tiles)
+        self.assertIn(".frame(minWidth: 120, maxWidth: 260, alignment: .leading)", tiles)
 
     def test_reader_menus_do_not_capture_the_reader(self):
         # Revue R2 Codex (P1) : les actions des menus passent par un relais retiré à la fermeture.

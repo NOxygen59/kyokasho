@@ -34,10 +34,10 @@ class Recette164FixesTests(unittest.TestCase):
         self.assertNotIn("if reader.pageHasText {\n                    NewLayoutIconButton", screen)
         self.assertIn("bottomTools(compact: true, annotateLabel: true)", screen)
         # Point 13 : le champ de page (UIKit) hors des versions essayées par ViewThatFits.
-        tools = screen.split("private func bottomTools(", 1)[1].split("private var bottomTail", 1)[0]
+        tools = screen.split("private func bottomTools(", 1)[1].split("private func bottomTail(", 1)[0]
         self.assertNotIn("pageCounter", tools)
         self.assertNotIn("TextField", tools)
-        self.assertIn("bottomTail.fixedSize()", screen)
+        self.assertIn("bottomTail(aiAndWebInMenu: aiAndWebInMenu, webAllowed: webAllowed).fixedSize()", screen)
 
     def test_resume_cards_can_be_dismissed_and_keep_natural_height(self):
         row = source("App/Library/ResumeRow.swift")
@@ -59,7 +59,7 @@ class Recette164FixesTests(unittest.TestCase):
         # tenir que le relais faible, jamais l'écran (donc le lecteur).
         screen = source("App/Reader/ReaderScreen.swift")
         bodies = [
-            screen.split("private func bottomTools(", 1)[1].split("private var bottomTail", 1)[0],
+            screen.split("private func bottomTools(", 1)[1].split("private func bottomTail(", 1)[0],
             screen.split("private func annotationTools(", 1)[1].split("private enum AnnotationTool", 1)[0],
             screen.split("private func newActionsCapsule(", 1)[1].split("if monitorEnabled && monitorShown", 1)[0],
             screen.split("private func newPageArrow(", 1)[1].split("private func railDivider", 1)[0],
@@ -85,7 +85,7 @@ class Recette164FixesTests(unittest.TestCase):
         screen = source("App/Reader/ReaderScreen.swift")
         code = "\n".join(l for l in screen.splitlines() if not l.strip().startswith("//"))
         self.assertNotIn("ViewThatFits(", code)
-        self.assertIn("bottomBar(width: barWidth)", screen)
+        self.assertIn("bottomBar(width: barWidth, aiAndWebInMenu: aiAndWebInMenu, webAllowed: webAllowed)", screen)
         self.assertIn("annotationBar(width: barWidth)", screen)
 
 

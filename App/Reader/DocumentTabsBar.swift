@@ -180,6 +180,10 @@ struct DocumentTileBar: View {
     /// Page affichée par le lecteur (la position enregistrée n'est publiée qu'à la fermeture du livre).
     let currentPageLabel: String
     var visible = 6
+    /// Livre affiché avec titre et page ; `false` quand la place manque (fenêtre étroite) : pastille seule.
+    var showsTitle = true
+    /// Bouton « + » ; retiré dans la barre resserrée (Split View ⅓), où l'on ouvre un autre livre par la bibliothèque.
+    var showsNewTab = true
     @EnvironmentObject private var model: AppModel
     private var openDocuments: [LibraryDocument] {
         model.tabs.ids.compactMap { id in model.documents.first { $0.id == id } }
@@ -215,7 +219,7 @@ struct DocumentTileBar: View {
                 }
                 .accessibilityLabel("Autres onglets ouverts")
             }
-            Menu {
+            if showsNewTab { Menu {
                 ForEach(model.documents.filter { !model.tabs.ids.contains($0.id) }) { document in
                     Button(document.title) { ReaderTabHandoff.shared.prepare(); model.openDocumentId = document.id }
                 }
@@ -225,7 +229,7 @@ struct DocumentTileBar: View {
                     .overlay(RoundedRectangle(cornerRadius: Atelier.corner(14), style: .continuous)
                         .strokeBorder(Atelier.hairline, style: StrokeStyle(lineWidth: Atelier.border(1.5), dash: [4, 3])))
             }
-            .accessibilityLabel("Ouvrir un autre document dans un onglet")
+            .accessibilityLabel("Ouvrir un autre document dans un onglet") }
         }
     }
 
@@ -246,7 +250,7 @@ struct DocumentTileBar: View {
     @ViewBuilder
     private func tile(_ document: LibraryDocument) -> some View {
         let on = document.id == current
-        let expanded = on && openDocuments.count < Self.pillsOnlyFrom
+        let expanded = on && showsTitle && openDocuments.count < Self.pillsOnlyFrom
         let square = Text(verbatim: Self.glyph(document.title)).font(.custom("HiraginoSans-W6", size: 20))
             .foregroundStyle(Color(hex: 0x1E272C))
             .frame(width: 44, height: 44)
@@ -262,7 +266,8 @@ struct DocumentTileBar: View {
                     Text(verbatim: "p. \(currentPageLabel) / \(document.pageLabel(document.pageCount - 1))")
                         .font(Atelier.font(12).monospacedDigit()).foregroundStyle(Atelier.textSecondary)
                 }
-                .frame(maxWidth: 260, alignment: .leading)
+                // Jamais vide (recette du 25/11 : à 981 pt le titre tombait à zéro) ; en dessous, pastille seule.
+                .frame(minWidth: 120, maxWidth: 260, alignment: .leading)
                 Button { close(document) } label: {
                     Image(systemName: "xmark").font(Atelier.font(12, weight: .bold))
                         .foregroundStyle(Atelier.textSecondary)

@@ -122,6 +122,10 @@ struct ReaderScreen: View {
             // (panneau recréé, fenêtre de correction fermée, disposition recalculée).
             let measured = keyboardFreeSize == .zero ? geo.size : keyboardFreeSize
             let landscape = measured.width > measured.height
+            // Fenêtre étroite (Split View, fenêtre libre) : le panneau d'étude flottant laisse la barre du bas entière
+            // (AV-FENETRES-001). Le navigateur à côté n'est proposé que s'il laisse au lecteur sa largeur minimale.
+            let narrow = geo.size.width < ReaderBarLayout.narrowWindow
+            let webAllowed = geo.size.width >= ReaderBarLayout.webPanelMinWindow
             let reservesSide = reservedSide == .web || (reservedSide == .study && landscape)
             let panelWidth: CGFloat = (reservedSide ?? docked) == .web ? 440 : Atelier.panelWidth
             let inset: CGFloat = reservesSide ? Atelier.gap : 0
@@ -145,9 +149,9 @@ struct ReaderScreen: View {
                     if chromeVisible {
                         // Portrait : la bande des pages s'arrête au bord du panneau d'étude flottant (recette 1.3.2 (59), A11).
                         let trailing = FilmstripLayout.trailingInset(
-                            portraitPanelShown: docked == .study && !landscape, panelWidth: panelWidth, gap: Atelier.gap)
+                            portraitPanelShown: docked == .study && !landscape && !(newLayout && narrow), panelWidth: panelWidth, gap: Atelier.gap)
                         Group {
-                            if newLayout { newChrome(filmstripTrailing: trailing, width: documentWidth) } else { chrome(filmstripTrailing: trailing) }
+                            if newLayout { newChrome(filmstripTrailing: trailing, width: documentWidth, webAllowed: webAllowed) } else { chrome(filmstripTrailing: trailing) }
                         }
                         .transition(.opacity)
                     } else {
@@ -225,6 +229,7 @@ struct ReaderScreen: View {
                 finishDockTransition()
             }
             .onChange(of: docked) { syncDock(to: $0) }
+            .onChange(of: webAllowed) { if !$0, side == .web { side = nil } }
             // Chaque livre retient sa position du panneau ; le réglage général reste celui des livres sans choix.
             .onChange(of: studyMode) { mode in
                 guard mode != .minimized, generalPanelMode != nil else { return }
@@ -239,9 +244,12 @@ struct ReaderScreen: View {
             .overlay(alignment: .trailing) {
                 // En portrait seulement, le panneau reste flottant sur la page.
                 if docked == .study, !landscape {
-                    sidePanel(.study)
+                    let fits = newLayout && narrow
+                    // Fenêtre étroite : au-dessus de la barre du bas (et d'Annoter), jamais plus large que la fenêtre.
+                    sidePanel(.study, fixedWidth: !fits)
                         .padding(.vertical, Atelier.gap)
-                        .frame(width: panelWidth, height: documentHeight)
+                        .padding(.bottom, fits ? floatingPanelBottomReserve : 0)
+                        .frame(width: fits ? min(panelWidth, geo.size.width - Atelier.gap * 2) : panelWidth, height: documentHeight)
                         .padding(.trailing, Atelier.gap)
                         .transition(panelTransition)
                         .animation(panelAnimation, value: docked)
@@ -610,7 +618,7 @@ struct ReaderScreen: View {
                 } label: {
                     Label("Affichage", systemImage: "eye")
                 }
-                moreMenuItems
+                moreMenuItems()
             } label: {
                 Image(systemName: "ellipsis").font(Atelier.font(17, weight: .semibold))
                     .frame(width: 40, height: 40).foregroundStyle(Atelier.textPrimary)
@@ -664,8 +672,24 @@ struct ReaderScreen: View {
                     }
     }
 
-    /// Menu « … » : cette page, notes, moniteur, DeepL, aide, réglages du document.
-    @ViewBuilder private var moreMenuItems: some View {
+    /// Menu « … » : cette page, notes, moniteur, DeepL, aide, réglages du document. En fenêtre étroite, il reçoit aussi
+    /// les boutons retirés des barres (PLAN-FENETRES-001, DEC-02 et DEC-03) : mêmes libellés, mêmes commandes.
+    @ViewBuilder private func moreMenuItems(searchAndBookmark: Bool = false, aiAndWeb: Bool = false, webAllowed: Bool = true) -> some View {
+                if searchAndBookmark {
+                    if capabilities.textAnalysis {
+                        Button { [menuActions] in menuActions.perform?(.openSearch) } label: { Label("Rechercher", systemImage: "magnifyingglass") }
+                    }
+                    Button { [menuActions] in menuActions.perform?(.bookmark) } label: {
+                        Label("Signet", systemImage: "bookmark")
+                    }
+                }
+                if aiAndWeb && capabilities.annotations {
+                    Button { [menuActions] in menuActions.perform?(.pageToAI) } label: { Label("Page vers IA", systemImage: "sparkles") }
+                    if side == .web || webAllowed {
+                        Button { [menuActions] in menuActions.perform?(.toggleWeb) } label: { Label("Navigateur à côté", systemImage: "globe") }
+                    }
+                }
+                if searchAndBookmark || (aiAndWeb && capabilities.annotations) { Divider() }
                 if capabilities.pageEditing {
                     Menu {
                         Button { [menuActions] in menuActions.perform?(.pageCards) } label: {
@@ -763,6 +787,8 @@ struct ReaderScreen: View {
         case .drawTool: selectAnnotationTool(.draw)
         case .highlightTool: selectAnnotationTool(.highlight)
         case .pencilTool: selectAnnotationTool(.pencilLookup)
+        case .pageToAI: sheet = .ai
+        case .toggleWeb: side = side == .web ? nil : .web
         }
     }
 
@@ -770,14 +796,19 @@ struct ReaderScreen: View {
 
     /// Barre du haut (bibliothèque, onglets, actions, Étudier) et grande barre du bas (Lire, Annoter, 辞, ふりがな,
     /// pages, IA, navigateur). Mêmes actions que l'ancienne présentation ; seule la disposition change.
-    private func newChrome(filmstripTrailing: CGFloat, width: CGFloat) -> some View {
+    private func newChrome(filmstripTrailing: CGFloat, width: CGFloat, webAllowed: Bool) -> some View {
         // Largeur offerte aux barres : la variante (libellés ou icônes) est choisie d'après elle, sans `ViewThatFits`.
         let barWidth = width - filmstripTrailing - Atelier.gap * 2
+        // Barre du haut : onglets, titre et capsule d'après la largeur (PLAN-FENETRES-001, DEC-01 et DEC-02).
+        let top = ReaderBarLayout.top(width: width - Atelier.gap * 2, openTabs: model.tabs.ids.count,
+                                      pillsOnlyFrom: DocumentTileBar.pillsOnlyFrom)
+        let aiAndWebInMenu = barWidth < ReaderBarLayout.aiAndWebInMenuBelow
         return VStack(spacing: 0) {
-            HStack(alignment: .top, spacing: 10) {
+            HStack(alignment: .top, spacing: top.slim ? 6 : 10) {
                 NewLayoutRoundButton(icon: "books.vertical", label: String(localized: "Bibliothèque")) { model.openDocumentId = nil }
-                DocumentTileBar(current: reader.document.id, currentPageLabel: reader.document.pageLabel(reader.currentSourcePage))
-                Spacer(minLength: 8)
+                DocumentTileBar(current: reader.document.id, currentPageLabel: reader.document.pageLabel(reader.currentSourcePage),
+                                visible: top.visibleTabs, showsTitle: top.currentTitle, showsNewTab: top.newTabButton)
+                Spacer(minLength: top.slim ? 0 : 8)
                 if reader.hasSelection {
                     HighlightMenu { reader.highlightSelection(color: $0) }
                         .transition(.scale.combined(with: .opacity))
@@ -785,7 +816,8 @@ struct ReaderScreen: View {
                 // Relecture finale Codex : repli quand la place manque (Split View, navigateur à côté) — « Étudier »
                 // en icône, puis capsule défilante ; rien n'est rogné.
                 // « Étudier » en icône quand le panneau ou le navigateur est ouvert, ou si la place manque.
-                newActionsCapsule(compact: side != nil || barWidth < Self.wideTopBar).fixedSize()
+                newActionsCapsule(compact: side != nil || barWidth < Self.wideTopBar, slim: top.slim,
+                                  aiAndWebInMenu: aiAndWebInMenu, webAllowed: webAllowed).fixedSize()
                 .frame(height: 56, alignment: .top)
                 .zIndex(1)
             }
@@ -852,7 +884,7 @@ struct ReaderScreen: View {
                 }
                 // Pendant le dessin, la palette d'outils d'iOS occupe le bas : seule la barre d'annotation reste.
                 if !reader.isDrawing {
-                    bottomBar(width: barWidth)
+                    bottomBar(width: barWidth, aiAndWebInMenu: aiAndWebInMenu, webAllowed: webAllowed)
                 }
             }
             .padding(.horizontal, Atelier.gap)
@@ -864,18 +896,20 @@ struct ReaderScreen: View {
     }
 
     /// Capsule du haut : Rechercher, Signet, Affichage (Aa), « … », puis Étudier ; le moniteur la prolonge vers le bas.
-    private func newActionsCapsule(compact: Bool) -> some View {
+    private func newActionsCapsule(compact: Bool, slim: Bool, aiAndWebInMenu: Bool, webAllowed: Bool) -> some View {
         // Contenu des menus construit hors des fermetures `Menu { }`, gardées en vie par iOS 16 : seuls les relais et
         // liaisons y restent (recette 1.6.4, point 13).
-        let display = displayMenuItems, more = moreMenuItems
+        let display = displayMenuItems, more = moreMenuItems(searchAndBookmark: slim, aiAndWeb: aiAndWebInMenu, webAllowed: webAllowed)
         return VStack(spacing: 0) {
             HStack(spacing: 2) {
-                if capabilities.textAnalysis {
+                if capabilities.textAnalysis && !slim {
                     NewLayoutIconButton(icon: "magnifyingglass", label: String(localized: "Rechercher")) { [menuActions] in menuActions.perform?(.openSearch) }
                 }
-                NewLayoutIconButton(icon: reader.isCurrentPageBookmarked ? "bookmark.fill" : "bookmark",
-                                    label: String(localized: "Signet"), active: reader.isCurrentPageBookmarked,
-                                    tint: Atelier.Tint.annotate) { [menuActions] in menuActions.perform?(.bookmark) }
+                if !slim {
+                    NewLayoutIconButton(icon: reader.isCurrentPageBookmarked ? "bookmark.fill" : "bookmark",
+                                        label: String(localized: "Signet"), active: reader.isCurrentPageBookmarked,
+                                        tint: Atelier.Tint.annotate) { [menuActions] in menuActions.perform?(.bookmark) }
+                }
                 Menu { display } label: {
                     Text(verbatim: "Aa").font(Atelier.font(17, weight: .semibold))
                         .frame(width: 48, height: 48).foregroundStyle(Atelier.textPrimary)
@@ -909,7 +943,7 @@ struct ReaderScreen: View {
     /// Grande barre du bas. Seuls les outils de gauche ont plusieurs versions (libellés retirés si la place manque :
     /// panneau ouvert, navigateur à côté, Split View) ; le compteur de pages et la droite n'existent qu'en un exemplaire.
     /// Version choisie d'après la largeur (voir `bottomBarWidths`), jamais par `ViewThatFits`.
-    private func bottomBar(width: CGFloat) -> some View {
+    private func bottomBar(width: CGFloat, aiAndWebInMenu: Bool, webAllowed: Bool) -> some View {
         HStack(spacing: 6) {
             if width >= Self.bottomBarWidths.full {
                 bottomTools(compact: false).fixedSize()
@@ -922,7 +956,7 @@ struct ReaderScreen: View {
                 // Dernier repli (navigateur à côté sur un écran étroit) : les outils défilent, rien n'est coupé.
                 ScrollView(.horizontal, showsIndicators: false) { bottomTools(compact: true).fixedSize() }
             }
-            bottomTail.fixedSize()
+            bottomTail(aiAndWebInMenu: aiAndWebInMenu, webAllowed: webAllowed).fixedSize()
         }
         .padding(6)
         .newLayoutBar(radius: 34)
@@ -933,6 +967,12 @@ struct ReaderScreen: View {
     /// large ne tenait pas (panneau ouvert) ; sans lui, 7 lecteurs sur 7 libérés. Le choix se fait donc à la largeur.
     static let bottomBarWidths = (full: CGFloat(960), annotate: CGFloat(860), compact: CGFloat(780))
     static let wideTopBar: CGFloat = 1100
+    /// Hauteur laissée sous le panneau d'étude flottant en fenêtre étroite : barre du bas (56 + 2 × 6) et sa marge
+    /// basse (12), plus la barre d'Annoter (≈ 66) quand elle est ouverte ; rien quand les barres sont masquées.
+    private var floatingPanelBottomReserve: CGFloat {
+        guard chromeVisible else { return 0 }
+        return (reader.isDrawing ? 0 : 80) + (annotationToolsShown && capabilities.annotations ? 66 : 0)
+    }
     static let wideAnnotationBar: CGFloat = 820
     static let compactAnnotationBar: CGFloat = 420
 
@@ -974,18 +1014,21 @@ struct ReaderScreen: View {
     }
 
     /// Droite de la barre du bas, en un seul exemplaire : compteur de pages, page suivante, IA, navigateur.
-    private var bottomTail: some View {
+    /// Barre étroite : IA et navigateur passent dans « … » (DEC-03) ; navigateur absent s'il ne laisse pas de place.
+    private func bottomTail(aiAndWebInMenu: Bool, webAllowed: Bool) -> some View {
         HStack(spacing: 6) {
             Rectangle().fill(Atelier.hairline).frame(width: 1, height: 30).padding(.horizontal, 2)
             pageCounter
             newPageArrow(left: false)
-            if capabilities.annotations {
+            if capabilities.annotations && !aiAndWebInMenu {
                 Rectangle().fill(Atelier.hairline).frame(width: 1, height: 30).padding(.horizontal, 2)
                 NewLayoutIconButton(icon: "sparkles", label: String(localized: "Page vers IA"), tint: Atelier.Tint.ai, size: 56) {
-                    sheet = .ai
+                    [menuActions] in menuActions.perform?(.pageToAI)
                 }
-                NewLayoutIconButton(icon: "globe", label: String(localized: "Navigateur à côté"), active: side == .web,
-                                    tint: Atelier.Tint.ai, size: 56) { side = side == .web ? nil : .web }
+                if side == .web || webAllowed {
+                    NewLayoutIconButton(icon: "globe", label: String(localized: "Navigateur à côté"), active: side == .web,
+                                        tint: Atelier.Tint.ai, size: 56) { [menuActions] in menuActions.perform?(.toggleWeb) }
+                }
             }
         }
     }
@@ -1270,11 +1313,11 @@ struct ReaderScreen: View {
     }
 
     @ViewBuilder
-    private func sidePanel(_ side: Side) -> some View {
+    private func sidePanel(_ side: Side, fixedWidth: Bool = true) -> some View {
         switch side {
         case .study:
             StudyPanel(reader: reader, tab: $studyTab, openSearch: { searchCardShown = true }, openLineEditor: { [sheet = $sheet] in sheet.wrappedValue = .lineEditor },
-                       openDocumentSettings: { [sheet = $sheet] in sheet.wrappedValue = .settings }, close: { self.side = nil })
+                       openDocumentSettings: { [sheet = $sheet] in sheet.wrappedValue = .settings }, close: { self.side = nil }, fixedWidth: fixedWidth)
         case .web:
             WebPanel(onClose: { self.side = nil })
                 .frame(width: 440)
@@ -1616,6 +1659,7 @@ final class ReaderMenuActions {
         // point 13 ; précaution en plus du retrait de `ViewThatFits`).
         case read, annotate, lookup, hover, furigana, pageArrow(left: Bool), openSearch, bookmark, study
         case drawTool, highlightTool, pencilTool
+        case pageToAI, toggleWeb
     }
     var perform: ((Command) -> Void)?
     func detach() { perform = nil }
