@@ -1,6 +1,50 @@
 {
   "sourceLanguage": "fr",
   "strings": {
+    "Ce que fait chaque IA maintenant, puis les tâches en cours et terminées. Le journal de diagnostic est suspendu : d'anciens fichiers n'ont pas pu être mis à l'écart.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What each AI is doing now, then running and finished tasks. The diagnostic journal is paused: some old files could not be set aside."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce que fait chaque IA maintenant, puis les tâches en cours et terminées. Le journal de diagnostic est suspendu : d'anciens fichiers n'ont pas pu être mis à l'écart."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "每个 AI 当前的工作，以及进行中和已完成的任务。诊断日志已暂停：部分旧文件未能隔离。"
+          }
+        }
+      }
+    },
+    "Relevé suspendu : d'anciens fichiers de diagnostic n'ont pas pu être mis à l'écart. Ne les partage pas, même depuis l'app Fichiers.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Record paused: some old diagnostic files could not be set aside. Do not share them, not even from the Files app."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Relevé suspendu : d'anciens fichiers de diagnostic n'ont pas pu être mis à l'écart. Ne les partage pas, même depuis l'app Fichiers."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "记录已暂停：部分旧诊断文件未能隔离。请勿分享，即使在“文件”应用中也不要分享。"
+          }
+        }
+      }
+    },
     "D'anciens fichiers de diagnostic n'ont pas pu être mis à l'écart : ne les partage pas, même depuis l'app Fichiers.": {
       "localizations": {
         "en": {

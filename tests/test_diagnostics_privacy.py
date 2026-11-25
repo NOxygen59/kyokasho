@@ -128,10 +128,10 @@ class DiagnosticsPrivacyTests(unittest.TestCase):
         self.assertIn("guard isReady else { return [] }", store)
         self.assertIn('guard filesReady else { return .init(lines: [], omittedBytes: 0) }', core)
         energy = (ROOT / "App/Settings/EnergyMeter.swift").read_text(encoding="utf-8")
-        append = energy.split("static func append(", 1)[1].split("let fm", 1)[0]
-        # Rejet dès l'arrivée, puis revérification sur la file.
-        self.assertEqual(append.count("guard Diagnostics.filesReady else { return }"), 2)
-        self.assertLess(append.index("guard Diagnostics.filesReady"), append.index("queue.async"))
+        append = energy.split("static func append(", 1)[1].split("static func samples", 1)[0]
+        # Rejet dès l'arrivée, puis écriture par le store (revérifié sur la file, éprouvé sur vrais fichiers).
+        self.assertLess(append.index("guard Diagnostics.filesReady else { return }"), append.index("queue.async"))
+        self.assertIn("Diagnostics.store.appendEnergy(line, header: EnergyLog.header, limit: limit)", append)
         # Trois partages : jamais une URL brute, toujours le contrôle commun.
         app = "\n".join(p.read_text(encoding="utf-8") for p in (ROOT / "App").rglob("*.swift"))
         self.assertNotIn("ShareLink(item: Diagnostics.file)", app)

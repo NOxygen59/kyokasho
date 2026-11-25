@@ -14,7 +14,11 @@ METER = Path(__file__).resolve().parents[1] / "App/Settings/EnergyMeter.swift"
 class EnergyLogRotationWiredTests(unittest.TestCase):
     def test_append_trims_through_rotated(self):
         source = METER.read_text(encoding="utf-8")
-        self.assertIn("EnergyLog.rotated(data, keeping: limit / 2)", source)
+        # PLAN-DIAG-001 E1 : l'écriture passe par `DiagnosticStore.appendEnergy`, qui coupe à `limit / 2` avec la
+        # fonction fournie ; l'app y passe toujours `EnergyLog.rotated`.
+        self.assertIn("{ EnergyLog.rotated($0, keeping: $1) }", source)
+        store = (METER.parents[2] / "Packages/KyokashoKit/Sources/DiagnosticKit/DiagnosticStore.swift").read_text(encoding="utf-8")
+        self.assertIn("try? rotate(data, limit / 2).write(to: energy)", store)
         self.assertIsNone(re.search(r"data\.suffix\(limit / 2\)", source), "ancienne coupe au milieu d'une ligne")
 
     def test_samples_are_read_as_bytes(self):

@@ -371,7 +371,9 @@ struct AITaskPill: View {
                 Button("Voir le journal de diagnostic") { showJournal = true }
                     .font(.subheadline)
             }
-            Text("Ce que fait chaque IA maintenant, puis les tâches en cours et terminées. Tout est aussi écrit dans le journal de diagnostic (zone « ia »).")
+            Text(Diagnostics.filesReady
+                 ? String(localized: "Ce que fait chaque IA maintenant, puis les tâches en cours et terminées. Tout est aussi écrit dans le journal de diagnostic (zone « ia »).")
+                 : String(localized: "Ce que fait chaque IA maintenant, puis les tâches en cours et terminées. Le journal de diagnostic est suspendu : d'anciens fichiers n'ont pas pu être mis à l'écart."))
                 .font(.caption).foregroundStyle(.secondary)
             // En clair, modèle par modèle (#47) : la pastille seule ne disait pas ce qui se passait.
             ForEach(badges) { badge in

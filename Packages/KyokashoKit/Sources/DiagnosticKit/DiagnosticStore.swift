@@ -84,6 +84,26 @@ public final class DiagnosticStore: @unchecked Sendable {
         return true
     }
 
+    /// Ajoute une ligne au relevé de batterie : création avec `header`, rotation par `rotate` au-delà de `limit`
+    /// octets. Rien si pas prêt (revue R2 passage 4 : l'écrivain du relevé éprouvé comme celui du journal).
+    @discardableResult
+    public func appendEnergy(_ line: String, header: String, limit: Int, rotate: (Data, Int) -> Data) -> Bool {
+        guard isReady else { return false }
+        let fm = FileManager.default
+        try? fm.createDirectory(at: folder, withIntermediateDirectories: true)
+        if let size = Self.size(energy), size > limit, let data = try? Data(contentsOf: energy) {
+            try? rotate(data, limit / 2).write(to: energy)
+        }
+        if let handle = try? FileHandle(forWritingTo: energy) {
+            handle.seekToEndOfFile()
+            handle.write(Data((line + "\n").utf8))
+            try? handle.close()
+        } else {
+            try? Data((header + "\n" + line + "\n").utf8).write(to: energy)
+        }
+        return true
+    }
+
     /// Fichiers partageables : actifs existants, seulement si prêt. Les anciens fichiers mis à l'écart n'en font
     /// jamais partie.
     public func shareable() -> [URL] {

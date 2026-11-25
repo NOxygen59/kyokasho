@@ -121,24 +121,10 @@ enum EnergyFile {
     static func append(_ line: String) {
         // Rejeté dès l'arrivée si la mise à l'écart n'a pas réussi, puis revérifié sur la file (revue R2 passage 3).
         guard Diagnostics.filesReady else { return }
-        let file = url
         queue.async {
-            // Mise à l'écart des anciens fichiers pas faite ou ratée : rien n'est écrit (PLAN-DIAG-001, DEC-07).
-            guard Diagnostics.filesReady else { return }
-            let fm = FileManager.default
-            try? fm.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
-            if let size = (try? fm.attributesOfItem(atPath: file.path)[.size] as? NSNumber)?.intValue, size > limit,
-               let data = try? Data(contentsOf: file) {
-                // Trop gros : on garde la seconde moitié, à partir du début d'une ligne (`EnergyLog.rotated`).
-                try? EnergyLog.rotated(data, keeping: limit / 2).write(to: file)
-            }
-            if let handle = try? FileHandle(forWritingTo: file) {
-                handle.seekToEndOfFile()
-                handle.write(Data((line + "\n").utf8))
-                try? handle.close()
-            } else {
-                try? Data((EnergyLog.header + "\n" + line + "\n").utf8).write(to: file)
-            }
+            // Revérifié dans le store sur la file ; trop gros : on garde la seconde moitié, à partir du début d'une
+            // ligne (`EnergyLog.rotated`).
+            Diagnostics.store.appendEnergy(line, header: EnergyLog.header, limit: limit) { EnergyLog.rotated($0, keeping: $1) }
         }
     }
 

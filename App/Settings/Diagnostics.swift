@@ -361,11 +361,15 @@ struct DiagnosticsSection: View {
         } header: {
             Text("Batterie")
         } footer: {
+            if !Diagnostics.filesReady {
+                Text("Relevé suspendu : d'anciens fichiers de diagnostic n'ont pas pu être mis à l'écart. Ne les partage pas, même depuis l'app Fichiers.")
+            } else {
             #if targetEnvironment(macCatalyst)
             Text("Note chaque minute le niveau de batterie, la chaleur et ce que fait l'app (lecture, IA, analyse), pour savoir quelle fonction consomme. Pour une mesure utile : luminosité fixe, MacBook débranché, au moins 15 minutes par activité. Le fichier reste sur ce MacBook.")
             #else
             Text("Note chaque minute le niveau de batterie, la chaleur et ce que fait l'app (lecture, IA, analyse), pour savoir quelle fonction consomme. Pour une mesure utile : luminosité fixe, iPad débranché, au moins 15 minutes par activité. Le fichier reste sur l'iPad (Fichiers → Kyōkasho → Diagnostics → energie.csv).")
             #endif
+            }
         }
         .sheet(isPresented: $showEnergy) { EnergySummaryView() }
         Section {
