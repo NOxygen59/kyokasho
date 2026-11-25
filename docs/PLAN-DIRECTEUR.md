@@ -219,6 +219,8 @@ Une anomalie critique démontrée peut modifier cet ordre, avec justification en
 
 ## 8. Point de reprise pour le prochain chat
 
+**État au 25/11/2026 :** `main` = `3705bf3` (v1.6.5). Branche `claude/reprendre-themes` (poussée, pas de PR, jamais essayée sur l'iPad) : cinq thèmes (Genkō, Riso, Shōwa, Kokuban, Contour), ✕ rouge et pastille bleue de Reprendre, livre rouvert qui revient dans Reprendre, ONNX Runtime pris dans le miroir `NOxygen59/onnxruntime-swift-package-manager` (le dépôt de Microsoft renvoie 404), garde simulateur pour MLX. Mesures SSH sur la 1.6.5 : aucun menu du lecteur ne le retient, le cache des dictionnaires ne fuit pas (empreinte iOS 58 Mo livre fermé). Simulateur iPad Pro 12,9" (M1) sous iOS 17.0.1, piloté par AXe : en Split View, le lecteur déborde de sa fenêtre à 639 points de large (Bibliothèque, page précédente, numéro de page, Étudier hors écran) ; à 981 points rien ne déborde mais l'onglet du livre perd son titre. **Suite :** plan d'attaque du correctif des fenêtres étroites, puis candidate du lot sur demande de NOxygen59. Non vérifié : largeurs ½ et ⅓, Slide Over, iOS 16 (le simulateur est en iOS 17).
+
 **État au 24/11/2026 :** recette 1.6.4 (116) 12/14 corrigée sur `claude/refonte-ui` : lecteur fermé de nouveau libéré (`ViewThatFits` retiré des barres du lecteur, 12/12 mesurés sur l'iPad par SSH), recherche OCR et IA, retours d'usage (onglets à la dernière page, mise en page IA, import de même nom, Reprendre repliable). Candidate **1.6.5 (126) « Correctifs de la refonte »** et release GitHub v1.6.5 sur demande de NOxygen59. Fusion vers `main` : sur accord.
 
 **État au 23/11/2026 (relevé de cette note, sur le Mac de travail) :**
