@@ -64,6 +64,14 @@ class DiagnosticSessionWiringTests(unittest.TestCase):
         cpu = (ROOT / "App/Settings/DiagnosticCPU.swift").read_text(encoding="utf-8")
         self.assertNotIn("detailEnabled", cpu)
         self.assertNotIn("autoDetail", (ROOT / "App/Settings/EnergyMeter.swift").read_text(encoding="utf-8"))
+        # B1 : en automatique, jamais de lecture mémoire (task_info) dans measure.
+        measure = core.split("static func measure<T>(", 1)[1].split("\n    }\n", 1)[0]
+        for line in measure.splitlines():
+            if "footprintMB()" in line and "log(" in line:
+                self.assertIn("enabled ?", line)
+        # B3 : la navigation ne nourrit que le contexte CPU, réservé au mode manuel.
+        nav = (ROOT / "App/Reader/ReaderController+Navigation.swift").read_text(encoding="utf-8")
+        self.assertIn("if changed, !rebuilding, Diagnostics.enabled {", nav)
         ctrl = (ROOT / "App/Settings/DiagnosticSessionController.swift").read_text(encoding="utf-8")
         self.assertIn("DiagnosticCenter.shared.setAutoDetail(launch.detail)", ctrl)
         self.assertIn("DiagnosticSessionMachine(lastGeneration: launch.lastGeneration, detail: launch.detail)", ctrl)

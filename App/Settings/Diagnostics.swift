@@ -263,12 +263,13 @@ enum Diagnostics {
     /// Mesure une étape (mode diagnostic) : durée et mémoire avant / après.
     static func measure<T>(_ name: String, _ area: String = "app", _ body: () async throws -> T) async rethrows -> T {
         let start = Date()
-        if detailEnabled { log("→ \(name) (mémoire \(Int(footprintMB())) Mo)", area) }
+        // Fenêtre automatique (E2b) : la trace et la durée seulement ; la mémoire (task_info) reste au mode manuel.
+        if detailEnabled { log(enabled ? "→ \(name) (mémoire \(Int(footprintMB())) Mo)" : "→ \(name)", area) }
         do {
             let result = try await body()
             let seconds = String(format: "%.1f", Date().timeIntervalSince(start))
             remember(area, "✓ \(name) en \(seconds) s")
-            if detailEnabled { log("✓ \(name) en \(seconds) s (mémoire \(Int(footprintMB())) Mo)", area) }
+            if detailEnabled { log(enabled ? "✓ \(name) en \(seconds) s (mémoire \(Int(footprintMB())) Mo)" : "✓ \(name) en \(seconds) s", area) }
             return result
         } catch {
             remember(area, "✗ \(name) : \(describe(error))")

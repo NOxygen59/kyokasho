@@ -93,10 +93,19 @@ public final class DiagnosticCenter: @unchecked Sendable {
     public func setAutoDetail(_ window: DiagnosticDetailWindow?) { lock.withLock { autoDetail = window } }
 
     /// Vrai pendant une fenêtre automatique valide à cet instant.
-    public var autoDetailActive: Bool { lock.withLock { autoDetail?.isActive(at: now()) ?? false } }
+    public var autoDetailActive: Bool { lock.withLock { autoDetailNow() } }
+
+    /// Fenêtre active ? Une fois l'échéance atteinte, la fenêtre est oubliée : reculer l'horloge ne la rouvre pas
+    /// (revue R2 E2b, B2). À appeler sous le verrou.
+    private func autoDetailNow() -> Bool {
+        guard let window = autoDetail else { return false }
+        let current = now()
+        if current >= window.until { autoDetail = nil; return false }
+        return window.isActive(at: current)
+    }
 
     /// Détail effectif : manuel OU fenêtre automatique valide. À appeler sous le verrou.
-    private var detailNow: Bool { detailed || (autoDetail?.isActive(at: now()) ?? false) }
+    private var detailNow: Bool { detailed || autoDetailNow() }
 
     /// Référence courte et salée d'un document pour ce journal (`DiagnosticRef`).
     public func ref(_ documentId: String) -> DiagnosticDocumentRef {

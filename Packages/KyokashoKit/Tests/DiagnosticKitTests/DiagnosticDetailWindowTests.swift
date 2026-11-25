@@ -110,4 +110,29 @@ final class DiagnosticDetailWindowTests: XCTestCase {
         center.emit(.info, DiagnosticEvent(.info, .app, "horloge reculée"))
         XCTAssertEqual(box.count, 2, "une horloge reculée n'ouvre pas la fenêtre")
     }
+
+    /// B2 : une fois expirée, reculer l'horloge ne rouvre pas la fenêtre.
+    func testExpiredWindowNeverReopens() {
+        let clock = Clock(t0)
+        let center = DiagnosticCenter(now: { clock.now })
+        center.setAutoDetail(.starting(at: t0))
+        XCTAssertTrue(center.autoDetailActive)
+        clock.now = t0.addingTimeInterval(86_400)
+        XCTAssertFalse(center.autoDetailActive)
+        clock.now = t0.addingTimeInterval(3_600)
+        XCTAssertFalse(center.autoDetailActive, "horloge reculée après l'échéance : fenêtre oubliée")
+    }
+
+    /// Nouvelle session non clôturée pendant une fenêtre : nouvelle fenêtre ancrée au second constat.
+    func testNewInterruptionDuringWindowStartsANewWindow() {
+        let file = DiagnosticSessionFile(folder: folder)
+        file.write(DiagnosticSessionState(generation: 1, state: .armed, updatedAt: t0, memoryMB: nil))
+        let first = file.consumeAtLaunch(now: t0)
+        var m = DiagnosticSessionMachine(lastGeneration: first.lastGeneration, detail: first.detail)
+        file.write(m.handle(.foreground, now: t0.addingTimeInterval(60), memoryMB: nil)!)   // puis arrêt brutal
+        let second = file.consumeAtLaunch(now: t0.addingTimeInterval(7_200))
+        XCTAssertEqual(second.previous, .notClosed(ageSeconds: 7_140, memoryMB: nil, generation: 2))
+        XCTAssertEqual(second.detail?.from, t0.addingTimeInterval(7_200))
+    }
+
 }
