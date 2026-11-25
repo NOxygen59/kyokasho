@@ -968,10 +968,11 @@ struct ReaderScreen: View {
     static let bottomBarWidths = (full: CGFloat(960), annotate: CGFloat(860), compact: CGFloat(780))
     static let wideTopBar: CGFloat = 1100
     /// Hauteur laissée sous le panneau d'étude flottant en fenêtre étroite : barre du bas (56 + 2 × 6) et sa marge
-    /// basse (12), plus la barre d'Annoter (≈ 66) quand elle est ouverte ; rien quand les barres sont masquées.
+    /// basse (12), plus la barre d'Annoter (≈ 66) et l'espace qui la sépare de la barre du bas (10) quand elle est
+    /// ouverte ; rien quand les barres sont masquées. À tenir à jour avec `.padding(6)` des barres et `VStack(spacing: 10)`.
     private var floatingPanelBottomReserve: CGFloat {
         guard chromeVisible else { return 0 }
-        return (reader.isDrawing ? 0 : 80) + (annotationToolsShown && capabilities.annotations ? 66 : 0)
+        return (reader.isDrawing ? 0 : 80) + (annotationToolsShown && capabilities.annotations ? 76 : 0)
     }
     static let wideAnnotationBar: CGFloat = 820
     static let compactAnnotationBar: CGFloat = 420

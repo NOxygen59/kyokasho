@@ -219,17 +219,19 @@ struct DocumentTileBar: View {
                 }
                 .accessibilityLabel("Autres onglets ouverts")
             }
-            if showsNewTab { Menu {
-                ForEach(model.documents.filter { !model.tabs.ids.contains($0.id) }) { document in
-                    Button(document.title) { ReaderTabHandoff.shared.prepare(); model.openDocumentId = document.id }
+            if showsNewTab {
+                Menu {
+                    ForEach(model.documents.filter { !model.tabs.ids.contains($0.id) }) { document in
+                        Button(document.title) { ReaderTabHandoff.shared.prepare(); model.openDocumentId = document.id }
+                    }
+                } label: {
+                    Image(systemName: "plus").font(Atelier.font(15, weight: .bold))
+                        .frame(width: 44, height: 44).foregroundStyle(Atelier.textSecondary)
+                        .overlay(RoundedRectangle(cornerRadius: Atelier.corner(14), style: .continuous)
+                            .strokeBorder(Atelier.hairline, style: StrokeStyle(lineWidth: Atelier.border(1.5), dash: [4, 3])))
                 }
-            } label: {
-                Image(systemName: "plus").font(Atelier.font(15, weight: .bold))
-                    .frame(width: 44, height: 44).foregroundStyle(Atelier.textSecondary)
-                    .overlay(RoundedRectangle(cornerRadius: Atelier.corner(14), style: .continuous)
-                        .strokeBorder(Atelier.hairline, style: StrokeStyle(lineWidth: Atelier.border(1.5), dash: [4, 3])))
+                .accessibilityLabel("Ouvrir un autre document dans un onglet")
             }
-            .accessibilityLabel("Ouvrir un autre document dans un onglet") }
         }
     }
 
