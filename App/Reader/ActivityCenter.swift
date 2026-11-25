@@ -68,13 +68,15 @@ final class ActivityCenter: @unchecked Sendable {
     func begin(_ kind: Kind, detail: String? = nil, page: Int? = nil, progress: Progress? = nil) -> UUID {
         let id = UUID()
         let work = Self.trackedWork(kind)
-        let published: DiagnosticOngoing? = lock.withLock {
+        let (published, op): (DiagnosticOngoing?, UInt32?) = lock.withLock {
             ledger.begin(id, kind: kind.rawValue, detail: detail, at: Date())
             if diagnosticsOn { register(id, kind: kind, page: page, progress: progress) }
-            return work.map { tracked.begin(id, kind: $0) }
+            // L'op est lu par le jeton de CE travail, pas en fin de projection tronquée (revue R2 E2c, B1).
+            let projection = work.map { tracked.begin(id, kind: $0) }
+            return (projection, tracked.op(for: id))
         }
         // Publication hors du verrou ; la révision écarte une publication réordonnée (E2c).
-        if let published, let work, let op = published.entries.last?.op {
+        if let published, let work, let op {
             DiagnosticSessionController.shared.updateOngoing(published)
             DiagnosticCenter.shared.emit(.info, DiagnosticEvent(.info, work.zone, "travail_observe", outcome: .debut,
                                                                 op: DiagnosticOperation(raw: op)))

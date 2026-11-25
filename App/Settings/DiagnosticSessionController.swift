@@ -124,16 +124,30 @@ final class DiagnosticSessionController: @unchecked Sendable {
 
 
     /// Nouvelle projection des travaux suivis (E2c), publiée par `ActivityCenter` hors de son verrou, aux bornes
-    /// début/fin. Écrite seulement si la session est armée ; une projection plus ancienne est ignorée.
+    /// début/fin. **Coalescée** : seule la plus récente attend, un seul passage sur la file l'écrit (un lot d'imports
+    /// ne fait pas une écriture par fichier) ; une projection plus ancienne est ignorée (revue R2 E2c, B4).
     func updateOngoing(_ ongoing: DiagnosticOngoing) {
+        let schedule: Bool = pendingLock.withLock {
+            if let current = pendingOngoing, current.revision >= ongoing.revision { return false }
+            let first = pendingOngoing == nil
+            pendingOngoing = ongoing
+            return first
+        }
+        guard schedule else { return }
         queue.async { [self] in
-            guard let file else { return }
-            if machine.armed {
-                guard let state = machine.next(ongoing: ongoing, now: Date(), memoryMB: nil), file.write(state) else { return }
-            }
-            machine.commit(ongoing: ongoing)
+            guard let latest = pendingLock.withLock({ () -> DiagnosticOngoing? in defer { pendingOngoing = nil }; return pendingOngoing })
+            else { return }
+            // Connaissance en mémoire adoptée même si l'écriture échoue : une fin de travail n'est pas perdue pour
+            // les écritures suivantes ni pour l'alerte mémoire (B3). L'écriture n'a lieu que session armée.
+            let previous = machine.ongoing
+            machine.commit(ongoing: latest)
+            guard let file, machine.armed, machine.ongoing != previous,
+                  let state = machine.next(ongoing: nil, now: Date(), memoryMB: nil) else { return }
+            file.write(state)
         }
     }
+    private let pendingLock = NSLock()
+    private var pendingOngoing: DiagnosticOngoing?
 
     /// Un seul observateur de la pression mémoire pour le processus (E2c), installé une fois. L'empreinte est relevée
     /// **avant** les libérations (0 = inconnue), notée dans l'état armé avec les travaux en cours, puis les
@@ -154,6 +168,11 @@ final class DiagnosticSessionController: @unchecked Sendable {
             var counts = [DiagnosticCount("operations_suivies", ongoing.entries.count)]
             if ongoing.truncated { counts.append(DiagnosticCount("tronquee", 1)) }
             DiagnosticCenter.shared.emit(.alerte, DiagnosticEvent(.alerte, .memoire, "alerte_memoire", memoryMB: memoryMB, counts: counts))
+            // Travaux connus au moment de l'alerte, avec leur op (revue R2 E2c, B2).
+            for entry in ongoing.entries {
+                DiagnosticCenter.shared.emit(.alerte, DiagnosticEvent(.alerte, entry.kind.zone, "travail_connu_alerte_memoire",
+                                                                      op: DiagnosticOperation(raw: entry.op)))
+            }
             if let file, let state = machine.next(ongoing: nil, now: Date(), memoryMB: memoryMB) { file.write(state) }
         }
     }

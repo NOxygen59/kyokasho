@@ -81,9 +81,15 @@ class DiagnosticSessionWiringTests(unittest.TestCase):
         # E2c : travaux suivis aux bornes begin/end, publiés hors verrou ; jamais `detail` dans la projection.
         center = (ROOT / "App/Reader/ActivityCenter.swift").read_text(encoding="utf-8")
         begin = center.split("func begin(_ kind: Kind, detail: String?", 1)[1].split("\n    }\n", 1)[0]
-        self.assertIn("return work.map { tracked.begin(id, kind: $0) }", begin)
+        self.assertIn("return (projection, tracked.op(for: id))", begin)
+        self.assertNotIn("entries.last", begin)
+        ctrl0 = (ROOT / "App/Settings/DiagnosticSessionController.swift").read_text(encoding="utf-8")
+        update = ctrl0.split("func updateOngoing(", 1)[1].split("\n    private let pendingLock", 1)[0]
+        # B3 : adoptée avant (et indépendamment de) l'écriture ; B4 : coalescée.
+        self.assertLess(update.index("machine.commit(ongoing: latest)"), update.index("file.write(state)"))
+        self.assertIn("return first", update)
+        self.assertIn('"travail_connu_alerte_memoire"', ctrl0)
         self.assertLess(begin.index("lock.withLock"), begin.index("DiagnosticSessionController.shared.updateOngoing(published)"))
-        self.assertNotIn("detail", begin.split("tracked.begin", 1)[1].split(")", 1)[0])
         end = center.split("    func end(_ id: UUID) {", 1)[1].split("\n    }\n", 1)[0]
         self.assertIn("return tracked.end(id)", end)
         # Un seul observateur mémoire, au niveau du processus, mémoire relevée avant les libérations.

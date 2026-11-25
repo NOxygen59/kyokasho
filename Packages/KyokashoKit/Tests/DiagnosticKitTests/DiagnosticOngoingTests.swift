@@ -76,4 +76,15 @@ final class DiagnosticOngoingTests: XCTestCase {
         XCTAssertEqual(Set(entries[0].keys), ["kind", "op"])
         XCTAssertEqual(entries[0]["kind"] as? String, "conversion_cbz")
     }
+
+    /// B1 : l'op d'un travail se lit par son jeton, même quand la projection est tronquée.
+    func testOpIsFoundByTokenBeyondTheLimit() {
+        var r = DiagnosticOngoingRegistry()
+        for i in 0..<DiagnosticOngoing.limit { _ = r.begin(UUID(), kind: .importPDF, op: DiagnosticOperation(raw: UInt32(i + 1))) }
+        let late = UUID()
+        let snapshot = r.begin(late, kind: .sauvegarde, op: DiagnosticOperation(raw: 999))
+        XCTAssertNotEqual(snapshot.entries.last?.op, 999, "hors projection")
+        XCTAssertEqual(r.op(for: late), 999)
+    }
+
 }
