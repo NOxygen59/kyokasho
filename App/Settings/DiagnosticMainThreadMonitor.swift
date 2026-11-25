@@ -9,8 +9,9 @@ import UIKit
 /// est active. Toutes les 500 ms, une file utilitaire envoie un battement au fil principal ; **une seule requête en
 /// vol**. Les décisions (seuil 250 ms, mesure à froid, veille, dédoublonnage) sont dans `DiagnosticMainThreadProbe`.
 ///
-/// Aucune écriture synchrone ni capture UIKit : la ligne part par `DiagnosticCenter.emit`, dont l'écriture est
-/// asynchrone. Le fil principal ne fait que lire deux horloges.
+/// Aucune écriture synchrone ni capture UIKit : la ligne part par `Diagnostics.manualOnly` (écriture asynchrone,
+/// mode manuel revérifié à l'écriture). Le fil principal ne fait que lire deux horloges. Pas d'injection de
+/// ralentissement dans la livraison (revue R2 E2e, B3) : la recette se fait sur un geste lent réel.
 final class DiagnosticMainThreadMonitor: @unchecked Sendable {
     static let shared = DiagnosticMainThreadMonitor()
 
@@ -41,22 +42,7 @@ final class DiagnosticMainThreadMonitor: @unchecked Sendable {
                 MainActor.assumeIsolated { updateActivation() }
             }
         }
-        let running = enabled && UIApplication.shared.applicationState == .active
-        shared.configure(running: running)
-        if running { injectRecipeStall() }
-    }
-
-    /// Recette iPad (plan E2e, matrice n° 7) : ralentissement **injecté** du fil principal, seulement en mode
-    /// diagnostic et si la clé `debug.diag.probeStallMs` a été posée à distance (absente par défaut). Une fois par
-    /// activation, après la mesure à froid ; borné à 250-3 000 ms.
-    @MainActor private static func injectRecipeStall() {
-        let ms = UserDefaults.standard.integer(forKey: "debug.diag.probeStallMs")
-        guard ms > 0 else { return }
-        let stall = min(max(ms, DiagnosticMainThreadProbe.thresholdMs), 3_000)
-        DispatchQueue.main.asyncAfter(deadline: .now() + .seconds(5)) {
-            guard Diagnostics.enabled, UIApplication.shared.applicationState == .active else { return }
-            usleep(useconds_t(stall * 1_000))
-        }
+        shared.configure(running: enabled && UIApplication.shared.applicationState == .active)
     }
 
     private func configure(running: Bool) {
@@ -82,7 +68,7 @@ final class DiagnosticMainThreadMonitor: @unchecked Sendable {
     private func beat() {
         let now = DiagnosticMainThreadProbe.Instant.now()
         probe.tick(at: now)
-        guard !inFlight else { return }
+        guard !inFlight, Diagnostics.enabled else { return }
         inFlight = true
         probe.send(at: now)
         let current = generation
@@ -90,8 +76,9 @@ final class DiagnosticMainThreadMonitor: @unchecked Sendable {
             let answered = DiagnosticMainThreadProbe.Instant.now()
             queue.async { [self] in
                 inFlight = false                       // toute réponse libère sa place
-                guard current == generation, timer != nil else { return }
-                if let event = probe.observe(sent: now, answered: answered) { DiagnosticCenter.shared.emit(event.level, event) }
+                guard current == generation, timer != nil, Diagnostics.enabled else { return }
+                // Voie réservée au mode manuel, revérifié au moment d'écrire : jamais par la fenêtre E2b (B2).
+                if let event = probe.observe(sent: now, answered: answered) { Diagnostics.manualOnly(event) }
             }
         }
     }

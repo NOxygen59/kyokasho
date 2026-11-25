@@ -53,7 +53,10 @@ public struct DiagnosticMainThreadProbe: Sendable {
     /// Chaque réveil de l'observateur, requête en vol ou non. Un silence plus long que `observationHoleNs` marque la
     /// requête en vol comme traversant un trou d'observation.
     public mutating func tick(at now: Instant) {
-        if let last = lastTickNs, now.uptimeNs &- last > Self.observationHoleNs { hole = true }
+        // La chronologie de l'observateur ne recule jamais : une réponse horodatée avant un réveil déjà traité
+        // (fil principal préempté entre sa lecture d'horloge et son envoi) n'invente pas de trou (revue R2 E2e, B1).
+        if let last = lastTickNs, now.uptimeNs < last { return }
+        if let last = lastTickNs, now.uptimeNs - last > Self.observationHoleNs { hole = true }
         lastTickNs = now.uptimeNs
     }
 

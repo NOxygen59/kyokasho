@@ -75,6 +75,31 @@ final class DiagnosticMainThreadProbeTests: XCTestCase {
         XCTAssertNotNil(probe.observe(sent: at(60_000), answered: at(60_400)))
     }
 
+    /// Revue R2 E2e, B1 : réponse horodatée avant un réveil plus récent mais traitée après lui.
+    func testAnswerStampedBeforeALaterTickIsStillMeasured() {
+        var probe = DiagnosticMainThreadProbe()
+        _ = probe.observe(sent: at(0), answered: at(1))
+        probe.send(at: at(1_000))
+        for t in stride(from: UInt64(1_500), through: 2_000, by: 500) { probe.tick(at: at(t)) }
+        probe.tick(at: at(2_500))   // traité avant la réponse lue à 2 400
+        XCTAssertEqual(probe.observe(sent: at(1_000), answered: at(2_400))?.durationMs, 1_400)
+        probe.send(at: at(3_000))
+        XCTAssertNil(probe.observe(sent: at(3_000), answered: at(3_100)), "mesure suivante normale, sous le seuil")
+    }
+
+    /// Revue R2 E2e, B1 : vrai trou avant la réponse, puis un réveil plus récent ; la mesure suivante n'en hérite pas.
+    func testRealHoleThenLaterTickStillDropsOnlyThatMeasure() {
+        var probe = DiagnosticMainThreadProbe()
+        _ = probe.observe(sent: at(0), answered: at(1))
+        probe.send(at: at(1_000))
+        probe.tick(at: at(4_500))   // 3,5 s de silence
+        probe.tick(at: at(5_000))
+        XCTAssertNil(probe.observe(sent: at(1_000), answered: at(4_400)))
+        probe.send(at: at(20_000))
+        probe.tick(at: at(20_500))
+        XCTAssertNotNil(probe.observe(sent: at(20_000), answered: at(20_600)))
+    }
+
     func testThresholdBoundary() {
         var probe = DiagnosticMainThreadProbe()
         _ = probe.observe(sent: at(0), answered: at(1))

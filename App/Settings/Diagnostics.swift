@@ -92,6 +92,12 @@ enum Diagnostics {
                 diagnosticOnly: diagnosticOnly)
     }
 
+    /// Événement réservé au mode diagnostic **manuel** (sonde du fil principal, E2e) : même garde que le moniteur CPU,
+    /// revérifiée au moment d'écrire ; la fenêtre de détail automatique E2b ne suffit pas.
+    static func manualOnly(_ event: DiagnosticEvent) {
+        enqueue(DiagnosticLine.event(event, at: Date()), sync: false, diagnosticOnly: true)
+    }
+
     /// Récepteur des événements typés (app et paquets) : même file, même fichier que les anciennes lignes.
     private static func receive(_ event: DiagnosticEvent) {
         enqueue(DiagnosticLine.event(event, at: Date()), sync: false, diagnosticOnly: false)
