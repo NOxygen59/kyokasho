@@ -23,6 +23,7 @@ final class DiagnosticSessionController: @unchecked Sendable {
 
     private let queue = DispatchQueue(label: "fr.noxygen59.kyokasho.diagnostics.session", qos: .utility)
     private var machine = DiagnosticSessionMachine()          // seulement sur `queue`
+    private var thermal = DiagnosticThermalTracker()          // seulement sur `queue` (E2d)
     private var file: DiagnosticSessionFile?                  // seulement sur `queue`
     private var observers: [NSObjectProtocol] = []            // fil principal
     /// Assertion demandée tôt, à `willResignActive`, pour couvrir une clôture éventuelle (fil principal).
@@ -67,8 +68,8 @@ final class DiagnosticSessionController: @unchecked Sendable {
             // Retour au premier plan sans clôture : l'assertion demandée tôt est rendue.
             self?.earlyAssertion?.end()
             self?.earlyAssertion = nil
-            self?.setForeground(true)
-            self?.handle(.foreground)
+            self?.handle(.foreground, phase: true)
+            self?.checkThermalState()   // E2d : relu au retour (changement pendant la suspension)
         }
         observers = [
             center.addObserver(forName: UIApplication.willEnterForegroundNotification, object: nil, queue: .main, using: foreground),
@@ -82,7 +83,21 @@ final class DiagnosticSessionController: @unchecked Sendable {
             center.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main) { [weak self] _ in
                 self?.close()
             },
+            // E2d : un seul observateur thermique pour le processus ; état du système, jamais une température.
+            center.addObserver(forName: ProcessInfo.thermalStateDidChangeNotification, object: nil, queue: nil) { [weak self] _ in
+                self?.checkThermalState()
+            },
         ]
+        checkThermalState()   // référence initiale, lue avant toute notification, sans signal
+    }
+
+    /// Relit l'état thermique du système et journalise un vrai changement (E2d) ; indépendant du relevé de batterie,
+    /// sans minuterie.
+    private func checkThermalState() {
+        let raw = ProcessInfo.processInfo.thermalState.rawValue
+        queue.async { [self] in
+            if let event = thermal.observe(raw: raw) { DiagnosticCenter.shared.emit(event.level, event) }
+        }
     }
 
     /// Pose et **relit** l'exclusion de la sauvegarde iOS sur le dossier.
@@ -104,14 +119,24 @@ final class DiagnosticSessionController: @unchecked Sendable {
     /// Les transitions (premier plan, fond) sont **prioritaires** : comptées au signal sur le fil principal, avant
     /// d'entrer dans la file ; tant qu'une transition attend, aucune capture de travaux ni alerte mémoire n'écrit
     /// (la transition écrira l'état complet). Revue R2 E2c, B4.
-    private func handle(_ event: DiagnosticSessionMachine.Event, done: (() -> Void)? = nil) {
+    /// `phase` : phase réelle publiée **dans le même verrou** que la réservation de la transition (revue R2 E2c,
+    /// passage 4) : aucune capture ne peut se glisser entre les deux.
+    private func handle(_ event: DiagnosticSessionMachine.Event, phase: Bool? = nil, done: (() -> Void)? = nil) {
         let isTransition = event != .inactive
-        if isTransition { pendingLock.withLock { pendingTransitions += 1 } }
+        pendingLock.withLock {
+            if let phase { foreground = phase }
+            if isTransition { pendingTransitions += 1 }
+        }
         queue.async { [self] in
             defer { if isTransition { pendingLock.withLock { pendingTransitions -= 1 } } }
             if let file, machine.next(event, now: Date(), memoryMB: nil) != nil,
                let state = machine.next(event, now: Date(), memoryMB: Int(Diagnostics.footprintMB())), file.write(state) {
                 machine.commit(state)
+                ongoingDirty = false   // l'état écrit porte les travaux courants (armé) ou n'en porte pas (clos)
+            } else if isTransition, ongoingDirty, let file, machine.armed, isForeground,
+                      let state = machine.next(ongoing: nil, now: Date(), memoryMB: nil), file.write(state) {
+                // Transition sans effet (déjà armée) : écrit la capture écartée pendant qu'elle attendait.
+                ongoingDirty = false
             }
             if let done { DispatchQueue.main.async(execute: done) }
         }
@@ -121,15 +146,14 @@ final class DiagnosticSessionController: @unchecked Sendable {
     /// (fin d'écriture ou expiration) : une clôture ancienne ne peut pas rendre celle d'une autre (revue R2 E2a, B1).
     /// Fil principal (notification).
     private func close() {
-        // Phase réelle notée tout de suite : aucune écriture de travaux ou de mémoire en attente ne passe après le
-        // signal de fond, même si l'écriture de clôture échoue (revue R2 E2c, B4).
-        setForeground(false)
         // L'assertion anticipée n'est reprise que si iOS l'a accordée et qu'elle court encore.
         let early = earlyAssertion
         earlyAssertion = nil
         let assertion: BackgroundAssertion
         if let early, early.id != .invalid { assertion = early } else { assertion = BackgroundAssertion.begin() }
-        handle(.background) { assertion.end() }
+        // Phase réelle « fond » publiée avec la réservation : aucune écriture de travaux ou de mémoire en attente ne
+        // passe après le signal, même si l'écriture de clôture échoue (revue R2 E2c, B4).
+        handle(.background, phase: false) { assertion.end() }
     }
 
 
@@ -151,9 +175,13 @@ final class DiagnosticSessionController: @unchecked Sendable {
             // les écritures suivantes ni pour l'alerte mémoire (B3). L'écriture n'a lieu que session armée.
             let previous = machine.ongoing
             machine.commit(ongoing: latest)
-            guard let file, capturesMayWrite, machine.armed, machine.ongoing != previous,
-                  let state = machine.next(ongoing: nil, now: Date(), memoryMB: nil) else { return }
-            file.write(state)
+            guard machine.ongoing != previous || ongoingDirty else { return }
+            guard let file, capturesMayWrite, machine.armed,
+                  let state = machine.next(ongoing: nil, now: Date(), memoryMB: nil), file.write(state) else {
+                ongoingDirty = true   // à écrire par la prochaine transition ou capture (passage 4)
+                return
+            }
+            ongoingDirty = false
         }
     }
     private let pendingLock = NSLock()
@@ -162,7 +190,8 @@ final class DiagnosticSessionController: @unchecked Sendable {
     private var foreground = false
     /// Transitions signalées et pas encore traitées par la file (B4).
     private var pendingTransitions = 0
-    private func setForeground(_ value: Bool) { pendingLock.withLock { foreground = value } }
+    /// Projection adoptée en mémoire mais pas encore écrite (seulement sur `queue`).
+    private var ongoingDirty = false
     private var isForeground: Bool { pendingLock.withLock { foreground } }
     /// Une capture peut écrire : premier plan réel et aucune transition en attente.
     private var capturesMayWrite: Bool { pendingLock.withLock { foreground && pendingTransitions == 0 } }

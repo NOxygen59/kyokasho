@@ -308,6 +308,7 @@ extension Notification.Name {
 /// Réglages → Aide et informations → Aide au diagnostic.
 struct DiagnosticsSection: View {
     @AppStorage(Diagnostics.enabledKey) private var enabled = false
+    @AppStorage(DiagnosticMetricKit.enabledKey) private var metricKit = false
     @AppStorage(EnergyMeter.enabledKey) private var energy = false
     @State private var showLog = false
     @State private var showEnergy = false
@@ -321,6 +322,11 @@ struct DiagnosticsSection: View {
                     DiagnosticCPU.updateActivation()
                     Diagnostics.updateDetail()
                 }
+            #if !targetEnvironment(macCatalyst)
+            // E2f (DEC-04 A) : essai facultatif, éteint par défaut.
+            Toggle("Rapports d'iOS (MetricKit, essai)", isOn: $metricKit)
+                .onChange(of: metricKit) { _ in DiagnosticMetricKit.apply() }
+            #endif
             if Diagnostics.filesReady {
                 Button { showLog = true } label: {
                     Label("Voir le journal", systemImage: "doc.text.magnifyingglass")

@@ -1,6 +1,28 @@
 {
   "sourceLanguage": "fr",
   "strings": {
+    "Rapports d'iOS (MetricKit, essai)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iOS reports (MetricKit, trial)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rapports d'iOS (MetricKit, essai)"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iOS 报告（MetricKit，试用）"
+          }
+        }
+      }
+    },
     "Journal détaillé automatiquement jusqu'à %@.": {
       "localizations": {
         "en": {

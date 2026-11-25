@@ -18,6 +18,8 @@ struct KyokashoApp: App {
         Diagnostics.start()
         // PLAN-DIAG-001 E2a : session du processus (constat « non clôturée » du lancement précédent, puis suivi).
         DiagnosticSessionController.shared.install()
+        // PLAN-DIAG-001 E2f : MetricKit seulement si l'essai a été allumé dans Réglages › Diagnostic.
+        DiagnosticMetricKit.apply()
         // Restauration préparée (#51) : appliquée avant que la moindre base soit ouverte.
         LibraryBackupService.applyPendingRestoreOnce()
         // Avant toute lecture du fond des pages (`@AppStorage`, `PageTone.current`) : valeurs retirées remplacées.

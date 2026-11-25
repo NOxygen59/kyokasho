@@ -94,10 +94,14 @@ class DiagnosticSessionWiringTests(unittest.TestCase):
         self.assertIn('DiagnosticCount("memoire_inconnue", 1)', ctrl0)
         # B4 (passage 2) : phase réelle notée au signal de fond, avant toute écriture en attente.
         close = ctrl0.split("private func close() {", 1)[1].split("\n    }", 1)[0]
-        self.assertLess(close.index("setForeground(false)"), close.index("handle(.background)"))
+        self.assertIn("handle(.background, phase: false)", close)
+        self.assertNotIn("setForeground", ctrl0)
         self.assertIn("guard let file, capturesMayWrite, machine.armed", ctrl0)
         handle = ctrl0.split("private func handle(", 1)[1].split("queue.async", 1)[0]
         self.assertIn("pendingTransitions += 1", handle)   # compté au signal, avant la file
+        self.assertIn("if let phase { foreground = phase }", handle)   # même verrou que la réservation
+        self.assertIn("ongoingDirty = true", ctrl0)
+        self.assertIn("Transition sans effet", ctrl0)
         self.assertIn("foreground && pendingTransitions == 0", ctrl0)
         self.assertLess(begin.index("lock.withLock"), begin.index("DiagnosticSessionController.shared.updateOngoing(published)"))
         end = center.split("    func end(_ id: UUID) {", 1)[1].split("\n    }\n", 1)[0]
@@ -111,6 +115,22 @@ class DiagnosticSessionWiringTests(unittest.TestCase):
         self.assertIn("guard memoryObserver == nil else { return }", observer)
         self.assertLess(observer.index("Diagnostics.footprintMB()"), observer.index("release()"))
         self.assertIn("footprint > 0 ? footprint : nil", observer)
+
+    def test_thermal_and_metrickit_are_bounded(self):
+        ctrl = (ROOT / "App/Settings/DiagnosticSessionController.swift").read_text(encoding="utf-8")
+        # E2d : un seul observateur thermique, référence initiale, relu au retour ; pas de minuterie ni de relevé.
+        self.assertEqual(ctrl.count("ProcessInfo.thermalStateDidChangeNotification"), 1)
+        self.assertIn("checkThermalState()   // référence initiale", ctrl)
+        self.assertIn("self?.checkThermalState()   // E2d : relu au retour", ctrl)
+        self.assertNotIn("Timer", ctrl)
+        self.assertNotIn("thermalStateDidChange", (ROOT / "App/Settings/EnergyMeter.swift").read_text(encoding="utf-8"))
+        # E2f : éteint par défaut, iPad seulement, seulement des comptes.
+        mk = (ROOT / "App/Settings/DiagnosticMetricKit.swift").read_text(encoding="utf-8")
+        self.assertIn("#if os(iOS) && !targetEnvironment(macCatalyst) && canImport(MetricKit)", mk)
+        for forbidden in ("jsonRepresentation", "dictionaryRepresentation", "callStackTree", "past", "URLSession"):
+            self.assertNotIn(forbidden, mk)
+        core = (ROOT / "App/Settings/Diagnostics.swift").read_text(encoding="utf-8")
+        self.assertIn("@AppStorage(DiagnosticMetricKit.enabledKey) private var metricKit = false", core)
 
     def test_mac_container_tool_never_copies_the_session_state(self):
         with tempfile.TemporaryDirectory() as tmp:
