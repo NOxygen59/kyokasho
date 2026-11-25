@@ -56,7 +56,7 @@ extension ThemeBackdrop {
     /// comme une affiche risographie mal calée. Les points grossissent vers la droite (le centre reste calme).
     static func riso(_ c: inout GraphicsContext, _ s: CGSize, _ t: Theme) {
         let m = min(s.width, s.height)
-        guard let glyph = glyphPath("読", font: "HiraginoSans-W8", size: m * 0.78,
+        guard let glyph = glyphPath("読", font: "HiraginoSans-W7", size: m * 0.78,
                                     center: CGPoint(x: s.width * 0.74, y: s.height * 0.56)) else { return }
         let step = max(6, m / 80), bounds = glyph.boundingRect
         var dots = Path()

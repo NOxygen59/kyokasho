@@ -181,6 +181,19 @@ final class StyleTokensGuardTests: XCTestCase {
         XCTAssertFalse(themes.contains("return \"sun.horizon\""))
     }
 
+    /// Recette 1.6.6 (ligne 2) : Riso invisible sur l'iPad. Un contour de glyphe n'a pas de police de secours : une police
+    /// absente d'iOS (HiraginoSans-W8, présente sur Mac) ne dessine rien. Polices relevées sur l'iPad par SSH le 25/11/2026.
+    func testBackdropGlyphFontsExistOnIOS() throws {
+        let file = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+            .appendingPathComponent("../../../../App/Design/ThemeBackdropJapon.swift").standardizedFileURL
+        let source = try String(contentsOf: file, encoding: .utf8)
+        let onIOS: Set<String> = ["HiraginoSans-W3", "HiraginoSans-W6", "HiraginoSans-W7"]
+        let used = source.components(separatedBy: "glyphPath(\"").dropFirst()
+            .compactMap { $0.components(separatedBy: "font: \"").dropFirst().first?.components(separatedBy: "\"").first }
+        XCTAssertFalse(used.isEmpty)
+        for name in used { XCTAssertTrue(onIOS.contains(name), "\(name) n'existe pas sur iOS : le fond serait vide") }
+    }
+
     /// Fichier → nombre d'usages permis, chacun vérifié à la main le 29/10/2026.
     private let allowed: [String: Int] = [
         "Design/Styles.swift": 1,            // voile du style Atelier
