@@ -44,7 +44,8 @@ public struct DiagnosticThermalTracker: Sendable {
         let level = DiagnosticThermalLevel(raw: raw)
         defer { last = level }
         guard let previous = last, previous != level else { return nil }
-        let important = level.isHigh || previous.isHigh || { if case .unknown = level { return true } else { return false } }()
+        // Alerte seulement vers ou depuis sérieux/critique ; « inconnu » seul reste en détail (revue E2d).
+        let important = level.isHigh || previous.isHigh
         let severity: DiagnosticLevel = important ? .alerte : .info
         return DiagnosticEvent(severity, .energie, "etat_thermique", counts: [DiagnosticCount("avant", previous.code),
                                                                             DiagnosticCount("apres", level.code)])

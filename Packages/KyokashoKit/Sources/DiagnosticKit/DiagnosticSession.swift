@@ -115,6 +115,10 @@ public struct DiagnosticSessionMachine: Sendable {
         if new.revision >= ongoing.revision { ongoing = new }
     }
 
+    /// Abandonne en mémoire une session dont la clôture n'a pas pu être écrite, au retour au premier plan : la
+    /// transition suivante arme une **nouvelle** génération (revue R2 E2c, passage 5).
+    public mutating func abandonAfterFailedClose() { armed = false }
+
     /// Adopte un état **écrit avec succès**.
     public mutating func commit(_ state: DiagnosticSessionState) {
         generation = state.generation

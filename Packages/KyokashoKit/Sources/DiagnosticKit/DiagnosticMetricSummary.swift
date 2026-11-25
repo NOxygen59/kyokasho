@@ -7,12 +7,21 @@ import Foundation
 /// de pile, de métadonnée libre, d'envoi, ni de rattachement automatique à une session. Une valeur absente
 /// (`nil`) n'est pas écrite : l'absence reste distincte de zéro.
 public enum DiagnosticMetricSummary {
-    /// Lot de mesures (`MXMetricPayload`) : nombre de lots, sorties au premier plan par limite mémoire et par chien de
-    /// garde si iOS les fournit.
-    public static func metrics(payloads: Int, memoryLimitExits: Int?, watchdogExits: Int?) -> DiagnosticEvent {
+    /// Sorties de l'app comptées par iOS, au premier plan ou en arrière-plan (absentes si iOS ne les fournit pas).
+    public struct Exits: Sendable {
+        public var memoryLimit: Int?
+        public var watchdog: Int?
+        public init(memoryLimit: Int?, watchdog: Int?) { self.memoryLimit = memoryLimit; self.watchdog = watchdog }
+    }
+
+    /// Lot de mesures (`MXMetricPayload`) : nombre de lots, sorties par limite mémoire et par chien de garde, au
+    /// premier plan (`pp_`) et en arrière-plan (`fond_`), si iOS les fournit.
+    public static func metrics(payloads: Int, foreground: Exits, background: Exits) -> DiagnosticEvent {
         var counts = [DiagnosticCount("lots", payloads)]
-        if let memoryLimitExits { counts.append(DiagnosticCount("sorties_limite_memoire", memoryLimitExits)) }
-        if let watchdogExits { counts.append(DiagnosticCount("sorties_chien_de_garde", watchdogExits)) }
+        if let n = foreground.memoryLimit { counts.append(DiagnosticCount("sorties_pp_limite_memoire", n)) }
+        if let n = foreground.watchdog { counts.append(DiagnosticCount("sorties_pp_chien_de_garde", n)) }
+        if let n = background.memoryLimit { counts.append(DiagnosticCount("sorties_fond_limite_memoire", n)) }
+        if let n = background.watchdog { counts.append(DiagnosticCount("sorties_fond_chien_de_garde", n)) }
         return DiagnosticEvent(.alerte, .performances, "metrickit_mesures", counts: counts)
     }
 

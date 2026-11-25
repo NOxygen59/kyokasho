@@ -16,13 +16,20 @@ final class DiagnosticThermalMetricTests: XCTestCase {
         XCTAssertEqual(serious?.level, .alerte)
         XCTAssertEqual(serious?.counts.map(\.value), [1, 2])
         XCTAssertEqual(t.observe(raw: 1)?.level, .alerte, "sortie d'un état élevé : alerte")
-        XCTAssertEqual(t.observe(raw: 9)?.counts.map(\.value), [1, -1], "état inconnu gardé comme inconnu")
+        let unknown = t.observe(raw: 9)
+        XCTAssertEqual(unknown?.counts.map(\.value), [1, -1], "état inconnu gardé comme inconnu")
+        XCTAssertEqual(unknown?.level, .info, "inconnu seul : pas d'alerte")
         XCTAssertEqual(DiagnosticThermalLevel(raw: 9), .unknown(9))
     }
 
     func testMetricSummaryKeepsAbsenceDistinctFromZero() {
-        let absent = DiagnosticMetricSummary.metrics(payloads: 1, memoryLimitExits: nil, watchdogExits: nil)
+        let absent = DiagnosticMetricSummary.metrics(payloads: 1, foreground: .init(memoryLimit: nil, watchdog: nil),
+                                                     background: .init(memoryLimit: nil, watchdog: nil))
         XCTAssertEqual(absent.counts.map(\.name.description), ["lots"])
+        let both = DiagnosticMetricSummary.metrics(payloads: 1, foreground: .init(memoryLimit: 0, watchdog: nil),
+                                                   background: .init(memoryLimit: 2, watchdog: 1))
+        XCTAssertEqual(both.counts.map(\.name.description), ["lots", "sorties_pp_limite_memoire", "sorties_fond_limite_memoire",
+                                                             "sorties_fond_chien_de_garde"], "arrière-plan compté à part")
         let zero = DiagnosticMetricSummary.diagnostics(payloads: 2, crashes: 0, hangs: nil)
         XCTAssertEqual(zero.counts.map(\.name.description), ["lots", "plantages"])
         XCTAssertEqual(zero.counts.map(\.value), [2, 0])

@@ -151,4 +151,14 @@ final class DiagnosticSessionTests: XCTestCase {
         XCTAssertEqual(file.consumeAtLaunch(now: t0).previous, .unknown)
     }
 
+
+    /// E2c passage 5 : après une clôture non écrite, le retour arme une nouvelle génération.
+    func testFailedCloseThenReturnArmsANewGeneration() {
+        var m = DiagnosticSessionMachine()
+        _ = m.handle(.foreground, now: t0, memoryMB: nil)
+        XCTAssertNotNil(m.next(.background, now: t0, memoryMB: nil))   // écriture ratée : pas de commit
+        m.abandonAfterFailedClose()
+        XCTAssertEqual(m.next(.foreground, now: t0, memoryMB: nil)?.generation, 2)
+    }
+
 }

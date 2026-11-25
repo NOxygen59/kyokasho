@@ -102,6 +102,8 @@ class DiagnosticSessionWiringTests(unittest.TestCase):
         self.assertIn("if let phase { foreground = phase }", handle)   # même verrou que la réservation
         self.assertIn("ongoingDirty = true", ctrl0)
         self.assertIn("Transition sans effet", ctrl0)
+        self.assertIn("machine.abandonAfterFailedClose()", ctrl0)
+        self.assertIn("closeFailed = true", ctrl0)
         self.assertIn("foreground && pendingTransitions == 0", ctrl0)
         self.assertLess(begin.index("lock.withLock"), begin.index("DiagnosticSessionController.shared.updateOngoing(published)"))
         end = center.split("    func end(_ id: UUID) {", 1)[1].split("\n    }\n", 1)[0]
@@ -120,7 +122,10 @@ class DiagnosticSessionWiringTests(unittest.TestCase):
         ctrl = (ROOT / "App/Settings/DiagnosticSessionController.swift").read_text(encoding="utf-8")
         # E2d : un seul observateur thermique, référence initiale, relu au retour ; pas de minuterie ni de relevé.
         self.assertEqual(ctrl.count("ProcessInfo.thermalStateDidChangeNotification"), 1)
-        self.assertIn("checkThermalState()   // référence initiale", ctrl)
+        install = ctrl.split("func install() {", 1)[1]
+        self.assertLess(install.index("checkThermalState()"), install.index("ProcessInfo.thermalStateDidChangeNotification"))
+        check = ctrl.split("private func checkThermalState() {", 1)[1].split("\n    }", 1)[0]
+        self.assertLess(check.index("queue.async"), check.index("thermalState.rawValue"))
         self.assertIn("self?.checkThermalState()   // E2d : relu au retour", ctrl)
         self.assertNotIn("Timer", ctrl)
         self.assertNotIn("thermalStateDidChange", (ROOT / "App/Settings/EnergyMeter.swift").read_text(encoding="utf-8"))
@@ -129,6 +134,8 @@ class DiagnosticSessionWiringTests(unittest.TestCase):
         self.assertIn("#if os(iOS) && !targetEnvironment(macCatalyst) && canImport(MetricKit)", mk)
         for forbidden in ("jsonRepresentation", "dictionaryRepresentation", "callStackTree", "past", "URLSession"):
             self.assertNotIn(forbidden, mk)
+        self.assertIn("guard gate.accepts(token) else { return }", mk)
+        self.assertIn("backgroundExitData", mk)
         core = (ROOT / "App/Settings/Diagnostics.swift").read_text(encoding="utf-8")
         self.assertIn("@AppStorage(DiagnosticMetricKit.enabledKey) private var metricKit = false", core)
 

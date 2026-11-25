@@ -16,46 +16,76 @@ enum DiagnosticMetricKit {
     /// Applique le réglage (au lancement et à chaque changement). Fil principal.
     static func apply() {
         #if os(iOS) && !targetEnvironment(macCatalyst) && canImport(MetricKit)
-        Subscriber.shared.set(UserDefaults.standard.bool(forKey: enabledKey))
+        MetricKitTrial.shared.set(UserDefaults.standard.bool(forKey: enabledKey))
         #endif
     }
 }
 
 #if os(iOS) && !targetEnvironment(macCatalyst) && canImport(MetricKit)
-private final class Subscriber: NSObject, MXMetricManagerSubscriber {
-    static let shared = Subscriber()
+/// Un abonné **neuf** par activation, avec son jeton de génération : un rappel d'un ancien abonné, ou arrivé après
+/// la coupure, est rejeté ; la vérification et la publication se font sous le même verrou que la coupure (revue E2f).
+private final class MetricKitTrial {
+    static let shared = MetricKitTrial()
     private let lock = NSLock()
     private var gate = DiagnosticSubscriptionGate()
+    private var subscriber: Subscriber?
 
-    /// Abonnement et désabonnement idempotents ; la génération rejette un rappel tardif.
     func set(_ on: Bool) {
-        let changed: Bool = lock.withLock { on ? gate.enable() != nil : gate.disable() }
-        guard changed else { return }
-        if on { MXMetricManager.shared.add(self) } else { MXMetricManager.shared.remove(self) }
+        let change: (add: Subscriber?, remove: Subscriber?)? = lock.withLock {
+            if on {
+                guard let token = gate.enable() else { return nil }
+                let new = Subscriber(token: token, owner: self)
+                subscriber = new
+                return (new, nil)
+            }
+            guard gate.disable() else { return nil }
+            defer { subscriber = nil }
+            return (nil, subscriber)
+        }
+        guard let change else { return }
+        if let add = change.add { MXMetricManager.shared.add(add) }
+        if let remove = change.remove { MXMetricManager.shared.remove(remove) }
         let version = ProcessInfo.processInfo.operatingSystemVersion
         let event = DiagnosticMetricSummary.subscription(on: on, systemMajor: version.majorVersion, systemMinor: version.minorVersion)
         DiagnosticCenter.shared.emit(event.level, event)
     }
 
-    private var accepting: Bool { lock.withLock { gate.accepts(gate.generation) } }
+    /// Publie seulement si le jeton est celui de l'abonnement actif, sans lâcher le verrou entre les deux.
+    func publish(_ event: DiagnosticEvent, token: UInt64) {
+        lock.withLock {
+            guard gate.accepts(token) else { return }
+            DiagnosticCenter.shared.emit(event.level, event)
+        }
+    }
+}
+
+private final class Subscriber: NSObject, MXMetricManagerSubscriber {
+    let token: UInt64
+    weak var owner: MetricKitTrial?
+
+    init(token: UInt64, owner: MetricKitTrial) {
+        self.token = token
+        self.owner = owner
+    }
 
     func didReceive(_ payloads: [MXMetricPayload]) {
-        guard accepting else { return }
-        let exits = payloads.compactMap { $0.applicationExitMetrics?.foregroundExitData }
-        let memory = exits.isEmpty ? nil : exits.reduce(0) { $0 + $1.cumulativeMemoryResourceLimitExitCount }
-        let watchdog = exits.isEmpty ? nil : exits.reduce(0) { $0 + $1.cumulativeAppWatchdogExitCount }
-        let event = DiagnosticMetricSummary.metrics(payloads: payloads.count, memoryLimitExits: memory, watchdogExits: watchdog)
-        DiagnosticCenter.shared.emit(event.level, event)
+        let exits = payloads.compactMap { $0.applicationExitMetrics }
+        let fg = exits.map(\.foregroundExitData), bg = exits.map(\.backgroundExitData)
+        func sum<T>(_ items: [T], _ value: (T) -> Int) -> Int? { items.isEmpty ? nil : items.reduce(0) { $0 + value($1) } }
+        let event = DiagnosticMetricSummary.metrics(
+            payloads: payloads.count,
+            foreground: .init(memoryLimit: sum(fg) { $0.cumulativeMemoryResourceLimitExitCount }, watchdog: sum(fg) { $0.cumulativeAppWatchdogExitCount }),
+            background: .init(memoryLimit: sum(bg) { $0.cumulativeMemoryResourceLimitExitCount }, watchdog: sum(bg) { $0.cumulativeAppWatchdogExitCount }))
+        owner?.publish(event, token: token)
     }
 
     func didReceive(_ payloads: [MXDiagnosticPayload]) {
-        guard accepting else { return }
         let crashes = payloads.compactMap { $0.crashDiagnostics?.count }
         let hangs = payloads.compactMap { $0.hangDiagnostics?.count }
         let event = DiagnosticMetricSummary.diagnostics(payloads: payloads.count,
                                                         crashes: crashes.isEmpty ? nil : crashes.reduce(0, +),
                                                         hangs: hangs.isEmpty ? nil : hangs.reduce(0, +))
-        DiagnosticCenter.shared.emit(event.level, event)
+        owner?.publish(event, token: token)
     }
 }
 #endif

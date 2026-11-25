@@ -63,6 +63,8 @@ final class DiagnosticSessionController: @unchecked Sendable {
             Self.publish(launch.previous, detail: launch.detail)
             Self.publishOngoing(launch)
         }
+        // E2d : état thermique lu **avant** l'inscription à ses notifications (règle du SDK), sans signal.
+        checkThermalState()
         let center = NotificationCenter.default
         let foreground: (Notification) -> Void = { [weak self] _ in
             // Retour au premier plan sans clôture : l'assertion demandée tôt est rendue.
@@ -88,14 +90,15 @@ final class DiagnosticSessionController: @unchecked Sendable {
                 self?.checkThermalState()
             },
         ]
-        checkThermalState()   // référence initiale, lue avant toute notification, sans signal
     }
 
     /// Relit l'état thermique du système et journalise un vrai changement (E2d) ; indépendant du relevé de batterie,
     /// sans minuterie.
+    /// Lu **sur la file série**, au moment du traitement : l'ordre des lectures est celui de la file, un rappel
+    /// retardé ne peut pas fabriquer une transition inverse (revue E2d).
     private func checkThermalState() {
-        let raw = ProcessInfo.processInfo.thermalState.rawValue
         queue.async { [self] in
+            let raw = ProcessInfo.processInfo.thermalState.rawValue
             if let event = thermal.observe(raw: raw) { DiagnosticCenter.shared.emit(event.level, event) }
         }
     }
@@ -129,11 +132,19 @@ final class DiagnosticSessionController: @unchecked Sendable {
         }
         queue.async { [self] in
             defer { if isTransition { pendingLock.withLock { pendingTransitions -= 1 } } }
+            // Retour après une clôture ratée : nouvelle génération, jamais d'écriture dans l'ancienne (passage 5).
+            if event == .foreground, closeFailed {
+                machine.abandonAfterFailedClose()
+                closeFailed = false
+            }
+            let wasArmed = machine.armed
             if let file, machine.next(event, now: Date(), memoryMB: nil) != nil,
                let state = machine.next(event, now: Date(), memoryMB: Int(Diagnostics.footprintMB())), file.write(state) {
                 machine.commit(state)
                 ongoingDirty = false   // l'état écrit porte les travaux courants (armé) ou n'en porte pas (clos)
-            } else if isTransition, ongoingDirty, let file, machine.armed, isForeground,
+            } else if event == .background, wasArmed {
+                closeFailed = true      // clôture non écrite : le rattrapage ne doit pas écrire dans cette génération
+            } else if event == .foreground, !closeFailed, ongoingDirty, let file, machine.armed, isForeground,
                       let state = machine.next(ongoing: nil, now: Date(), memoryMB: nil), file.write(state) {
                 // Transition sans effet (déjà armée) : écrit la capture écartée pendant qu'elle attendait.
                 ongoingDirty = false
@@ -192,6 +203,8 @@ final class DiagnosticSessionController: @unchecked Sendable {
     private var pendingTransitions = 0
     /// Projection adoptée en mémoire mais pas encore écrite (seulement sur `queue`).
     private var ongoingDirty = false
+    /// La dernière clôture n'a pas pu être écrite (seulement sur `queue`).
+    private var closeFailed = false
     private var isForeground: Bool { pendingLock.withLock { foreground } }
     /// Une capture peut écrire : premier plan réel et aucune transition en attente.
     private var capturesMayWrite: Bool { pendingLock.withLock { foreground && pendingTransitions == 0 } }
