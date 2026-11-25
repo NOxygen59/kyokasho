@@ -78,7 +78,8 @@ public struct DiagnosticMainThreadProbe: Sendable {
         if lastTickNs.map({ $0 < sent.uptimeNs }) ?? true { send(at: sent) }
         // Trou jusqu'à la réponse elle-même (processus repris : réponse et réveil arrivent ensemble).
         tick(at: answered)
-        let crossedHole = holeAtNs.map { $0 <= answered.uptimeNs } ?? false
+        // Strict, comme la détection (`>`) : une réponse pile à la limite donne le même verdict dans les deux ordres.
+        let crossedHole = holeAtNs.map { $0 < answered.uptimeNs } ?? false
         holeAtNs = nil
         guard !crossedHole else { return nil }
         guard answered.uptimeNs >= sent.uptimeNs, answered.continuousNs >= sent.continuousNs else { return nil }

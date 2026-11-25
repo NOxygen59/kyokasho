@@ -113,6 +113,22 @@ final class DiagnosticMainThreadProbeTests: XCTestCase {
         XCTAssertNotNil(probe.observe(sent: at(15_000), answered: at(15_600)), "mesure suivante publiable")
     }
 
+    /// Revue R2 E2e passage 3, B1 : réponse lue exactement à « dernier réveil + 2 s », dans les deux ordres.
+    func testAnswerExactlyAtHoleLimitIsAcceptedInBothOrders() {
+        var lateTickFirst = DiagnosticMainThreadProbe()
+        _ = lateTickFirst.observe(sent: at(0), answered: at(1))
+        lateTickFirst.send(at: at(1_000))
+        lateTickFirst.tick(at: at(1_500))
+        lateTickFirst.tick(at: at(4_000))
+        XCTAssertEqual(lateTickFirst.observe(sent: at(1_000), answered: at(3_500))?.durationMs, 2_500)
+
+        var answerFirst = DiagnosticMainThreadProbe()
+        _ = answerFirst.observe(sent: at(0), answered: at(1))
+        answerFirst.send(at: at(1_000))
+        answerFirst.tick(at: at(1_500))
+        XCTAssertEqual(answerFirst.observe(sent: at(1_000), answered: at(3_500))?.durationMs, 2_500)
+    }
+
     func testThresholdBoundary() {
         var probe = DiagnosticMainThreadProbe()
         _ = probe.observe(sent: at(0), answered: at(1))
