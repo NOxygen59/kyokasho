@@ -140,4 +140,15 @@ final class DiagnosticSessionTests: XCTestCase {
         XCTAssertFalse(fm.fileExists(atPath: folder.path), "dossier non recréé (il perdrait son exclusion de sauvegarde)")
     }
 
+
+    /// B3 (passage 3) : un tube nommé à la place du fichier ne bloque pas la lecture ; il est « illisible ».
+    func testNamedPipeIsUnreadableWithoutBlocking() throws {
+        let file = DiagnosticSessionFile(folder: folder)
+        XCTAssertEqual(mkfifo(file.url.path, 0o600), 0)
+        let started = Date()
+        XCTAssertEqual(file.read(), .unreadable)
+        XCTAssertLessThan(Date().timeIntervalSince(started), 1)
+        XCTAssertEqual(file.consumeAtLaunch(now: t0).previous, .unknown)
+    }
+
 }

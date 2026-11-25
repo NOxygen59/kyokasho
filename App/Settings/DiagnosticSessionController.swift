@@ -106,8 +106,11 @@ final class DiagnosticSessionController: @unchecked Sendable {
     /// (fin d'écriture ou expiration) : une clôture ancienne ne peut pas rendre celle d'une autre (revue R2 E2a, B1).
     /// Fil principal (notification).
     private func close() {
-        let assertion = earlyAssertion ?? BackgroundAssertion.begin()
+        // L'assertion anticipée n'est reprise que si iOS l'a accordée et qu'elle court encore.
+        let early = earlyAssertion
         earlyAssertion = nil
+        let assertion: BackgroundAssertion
+        if let early, early.id != .invalid { assertion = early } else { assertion = BackgroundAssertion.begin() }
         handle(.background) { assertion.end() }
     }
 

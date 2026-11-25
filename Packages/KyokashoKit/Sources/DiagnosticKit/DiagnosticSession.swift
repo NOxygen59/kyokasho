@@ -98,9 +98,13 @@ public struct DiagnosticSessionFile: Sendable {
     /// Une erreur de lecture n'est pas une absence. La lecture elle-même est bornée (au plus `maxBytes + 1` octets
     /// lus) et refuse un lien symbolique (`O_NOFOLLOW`) : revue R2 E2a, B3.
     public func read() -> Read {
-        let fd = open(url.path, O_RDONLY | O_NOFOLLOW)
+        // Non bloquant : un tube nommé sans écrivain ne retient pas le lancement ; puis fichier ordinaire exigé
+        // (revue R2 E2a passage 3, B3).
+        let fd = open(url.path, O_RDONLY | O_NOFOLLOW | O_NONBLOCK)
         guard fd >= 0 else { return errno == ENOENT ? .absent : .unreadable }
         let handle = FileHandle(fileDescriptor: fd, closeOnDealloc: true)
+        var info = stat()
+        guard fstat(fd, &info) == 0, (info.st_mode & S_IFMT) == S_IFREG else { return .unreadable }
         guard let data = try? handle.read(upToCount: Self.maxBytes + 1) else { return .unreadable }
         guard data.count <= Self.maxBytes else { return .unreadable }
         return .data(data)

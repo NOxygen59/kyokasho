@@ -24,7 +24,7 @@ class DiagnosticSessionWiringTests(unittest.TestCase):
         self.assertNotIn("willTerminate", ctrl)
         # Une assertion par clôture, rendue une fois par elle-même (B1).
         close = ctrl.split("private func close() {", 1)[1].split("\n    }", 1)[0]
-        self.assertIn("let assertion = earlyAssertion ?? BackgroundAssertion.begin()", close)
+        self.assertIn("if let early, early.id != .invalid { assertion = early } else { assertion = BackgroundAssertion.begin() }", close)
         # Demandée tôt, sans clore, à willResignActive (B1).
         resign = ctrl.split("UIApplication.willResignActiveNotification", 1)[1].split("},", 1)[0]
         self.assertIn("BackgroundAssertion.begin()", resign)
