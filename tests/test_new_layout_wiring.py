@@ -71,7 +71,9 @@ class NewLayoutWiringTests(unittest.TestCase):
         home = source("Library/LibraryView.swift")
         self.assertIn("private var newLayout: Bool { NewLayout.isAvailable && newLayoutPreference }", home)
         self.assertIn("if newLayout { newSidebarContent } else { sidebarContent }", home)
-        self.assertIn("if newLayout { Atelier.canvas.ignoresSafeArea() } else { libraryBackdrop }", home)
+        # Recette 1.6.6 : le fond dessiné du thème est aussi celui de la nouvelle présentation.
+        self.assertNotIn("Atelier.canvas.ignoresSafeArea() } else { libraryBackdrop }", home)
+        self.assertIn("                libraryBackdrop\n", home)
         self.assertRegex(home, r"if newLayout \{\s*newHeader\s*\} else \{\s*if usesCompactDocuments \{")
         # L'ancienne colonne garde ses tuiles d'import ; la nouvelle les confie au menu « Importer ».
         old = home.split("private var sidebarContent: some View {", 1)[1].split("private func sideRow", 1)[0]

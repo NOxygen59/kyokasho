@@ -215,7 +215,9 @@ struct LibraryView: View {
         GeometryReader { geo in
             let landscape = geo.size.width > geo.size.height
             ZStack {
-                if newLayout { Atelier.canvas.ignoresSafeArea() } else { libraryBackdrop }
+                // Fond dessiné du thème aussi dans la nouvelle présentation (recette 1.6.6 : les fonds des nouveaux
+                // thèmes n'apparaissaient pas, la refonte E3 peignait un fond uni). Coupé par le réglage des motifs.
+                libraryBackdrop
                 Group {
                     if landscape {
                         HStack(alignment: .top, spacing: Atelier.gap) {
