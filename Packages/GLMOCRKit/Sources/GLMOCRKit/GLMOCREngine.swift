@@ -217,8 +217,15 @@ actor GLMModel {
     }
 
     func status() -> AIModelStatus {
+        #if targetEnvironment(simulator)
+        // Le simulateur n'a pas de Metal pour MLX : lire sa mémoire fait planter l'app au lancement (abort dans
+        // `mlx::core::metal::Device`). Le simulateur sert aux tests d'interface ; l'IA locale se teste sur l'iPad.
+        AIModelStatus(loaded: loaded?.0, loading: loading?.0, inUse: users > 0, lastUse: lastUse,
+                      gpuActiveMB: 0, gpuCacheMB: 0)
+        #else
         AIModelStatus(loaded: loaded?.0, loading: loading?.0, inUse: users > 0, lastUse: lastUse,
                       gpuActiveMB: MLX.GPU.activeMemory / 1_048_576, gpuCacheMB: MLX.GPU.cacheMemory / 1_048_576)
+        #endif
     }
 
     /// Libère le modèle (tous, ou seulement s'il s'agit de `directory`).
