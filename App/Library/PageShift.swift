@@ -1153,7 +1153,8 @@ enum PageShift {
     private static func block(_ model: AppModel, _ error: Error) {
         model.openDocumentId = nil
         model.storageRecoveryError = String(localized: "La modification des pages doit être reprise avant de continuer. ") + error.localizedDescription
-        Diagnostics.error(model.storageRecoveryError!, "pages")
+        // Le message affiché garde l'erreur système ; le journal n'en garde que le domaine et le numéro (B-NOMS).
+        Diagnostics.error("modification des pages à reprendre : \(Diagnostics.describe(error))", "pages")
     }
 
     /// N4 (revue R2) : un journal de reprise refusé (altéré, incohérent, incomplet, ambigu) ne
@@ -1172,7 +1173,7 @@ enum PageShift {
         // à tort que « rien n'est effacé ».
         guard journalHadNoEffect(model) else {
             model.storageRecoveryError = String(localized: "Ce journal a déjà commencé à modifier la bibliothèque : il ne peut pas être mis de côté sans risque. Fais une sauvegarde complète, puis demande une réparation sur une copie.")
-            Diagnostics.error(model.storageRecoveryError!, "pages")
+            Diagnostics.error("journal de modification déjà commencé : mise de côté refusée", "pages")
             return
         }
         do {

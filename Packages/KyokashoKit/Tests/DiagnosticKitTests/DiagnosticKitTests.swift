@@ -20,7 +20,7 @@ final class DiagnosticKitTests: XCTestCase {
     func testEventLineHasTheTypedFieldsOnOneLine() {
         let op = DiagnosticOperation(raw: 0xabc), parent = DiagnosticOperation(raw: 0x1)
         let e = DiagnosticEvent(.erreur, .export, "écriture du pdf", outcome: .erreur, cause: .ecriture, op: op, parent: parent,
-                                durationMs: 42, memoryMB: 310, counts: [DiagnosticCount("pages", 12)], ref: "k3x9qa")
+                                durationMs: 42, memoryMB: 310, counts: [DiagnosticCount("pages", 12)], ref: DiagnosticDocumentRef(text: "k3x9qa"))
         let line = DiagnosticLine.event(e, at: date, timeZone: paris)
         XCTAssertTrue(line.hasSuffix("[erreur] [export] op=00000abc parent=00000001 étape=écriture_du_pdf issue=erreur cause=ecriture t=42ms mem=310Mo doc=k3x9qa pages=12"), line)
         XCTAssertFalse(line.contains("\n"))
@@ -35,6 +35,7 @@ final class DiagnosticKitTests: XCTestCase {
         XCTAssertEqual(DiagnosticZone.legacy("import"), .importation)
         XCTAssertEqual(DiagnosticZone.legacy("ocr-scroll"), .ocrScroll)
         XCTAssertEqual(DiagnosticZone.legacy("mémoire"), .memoire)
+        XCTAssertEqual(DiagnosticZone.memoire.rawValue, "mémoire", "nom lu par le moniteur d'activité")
         XCTAssertEqual(DiagnosticZone.legacy("inconnue-xyz"), .app)
         XCTAssertEqual(Set(DiagnosticZone.allCases.map(\.rawValue)).count, DiagnosticZone.allCases.count)
     }
@@ -46,7 +47,10 @@ final class DiagnosticKitTests: XCTestCase {
         let cause = DiagnosticCause.from(secret)
         XCTAssertEqual(cause.text, "NSCocoaErrorDomain#513")
         XCTAssertEqual(DiagnosticCause.from(CancellationError()), .annulee)
-        XCTAssertEqual(DiagnosticCause.systeme(domain: "a b\nc/d", code: 1).text, "abcd#1")
+        XCTAssertEqual(DiagnosticCause.systeme(domain: "a b\nc/d", code: 1).text, "autre#1")
+        XCTAssertEqual(DiagnosticCause.systeme(domain: "SENTINELLE-TITRE", code: 2).text, "autre#2", "domaine choisi à la main")
+        XCTAssertEqual(DiagnosticCause.systeme(domain: "Kyokasho.ExportError", code: 3).text, "Kyokasho.ExportError#3")
+        XCTAssertEqual(DiagnosticCause.systeme(domain: NSPOSIXErrorDomain, code: 2).text, "NSPOSIXErrorDomain#2")
     }
 
     func testNothingHappensWithoutSinkAndInfoNeedsDetailedMode() {
@@ -103,6 +107,12 @@ final class DiagnosticKitTests: XCTestCase {
         XCTAssertFalse(id.contains(a), "pas un morceau de l'empreinte")
     }
 
+    func testMonitorLineCarriesOpAndStep() {
+        let line = DiagnosticLine.monitor(.info, zone: .cpu, op: DiagnosticOperation(raw: 0x2a), step: "releve_cpu",
+                                          measures: "cpu=12%\nfil#1:3%", at: date, timeZone: paris)
+        XCTAssertTrue(line.hasSuffix("[info] [cpu] op=0000002a étape=releve_cpu issue=etape cpu=12% fil#1:3%"), line)
+    }
+
     func testJournalPolicy() {
         XCTAssertFalse(DiagnosticJournalPolicy.shouldRotate(currentBytes: 5_000_000))
         XCTAssertTrue(DiagnosticJournalPolicy.shouldRotate(currentBytes: 5_000_001))
@@ -116,8 +126,10 @@ final class DiagnosticKitTests: XCTestCase {
     func testSentinelsNeverReachTheLine() {
         let sentinels = ["SENTINELLE-TITRE", "SENTINELLE-TEXTE", "SENTINELLE-CHEMIN", "SENTINELLE-MODELE"]
         let error = NSError(domain: "Kyokasho.Export", code: 3, userInfo: [NSLocalizedDescriptionKey: sentinels.joined(separator: " ")])
-        let ref = DiagnosticRef.short(sentinels[0], salt: 99)
+        let ref = DiagnosticDocumentRef(text: DiagnosticRef.short(sentinels[0], salt: 99))
         let e = DiagnosticEvent(.erreur, .export, "export", outcome: .erreur, cause: .from(error), op: .new(), ref: ref)
+        let hostile = NSError(domain: sentinels[0], code: 1)
+        XCTAssertFalse(DiagnosticCause.from(hostile).text.contains(sentinels[0]))
         let line = DiagnosticLine.event(e, at: date)
         for s in sentinels { XCTAssertFalse(line.contains(s), "\(s) dans « \(line) »") }
     }

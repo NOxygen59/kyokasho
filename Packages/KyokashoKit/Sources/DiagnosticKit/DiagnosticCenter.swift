@@ -6,6 +6,14 @@ import Foundation
 /// Lignes du journal (contrat lu par les outils et les agents, `docs/DEBOGAGE.md`) : heure ISO, niveau, zone, puis
 /// soit les champs d'un événement typé, soit l'ancien message. Une ligne tient toujours sur **une** ligne.
 public enum DiagnosticLine {
+    /// Relevé d'un moniteur (CPU, fils) : même en-tête que les événements (`op`, `étape`), puis les mesures. Le texte
+    /// des mesures n'est fait que de nombres et de noms de fils filtrés (`DiagnosticThreads.safeName`) par
+    /// `DiagnosticCPULog` (AV-DIAG-001, AV-03).
+    public static func monitor(_ level: DiagnosticLevel, zone: DiagnosticZone, op: DiagnosticOperation, step: StaticString,
+                               measures: String, at date: Date, timeZone: TimeZone = .current) -> String {
+        "\(stamp(date, timeZone)) [\(level.rawValue)] [\(zone.rawValue)] op=\(op.text) étape=\(step) issue=etape \(oneLine(measures))"
+    }
+
     /// Ancien format : `ISO [niveau] [zone] message` (compatibilité de lecture, PLAN-DIAG-001 E1).
     public static func legacy(_ level: DiagnosticLevel, area: String, message: String, at date: Date,
                               timeZone: TimeZone = .current) -> String {
@@ -23,7 +31,7 @@ public enum DiagnosticLine {
         if e.cause != .aucune { parts.append("cause=\(e.cause.text)") }
         if let ms = e.durationMs { parts.append("t=\(ms)ms") }
         if let mb = e.memoryMB { parts.append("mem=\(mb)Mo") }
-        if let ref = e.ref { parts.append("doc=\(oneLine(ref))") }
+        if let ref = e.ref { parts.append("doc=\(ref.text)") }
         for count in e.counts { parts.append("\(count.name.description)=\(count.value)") }
         return parts.joined(separator: " ")
     }
@@ -78,7 +86,9 @@ public final class DiagnosticCenter: @unchecked Sendable {
     public func setDetailed(_ on: Bool) { lock.withLock { detailed = on } }
 
     /// Référence courte et salée d'un document pour ce journal (`DiagnosticRef`).
-    public func ref(_ documentId: String) -> String { DiagnosticRef.short(documentId, salt: lock.withLock { salt }) }
+    public func ref(_ documentId: String) -> DiagnosticDocumentRef {
+        DiagnosticDocumentRef(text: DiagnosticRef.short(documentId, salt: lock.withLock { salt }))
+    }
 
     /// Vrai si un événement de ce niveau serait écrit : permet d'éviter un calcul coûteux (mémoire, durée).
     public func wants(_ level: DiagnosticLevel) -> Bool {
@@ -116,6 +126,9 @@ public enum DiagnosticJournalPolicy {
     /// DEC-07 A : journal écrit avant PLAN-DIAG-001 (il peut contenir des titres et des chemins). Renommé, exclu du
     /// partage, effacé avec le reste.
     public static let quarantineName = "journal-avant-diagnostics.txt"
+    /// Relevé de batterie écrit avant ce format (titres de modèles importés, préfixes d'empreinte) : même traitement
+    /// que l'ancien journal (revue R2 Codex, B-CSV).
+    public static let energyQuarantineName = "energie-avant-diagnostics.csv"
     /// Version du format : 2 = événements typés et confidentialité à la source.
     public static let formatVersion = 2
 

@@ -142,7 +142,11 @@ enum EnergyFile {
     }
 
     static func erase() {
-        queue.sync { try? FileManager.default.removeItem(at: url) }
+        queue.sync {
+            try? FileManager.default.removeItem(at: url)
+            // Ancien relevé mis à l'écart (PLAN-DIAG-001, revue R2 B-CSV) : effacé avec le relevé.
+            try? FileManager.default.removeItem(at: Diagnostics.quarantinedEnergyFile)
+        }
     }
 }
 

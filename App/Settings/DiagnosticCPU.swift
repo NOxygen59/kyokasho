@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 NOxygen59
 
+import DiagnosticKit
 import ReaderCore
 import UIKit
 
@@ -182,12 +183,14 @@ final class DiagnosticCPU: @unchecked Sendable {
             threadHistory.interrupt()
             observations = []
         }
+        // Une opération par relevé : les lignes des fils persistants et la ligne du relevé la partagent (AV-03).
+        let op = DiagnosticOperation.new()
         let persistent = observations.filter { $0.events != nil }
         let shown = DiagnosticCPULog.topThreads(sample.threads).map(\.id)
         let segments = center.diagnosticSegments(for: shown + persistent.map { $0.load.id }, at: sampledAt)
         for thread in persistent {
-            Diagnostics.log(DiagnosticCPULog.persistentLine(thread, segment: segments[thread.load.id], at: sampledAt),
-                            "cpu-persistant")
+            Diagnostics.logCPU(DiagnosticCPULog.persistentLine(thread, segment: segments[thread.load.id], at: sampledAt),
+                               op: op, step: "fil_persistant", zone: .cpuPersistant)
         }
         guard let decision = policy.decide(at: now, percent: sample.percent, cost: sample.cost,
                                            hasLongWork: !long.entries.isEmpty) else { return }
@@ -199,6 +202,6 @@ final class DiagnosticCPU: @unchecked Sendable {
         let line = DiagnosticCPULog.line(percent: sample.percent, threads: sample.threads, active: center.diagnosticActive(),
                                          context: current, long: long, cost: sample.cost, decision: decision,
                                          observations: observations, segments: segments, at: sampledAt, previousTick: previousTick)
-        Diagnostics.logCPU(line)
+        Diagnostics.logCPU(line, op: op, step: "releve_cpu")
     }
 }

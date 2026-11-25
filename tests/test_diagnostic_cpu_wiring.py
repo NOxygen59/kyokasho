@@ -21,11 +21,12 @@ class DiagnosticCPUWiringTests(unittest.TestCase):
         tick = cpu.split("private func tick", 1)[1]
         self.assertLess(tick.index("guard Diagnostics.enabled else { return }"), tick.index("sampler.sample("))
         self.assertLess(tick.index("policy.admit"), tick.index("sampler.sample("))
-        self.assertLess(tick.index("policy.decide"), tick.index("Diagnostics.logCPU("))
+        self.assertLess(tick.index("policy.decide"), tick.index("Diagnostics.logCPU(line"))
 
     def test_cpu_writes_use_the_guarded_journal(self):
         journal = source("App/Settings/Diagnostics.swift")
-        self.assertIn('write(message, area: "cpu", diagnosticOnly: true)', journal)
+        # PLAN-DIAG-001 (AV-03) : même filtre, ligne au contrat commun (zone, op, étape).
+        self.assertIn("enqueue(DiagnosticLine.monitor(.info, zone: zone, op: op, step: step, measures: measures, at: Date()), sync: false,\n                diagnosticOnly: true)", journal)
         self.assertIn("guard !diagnosticOnly || enabled else { return }", journal)
         self.assertIn(".onChange(of: enabled) { _ in\n                    DiagnosticCPU.updateActivation()\n                    Diagnostics.updateDetail()", journal)
         self.assertIn("DiagnosticCPU.updateActivation()", source("App/Settings/EnergyMeter.swift"))
@@ -59,7 +60,7 @@ class DiagnosticCPUWiringTests(unittest.TestCase):
         self.assertLess(tick.index("let cutoff = Date()"), tick.index("sampler.sample("))
         self.assertIn("DiagnosticThreads.recentCategories(Diagnostics.tail().lines, before: cutoff)", tick)
         self.assertIn("shown + persistent.map { $0.load.id }", tick)
-        self.assertIn('"cpu-persistant")', tick)
+        self.assertIn('zone: .cpuPersistant)', tick)
         mach = source("Packages/KyokashoKit/Sources/ReaderCore/DiagnosticMachCPU.swift")
         self.assertIn(".init(id: info.thread_id,", mach)
 

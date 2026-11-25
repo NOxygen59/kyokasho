@@ -77,10 +77,13 @@ final class AITaskCenter: ObservableObject {
         errors[key] = nil
         // Début et fin écrits pour toutes les tâches, même celles qui ne journalisent rien d'autre (#47).
         log(job.id, String(localized: "Démarrée") + (modelId.map { " avec \(Self.modelName($0))" } ?? "")
-            + (activity.map { " : \(AIActivityText.explain($0))" } ?? ""))
+            + (activity.map { " : \(AIActivityText.explain($0))" } ?? ""),
+            journal: "Démarrée" + (modelId.map { " avec \(Self.diagnosticModelName($0))" } ?? ""))
         tasks[job.id] = Task { [weak self] in
             defer { ActivityCenter.shared.endDiagnostic(job.diagnosticID) }
             var failure: String?
+            /// Version de l'erreur pour le journal : domaine et numéro, jamais le message (revue R2 Codex, B-IA).
+            var journalFailure: String?
             var cancelled = false
             do {
                 if modelId == ModelSpec.ovisocr2.id || modelId == ModelSpec.qwen3vl4b.id {
@@ -95,12 +98,14 @@ final class AITaskCenter: ObservableObject {
             } catch {
                 if Task.isCancelled { cancelled = true } else {
                     failure = error.localizedDescription
+                    journalFailure = Diagnostics.describe(error)
                     self?.errors[key] = failure
                 }
             }
             if Task.isCancelled { cancelled = true }
-            self?.finish(job.id, AIActivityText.outcome(seconds: Date().timeIntervalSince(job.started),
-                                                         cancelled: cancelled, error: failure))
+            let seconds = Date().timeIntervalSince(job.started)
+            self?.finish(job.id, AIActivityText.outcome(seconds: seconds, cancelled: cancelled, error: failure),
+                         journal: AIActivityText.outcome(seconds: seconds, cancelled: cancelled, error: journalFailure))
             self?.tasks[job.id] = nil
             self?.finished += 1
         }
@@ -141,8 +146,8 @@ final class AITaskCenter: ObservableObject {
     }
 
     /// Retire la tâche de la liste en cours et la garde dans `recent`, avec sa fin écrite au journal.
-    private func finish(_ id: UUID, _ outcome: String) {
-        log(id, outcome)
+    private func finish(_ id: UUID, _ outcome: String, journal: String? = nil) {
+        log(id, outcome, journal: journal)
         guard let i = jobs.firstIndex(where: { $0.id == id }) else { return }
         var job = jobs.remove(at: i)
         job.outcome = outcome

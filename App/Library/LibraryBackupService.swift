@@ -189,7 +189,8 @@ enum LibraryBackupService {
             Diagnostics.error("restauration : \(Diagnostics.describe(error))", "sauvegarde")
             return
         }
-        Diagnostics.write("restauration de \(marker.backupName)…", level: .info, area: "sauvegarde", sync: true)
+        // Le nom de l'archive peut avoir été choisi par l'utilisateur dans Fichiers : jamais dans le journal (B-NOMS).
+        Diagnostics.write("restauration d'une sauvegarde…", level: .info, area: "sauvegarde", sync: true)
         do {
             let bundle = Bundle.main.bundleIdentifier ?? ""
             let current = UserDefaults.standard.persistentDomain(forName: bundle) ?? [:]

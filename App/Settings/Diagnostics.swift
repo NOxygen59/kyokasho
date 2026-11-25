@@ -32,6 +32,8 @@ enum Diagnostics {
     static var previousFile: URL { folder.appendingPathComponent("journal.1.txt") }
     /// Journal écrit avant PLAN-DIAG-001, mis à l'écart (DEC-07 A) : jamais partagé, effacé avec le reste.
     static var quarantinedFile: URL { folder.appendingPathComponent("journal-avant-diagnostics.txt") }
+    /// Relevé de batterie de l'ancien format, mis à l'écart comme l'ancien journal : jamais partagé, effacé avec le relevé.
+    static var quarantinedEnergyFile: URL { folder.appendingPathComponent("energie-avant-diagnostics.csv") }
 
     private static let queue = DispatchQueue(label: "fr.noxygen59.kyokasho.diagnostics")
     /// Lignes en attente d'écriture et lignes perdues faute de place (file bornée, PLAN-DIAG-001 E1).
@@ -45,9 +47,12 @@ enum Diagnostics {
         write(message(), level: .info, area: area)
     }
 
-    static func logCPU(_ message: String) {
+    /// Relevé du moniteur CPU et des fils (AV-DIAG-001, AV-03) : zone fermée, `op` du relevé et étape, comme les
+    /// événements ; les mesures viennent de `DiagnosticCPULog` (nombres et noms de fils filtrés).
+    static func logCPU(_ measures: String, op: DiagnosticOperation, step: StaticString, zone: DiagnosticZone = .cpu) {
         guard enabled else { return }
-        write(message, area: "cpu", diagnosticOnly: true)
+        enqueue(DiagnosticLine.monitor(.info, zone: zone, op: op, step: step, measures: measures, at: Date()), sync: false,
+                diagnosticOnly: true)
     }
 
     /// Erreur : toujours notée. Le message est un texte du code : jamais un titre, un chemin ni le message d'une
@@ -66,7 +71,7 @@ enum Diagnostics {
     static func describe(_ error: Error) -> String { DiagnosticCause.from(error).text }
 
     /// Référence courte et salée d'un document pour le journal, à la place de son titre (DEC-01).
-    static func ref(_ documentId: String) -> String { DiagnosticCenter.shared.ref(documentId) }
+    static func ref(_ documentId: String) -> String { DiagnosticCenter.shared.ref(documentId).text }
 
     /// Une ligne : heure ISO, niveau, zone, message. Écrite tout de suite si `sync`
     /// (utilisé juste avant un arrêt de l'app).
@@ -115,12 +120,21 @@ enum Diagnostics {
         let fm = FileManager.default
         try? fm.createDirectory(at: folder, withIntermediateDirectories: true)
         if let size = fileSize(limitPath: file), DiagnosticJournalPolicy.shouldRotate(currentBytes: size) {
-            try? fm.removeItem(at: previousFile)
-            try? fm.moveItem(at: file, to: previousFile)
-            let note = DiagnosticLine.legacy(.alerte, area: DiagnosticZone.journal.rawValue,
-                                             message: "Rotation du journal : l'ancien (\(size) octets) est dans \(DiagnosticJournalPolicy.previousName)",
-                                             at: Date())
-            try? Data((note + "\n").utf8).write(to: file)
+            // Le précédent n'est remplacé qu'au moment du déplacement réussi (remplacement atomique) ; l'en-tête de
+            // rotation n'est écrit que si le journal a bien changé de nom (revue R2 Codex, B-ROTATION). En cas
+            // d'échec, on continue d'ajouter au journal actuel.
+            let rotated: Bool
+            if fm.fileExists(atPath: previousFile.path) {
+                rotated = (try? fm.replaceItemAt(previousFile, withItemAt: file)) != nil
+            } else {
+                rotated = (try? fm.moveItem(at: file, to: previousFile)) != nil
+            }
+            if rotated && !fm.fileExists(atPath: file.path) {
+                let note = DiagnosticLine.legacy(.alerte, area: DiagnosticZone.journal.rawValue,
+                                                 message: "Rotation du journal : l'ancien (\(size) octets) est dans \(DiagnosticJournalPolicy.previousName)",
+                                                 at: Date())
+                try? Data((note + "\n").utf8).write(to: file)
+            }
         }
         if let handle = try? FileHandle(forWritingTo: file) {
             handle.seekToEndOfFile()
@@ -138,13 +152,18 @@ enum Diagnostics {
         let fm = FileManager.default
         queue.sync {
             let stored = defaults.integer(forKey: formatKey)
-            if DiagnosticJournalPolicy.needsQuarantine(storedFormat: stored, journalExists: fm.fileExists(atPath: file.path)) {
-                try? fm.removeItem(at: quarantinedFile)
-                try? fm.moveItem(at: file, to: quarantinedFile)
-                // L'ancien format pouvait aussi être tourné ; jamais de `journal.1.txt` avant ce format.
-                try? fm.removeItem(at: previousFile)
+            guard stored < DiagnosticJournalPolicy.formatVersion else { return }
+            // Journal et relevé de batterie de l'ancien format (titres, chemins, préfixes d'empreinte, noms de modèles
+            // importés) : mis à l'écart. Le format n'est marqué migré que si **les deux** ont réussi ; sinon on
+            // réessaie au prochain lancement (revue R2 Codex, B-QUARANTAINE et B-CSV).
+            let moved = [(file, quarantinedFile), (EnergyFile.url, quarantinedEnergyFile)].allSatisfy { source, target in
+                guard fm.fileExists(atPath: source.path) else { return true }
+                if fm.fileExists(atPath: target.path) {
+                    return (try? fm.replaceItemAt(target, withItemAt: source)) != nil && !fm.fileExists(atPath: source.path)
+                }
+                return (try? fm.moveItem(at: source, to: target)) != nil
             }
-            defaults.set(DiagnosticJournalPolicy.formatVersion, forKey: formatKey)
+            if moved { defaults.set(DiagnosticJournalPolicy.formatVersion, forKey: formatKey) }
         }
     }
 
@@ -168,7 +187,7 @@ enum Diagnostics {
     /// Tailles lues pour la bannière de taille : journal et relevé de batterie.
     static func diagnosticSizes() -> (journal: Int, energy: Int) {
         let journal = [file, previousFile, quarantinedFile].reduce(0) { $0 + (fileSize(limitPath: $1) ?? 0) }
-        return (journal, fileSize(limitPath: EnergyFile.url) ?? 0)
+        return (journal, (fileSize(limitPath: EnergyFile.url) ?? 0) + (fileSize(limitPath: quarantinedEnergyFile) ?? 0))
     }
 
     /// Les fichiers de diagnostic qui existent, journal d'abord : un seul geste de partage (demande du 10/11/2026).
@@ -222,7 +241,9 @@ enum Diagnostics {
               level: .info, area: "app")
         setErrorHandler({ message, _ in
             let text = message.map { String(cString: $0) } ?? "(sans message)"
-            Diagnostics.write("ERREUR FATALE : \(text) · mémoire de l'app \(Int(Diagnostics.footprintMB())) Mo",
+            // Le message natif peut contenir un chemin ou un nom de modèle : le journal n'en garde que la longueur
+            // (revue R2 Codex, B-MLX). Le rapport de plantage d'iOS garde le message complet via `fatalError`.
+            Diagnostics.write("ERREUR FATALE MLX (message natif de \(text.count) caractères) · mémoire de l'app \(Int(Diagnostics.footprintMB())) Mo",
                               level: .erreur, area: "mlx", sync: true)
             fatalError("MLX : \(text)")
         })

@@ -86,7 +86,7 @@ final class AppModel: ObservableObject {
                 tabs.open(openDocumentId)
                 openRequestSerial += 1
                 ResumeRow.forgetDismissal(openDocumentId)
-                Diagnostics.log("ouverture demandée : \(openDocumentId.prefix(8))", "lecteur")
+                Diagnostics.log("ouverture demandée : doc \(Diagnostics.ref(openDocumentId))", "lecteur")
             }
             // Le lecteur doit lire Theme.current avant de construire ses vues et ses furigana.
             themeManager?.showDocument(in: activeDocumentSpace)

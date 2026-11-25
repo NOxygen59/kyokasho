@@ -41,7 +41,7 @@ class EqualizationWiringTests(unittest.TestCase):
         valid_pair = "if let pdf = PDFDocument(url: pdfFile), pdf.pageCount == boxes.count {"
         self.assertIn(valid_pair, cache)
         rejected = cache.split(valid_pair, 1)[1].split("return (pdf, boxes)\n            }", 1)[1]
-        self.assertIn('Diagnostics.error("paire d’égalisation incohérente rejetée : \\(documentId.prefix(8))", "lecteur")', rejected)
+        self.assertIn('Diagnostics.error("paire d’égalisation incohérente rejetée : doc \\(Diagnostics.ref(documentId))", "lecteur")', rejected)
         self.assertIn("rejectedNames = [pdfFile.lastPathComponent, boxesFile.lastPathComponent]", rejected)
         self.assertIn("fm.removeItem(at: boxesFile)", rejected)
         self.assertIn("fm.removeItem(at: pdfFile)", rejected)
@@ -68,7 +68,7 @@ class EqualizationWiringTests(unittest.TestCase):
         self.assertIn("guard (try? fm.moveItem(at: temporary, to: pdfFile)) != nil else { return failed() }", source)
         reader = (APP / "Reader/ReaderController.swift").read_text(encoding="utf-8")
         build = reader.split("static func build(", 1)[1]
-        self.assertIn('    Diagnostics.error("échec de la préparation des pages égalisées : \\(documentId.prefix(8)) ; repli sur le PDF d’origine", "lecteur")\n'
+        self.assertIn('    Diagnostics.error("échec de la préparation des pages égalisées : doc \\(Diagnostics.ref(documentId)) ; repli sur le PDF d’origine", "lecteur")\n'
                       '        }\n        guard let pdf = equalized?.pdf ?? PDFDocument(url: url) else { return nil }', build)
 
     def test_cached_equalized_pages_are_created_after_the_reader_delegate(self):

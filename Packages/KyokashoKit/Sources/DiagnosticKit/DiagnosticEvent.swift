@@ -13,7 +13,8 @@ public enum DiagnosticLevel: String, Sendable, CaseIterable {
 /// Zone du journal : liste **fermée** (PLAN-DIAG-001, DEC-01). Les valeurs brutes sont celles des anciennes lignes,
 /// pour que les outils de lecture (`docs/DEBOGAGE.md`) continuent de filtrer pareil.
 public enum DiagnosticZone: String, Sendable, CaseIterable {
-    case app, ui, journal, diagnostic, memoire, cpu, cpuPersistant = "cpu-persistant", energie, performances
+    // `mémoire` garde son accent : c'est le nom lu par le moniteur d'activité (`DiagnosticThreadMonitor.Category`).
+    case app, ui, journal, diagnostic, memoire = "mémoire", cpu, cpuPersistant = "cpu-persistant", energie, performances
     case bibliotheque, importation = "import", export, sauvegarde, drive, pages, analyse, scan, verif
     case lecteur, panneau, affichage, gestes, clavier, notes, furigana
     case ocr, ocrScroll = "ocr-scroll", ocrUI = "ocr-ui", ocrPanel = "ocr-panel", relecture, miseEnPage = "miseenpage"
@@ -28,7 +29,7 @@ public enum DiagnosticZone: String, Sendable, CaseIterable {
 
     /// Anciennes zones écrites avec des accents (relevé du 25/11 dans `App/`).
     static let legacyAliases: [String: DiagnosticZone] = [
-        "bibliothèque": .bibliotheque, "mémoire": .memoire, "énergie": .energie, "révision": .revision,
+        "bibliothèque": .bibliotheque, "memoire": .memoire, "énergie": .energie, "révision": .revision,
     ]
 }
 
@@ -69,9 +70,27 @@ public enum DiagnosticCause: Sendable, Equatable {
         case .delai: return "delai"
         case .doublon: return "doublon"
         case .systeme(let domain, let code):
-            let safe = String(domain.unicodeScalars.filter { CharacterSet.alphanumerics.contains($0) || "._-".unicodeScalars.contains($0) }.prefix(60))
-            return "\(safe.isEmpty ? "erreur" : safe)#\(code)"
+            return "\(Self.safeDomain(domain))#\(code)"
         }
+    }
+}
+
+extension DiagnosticCause {
+    /// Domaines gardés tels quels : ceux du système, et les noms de types Swift qualifiés (`Module.Type`, au moins un
+    /// point, identifiants seulement). Un domaine choisi à la main (`NSError(domain: titre)`) devient `autre` :
+    /// la cause ne peut pas transporter un texte (revue R2 Codex, B-TYPE).
+    static let systemDomains: Set<String> = [NSCocoaErrorDomain, NSPOSIXErrorDomain, NSOSStatusErrorDomain, NSURLErrorDomain,
+                                            NSMachErrorDomain, "kCFErrorDomainCFNetwork", "GRDB.DatabaseError"]
+
+    static func safeDomain(_ domain: String) -> String {
+        if systemDomains.contains(domain) { return domain }
+        let parts = domain.split(separator: ".", omittingEmptySubsequences: false)
+        let identifier = { (part: Substring) -> Bool in
+            guard let first = part.unicodeScalars.first, CharacterSet.letters.contains(first) || first == "_" else { return false }
+            return part.unicodeScalars.allSatisfy { $0.isASCII && (CharacterSet.alphanumerics.contains($0) || $0 == "_") }
+        }
+        guard parts.count >= 2, parts.count <= 6, domain.count <= 80, parts.allSatisfy(identifier) else { return "autre" }
+        return domain
     }
 }
 
@@ -106,12 +125,12 @@ public struct DiagnosticEvent: Sendable {
     /// Empreinte mémoire de l'app, en Mo.
     public var memoryMB: Int?
     public var counts: [DiagnosticCount]
-    /// Référence courte et salée d'un document (`DiagnosticRef`), jamais son titre ni son empreinte.
-    public var ref: String?
+    /// Référence courte et salée d'un document, jamais son titre ni son empreinte.
+    public var ref: DiagnosticDocumentRef?
 
     public init(_ level: DiagnosticLevel, _ zone: DiagnosticZone, _ step: StaticString, outcome: DiagnosticOutcome = .etape,
                 cause: DiagnosticCause = .aucune, op: DiagnosticOperation? = nil, parent: DiagnosticOperation? = nil,
-                durationMs: Int? = nil, memoryMB: Int? = nil, counts: [DiagnosticCount] = [], ref: String? = nil) {
+                durationMs: Int? = nil, memoryMB: Int? = nil, counts: [DiagnosticCount] = [], ref: DiagnosticDocumentRef? = nil) {
         self.level = level
         self.zone = zone
         self.step = step
@@ -124,6 +143,13 @@ public struct DiagnosticEvent: Sendable {
         self.counts = counts
         self.ref = ref
     }
+}
+
+/// Référence de document pour un événement : ne se construit que par `DiagnosticCenter.ref(_:)` (ou les tests), jamais
+/// depuis une chaîne quelconque (revue R2 Codex, B-TYPE).
+public struct DiagnosticDocumentRef: Sendable, Equatable {
+    public let text: String
+    init(text: String) { self.text = text }
 }
 
 /// Référence d'un document dans le journal : six caractères tirés de son identifiant **et d'un sel propre à

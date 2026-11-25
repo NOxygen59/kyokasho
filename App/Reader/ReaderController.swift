@@ -433,7 +433,7 @@ final class ReaderController: NSObject, ObservableObject {
                 if stored == nil { remember(PDFDocument(url: pdfFile).flatMap { preparedHeight($0, boxes) }) }
                 return (pdf, boxes)
             }
-            Diagnostics.error("paire d’égalisation incohérente rejetée : \(documentId.prefix(8))", "lecteur")
+            Diagnostics.error("paire d’égalisation incohérente rejetée : doc \(Diagnostics.ref(documentId))", "lecteur")
             // Même si la suppression échoue, cette paire ne doit plus fournir de hauteur de référence.
             rejectedNames = [pdfFile.lastPathComponent, boxesFile.lastPathComponent]
             try? fm.removeItem(at: boxesFile)
@@ -567,7 +567,7 @@ final class ReaderController: NSObject, ObservableObject {
         // Pages remises à la même hauteur : préparées une fois par version du PDF (cache disque), ensuite lues
         // directement (plus de « Préparation des pages » à chaque ouverture).
         let equalized = equalizedDocument(url: url, documentId: documentId, database: database) {
-            Diagnostics.error("échec de la préparation des pages égalisées : \(documentId.prefix(8)) ; repli sur le PDF d’origine", "lecteur")
+            Diagnostics.error("échec de la préparation des pages égalisées : doc \(Diagnostics.ref(documentId)) ; repli sur le PDF d’origine", "lecteur")
         }
         guard let pdf = equalized?.pdf ?? PDFDocument(url: url) else { return nil }
         pdf.delegate = TonedPageProvider.shared

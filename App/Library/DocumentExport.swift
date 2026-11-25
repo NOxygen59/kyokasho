@@ -160,7 +160,7 @@ enum DocumentExport {
         let stored = (try? database.equalizationReference(documentId: documentId)).flatMap { $0 }.map { CGFloat($0) }
         if let common = stored ?? PageEqualization.commonHeight(heights),
            heights.contains(where: { PageEqualization.factor(height: $0, common: common) != nil }) {
-            Diagnostics.error("export : pages égalisées indisponibles pour \(documentId)", "export")
+            Diagnostics.error("export : pages égalisées indisponibles pour doc \(Diagnostics.ref(documentId))", "export")
             throw ExportPreparationFailed()
         }
         return original
