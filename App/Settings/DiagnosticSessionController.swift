@@ -25,6 +25,8 @@ final class DiagnosticSessionController: @unchecked Sendable {
     private var machine = DiagnosticSessionMachine()          // seulement sur `queue`
     private var file: DiagnosticSessionFile?                  // seulement sur `queue`
     private var observers: [NSObjectProtocol] = []            // fil principal
+    /// Assertion demandée tôt, à `willResignActive`, pour couvrir une clôture éventuelle (fil principal).
+    private var earlyAssertion: BackgroundAssertion?
 
     /// Constat du lancement, pour Réglages › Diagnostic (ce lancement seulement, en mémoire).
     private let reportLock = NSLock()
@@ -53,12 +55,20 @@ final class DiagnosticSessionController: @unchecked Sendable {
             Self.publish(previous)
         }
         let center = NotificationCenter.default
-        let foreground: (Notification) -> Void = { [weak self] _ in self?.handle(.foreground) }
+        let foreground: (Notification) -> Void = { [weak self] _ in
+            // Retour au premier plan sans clôture : l'assertion demandée tôt est rendue.
+            self?.earlyAssertion?.end()
+            self?.earlyAssertion = nil
+            self?.handle(.foreground)
+        }
         observers = [
             center.addObserver(forName: UIApplication.willEnterForegroundNotification, object: nil, queue: .main, using: foreground),
             center.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main, using: foreground),
             center.addObserver(forName: UIApplication.willResignActiveNotification, object: nil, queue: .main) { [weak self] _ in
-                self?.handle(.inactive)
+                // Sans clore : on demande seulement tôt la protection d'une clôture possible (revue R2 E2a, B1).
+                guard let self else { return }
+                if self.earlyAssertion == nil { self.earlyAssertion = BackgroundAssertion.begin() }
+                self.handle(.inactive)
             },
             center.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main) { [weak self] _ in
                 self?.close()
@@ -96,8 +106,8 @@ final class DiagnosticSessionController: @unchecked Sendable {
     /// (fin d'écriture ou expiration) : une clôture ancienne ne peut pas rendre celle d'une autre (revue R2 E2a, B1).
     /// Fil principal (notification).
     private func close() {
-        let assertion = BackgroundAssertion()
-        assertion.id = UIApplication.shared.beginBackgroundTask(withName: "diagnostic.session") { assertion.end() }
+        let assertion = earlyAssertion ?? BackgroundAssertion.begin()
+        earlyAssertion = nil
         handle(.background) { assertion.end() }
     }
 
@@ -122,6 +132,14 @@ final class DiagnosticSessionController: @unchecked Sendable {
 /// Une assertion d'arrière-plan et sa fin unique (fil principal).
 private final class BackgroundAssertion {
     var id: UIBackgroundTaskIdentifier = .invalid
+
+    /// Demande une assertion qui se rend d'elle-même à l'expiration.
+    static func begin() -> BackgroundAssertion {
+        let assertion = BackgroundAssertion()
+        assertion.id = UIApplication.shared.beginBackgroundTask(withName: "diagnostic.session") { assertion.end() }
+        return assertion
+    }
+
     func end() {
         guard id != .invalid else { return }
         UIApplication.shared.endBackgroundTask(id)

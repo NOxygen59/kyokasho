@@ -95,18 +95,15 @@ public struct DiagnosticSessionFile: Sendable {
 
     public enum Read: Equatable, Sendable { case absent, unreadable, data(Data) }
 
-    /// Une erreur de lecture n'est pas une absence. Taille vérifiée **avant** de lire (revue R2 E2a, B3).
+    /// Une erreur de lecture n'est pas une absence. La lecture elle-même est bornée (au plus `maxBytes + 1` octets
+    /// lus) et refuse un lien symbolique (`O_NOFOLLOW`) : revue R2 E2a, B3.
     public func read() -> Read {
-        do {
-            let size = (try FileManager.default.attributesOfItem(atPath: url.path)[.size] as? NSNumber)?.intValue ?? Int.max
-            guard size <= Self.maxBytes else { return .unreadable }
-            return .data(try Data(contentsOf: url))
-        } catch let error as NSError where (error.domain == NSCocoaErrorDomain && error.code == NSFileReadNoSuchFileError)
-                                          || (error.domain == NSPOSIXErrorDomain && error.code == Int(ENOENT)) {
-            return .absent
-        } catch {
-            return .unreadable
-        }
+        let fd = open(url.path, O_RDONLY | O_NOFOLLOW)
+        guard fd >= 0 else { return errno == ENOENT ? .absent : .unreadable }
+        let handle = FileHandle(fileDescriptor: fd, closeOnDealloc: true)
+        guard let data = try? handle.read(upToCount: Self.maxBytes + 1) else { return .unreadable }
+        guard data.count <= Self.maxBytes else { return .unreadable }
+        return .data(data)
     }
 
     /// Remplacement atomique ; `false` si l'écriture échoue.
@@ -114,7 +111,8 @@ public struct DiagnosticSessionFile: Sendable {
     public func write(_ state: DiagnosticSessionState) -> Bool {
         guard let data = try? DiagnosticSession.encoder.encode(state) else { return false }
         do {
-            try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+            // Jamais de création du dossier ici : seul l'installateur le crée, avec l'exclusion de la sauvegarde
+            // confirmée. Un dossier disparu fait échouer l'écriture (revue R2 E2a, B4).
             try data.write(to: url, options: .atomic)
             return true
         } catch {

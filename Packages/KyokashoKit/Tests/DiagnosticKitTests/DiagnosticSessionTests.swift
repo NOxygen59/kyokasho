@@ -127,4 +127,17 @@ final class DiagnosticSessionTests: XCTestCase {
         XCTAssertEqual(file.consumeAtLaunch(now: t0).previous, .unknown)
     }
 
+
+    /// B3 : un lien symbolique n'est pas suivi ; B4 : l'écriture ne recrée jamais un dossier disparu.
+    func testSymlinkIsRefusedAndMissingFolderIsNotRecreated() throws {
+        let file = DiagnosticSessionFile(folder: folder)
+        let target = folder.appendingPathComponent("cible.json")
+        try Data(#"{"schemaVersion":1,"generation":1,"state":"armed","updatedAt":"2026-11-25T00:00:00Z"}"#.utf8).write(to: target)
+        try fm.createSymbolicLink(at: file.url, withDestinationURL: target)
+        XCTAssertEqual(file.read(), .unreadable)
+        try fm.removeItem(at: folder)
+        XCTAssertFalse(file.write(DiagnosticSessionState(generation: 1, state: .armed, updatedAt: t0, memoryMB: nil)))
+        XCTAssertFalse(fm.fileExists(atPath: folder.path), "dossier non recréé (il perdrait son exclusion de sauvegarde)")
+    }
+
 }
