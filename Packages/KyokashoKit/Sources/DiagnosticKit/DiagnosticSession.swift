@@ -40,14 +40,23 @@ public struct DiagnosticSessionState: Codable, Equatable, Sendable {
     public var memoryMB: Int?
     /// Fenêtre de détail automatique en cours (E2b), reportée telle quelle dans chaque écriture.
     public var detail: DiagnosticDetailWindow?
+    /// Travaux suivis en cours à l'écriture (E2c), au plus `DiagnosticOngoing.limit` ; `ongoingTruncated` s'il y en
+    /// avait davantage.
+    public var ongoing: [DiagnosticOngoingEntry]?
+    public var ongoingTruncated: Bool?
 
-    public init(generation: UInt64, state: Phase, updatedAt: Date, memoryMB: Int?, detail: DiagnosticDetailWindow? = nil) {
+    public init(generation: UInt64, state: Phase, updatedAt: Date, memoryMB: Int?, detail: DiagnosticDetailWindow? = nil,
+                ongoing: DiagnosticOngoing? = nil) {
         schemaVersion = Self.schema
         self.generation = generation
         self.state = state
         self.updatedAt = updatedAt
         self.memoryMB = memoryMB.flatMap { $0 > 0 ? $0 : nil }
         self.detail = detail
+        if let ongoing, state == .armed, !ongoing.entries.isEmpty || ongoing.truncated {
+            self.ongoing = ongoing.entries
+            self.ongoingTruncated = ongoing.truncated ? true : nil
+        }
     }
 }
 
@@ -68,6 +77,8 @@ public struct DiagnosticSessionMachine: Sendable {
     public private(set) var armed = false
     /// Fenêtre de détail en cours, recopiée dans chaque état écrit (E2b).
     public private(set) var detail: DiagnosticDetailWindow?
+    /// Dernière projection des travaux suivis adoptée (E2c).
+    public private(set) var ongoing = DiagnosticOngoing()
 
     public init(lastGeneration: UInt64 = 0, detail: DiagnosticDetailWindow? = nil) {
         generation = lastGeneration
@@ -80,7 +91,7 @@ public struct DiagnosticSessionMachine: Sendable {
         case .foreground:
             guard !armed else { return nil }
             return DiagnosticSessionState(generation: generation &+ 1, state: .armed, updatedAt: now, memoryMB: memoryMB,
-                                          detail: detail)
+                                          detail: detail, ongoing: ongoing)
         case .inactive:
             return nil
         case .background:
@@ -88,6 +99,20 @@ public struct DiagnosticSessionMachine: Sendable {
             return DiagnosticSessionState(generation: generation, state: .closed, updatedAt: now, memoryMB: memoryMB,
                                           detail: detail)
         }
+    }
+
+    /// État armé à réécrire pour une nouvelle projection des travaux (E2c), ou pour une alerte mémoire ; `nil` si la
+    /// session n'est pas armée ou si la projection est plus ancienne que la dernière adoptée.
+    public func next(ongoing new: DiagnosticOngoing?, now: Date, memoryMB: Int?) -> DiagnosticSessionState? {
+        guard armed else { return nil }
+        if let new, new.revision < ongoing.revision { return nil }
+        return DiagnosticSessionState(generation: generation, state: .armed, updatedAt: now, memoryMB: memoryMB,
+                                      detail: detail, ongoing: new ?? ongoing)
+    }
+
+    /// Adopte une projection écrite avec succès.
+    public mutating func commit(ongoing new: DiagnosticOngoing) {
+        if new.revision >= ongoing.revision { ongoing = new }
     }
 
     /// Adopte un état **écrit avec succès**.
@@ -160,6 +185,9 @@ public struct DiagnosticSessionFile: Sendable {
         public var lastGeneration: UInt64
         /// Fenêtre de détail active pour ce lancement (posée par ce constat, ou encore en cours), sinon `nil`.
         public var detail: DiagnosticDetailWindow?
+        /// Travaux suivis qui tournaient lors du dernier état écrit de la session non clôturée (E2c).
+        public var ongoing: [DiagnosticOngoingEntry] = []
+        public var ongoingTruncated = false
     }
 
     /// Lecture **une fois** au lancement : une session armée est d'abord remplacée par « close » (consommée), avec
@@ -183,7 +211,8 @@ public struct DiagnosticSessionFile: Sendable {
             guard write(closed) else { return Launch(previous: .unknown, lastGeneration: state.generation, detail: nil) }
             return Launch(previous: .notClosed(ageSeconds: DiagnosticSession.age(from: state.updatedAt, now: now),
                                                memoryMB: state.memoryMB, generation: state.generation),
-                          lastGeneration: state.generation, detail: window)
+                          lastGeneration: state.generation, detail: window, ongoing: state.ongoing ?? [],
+                          ongoingTruncated: state.ongoingTruncated ?? false)
         }
     }
 }
@@ -203,7 +232,8 @@ public enum DiagnosticSession {
     }()
 
     /// Clés permises : une clé inconnue rend l'état invalide (revue R2 E2a, B3).
-    static let allowedKeys: Set<String> = ["schemaVersion", "generation", "state", "updatedAt", "memoryMB", "detail"]
+    static let allowedKeys: Set<String> = ["schemaVersion", "generation", "state", "updatedAt", "memoryMB", "detail",
+                                           "ongoing", "ongoingTruncated"]
     static let allowedDetailKeys: Set<String> = ["from", "until"]
 
     /// Validation avant usage : taille, clés, schéma, bornes. Tout écart → `nil` (état inconnu).
@@ -216,7 +246,10 @@ public enum DiagnosticSession {
               state.schemaVersion == DiagnosticSessionState.schema,
               state.generation > 0,
               state.memoryMB.map({ (1...1_000_000).contains($0) }) ?? true,
-              state.detail?.isWellFormed ?? true
+              state.detail?.isWellFormed ?? true,
+              (state.ongoing?.count ?? 0) <= DiagnosticOngoing.limit,
+              state.ongoing?.allSatisfy({ $0.op > 0 }) ?? true,
+              (object["ongoing"] as? [[String: Any]])?.allSatisfy({ Set($0.keys) == ["kind", "op"] }) ?? (object["ongoing"] == nil)
         else { return nil }
         return state
     }

@@ -2,6 +2,7 @@
 // Copyright (c) 2026 NOxygen59
 
 import Darwin
+import DiagnosticKit
 import Foundation
 import ReaderCore
 
@@ -33,6 +34,20 @@ final class ActivityCenter: @unchecked Sendable {
     private var aliases: [String: DiagnosticThreads.Alias] = [:]
     /// Copie en mémoire du mode diagnostic (revue R2 D) : les chemins fréquents ne relisent pas les préférences.
     private var diagnosticsOn = false
+    /// Travaux longs suivis par la session de diagnostic (PLAN-DIAG-001 E2c), même mode coupé : types fermés et `op`
+    /// seulement, jamais `detail`.
+    private var tracked = DiagnosticOngoingRegistry()
+
+    /// Travaux suivis par la session : sauvegarde, imports, conversion CBZ (liste fermée).
+    private static func trackedWork(_ kind: Kind) -> DiagnosticTrackedWork? {
+        switch kind {
+        case .backup: return .sauvegarde
+        case .importing: return .importPDF
+        case .comicImport: return .importCBZ
+        case .comicConversion: return .conversionCBZ
+        default: return nil
+        }
+    }
 
     func setDiagnostics(_ on: Bool) {
         lock.withLock {
@@ -52,9 +67,17 @@ final class ActivityCenter: @unchecked Sendable {
     /// `end` part avec le `defer` de l'appelant : une erreur ou une annulation ferment aussi la mesure.
     func begin(_ kind: Kind, detail: String? = nil, page: Int? = nil, progress: Progress? = nil) -> UUID {
         let id = UUID()
-        lock.withLock {
+        let work = Self.trackedWork(kind)
+        let published: DiagnosticOngoing? = lock.withLock {
             ledger.begin(id, kind: kind.rawValue, detail: detail, at: Date())
             if diagnosticsOn { register(id, kind: kind, page: page, progress: progress) }
+            return work.map { tracked.begin(id, kind: $0) }
+        }
+        // Publication hors du verrou ; la révision écarte une publication réordonnée (E2c).
+        if let published, let work, let op = published.entries.last?.op {
+            DiagnosticSessionController.shared.updateOngoing(published)
+            DiagnosticCenter.shared.emit(.info, DiagnosticEvent(.info, work.zone, "travail_observe", outcome: .debut,
+                                                                op: DiagnosticOperation(raw: op)))
         }
         return id
     }
@@ -99,10 +122,12 @@ final class ActivityCenter: @unchecked Sendable {
     }
 
     func end(_ id: UUID) {
-        lock.withLock {
+        let published: DiagnosticOngoing? = lock.withLock {
             if diagnosticsOn { diagnosticRunning.removeValue(forKey: id) }
             ledger.end(id, at: Date())
+            return tracked.end(id)
         }
+        if let published { DiagnosticSessionController.shared.updateOngoing(published) }
     }
 
     /// Travail synchrone dont le vrai temps processeur est mesuré. À garder hors de tout `await` : la mesure suit un seul fil.

@@ -77,6 +77,25 @@ class DiagnosticSessionWiringTests(unittest.TestCase):
         self.assertIn("DiagnosticCenter.shared.setAutoDetail(launch.detail)", ctrl)
         self.assertIn("DiagnosticSessionMachine(lastGeneration: launch.lastGeneration, detail: launch.detail)", ctrl)
 
+    def test_tracked_work_and_single_memory_observer(self):
+        # E2c : travaux suivis aux bornes begin/end, publiés hors verrou ; jamais `detail` dans la projection.
+        center = (ROOT / "App/Reader/ActivityCenter.swift").read_text(encoding="utf-8")
+        begin = center.split("func begin(_ kind: Kind, detail: String?", 1)[1].split("\n    }\n", 1)[0]
+        self.assertIn("return work.map { tracked.begin(id, kind: $0) }", begin)
+        self.assertLess(begin.index("lock.withLock"), begin.index("DiagnosticSessionController.shared.updateOngoing(published)"))
+        self.assertNotIn("detail", begin.split("tracked.begin", 1)[1].split(")", 1)[0])
+        end = center.split("    func end(_ id: UUID) {", 1)[1].split("\n    }\n", 1)[0]
+        self.assertIn("return tracked.end(id)", end)
+        # Un seul observateur mémoire, au niveau du processus, mémoire relevée avant les libérations.
+        app = (ROOT / "App/KyokashoApp.swift").read_text(encoding="utf-8")
+        self.assertNotIn(".onReceive(NotificationCenter.default.publisher(for: UIApplication.didReceiveMemoryWarningNotification))", app)
+        self.assertIn("DiagnosticSessionController.shared.installMemoryObserver { [weak model] in", app)
+        ctrl = (ROOT / "App/Settings/DiagnosticSessionController.swift").read_text(encoding="utf-8")
+        observer = ctrl.split("func installMemoryObserver(", 1)[1].split("\n    }\n", 1)[0]
+        self.assertIn("guard memoryObserver == nil else { return }", observer)
+        self.assertLess(observer.index("Diagnostics.footprintMB()"), observer.index("release()"))
+        self.assertIn("footprint > 0 ? footprint : nil", observer)
+
     def test_mac_container_tool_never_copies_the_session_state(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = pathlib.Path(tmp)

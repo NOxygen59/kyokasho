@@ -60,15 +60,18 @@ struct KyokashoApp: App {
                     }
                 }
                 #endif
-                .onReceive(NotificationCenter.default.publisher(for: UIApplication.didReceiveMemoryWarningNotification)) { _ in
-                    Diagnostics.alert("mémoire basse : caches et modèles libérés (empreinte \(Int(Diagnostics.footprintMB())) Mo)", "mémoire")
-                    model.thumbnails.trim()
-                    ONNXEngines.unload()
-                    PDFPool.release()
-                    ScanSharpening.clearMemory()
-                    FuriganaLayer.clearMemory()
-                    ToneCache.clear()
-                    Task { await GLMOCREngine.unload() }
+                .onAppear {
+                    // PLAN-DIAG-001 E2c : un seul observateur de la pression mémoire pour le processus (et non un par
+                    // fenêtre) ; empreinte relevée avant les libérations, qui restent les mêmes, une fois par alerte.
+                    DiagnosticSessionController.shared.installMemoryObserver { [weak model] in
+                        model?.thumbnails.trim()
+                        ONNXEngines.unload()
+                        PDFPool.release()
+                        ScanSharpening.clearMemory()
+                        FuriganaLayer.clearMemory()
+                        ToneCache.clear()
+                        Task { await GLMOCREngine.unload() }
+                    }
                 }
         }
     }

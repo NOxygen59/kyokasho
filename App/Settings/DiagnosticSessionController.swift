@@ -27,6 +27,8 @@ final class DiagnosticSessionController: @unchecked Sendable {
     private var observers: [NSObjectProtocol] = []            // fil principal
     /// Assertion demandée tôt, à `willResignActive`, pour couvrir une clôture éventuelle (fil principal).
     private var earlyAssertion: BackgroundAssertion?
+    /// Observateur unique de la pression mémoire du processus (E2c), fil principal.
+    private var memoryObserver: NSObjectProtocol?
 
     /// Constat du lancement, pour Réglages › Diagnostic (ce lancement seulement, en mémoire).
     private let reportLock = NSLock()
@@ -58,6 +60,7 @@ final class DiagnosticSessionController: @unchecked Sendable {
             DiagnosticCenter.shared.setAutoDetail(launch.detail)
             reportLock.withLock { report = launch.previous; detail = launch.detail }
             Self.publish(launch.previous, detail: launch.detail)
+            Self.publishOngoing(launch)
         }
         let center = NotificationCenter.default
         let foreground: (Notification) -> Void = { [weak self] _ in
@@ -119,6 +122,58 @@ final class DiagnosticSessionController: @unchecked Sendable {
         handle(.background) { assertion.end() }
     }
 
+
+    /// Nouvelle projection des travaux suivis (E2c), publiée par `ActivityCenter` hors de son verrou, aux bornes
+    /// début/fin. Écrite seulement si la session est armée ; une projection plus ancienne est ignorée.
+    func updateOngoing(_ ongoing: DiagnosticOngoing) {
+        queue.async { [self] in
+            guard let file else { return }
+            if machine.armed {
+                guard let state = machine.next(ongoing: ongoing, now: Date(), memoryMB: nil), file.write(state) else { return }
+            }
+            machine.commit(ongoing: ongoing)
+        }
+    }
+
+    /// Un seul observateur de la pression mémoire pour le processus (E2c), installé une fois. L'empreinte est relevée
+    /// **avant** les libérations (0 = inconnue), notée dans l'état armé avec les travaux en cours, puis les
+    /// libérations existantes sont lancées une fois. Aucune cause n'est déduite. Fil principal.
+    func installMemoryObserver(release: @escaping () -> Void) {
+        guard memoryObserver == nil else { return }
+        memoryObserver = NotificationCenter.default.addObserver(forName: UIApplication.didReceiveMemoryWarningNotification,
+                                                                object: nil, queue: .main) { [weak self] _ in
+            let footprint = Int(Diagnostics.footprintMB())
+            self?.memoryWarning(memoryMB: footprint > 0 ? footprint : nil)
+            release()
+        }
+    }
+
+    private func memoryWarning(memoryMB: Int?) {
+        queue.async { [self] in
+            let ongoing = machine.ongoing
+            var counts = [DiagnosticCount("operations_suivies", ongoing.entries.count)]
+            if ongoing.truncated { counts.append(DiagnosticCount("tronquee", 1)) }
+            DiagnosticCenter.shared.emit(.alerte, DiagnosticEvent(.alerte, .memoire, "alerte_memoire", memoryMB: memoryMB, counts: counts))
+            if let file, let state = machine.next(ongoing: nil, now: Date(), memoryMB: memoryMB) { file.write(state) }
+        }
+    }
+
+    /// Travaux suivis qui tournaient lors du dernier état écrit d'une session non clôturée (E2c) : une ligne par
+    /// travail avec son `op` d'origine, ou « aucun travail suivi connu » (connaissance limitée, pas une absence).
+    private static func publishOngoing(_ launch: DiagnosticSessionFile.Launch) {
+        guard case .notClosed = launch.previous else { return }
+        for entry in launch.ongoing {
+            DiagnosticCenter.shared.emit(.alerte, DiagnosticEvent(.alerte, entry.kind.zone, "travail_en_cours_avant_arret",
+                                                                  op: DiagnosticOperation(raw: entry.op)))
+        }
+        if launch.ongoing.isEmpty {
+            DiagnosticCenter.shared.emit(.alerte, DiagnosticEvent(.alerte, .diagnostic, "aucun_travail_suivi_connu"))
+        }
+        if launch.ongoingTruncated {
+            DiagnosticCenter.shared.emit(.alerte, DiagnosticEvent(.alerte, .diagnostic, "travaux_suivis_tronques",
+                                                                  counts: [DiagnosticCount("limite", DiagnosticOngoing.limit)]))
+        }
+    }
 
     /// Une ligne au journal, au plus une fois par lancement ; aucun travail ni cause déduits.
     private static func publish(_ previous: DiagnosticPreviousSession, detail: DiagnosticDetailWindow?) {
