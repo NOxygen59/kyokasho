@@ -54,6 +54,20 @@ class DiagnosticSessionWiringTests(unittest.TestCase):
         self.assertLess(install, restore)
         self.assertEqual(app.count("DiagnosticSessionController.shared.install()"), 1)
 
+    def test_detail_window_never_touches_the_manual_setting_or_monitors(self):
+        # E2b (DEC-02 B) : détail du journal = manuel OU fenêtre ; réglage inchangé ; CPU, relevé, sonde sur le manuel.
+        core = (ROOT / "App/Settings/Diagnostics.swift").read_text(encoding="utf-8")
+        self.assertIn("static var detailEnabled: Bool { enabled || DiagnosticCenter.shared.autoDetailActive }", core)
+        log = core.split("static func log(", 1)[1].split("\n    }", 1)[0]
+        self.assertIn("guard detailEnabled else { return }", log)
+        self.assertNotIn("forKey: enabledKey)", core.replace("UserDefaults.standard.bool(forKey: enabledKey)", ""))
+        cpu = (ROOT / "App/Settings/DiagnosticCPU.swift").read_text(encoding="utf-8")
+        self.assertNotIn("detailEnabled", cpu)
+        self.assertNotIn("autoDetail", (ROOT / "App/Settings/EnergyMeter.swift").read_text(encoding="utf-8"))
+        ctrl = (ROOT / "App/Settings/DiagnosticSessionController.swift").read_text(encoding="utf-8")
+        self.assertIn("DiagnosticCenter.shared.setAutoDetail(launch.detail)", ctrl)
+        self.assertIn("DiagnosticSessionMachine(lastGeneration: launch.lastGeneration, detail: launch.detail)", ctrl)
+
     def test_mac_container_tool_never_copies_the_session_state(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = pathlib.Path(tmp)

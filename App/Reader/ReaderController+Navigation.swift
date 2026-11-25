@@ -100,7 +100,7 @@ extension ReaderController {
         }
         currentIndex = index
         updateCurrentSourcePage()
-        if changed, !rebuilding, Diagnostics.enabled {
+        if changed, !rebuilding, Diagnostics.detailEnabled {
             DiagnosticContext.inferPageGesture(settings.scrollMode == .paginated ? .pageTurn : .scroll, from: self)
         }
         ReadingTimeTracker.shared.pageViewed(currentSourcePage)

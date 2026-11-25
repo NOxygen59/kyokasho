@@ -17,7 +17,11 @@ enum Diagnostics {
     typealias Level = DiagnosticLevel
 
     static let enabledKey = "diagnostics.enabled"
+    /// Réglage **manuel** « Mode diagnostic » : seul à allumer le moniteur CPU, le relevé et les mesures coûteuses.
     static var enabled: Bool { UserDefaults.standard.bool(forKey: enabledKey) }
+    /// Détail du journal : réglage manuel OU fenêtre automatique de 24 h après une session non clôturée
+    /// (PLAN-DIAG-001 E2b, DEC-02 B). Ne change jamais le réglage.
+    static var detailEnabled: Bool { enabled || DiagnosticCenter.shared.autoDetailActive }
     /// Version du format du journal déjà en place (DEC-07) et sel des références de documents (`DiagnosticRef`).
     private static let migrationKey = "diagnostics.migrationRevision"
     private static let saltKey = "diagnostics.refSalt"
@@ -42,7 +46,7 @@ enum Diagnostics {
 
     /// Étape détaillée (seulement en mode diagnostic).
     static func log(_ message: @autoclosure () -> String, _ area: String = "app") {
-        guard enabled else { return }
+        guard detailEnabled else { return }
         write(message(), level: .info, area: area)
     }
 
@@ -259,12 +263,12 @@ enum Diagnostics {
     /// Mesure une étape (mode diagnostic) : durée et mémoire avant / après.
     static func measure<T>(_ name: String, _ area: String = "app", _ body: () async throws -> T) async rethrows -> T {
         let start = Date()
-        if enabled { log("→ \(name) (mémoire \(Int(footprintMB())) Mo)", area) }
+        if detailEnabled { log("→ \(name) (mémoire \(Int(footprintMB())) Mo)", area) }
         do {
             let result = try await body()
             let seconds = String(format: "%.1f", Date().timeIntervalSince(start))
             remember(area, "✓ \(name) en \(seconds) s")
-            if enabled { log("✓ \(name) en \(seconds) s (mémoire \(Int(footprintMB())) Mo)", area) }
+            if detailEnabled { log("✓ \(name) en \(seconds) s (mémoire \(Int(footprintMB())) Mo)", area) }
             return result
         } catch {
             remember(area, "✗ \(name) : \(describe(error))")
@@ -401,6 +405,11 @@ extension DiagnosticsSection {
             }
         case .unknown:
             Label("État de la session précédente inconnu.", systemImage: "questionmark.circle")
+        }
+        // E2b : détail temporaire du journal (le réglage « Mode diagnostic » ne change pas).
+        if let window = DiagnosticSessionController.shared.detailWindow, window.isActive(at: Date()) {
+            Label(String(localized: "Journal détaillé automatiquement jusqu'à \(window.until.formatted(date: .abbreviated, time: .shortened))."),
+                  systemImage: "doc.text.magnifyingglass")
         }
     }
 }

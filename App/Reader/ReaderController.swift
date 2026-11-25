@@ -217,7 +217,7 @@ final class ReaderController: NSObject, ObservableObject {
 
     /// Trace bornée du trajet du pointeur, sans texte, titre ou identifiant du document.
     func traceLookup(_ stage: String) {
-        guard Diagnostics.enabled, Date().timeIntervalSince(lookupDiagnosticTimes[stage] ?? .distantPast) >= 1 else { return }
+        guard Diagnostics.detailEnabled, Date().timeIntervalSince(lookupDiagnosticTimes[stage] ?? .distantPast) >= 1 else { return }
         lookupDiagnosticTimes[stage] = Date()
         Diagnostics.log("\(stage) ; page=\(focusSource + 1) ; actif=\(hoverLookup) ; dessin=\(isDrawing) ; fermé=\(closed)", "lookup")
     }

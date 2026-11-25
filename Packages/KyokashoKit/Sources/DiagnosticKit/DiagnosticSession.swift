@@ -3,6 +3,25 @@
 
 import Foundation
 
+/// Fenêtre de détail automatique (PLAN-DIAG-001 E2b, DEC-02 B) : après une session non clôturée, le journal passe en
+/// détail pendant 24 h, sans toucher au réglage manuel ni allumer le moniteur CPU, le relevé de batterie, la sonde ou
+/// MetricKit. Posée une fois à la consommation du constat ; jamais prolongée par une simple relance.
+public struct DiagnosticDetailWindow: Codable, Equatable, Sendable {
+    public static let duration: TimeInterval = 24 * 3600
+    public let from: Date
+    public let until: Date
+
+    public static func starting(at date: Date) -> DiagnosticDetailWindow {
+        DiagnosticDetailWindow(from: date, until: date.addingTimeInterval(duration))
+    }
+
+    init(from: Date, until: Date) { self.from = from; self.until = until }
+
+    /// Durée exacte de 24 h exigée ; une horloge reculée avant le début ne la rend pas active (pas d'extension).
+    public var isWellFormed: Bool { abs(until.timeIntervalSince(from) - Self.duration) < 1 }
+    public func isActive(at now: Date) -> Bool { isWellFormed && from <= now && now < until }
+}
+
 /// État de session du processus (PLAN-DIAG-001, E2a) : « armée » au premier plan, « close » au vrai arrière-plan.
 /// Retrouvée armée au lancement suivant, elle dit seulement « session précédente non clôturée » : jamais
 /// « plantage », ni cause, ni travail déduit (réunion DIAG du 25/11).
@@ -19,13 +38,16 @@ public struct DiagnosticSessionState: Codable, Equatable, Sendable {
     public var updatedAt: Date
     /// Empreinte mémoire au moment de l'écriture, en Mo ; absente si inconnue (jamais « 0 Mo » pour « inconnue »).
     public var memoryMB: Int?
+    /// Fenêtre de détail automatique en cours (E2b), reportée telle quelle dans chaque écriture.
+    public var detail: DiagnosticDetailWindow?
 
-    public init(generation: UInt64, state: Phase, updatedAt: Date, memoryMB: Int?) {
+    public init(generation: UInt64, state: Phase, updatedAt: Date, memoryMB: Int?, detail: DiagnosticDetailWindow? = nil) {
         schemaVersion = Self.schema
         self.generation = generation
         self.state = state
         self.updatedAt = updatedAt
         self.memoryMB = memoryMB.flatMap { $0 > 0 ? $0 : nil }
+        self.detail = detail
     }
 }
 
@@ -44,20 +66,27 @@ public struct DiagnosticSessionMachine: Sendable {
 
     public private(set) var generation: UInt64
     public private(set) var armed = false
+    /// Fenêtre de détail en cours, recopiée dans chaque état écrit (E2b).
+    public private(set) var detail: DiagnosticDetailWindow?
 
-    public init(lastGeneration: UInt64 = 0) { generation = lastGeneration }
+    public init(lastGeneration: UInt64 = 0, detail: DiagnosticDetailWindow? = nil) {
+        generation = lastGeneration
+        self.detail = detail
+    }
 
     /// État à écrire pour cet événement, ou `nil` si rien ne change.
     public func next(_ event: Event, now: Date, memoryMB: Int?) -> DiagnosticSessionState? {
         switch event {
         case .foreground:
             guard !armed else { return nil }
-            return DiagnosticSessionState(generation: generation &+ 1, state: .armed, updatedAt: now, memoryMB: memoryMB)
+            return DiagnosticSessionState(generation: generation &+ 1, state: .armed, updatedAt: now, memoryMB: memoryMB,
+                                          detail: detail)
         case .inactive:
             return nil
         case .background:
             guard armed else { return nil }
-            return DiagnosticSessionState(generation: generation, state: .closed, updatedAt: now, memoryMB: memoryMB)
+            return DiagnosticSessionState(generation: generation, state: .closed, updatedAt: now, memoryMB: memoryMB,
+                                          detail: detail)
         }
     }
 
@@ -65,6 +94,7 @@ public struct DiagnosticSessionMachine: Sendable {
     public mutating func commit(_ state: DiagnosticSessionState) {
         generation = state.generation
         armed = state.state == .armed
+        detail = state.detail
     }
 
     /// Commodité des tests : `next` puis `commit` (écriture supposée réussie).
@@ -124,20 +154,36 @@ public struct DiagnosticSessionFile: Sendable {
         }
     }
 
-    /// Lecture **une fois** au lancement : une session armée est d'abord remplacée par « close » (consommée), puis
-    /// rapportée ; si ce remplacement échoue, rien n'est affirmé (`.unknown`). Une coupure entre les deux peut
-    /// perdre le constat, jamais le doubler.
-    public func consumeAtLaunch(now: Date) -> (previous: DiagnosticPreviousSession, lastGeneration: UInt64) {
+    /// Résultat de la lecture du lancement.
+    public struct Launch: Equatable, Sendable {
+        public var previous: DiagnosticPreviousSession
+        public var lastGeneration: UInt64
+        /// Fenêtre de détail active pour ce lancement (posée par ce constat, ou encore en cours), sinon `nil`.
+        public var detail: DiagnosticDetailWindow?
+    }
+
+    /// Lecture **une fois** au lancement : une session armée est d'abord remplacée par « close » (consommée), avec
+    /// une fenêtre de détail de 24 h qui commence maintenant (E2b), puis rapportée ; si ce remplacement échoue, rien
+    /// n'est affirmé (`.unknown`) et aucune fenêtre n'est ouverte. Une coupure entre les deux peut perdre le constat,
+    /// jamais le doubler. Une session close garde sa fenêtre seulement si elle est encore active : une relance ne la
+    /// prolonge jamais.
+    public func consumeAtLaunch(now: Date) -> Launch {
         switch read() {
-        case .absent: return (.none, 0)
-        case .unreadable: return (.unknown, 0)
+        case .absent: return Launch(previous: .none, lastGeneration: 0, detail: nil)
+        case .unreadable: return Launch(previous: .unknown, lastGeneration: 0, detail: nil)
         case .data(let data):
-            guard let state = DiagnosticSession.decode(data) else { return (.unknown, 0) }
-            guard state.state == .armed else { return (.none, state.generation) }
-            let closed = DiagnosticSessionState(generation: state.generation, state: .closed, updatedAt: now, memoryMB: nil)
-            guard write(closed) else { return (.unknown, state.generation) }
-            return (.notClosed(ageSeconds: DiagnosticSession.age(from: state.updatedAt, now: now), memoryMB: state.memoryMB,
-                               generation: state.generation), state.generation)
+            guard let state = DiagnosticSession.decode(data) else { return Launch(previous: .unknown, lastGeneration: 0, detail: nil) }
+            guard state.state == .armed else {
+                return Launch(previous: .none, lastGeneration: state.generation,
+                              detail: state.detail.flatMap { $0.isActive(at: now) ? $0 : nil })
+            }
+            let window = DiagnosticDetailWindow.starting(at: now)
+            let closed = DiagnosticSessionState(generation: state.generation, state: .closed, updatedAt: now, memoryMB: nil,
+                                                detail: window)
+            guard write(closed) else { return Launch(previous: .unknown, lastGeneration: state.generation, detail: nil) }
+            return Launch(previous: .notClosed(ageSeconds: DiagnosticSession.age(from: state.updatedAt, now: now),
+                                               memoryMB: state.memoryMB, generation: state.generation),
+                          lastGeneration: state.generation, detail: window)
         }
     }
 }
@@ -157,17 +203,20 @@ public enum DiagnosticSession {
     }()
 
     /// Clés permises : une clé inconnue rend l'état invalide (revue R2 E2a, B3).
-    static let allowedKeys: Set<String> = ["schemaVersion", "generation", "state", "updatedAt", "memoryMB"]
+    static let allowedKeys: Set<String> = ["schemaVersion", "generation", "state", "updatedAt", "memoryMB", "detail"]
+    static let allowedDetailKeys: Set<String> = ["from", "until"]
 
     /// Validation avant usage : taille, clés, schéma, bornes. Tout écart → `nil` (état inconnu).
     public static func decode(_ data: Data) -> DiagnosticSessionState? {
         guard data.count <= DiagnosticSessionFile.maxBytes,
               let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               Set(object.keys).isSubset(of: allowedKeys),
+              (object["detail"].map { ($0 as? [String: Any]).map { Set($0.keys) == allowedDetailKeys } ?? false } ?? true),
               let state = try? decoder.decode(DiagnosticSessionState.self, from: data),
               state.schemaVersion == DiagnosticSessionState.schema,
               state.generation > 0,
-              state.memoryMB.map({ (1...1_000_000).contains($0) }) ?? true
+              state.memoryMB.map({ (1...1_000_000).contains($0) }) ?? true,
+              state.detail?.isWellFormed ?? true
         else { return nil }
         return state
     }

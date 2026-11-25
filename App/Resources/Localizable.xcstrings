@@ -1,6 +1,28 @@
 {
   "sourceLanguage": "fr",
   "strings": {
+    "Journal détaillé automatiquement jusqu'à %@.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Journal automatically detailed until %@."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Journal détaillé automatiquement jusqu'à %@."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "日志自动详细记录至 %@。"
+          }
+        }
+      }
+    },
     "Session précédente non clôturée, il y a %lld min.": {
       "localizations": {
         "en": {

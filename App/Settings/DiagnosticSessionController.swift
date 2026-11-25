@@ -31,7 +31,10 @@ final class DiagnosticSessionController: @unchecked Sendable {
     /// Constat du lancement, pour Réglages › Diagnostic (ce lancement seulement, en mémoire).
     private let reportLock = NSLock()
     private var report: DiagnosticPreviousSession = .none
+    private var detail: DiagnosticDetailWindow?
     var launchReport: DiagnosticPreviousSession { reportLock.withLock { report } }
+    /// Fenêtre de détail automatique de ce lancement (E2b), pour l'affichage.
+    var detailWindow: DiagnosticDetailWindow? { reportLock.withLock { detail } }
 
     private init() {}
 
@@ -44,15 +47,17 @@ final class DiagnosticSessionController: @unchecked Sendable {
             // session pour ce lancement, et le constat est « inconnu » (revue R2 E2a, B4).
             guard Self.excludeFromBackup(folder) else {
                 reportLock.withLock { report = .unknown }
-                Self.publish(.unknown)
+                Self.publish(.unknown, detail: nil)
                 return
             }
             let file = DiagnosticSessionFile(folder: folder)
             self.file = file
-            let (previous, lastGeneration) = file.consumeAtLaunch(now: Date())
-            machine = DiagnosticSessionMachine(lastGeneration: lastGeneration)
-            reportLock.withLock { report = previous }
-            Self.publish(previous)
+            let launch = file.consumeAtLaunch(now: Date())
+            machine = DiagnosticSessionMachine(lastGeneration: launch.lastGeneration, detail: launch.detail)
+            // E2b : détail du journal pendant 24 h après une session non clôturée (réglage manuel inchangé).
+            DiagnosticCenter.shared.setAutoDetail(launch.detail)
+            reportLock.withLock { report = launch.previous; detail = launch.detail }
+            Self.publish(launch.previous, detail: launch.detail)
         }
         let center = NotificationCenter.default
         let foreground: (Notification) -> Void = { [weak self] _ in
@@ -116,7 +121,7 @@ final class DiagnosticSessionController: @unchecked Sendable {
 
 
     /// Une ligne au journal, au plus une fois par lancement ; aucun travail ni cause déduits.
-    private static func publish(_ previous: DiagnosticPreviousSession) {
+    private static func publish(_ previous: DiagnosticPreviousSession, detail: DiagnosticDetailWindow?) {
         switch previous {
         case .none:
             return
@@ -125,6 +130,10 @@ final class DiagnosticSessionController: @unchecked Sendable {
             if let age { counts.append(DiagnosticCount("age_s", age)) }
             DiagnosticCenter.shared.emit(.alerte, DiagnosticEvent(.alerte, .diagnostic, "session_precedente_non_cloturee",
                                                                   memoryMB: memory, counts: counts))
+            if detail != nil {
+                DiagnosticCenter.shared.emit(.alerte, DiagnosticEvent(.alerte, .diagnostic, "detail_automatique_24h",
+                                                                      counts: [DiagnosticCount("duree_s", Int(DiagnosticDetailWindow.duration))]))
+            }
         case .unknown:
             DiagnosticCenter.shared.emit(.alerte, DiagnosticEvent(.alerte, .diagnostic, "etat_session_precedente_inconnu"))
         }

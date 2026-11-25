@@ -64,11 +64,15 @@ public final class DiagnosticCenter: @unchecked Sendable {
     private let lock = NSLock()
     private var sink: Sink?
     private var detailed = false
+    /// Fenêtre de détail automatique (E2b) : s'ajoute au mode manuel, sans le changer.
+    private var autoDetail: DiagnosticDetailWindow?
+    private let now: @Sendable () -> Date
     private var salt: UInt64 = 0
     private var reentrantDrops = 0
     private static let reentrancyKey = "fr.noxygen59.kyokasho.diagnostic.inSink"
 
-    public init() {}
+    /// `now` : horloge injectable (tests de l'échéance) ; l'échéance est vérifiée à chaque émission, même sans relance.
+    public init(now: @escaping @Sendable () -> Date = { Date() }) { self.now = now }
 
     /// Branche le récepteur, une seule fois : un second branchement est refusé (`false`), pour qu'un module ne puisse
     /// pas détourner le journal.
@@ -82,8 +86,17 @@ public final class DiagnosticCenter: @unchecked Sendable {
         }
     }
 
-    /// Mode diagnostic : les événements `info` ne passent que s'il est allumé.
+    /// Mode diagnostic : les événements `info` ne passent que s'il est allumé (ou pendant une fenêtre automatique).
     public func setDetailed(_ on: Bool) { lock.withLock { detailed = on } }
+
+    /// Fenêtre de détail automatique après une session non clôturée (E2b) ; `nil` pour aucune.
+    public func setAutoDetail(_ window: DiagnosticDetailWindow?) { lock.withLock { autoDetail = window } }
+
+    /// Vrai pendant une fenêtre automatique valide à cet instant.
+    public var autoDetailActive: Bool { lock.withLock { autoDetail?.isActive(at: now()) ?? false } }
+
+    /// Détail effectif : manuel OU fenêtre automatique valide. À appeler sous le verrou.
+    private var detailNow: Bool { detailed || (autoDetail?.isActive(at: now()) ?? false) }
 
     /// Référence courte et salée d'un document pour ce journal (`DiagnosticRef`).
     public func ref(_ documentId: String) -> DiagnosticDocumentRef {
@@ -92,7 +105,7 @@ public final class DiagnosticCenter: @unchecked Sendable {
 
     /// Vrai si un événement de ce niveau serait écrit : permet d'éviter un calcul coûteux (mémoire, durée).
     public func wants(_ level: DiagnosticLevel) -> Bool {
-        lock.withLock { sink != nil && (level != .info || detailed) }
+        lock.withLock { sink != nil && (level != .info || detailNow) }
     }
 
     /// Émissions ignorées parce qu'elles venaient du récepteur lui-même (lu et remis à zéro).
@@ -102,7 +115,7 @@ public final class DiagnosticCenter: @unchecked Sendable {
     public func emit(_ level: DiagnosticLevel, _ make: @autoclosure () -> DiagnosticEvent) {
         let thread = Thread.current.threadDictionary
         let target: Sink? = lock.withLock {
-            guard let sink, level != .info || detailed else { return nil }
+            guard let sink, level != .info || detailNow else { return nil }
             if thread[Self.reentrancyKey] != nil { reentrantDrops += 1; return nil }
             return sink
         }
