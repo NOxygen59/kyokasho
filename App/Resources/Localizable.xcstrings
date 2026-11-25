@@ -1,6 +1,182 @@
 {
   "sourceLanguage": "fr",
   "strings": {
+    "Thèmes, fenêtres et diagnostics": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Themes, windows and diagnostics"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thèmes, fenêtres et diagnostics"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "主题、窗口和诊断"
+          }
+        }
+      }
+    },
+    "Cinq nouveaux thèmes : Genkō, Riso, Shōwa, Kokuban et Contour, chacun avec son fond dessiné.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Five new themes: Genkō, Riso, Shōwa, Kokuban and Contour, each with its own drawn background."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cinq nouveaux thèmes : Genkō, Riso, Shōwa, Kokuban et Contour, chacun avec son fond dessiné."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "五个新主题：Genkō、Riso、Shōwa、Kokuban 和 Contour，各有手绘背景。"
+          }
+        }
+      }
+    },
+    "Fenêtres étroites (Split View, fenêtre libre) : les barres du lecteur s'adaptent, le panneau d'étude ne les cache plus, et les boutons qui ne tiennent pas passent dans « … ».": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Narrow windows (Split View, free window): the reader bars adapt, the study panel no longer covers them, and buttons that do not fit move into “…”."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fenêtres étroites (Split View, fenêtre libre) : les barres du lecteur s'adaptent, le panneau d'étude ne les cache plus, et les boutons qui ne tiennent pas passent dans « … »."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "窄窗口（分屏、自由窗口）：阅读器工具栏自动适应，学习面板不再遮挡，放不下的按钮移入“…”。"
+          }
+        }
+      }
+    },
+    "Diagnostic : après un arrêt inattendu, « Session précédente non clôturée » s'affiche, et le journal est détaillé pendant 24 h ; travaux en cours, alertes mémoire et chaleur y sont notés.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diagnostics: after an unexpected stop, “Previous session not closed” is shown and the journal is detailed for 24 h; ongoing work, memory warnings and heat are recorded."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diagnostic : après un arrêt inattendu, « Session précédente non clôturée » s'affiche, et le journal est détaillé pendant 24 h ; travaux en cours, alertes mémoire et chaleur y sont notés."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "诊断：意外停止后会显示“上一次会话未正常结束”，日志详细记录 24 小时；并记录进行中的任务、内存警告和发热状态。"
+          }
+        }
+      }
+    },
+    "Diagnostic : essai des rapports d'iOS (MetricKit), à allumer dans Réglages → Diagnostic.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diagnostics: trial of iOS reports (MetricKit), to turn on in Settings → Diagnostics."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diagnostic : essai des rapports d'iOS (MetricKit), à allumer dans Réglages → Diagnostic."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "诊断：试用 iOS 报告（MetricKit），可在“设置 → 诊断”中开启。"
+          }
+        }
+      }
+    },
+    "Journal de diagnostic : plus aucun titre de livre, chemin, texte ni message d'erreur brut ; l'ancien journal est mis à l'écart et n'est jamais partagé.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diagnostic journal: no more book titles, paths, text or raw error messages; the old journal is set aside and never shared."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Journal de diagnostic : plus aucun titre de livre, chemin, texte ni message d'erreur brut ; l'ancien journal est mis à l'écart et n'est jamais partagé."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "诊断日志：不再包含书名、路径、文本或原始错误信息；旧日志被隔离，永不分享。"
+          }
+        }
+      }
+    },
+    "Reprendre : ✕ rouge tant que l'onglet est ouvert, pastille bleue quand la rangée est repliée, et un livre rouvert revient dans la rangée.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resume: red ✕ while the tab is open, blue dot when the row is collapsed, and a reopened book comes back to the row."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reprendre : ✕ rouge tant que l'onglet est ouvert, pastille bleue quand la rangée est repliée, et un livre rouvert revient dans la rangée."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "继续阅读：标签页打开时显示红色 ✕，折叠时显示蓝点，重新打开的书会回到这一行。"
+          }
+        }
+      }
+    },
+    "Onglet du livre : son titre ne disparaît plus quand la place manque.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Book tab: its title no longer disappears when space is short."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Onglet du livre : son titre ne disparaît plus quand la place manque."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "书籍标签：空间不足时标题不再消失。"
+          }
+        }
+      }
+    },
     "Rapports d'iOS (MetricKit, essai)": {
       "localizations": {
         "en": {

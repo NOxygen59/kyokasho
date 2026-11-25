@@ -101,17 +101,15 @@ public struct ReleaseNotes: Equatable, Sendable, Identifiable {
 
     /// La version en cours de préparation : seulement ce qu'elle change (décision de NOxygen59 du 04/11/2026). C'est
     /// elle que montre la fenêtre « Nouveautés » ; les versions précédentes vont dans `ReleaseHistory`.
-    public static let current = ReleaseNotes("1.6.5", "2026-11-24", published: false, String(localized: "Correctifs de la refonte", bundle: .main), added: [
-            String(localized: "Accueil : la rangée Reprendre se replie en pastilles rondes, et chaque carte a son ✕ pour fermer l'onglet ou retirer le livre.", bundle: .main),
-            String(localized: "Carte « Aujourd'hui » : les minutes lues et les jours de série, avec une flamme.", bundle: .main),
+    public static let current = ReleaseNotes("1.6.6", "2026-11-25", published: false, String(localized: "Thèmes, fenêtres et diagnostics", bundle: .main), added: [
+            String(localized: "Cinq nouveaux thèmes : Genkō, Riso, Shōwa, Kokuban et Contour, chacun avec son fond dessiné.", bundle: .main),
+            String(localized: "Fenêtres étroites (Split View, fenêtre libre) : les barres du lecteur s'adaptent, le panneau d'étude ne les cache plus, et les boutons qui ne tiennent pas passent dans « … ».", bundle: .main),
+            String(localized: "Diagnostic : après un arrêt inattendu, « Session précédente non clôturée » s'affiche, et le journal est détaillé pendant 24 h ; travaux en cours, alertes mémoire et chaleur y sont notés.", bundle: .main),
+            String(localized: "Diagnostic : essai des rapports d'iOS (MetricKit), à allumer dans Réglages → Diagnostic.", bundle: .main),
         ], fixed: [
-            String(localized: "Mémoire : un livre fermé est de nouveau libéré avec la nouvelle présentation ; avant, la mémoire montait à chaque livre ouvert.", bundle: .main),
-            String(localized: "Recherche dans un document : elle trouve aussi le texte de la mise en page IA et ne dit plus « Aucun résultat » avant la fin.", bundle: .main),
-            String(localized: "Onglets : un livre rouvert par son onglet reprend à la dernière page lue.", bundle: .main),
-            String(localized: "Mise en page IA : les tableaux et les images restent dans la largeur du panneau, et la fin du texte n'est plus cachée par Copier.", bundle: .main),
-            String(localized: "Import : deux PDF différents de même nom ne se confondent plus, le second est nommé « … (2) ».", bundle: .main),
-            String(localized: "Barre du bas : « Annoter » garde son nom ; la palette Pencil disparaît à la fermeture du livre.", bundle: .main),
-            String(localized: "Onglet Texte : les corrections IA tiennent sur une ligne ; à partir de 4 livres ouverts, les onglets passent en pastilles.", bundle: .main),
+            String(localized: "Journal de diagnostic : plus aucun titre de livre, chemin, texte ni message d'erreur brut ; l'ancien journal est mis à l'écart et n'est jamais partagé.", bundle: .main),
+            String(localized: "Reprendre : ✕ rouge tant que l'onglet est ouvert, pastille bleue quand la rangée est repliée, et un livre rouvert revient dans la rangée.", bundle: .main),
+            String(localized: "Onglet du livre : son titre ne disparaît plus quand la place manque.", bundle: .main),
         ])
 
     /// Notes de `version` (« 1.3.2 », sans le numéro de build) : la version elle-même, jamais une build de test.

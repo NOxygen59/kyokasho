@@ -9,6 +9,18 @@ import Foundation
 /// développeur.
 enum ReleaseHistory {
     static let past: [ReleaseNotes] = [
+        ReleaseNotes("1.6.5", "2026-11-24", String(localized: "Correctifs de la refonte", bundle: .main), added: [
+                String(localized: "Accueil : la rangée Reprendre se replie en pastilles rondes, et chaque carte a son ✕ pour fermer l'onglet ou retirer le livre.", bundle: .main),
+                String(localized: "Carte « Aujourd'hui » : les minutes lues et les jours de série, avec une flamme.", bundle: .main),
+            ], fixed: [
+                String(localized: "Mémoire : un livre fermé est de nouveau libéré avec la nouvelle présentation ; avant, la mémoire montait à chaque livre ouvert.", bundle: .main),
+                String(localized: "Recherche dans un document : elle trouve aussi le texte de la mise en page IA et ne dit plus « Aucun résultat » avant la fin.", bundle: .main),
+                String(localized: "Onglets : un livre rouvert par son onglet reprend à la dernière page lue.", bundle: .main),
+                String(localized: "Mise en page IA : les tableaux et les images restent dans la largeur du panneau, et la fin du texte n'est plus cachée par Copier.", bundle: .main),
+                String(localized: "Import : deux PDF différents de même nom ne se confondent plus, le second est nommé « … (2) ».", bundle: .main),
+                String(localized: "Barre du bas : « Annoter » garde son nom ; la palette Pencil disparaît à la fermeture du livre.", bundle: .main),
+                String(localized: "Onglet Texte : les corrections IA tiennent sur une ligne ; à partir de 4 livres ouverts, les onglets passent en pastilles.", bundle: .main),
+            ]),
         ReleaseNotes("1.6.4", "2026-11-23", String(localized: "Refonte graphique", bundle: .main), added: [
                 String(localized: "Nouvelle présentation sur iPad : lecteur, panneau d'étude et accueil redessinés, aux couleurs de ton thème. À activer dans Réglages → Général → Thèmes et couleurs ; désactivée, tout reste comme avant.", bundle: .main),
                 String(localized: "Lecteur : barre du haut et grande barre du bas, outils d'annotation regroupés, grille de toutes les pages du document.", bundle: .main),
