@@ -30,6 +30,8 @@ enum Diagnostics {
     static var file: URL { folder.appendingPathComponent("journal.txt") }
     /// Journal précédent, gardé à la rotation (DEC-06 B).
     static var previousFile: URL { folder.appendingPathComponent("journal.1.txt") }
+    /// Décisions sur les fichiers (mise à l'écart, rotation, partage, effacement, poids), éprouvées dans DiagnosticKit.
+    static let store = DiagnosticStore(folder: folder)
 
 
     private static let queue = DispatchQueue(label: "fr.noxygen59.kyokasho.diagnostics")
@@ -114,36 +116,8 @@ enum Diagnostics {
         if sync { queue.sync(execute: work) } else { queue.async(execute: work) }
     }
 
-    /// Écrit en fin de journal ; au-delà de 5 Mo, le journal devient `journal.1.txt` (DEC-06 B). Sur la file.
-    private static func append(_ text: String) {
-        guard filesReady else { return }   // dernière garde avant création, rotation ou écriture
-        let fm = FileManager.default
-        try? fm.createDirectory(at: folder, withIntermediateDirectories: true)
-        if let size = fileSize(limitPath: file), DiagnosticJournalPolicy.shouldRotate(currentBytes: size) {
-            // Le précédent n'est remplacé qu'au moment du déplacement réussi (remplacement atomique) ; l'en-tête de
-            // rotation n'est écrit que si le journal a bien changé de nom (revue R2 Codex, B-ROTATION). En cas
-            // d'échec, on continue d'ajouter au journal actuel.
-            let rotated: Bool
-            if fm.fileExists(atPath: previousFile.path) {
-                rotated = (try? fm.replaceItemAt(previousFile, withItemAt: file)) != nil
-            } else {
-                rotated = (try? fm.moveItem(at: file, to: previousFile)) != nil
-            }
-            if rotated && !fm.fileExists(atPath: file.path) {
-                let note = DiagnosticLine.legacy(.alerte, area: DiagnosticZone.journal.rawValue,
-                                                 message: "Rotation du journal : l'ancien (\(size) octets) est dans \(DiagnosticJournalPolicy.previousName)",
-                                                 at: Date())
-                try? Data((note + "\n").utf8).write(to: file)
-            }
-        }
-        if let handle = try? FileHandle(forWritingTo: file) {
-            handle.seekToEndOfFile()
-            handle.write(Data(text.utf8))
-            try? handle.close()
-        } else {
-            try? Data(text.utf8).write(to: file)
-        }
-    }
+    /// Écrit en fin de journal (rotation à 5 Mo, DEC-06 B) ; rien si la mise à l'écart n'a pas réussi. Sur la file.
+    private static func append(_ text: String) { store.appendJournal(text) }
 
     /// DEC-07 A, condition d'accès (réunion DIAG du 25/11, arbitrage D1) : les fichiers écrits avant ce format
     /// (titres, chemins, préfixes d'empreinte, noms de modèles importés) sont déplacés vers un nom libre de leur
@@ -151,38 +125,16 @@ enum Diagnostics {
     /// (`filesReady`) ; nouvel essai au lancement suivant.
     private static func migrateOldFiles() -> Bool {
         let defaults = UserDefaults.standard
-        let fm = FileManager.default
-        let ops = DiagnosticFileMigration.Operations(presence: { name in
-            do {
-                _ = try fm.attributesOfItem(atPath: folder.appendingPathComponent(name).path)
-                return .present
-            } catch let error as NSError where (error.domain == NSCocoaErrorDomain && error.code == NSFileReadNoSuchFileError)
-                                              || (error.domain == NSPOSIXErrorDomain && error.code == Int(ENOENT)) {
-                return .absent
-            } catch {
-                return .unknown
-            }
-        }, move: { from, to in
-            // `moveItem` échoue si la cible existe : jamais d'écrasement.
-            (try? fm.moveItem(at: folder.appendingPathComponent(from), to: folder.appendingPathComponent(to))) != nil
-        })
         return queue.sync {
-            let outcome = DiagnosticFileMigration.run(storedRevision: defaults.integer(forKey: migrationKey), operations: ops)
-            guard outcome == .ready else { return false }
-            defaults.set(DiagnosticFileMigration.revision, forKey: migrationKey)
-            return true
+            store.migrate(storedRevision: defaults.integer(forKey: migrationKey)) { defaults.set($0, forKey: migrationKey) } == .ready
         }
     }
 
     /// Fichiers de diagnostic utilisables (mise à l'écart réussie). Fixé une fois au lancement.
-    static var filesReady: Bool { stateLock.withLock { ready } }
-    private static let stateLock = NSLock()
-    nonisolated(unsafe) private static var ready = false
+    static var filesReady: Bool { store.isReady }
 
     /// Anciens fichiers mis à l'écart d'une famille, qui existent (comptés et effacés, jamais partagés).
-    static func isolatedFiles(_ family: DiagnosticFileMigration.Family) -> [URL] {
-        DiagnosticFileMigration.isolatedNames(family).map { folder.appendingPathComponent($0) }
-    }
+    static func isolatedFiles(_ family: DiagnosticFileMigration.Family) -> [URL] { store.isolated(family) }
 
     /// Sel des références de documents, tiré une fois par installation.
     private static func referenceSalt() -> UInt64 {
@@ -196,23 +148,15 @@ enum Diagnostics {
     /// Mode diagnostic allumé ou éteint : les événements `info` des paquets suivent.
     static func updateDetail() { DiagnosticCenter.shared.setDetailed(enabled) }
 
-    /// Taille d'un fichier en octets (`nil` s'il n'existe pas).
-    private static func fileSize(limitPath url: URL) -> Int? {
-        (try? FileManager.default.attributesOfItem(atPath: url.path)[.size] as? NSNumber)?.intValue
-    }
 
     /// Tailles lues pour la bannière de taille : journal et relevé de batterie.
     static func diagnosticSizes() -> (journal: Int, energy: Int) {
-        let size = { (urls: [URL]) in urls.reduce(0) { $0 + (fileSize(limitPath: $1) ?? 0) } }
-        return (size([file, previousFile] + isolatedFiles(.journal)), size([EnergyFile.url] + isolatedFiles(.energy)))
+        store.sizes()
     }
 
     /// Les fichiers de diagnostic qui existent, journal d'abord : un seul geste de partage (demande du 10/11/2026).
     /// Le journal mis à l'écart (DEC-07) n'en fait jamais partie.
-    static func filesForSharing() -> [URL] {
-        guard filesReady else { return [] }
-        return [file, previousFile, EnergyFile.url].filter { FileManager.default.fileExists(atPath: $0.path) }
-    }
+    static func filesForSharing() -> [URL] { store.shareable() }
 
     /// Journal partageable seul, s'il existe et si la mise à l'écart a réussi.
     static var shareableJournal: URL? { filesForSharing().first { $0 == file } }
@@ -223,7 +167,7 @@ enum Diagnostics {
     static func eraseJournal() {
         queue.sync {
             // Effacement explicite (geste de l'utilisateur), possible même bloqué : la famille du journal seulement.
-            for url in [file, previousFile] + isolatedFiles(.journal) { try? FileManager.default.removeItem(at: url) }
+            store.erase(.journal)
         }
         postSizeChange()
     }
@@ -253,8 +197,7 @@ enum Diagnostics {
     static func start() {
         // Avant toute ligne : ancien journal mis à l'écart, puis récepteur des paquets branché (une seule fois, avant
         // la restauration de la bibliothèque appelée juste après par `KyokashoApp`).
-        let migrated = migrateOldFiles()
-        stateLock.withLock { ready = migrated }
+        _ = migrateOldFiles()
         DiagnosticCenter.shared.install(sink: { receive($0) }, salt: referenceSalt())
         updateDetail()
         let info = Bundle.main.infoDictionary
@@ -393,11 +336,16 @@ struct DiagnosticsSection: View {
         } header: {
             Text("Diagnostic")
         } footer: {
-            #if targetEnvironment(macCatalyst)
-            Text("Note dans un journal ce que fait l'app (chargement des modèles, durées, mémoire, erreurs) pour aider à corriger un bug. Les erreurs sont toujours notées. Le journal reste sur ce MacBook ; partage-le quand on te le demande. Rien ne part tout seul.")
-            #else
-            Text("Note dans un journal ce que fait l'app (chargement des modèles, durées, mémoire, erreurs) pour aider à corriger un bug. Les erreurs sont toujours notées. Le journal reste sur l'iPad (app Fichiers → Kyōkasho → Diagnostics) ; partage-le quand on te le demande. Rien ne part tout seul.")
-            #endif
+            if !Diagnostics.filesReady {
+                // Bloqué (DEC-07) : aucune invitation à partager, ni ici ni par l'app Fichiers.
+                Text("D'anciens fichiers de diagnostic n'ont pas pu être mis à l'écart : ne les partage pas, même depuis l'app Fichiers.")
+            } else {
+                #if targetEnvironment(macCatalyst)
+                Text("Note dans un journal ce que fait l'app (chargement des modèles, durées, mémoire, erreurs) pour aider à corriger un bug. Les erreurs sont toujours notées. Le journal reste sur ce MacBook ; partage-le quand on te le demande. Rien ne part tout seul.")
+                #else
+                Text("Note dans un journal ce que fait l'app (chargement des modèles, durées, mémoire, erreurs) pour aider à corriger un bug. Les erreurs sont toujours notées. Le journal reste sur l'iPad (app Fichiers → Kyōkasho → Diagnostics) ; partage-le quand on te le demande. Rien ne part tout seul.")
+                #endif
+            }
         }
         .sheet(isPresented: $showLog) { DiagnosticLogView() }
         Section {

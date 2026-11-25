@@ -57,7 +57,7 @@ et DeepSeek V4.1 Flash ont analysé. Le travail s'est fait en lecture seule, sur
 | KYO-051 | Moniteur de performances : compacité, accès, pastilles IA | Cohérence | P3 | R1 | Deux demandes distinctes à préciser | #40, #47 | Tickets liés, chacun recetté pour lui-même |
 | KYO-058 | Documentation : guides et libellés de réglages périmés, notes de version 1.4 à 1.5.9 absentes de `docs/` | Cohérence | P3 | R0 | Relevé fait (19/11) | #26 | Guides alignés sur les réglages actuels, notes de version rangées ; brief README (#26) traité à part |
 | KYO-029 | Guide de la chaîne OCR → zones → furigana | Cohérence | P3 | R0 | Livré et conforme sur `main` | #46 | Clôture de #46 proposée (guide présent et conforme), sur accord |
-| KYO-015 | Diagnostics renforcés (événements typés, partage filtré) | Diagnostics | P2 | R2 | Plan approuvé, pas de code | À créer | Étapes E1 à E5 du plan validées ; partage sans donnée personnelle |
+| KYO-015 | Diagnostics renforcés (événements typés, partage filtré) | Diagnostics | P2 | R2 | E1 codée sur `claude/diag` (réunion DIAG du 25/11, revue R2 Codex en cours) ; E2 préparée (E2a à E2f) | #98 | Étapes E1 à E5 du plan validées ; partage sans donnée personnelle |
 | KYO-019 | « Voir le journal » lent quand le journal est long | Diagnostics | P2 | R1 | Livré ; à recetter | #67 | Ouverture rapide d'un long journal vérifiée sur iPad |
 | KYO-042 | Le survol du dictionnaire cesse de répondre | Diagnostics | P2 | R1 | Cause inconnue | #36 | Reproduction tracée, cause trouvée, correctif recetté |
 | KYO-043 | Miniatures après une correction OCR | Diagnostics | P2 | R1 | À préciser | #35 | Reproduction écrite avant tout correctif |

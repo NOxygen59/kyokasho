@@ -367,8 +367,10 @@ struct AITaskPill: View {
     private var list: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Activité des IA").font(.headline)
-            Button("Voir le journal de diagnostic") { showJournal = true }
-                .font(.subheadline)
+            if Diagnostics.filesReady {   // bloqué (DEC-07) : pas de feuille de journal vide
+                Button("Voir le journal de diagnostic") { showJournal = true }
+                    .font(.subheadline)
+            }
             Text("Ce que fait chaque IA maintenant, puis les tâches en cours et terminées. Tout est aussi écrit dans le journal de diagnostic (zone « ia »).")
                 .font(.caption).foregroundStyle(.secondary)
             // En clair, modèle par modèle (#47) : la pastille seule ne disait pas ce qui se passait.

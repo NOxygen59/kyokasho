@@ -25,7 +25,9 @@ struct DiagnosticSizeBanner: View {
                     Image(systemName: "externaldrive.badge.exclamationmark")
                         .font(Atelier.font(22)).foregroundStyle(Atelier.Tint.annotate)
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Fichiers de diagnostic volumineux (\(sizeText(warning)) Mo) : partage-les puis efface-les.")
+                        Text(Diagnostics.filesReady
+                             ? String(localized: "Fichiers de diagnostic volumineux (\(sizeText(warning)) Mo) : partage-les puis efface-les.")
+                             : String(localized: "Anciens fichiers de diagnostic non isolés (\(sizeText(warning)) Mo) : ne les partage pas."))
                             .font(.subheadline.weight(.semibold)).foregroundStyle(Atelier.textPrimary)
                         Text(Diagnostics.filesReady
                              ? String(localized: "Le journal et le relevé de batterie prennent de la place. « Partager le relevé et le journal » les envoie ensemble, puis « Effacer le journal » et « Effacer le relevé » les retirent.")

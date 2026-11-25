@@ -91,10 +91,14 @@ class DiagnosticsPrivacyTests(unittest.TestCase):
         self.assertLess(app.index("Diagnostics.start()"), app.index("LibraryBackupService.applyPendingRestoreOnce()"))
         # Zones fermées pour les anciennes lignes, journal précédent gardé (DEC-06), jamais l'ancien journal partagé.
         self.assertIn("let zone = DiagnosticZone.legacy(area)", core)
-        self.assertIn("try? fm.moveItem(at: file, to: previousFile)", core)
+        store = (ROOT / "Packages/KyokashoKit/Sources/DiagnosticKit/DiagnosticStore.swift").read_text(encoding="utf-8")
+        self.assertIn("rotated = (try? fm.moveItem(at: journal, to: previousJournal)) != nil", store)
         sharing = core.split("static func filesForSharing() -> [URL] {", 1)[1].split("\n    }", 1)[0]
         self.assertNotIn("isolatedFiles", sharing)
-        self.assertIn("for url in [file, previousFile] + isolatedFiles(.journal)", core)
+        self.assertIn("store.erase(.journal)", core)
+        # Mêmes fichiers dans l'app et dans le store.
+        self.assertIn('folder.appendingPathComponent("energie.csv")', (ROOT / "App/Settings/EnergyMeter.swift").read_text(encoding="utf-8"))
+        self.assertIn('folder.appendingPathComponent("energie.csv")', store)
         # Noms en clair (garde DATA-02) identiques à ceux du paquet.
         policy = (ROOT / "Packages/KyokashoKit/Sources/DiagnosticKit/DiagnosticCenter.swift").read_text(encoding="utf-8")
         for name in ("journal.txt", "journal.1.txt"):
@@ -105,25 +109,39 @@ class DiagnosticsPrivacyTests(unittest.TestCase):
         # Réunion DIAG du 25/11, arbitrage D1 : mise à l'écart = condition d'accès, jamais d'effacement implicite.
         core = (ROOT / "App/Settings/Diagnostics.swift").read_text(encoding="utf-8")
         start = core.split("static func start() {", 1)[1]
-        self.assertLess(start.index("let migrated = migrateOldFiles()"), start.index("DiagnosticCenter.shared.install"))
-        self.assertLess(start.index("stateLock.withLock { ready = migrated }"), start.index("write(launchHeader("))
-        migrate = core.split("private static func migrateOldFiles() -> Bool {", 1)[1].split("\n    }\n", 1)[0]
-        self.assertNotIn("removeItem", migrate)
-        self.assertNotIn("replaceItemAt", migrate)
+        self.assertLess(start.index("_ = migrateOldFiles()"), start.index("DiagnosticCenter.shared.install"))
+        self.assertLess(start.index("_ = migrateOldFiles()"), start.index("write(launchHeader("))
+        migration = (ROOT / "Packages/KyokashoKit/Sources/DiagnosticKit/DiagnosticFileMigration.swift").read_text(encoding="utf-8")
+        self.assertNotIn("removeItem", migration)
+        operations = store_text = (ROOT / "Packages/KyokashoKit/Sources/DiagnosticKit/DiagnosticStore.swift").read_text(encoding="utf-8")
+        operations = store_text.split("func fileSystemOperations(", 1)[1].split("\n    }\n", 1)[0]
+        self.assertNotIn("removeItem", operations)
+        self.assertNotIn("replaceItemAt", operations)
         enqueue = core.split("private static func enqueue(", 1)[1].split("let accepted", 1)[0]
         self.assertIn("guard filesReady else { return }", enqueue)
-        self.assertIn("guard filesReady else { return }   // dernière garde", core)
+        self.assertIn("private static func append(_ text: String) { store.appendJournal(text) }", core)
+        self.assertIn("static var filesReady: Bool { store.isReady }", core)
+        self.assertIn("static func filesForSharing() -> [URL] { store.shareable() }", core)
+        self.assertIn("store.erase(.journal)", core)
+        store = (ROOT / "Packages/KyokashoKit/Sources/DiagnosticKit/DiagnosticStore.swift").read_text(encoding="utf-8")
+        self.assertIn("guard isReady else { return false }", store)
+        self.assertIn("guard isReady else { return [] }", store)
         self.assertIn('guard filesReady else { return .init(lines: [], omittedBytes: 0) }', core)
         energy = (ROOT / "App/Settings/EnergyMeter.swift").read_text(encoding="utf-8")
         append = energy.split("static func append(", 1)[1].split("let fm", 1)[0]
-        self.assertIn("guard Diagnostics.filesReady else { return }", append)
+        # Rejet dès l'arrivée, puis revérification sur la file.
+        self.assertEqual(append.count("guard Diagnostics.filesReady else { return }"), 2)
+        self.assertLess(append.index("guard Diagnostics.filesReady"), append.index("queue.async"))
         # Trois partages : jamais une URL brute, toujours le contrôle commun.
         app = "\n".join(p.read_text(encoding="utf-8") for p in (ROOT / "App").rglob("*.swift"))
         self.assertNotIn("ShareLink(item: Diagnostics.file)", app)
         self.assertNotIn("ShareLink(item: EnergyFile.url)", app)
         self.assertIn("ShareLink(item: journal)", core)
         self.assertIn("ShareLink(item: energy)", energy)
-        self.assertIn("guard filesReady else { return [] }", core)
+        # Partage groupé : seulement depuis le contrôle commun.
+        self.assertIn("let files = Diagnostics.filesForSharing()", core)
+        self.assertIn("ShareLink(items: files)", core)
+        self.assertNotIn("ShareLink(items: Diagnostics.", app)
 
     def test_cpu_thread_names_are_closed_labels(self):
         log = (ROOT / "Packages/KyokashoKit/Sources/ReaderCore/DiagnosticCPULog.swift").read_text(encoding="utf-8")
@@ -131,9 +149,16 @@ class DiagnosticsPrivacyTests(unittest.TestCase):
         self.assertIn("DiagnosticThreads.closedLabel(load.name)", label)
         self.assertIn("DiagnosticThreads.closedLabel(load.queue)", label)
 
+    def test_scanner_catches_nested_concatenation(self):
+        sample = 'Diagnostics.log("x \\(Diagnostics.describe(e) + (file.lastPathComponent))", "app")'
+        found = [v for _, call in calls(sample) for v in interpolations(call)
+                 if not SAFE_INTERPOLATION.fullmatch(v.strip()) and any(re.search(p, v) for p in FORBIDDEN)]
+        self.assertEqual(len(found), 1)
+
     def test_safe_interpolation_is_exact(self):
         ok = ["Diagnostics.describe(error)", "Diagnostics.ref(document.id)", "words.count", "Diagnostics.ref(id.prefix(8))"]
         bad = ["Diagnostics.describe(e) + file.lastPathComponent", "file.lastPathComponent + Diagnostics.ref(x)",
+               "Diagnostics.describe(e) + (x.count + y.title.count)",
                "flag ? file.lastPathComponent : items.count", "Diagnostics.describe(e).lastPathComponent"]
         for value in ok:
             self.assertTrue(SAFE_INTERPOLATION.fullmatch(value), value)
@@ -146,7 +171,8 @@ class DiagnosticsPrivacyTests(unittest.TestCase):
         self.assertIn("ERREUR FATALE MLX (message natif de \\(text.count) caractères)", core)
         # B-QUARANTAINE : format marqué migré seulement après mise à l'écart réussie.
         # B-ROTATION : en-tête de rotation seulement si le journal a changé de nom.
-        self.assertIn("if rotated && !fm.fileExists(atPath: file.path) {", core)
+        store = (ROOT / "Packages/KyokashoKit/Sources/DiagnosticKit/DiagnosticStore.swift").read_text(encoding="utf-8")
+        self.assertIn("if rotated && !fm.fileExists(atPath: journal.path) {", store)
         # B-CPU : relevés CPU avec op et étape.
         cpu = (ROOT / "App/Settings/DiagnosticCPU.swift").read_text(encoding="utf-8")
         self.assertIn('Diagnostics.logCPU(line, op: op, step: "releve_cpu")', cpu)

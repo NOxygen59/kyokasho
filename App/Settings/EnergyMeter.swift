@@ -119,6 +119,8 @@ enum EnergyFile {
     private static let limit = DiagnosticFiles.energyRotationBytes
 
     static func append(_ line: String) {
+        // Rejeté dès l'arrivée si la mise à l'écart n'a pas réussi, puis revérifié sur la file (revue R2 passage 3).
+        guard Diagnostics.filesReady else { return }
         let file = url
         queue.async {
             // Mise à l'écart des anciens fichiers pas faite ou ratée : rien n'est écrit (PLAN-DIAG-001, DEC-07).
@@ -148,7 +150,7 @@ enum EnergyFile {
     static func erase() {
         queue.sync {
             // Effacement explicite (geste de l'utilisateur) : relevé actuel et anciens relevés mis à l'écart.
-            for file in [url] + Diagnostics.isolatedFiles(.energy) { try? FileManager.default.removeItem(at: file) }
+            Diagnostics.store.erase(.energy)
         }
     }
 }

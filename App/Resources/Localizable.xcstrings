@@ -1,6 +1,50 @@
 {
   "sourceLanguage": "fr",
   "strings": {
+    "D'anciens fichiers de diagnostic n'ont pas pu être mis à l'écart : ne les partage pas, même depuis l'app Fichiers.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Some old diagnostic files could not be set aside: do not share them, not even from the Files app."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "D'anciens fichiers de diagnostic n'ont pas pu être mis à l'écart : ne les partage pas, même depuis l'app Fichiers."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "部分旧诊断文件未能隔离：请勿分享，即使在“文件”应用中也不要分享。"
+          }
+        }
+      }
+    },
+    "Anciens fichiers de diagnostic non isolés (%@ Mo) : ne les partage pas.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Old diagnostic files not isolated (%@ MB): do not share them."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anciens fichiers de diagnostic non isolés (%@ Mo) : ne les partage pas."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "旧诊断文件未隔离（%@ MB）：请勿分享。"
+          }
+        }
+      }
+    },
     "Anciens diagnostics non isolés : aucun nouveau journal ni partage. Relance l'app pour réessayer.": {
       "localizations": {
         "en": {
