@@ -64,7 +64,7 @@ public struct DiagnosticSessionState: Codable, Equatable, Sendable {
 /// doublées ou réordonnées. `next` propose l'état à écrire sans rien changer ; `commit` ne l'adopte qu'après une
 /// écriture réussie (revue R2 E2a, B2) : un échec laisse la transition à refaire à la notification suivante.
 public struct DiagnosticSessionMachine: Sendable {
-    public enum Event: Sendable {
+    public enum Event: Sendable, Equatable {
         /// `willEnterForeground`, `didBecomeActive`, ou application déjà au premier plan à l'installation.
         case foreground
         /// `willResignActive` / `.inactive` : sans effet (Centre de contrôle, Split View, sélecteur).

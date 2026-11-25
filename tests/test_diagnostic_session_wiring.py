@@ -95,7 +95,10 @@ class DiagnosticSessionWiringTests(unittest.TestCase):
         # B4 (passage 2) : phase réelle notée au signal de fond, avant toute écriture en attente.
         close = ctrl0.split("private func close() {", 1)[1].split("\n    }", 1)[0]
         self.assertLess(close.index("setForeground(false)"), close.index("handle(.background)"))
-        self.assertIn("guard let file, isForeground, machine.armed", ctrl0)
+        self.assertIn("guard let file, capturesMayWrite, machine.armed", ctrl0)
+        handle = ctrl0.split("private func handle(", 1)[1].split("queue.async", 1)[0]
+        self.assertIn("pendingTransitions += 1", handle)   # compté au signal, avant la file
+        self.assertIn("foreground && pendingTransitions == 0", ctrl0)
         self.assertLess(begin.index("lock.withLock"), begin.index("DiagnosticSessionController.shared.updateOngoing(published)"))
         end = center.split("    func end(_ id: UUID) {", 1)[1].split("\n    }\n", 1)[0]
         self.assertIn("return tracked.end(id)", end)

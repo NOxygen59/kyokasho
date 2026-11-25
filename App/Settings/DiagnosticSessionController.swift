@@ -101,8 +101,14 @@ final class DiagnosticSessionController: @unchecked Sendable {
     }
 
     /// L'automate n'adopte l'état qu'après une écriture réussie (B2) ; la mémoire n'est lue que s'il y a à écrire.
+    /// Les transitions (premier plan, fond) sont **prioritaires** : comptées au signal sur le fil principal, avant
+    /// d'entrer dans la file ; tant qu'une transition attend, aucune capture de travaux ni alerte mémoire n'écrit
+    /// (la transition écrira l'état complet). Revue R2 E2c, B4.
     private func handle(_ event: DiagnosticSessionMachine.Event, done: (() -> Void)? = nil) {
+        let isTransition = event != .inactive
+        if isTransition { pendingLock.withLock { pendingTransitions += 1 } }
         queue.async { [self] in
+            defer { if isTransition { pendingLock.withLock { pendingTransitions -= 1 } } }
             if let file, machine.next(event, now: Date(), memoryMB: nil) != nil,
                let state = machine.next(event, now: Date(), memoryMB: Int(Diagnostics.footprintMB())), file.write(state) {
                 machine.commit(state)
@@ -145,7 +151,7 @@ final class DiagnosticSessionController: @unchecked Sendable {
             // les écritures suivantes ni pour l'alerte mémoire (B3). L'écriture n'a lieu que session armée.
             let previous = machine.ongoing
             machine.commit(ongoing: latest)
-            guard let file, isForeground, machine.armed, machine.ongoing != previous,
+            guard let file, capturesMayWrite, machine.armed, machine.ongoing != previous,
                   let state = machine.next(ongoing: nil, now: Date(), memoryMB: nil) else { return }
             file.write(state)
         }
@@ -154,8 +160,12 @@ final class DiagnosticSessionController: @unchecked Sendable {
     private var pendingOngoing: DiagnosticOngoing?
     /// Phase réelle du processus, notée au signal (fil principal), distincte de l'état écrit.
     private var foreground = false
+    /// Transitions signalées et pas encore traitées par la file (B4).
+    private var pendingTransitions = 0
     private func setForeground(_ value: Bool) { pendingLock.withLock { foreground = value } }
     private var isForeground: Bool { pendingLock.withLock { foreground } }
+    /// Une capture peut écrire : premier plan réel et aucune transition en attente.
+    private var capturesMayWrite: Bool { pendingLock.withLock { foreground && pendingTransitions == 0 } }
 
     /// Un seul observateur de la pression mémoire pour le processus (E2c), installé une fois. L'empreinte est relevée
     /// **avant** les libérations (0 = inconnue), notée dans l'état armé avec les travaux en cours, puis les
@@ -184,7 +194,7 @@ final class DiagnosticSessionController: @unchecked Sendable {
                                                                       op: DiagnosticOperation(raw: entry.op)))
             }
             // Jamais en fond : une clôture ratée ne doit pas être réécrite « armée » (B4).
-            if foregroundNow, isForeground, let file, let state = machine.next(ongoing: nil, now: Date(), memoryMB: memoryMB) {
+            if foregroundNow, capturesMayWrite, let file, let state = machine.next(ongoing: nil, now: Date(), memoryMB: memoryMB) {
                 file.write(state)
             }
         }
