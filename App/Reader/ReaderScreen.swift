@@ -969,10 +969,12 @@ struct ReaderScreen: View {
     static let wideTopBar: CGFloat = 1100
     /// Hauteur laissée sous le panneau d'étude flottant en fenêtre étroite : barre du bas (56 + 2 × 6) et sa marge
     /// basse (12), plus la barre d'Annoter (≈ 66) et l'espace qui la sépare de la barre du bas (10) quand elle est
-    /// ouverte ; rien quand les barres sont masquées. À tenir à jour avec `.padding(6)` des barres et `VStack(spacing: 10)`.
+    /// ouverte, plus la bande des pages (96 + 10) quand elle est affichée ; rien quand les barres sont masquées. À tenir
+    /// à jour avec `.padding(6)` des barres, `VStack(spacing: 10)` et `.frame(height: 96)` de `PageFilmstrip`.
     private var floatingPanelBottomReserve: CGFloat {
         guard chromeVisible else { return 0 }
-        return (reader.isDrawing ? 0 : 80) + (annotationToolsShown && capabilities.annotations ? 76 : 0)
+        let filmstrip: CGFloat = filmstripMounted && filmstripVisible && !reader.isDrawing ? 106 : 0
+        return (reader.isDrawing ? 0 : 80) + (annotationToolsShown && capabilities.annotations ? 76 : 0) + filmstrip
     }
     static let wideAnnotationBar: CGFloat = 820
     static let compactAnnotationBar: CGFloat = 420
