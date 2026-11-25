@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 NOxygen59
 
+import DiagnosticKit
 import GLMOCRKit
 import OCRKit
 import ReaderCore
@@ -120,6 +121,8 @@ enum EnergyFile {
     static func append(_ line: String) {
         let file = url
         queue.async {
+            // Mise à l'écart des anciens fichiers pas faite ou ratée : rien n'est écrit (PLAN-DIAG-001, DEC-07).
+            guard Diagnostics.filesReady else { return }
             let fm = FileManager.default
             try? fm.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
             if let size = (try? fm.attributesOfItem(atPath: file.path)[.size] as? NSNumber)?.intValue, size > limit,
@@ -138,14 +141,14 @@ enum EnergyFile {
     }
 
     static func samples() -> [EnergySample] {
-        queue.sync { EnergyLog.parse((try? Data(contentsOf: url)) ?? Data()) }
+        guard Diagnostics.filesReady else { return [] }
+        return queue.sync { EnergyLog.parse((try? Data(contentsOf: url)) ?? Data()) }
     }
 
     static func erase() {
         queue.sync {
-            try? FileManager.default.removeItem(at: url)
-            // Ancien relevé mis à l'écart (PLAN-DIAG-001, revue R2 B-CSV) : effacé avec le relevé.
-            try? FileManager.default.removeItem(at: Diagnostics.quarantinedEnergyFile)
+            // Effacement explicite (geste de l'utilisateur) : relevé actuel et anciens relevés mis à l'écart.
+            for file in [url] + Diagnostics.isolatedFiles(.energy) { try? FileManager.default.removeItem(at: file) }
         }
     }
 }
@@ -229,7 +232,9 @@ struct EnergySummaryView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Fermer") { dismiss() } }
                 ToolbarItem(placement: .primaryAction) {
-                    ShareLink(item: EnergyFile.url) { Label("Partager", systemImage: "square.and.arrow.up") }
+                    if let energy = Diagnostics.shareableEnergy {
+                        ShareLink(item: energy) { Label("Partager", systemImage: "square.and.arrow.up") }
+                    }
                 }
             }
             .task {

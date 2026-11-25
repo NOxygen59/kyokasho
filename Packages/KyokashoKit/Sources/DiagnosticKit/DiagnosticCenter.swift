@@ -115,29 +115,16 @@ public final class DiagnosticCenter: @unchecked Sendable {
     }
 }
 
-/// Règles du fichier journal, sans accès au disque (testées) : rotation (DEC-06) et mise à l'écart de l'ancien
-/// journal (DEC-07).
+/// Règles du fichier journal, sans accès au disque (testées) : rotation (DEC-06). La mise à l'écart des anciens
+/// fichiers (DEC-07) est dans `DiagnosticFileMigration`.
 public enum DiagnosticJournalPolicy {
     /// DEC-06 B : au-delà de 5 Mo, le journal devient `journal.1.txt` (l'ancien `journal.1.txt` est remplacé) et un
     /// nouveau journal commence.
     public static let rotationBytes = 5_000_000
     public static let currentName = "journal.txt"
     public static let previousName = "journal.1.txt"
-    /// DEC-07 A : journal écrit avant PLAN-DIAG-001 (il peut contenir des titres et des chemins). Renommé, exclu du
-    /// partage, effacé avec le reste.
-    public static let quarantineName = "journal-avant-diagnostics.txt"
-    /// Relevé de batterie écrit avant ce format (titres de modèles importés, préfixes d'empreinte) : même traitement
-    /// que l'ancien journal (revue R2 Codex, B-CSV).
-    public static let energyQuarantineName = "energie-avant-diagnostics.csv"
-    /// Version du format : 2 = événements typés et confidentialité à la source.
-    public static let formatVersion = 2
 
     public static func shouldRotate(currentBytes: Int) -> Bool { currentBytes > rotationBytes }
-
-    /// Mise à l'écart nécessaire : format plus ancien que 2 et un journal existe.
-    public static func needsQuarantine(storedFormat: Int, journalExists: Bool) -> Bool {
-        storedFormat < formatVersion && journalExists
-    }
 
     /// File d'écriture bornée : au-delà, les lignes sont perdues et comptées (une ligne d'alerte le dit ensuite).
     public static let maxPendingLines = 2_000

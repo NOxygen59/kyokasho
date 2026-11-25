@@ -227,8 +227,9 @@ public enum DiagnosticCPULog {
     }
 
     private static func threadLabel(_ load: ThreadLoad, segment: DiagnosticThreads.Segment?, at now: TimeInterval) -> String {
-        let name = load.name ?? "sans-nom"
-        let queue = load.queue ?? "?"
+        // Étiquettes fermées au rendu, pour les deux lignes (relevé et fil persistant).
+        let name = DiagnosticThreads.closedLabel(load.name) ?? "sans-nom"
+        let queue = DiagnosticThreads.closedLabel(load.queue) ?? "?"
         let runtime = [load.name, load.queue].compactMap { $0 }.contains { $0.hasSuffix(".cooperative") }
             ? "/runtime:swift-probable" : ""
         var label = "\(load.role?.rawValue ?? "fil")#\(String(load.id, radix: 16)):\(number(load.percent))%/nom:\(name)/file:\(queue)\(runtime)"

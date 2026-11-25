@@ -27,7 +27,9 @@ struct DiagnosticSizeBanner: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Fichiers de diagnostic volumineux (\(sizeText(warning)) Mo) : partage-les puis efface-les.")
                             .font(.subheadline.weight(.semibold)).foregroundStyle(Atelier.textPrimary)
-                        Text("Le journal et le relevé de batterie prennent de la place. « Partager le relevé et le journal » les envoie ensemble, puis « Effacer le journal » et « Effacer le relevé » les retirent.")
+                        Text(Diagnostics.filesReady
+                             ? String(localized: "Le journal et le relevé de batterie prennent de la place. « Partager le relevé et le journal » les envoie ensemble, puis « Effacer le journal » et « Effacer le relevé » les retirent.")
+                             : String(localized: "D'anciens fichiers de diagnostic n'ont pas pu être mis à l'écart : ne les partage pas. « Effacer le journal » et « Effacer le relevé » les retirent."))
                             .font(.footnote).foregroundStyle(Atelier.textSecondary)
                     }
                     Spacer(minLength: 8)

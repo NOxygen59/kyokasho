@@ -116,9 +116,8 @@ final class DiagnosticKitTests: XCTestCase {
     func testJournalPolicy() {
         XCTAssertFalse(DiagnosticJournalPolicy.shouldRotate(currentBytes: 5_000_000))
         XCTAssertTrue(DiagnosticJournalPolicy.shouldRotate(currentBytes: 5_000_001))
-        XCTAssertTrue(DiagnosticJournalPolicy.needsQuarantine(storedFormat: 0, journalExists: true))
-        XCTAssertFalse(DiagnosticJournalPolicy.needsQuarantine(storedFormat: 0, journalExists: false))
-        XCTAssertFalse(DiagnosticJournalPolicy.needsQuarantine(storedFormat: 2, journalExists: true))
+        XCTAssertEqual(DiagnosticFileMigration.actives.map(\.name), [DiagnosticJournalPolicy.currentName,
+                                                                     DiagnosticJournalPolicy.previousName, "energie.csv"])
     }
 
     /// Sentinelles : un titre, un texte, un chemin et un nom de modèle factices passés partout où un événement peut

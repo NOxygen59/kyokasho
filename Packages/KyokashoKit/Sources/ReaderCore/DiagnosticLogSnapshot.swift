@@ -23,6 +23,8 @@ public enum DiagnosticLogSnapshot {
         public var lines: [String]
         /// Octets du début du fichier non affichés (0 : tout le journal est là).
         public var omittedBytes: Int
+
+        public init(lines: [String], omittedBytes: Int) { self.lines = lines; self.omittedBytes = omittedBytes }
     }
 
     /// Lit seulement la fin du journal : au plus `maxBytes` octets, puis au plus `maxLines` lignes.

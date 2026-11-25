@@ -19,7 +19,7 @@ enum Diagnostics {
     static let enabledKey = "diagnostics.enabled"
     static var enabled: Bool { UserDefaults.standard.bool(forKey: enabledKey) }
     /// Version du format du journal déjà en place (DEC-07) et sel des références de documents (`DiagnosticRef`).
-    private static let formatKey = "diagnostics.formatVersion"
+    private static let migrationKey = "diagnostics.migrationRevision"
     private static let saltKey = "diagnostics.refSalt"
 
     static var folder: URL {
@@ -30,10 +30,7 @@ enum Diagnostics {
     static var file: URL { folder.appendingPathComponent("journal.txt") }
     /// Journal précédent, gardé à la rotation (DEC-06 B).
     static var previousFile: URL { folder.appendingPathComponent("journal.1.txt") }
-    /// Journal écrit avant PLAN-DIAG-001, mis à l'écart (DEC-07 A) : jamais partagé, effacé avec le reste.
-    static var quarantinedFile: URL { folder.appendingPathComponent("journal-avant-diagnostics.txt") }
-    /// Relevé de batterie de l'ancien format, mis à l'écart comme l'ancien journal : jamais partagé, effacé avec le relevé.
-    static var quarantinedEnergyFile: URL { folder.appendingPathComponent("energie-avant-diagnostics.csv") }
+
 
     private static let queue = DispatchQueue(label: "fr.noxygen59.kyokasho.diagnostics")
     /// Lignes en attente d'écriture et lignes perdues faute de place (file bornée, PLAN-DIAG-001 E1).
@@ -94,6 +91,8 @@ enum Diagnostics {
     /// File d'écriture bornée : au-delà de `maxPendingLines`, la ligne est perdue et comptée ; la ligne suivante
     /// écrite le signale. Rien ici n'appelle le journal : pas de récursion.
     private static func enqueue(_ line: String, sync: Bool, diagnosticOnly: Bool) {
+        // Mise à l'écart pas faite ou ratée : la ligne est jetée (aucune écriture dans un ancien fichier).
+        guard filesReady else { return }
         let accepted: Bool = pendingLock.withLock {
             guard sync || pending < DiagnosticJournalPolicy.maxPendingLines else { dropped += 1; return false }
             pending += 1
@@ -117,6 +116,7 @@ enum Diagnostics {
 
     /// Écrit en fin de journal ; au-delà de 5 Mo, le journal devient `journal.1.txt` (DEC-06 B). Sur la file.
     private static func append(_ text: String) {
+        guard filesReady else { return }   // dernière garde avant création, rotation ou écriture
         let fm = FileManager.default
         try? fm.createDirectory(at: folder, withIntermediateDirectories: true)
         if let size = fileSize(limitPath: file), DiagnosticJournalPolicy.shouldRotate(currentBytes: size) {
@@ -145,26 +145,43 @@ enum Diagnostics {
         }
     }
 
-    /// DEC-07 A : un journal écrit avant ce format (il peut contenir des titres et des chemins) est renommé, exclu
-    /// du partage et effacé avec le reste. Une seule fois, au premier lancement de la nouvelle version.
-    private static func quarantineOldJournalIfNeeded() {
+    /// DEC-07 A, condition d'accès (réunion DIAG du 25/11, arbitrage D1) : les fichiers écrits avant ce format
+    /// (titres, chemins, préfixes d'empreinte, noms de modèles importés) sont déplacés vers un nom libre de leur
+    /// famille, sans jamais effacer ni écraser. Tant que ce n'est pas fait, aucune écriture, lecture ni partage
+    /// (`filesReady`) ; nouvel essai au lancement suivant.
+    private static func migrateOldFiles() -> Bool {
         let defaults = UserDefaults.standard
         let fm = FileManager.default
-        queue.sync {
-            let stored = defaults.integer(forKey: formatKey)
-            guard stored < DiagnosticJournalPolicy.formatVersion else { return }
-            // Journal et relevé de batterie de l'ancien format (titres, chemins, préfixes d'empreinte, noms de modèles
-            // importés) : mis à l'écart. Le format n'est marqué migré que si **les deux** ont réussi ; sinon on
-            // réessaie au prochain lancement (revue R2 Codex, B-QUARANTAINE et B-CSV).
-            let moved = [(file, quarantinedFile), (EnergyFile.url, quarantinedEnergyFile)].allSatisfy { source, target in
-                guard fm.fileExists(atPath: source.path) else { return true }
-                if fm.fileExists(atPath: target.path) {
-                    return (try? fm.replaceItemAt(target, withItemAt: source)) != nil && !fm.fileExists(atPath: source.path)
-                }
-                return (try? fm.moveItem(at: source, to: target)) != nil
+        let ops = DiagnosticFileMigration.Operations(presence: { name in
+            do {
+                _ = try fm.attributesOfItem(atPath: folder.appendingPathComponent(name).path)
+                return .present
+            } catch let error as NSError where (error.domain == NSCocoaErrorDomain && error.code == NSFileReadNoSuchFileError)
+                                              || (error.domain == NSPOSIXErrorDomain && error.code == Int(ENOENT)) {
+                return .absent
+            } catch {
+                return .unknown
             }
-            if moved { defaults.set(DiagnosticJournalPolicy.formatVersion, forKey: formatKey) }
+        }, move: { from, to in
+            // `moveItem` échoue si la cible existe : jamais d'écrasement.
+            (try? fm.moveItem(at: folder.appendingPathComponent(from), to: folder.appendingPathComponent(to))) != nil
+        })
+        return queue.sync {
+            let outcome = DiagnosticFileMigration.run(storedRevision: defaults.integer(forKey: migrationKey), operations: ops)
+            guard outcome == .ready else { return false }
+            defaults.set(DiagnosticFileMigration.revision, forKey: migrationKey)
+            return true
         }
+    }
+
+    /// Fichiers de diagnostic utilisables (mise à l'écart réussie). Fixé une fois au lancement.
+    static var filesReady: Bool { stateLock.withLock { ready } }
+    private static let stateLock = NSLock()
+    nonisolated(unsafe) private static var ready = false
+
+    /// Anciens fichiers mis à l'écart d'une famille, qui existent (comptés et effacés, jamais partagés).
+    static func isolatedFiles(_ family: DiagnosticFileMigration.Family) -> [URL] {
+        DiagnosticFileMigration.isolatedNames(family).map { folder.appendingPathComponent($0) }
     }
 
     /// Sel des références de documents, tiré une fois par installation.
@@ -186,20 +203,27 @@ enum Diagnostics {
 
     /// Tailles lues pour la bannière de taille : journal et relevé de batterie.
     static func diagnosticSizes() -> (journal: Int, energy: Int) {
-        let journal = [file, previousFile, quarantinedFile].reduce(0) { $0 + (fileSize(limitPath: $1) ?? 0) }
-        return (journal, (fileSize(limitPath: EnergyFile.url) ?? 0) + (fileSize(limitPath: quarantinedEnergyFile) ?? 0))
+        let size = { (urls: [URL]) in urls.reduce(0) { $0 + (fileSize(limitPath: $1) ?? 0) } }
+        return (size([file, previousFile] + isolatedFiles(.journal)), size([EnergyFile.url] + isolatedFiles(.energy)))
     }
 
     /// Les fichiers de diagnostic qui existent, journal d'abord : un seul geste de partage (demande du 10/11/2026).
     /// Le journal mis à l'écart (DEC-07) n'en fait jamais partie.
     static func filesForSharing() -> [URL] {
-        [file, previousFile, EnergyFile.url].filter { FileManager.default.fileExists(atPath: $0.path) }
+        guard filesReady else { return [] }
+        return [file, previousFile, EnergyFile.url].filter { FileManager.default.fileExists(atPath: $0.path) }
     }
+
+    /// Journal partageable seul, s'il existe et si la mise à l'écart a réussi.
+    static var shareableJournal: URL? { filesForSharing().first { $0 == file } }
+    /// Relevé de batterie partageable, mêmes conditions.
+    static var shareableEnergy: URL? { filesForSharing().first { $0 == EnergyFile.url } }
 
     /// « Effacer le journal » : toutes les générations, ancien journal mis à l'écart compris (DEC-06, DEC-07).
     static func eraseJournal() {
         queue.sync {
-            for url in [file, previousFile, quarantinedFile] { try? FileManager.default.removeItem(at: url) }
+            // Effacement explicite (geste de l'utilisateur), possible même bloqué : la famille du journal seulement.
+            for url in [file, previousFile] + isolatedFiles(.journal) { try? FileManager.default.removeItem(at: url) }
         }
         postSizeChange()
     }
@@ -211,13 +235,15 @@ enum Diagnostics {
 
     /// Attend les écritures déjà en file avant de lire ; aucun changement du fichier exporté.
     static func snapshot() -> String {
-        queue.sync { DiagnosticLogSnapshot.read(from: file) }
+        guard filesReady else { return "" }
+        return queue.sync { DiagnosticLogSnapshot.read(from: file) }
     }
 
     /// Fin du journal pour l'écran « Journal » (RET-045, #67). Lit sur la file du journal pour ne pas croiser une
     /// écriture ou une rotation ; à appeler hors du fil principal.
     static func tail() -> DiagnosticLogSnapshot.Tail {
-        queue.sync { DiagnosticLogSnapshot.readTail(from: file) }
+        guard filesReady else { return .init(lines: [], omittedBytes: 0) }
+        return queue.sync { DiagnosticLogSnapshot.readTail(from: file) }
     }
 
     /// Au lancement : en-tête (date, version, appareil, iOS, batterie, luminosité, réglages qui consomment) et
@@ -227,7 +253,8 @@ enum Diagnostics {
     static func start() {
         // Avant toute ligne : ancien journal mis à l'écart, puis récepteur des paquets branché (une seule fois, avant
         // la restauration de la bibliothèque appelée juste après par `KyokashoApp`).
-        quarantineOldJournalIfNeeded()
+        let migrated = migrateOldFiles()
+        stateLock.withLock { ready = migrated }
         DiagnosticCenter.shared.install(sink: { receive($0) }, salt: referenceSalt())
         updateDetail()
         let info = Bundle.main.infoDictionary
@@ -342,13 +369,25 @@ struct DiagnosticsSection: View {
                     DiagnosticCPU.updateActivation()
                     Diagnostics.updateDetail()
                 }
-            Button { showLog = true } label: {
-                Label("Voir le journal", systemImage: "doc.text.magnifyingglass")
-            }
-            ShareLink(item: Diagnostics.file) { Label("Partager le journal", systemImage: "square.and.arrow.up") }
-            // Un seul geste pour les deux fichiers (demande du 10/11/2026) : ils s'expliquent l'un par l'autre.
-            ShareLink(items: Diagnostics.filesForSharing()) {
-                Label("Partager le relevé et le journal", systemImage: "square.and.arrow.up.on.square")
+            if Diagnostics.filesReady {
+                Button { showLog = true } label: {
+                    Label("Voir le journal", systemImage: "doc.text.magnifyingglass")
+                }
+                if let journal = Diagnostics.shareableJournal {
+                    ShareLink(item: journal) { Label("Partager le journal", systemImage: "square.and.arrow.up") }
+                }
+                // Un seul geste pour les deux fichiers (demande du 10/11/2026) : ils s'expliquent l'un par l'autre.
+                let files = Diagnostics.filesForSharing()
+                if !files.isEmpty {
+                    ShareLink(items: files) {
+                        Label("Partager le relevé et le journal", systemImage: "square.and.arrow.up.on.square")
+                    }
+                }
+            } else {
+                // Mise à l'écart des anciens fichiers ratée (PLAN-DIAG-001, DEC-07) : ni journal, ni lecture, ni partage.
+                Label("Anciens diagnostics non isolés : aucun nouveau journal ni partage. Relance l'app pour réessayer.",
+                      systemImage: "exclamationmark.triangle")
+                    .foregroundStyle(.secondary)
             }
             Button("Effacer le journal", role: .destructive) { Diagnostics.eraseJournal() }
         } header: {
@@ -364,7 +403,9 @@ struct DiagnosticsSection: View {
         Section {
             Toggle("Relevé de batterie", isOn: $energy)
                 .onChange(of: energy) { EnergyMeter.shared.setEnabled($0) }
-            Button { showEnergy = true } label: { Label("Voir le résumé", systemImage: "battery.75") }
+            if Diagnostics.filesReady {
+                Button { showEnergy = true } label: { Label("Voir le résumé", systemImage: "battery.75") }
+            }
             Button("Effacer le relevé", role: .destructive) {
                 EnergyFile.erase()
                 Diagnostics.postSizeChange()

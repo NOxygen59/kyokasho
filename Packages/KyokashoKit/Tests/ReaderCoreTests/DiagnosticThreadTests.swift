@@ -199,4 +199,31 @@ final class DiagnosticThreadTests: XCTestCase {
         print(String(format: "G1 Mac noyau tick n=%d mur_moy_ms=%.3f mur_max_ms=%.3f cpu_moy_ms=%.3f",
                      runs, wall * 1000 / Double(runs), maxWall * 1000, cpu * 1000 / Double(runs)))
     }
+
+    /// Réunion DIAG du 25/11 (contrat E1, point 6) : un nom de fil ou de file venu d'ailleurs (titre ASCII,
+    /// identifiant hexadécimal, file inconnue) n'atteint jamais les deux lignes CPU ; les repères connus restent.
+    func testThreadNamesAreClosedLabelsInBothLines() throws {
+        let loads = [
+            DiagnosticCPULog.ThreadLoad(id: 1, percent: 40, name: "SENTINELLE-TITRE", queue: "SENTINELLE.file.inconnue"),
+            DiagnosticCPULog.ThreadLoad(id: 2, percent: 30, name: "9f86d081884c7d65", queue: "kyokasho.io"),
+            DiagnosticCPULog.ThreadLoad(id: 3, percent: 20, name: "kyo.ocr", queue: "com.apple.root.default-qos.cooperative"),
+        ]
+        var history = DiagnosticThreads.History()
+        let observed = history.observe(loads, at: 8) { [] }
+        var policy = DiagnosticCPULog.Policy()
+        XCTAssertTrue(policy.admit(at: 8))
+        let cost = DiagnosticCPULog.Cost(wall: 0.001, cpu: 0.0005)
+        let decision = try XCTUnwrap(policy.decide(at: 8, percent: 90, cost: cost, hasLongWork: false))
+        let line = DiagnosticCPULog.line(percent: 90, threads: loads, active: [], context: .init(), long: .init(),
+                                         cost: cost, decision: decision, observations: observed, at: 8)
+        let persistent = DiagnosticCPULog.persistentLine(.init(load: loads[0], age: 6, average: 40, events: []), segment: nil, at: 8)
+        for text in [line, persistent] {
+            for secret in ["SENTINELLE", "9f86d081884c7d65"] { XCTAssertFalse(text.contains(secret), "\(secret) : \(text)") }
+        }
+        XCTAssertTrue(line.contains("nom:autre/file:autre"))
+        XCTAssertTrue(line.contains("nom:autre/file:kyokasho.io"))
+        XCTAssertTrue(line.contains("nom:kyo.ocr/file:apple.cooperative/runtime:swift-probable"), line)
+        XCTAssertTrue(persistent.contains("nom:autre/file:autre"))
+    }
+
 }

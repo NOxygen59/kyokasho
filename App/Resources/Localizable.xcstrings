@@ -1,6 +1,50 @@
 {
   "sourceLanguage": "fr",
   "strings": {
+    "Anciens diagnostics non isolés : aucun nouveau journal ni partage. Relance l'app pour réessayer.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Old diagnostics not isolated: no new journal and no sharing. Relaunch the app to try again."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Anciens diagnostics non isolés : aucun nouveau journal ni partage. Relance l'app pour réessayer."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "旧诊断文件尚未隔离：不会写入新日志，也无法分享。请重新启动应用再试。"
+          }
+        }
+      }
+    },
+    "D'anciens fichiers de diagnostic n'ont pas pu être mis à l'écart : ne les partage pas. « Effacer le journal » et « Effacer le relevé » les retirent.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Some old diagnostic files could not be set aside: do not share them. “Clear the log” and “Clear the record” remove them."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "D'anciens fichiers de diagnostic n'ont pas pu être mis à l'écart : ne les partage pas. « Effacer le journal » et « Effacer le relevé » les retirent."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "部分旧诊断文件未能隔离：请勿分享。“清除日志”和“清除记录”可将其删除。"
+          }
+        }
+      }
+    },
     "Ajouter aux cartes": {
       "localizations": {
         "fr": {

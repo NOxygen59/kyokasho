@@ -7,6 +7,28 @@ public enum DiagnosticThreads {
     public static let limit = 12
     public static let threshold = 5.0
 
+    /// Noms de fils et de files reconnus tels quels (ceux de l'app et du système les plus courants).
+    static let knownLabels: Set<String> = [
+        "com.apple.main-thread", "com.apple.uikit.eventfetch-thread", "fr.noxygen59.kyokasho.diagnostics",
+        "fr.noxygen59.kyokasho.diagnostics.cpu", "fr.noxygen59.kyokasho.energy", "kyokasho.io", "kyokasho.thumbnails",
+        "dictionnaires.connexion",
+    ]
+
+    /// Étiquette **fermée** d'un nom de fil ou de file pour le journal (réunion DIAG du 25/11, contrat E1 point 6) :
+    /// nom reconnu exact, `kyo.<travail>` tiré de l'énumération, famille système, sinon `autre`. Jamais la chaîne
+    /// d'origine : un fil nommé par une bibliothèque ou un titre passé en nom ne peut pas atteindre le journal.
+    public static func closedLabel(_ name: String?) -> String? {
+        guard let name, !name.isEmpty else { return nil }
+        if knownLabels.contains(name) { return name }
+        if name.hasPrefix("kyo."), let kind = DiagnosticCPULog.Kind(rawValue: String(name.dropFirst(4))) { return "kyo.\(kind.rawValue)" }
+        if name.hasPrefix("com.apple.") {
+            if name.hasSuffix(".cooperative") { return "apple.cooperative" }
+            if name.hasPrefix("com.apple.root.") { return "apple.root" }
+            return "apple.autre"
+        }
+        return "autre"
+    }
+
     /// Rejette le nom entier si un octet n'est pas autorisé, y compris après le plafond.
     public static func safeName(_ name: String?) -> String? {
         guard let name, !name.isEmpty, name.utf8.allSatisfy({

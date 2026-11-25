@@ -68,9 +68,9 @@ extension BackupRoundTripTests {
                                                    ["BackupApp-\\(UUID().uuidString)", "Kyokasho", "Models", "definition-translations.json", "preferences.plist"]),
         "Packages/KyokashoKit/Sources/ReaderCore/LibraryBackup.swift": ("sauvegarde complète (#51) : temporaire tmp/BackupWrite-<UUID>/ (copies des bases, relecture check/)",
                                                                         ["BackupWrite-\\(UUID().uuidString)", "check", "db-\\(index).sqlite"]),
-        "App/Settings/Diagnostics.swift": ("diagnostic : Documents/Diagnostics/journal.txt, journal.1.txt (DEC-06), journal-avant-diagnostics.txt (DEC-07)",
-                                           ["Diagnostics", "journal.txt", "journal.1.txt", "journal-avant-diagnostics.txt",
-                                            "energie-avant-diagnostics.csv"]),
+        // Anciens fichiers mis à l'écart (DEC-07) : noms de `DiagnosticFileMigration.isolatedNames`, même dossier.
+        "App/Settings/Diagnostics.swift": ("diagnostic : Documents/Diagnostics/journal.txt, journal.1.txt (DEC-06), *-avant-diagnostics* (DEC-07)",
+                                           ["Diagnostics", "journal.txt", "journal.1.txt"]),
         "App/Settings/StorageUsage.swift": ("lecture seule (calcul de l'espace)", ["Analysis", "Dictionaries", "Documents", "Kyokasho", "unidic"]),
         "App/Settings/GitHubUpdate.swift": ("cache : Caches/Update", ["Update"]),
         "App/Reader/ScanSharpening.swift": ("cache : Caches/Sharpened", ["Sharpened"]),
