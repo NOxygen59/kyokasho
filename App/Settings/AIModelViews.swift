@@ -467,7 +467,7 @@ struct QwenChatView: View {
         selectedChat.readings = DomainLexicon.shared.readings
         chat = selectedChat
         do {
-            try await Diagnostics.measure("chargement de \(spec.title) (chat)", "chat") {
+            try await Diagnostics.measure("chargement de \(AITaskCenter.diagnosticModelName(spec.id)) (chat)", "chat") {
                 try await selectedChat.start(history: document == nil ? messages : [], grounded: document != nil,
                                              settings: AIChatSettingsStore.load(spec.id))
             }
@@ -854,7 +854,7 @@ struct QwenChatView: View {
             } catch is CancellationError {
             } catch {
                 self.error = error.localizedDescription
-                Diagnostics.remember("chat", String(localized: "✗ réponse : \(error.localizedDescription)"))
+                Diagnostics.remember("chat", String(localized: "✗ réponse : \(Diagnostics.describe(error))"))
             }
             if messages[index].text.isEmpty { messages[index].text = String(localized: "(pas de réponse)") }
             answering = nil

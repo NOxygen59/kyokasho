@@ -41,7 +41,7 @@ final class ReviewModel: ObservableObject {
             persistentStorageAvailable = true
         } else {
             // Revue DeepSeek Cartes E1 (n°3) : jamais en silence. Rien n'est effacé sur le disque ; l'accueil le dit.
-            if let openError { Diagnostics.error("base des cartes illisible : \(openError.localizedDescription)", "cartes") }
+            if let openError { Diagnostics.error("base des cartes illisible : \(Diagnostics.describe(openError))", "cartes") }
             store = try! ReviewStore.inMemory()
             persistentStorageAvailable = false
         }

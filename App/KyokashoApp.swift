@@ -253,7 +253,7 @@ private enum MacInitialWindow {
         restrictions.minimumSize = appSize
         restrictions.maximumSize = appSize
         scene.requestGeometryUpdate(.Mac(systemFrame: frame)) { error in
-            Diagnostics.error("fenêtre Mac : \(error.localizedDescription)", "app")
+            Diagnostics.error("fenêtre Mac : \(Diagnostics.describe(error))", "app")
         }
         try? await Task.sleep(nanoseconds: 500_000_000)
         restrictions.minimumSize = minimum

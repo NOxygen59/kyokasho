@@ -128,12 +128,16 @@ final class AITaskCenter: ObservableObject {
         }
     }
 
-    func log(_ id: UUID, _ line: String) {
+    /// `journal` : version de la ligne pour le journal quand l'affichée contient un message d'erreur système
+    /// (PLAN-DIAG-001, DEC-01) ; sinon la ligne affichée est reprise.
+    func log(_ id: UUID, _ line: String, journal: String? = nil) {
         guard let i = jobs.firstIndex(where: { $0.id == id }) else { return }
         let time = Date().formatted(date: .omitted, time: .standard)
         jobs[i].log.append("\(time)  \(line)")
         if jobs[i].log.count > 200 { jobs[i].log.removeFirst(jobs[i].log.count - 200) }
-        Diagnostics.log("\(jobs[i].title) · \(line)", "ia")
+        // Le titre d'une tâche peut contenir celui du livre (« Lecture IA de « … » ») : le journal ne garde que
+        // le type d'action et le modèle (PLAN-DIAG-001, DEC-01).
+        Diagnostics.log("\(jobs[i].activity ?? "tâche IA") (\(jobs[i].modelId.map(Self.diagnosticModelName) ?? "IA")) · \(journal ?? line)", "ia")
     }
 
     /// Retire la tâche de la liste en cours et la garde dans `recent`, avec sa fin écrite au journal.
@@ -147,6 +151,12 @@ final class AITaskCenter: ObservableObject {
     }
 
     /// Nom affiché d'un modèle (pastilles, journal).
+    /// Nom d'un modèle pour le journal et le relevé de batterie : les modèles importés n'y sont jamais nommés
+    /// (leur nom vient de l'utilisateur, PLAN-DIAG-001 DEC-01).
+    static func diagnosticModelName(_ id: String) -> String {
+        LocalModels.name(id) == nil ? modelName(id) : "modèle importé"
+    }
+
     static func modelName(_ id: String) -> String {
         switch id {
         case ModelSpec.ovisocr2.id: return "OvisOCR2"

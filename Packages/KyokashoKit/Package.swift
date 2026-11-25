@@ -10,6 +10,7 @@ let package = Package(
     platforms: [.iOS(.v16), .macOS(.v14)],
     products: [
         .library(name: "ReaderCore", targets: ["ReaderCore"]),
+        .library(name: "DiagnosticKit", targets: ["DiagnosticKit"]),
         .library(name: "OCRKit", targets: ["OCRKit"]),
         .library(name: "DictionaryKit", targets: ["DictionaryKit"]),
         .library(name: "ReviewKit", targets: ["ReviewKit"]),
@@ -26,11 +27,15 @@ let package = Package(
         .package(url: "https://github.com/open-spaced-repetition/swift-fsrs", revision: "4fbaf20184d62f82a9f44f343337c61a2c5483e9"),
     ],
     targets: [
+        // Code original (MIT) : événements typés du journal, sans dépendance (PLAN-DIAG-001, E1). Les paquets qui
+        // émettent en dépendent directement ; l'app branche le récepteur.
+        .target(name: "DiagnosticKit"),
         // Code original (MIT) : modèles, base, import, réglages, logique pure.
         .target(
             name: "ReaderCore",
             // ZIPFoundation : déjà utilisé par DictionaryKit (même version résolue) ; sert au paquet .kyokasho.
-            dependencies: [.product(name: "GRDB", package: "GRDB.swift"),
+            dependencies: ["DiagnosticKit",
+                           .product(name: "GRDB", package: "GRDB.swift"),
                            .product(name: "ZIPFoundation", package: "ZIPFoundation")]
         ),
         // Code original (MIT) : moteurs OCR, boîtes de caractères, cache, banc d'essai.
@@ -63,6 +68,7 @@ let package = Package(
         // Code original (MIT) : découpage en mots et lectures (MeCab + dictionnaire UniDic téléchargé à part).
         .target(name: "MorphologyKit", dependencies: ["MeCabC"]),
         .testTarget(name: "ReaderCoreTests", dependencies: ["ReaderCore"]),
+        .testTarget(name: "DiagnosticKitTests", dependencies: ["DiagnosticKit"]),
         // Compile le vrai orchestrateur App via un lien, avec des adaptateurs Mac sans interface.
         .testTarget(name: "PageShiftTests", dependencies: ["ReaderCore", "OCRKit", "ReviewKit"]),
         .testTarget(name: "YomitanKitTests", dependencies: ["YomitanKit"]),

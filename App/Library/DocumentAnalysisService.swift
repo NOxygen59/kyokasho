@@ -145,7 +145,7 @@ final class DocumentAnalysisService: ObservableObject {
         }
         progress = Progress(documentId: id, phase: String(localized: "Lecture OCR"), done: 0, total: pages.count, phaseStarted: Date())
         UIApplication.shared.isIdleTimerDisabled = true
-        Diagnostics.log("analyse \(document.title) : pages \(range.lowerBound + 1)–\(range.upperBound + 1), lecteurs \(readers)\(reread ? ", relecture" : "")", "analyse")
+        Diagnostics.log("analyse doc \(Diagnostics.ref(document.id)) : pages \(range.lowerBound + 1)–\(range.upperBound + 1), lecteurs \(readers)\(reread ? ", relecture" : "")", "analyse")
 
         // Toute tâche créée est marquée de son document avant la création : c'est la clé qui borne
         // l'attente de `cancelAndFinish` au bon document (revue DeepSeek constat n°1).
@@ -465,7 +465,7 @@ final class DocumentAnalysisService: ObservableObject {
                     self.invalidatePage(source, documentId: id)
                 } catch {
                     self.lastError = String(localized: "Page \(document.pageLabel(source)) : \(error.localizedDescription)")
-                    Diagnostics.error(error.localizedDescription, String(localized: "corrections OvisOCR2 p. \(document.pageLabel(source))"))
+                    Diagnostics.error("corrections OvisOCR2 p. \(source + 1) : \(Diagnostics.describe(error))", "analyse")
                 }
             }
             self?.correctionsDone = total

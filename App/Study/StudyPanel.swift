@@ -1163,7 +1163,7 @@ struct StudyNotesTab: View {
         do {
             markdownFile = SharedFile(url: try MarkdownShareFile.write(text, title: reader.document.title))
         } catch {
-            Diagnostics.error("Export Markdown impossible : \(error.localizedDescription)", "notes")
+            Diagnostics.error("Export Markdown impossible : \(Diagnostics.describe(error))", "notes")
         }
     }
 
@@ -1179,7 +1179,7 @@ struct StudyNotesTab: View {
         do {
             try drafts.setDraft(text, documentId: reader.document.id, page: draftPage)
         } catch {
-            Diagnostics.error("Brouillon de note non enregistré : \(error.localizedDescription)", "notes")
+            Diagnostics.error("Brouillon de note non enregistré : \(Diagnostics.describe(error))", "notes")
         }
         refreshPending()
     }

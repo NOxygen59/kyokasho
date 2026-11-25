@@ -215,7 +215,7 @@ struct PageCardsView: View {
                 throw CancellationError()
             } catch {
                 otherWordsNote = String(localized: "Autres mots illisibles : \(error.localizedDescription)")
-                Diagnostics.error("Cartes p. \(page), autres mots : \(error.localizedDescription)", "cartes")
+                Diagnostics.error("Cartes p. \(page), autres mots : \(Diagnostics.describe(error))", "cartes")
             }
             // DEC-CA-03 : une seule carte par mot ; celles qui existent déjà sont signalées et décochées.
             let store = review.store
@@ -231,7 +231,7 @@ struct PageCardsView: View {
             return
         } catch {
             self.error = error.localizedDescription
-            Diagnostics.error("Cartes p. \(page) : \(error.localizedDescription)", "cartes")
+            Diagnostics.error("Cartes p. \(page) : \(Diagnostics.describe(error))", "cartes")
         }
     }
 
@@ -298,7 +298,7 @@ struct PageCardsView: View {
             Diagnostics.log("Cartes p. \(page) : \(added) ajoutées", "cartes")
         } catch {
             self.error = String(localized: "Ajout impossible : \(error.localizedDescription)")
-            Diagnostics.error("Cartes p. \(page) : \(error.localizedDescription)", "cartes")
+            Diagnostics.error("Cartes p. \(page) : \(Diagnostics.describe(error))", "cartes")
         }
     }
 }

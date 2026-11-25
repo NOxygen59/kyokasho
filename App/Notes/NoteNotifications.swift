@@ -47,7 +47,7 @@ enum NoteNotifications {
             guard Generation.isCurrent(generation) else { return }
             let notes: [OrganizedNote]
             do { notes = try database.organizedNotes(includeArchived: false, excludingDocuments: excluded) } catch {
-                Diagnostics.error("rappels des notes : \(error.localizedDescription)", "notes")
+                Diagnostics.error("rappels des notes : \(Diagnostics.describe(error))", "notes")
                 return
             }
             let center = UNUserNotificationCenter.current()
@@ -86,7 +86,7 @@ enum NoteNotifications {
                                                     trigger: UNCalendarNotificationTrigger(dateMatching: reminder.trigger.components,
                                                                                            repeats: reminder.trigger.repeats))
                 do { try await center.add(request) } catch {
-                    Diagnostics.error("rappel non programmé : \(error.localizedDescription)", "notes")
+                    Diagnostics.error("rappel non programmé : \(Diagnostics.describe(error))", "notes")
                 }
             }
         }

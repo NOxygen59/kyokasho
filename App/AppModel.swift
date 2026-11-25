@@ -188,7 +188,7 @@ final class AppModel: ObservableObject {
         database.documentsPublisher()
             // Bibliothèque illisible : le dire, plutôt que de la montrer vide comme si tout avait disparu.
             .catch { [weak self] error -> Empty<[LibraryDocument], Never> in
-                Diagnostics.error("lecture de la bibliothèque : \(error.localizedDescription)", "app")
+                Diagnostics.error("lecture de la bibliothèque : \(Diagnostics.describe(error))", "app")
                 DispatchQueue.main.async {
                     self?.lastError = String(localized: "La bibliothèque n'a pas pu être lue. Tes documents restent sur l'iPad : réinstalle la dernière version de l'app.")
                 }
@@ -228,7 +228,7 @@ final class AppModel: ObservableObject {
         database.foldersPublisher()
             .catch { error -> Empty<LibraryFolders, Never> in
                 // Dossiers illisibles : l'accueil reste utilisable, sans dossiers (les documents restent visibles).
-                Diagnostics.error("lecture des dossiers : \(error.localizedDescription)", "bibliotheque")
+                Diagnostics.error("lecture des dossiers : \(Diagnostics.describe(error))", "bibliotheque")
                 return Empty()
             }
             .receive(on: DispatchQueue.main)
@@ -381,7 +381,7 @@ final class AppModel: ObservableObject {
         documents.removeAll { $0.id == document.id }
         pendingDocuments?.removeAll { $0.id == document.id }
         if !trashedDocuments.contains(where: { $0.id == document.id }) { trashedDocuments.insert(document, at: 0) }
-        Diagnostics.log("corbeille : « \(document.title) » mis de côté", "bibliotheque")
+        Diagnostics.log("corbeille : doc \(Diagnostics.ref(document.id)) mis de côté", "bibliotheque")
     }
 
     func restoreFromTrash(_ document: LibraryDocument) {
@@ -389,7 +389,7 @@ final class AppModel: ObservableObject {
         saveTrash()
         trashedDocuments.removeAll { $0.id == document.id }
         documents = ((try? database.allDocuments()) ?? documents).filter { !trash.contains($0.id) && !deletingIds.contains($0.id) }
-        Diagnostics.log("corbeille : « \(document.title) » restauré", "bibliotheque")
+        Diagnostics.log("corbeille : doc \(Diagnostics.ref(document.id)) restauré", "bibliotheque")
     }
 
     /// Efface pour de bon (le même effacement qu'avant la corbeille).
@@ -580,7 +580,7 @@ final class AppModel: ObservableObject {
                 badge = try database.noteDueBadge(today: now, excludingDocuments: excluded)
             } catch {
                 // Revue DeepSeek F7 : jamais confondu avec « aucune note » sans trace.
-                Diagnostics.error("pastille des notes : \(error.localizedDescription)", "notes")
+                Diagnostics.error("pastille des notes : \(Diagnostics.describe(error))", "notes")
                 return
             }
             await MainActor.run {
@@ -733,7 +733,7 @@ final class AppModel: ObservableObject {
             do {
                 try DocumentAITextStore.removePages(documentId: document.id, pages: pages)
             } catch {
-                Diagnostics.error("rotation : lectures IA non effacées : \(error.localizedDescription)", "lecteur")
+                Diagnostics.error("rotation : lectures IA non effacées : \(Diagnostics.describe(error))", "lecteur")
                 lastError = String(localized: "Orientation appliquée, mais d'anciennes lectures IA n'ont pas pu être effacées.")
             }
             for page in pages { DocumentAnalysisService.shared.invalidatePage(page, documentId: document.id) }

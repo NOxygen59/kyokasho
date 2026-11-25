@@ -1001,9 +1001,9 @@ enum PageShift {
                 try fm.createDirectory(at: conflicts.folder, withIntermediateDirectories: true)
                 try fm.moveItem(at: source, to: conflicts.folder.appendingPathComponent(source.lastPathComponent))
                 noteConflict(conflicts.documentId)
-                Diagnostics.error(String(localized: "Remplacement : « \(target.lastPathComponent) » existe déjà, « \(source.lastPathComponent) » est mis de côté dans « Conflits-remplacement »."), "pages")
+                Diagnostics.error("Remplacement : la cible existe déjà, la source est mise de côté dans « Conflits-remplacement »", "pages")
             } else {
-                Diagnostics.error(String(localized: "Remplacement : « \(target.lastPathComponent) » existe déjà, « \(source.lastPathComponent) » est gardé en secours."), "pages")
+                Diagnostics.error("Remplacement : la cible existe déjà, la source est gardée en secours", "pages")
             }
             return
         }
@@ -1085,9 +1085,9 @@ enum PageShift {
                 }
                 try hit("purge.database")
                 try fm.removeItem(at: copy.folder)
-                Diagnostics.log("pages : copie \(copy.folder.lastPathComponent) effacée après 30 jours", "pages")
+                Diagnostics.log("pages : copie effacée après 30 jours", "pages")
             } catch {
-                Diagnostics.error("pages : copie \(copy.folder.lastPathComponent) non effacée — \(error.localizedDescription)", "pages")
+                Diagnostics.error("pages : copie non effacée — \(Diagnostics.describe(error))", "pages")
             }
         }
     }
@@ -1127,7 +1127,7 @@ enum PageShift {
         for copy in copies() where [plan.archiveId, token].contains(copy.folder.lastPathComponent)
             && copy.manifest?.documentId == p.documentId {
             do { try erase(copy, model: model, now: Date()) } catch {
-                Diagnostics.error("pages : copie \(copy.folder.lastPathComponent) gardée — \(error.localizedDescription)", "pages")
+                Diagnostics.error("pages : copie gardée — \(Diagnostics.describe(error))", "pages")
             }
         }
     }
@@ -1137,7 +1137,7 @@ enum PageShift {
             try model.database.purgeArchive(editId: copy.folder.lastPathComponent, at: now)
         }
         try fm.removeItem(at: copy.folder)
-        Diagnostics.log("pages : copie \(copy.folder.lastPathComponent) effacée", "pages")
+        Diagnostics.log("pages : copie effacée", "pages")
     }
 
     /// Document supprimé définitivement : ses copies partent avec lui (sa base est déjà effacée par cascade),
@@ -1183,7 +1183,7 @@ enum PageShift {
             model.storageRecoveryError = nil
             Diagnostics.error(String(localized: "Journal de reprise mis de côté dans « Conflits-remplacement/journaux-refusés » : l'app redémarre sans le rejouer, rien n'est effacé."), "pages")
         } catch {
-            Diagnostics.error("pages : journal refusé non déplacé — \(error.localizedDescription)", "pages")
+            Diagnostics.error("pages : journal refusé non déplacé — \(Diagnostics.describe(error))", "pages")
         }
     }
 

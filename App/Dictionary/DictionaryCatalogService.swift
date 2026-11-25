@@ -109,7 +109,7 @@ final class DictionaryCatalogService: ObservableObject {
                     }
                 }
                 self?.updates[entry.id] = nil
-                Diagnostics.log("dictionnaires : « \(index.title) » installé depuis le catalogue", "dictionnaire")
+                Diagnostics.log("dictionnaires : un dictionnaire du catalogue installé", "dictionnaire")
             } catch is CancellationError {
             } catch DictionaryImporter.ImportError.cancelled {
                 // Import arrêté par « Annuler » : l'importeur a retiré ce qu'il avait commencé, pas une erreur.
@@ -117,7 +117,7 @@ final class DictionaryCatalogService: ObservableObject {
                 // Téléchargement arrêté par « Annuler » : pas une erreur.
             } catch {
                 self?.errors[entry.id] = error.localizedDescription
-                Diagnostics.log("dictionnaires : échec « \(entry.name) » — \(error.localizedDescription)", "dictionnaire")
+                Diagnostics.log("dictionnaires : échec d'un dictionnaire du catalogue — \(Diagnostics.describe(error))", "dictionnaire")
             }
             model.reload()
             model.applyFirstLanguage()
@@ -157,11 +157,11 @@ final class DictionaryCatalogService: ObservableObject {
                         Task { @MainActor in self?.working = (id, .importing(p.fraction)) }
                     }
                 }.value
-                Diagnostics.log("dictionnaires : « \(info.title) » (\(info.revision)) installé depuis l'app", "dictionnaire")
+                Diagnostics.log("dictionnaires : lexique fourni installé", "dictionnaire")
             } catch is CancellationError {
             } catch {
                 self?.errors[id] = error.localizedDescription
-                Diagnostics.log("dictionnaires : échec du lexique fourni — \(error.localizedDescription)", "dictionnaire")
+                Diagnostics.log("dictionnaires : échec du lexique fourni — \(Diagnostics.describe(error))", "dictionnaire")
             }
             model.reload()
             model.applyFirstLanguage()

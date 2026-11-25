@@ -186,7 +186,7 @@ enum LibraryBackupService {
         } catch {
             restoreBlocked = true
             restoreMessage = String(localized: "Restauration inachevée : rien n'a été effacé. Ferme puis rouvre l'app. (\(error.localizedDescription))")
-            Diagnostics.error("restauration : \(error.localizedDescription)", "sauvegarde")
+            Diagnostics.error("restauration : \(Diagnostics.describe(error))", "sauvegarde")
             return
         }
         Diagnostics.write("restauration de \(marker.backupName)…", level: .info, area: "sauvegarde", sync: true)
@@ -205,7 +205,7 @@ enum LibraryBackupService {
         } catch {
             restoreBlocked = true
             restoreMessage = String(localized: "Restauration inachevée : rien n'a été effacé. Ferme puis rouvre l'app pour la reprendre. (\(error.localizedDescription))")
-            Diagnostics.error("restauration : \(error.localizedDescription)", "sauvegarde")
+            Diagnostics.error("restauration : \(Diagnostics.describe(error))", "sauvegarde")
         }
     }
 
@@ -242,7 +242,7 @@ enum LibraryBackupService {
             guard folder != nil else { throw fail(String(localized: "Choisis d'abord un dossier de sauvegarde : la copie de sécurité y sera écrite.")) }
             let safety = try await backup(model)
             _ = try LibraryRestore.writeMarker(support: support, id: prepared.id, backupName: prepared.name)
-            Diagnostics.log("sauvegarde : restauration de \(prepared.name) prête, sécurité \(safety.url.lastPathComponent)", "sauvegarde")
+            Diagnostics.log("sauvegarde : restauration prête, copie de sécurité faite", "sauvegarde")
             return safety
         } catch {
             try? FileManager.default.removeItem(at: staging)

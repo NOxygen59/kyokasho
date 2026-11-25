@@ -56,7 +56,7 @@ final class EnergyMeter {
     /// ici, seulement le nom du modèle ou le type d'action.
     private func activity() -> String {
         var parts: [String] = []
-        let models = Set(AITaskCenter.shared.jobs.map { $0.modelId.map(AITaskCenter.modelName) ?? "IA" }).sorted()
+        let models = Set(AITaskCenter.shared.jobs.map { $0.modelId.map(AITaskCenter.diagnosticModelName) ?? "IA" }).sorted()
         if !models.isEmpty { parts.append("IA : " + models.joined(separator: " + ")) }
         if DocumentAnalysisService.shared.progress != nil { parts.append("Analyse du document") }
         if parts.isEmpty { parts.append(model?.openDocumentId != nil ? "Lecture" : "Bibliothèque ou réglages") }
@@ -74,7 +74,8 @@ final class EnergyMeter {
         guard let loaded = status.loaded else { return "" }
         let specs: [(ModelSpec, String)] = [(.ovisocr2, "OvisOCR2"), (.glmocr, "GLM-OCR"),
                                             (.qwen3vl4b, "Qwen3-VL"), (.qwen35chat4b, "Qwen3.5")]
-            + LocalModels.specs().map { ($0, $0.title) }   // modèles importés (PLAN-MODLOC-001, E3)
+            // Modèles importés (PLAN-MODLOC-001, E3) : jamais nommés dans le relevé (PLAN-DIAG-001, DEC-01).
+            + LocalModels.specs().map { ($0, "modèle importé") }
         return specs.filter { ModelStore.shared.directory($0.0) == loaded }.map(\.1).joined(separator: "+")
     }
 
@@ -99,7 +100,8 @@ final class EnergyMeter {
         sample.tone = model?.openDocumentId == nil ? "" : PageTone.current.rawValue
         sample.aiTasks = aiTasks
         // 8 caractères au plus, et rien hors du lecteur : ce fichier peut être partagé.
-        sample.document = model?.openDocumentId.map { String($0.prefix(EnergyLog.documentPrefix)) } ?? ""
+        // Référence salée, pas un préfixe de l'empreinte du fichier (PLAN-DIAG-001, DEC-01).
+        sample.document = model?.openDocumentId.map(Diagnostics.ref) ?? ""
         sample.appVersion = Self.version
         sample.loadedModels = loadedModels(await GLMOCREngine.status())
         previous = sample

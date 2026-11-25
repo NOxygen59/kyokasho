@@ -81,8 +81,9 @@ enum DocumentScan {
                     throw CancellationError()
                 } catch {
                     failures += 1
-                    center.log(job, "p. \(page + 1) : erreur — \(error.localizedDescription)")
-                    Diagnostics.error("scan IA p. \(page) : \(error.localizedDescription)", "scan")
+                    center.log(job, "p. \(page + 1) : erreur — \(error.localizedDescription)",
+                               journal: "p. \(page + 1) : erreur — \(Diagnostics.describe(error))")
+                    Diagnostics.error("scan IA p. \(page) : \(Diagnostics.describe(error))", "scan")
                     // Arrêt signalé sous une autre forme d'erreur : on s'arrête quand même.
                     try Task.checkCancellation()
                 }

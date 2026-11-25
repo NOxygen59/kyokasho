@@ -27,7 +27,7 @@ class DiagnosticCPUWiringTests(unittest.TestCase):
         journal = source("App/Settings/Diagnostics.swift")
         self.assertIn('write(message, area: "cpu", diagnosticOnly: true)', journal)
         self.assertIn("guard !diagnosticOnly || enabled else { return }", journal)
-        self.assertIn(".onChange(of: enabled) { _ in DiagnosticCPU.updateActivation() }", journal)
+        self.assertIn(".onChange(of: enabled) { _ in\n                    DiagnosticCPU.updateActivation()\n                    Diagnostics.updateDetail()", journal)
         self.assertIn("DiagnosticCPU.updateActivation()", source("App/Settings/EnergyMeter.swift"))
 
     def test_activity_snapshot_does_not_consume_monitor_ledger_or_details(self):

@@ -276,7 +276,7 @@ extension ReaderController {
                 // `NSUserCancelledError` (et non `CancellationError`) n'est pas un échec, comme dans `ensureOCR` :
                 // état reposé à `.idle`, rien d'affiché.
                 let cancelled = OCRCancellation.isCancellation(error, taskCancelled: Task.isCancelled)
-                if !cancelled { Diagnostics.error("OCR \(engineID) p. \(source) : \(error.localizedDescription)", "ocr") }
+                if !cancelled { Diagnostics.error("OCR \(engineID) p. \(source) : \(Diagnostics.describe(error))", "ocr") }
                 guard let self else { return }
                 // Moteur demandé en échec : l'ancienne lecture, toujours dessinée et dans le panneau, redevient
                 // explicitement l'OCR retenu (pas de moteur retenu sans lecture ; contre-revue Codex de 51f8a2d, F1).

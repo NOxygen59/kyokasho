@@ -85,7 +85,8 @@ extension ReaderController {
                         AITaskCenter.shared.log(id, String(localized: "p. \(source + 1) : comparée à l'OCR, \(result.suggestions.count) différence(s)"))
                     } catch {
                         result.error = error.localizedDescription
-                        AITaskCenter.shared.log(id, String(localized: "p. \(source + 1) : erreur — \(error.localizedDescription)"))
+                        AITaskCenter.shared.log(id, String(localized: "p. \(source + 1) : erreur — \(error.localizedDescription)"),
+                                                journal: "p. \(source + 1) : erreur — \(Diagnostics.describe(error))")
                     }
                 } else {
                     result.error = String(localized: "Page pas encore lue par l'OCR.")

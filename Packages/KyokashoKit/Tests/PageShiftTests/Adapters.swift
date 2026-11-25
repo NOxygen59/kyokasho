@@ -72,6 +72,8 @@ enum ToneCache { static func clear() {} }
 enum Diagnostics {
     static func error(_ message: String, _ area: String = "app") {}
     static func log(_ message: @autoclosure () -> String, _ area: String = "app") {}
+    /// Même contrat que l'app (PLAN-DIAG-001, DEC-01) : domaine et numéro, jamais le message.
+    static func describe(_ error: Error) -> String { "\((error as NSError).domain)#\((error as NSError).code)" }
 }
 @MainActor final class LayoutRegionsCache {
     static let shared = LayoutRegionsCache()

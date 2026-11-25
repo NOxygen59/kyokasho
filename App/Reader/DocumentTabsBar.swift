@@ -157,13 +157,13 @@ struct DocumentTabsBar: View {
 
     private func select(_ document: LibraryDocument) {
         guard document.id != current else { return }
-        Diagnostics.log("onglets : passage à « \(document.title) »", "lecteur")
+        Diagnostics.log("onglets : passage à doc \(Diagnostics.ref(document.id))", "lecteur")
         ReaderTabHandoff.shared.prepare()
         model.openDocumentId = document.id
     }
 
     private func close(_ document: LibraryDocument) {
-        Diagnostics.log("onglets : fermeture de « \(document.title) »", "lecteur")
+        Diagnostics.log("onglets : fermeture de doc \(Diagnostics.ref(document.id))", "lecteur")
         ReaderTabHandoff.shared.prepare()
         model.closeTab(document.id)
         // Dernier onglet fermé : retour à la bibliothèque, rien à reprendre.
@@ -304,13 +304,13 @@ struct DocumentTileBar: View {
 
     private func select(_ document: LibraryDocument) {
         guard document.id != current else { return }
-        Diagnostics.log("onglets : passage à « \(document.title) »", "lecteur")
+        Diagnostics.log("onglets : passage à doc \(Diagnostics.ref(document.id))", "lecteur")
         ReaderTabHandoff.shared.prepare()
         model.openDocumentId = document.id
     }
 
     private func close(_ document: LibraryDocument) {
-        Diagnostics.log("onglets : fermeture de « \(document.title) »", "lecteur")
+        Diagnostics.log("onglets : fermeture de doc \(Diagnostics.ref(document.id))", "lecteur")
         ReaderTabHandoff.shared.prepare()
         model.closeTab(document.id)
         // Dernier onglet fermé : retour à la bibliothèque, rien à reprendre.

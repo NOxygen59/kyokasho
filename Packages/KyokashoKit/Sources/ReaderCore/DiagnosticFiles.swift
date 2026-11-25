@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: MIT
 // Copyright (c) 2026 NOxygen59
 
+import DiagnosticKit
 import Foundation
 
-/// Niveau d'une ligne du journal (demande du 10/11/2026) : l'ancien format ne disait pas si une ligne était une
-/// simple étape ou une erreur, et il fallait lire le message pour le deviner.
-public enum DiagnosticLevel: String, Sendable {
-    case info, alerte, erreur
-}
+/// Niveau d'une ligne du journal : déplacé dans `DiagnosticKit` (PLAN-DIAG-001, E1), alias gardé pour les appelants.
+public typealias DiagnosticLevel = DiagnosticKit.DiagnosticLevel
 
 /// Fichiers de diagnostic (journal et relevé de batterie) : quand ils deviennent trop gros, l'utilisateur doit le
 /// savoir et pouvoir les partager puis les effacer. Décision pure, testée, sans accès au disque.
@@ -15,8 +13,8 @@ public enum DiagnosticLevel: String, Sendable {
 /// Demande de NOxygen59 du 10/11/2026 : une bannière **permanente**, dans la bibliothèque comme dans le lecteur,
 /// tant que les fichiers dépassent les seuils ; elle disparaît d'elle-même une fois les fichiers effacés.
 public enum DiagnosticFiles {
-    /// Rotation du journal : au-delà, la seconde moitié est gardée et la coupe est notée en tête du fichier.
-    public static let journalRotationBytes = 2_000_000
+    /// Rotation du journal : au-delà, il devient `journal.1.txt` et un nouveau journal commence (DEC-06 B, 5 Mo).
+    public static let journalRotationBytes = DiagnosticJournalPolicy.rotationBytes
     /// Rotation du relevé de batterie : **au-dessus** du seuil d'alerte (1 Mo), sinon le fichier serait coupé avant de
     /// pouvoir dépasser 1 Mo et la bannière ne resterait jamais affichée (relevé de 12 jours ≈ 1,5 Mo).
     public static let energyRotationBytes = 2_000_000
@@ -44,12 +42,6 @@ public enum DiagnosticFiles {
     /// (`docs/DEBOGAGE.md`) : le message tient toujours sur **une** ligne, sinon un événement compterait pour plusieurs.
     public static func journalLine(_ level: DiagnosticLevel, area: String, message: String, at date: Date,
                                    timeZone: TimeZone = .current) -> String {
-        let formatter = ISO8601DateFormatter()
-        formatter.timeZone = timeZone
-        formatter.formatOptions = [.withFullDate, .withFullTime, .withFractionalSeconds]
-        let oneLine = message.replacingOccurrences(of: "\r\n", with: " ")
-            .replacingOccurrences(of: "\r", with: " ")
-            .replacingOccurrences(of: "\n", with: " ")
-        return "\(formatter.string(from: date)) [\(level.rawValue)] [\(area)] \(oneLine)"
+        DiagnosticLine.legacy(level, area: area, message: message, at: date, timeZone: timeZone)
     }
 }

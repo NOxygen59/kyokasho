@@ -25,7 +25,8 @@ Les chemins ci-dessous sont relatifs au conteneur de l'app sur iPad. Ils ne dés
 | Lexique | `DomainLexicon`, fichier `lexique.json` | Donnée personnelle à inclure dans l'inventaire de sauvegarde |
 | Préférences | Base et UserDefaults / AppStorage | Un export PDF ne les transporte pas |
 | Identifiants de compte | Trousseau selon intégration Drive/GitHub/DeepL | Ne pas exporter dans Git ou les rapports ; prévoir reconnexion |
-| Diagnostic | `Documents/Diagnostics/journal.txt` | Potentiellement personnel ; partager après contrôle |
+| Diagnostic | `Documents/Diagnostics/journal.txt` et `journal.1.txt` (journal précédent, au-delà de 5 Mo) | Sans titre, chemin, texte ni message d'erreur système depuis PLAN-DIAG-001 E1 ; relire avant de publier |
+| Diagnostic (ancien) | `Documents/Diagnostics/journal-avant-diagnostics.txt` | Journal écrit avant PLAN-DIAG-001 : peut contenir des titres et des chemins ; jamais partagé par l'app, effacé par « Effacer le journal » |
 | Relevé de batterie (#20) | `Documents/Diagnostics/energie.csv` | Seulement si « Relevé de batterie » est allumé : niveau, chaleur, activité de l'app par minute ; non essentiel |
 | Vignettes, pages préparées/nettoyées | `Caches/`, dont Thumbnails, Sharpened, Equalized | Régénérables ; ne pas supprimer une tâche active |
 | Reprise d'une modification des pages (ajout, suppression, restauration) | `Application Support/Kyokasho/page-shift.json` et PDF de passage | État transactionnel : ne pas effacer à la main |

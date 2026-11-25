@@ -4,6 +4,7 @@
 import Foundation
 import OCRKit
 import MLX
+import DiagnosticKit
 import ReaderCore
 import SwiftUI
 import UIKit
@@ -17,14 +18,26 @@ enum Diagnostics {
 
     static let enabledKey = "diagnostics.enabled"
     static var enabled: Bool { UserDefaults.standard.bool(forKey: enabledKey) }
+    /// Version du format du journal déjà en place (DEC-07) et sel des références de documents (`DiagnosticRef`).
+    private static let formatKey = "diagnostics.formatVersion"
+    private static let saltKey = "diagnostics.refSalt"
 
     static var folder: URL {
         FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent("Diagnostics", isDirectory: true)
     }
+    // Noms écrits en clair : la garde de l'inventaire des données (DATA-02) les lit ; un test vérifie qu'ils sont
+    // ceux de `DiagnosticJournalPolicy` (`tests/test_diagnostics_privacy.py`).
     static var file: URL { folder.appendingPathComponent("journal.txt") }
+    /// Journal précédent, gardé à la rotation (DEC-06 B).
+    static var previousFile: URL { folder.appendingPathComponent("journal.1.txt") }
+    /// Journal écrit avant PLAN-DIAG-001, mis à l'écart (DEC-07 A) : jamais partagé, effacé avec le reste.
+    static var quarantinedFile: URL { folder.appendingPathComponent("journal-avant-diagnostics.txt") }
 
     private static let queue = DispatchQueue(label: "fr.noxygen59.kyokasho.diagnostics")
-    private static let limit = DiagnosticFiles.journalRotationBytes
+    /// Lignes en attente d'écriture et lignes perdues faute de place (file bornée, PLAN-DIAG-001 E1).
+    private static let pendingLock = NSLock()
+    nonisolated(unsafe) private static var pending = 0
+    nonisolated(unsafe) private static var dropped = 0
 
     /// Étape détaillée (seulement en mode diagnostic).
     static func log(_ message: @autoclosure () -> String, _ area: String = "app") {
@@ -37,7 +50,8 @@ enum Diagnostics {
         write(message, area: "cpu", diagnosticOnly: true)
     }
 
-    /// Erreur : toujours notée.
+    /// Erreur : toujours notée. Le message est un texte du code : jamais un titre, un chemin ni le message d'une
+    /// erreur système (`describe(_:)` à la place) ; garde `tests/test_diagnostics_privacy.py`.
     static func error(_ message: String, _ area: String = "app") {
         write(message, level: .erreur, area: area)
     }
@@ -47,6 +61,13 @@ enum Diagnostics {
         write(message, level: .alerte, area: area)
     }
 
+    /// Cause d'une erreur pour le journal : domaine et numéro seulement (DEC-01), jamais `localizedDescription`,
+    /// qui peut contenir un chemin ou un nom de fichier.
+    static func describe(_ error: Error) -> String { DiagnosticCause.from(error).text }
+
+    /// Référence courte et salée d'un document pour le journal, à la place de son titre (DEC-01).
+    static func ref(_ documentId: String) -> String { DiagnosticCenter.shared.ref(documentId) }
+
     /// Une ligne : heure ISO, niveau, zone, message. Écrite tout de suite si `sync`
     /// (utilisé juste avant un arrêt de l'app).
     static func write(_ message: String, level: Level = .info, area: String = "app", sync: Bool = false) {
@@ -54,32 +75,90 @@ enum Diagnostics {
     }
 
     private static func write(_ message: String, level: Level = .info, area: String, sync: Bool = false, diagnosticOnly: Bool) {
-        let now = Date()
-        let text = DiagnosticFiles.journalLine(level, area: area, message: message, at: now) + "\n"
+        // Zone fermée (contrat commun avec les événements typés) ; une ancienne zone inconnue devient `app`.
+        let zone = DiagnosticZone.legacy(area)
+        enqueue(DiagnosticLine.legacy(level, area: zone.rawValue, message: message, at: Date()), sync: sync,
+                diagnosticOnly: diagnosticOnly)
+    }
+
+    /// Récepteur des événements typés (app et paquets) : même file, même fichier que les anciennes lignes.
+    private static func receive(_ event: DiagnosticEvent) {
+        enqueue(DiagnosticLine.event(event, at: Date()), sync: false, diagnosticOnly: false)
+    }
+
+    /// File d'écriture bornée : au-delà de `maxPendingLines`, la ligne est perdue et comptée ; la ligne suivante
+    /// écrite le signale. Rien ici n'appelle le journal : pas de récursion.
+    private static func enqueue(_ line: String, sync: Bool, diagnosticOnly: Bool) {
+        let accepted: Bool = pendingLock.withLock {
+            guard sync || pending < DiagnosticJournalPolicy.maxPendingLines else { dropped += 1; return false }
+            pending += 1
+            return true
+        }
+        guard accepted else { return }
         let work = {
+            let lost: Int = pendingLock.withLock { pending -= 1; defer { dropped = 0 }; return dropped }
             guard !diagnosticOnly || enabled else { return }
-            try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-            if let size = fileSize(limitPath: file), size > limit {
-                // Trop gros : on garde la seconde moitié. La coupe est écrite **en tête** du fichier (date, taille
-                // coupée) : elle ne peut plus passer inaperçue (demande du 10/11/2026).
-                if let data = try? Data(contentsOf: file) {
-                    let kept = data.suffix(limit / 2)
-                    let note = DiagnosticFiles.journalLine(.alerte, area: "journal",
-                                                           message: "Coupe du journal : fichier de \(size) octets, on garde la fin (\(kept.count) octets)",
-                                                           at: now)
-                    try? (Data((note + "\n").utf8) + kept).write(to: file)
-                }
+            var text = line + "\n"
+            let reentrant = DiagnosticCenter.shared.takeReentrantDrops()
+            if lost + reentrant > 0 {
+                text = DiagnosticLine.legacy(.alerte, area: DiagnosticZone.journal.rawValue,
+                                             message: "Lignes perdues : \(lost) (file pleine), \(reentrant) (émises par le journal)",
+                                             at: Date()) + "\n" + text
             }
-            if let handle = try? FileHandle(forWritingTo: file) {
-                handle.seekToEndOfFile()
-                handle.write(Data(text.utf8))
-                try? handle.close()
-            } else {
-                try? Data(text.utf8).write(to: file)
-            }
+            append(text)
         }
         if sync { queue.sync(execute: work) } else { queue.async(execute: work) }
     }
+
+    /// Écrit en fin de journal ; au-delà de 5 Mo, le journal devient `journal.1.txt` (DEC-06 B). Sur la file.
+    private static func append(_ text: String) {
+        let fm = FileManager.default
+        try? fm.createDirectory(at: folder, withIntermediateDirectories: true)
+        if let size = fileSize(limitPath: file), DiagnosticJournalPolicy.shouldRotate(currentBytes: size) {
+            try? fm.removeItem(at: previousFile)
+            try? fm.moveItem(at: file, to: previousFile)
+            let note = DiagnosticLine.legacy(.alerte, area: DiagnosticZone.journal.rawValue,
+                                             message: "Rotation du journal : l'ancien (\(size) octets) est dans \(DiagnosticJournalPolicy.previousName)",
+                                             at: Date())
+            try? Data((note + "\n").utf8).write(to: file)
+        }
+        if let handle = try? FileHandle(forWritingTo: file) {
+            handle.seekToEndOfFile()
+            handle.write(Data(text.utf8))
+            try? handle.close()
+        } else {
+            try? Data(text.utf8).write(to: file)
+        }
+    }
+
+    /// DEC-07 A : un journal écrit avant ce format (il peut contenir des titres et des chemins) est renommé, exclu
+    /// du partage et effacé avec le reste. Une seule fois, au premier lancement de la nouvelle version.
+    private static func quarantineOldJournalIfNeeded() {
+        let defaults = UserDefaults.standard
+        let fm = FileManager.default
+        queue.sync {
+            let stored = defaults.integer(forKey: formatKey)
+            if DiagnosticJournalPolicy.needsQuarantine(storedFormat: stored, journalExists: fm.fileExists(atPath: file.path)) {
+                try? fm.removeItem(at: quarantinedFile)
+                try? fm.moveItem(at: file, to: quarantinedFile)
+                // L'ancien format pouvait aussi être tourné ; jamais de `journal.1.txt` avant ce format.
+                try? fm.removeItem(at: previousFile)
+            }
+            defaults.set(DiagnosticJournalPolicy.formatVersion, forKey: formatKey)
+        }
+    }
+
+    /// Sel des références de documents, tiré une fois par installation.
+    private static func referenceSalt() -> UInt64 {
+        let defaults = UserDefaults.standard
+        if let stored = defaults.string(forKey: saltKey), let value = UInt64(stored) { return value }
+        let value = UInt64.random(in: 1...UInt64.max)
+        defaults.set(String(value), forKey: saltKey)
+        return value
+    }
+
+    /// Mode diagnostic allumé ou éteint : les événements `info` des paquets suivent.
+    static func updateDetail() { DiagnosticCenter.shared.setDetailed(enabled) }
 
     /// Taille d'un fichier en octets (`nil` s'il n'existe pas).
     private static func fileSize(limitPath url: URL) -> Int? {
@@ -88,12 +167,22 @@ enum Diagnostics {
 
     /// Tailles lues pour la bannière de taille : journal et relevé de batterie.
     static func diagnosticSizes() -> (journal: Int, energy: Int) {
-        (fileSize(limitPath: file) ?? 0, fileSize(limitPath: EnergyFile.url) ?? 0)
+        let journal = [file, previousFile, quarantinedFile].reduce(0) { $0 + (fileSize(limitPath: $1) ?? 0) }
+        return (journal, fileSize(limitPath: EnergyFile.url) ?? 0)
     }
 
-    /// Les deux fichiers de diagnostic qui existent, journal d'abord : un seul geste de partage (demande du 10/11/2026).
+    /// Les fichiers de diagnostic qui existent, journal d'abord : un seul geste de partage (demande du 10/11/2026).
+    /// Le journal mis à l'écart (DEC-07) n'en fait jamais partie.
     static func filesForSharing() -> [URL] {
-        [file, EnergyFile.url].filter { FileManager.default.fileExists(atPath: $0.path) }
+        [file, previousFile, EnergyFile.url].filter { FileManager.default.fileExists(atPath: $0.path) }
+    }
+
+    /// « Effacer le journal » : toutes les générations, ancien journal mis à l'écart compris (DEC-06, DEC-07).
+    static func eraseJournal() {
+        queue.sync {
+            for url in [file, previousFile, quarantinedFile] { try? FileManager.default.removeItem(at: url) }
+        }
+        postSizeChange()
     }
 
     /// Les fichiers ont changé (effacement, coupe) : la bannière de taille se remet à jour.
@@ -117,6 +206,11 @@ enum Diagnostics {
     /// ne le contient pas). L'en-tête est réécrit à chaque lancement (demande du 10/11/2026) : c'est lui qui dit dans
     /// quelles conditions le journal a été produit.
     static func start() {
+        // Avant toute ligne : ancien journal mis à l'écart, puis récepteur des paquets branché (une seule fois, avant
+        // la restauration de la bibliothèque appelée juste après par `KyokashoApp`).
+        quarantineOldJournalIfNeeded()
+        DiagnosticCenter.shared.install(sink: { receive($0) }, salt: referenceSalt())
+        updateDetail()
         let info = Bundle.main.infoDictionary
         let version = "\(info?["CFBundleShortVersionString"] as? String ?? "?") (\(info?["CFBundleVersion"] as? String ?? "?"))"
         let memory = ProcessInfo.processInfo.physicalMemory / 1_048_576
@@ -182,8 +276,8 @@ enum Diagnostics {
             if enabled { log("✓ \(name) en \(seconds) s (mémoire \(Int(footprintMB())) Mo)", area) }
             return result
         } catch {
-            remember(area, "✗ \(name) : \(error.localizedDescription)")
-            Diagnostics.error("\(name) : \(error.localizedDescription)", area)
+            remember(area, "✗ \(name) : \(describe(error))")
+            Diagnostics.error("\(name) : \(describe(error))", area)
             throw error
         }
     }
@@ -223,7 +317,10 @@ struct DiagnosticsSection: View {
     var body: some View {
         Section {
             Toggle("Mode diagnostic", isOn: $enabled)
-                .onChange(of: enabled) { _ in DiagnosticCPU.updateActivation() }
+                .onChange(of: enabled) { _ in
+                    DiagnosticCPU.updateActivation()
+                    Diagnostics.updateDetail()
+                }
             Button { showLog = true } label: {
                 Label("Voir le journal", systemImage: "doc.text.magnifyingglass")
             }
@@ -232,10 +329,7 @@ struct DiagnosticsSection: View {
             ShareLink(items: Diagnostics.filesForSharing()) {
                 Label("Partager le relevé et le journal", systemImage: "square.and.arrow.up.on.square")
             }
-            Button("Effacer le journal", role: .destructive) {
-                try? FileManager.default.removeItem(at: Diagnostics.file)
-                Diagnostics.postSizeChange()
-            }
+            Button("Effacer le journal", role: .destructive) { Diagnostics.eraseJournal() }
         } header: {
             Text("Diagnostic")
         } footer: {
@@ -353,7 +447,7 @@ private struct OvisReadingExportView: View {
             case .success(nil): message = String(localized: "OvisOCR2 n'a encore lu aucune page de « \(document.title) ».")
             case .failure(let error):
                 message = String(localized: "Extraction impossible : \(error.localizedDescription)")
-                Diagnostics.error("extraction des lectures : \(error.localizedDescription)", "diagnostic")
+                Diagnostics.error("extraction des lectures : \(Diagnostics.describe(error))", "diagnostic")
             }
         }
     }

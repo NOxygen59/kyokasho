@@ -163,7 +163,7 @@ extension AppModel {
         FuriganaLayer.clearMemory() // PDF peut-être remplacé : ses cadres ne valent plus.
         DocumentAnalysisService.shared.reloadAfterPageShift(id)
         refreshPrintedNumbers()
-        Diagnostics.log("paquet : « \(contents.manifest.title) » importé\(replacing ? " (remplacé)" : "")", "import")
+        Diagnostics.log("paquet importé\(replacing ? " (remplacé)" : "")", "import")
         return safety
     }
 
