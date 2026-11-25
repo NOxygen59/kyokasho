@@ -19,7 +19,8 @@ PERSISTENT_DATABASES = (
     "Library/Application Support/Kyokasho/kyokasho.sqlite",
     "Library/Application Support/Kyokasho/Review/review.sqlite",
 )
-CACHES = ("Library/Caches", "tmp")
+# PLAN-DIAG-001 E2a : état de session du diagnostic, propre à l'appareil, jamais sauvegardé ni restauré.
+CACHES = ("Library/Caches", "tmp", "Library/Application Support/KyokashoDiagnosticState")
 MODELS = "Library/Application Support/Kyokasho/Models"
 # Dictionnaires : retéléchargeables depuis le catalogue de l'app (#50, décision de NOxygen59 du 29/10/2026). Option
 # explicite seulement : un dictionnaire importé à la main (fichier .zip perso) ne se retélécharge pas.

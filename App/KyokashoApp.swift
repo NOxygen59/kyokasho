@@ -16,6 +16,8 @@ struct KyokashoApp: App {
         UNUserNotificationCenter.current().delegate = NoteNotificationDelegate.shared
         // Avant tout : journal de diagnostic et gestionnaire d'erreurs MLX (message noté avant un arrêt).
         Diagnostics.start()
+        // PLAN-DIAG-001 E2a : session du processus (constat « non clôturée » du lancement précédent, puis suivi).
+        DiagnosticSessionController.shared.install()
         // Restauration préparée (#51) : appliquée avant que la moindre base soit ouverte.
         LibraryBackupService.applyPendingRestoreOnce()
         // Avant toute lecture du fond des pages (`@AppStorage`, `PageTone.current`) : valeurs retirées remplacées.

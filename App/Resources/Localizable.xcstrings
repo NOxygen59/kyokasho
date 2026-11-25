@@ -1,6 +1,72 @@
 {
   "sourceLanguage": "fr",
   "strings": {
+    "Session précédente non clôturée, il y a %lld min.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Previous session not closed, %lld min ago."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Session précédente non clôturée, il y a %lld min."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上一次会话未正常结束，%lld 分钟前。"
+          }
+        }
+      }
+    },
+    "Session précédente non clôturée (âge inconnu).": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Previous session not closed (age unknown)."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Session précédente non clôturée (âge inconnu)."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上一次会话未正常结束（时间未知）。"
+          }
+        }
+      }
+    },
+    "État de la session précédente inconnu.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Previous session state unknown."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "État de la session précédente inconnu."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "上一次会话状态未知。"
+          }
+        }
+      }
+    },
     "Ce que fait chaque IA maintenant, puis les tâches en cours et terminées. Le journal de diagnostic est suspendu : d'anciens fichiers n'ont pas pu être mis à l'écart.": {
       "localizations": {
         "en": {

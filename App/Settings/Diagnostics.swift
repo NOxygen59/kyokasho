@@ -307,6 +307,7 @@ struct DiagnosticsSection: View {
 
     var body: some View {
         Section {
+            sessionReport
             Toggle("Mode diagnostic", isOn: $enabled)
                 .onChange(of: enabled) { _ in
                     DiagnosticCPU.updateActivation()
@@ -382,6 +383,25 @@ struct DiagnosticsSection: View {
             Text("Crée un seul fichier texte avec tout ce qu'OvisOCR2 a lu dans le document choisi. Le fichier contient le texte de ton livre : ne le publie pas.")
         }
         .sheet(isPresented: $showReadingExport) { OvisReadingExportView() }
+    }
+}
+
+extension DiagnosticsSection {
+    /// Constat du lancement (PLAN-DIAG-001, E2a) : session précédente non clôturée, ou état inconnu. Jamais
+    /// « plantage » ni cause.
+    @ViewBuilder var sessionReport: some View {
+        switch DiagnosticSessionController.shared.launchReport {
+        case .none:
+            EmptyView()
+        case .notClosed(let age, _, _):
+            if let age {
+                Label(String(localized: "Session précédente non clôturée, il y a \(max(1, age / 60)) min."), systemImage: "clock.badge.exclamationmark")
+            } else {
+                Label("Session précédente non clôturée (âge inconnu).", systemImage: "clock.badge.exclamationmark")
+            }
+        case .unknown:
+            Label("État de la session précédente inconnu.", systemImage: "questionmark.circle")
+        }
     }
 }
 

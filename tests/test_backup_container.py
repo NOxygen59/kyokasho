@@ -159,7 +159,8 @@ class BackupTests(unittest.TestCase):
         self.assertFalse((self.root / "outside").exists())
 
     def test_optional_models_and_regenerable_caches_are_listed(self):
-        for name in [storage.MODELS + "/weight", "Library/Caches/thumb", "tmp/work"]:
+        for name in [storage.MODELS + "/weight", "Library/Caches/thumb", "tmp/work",
+                     "Library/Application Support/KyokashoDiagnosticState/session.json"]:
             target = self.source / name
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text("synthetique")

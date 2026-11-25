@@ -68,6 +68,9 @@ extension BackupRoundTripTests {
                                                    ["BackupApp-\\(UUID().uuidString)", "Kyokasho", "Models", "definition-translations.json", "preferences.plist"]),
         "Packages/KyokashoKit/Sources/ReaderCore/LibraryBackup.swift": ("sauvegarde complète (#51) : temporaire tmp/BackupWrite-<UUID>/ (copies des bases, relecture check/)",
                                                                         ["BackupWrite-\\(UUID().uuidString)", "check", "db-\\(index).sqlite"]),
+        // PLAN-DIAG-001 E2a : état de session (session.json), exclu de la sauvegarde système et des archives.
+        "App/Settings/DiagnosticSessionController.swift": ("diagnostic : Application Support/KyokashoDiagnosticState/session.json (hors sauvegarde)",
+                                                           ["KyokashoDiagnosticState"]),
         // Anciens fichiers mis à l'écart (DEC-07) : noms de `DiagnosticFileMigration.isolatedNames`, même dossier.
         "App/Settings/Diagnostics.swift": ("diagnostic : Documents/Diagnostics/journal.txt, journal.1.txt (DEC-06), *-avant-diagnostics* (DEC-07)",
                                            ["Diagnostics", "journal.txt", "journal.1.txt"]),
