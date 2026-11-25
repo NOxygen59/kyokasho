@@ -25,7 +25,6 @@ final class DiagnosticSessionController: @unchecked Sendable {
     private var machine = DiagnosticSessionMachine()          // seulement sur `queue`
     private var file: DiagnosticSessionFile?                  // seulement sur `queue`
     private var observers: [NSObjectProtocol] = []            // fil principal
-    private var closingTask: UIBackgroundTaskIdentifier = .invalid   // fil principal
 
     /// Constat du lancement, pour Réglages › Diagnostic (ce lancement seulement, en mémoire).
     private let reportLock = NSLock()
@@ -39,11 +38,13 @@ final class DiagnosticSessionController: @unchecked Sendable {
         guard observers.isEmpty else { return }
         let folder = Self.folder
         queue.async { [self] in
-            try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
-            var excluded = folder
-            var values = URLResourceValues()
-            values.isExcludedFromBackup = true
-            try? excluded.setResourceValues(values)
+            // Exclusion de la sauvegarde iOS **confirmée** avant toute lecture ou écriture ; sinon, pas de suivi de
+            // session pour ce lancement, et le constat est « inconnu » (revue R2 E2a, B4).
+            guard Self.excludeFromBackup(folder) else {
+                reportLock.withLock { report = .unknown }
+                Self.publish(.unknown)
+                return
+            }
             let file = DiagnosticSessionFile(folder: folder)
             self.file = file
             let (previous, lastGeneration) = file.consumeAtLaunch(now: Date())
@@ -65,31 +66,41 @@ final class DiagnosticSessionController: @unchecked Sendable {
         ]
     }
 
+    /// Pose et **relit** l'exclusion de la sauvegarde iOS sur le dossier.
+    private static func excludeFromBackup(_ folder: URL) -> Bool {
+        do {
+            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+            var url = folder
+            var values = URLResourceValues()
+            values.isExcludedFromBackup = true
+            try url.setResourceValues(values)
+            url.removeAllCachedResourceValues()
+            return try url.resourceValues(forKeys: [.isExcludedFromBackupKey]).isExcludedFromBackup == true
+        } catch {
+            return false
+        }
+    }
+
+    /// L'automate n'adopte l'état qu'après une écriture réussie (B2) ; la mémoire n'est lue que s'il y a à écrire.
     private func handle(_ event: DiagnosticSessionMachine.Event, done: (() -> Void)? = nil) {
-        let memory = Int(Diagnostics.footprintMB())
         queue.async { [self] in
-            if let state = machine.handle(event, now: Date(), memoryMB: memory) { file?.write(state) }
+            if let file, machine.next(event, now: Date(), memoryMB: nil) != nil,
+               let state = machine.next(event, now: Date(), memoryMB: Int(Diagnostics.footprintMB())), file.write(state) {
+                machine.commit(state)
+            }
             if let done { DispatchQueue.main.async(execute: done) }
         }
     }
 
-    /// Vrai arrière-plan : clôture durable. Une seule assertion d'arrière-plan, pour cette écriture seulement,
-    /// rendue exactement une fois. Fil principal (notification).
+    /// Vrai arrière-plan : clôture durable. **Une assertion par clôture**, rendue exactement une fois par celle-ci
+    /// (fin d'écriture ou expiration) : une clôture ancienne ne peut pas rendre celle d'une autre (revue R2 E2a, B1).
+    /// Fil principal (notification).
     private func close() {
-        if closingTask == .invalid {
-            closingTask = UIApplication.shared.beginBackgroundTask(withName: "diagnostic.session") { [weak self] in
-                self?.endClosingTask()
-            }
-        }
-        handle(.background) { [weak self] in self?.endClosingTask() }
+        let assertion = BackgroundAssertion()
+        assertion.id = UIApplication.shared.beginBackgroundTask(withName: "diagnostic.session") { assertion.end() }
+        handle(.background) { assertion.end() }
     }
 
-    /// Fil principal (fin d'écriture ou expiration) : `endBackgroundTask` une seule fois.
-    private func endClosingTask() {
-        guard closingTask != .invalid else { return }
-        UIApplication.shared.endBackgroundTask(closingTask)
-        closingTask = .invalid
-    }
 
     /// Une ligne au journal, au plus une fois par lancement ; aucun travail ni cause déduits.
     private static func publish(_ previous: DiagnosticPreviousSession) {
@@ -104,5 +115,16 @@ final class DiagnosticSessionController: @unchecked Sendable {
         case .unknown:
             DiagnosticCenter.shared.emit(.alerte, DiagnosticEvent(.alerte, .diagnostic, "etat_session_precedente_inconnu"))
         }
+    }
+}
+
+
+/// Une assertion d'arrière-plan et sa fin unique (fil principal).
+private final class BackgroundAssertion {
+    var id: UIBackgroundTaskIdentifier = .invalid
+    func end() {
+        guard id != .invalid else { return }
+        UIApplication.shared.endBackgroundTask(id)
+        id = .invalid
     }
 }

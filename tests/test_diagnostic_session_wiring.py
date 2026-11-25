@@ -22,9 +22,17 @@ class DiagnosticSessionWiringTests(unittest.TestCase):
         # Jamais la phase d'une vue, ni la fin d'application comme vérité de session.
         self.assertNotIn("scenePhase", ctrl)
         self.assertNotIn("willTerminate", ctrl)
-        # Une seule assertion d'arrière-plan, rendue une fois.
-        self.assertIn("guard closingTask != .invalid else { return }", ctrl)
-        self.assertIn("closingTask = .invalid", ctrl)
+        # Une assertion par clôture, rendue une fois par elle-même (B1).
+        close = ctrl.split("private func close() {", 1)[1].split("\n    }", 1)[0]
+        self.assertIn("let assertion = BackgroundAssertion()", close)
+        self.assertIn("{ assertion.end() }", close)
+        self.assertIn("guard id != .invalid else { return }", ctrl)
+        # L'automate n'adopte l'état qu'après une écriture réussie (B2).
+        self.assertIn("file.write(state) {\n                machine.commit(state)", ctrl)
+        # Exclusion de la sauvegarde confirmée avant tout usage du fichier (B4).
+        install = ctrl.split("func install() {", 1)[1]
+        self.assertLess(install.index("guard Self.excludeFromBackup(folder) else {"), install.index("DiagnosticSessionFile(folder: folder)"))
+        self.assertIn(".isExcludedFromBackup == true", ctrl)
         # Hors Documents, exclu de la sauvegarde système.
         self.assertIn("applicationSupportDirectory", ctrl)
         self.assertNotIn("documentDirectory", ctrl)

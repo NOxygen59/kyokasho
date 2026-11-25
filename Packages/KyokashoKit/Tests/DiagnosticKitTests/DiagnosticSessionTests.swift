@@ -100,4 +100,31 @@ final class DiagnosticSessionTests: XCTestCase {
         let json = try XCTUnwrap(try JSONSerialization.jsonObject(with: Data(contentsOf: file.url)) as? [String: Any])
         XCTAssertEqual(Set(json.keys), ["schemaVersion", "generation", "state", "updatedAt", "memoryMB"])
     }
+
+    /// B2 : une écriture ratée ne change pas l'automate ; la notification suivante refait la transition.
+    func testFailedWriteIsRetriedByTheNextNotification() {
+        var m = DiagnosticSessionMachine()
+        let armed = m.next(.foreground, now: t0, memoryMB: nil)
+        XCTAssertEqual(armed?.generation, 1)
+        XCTAssertFalse(m.armed, "rien d'adopté avant l'écriture")
+        XCTAssertEqual(m.next(.foreground, now: t0, memoryMB: nil)?.generation, 1, "didBecomeActive refait l'armement")
+        m.commit(armed!)
+        XCTAssertTrue(m.armed)
+        let closed = m.next(.background, now: t0, memoryMB: nil)
+        XCTAssertEqual(closed?.state, .closed)
+        XCTAssertNotNil(m.next(.background, now: t0, memoryMB: nil), "clôture ratée : un second fond réessaie")
+        m.commit(closed!)
+        XCTAssertNil(m.next(.background, now: t0, memoryMB: nil))
+    }
+
+    /// B3 : un fichier trop gros est refusé avant lecture ; une clé inconnue rend l'état invalide.
+    func testOversizedOrUnknownKeyIsUnknown() throws {
+        let file = DiagnosticSessionFile(folder: folder)
+        try Data(count: DiagnosticSessionFile.maxBytes + 1).write(to: file.url)
+        XCTAssertEqual(file.read(), .unreadable)
+        XCTAssertEqual(file.consumeAtLaunch(now: t0).previous, .unknown)
+        try Data(#"{"schemaVersion":1,"generation":1,"state":"armed","updatedAt":"2026-11-25T00:00:00Z","titre":"x"}"#.utf8).write(to: file.url)
+        XCTAssertEqual(file.consumeAtLaunch(now: t0).previous, .unknown)
+    }
+
 }

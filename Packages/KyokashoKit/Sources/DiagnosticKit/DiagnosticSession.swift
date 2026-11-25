@@ -30,7 +30,8 @@ public struct DiagnosticSessionState: Codable, Equatable, Sendable {
 }
 
 /// Automate du cycle de vie, au niveau du **processus** (jamais d'une scène) : idempotent face aux notifications
-/// doublées ou réordonnées. Rend l'état à écrire, ou `nil` si rien ne change.
+/// doublées ou réordonnées. `next` propose l'état à écrire sans rien changer ; `commit` ne l'adopte qu'après une
+/// écriture réussie (revue R2 E2a, B2) : un échec laisse la transition à refaire à la notification suivante.
 public struct DiagnosticSessionMachine: Sendable {
     public enum Event: Sendable {
         /// `willEnterForeground`, `didBecomeActive`, ou application déjà au premier plan à l'installation.
@@ -46,20 +47,31 @@ public struct DiagnosticSessionMachine: Sendable {
 
     public init(lastGeneration: UInt64 = 0) { generation = lastGeneration }
 
-    public mutating func handle(_ event: Event, now: Date, memoryMB: Int?) -> DiagnosticSessionState? {
+    /// État à écrire pour cet événement, ou `nil` si rien ne change.
+    public func next(_ event: Event, now: Date, memoryMB: Int?) -> DiagnosticSessionState? {
         switch event {
         case .foreground:
             guard !armed else { return nil }
-            armed = true
-            generation &+= 1
-            return DiagnosticSessionState(generation: generation, state: .armed, updatedAt: now, memoryMB: memoryMB)
+            return DiagnosticSessionState(generation: generation &+ 1, state: .armed, updatedAt: now, memoryMB: memoryMB)
         case .inactive:
             return nil
         case .background:
             guard armed else { return nil }
-            armed = false
             return DiagnosticSessionState(generation: generation, state: .closed, updatedAt: now, memoryMB: memoryMB)
         }
+    }
+
+    /// Adopte un état **écrit avec succès**.
+    public mutating func commit(_ state: DiagnosticSessionState) {
+        generation = state.generation
+        armed = state.state == .armed
+    }
+
+    /// Commodité des tests : `next` puis `commit` (écriture supposée réussie).
+    public mutating func handle(_ event: Event, now: Date, memoryMB: Int?) -> DiagnosticSessionState? {
+        guard let state = next(event, now: now, memoryMB: memoryMB) else { return nil }
+        commit(state)
+        return state
     }
 }
 
@@ -83,9 +95,11 @@ public struct DiagnosticSessionFile: Sendable {
 
     public enum Read: Equatable, Sendable { case absent, unreadable, data(Data) }
 
-    /// Une erreur de lecture n'est pas une absence.
+    /// Une erreur de lecture n'est pas une absence. Taille vérifiée **avant** de lire (revue R2 E2a, B3).
     public func read() -> Read {
         do {
+            let size = (try FileManager.default.attributesOfItem(atPath: url.path)[.size] as? NSNumber)?.intValue ?? Int.max
+            guard size <= Self.maxBytes else { return .unreadable }
             return .data(try Data(contentsOf: url))
         } catch let error as NSError where (error.domain == NSCocoaErrorDomain && error.code == NSFileReadNoSuchFileError)
                                           || (error.domain == NSPOSIXErrorDomain && error.code == Int(ENOENT)) {
@@ -140,9 +154,14 @@ public enum DiagnosticSession {
         return d
     }()
 
-    /// Validation avant usage : taille, schéma, bornes. Tout écart → `nil` (état inconnu).
+    /// Clés permises : une clé inconnue rend l'état invalide (revue R2 E2a, B3).
+    static let allowedKeys: Set<String> = ["schemaVersion", "generation", "state", "updatedAt", "memoryMB"]
+
+    /// Validation avant usage : taille, clés, schéma, bornes. Tout écart → `nil` (état inconnu).
     public static func decode(_ data: Data) -> DiagnosticSessionState? {
         guard data.count <= DiagnosticSessionFile.maxBytes,
+              let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              Set(object.keys).isSubset(of: allowedKeys),
               let state = try? decoder.decode(DiagnosticSessionState.self, from: data),
               state.schemaVersion == DiagnosticSessionState.schema,
               state.generation > 0,
