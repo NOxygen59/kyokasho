@@ -123,7 +123,7 @@ class DiagnosticSessionWiringTests(unittest.TestCase):
         # E2d : un seul observateur thermique, référence initiale, relu au retour ; pas de minuterie ni de relevé.
         self.assertEqual(ctrl.count("ProcessInfo.thermalStateDidChangeNotification"), 1)
         install = ctrl.split("func install() {", 1)[1]
-        self.assertLess(install.index("checkThermalState()"), install.index("ProcessInfo.thermalStateDidChangeNotification"))
+        self.assertLess(install.index("_ = ProcessInfo.processInfo.thermalState"), install.index("ProcessInfo.thermalStateDidChangeNotification"))
         check = ctrl.split("private func checkThermalState() {", 1)[1].split("\n    }", 1)[0]
         self.assertLess(check.index("queue.async"), check.index("thermalState.rawValue"))
         self.assertIn("self?.checkThermalState()   // E2d : relu au retour", ctrl)

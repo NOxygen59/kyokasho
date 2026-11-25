@@ -63,7 +63,9 @@ final class DiagnosticSessionController: @unchecked Sendable {
             Self.publish(launch.previous, detail: launch.detail)
             Self.publishOngoing(launch)
         }
-        // E2d : état thermique lu **avant** l'inscription à ses notifications (règle du SDK), sans signal.
+        // E2d : état thermique lu **avant** l'inscription à ses notifications, de façon synchrone (règle du SDK :
+        // l'accès effectif doit précéder l'inscription) ; la référence du suivi est posée ensuite sur la file.
+        _ = ProcessInfo.processInfo.thermalState
         checkThermalState()
         let center = NotificationCenter.default
         let foreground: (Notification) -> Void = { [weak self] _ in
