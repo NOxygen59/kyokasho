@@ -21,7 +21,10 @@ enum Diagnostics {
     static var enabled: Bool { UserDefaults.standard.bool(forKey: enabledKey) }
     /// Détail du journal : réglage manuel OU fenêtre automatique de 24 h après une session non clôturée
     /// (PLAN-DIAG-001 E2b, DEC-02 B). Ne change jamais le réglage.
-    static var detailEnabled: Bool { enabled || DiagnosticCenter.shared.autoDetailActive }
+    static var detailEnabled: Bool {
+        let automatic = DiagnosticCenter.shared.autoDetailActive   // toujours évaluée : échéance oubliée même en manuel
+        return enabled || automatic
+    }
     /// Version du format du journal déjà en place (DEC-07) et sel des références de documents (`DiagnosticRef`).
     private static let migrationKey = "diagnostics.migrationRevision"
     private static let saltKey = "diagnostics.refSalt"

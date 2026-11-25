@@ -105,7 +105,11 @@ public final class DiagnosticCenter: @unchecked Sendable {
     }
 
     /// Détail effectif : manuel OU fenêtre automatique valide. À appeler sous le verrou.
-    private var detailNow: Bool { detailed || autoDetailNow() }
+    /// La fenêtre est toujours évaluée (son échéance oubliée) même quand le manuel suffit (revue R2 E2b passage 2).
+    private var detailNow: Bool {
+        let automatic = autoDetailNow()
+        return detailed || automatic
+    }
 
     /// Référence courte et salée d'un document pour ce journal (`DiagnosticRef`).
     public func ref(_ documentId: String) -> DiagnosticDocumentRef {

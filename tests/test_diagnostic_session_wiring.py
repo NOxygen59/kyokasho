@@ -57,7 +57,8 @@ class DiagnosticSessionWiringTests(unittest.TestCase):
     def test_detail_window_never_touches_the_manual_setting_or_monitors(self):
         # E2b (DEC-02 B) : détail du journal = manuel OU fenêtre ; réglage inchangé ; CPU, relevé, sonde sur le manuel.
         core = (ROOT / "App/Settings/Diagnostics.swift").read_text(encoding="utf-8")
-        self.assertIn("static var detailEnabled: Bool { enabled || DiagnosticCenter.shared.autoDetailActive }", core)
+        self.assertIn("let automatic = DiagnosticCenter.shared.autoDetailActive", core)
+        self.assertIn("return enabled || automatic", core)
         log = core.split("static func log(", 1)[1].split("\n    }", 1)[0]
         self.assertIn("guard detailEnabled else { return }", log)
         self.assertNotIn("forKey: enabledKey)", core.replace("UserDefaults.standard.bool(forKey: enabledKey)", ""))

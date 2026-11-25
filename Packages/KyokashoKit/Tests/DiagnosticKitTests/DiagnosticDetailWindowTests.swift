@@ -135,4 +135,23 @@ final class DiagnosticDetailWindowTests: XCTestCase {
         XCTAssertEqual(second.detail?.from, t0.addingTimeInterval(7_200))
     }
 
+
+    /// Le manuel ne masque pas l'échéance : émission en manuel à l'échéance, recul dans la fenêtre, manuel coupé →
+    /// filtré (aucun appel direct à `autoDetailActive`).
+    func testManualModeDoesNotHideExpiry() {
+        let clock = Clock(t0)
+        let center = DiagnosticCenter(now: { clock.now })
+        let box = Box()
+        center.install(sink: { box.add($0) }, salt: 1)
+        center.setAutoDetail(.starting(at: t0))
+        center.setDetailed(true)
+        clock.now = t0.addingTimeInterval(86_400)
+        center.emit(.info, DiagnosticEvent(.info, .app, "manuel à l'échéance"))
+        XCTAssertEqual(box.count, 1)
+        clock.now = t0.addingTimeInterval(3_600)
+        center.setDetailed(false)
+        center.emit(.info, DiagnosticEvent(.info, .app, "après recul"))
+        XCTAssertEqual(box.count, 1, "fenêtre oubliée à l'échéance, même vue en mode manuel")
+    }
+
 }
