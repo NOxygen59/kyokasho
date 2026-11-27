@@ -586,6 +586,44 @@ extension PageShiftRecoveryTests {
         }
     }
 
+    /// AV-DIAG-002 (R-2) : une **erreur** de lecture du nouveau document ne vaut pas « nouveau absent ». La mise de
+    /// côté est refusée, le journal reste et l'app reste bloquée ; une fois la lecture rétablie, elle fonctionne.
+    func testSetAsideIsRefusedWhenTheNewDocumentCannotBeRead() async throws {
+        try await withFixture { model, doc, root in
+            let card = try seed(model, doc)
+            let (plan, _) = try replacementPlan(root, pages: 3)
+            let modesDone = trackModeKeys(doc.id, plan.newDocumentId)
+            defer { modesDone() }
+            try writeReplacementJournal(root, oldId: doc.id, oldCount: doc.pageCount, oldSize: doc.fileSize, plan: plan)
+            let decoy = root.appendingPathComponent("leurre-" + UUID().uuidString + ".pdf")
+            try writePDF(decoy, pages: 3)
+            defer { try? FileManager.default.removeItem(at: decoy) }
+            var tampered = try journal(root)
+            tampered.newSourcePath = decoy.path
+            try JSONEncoder().encode(tampered).write(to: root.appendingPathComponent(journalFile))
+            let restarted = try AppModel(root: root)
+            PageShift.reconcile(restarted)
+            XCTAssertNotNil(restarted.storageRecoveryError)
+
+            var reads: [String] = []
+            PageShift.fault = { site in
+                reads.append(site)
+                if site == "journal.lecture_nouveau" { throw NSError(domain: NSCocoaErrorDomain, code: NSFileReadUnknownError) }
+            }
+            PageShift.setAsideRejectedJournal(restarted)
+            PageShift.fault = nil
+            XCTAssertEqual(reads, ["journal.lecture_nouveau"], "la panne vise la lecture du nouveau document")
+            XCTAssertTrue(journalExists(root), "lecture incertaine : journal gardé")
+            XCTAssertNotNil(restarted.storageRecoveryError, "lecture incertaine : l'app reste bloquée")
+
+            PageShift.setAsideRejectedJournal(restarted)
+            XCTAssertFalse(journalExists(root), "lecture rétablie, nouveau absent : mise de côté possible")
+            XCTAssertNil(restarted.storageRecoveryError)
+            PageShift.reconcile(restarted)
+            try assertUnshifted(restarted, doc, card)
+        }
+    }
+
     /// N6 (revue R2) : les métriques d'un remplacement refusent seulement un PDF qui ne s'ouvre
     /// pas — la taille du fichier est relue par un second chemin (attributs) avant de conclure à
     /// l'illisibilité, et le même fichier reste un simple changement de révision.

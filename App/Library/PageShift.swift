@@ -67,6 +67,9 @@ enum PageShift {
         .appendingPathComponent("Kyokasho", isDirectory: true)
     /// Injection de panne uniquement dans le harnais ; nil dans l'app.
     static var checkpoint: ((String) throws -> Void)?
+    /// Panne de lecture ou d'écriture injectée par le harnais devant un appel précis (PLAN-DIAG-001 E3, AV-DIAG-002
+    /// AV2-03) ; nil dans l'app. Distincte de `checkpoint` (points de reprise, inchangés).
+    static var fault: ((String) throws -> Void)?
     private static let fm = FileManager.default
     private static var applyingDocuments: Set<String> = []
     private static var marker: URL { support.appendingPathComponent("page-shift.json") }
@@ -1196,7 +1199,15 @@ enum PageShift {
         guard let old = try? model.database.document(id: p.documentId) else { return false }
         if p.kind == "replacement" {
             guard let newId = p.newDocumentId else { return false }
-            return newId == p.documentId || (try? model.database.document(id: newId)) == nil
+            if newId == p.documentId { return true }
+            // AV-DIAG-002 (R-2) : une lecture en erreur n'est pas « nouveau absent ». Le nouveau PDF peut déjà avoir
+            // été déplacé : dans le doute, réponse prudente (faux), la mise de côté est refusée et l'app reste bloquée.
+            do {
+                try fault?("journal.lecture_nouveau")
+                return try model.database.document(id: newId) == nil
+            } catch {
+                return false
+            }
         }
         let size = (try? fm.attributesOfItem(atPath: model.storage.url(for: p.documentId).path)[.size] as? NSNumber)?.int64Value
         return old.pageCount == p.oldCount && size == p.oldSize
